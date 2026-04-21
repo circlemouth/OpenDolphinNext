@@ -123,8 +123,8 @@ class LocalDiagnosisResourceTest {
                                 "diagnosisId", -1L,
                                 "diagnosisName", "主病名テスト",
                                 "diagnosisCode", "I10",
-                                "startDate", "2026-04-10 00:00:00",
-                                "endDate", "2026-04-20 00:00:00",
+                                "startDate", "2026-04-10",
+                                "endDate", "2026-04-20",
                                 "outcome", "治癒",
                                 "category", "主病名",
                                 "suspectedFlag", "疑い"))));
@@ -175,7 +175,7 @@ class LocalDiagnosisResourceTest {
                                 "diagnosisId", 55L,
                                 "diagnosisName", "更新後病名",
                                 "diagnosisCode", "E11",
-                                "startDate", "2026-04-11 00:00:00",
+                                "startDate", "2026-04-11",
                                 "outcome", "継続",
                                 "category", "副病名"))));
 
@@ -190,7 +190,7 @@ class LocalDiagnosisResourceTest {
     }
 
     @Test
-    void mutateDiagnosesDateOnlyInputIsCurrentlyDroppedToNullBlockerEvidence() {
+    void mutateDiagnosesDateOnlyInputIsPersistedAndReadBack() {
         resource.mutateDiagnoses(
                 request,
                 Map.of(
@@ -204,13 +204,19 @@ class LocalDiagnosisResourceTest {
                                 "endDate", "2026-04-20"))));
 
         RegisteredDiagnosisModel created = karteServiceBean.getLastAddedDiagnosis();
-        assertEquals(null, created.getStarted());
-        assertEquals(null, created.getEnded());
+        assertEquals("2026-04-10", open.dolphin.infomodel.ModelUtils.getDateAsString(created.getStarted()));
+        assertEquals("2026-04-20", open.dolphin.infomodel.ModelUtils.getDateAsString(created.getEnded()));
+
+        Map<String, Object> readback = resource.getDiagnoses(request, "00001", "2026-04-01", null, false);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> diseases = (List<Map<String, Object>>) readback.get("diseases");
+        assertEquals("2026-04-10", diseases.get(0).get("startDate"));
+        assertEquals("2026-04-20", diseases.get(0).get("endDate"));
     }
 
     @Test
-    void mutateDiagnosesInvalidDatesAreCurrentlyAcceptedAsNullBlockerEvidence() {
-        resource.mutateDiagnoses(
+    void mutateDiagnosesRejectsInvalidDatesWithBadRequest() {
+        WebApplicationException exception = assertThrows(WebApplicationException.class, () -> resource.mutateDiagnoses(
                 request,
                 Map.of(
                         "patientId", "00001",
@@ -220,16 +226,13 @@ class LocalDiagnosisResourceTest {
                                 "diagnosisId", -1L,
                                 "diagnosisName", "不正日付病名",
                                 "startDate", "not-a-date",
-                                "endDate", "still-not-a-date"))));
-
-        RegisteredDiagnosisModel created = karteServiceBean.getLastAddedDiagnosis();
-        assertEquals(null, created.getStarted());
-        assertEquals(null, created.getEnded());
+                                "endDate", "still-not-a-date")))));
+        assertEquals(400, exception.getResponse().getStatus());
     }
 
     @Test
-    void mutateDiagnosesUnknownOutcomeIsCurrentlyPersistedBlockerEvidence() {
-        resource.mutateDiagnoses(
+    void mutateDiagnosesRejectsUnknownOutcomeWithBadRequest() {
+        WebApplicationException exception = assertThrows(WebApplicationException.class, () -> resource.mutateDiagnoses(
                 request,
                 Map.of(
                         "patientId", "00001",
@@ -238,17 +241,14 @@ class LocalDiagnosisResourceTest {
                                 "operation", "create",
                                 "diagnosisId", -1L,
                                 "diagnosisName", "未知転帰病名",
-                                "startDate", "2026-04-10 00:00:00",
-                                "outcome", "想定外の転帰"))));
-
-        RegisteredDiagnosisModel created = karteServiceBean.getLastAddedDiagnosis();
-        assertEquals("想定外の転帰", created.getOutcome());
-        assertEquals("想定外の転帰", created.getOutcomeDesc());
+                                "startDate", "2026-04-10",
+                                "outcome", "想定外の転帰")))));
+        assertEquals(400, exception.getResponse().getStatus());
     }
 
     @Test
-    void mutateDiagnosesEndDateBeforeStartDateIsCurrentlyAcceptedBlockerEvidence() {
-        resource.mutateDiagnoses(
+    void mutateDiagnosesRejectsEndDateBeforeStartDateWithBadRequest() {
+        WebApplicationException exception = assertThrows(WebApplicationException.class, () -> resource.mutateDiagnoses(
                 request,
                 Map.of(
                         "patientId", "00001",
@@ -257,12 +257,9 @@ class LocalDiagnosisResourceTest {
                                 "operation", "create",
                                 "diagnosisId", -1L,
                                 "diagnosisName", "逆転日付病名",
-                                "startDate", "2026-04-20 00:00:00",
-                                "endDate", "2026-04-10 00:00:00"))));
-
-        RegisteredDiagnosisModel created = karteServiceBean.getLastAddedDiagnosis();
-        assertEquals("2026-04-20", open.dolphin.infomodel.ModelUtils.getDateAsString(created.getStarted()));
-        assertEquals("2026-04-10", open.dolphin.infomodel.ModelUtils.getDateAsString(created.getEnded()));
+                                "startDate", "2026-04-20",
+                                "endDate", "2026-04-10")))));
+        assertEquals(400, exception.getResponse().getStatus());
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

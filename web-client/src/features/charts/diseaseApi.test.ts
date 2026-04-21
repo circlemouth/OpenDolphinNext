@@ -401,6 +401,105 @@ describe('diseaseApi', () => {
     expect(body.operations[0]).toMatchObject({
       operation: 'create',
       diagnosisId: -1,
+      startDate: '2026-03-25',
     });
+  });
+
+  it('rejects invalid mutation dates before sending a local diagnosis request', async () => {
+    await expect(
+      mutateDiseases({
+        patientId: '000001',
+        karteId: 1001,
+        operations: [
+          {
+            operation: 'create',
+            diagnosisName: '不正日付',
+            startDate: '2026-02-30',
+          },
+        ],
+      }),
+    ).rejects.toThrow('開始日は西暦yyyy-MM-dd形式の実在する日付で入力してください。');
+
+    expect(httpFetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects end date before start date before sending a local diagnosis request', async () => {
+    await expect(
+      mutateDiseases({
+        patientId: '000001',
+        karteId: 1001,
+        operations: [
+          {
+            operation: 'create',
+            diagnosisName: '逆転日付',
+            startDate: '2026-04-20',
+            endDate: '2026-04-10',
+          },
+        ],
+      }),
+    ).rejects.toThrow('転帰日は開始日以降の日付を入力してください。');
+
+    expect(httpFetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects unknown outcomes before sending a local diagnosis request', async () => {
+    await expect(
+      mutateDiseases({
+        patientId: '000001',
+        karteId: 1001,
+        operations: [
+          {
+            operation: 'update',
+            diagnosisId: 50,
+            diagnosisName: '未知転帰',
+            startDate: '2026-04-10',
+            outcome: '想定外の転帰',
+          },
+        ],
+      }),
+    ).rejects.toThrow('転帰は 継続、治癒、中止、再発、死亡、転院、不明 のいずれかを入力してください。');
+
+    expect(httpFetch).not.toHaveBeenCalled();
+  });
+
+  it('sends only local diagnosis mutation fields even if mirror or candidate metadata is present', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ runId: 'RUN-MUTATE', updatedDiagnosisIds: [50] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await mutateDiseases({
+      patientId: '000001',
+      karteId: 1001,
+      operations: [
+        {
+          operation: 'update',
+          diagnosisId: 50,
+          diagnosisName: '高血圧症',
+          startDate: '2026-04-10',
+          outcome: '継続',
+          layer: 'orca-mirror',
+          candidateOnly: true,
+          readOnly: true,
+        } as never,
+      ],
+    });
+
+    const requestInit = vi.mocked(httpFetch).mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(String(requestInit.body)) as {
+      operations: Array<Record<string, unknown>>;
+    };
+    expect(body.operations[0]).toMatchObject({
+      operation: 'update',
+      diagnosisId: 50,
+      diagnosisName: '高血圧症',
+      startDate: '2026-04-10',
+      outcome: '継続',
+    });
+    expect(body.operations[0]).not.toHaveProperty('layer');
+    expect(body.operations[0]).not.toHaveProperty('candidateOnly');
+    expect(body.operations[0]).not.toHaveProperty('readOnly');
   });
 });

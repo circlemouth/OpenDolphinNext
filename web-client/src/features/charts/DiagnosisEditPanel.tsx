@@ -9,6 +9,7 @@ import {
   DISEASE_CANDIDATE_CONFIRM_NOTE,
   DISEASE_CLINICAL_UNAVAILABLE_NOTE,
   DISEASE_CONFLICT_NOTE,
+  DISEASE_OUTCOME_PRESETS,
   DISEASE_MANUAL_RESOLUTION_NOTE,
   DISEASE_MIRROR_UNAVAILABLE_NOTE,
   DISEASE_SYNC_CANDIDATES_NOTE,
@@ -61,9 +62,9 @@ type QuickCandidateOption = {
   candidate: DiseaseMasterCandidate;
 };
 
-const OUTCOME_PRESETS = ['継続', '治癒', '中止', '再発', '死亡', '転院', '不明'];
 const QUICK_CANDIDATE_MIN_KEYWORD = 2;
 const QUICK_CANDIDATE_MAX_ITEMS = 20;
+const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 const formatQuickCandidateLabel = (candidate: DiseaseMasterCandidate) => {
   const codeParts: string[] = [];
@@ -106,6 +107,37 @@ const isMainDisease = (entry: DiseaseEntry) => entry.category?.includes('主') ?
 const isSuspectedDisease = (entry: DiseaseEntry) => entry.suspectedFlag?.includes('疑い') ?? entry.category?.includes('疑い') ?? false;
 const buildEntryKey = (entry: DiseaseEntry) =>
   `${resolveDiseaseLayer(entry)}:${entry.diagnosisId ?? `${entry.diagnosisName ?? 'unknown'}-${entry.startDate ?? 'na'}`}`;
+
+const isValidDateOnly = (value: string) => {
+  const match = DATE_ONLY_PATTERN.exec(value);
+  if (!match) {
+    return false;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+};
+
+const validateDiagnosisForm = (state: DiagnosisFormState): string | null => {
+  if (!state.name.trim()) {
+    return '病名を入力してください。';
+  }
+  if (!state.startDate.trim() || !isValidDateOnly(state.startDate.trim())) {
+    return '開始日は西暦yyyy-MM-dd形式の実在する日付で入力してください。';
+  }
+  if (state.endDate.trim() && !isValidDateOnly(state.endDate.trim())) {
+    return '転帰日は西暦yyyy-MM-dd形式の実在する日付で入力してください。';
+  }
+  if (state.endDate.trim() && state.endDate.trim() < state.startDate.trim()) {
+    return '転帰日は開始日以降の日付を入力してください。';
+  }
+  if (state.outcome.trim() && !(DISEASE_OUTCOME_PRESETS as readonly string[]).includes(state.outcome.trim())) {
+    return `転帰は ${DISEASE_OUTCOME_PRESETS.join('、')} のいずれかを入力してください。`;
+  }
+  return null;
+};
 
 export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps) {
   const queryClient = useQueryClient();
@@ -796,7 +828,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
             ) : null}
           </div>
           <div className="charts-side-panel__field">
-            <label htmlFor="diagnosis-quick-code">コード</label>
+            <label htmlFor="diagnosis-quick-code">コード ※任意</label>
             <input
               id="diagnosis-quick-code"
               value={quickAdd.code}
@@ -806,7 +838,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
             />
           </div>
           <div className="charts-side-panel__field">
-            <label htmlFor="diagnosis-quick-start">開始日</label>
+            <label htmlFor="diagnosis-quick-start">開始日 ※必須</label>
             <input
               id="diagnosis-quick-start"
               type="date"
@@ -816,7 +848,11 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                 setQuickAdd((prev) => ({ ...prev, startDate: event.target.value }));
               }}
               disabled={isBlocked || mutation.isPending}
+              aria-describedby="diagnosis-quick-start-help"
             />
+            <p id="diagnosis-quick-start-help" className="charts-side-panel__help">
+              西暦の例: 2026-04-21。日付は保存後にサーバー再取得で確認します。
+            </p>
           </div>
           <label className="charts-side-panel__toggle">
             <input
@@ -842,18 +878,20 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
             type="button"
             disabled={isBlocked || mutation.isPending}
             onClick={() => {
-              if (!quickAdd.name.trim()) {
-                setNotice({ tone: 'error', message: '病名を入力してください。' });
-                return;
-              }
-              mutation.mutate({
+              const nextForm = {
                 ...buildEmptyForm(today),
                 name: quickAdd.name.trim(),
                 code: quickAdd.code.trim(),
                 startDate: quickAdd.startDate || today,
                 isMain: quickAdd.isMain,
                 isSuspected: quickAdd.isSuspected,
-              });
+              };
+              const validationMessage = validateDiagnosisForm(nextForm);
+              if (validationMessage) {
+                setNotice({ tone: 'error', message: validationMessage });
+                return;
+              }
+              mutation.mutate(nextForm);
             }}
           >
             保険病名に追加
@@ -878,6 +916,11 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
             }
             if (!form.name.trim()) {
               setNotice({ tone: 'error', message: '病名を入力してください。' });
+              return;
+            }
+            const validationMessage = validateDiagnosisForm(form);
+            if (validationMessage) {
+              setNotice({ tone: 'error', message: validationMessage });
               return;
             }
             mutation.mutate(form);
@@ -944,7 +987,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
           <details className="charts-diagnosis__advanced">
             <summary className="charts-diagnosis__advanced-summary">詳細（コード/開始/転帰）</summary>
             <div className="charts-side-panel__field">
-              <label htmlFor="diagnosis-code">病名コード</label>
+              <label htmlFor="diagnosis-code">病名コード ※任意</label>
               <input
                 id="diagnosis-code"
                 value={form.code}
@@ -955,28 +998,36 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
             </div>
             <div className="charts-side-panel__field-row">
               <div className="charts-side-panel__field">
-                <label htmlFor="diagnosis-start">開始日</label>
+                <label htmlFor="diagnosis-start">開始日 ※必須</label>
                 <input
                   id="diagnosis-start"
                   type="date"
                   value={form.startDate}
                   onChange={(event) => setForm((prev) => ({ ...prev, startDate: event.target.value }))}
                   disabled={isBlocked}
+                  aria-describedby="diagnosis-start-help"
                 />
+                <p id="diagnosis-start-help" className="charts-side-panel__help">
+                  西暦の例: 2026-04-21。保存後に再取得した日付を一覧へ表示します。
+                </p>
               </div>
               <div className="charts-side-panel__field">
-                <label htmlFor="diagnosis-end">転帰日</label>
+                <label htmlFor="diagnosis-end">転帰日 ※任意</label>
                 <input
                   id="diagnosis-end"
                   type="date"
                   value={form.endDate}
                   onChange={(event) => setForm((prev) => ({ ...prev, endDate: event.target.value }))}
                   disabled={isBlocked}
+                  aria-describedby="diagnosis-end-help"
                 />
+                <p id="diagnosis-end-help" className="charts-side-panel__help">
+                  西暦の例: 2026-04-30。開始日より前の日付は保存できません。
+                </p>
               </div>
             </div>
             <div className="charts-side-panel__field">
-              <label htmlFor="diagnosis-outcome">転帰</label>
+              <label htmlFor="diagnosis-outcome">転帰 ※任意</label>
               <input
                 id="diagnosis-outcome"
                 list="diagnosis-outcome-options"
@@ -984,12 +1035,16 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                 onChange={(event) => setForm((prev) => ({ ...prev, outcome: event.target.value }))}
                 placeholder="例: 継続"
                 disabled={isBlocked}
+                aria-describedby="diagnosis-outcome-help"
               />
               <datalist id="diagnosis-outcome-options">
-                {OUTCOME_PRESETS.map((option) => (
+                {DISEASE_OUTCOME_PRESETS.map((option) => (
                   <option key={option} value={option} />
                 ))}
               </datalist>
+              <p id="diagnosis-outcome-help" className="charts-side-panel__help">
+                入力できる転帰: {DISEASE_OUTCOME_PRESETS.join('、')}。
+              </p>
             </div>
           </details>
           <div className="charts-diagnosis__editor-actions" role="group" aria-label="病名保存">
