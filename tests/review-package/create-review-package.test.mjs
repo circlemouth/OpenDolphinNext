@@ -132,9 +132,11 @@ test('creates a reviewer package without artifacts or legacy client content', ()
     'docs/implementation/old/OpenDolphin_WebClient-review-package-20260401T000000Z.zip.summary.txt':
       'old package sidecar summary\n',
     'docs/implementation/old/raw-network-dumps/request.txt': 'raw network dump\n',
+    'docs/implementation/old/raw-xml/response.xml': '<response>raw</response>\n',
     'docs/implementation/old/network/requests.json': 'raw network capture\n',
     'docs/implementation/old/trace/browser.trace': 'raw trace\n',
     'docs/implementation/old/videos/browser.webm': 'raw video\n',
+    'docs/implementation/old/session.env': 'SESSION_SECRET=raw\n',
     'docs/sample.har': '{}\n',
     'web-client/dist/assets/app.js': 'compiled\n',
     'tmp/debug.txt': 'temporary\n',
@@ -188,6 +190,7 @@ test('creates a reviewer package without artifacts or legacy client content', ()
     assert(!entries.some((entry) => entry.endsWith('.zip')));
     assert(!entries.some((entry) => /OpenDolphin_WebClient-review-package-.*\.zip\.summary\.txt$/.test(entry)));
     assert(!entries.some((entry) => entry.endsWith('.har')));
+    assert(!entries.some((entry) => entry.endsWith('.env')));
     assert(!entries.some((entry) => entry.includes('/dist/')));
     assert(!entries.some((entry) => entry.includes('/node_modules/')));
     assert(!entries.some((entry) => entry.includes('/target/')));
@@ -195,6 +198,7 @@ test('creates a reviewer package without artifacts or legacy client content', ()
     assert(!entries.some((entry) => entry.includes('/test-results/')));
     assert(!entries.some((entry) => entry.includes('/network/')));
     assert(!entries.some((entry) => entry.includes('/raw-network-dumps/')));
+    assert(!entries.some((entry) => entry.includes('/raw-xml/')));
     assert(!entries.some((entry) => entry.includes('/trace/')));
     assert(!entries.some((entry) => entry.includes('/videos/')));
     assert(!entries.some((entry) => entry.startsWith('tmp/')));
