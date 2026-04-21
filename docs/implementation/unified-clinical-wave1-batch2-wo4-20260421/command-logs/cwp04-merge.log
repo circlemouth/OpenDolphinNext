@@ -1,0 +1,16 @@
+runId: 20260421T224445Z
+cwd: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main
+command: git merge --no-ff fc91d7caee69f16f9374e0a630cdbf91eab49889 -m "merge CWP-04 generic order matrix"
+start_utc: 2026-04-21T23:16:42Z
+
+Merge made by the 'ort' strategy.
+ .../CWP04_GENERIC_ORDER_MATRIX_REPORT.md           | 80 ++++++++++++++++++++++
+ .../rest/orca/LocalOrderBundleResourceTest.java    | 59 ++++++++++++++++
+ .../__tests__/orderLocalOrcaBoundary.test.ts       | 70 +++++++++++++++++++
+ .../__tests__/orderLocalPersistenceMatrix.test.ts  | 54 +++++++++++++++
+ .../src/features/charts/orderRpNormalization.ts    | 19 ++++-
+ 5 files changed, 281 insertions(+), 1 deletion(-)
+ create mode 100644 docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/subagent-reports/CWP04_GENERIC_ORDER_MATRIX_REPORT.md
+
+end_utc: 2026-04-21T23:16:43Z
+exit_code: 0

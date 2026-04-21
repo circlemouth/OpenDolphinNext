@@ -1,0 +1,162 @@
+runId: 20260421T224445Z
+cwd: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main
+command: mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=KarteResourceDocumentContractTest,KarteDocumentWriteResourceTest,KarteDocumentSnapshotContractTest,LetterResourceTest test
+start_utc: 2026-04-21T23:19:56Z
+
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.google.inject.internal.aop.HiddenClassDefiner (file:/opt/homebrew/Cellar/maven/3.9.11/libexec/lib/guice-5.1.0-classes.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.inject.internal.aop.HiddenClassDefiner
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] opendolphin                                                        [pom]
+[INFO] opendolphin-api-contract                                           [jar]
+[INFO] opendolphin-persistence                                            [jar]
+[INFO] opendolphin-reporting                                              [jar]
+[INFO] opendolphin-server-modernized                                      [war]
+[INFO] 
+[INFO] ----------------------< opendolphin:opendolphin >-----------------------
+[INFO] Building opendolphin 2.7.1                                         [1/5]
+[INFO]   from pom.server-modernized.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] ----------------< opendolphin:opendolphin-api-contract >----------------
+[INFO] Building opendolphin-api-contract 2.7.1                            [2/5]
+[INFO]   from api-contract/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ opendolphin-api-contract ---
+[INFO] skip non existing resourceDirectory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main/api-contract/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ opendolphin-api-contract ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ opendolphin-api-contract ---
+[INFO] skip non existing resourceDirectory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main/api-contract/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ opendolphin-api-contract ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ opendolphin-api-contract ---
+[INFO] No tests to run.
+[INFO] 
+[INFO] ----------------< opendolphin:opendolphin-persistence >-----------------
+[INFO] Building opendolphin-persistence 2.7.1                             [3/5]
+[INFO]   from persistence/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ opendolphin-persistence ---
+[INFO] skip non existing resourceDirectory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main/persistence/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ opendolphin-persistence ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ opendolphin-persistence ---
+[INFO] skip non existing resourceDirectory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main/persistence/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ opendolphin-persistence ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ opendolphin-persistence ---
+[INFO] 
+[INFO] -----------------< opendolphin:opendolphin-reporting >------------------
+[INFO] Building opendolphin-reporting 2.7.1                               [4/5]
+[INFO]   from reporting/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ opendolphin-reporting ---
+[INFO] skip non existing resourceDirectory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main/reporting/src/main/resources
+[INFO] Copying 7 resources from ../server-modernized/reporting/templates to target/classes/reporting/templates
+[INFO] Copying 1 resource from ../server-modernized/reporting/glossary to target/classes/reporting/glossary
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ opendolphin-reporting ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ opendolphin-reporting ---
+[INFO] skip non existing resourceDirectory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main/reporting/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ opendolphin-reporting ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ opendolphin-reporting ---
+[INFO] 
+[INFO] -------------< opendolphin:opendolphin-server-modernized >--------------
+[INFO] Building opendolphin-server-modernized 2.7.1                       [5/5]
+[INFO]   from server-modernized/pom.xml
+[INFO] --------------------------------[ war ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ opendolphin-server-modernized ---
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] Copying 7 resources from reporting/templates to target/classes/reporting/templates
+[INFO] Copying 1 resource from reporting/glossary to target/classes/reporting/glossary
+[INFO] 
+[INFO] --- antrun:3.1.0:run (clean-generated-flyway-migrations) @ opendolphin-server-modernized ---
+[INFO] Executing tasks
+[INFO]    [delete] Deleting directory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main/server-modernized/target/classes/db/migration
+[INFO]     [mkdir] Created dir: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main/server-modernized/target/classes/db/migration
+[INFO] Executed tasks
+[INFO] 
+[INFO] --- resources:3.3.1:copy-resources (copy-canonical-flyway-migrations) @ opendolphin-server-modernized ---
+[INFO] Copying 11 resources from tools/flyway/sql to target/classes/db/migration
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ opendolphin-server-modernized ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ opendolphin-server-modernized ---
+[INFO] Copying 80 resources from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ opendolphin-server-modernized ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- surefire:3.1.2:test (default-test) @ opendolphin-server-modernized ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running open.dolphin.rest.KarteDocumentSnapshotContractTest
+4月 22, 2026 8:19:59 午前 org.jboss.logmanager.JBossLoggerFinder getLogger
+ERROR: The LogManager accessed before the "java.util.logging.manager" system property was set to "org.jboss.logmanager.LogManager". Results may be unexpected.
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (/Users/Hayato/.m2/repository/net/bytebuddy/byte-buddy-agent/1.14.12/byte-buddy-agent-1.14.12.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by net.bytebuddy.dynamic.loading.ClassInjector$UsingUnsafe$Dispatcher$CreationAction (file:/Users/Hayato/.m2/repository/net/bytebuddy/byte-buddy/1.14.18/byte-buddy-1.14.18.jar)
+WARNING: Please consider reporting this to the maintainers of class net.bytebuddy.dynamic.loading.ClassInjector$UsingUnsafe$Dispatcher$CreationAction
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.926 s -- in open.dolphin.rest.KarteDocumentSnapshotContractTest
+[INFO] Running open.dolphin.rest.KarteDocumentWriteResourceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in open.dolphin.rest.KarteDocumentWriteResourceTest
+[INFO] Running open.dolphin.rest.KarteResourceDocumentContractTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.151 s -- in open.dolphin.rest.KarteResourceDocumentContractTest
+[INFO] Running open.dolphin.rest.LetterResourceTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.054 s -- in open.dolphin.rest.LetterResourceTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for opendolphin 2.7.1:
+[INFO] 
+[INFO] opendolphin ........................................ SUCCESS [  0.000 s]
+[INFO] opendolphin-api-contract ........................... SUCCESS [  0.312 s]
+[INFO] opendolphin-persistence ............................ SUCCESS [  0.102 s]
+[INFO] opendolphin-reporting .............................. SUCCESS [  0.032 s]
+[INFO] opendolphin-server-modernized ...................... SUCCESS [  2.157 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  2.684 s
+[INFO] Finished at: 2026-04-22T08:20:00+09:00
+[INFO] ------------------------------------------------------------------------
+
+end_utc: 2026-04-21T23:20:00Z
+exit_code: 0

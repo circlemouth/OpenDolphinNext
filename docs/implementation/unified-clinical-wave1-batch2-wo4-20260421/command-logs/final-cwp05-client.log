@@ -1,0 +1,49 @@
+runId: 20260421T224445Z
+cwd: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main
+command: cd web-client && npm test -- --run src/features/charts/diseaseApi.test.ts src/features/charts/__tests__/DiagnosisEditPanel.test.tsx src/features/charts/__tests__/DiagnosisEditPanel.readback.test.tsx src/features/charts/__tests__/dadsClinicalInputContract.test.tsx
+start_utc: 2026-04-21T23:22:22Z
+
+
+> web-client@0.0.0 pretest
+> npm run verify:web-guard
+
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client 配下の gitignore 対象外 .env* に問題は検出されませんでした。
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=9, files=1147. category counts: production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e/QA fixture surface=248, blocked-route detector=39, docs/reference=183, server route inventory negative assertion=2, web.xml exposure negative assertion=3. skipped roots: none
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+
+> web-client@0.0.0 test
+> vitest run --run src/features/charts/diseaseApi.test.ts src/features/charts/__tests__/DiagnosisEditPanel.test.tsx src/features/charts/__tests__/DiagnosisEditPanel.readback.test.tsx src/features/charts/__tests__/dadsClinicalInputContract.test.tsx
+
+
+ RUN  v4.0.18 /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main/web-client
+
+ ✓ src/features/charts/diseaseApi.test.ts (15 tests) 30ms
+ ✓ src/features/charts/__tests__/DiagnosisEditPanel.readback.test.tsx (2 tests) 456ms
+ ✓ src/features/charts/__tests__/DiagnosisEditPanel.test.tsx (7 tests) 1071ms
+     ✓ 候補プルダウン選択で病名とコードを反映して登録できる  372ms
+ ✓ src/features/charts/__tests__/dadsClinicalInputContract.test.tsx (4 tests) 158ms
+
+ Test Files  4 passed (4)
+      Tests  28 passed (28)
+   Start at  08:22:24
+   Duration  2.99s (transform 2.46s, setup 384ms, import 3.55s, tests 1.71s, environment 1.72s)
+
+
+end_utc: 2026-04-21T23:22:27Z
+exit_code: 0
