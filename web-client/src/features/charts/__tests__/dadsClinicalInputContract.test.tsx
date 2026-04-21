@@ -233,7 +233,7 @@ describe('DADS clinical input contract - disease', () => {
     expect(within(activeList).getByText('コードあり')).toBeVisible();
     expect(screen.getByText('参照専用。保険病名へ自動反映しません。')).toBeVisible();
 
-    const quickStartDate = screen.getByLabelText('開始日');
+    const quickStartDate = screen.getByLabelText(/開始日/);
     expect(quickStartDate).toHaveAttribute('type', 'date');
     expect(quickStartDate).not.toHaveAttribute('placeholder');
   });

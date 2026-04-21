@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
@@ -275,18 +275,16 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     });
   }, [meta]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isEditorOpen) return;
-    requestAnimationFrame(() => {
-      const el = nameInputRef.current;
-      if (!el) return;
-      el.focus();
-      try {
-        el.select();
-      } catch {
-        // ignore select errors (e.g. input type/date)
-      }
-    });
+    const el = nameInputRef.current;
+    if (!el) return;
+    el.focus();
+    try {
+      el.select();
+    } catch {
+      // ignore select errors (e.g. input type/date)
+    }
   }, [isEditorOpen, form.diagnosisId]);
 
   const mutation = useMutation({

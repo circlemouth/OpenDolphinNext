@@ -1,0 +1,67 @@
+RUN_ID=20260421T142818Z
+Purpose: sanitized WO-3 review log and report inclusions. Subagent logs are not included as final gate evidence.
+WO2_REOPEN_FINAL_ZIP_STATUS=not_available_owner_waived
+WO2_REOPEN_PACKAGE_EVIDENCE=waived_by_owner_for_WO3_start
+WO2_REOPEN_FINAL_ZIP_SHA256=not_verified
+WO2_REOPEN_FINAL_ZIP_METADATA_VALIDATION=not_verified
+WO2_REOPEN_FINAL_ZIP_SOURCE_SCOPE_SCAN=not_verified
+WO2_REOPEN_FINAL_ZIP_SIDECAR_LEDGER=not_verified
+Review logs:
+- WO2_REOPEN_WAIVER.md
+- FINAL_REPORT.md
+- MAIN_AGENT_REPORT.md
+- TEST_LOGS.sanitized.md
+- CWP01_INTEGRATION_GATE_REPORT.md
+- CWP05_DISEASE_DATE_READBACK_REPORT.md
+- CWP02_SOAP_SERVER_RELOAD_REPORT.md
+- REVIEW_PACKAGE_MANIFEST.txt
+- final-summary.sanitized.md
+- final-summary.sanitized.json
+- secret-scan.sanitized.txt
+- command-log.jsonl
+- subagent-prompts/CWP05_DISEASE_DATE_READBACK_PROMPT.md
+- subagent-prompts/CWP02_SOAP_SERVER_RELOAD_PROMPT.md
+- subagent-reports/CWP05_DISEASE_DATE_READBACK_REPORT.md
+- subagent-reports/CWP02_SOAP_SERVER_RELOAD_REPORT.md
+- command-logs/20260421T142818Z-cwp01-artifact-sha256.log
+- command-logs/20260421T142818Z-cwp01-artifact-unzip-list.log
+- command-logs/20260421T142818Z-cwp01-doc-link-check.log
+- command-logs/20260421T142818Z-cwp01-git-diff-check.log
+- command-logs/20260421T142818Z-cwp01-maven-gate.log
+- command-logs/20260421T142818Z-cwp02-postmerge-git-diff-check.log
+- command-logs/20260421T142818Z-cwp02-postmerge-maven.log
+- command-logs/20260421T142818Z-cwp02-postmerge-typecheck.log
+- command-logs/20260421T142818Z-cwp02-postmerge-web-tests.log
+- command-logs/20260421T142818Z-cwp05-focus-fix-git-diff-check.log
+- command-logs/20260421T142818Z-cwp05-focus-fix-typecheck.log
+- command-logs/20260421T142818Z-cwp05-focus-fix-web-tests.log
+- command-logs/20260421T142818Z-cwp05-postmerge-git-diff-check.log
+- command-logs/20260421T142818Z-cwp05-postmerge-maven.log
+- command-logs/20260421T142818Z-cwp05-postmerge-npm-ci.log
+- command-logs/20260421T142818Z-cwp05-postmerge-typecheck.log
+- command-logs/20260421T142818Z-cwp05-postmerge-web-tests-rerun.log
+- command-logs/20260421T142818Z-cwp05-postmerge-web-tests.log
+- command-logs/20260421T142818Z-final-cwp01-maven-gate.log
+- command-logs/20260421T142818Z-final-cwp02-maven.log
+- command-logs/20260421T142818Z-final-cwp02-web-tests.log
+- command-logs/20260421T142818Z-final-cwp05-maven.log
+- command-logs/20260421T142818Z-final-cwp05-web-tests.log
+- command-logs/20260421T142818Z-final-git-diff-check.log
+- command-logs/20260421T142818Z-final-label-fix-typecheck.log
+- command-logs/20260421T142818Z-final-label-fix2-git-diff-check.log
+- command-logs/20260421T142818Z-final-npm-build.log
+- command-logs/20260421T142818Z-final-npm-lint.log
+- command-logs/20260421T142818Z-final-npm-test-ci-rerun.log
+- command-logs/20260421T142818Z-final-npm-test-ci-rerun2.log
+- command-logs/20260421T142818Z-final-npm-test-ci.log
+- command-logs/20260421T142818Z-final-npm-typecheck.log
+- command-logs/20260421T142818Z-final-readback-label-targeted.log
+- command-logs/20260421T142818Z-final-review-package-script-tests.log
+- command-logs/20260421T142818Z-final-testci-label-fix-git-diff-check.log
+- command-logs/20260421T142818Z-initial-git-branch.log
+- command-logs/20260421T142818Z-initial-git-diff-cached-stat.log
+- command-logs/20260421T142818Z-initial-git-diff-stat.log
+- command-logs/20260421T142818Z-initial-git-rev-parse.log
+- command-logs/20260421T142818Z-initial-git-status.log
+- command-logs/20260421T142818Z-merge-cwp02.log
+- command-logs/20260421T142818Z-merge-cwp05.log

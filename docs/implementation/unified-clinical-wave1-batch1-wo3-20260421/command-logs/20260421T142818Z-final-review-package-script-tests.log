@@ -1,0 +1,170 @@
+command_log_version=1
+command=node --test tests/review-package/create-review-package.test.mjs
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main
+runId=20260421T142818Z
+start_utc=2026-04-21T15:00:54Z
+--- command output ---
+TAP version 13
+# Subtest: creates a reviewer package without artifacts or legacy client content
+ok 1 - creates a reviewer package without artifacts or legacy client content
+  ---
+  duration_ms: 535.196834
+  type: 'test'
+  ...
+# Subtest: adds manifest-listed review logs when requested
+ok 2 - adds manifest-listed review logs when requested
+  ---
+  duration_ms: 832.123167
+  type: 'test'
+  ...
+# Subtest: claims package source-scope scan only when the package scan log proves pass
+ok 3 - claims package source-scope scan only when the package scan log proves pass
+  ---
+  duration_ms: 592.70825
+  type: 'test'
+  ...
+# Subtest: rejects dynamic-only evidence when the sidecar claims full source clean
+ok 4 - rejects dynamic-only evidence when the sidecar claims full source clean
+  ---
+  duration_ms: 510.526125
+  type: 'test'
+  ...
+# Subtest: rejects final package scan evidence that targets a preliminary zip
+ok 5 - rejects final package scan evidence that targets a preliminary zip
+  ---
+  duration_ms: 681.281375
+  type: 'test'
+  ...
+# Subtest: rejects missing or stale artifact hash ledger
+ok 6 - rejects missing or stale artifact hash ledger
+  ---
+  duration_ms: 692.76375
+  type: 'test'
+  ...
+# Subtest: validates complete evidence directory artifact ledgers
+ok 7 - validates complete evidence directory artifact ledgers
+  ---
+  duration_ms: 111.691792
+  type: 'test'
+  ...
+# Subtest: rejects worktree clean claims without package-included git command log evidence
+ok 8 - rejects worktree clean claims without package-included git command log evidence
+  ---
+  duration_ms: 390.576125
+  type: 'test'
+  ...
+# Subtest: rejects package source-scope claim when secret-scan-review-bundle log is not a pass result
+ok 9 - rejects package source-scope claim when secret-scan-review-bundle log is not a pass result
+  ---
+  duration_ms: 344.7755
+  type: 'test'
+  ...
+# Subtest: finalizes sanitized ORCA readonly evidence summary and package sidecar fields
+ok 10 - finalizes sanitized ORCA readonly evidence summary and package sidecar fields
+  ---
+  duration_ms: 407.636042
+  type: 'test'
+  ...
+# Subtest: rejects sidecar zip integrity drift
+ok 11 - rejects sidecar zip integrity drift
+  ---
+  duration_ms: 1013.354958
+  type: 'test'
+  ...
+# Subtest: packages extracted source subsets without git metadata as not verified git truth
+ok 12 - packages extracted source subsets without git metadata as not verified git truth
+  ---
+  duration_ms: 201.242792
+  type: 'test'
+  ...
+# Subtest: rejects raw artifact paths from review log manifests
+ok 13 - rejects raw artifact paths from review log manifests
+  ---
+  duration_ms: 1767.14725
+  type: 'test'
+  ...
+# Subtest: scan tool rejects raw sensitive package path categories
+ok 14 - scan tool rejects raw sensitive package path categories
+  ---
+  duration_ms: 1410.571709
+  type: 'test'
+  ...
+# Subtest: rejects credential-bearing review evidence before packaging
+ok 15 - rejects credential-bearing review evidence before packaging
+  ---
+  duration_ms: 2344.40325
+  type: 'test'
+  ...
+# Subtest: rejects empty manifest-listed command logs
+ok 16 - rejects empty manifest-listed command logs
+  ---
+  duration_ms: 291.502291
+  type: 'test'
+  ...
+# Subtest: rejects manifest-listed command logs with an empty output section
+ok 17 - rejects manifest-listed command logs with an empty output section
+  ---
+  duration_ms: 332.52225
+  type: 'test'
+  ...
+# Subtest: rejects package command logs with placeholder-only timestamps
+ok 18 - rejects package command logs with placeholder-only timestamps
+  ---
+  duration_ms: 394.646917
+  type: 'test'
+  ...
+# Subtest: rejects malformed manifest-listed JSON command logs
+ok 19 - rejects malformed manifest-listed JSON command logs
+  ---
+  duration_ms: 470.779667
+  type: 'test'
+  ...
+# Subtest: rejects JSON command logs without non-empty output evidence
+ok 20 - rejects JSON command logs without non-empty output evidence
+  ---
+  duration_ms: 396.702958
+  type: 'test'
+  ...
+# Subtest: records tracked missing file details in the package manifest
+ok 21 - records tracked missing file details in the package manifest
+  ---
+  duration_ms: 412.794417
+  type: 'test'
+  ...
+# Subtest: skips gitlink directory entries instead of packaging submodule contents
+ok 22 - skips gitlink directory entries instead of packaging submodule contents
+  ---
+  duration_ms: 494.624209
+  type: 'test'
+  ...
+# Subtest: command log wrapper writes exit code metadata for silent success
+ok 23 - command log wrapper writes exit code metadata for silent success
+  ---
+  duration_ms: 29.5255
+  type: 'test'
+  ...
+# Subtest: command log wrapper records exact target metadata when supplied
+ok 24 - command log wrapper records exact target metadata when supplied
+  ---
+  duration_ms: 28.245542
+  type: 'test'
+  ...
+# Subtest: fails when every tracked file is excluded
+ok 25 - fails when every tracked file is excluded
+  ---
+  duration_ms: 259.134875
+  type: 'test'
+  ...
+1..25
+# tests 25
+# suites 0
+# pass 25
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 15027.174375
+--- command summary ---
+end_utc=2026-04-21T15:01:09Z
+exit_code=0
+result=PASS

@@ -1,0 +1,27 @@
+command_log_version=1
+command=unzip -l artifacts/codex/clinical-input-cwp01-karte-order-persistence-20260421.zip
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main
+runId=20260421T142818Z
+start_utc=2026-04-21T14:38:19Z
+--- command output ---
+Archive:  artifacts/codex/clinical-input-cwp01-karte-order-persistence-20260421.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+     7456  04-21-2026 15:41   docs/codex/clinical-input-cwp01-karte-order-persistence-20260421/README.md
+     1328  04-21-2026 15:40   docs/codex/README.md
+     7978  04-21-2026 15:40   docs/README.md
+    10006  04-21-2026 15:40   server-modernized/src/test/java/open/dolphin/testsupport/CanonicalOrderDocumentFixture.java
+     5240  04-21-2026 15:40   server-modernized/src/test/java/open/dolphin/testsupport/CanonicalOrderDocumentFixtureTest.java
+    17552  04-21-2026 15:40   server-modernized/src/test/java/open/dolphin/session/KarteDocumentOrderModulePersistenceTest.java
+    12682  04-21-2026 15:40   server-modernized/src/test/java/open/dolphin/session/KarteRevisionServiceBeanOrderModuleCloneTest.java
+     9105  04-21-2026 15:40   server-modernized/src/test/java/open/dolphin/rest/KarteRevisionSnapshotContractTest.java
+     5601  04-21-2026 15:24   server-modernized/src/test/java/open/dolphin/rest/KarteRevisionDocumentResponseJsonTest.java
+     5884  04-21-2026 15:24   server-modernized/src/test/java/open/dolphin/rest/KarteDocumentSnapshotContractTest.java
+    18274  04-21-2026 15:40   server-modernized/src/test/java/open/dolphin/security/integrity/DocumentIntegrityServiceTest.java
+---------                     -------
+   101106                     11 files
+
+--- command summary ---
+end_utc=2026-04-21T14:38:19Z
+exit_code=0
+result=PASS
