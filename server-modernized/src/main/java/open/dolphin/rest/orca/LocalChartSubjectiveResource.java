@@ -10,6 +10,9 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
@@ -62,28 +65,32 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
         String facilityId = requireFacilityId(request);
         String patientId = requirePatientId(request, payload, facilityId, runId);
         String soapCategory = requireSoapCategory(request, payload, facilityId, patientId, runId);
+        String displaySection = requireDisplaySection(request, payload, facilityId, patientId, runId, soapCategory);
         String body = requireBody(request, payload, facilityId, patientId, runId);
         PatientModel patient = requirePatient(request, facilityId, patientId, runId);
         UserModel user = requireUser(request, facilityId, patientId, runId);
-        Date performDate = parseDate(payload.getPerformDate(), new Date());
+        Date performDate = requirePerformDate(request, payload.getPerformDate(), new Date(), facilityId, patientId, runId);
         KarteBean karte = requireKarte(request, facilityId, patientId, runId, patient);
 
         DocumentModel document = buildSubjectiveDocument(karte, user, payload, performDate, body, soapCategory);
         long documentId = karteServiceBean.addDocument(document);
+        String recordedAt = Instant.now().toString();
 
         SubjectiveEntryResponse response = new SubjectiveEntryResponse();
         response.setApiResult("00");
         response.setApiResultMessage("処理終了");
         response.setRunId(runId);
         response.setRouteNamespace(ROUTE_NAMESPACE);
-        response.setRecordedAt(Instant.now().toString());
+        response.setRecordedAt(recordedAt);
         response.setMessageDetail("院内ローカル SOAP 記載を登録しました。");
+        response.setEntry(buildReadbackEntry(documentId, patientId, performDate, soapCategory, displaySection, body, recordedAt, user));
 
         Map<String, Object> audit = new HashMap<>();
         audit.put("facilityId", facilityId);
-        audit.put("patientId", payload.getPatientId());
+        audit.put("patientId", patientId);
         audit.put("runId", runId);
         audit.put("soapCategory", soapCategory);
+        audit.put("displaySection", displaySection);
         audit.put("documentId", documentId);
         markSuccessDetails(audit);
         recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.SUCCESS);
@@ -112,6 +119,27 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
         return soapCategory;
     }
 
+    private String requireDisplaySection(HttpServletRequest request, SubjectiveEntryRequest payload, String facilityId,
+            String patientId, String runId, String soapCategory) {
+        if (payload.getDisplaySection() != null && !payload.getDisplaySection().isBlank()
+                && normalizeDisplaySection(payload.getDisplaySection()) == null) {
+            Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
+            audit.put("soapCategory", soapCategory);
+            failSubjectiveRequest(request, audit, "displaySection", "displaySection must be free/subjective/objective/assessment/plan");
+        }
+        String displaySection = normalizeDisplaySection(payload.getDisplaySection());
+        if (displaySection == null) {
+            return defaultDisplaySection(soapCategory);
+        }
+        String mappedCategory = categoryForDisplaySection(displaySection);
+        if (mappedCategory == null || !mappedCategory.equals(soapCategory)) {
+            Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
+            audit.put("soapCategory", soapCategory);
+            failSubjectiveRequest(request, audit, "displaySection", "displaySection must match soapCategory");
+        }
+        return displaySection;
+    }
+
     private String requireBody(HttpServletRequest request, SubjectiveEntryRequest payload, String facilityId,
             String patientId, String runId) {
         String body = payload.getBody();
@@ -124,6 +152,21 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
             failSubjectiveRequest(request, audit, "body", "body must be <= 1000 characters");
         }
         return body;
+    }
+
+    private Date requirePerformDate(HttpServletRequest request, String input, Date defaultValue, String facilityId,
+            String patientId, String runId) {
+        if (input == null || input.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            LocalDate parsed = LocalDate.parse(input.trim());
+            return Date.from(parsed.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        } catch (DateTimeParseException ex) {
+            Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
+            failSubjectiveRequest(request, audit, "performDate", "performDate must be yyyy-MM-dd");
+            return defaultValue;
+        }
     }
 
     private PatientModel requirePatient(HttpServletRequest request, String facilityId, String patientId, String runId) {
@@ -220,6 +263,21 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
         return document;
     }
 
+    private SubjectiveEntryResponse.Entry buildReadbackEntry(long documentId, String patientId, Date performDate,
+            String soapCategory, String displaySection, String body, String recordedAt, UserModel user) {
+        SubjectiveEntryResponse.Entry entry = new SubjectiveEntryResponse.Entry();
+        entry.setDocumentId(documentId);
+        entry.setPatientId(patientId);
+        entry.setPerformDate(ModelUtils.getDateAsString(performDate));
+        entry.setSoapCategory(soapCategory);
+        entry.setDisplaySection(displaySection);
+        entry.setBody(body);
+        entry.setRecordedAt(recordedAt);
+        entry.setAuthorUserId(user.getUserId());
+        entry.setAuthorName(user.getCommonName());
+        return entry;
+    }
+
     private String normalizeSoapCategory(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -231,6 +289,37 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
         return "S".equals(value) || "O".equals(value) || "A".equals(value) || "P".equals(value);
     }
 
+    private String normalizeDisplaySection(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "free", "subjective", "objective", "assessment", "plan" -> normalized;
+            default -> null;
+        };
+    }
+
+    private String defaultDisplaySection(String soapCategory) {
+        return switch (soapCategory) {
+            case "S" -> "subjective";
+            case "O" -> "objective";
+            case "A" -> "assessment";
+            case "P" -> "plan";
+            default -> "subjective";
+        };
+    }
+
+    private String categoryForDisplaySection(String displaySection) {
+        return switch (displaySection) {
+            case "free", "subjective" -> "S";
+            case "objective" -> "O";
+            case "assessment" -> "A";
+            case "plan" -> "P";
+            default -> null;
+        };
+    }
+
     private String resolveStampRole(String soapCategory) {
         if ("P".equals(soapCategory)) {
             return IInfoModel.ROLE_P_SPEC;
@@ -238,11 +327,4 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
         return IInfoModel.ROLE_SOA_SPEC;
     }
 
-    private Date parseDate(String input, Date defaultValue) {
-        if (input == null || input.isBlank()) {
-            return defaultValue;
-        }
-        Date parsed = ModelUtils.getDateAsObject(input);
-        return parsed != null ? parsed : defaultValue;
-    }
 }

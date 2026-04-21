@@ -24,27 +24,45 @@ const renderWithQueryClient = (ui: ReactNode) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(postChartSubjectiveEntry).mockResolvedValue({
+  vi.mocked(postChartSubjectiveEntry).mockImplementation(async (payload) => ({
     ok: true,
     status: 200,
     apiResult: '00',
     apiResultMessage: '処理終了',
     runId: 'RUN-SOAP-LOCAL',
-  });
+    recordedAt: `2026-04-10T00:00:0${vi.mocked(postChartSubjectiveEntry).mock.calls.length}Z`,
+    entry: {
+      documentId: 9000 + vi.mocked(postChartSubjectiveEntry).mock.calls.length,
+      patientId: payload.patientId,
+      performDate: payload.performDate,
+      soapCategory: payload.soapCategory,
+      displaySection: payload.displaySection,
+      body: payload.body,
+      recordedAt: `2026-04-10T00:00:0${vi.mocked(postChartSubjectiveEntry).mock.calls.length}Z`,
+      authorName: 'Server Doctor',
+    },
+  }));
 });
 
-afterEach(() => {
-  cleanup();
-});
+const sectionCases = [
+  ['Free を記載してください。', '自由記載の主観情報', 'free', 'S'],
+  ['Subjective を記載してください。', '主訴あり', 'subjective', 'S'],
+  ['Objective を記載してください。', '咽頭発赤あり', 'objective', 'O'],
+  ['Assessment を記載してください。', '急性咽頭炎疑い', 'assessment', 'A'],
+  ['Plan を記載してください。', '内服と再診案内', 'plan', 'P'],
+] as const;
 
 describe('SoapNotePanel local readback contract', () => {
-  it('maps Free to local S category, appends canonical local history, and reloads from that history', async () => {
+  it('saves S/O/A/P/free from SOAP server response and remounts from canonical readback history', async () => {
     const user = userEvent.setup();
-    const captured: SoapEntry[] = [];
+    let history: SoapEntry[] = [];
+    const appendHistory = (entries: SoapEntry[]) => {
+      history = [...history, ...entries];
+    };
 
     renderWithQueryClient(
       <SoapNotePanel
-        history={[]}
+        history={history}
         meta={{
           runId: 'RUN-SOAP-READBACK',
           patientId: 'P-SOAP-001',
@@ -53,37 +71,49 @@ describe('SoapNotePanel local readback contract', () => {
           visitDate: '2026-04-10',
         }}
         author={{ role: 'doctor', displayName: 'Dr. Soap', userId: 'doctor01' }}
-        onAppendHistory={(entries) => captured.push(...entries)}
+        onAppendHistory={appendHistory}
       />,
     );
 
-    await user.type(screen.getByPlaceholderText('Free を記載してください。'), '自由記載の主観情報');
+    for (const [placeholder, body] of sectionCases) {
+      await user.type(screen.getByPlaceholderText(placeholder), body);
+    }
     await user.click(screen.getByRole('button', { name: '保存' }));
 
-    await waitFor(() => {
-      expect(postChartSubjectiveEntry).toHaveBeenCalledWith({
-        patientId: 'P-SOAP-001',
-        performDate: '2026-04-10',
-        soapCategory: 'S',
-        body: '自由記載の主観情報',
-      });
+    await waitFor(() => expect(postChartSubjectiveEntry).toHaveBeenCalledTimes(sectionCases.length));
+    sectionCases.forEach(([, body, displaySection, soapCategory], index) => {
+      expect(postChartSubjectiveEntry).toHaveBeenNthCalledWith(
+        index + 1,
+        expect.objectContaining({
+          patientId: 'P-SOAP-001',
+          performDate: '2026-04-10',
+          soapCategory,
+          displaySection,
+          body,
+        }),
+      );
     });
-    await waitFor(() => expect(captured).toHaveLength(1));
-    expect(captured[0]).toEqual(
-      expect.objectContaining({
-        section: 'free',
-        body: '自由記載の主観情報',
-        patientId: 'P-SOAP-001',
-        visitDate: '2026-04-10',
-      }),
+    await waitFor(() => expect(history).toHaveLength(sectionCases.length));
+    expect(history).toEqual(
+      expect.arrayContaining(
+        sectionCases.map(([, body, displaySection]) =>
+          expect.objectContaining({
+            section: displaySection,
+            body,
+            authorName: 'Server Doctor',
+            patientId: 'P-SOAP-001',
+            visitDate: '2026-04-10',
+          }),
+        ),
+      ),
     );
-    expect(screen.getByText('SOAP保存完了（ローカル下書き + ローカルカルテ 1 件）')).toBeInTheDocument();
+    expect(screen.getByText('SOAP保存完了（ローカル下書き + ローカルカルテ 5 件）')).toBeInTheDocument();
 
     cleanup();
 
     renderWithQueryClient(
       <SoapNotePanel
-        history={captured}
+        history={history}
         meta={{
           runId: 'RUN-SOAP-READBACK-RELOAD',
           patientId: 'P-SOAP-001',
@@ -95,7 +125,14 @@ describe('SoapNotePanel local readback contract', () => {
       />,
     );
 
-    expect(screen.getByPlaceholderText('Free を記載してください。')).toHaveValue('自由記載の主観情報');
+    sectionCases.forEach(([placeholder, body]) => {
+      expect(screen.getByPlaceholderText(placeholder)).toHaveValue(body);
+    });
+    expect(screen.getByText('Free は院内ローカル保存時に S として記録し、保存応答から再読込した場合も Free 欄へ戻します。')).toBeInTheDocument();
     expect(screen.getAllByText(/最終更新:/).length).toBeGreaterThan(0);
   });
+});
+
+afterEach(() => {
+  cleanup();
 });

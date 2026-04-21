@@ -11,6 +11,7 @@ public class SubjectiveEntryRequest {
     private String patientId;
     private String performDate;
     private String soapCategory;
+    private String displaySection;
     private String physicianCode;
     private String body;
 
@@ -36,6 +37,14 @@ public class SubjectiveEntryRequest {
 
     public void setSoapCategory(String soapCategory) {
         this.soapCategory = soapCategory;
+    }
+
+    public String getDisplaySection() {
+        return displaySection;
+    }
+
+    public void setDisplaySection(String displaySection) {
+        this.displaySection = displaySection;
     }
 
     public String getPhysicianCode() {

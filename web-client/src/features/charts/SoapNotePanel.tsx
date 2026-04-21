@@ -28,7 +28,12 @@ import {
 } from './soapNote';
 import { SubjectivesPanel } from './soap/SubjectivesPanel';
 import { appendImageAttachmentPlaceholders, type ChartImageAttachment } from './documentImageAttach';
-import { postChartSubjectiveEntry, type ChartSubjectiveEntryRequest } from './soap/subjectiveChartApi';
+import {
+  postChartSubjectiveEntry,
+  type ChartSubjectiveEntryReadback,
+  type ChartSubjectiveEntryRequest,
+  type ChartSubjectiveEntryResponse,
+} from './soap/subjectiveChartApi';
 import { RevisionHistoryDrawer } from './revisions/RevisionHistoryDrawer';
 import type { RpHistoryEntry } from './karteExtrasApi';
 import type { OrderBundle } from './orderBundleApi';
@@ -169,6 +174,36 @@ const resolveSoapCategory = (section: SoapSectionKey): 'S' | 'O' | 'A' | 'P' | n
     default:
       return null;
   }
+};
+
+const SOAP_SECTION_SUPPORT_TEXT: Record<SoapSectionKey, string> = {
+  free: 'Free は院内ローカル保存時に S として記録し、保存応答から再読込した場合も Free 欄へ戻します。',
+  subjective: '自覚症状・主訴など S に相当する内容を記載します。',
+  objective: '所見・検査値など O に相当する内容を記載します。',
+  assessment: '評価・鑑別など A に相当する内容を記載します。',
+  plan: '方針・処方・検査予定など P に相当する内容を記載します。',
+};
+
+const isSoapSectionKey = (value: unknown): value is SoapSectionKey =>
+  value === 'free' || value === 'subjective' || value === 'objective' || value === 'assessment' || value === 'plan';
+
+const buildCanonicalSoapEntryFromReadback = (
+  fallback: SoapEntry,
+  readback?: ChartSubjectiveEntryReadback,
+  recordedAt?: string,
+): SoapEntry => {
+  const section = isSoapSectionKey(readback?.displaySection) ? readback.displaySection : fallback.section;
+  const authoredAt = readback?.recordedAt ?? recordedAt ?? fallback.authoredAt;
+  return {
+    ...fallback,
+    id: typeof readback?.documentId === 'number' ? `local-subjective-${readback.documentId}-${section}` : fallback.id,
+    section,
+    body: readback?.body ?? fallback.body,
+    authoredAt,
+    authorName: readback?.authorName ?? fallback.authorName,
+    patientId: readback?.patientId ?? fallback.patientId,
+    visitDate: readback?.performDate ?? fallback.visitDate,
+  };
 };
 
 const EMPTY_ORDER_BUNDLE_EDITING_CONTEXT: OrderBundleEditingContext = {
@@ -351,8 +386,25 @@ export function SoapNotePanel({
   const [subjectivesOpen, setSubjectivesOpen] = useState(false);
   const [clearHistoryDialogOpen, setClearHistoryDialogOpen] = useState(false);
   const [saveRequestTokenHandled, setSaveRequestTokenHandled] = useState<string | null>(null);
+  const dirtySectionsRef = useRef<Set<SoapSectionKey>>(new Set());
 
   const latestBySection = useMemo(() => getLatestSoapEntries(history), [history]);
+  const markSectionsDirty = useCallback((sections: SoapSectionKey[]) => {
+    sections.forEach((section) => dirtySectionsRef.current.add(section));
+  }, []);
+  const markSectionsClean = useCallback((sections: SoapSectionKey[]) => {
+    sections.forEach((section) => dirtySectionsRef.current.delete(section));
+  }, []);
+  const clearPendingTemplatesForSections = useCallback((sections: SoapSectionKey[]) => {
+    if (sections.length === 0) return;
+    setPendingTemplate((prev) => {
+      const next = { ...prev };
+      sections.forEach((section) => {
+        delete next[section];
+      });
+      return next;
+    });
+  }, []);
   const visibleSections = useMemo<SoapSectionKey[]>(() => {
     switch (viewMode) {
       case 'soap':
@@ -728,18 +780,54 @@ export function SoapNotePanel({
   );
 
   useEffect(() => {
-    setDraft(buildSoapDraftFromHistory(history));
+    const nextDraft = buildSoapDraftFromHistory(history);
+    const dirtySections = dirtySectionsRef.current;
+    setDraft((prev) => {
+      if (dirtySections.size === 0) return nextDraft;
+      return SOAP_SECTIONS.reduce<SoapDraft>(
+        (acc, section) => {
+          acc[section] = dirtySections.has(section) ? (prev[section] ?? '') : nextDraft[section];
+          return acc;
+        },
+        {
+          free: '',
+          subjective: '',
+          objective: '',
+          assessment: '',
+          plan: '',
+        },
+      );
+    });
     setTemplateSelection('');
     setTemplateDialogOpen(false);
-    setPendingTemplate({});
-    setFeedback(null);
-    setSyncState({
-      localSaved: false,
-      serverSynced: true,
-      isSaving: false,
-      error: undefined,
-      savedAt: undefined,
+    setPendingTemplate((prev) => {
+      if (dirtySectionsRef.current.size === 0) return {};
+      const next = { ...prev };
+      SOAP_SECTIONS.forEach((section) => {
+        if (!dirtySectionsRef.current.has(section)) {
+          delete next[section];
+        }
+      });
+      return next;
     });
+    if (dirtySectionsRef.current.size === 0) {
+      setFeedback(null);
+    }
+    setSyncState((prev) =>
+      dirtySectionsRef.current.size === 0
+        ? {
+            localSaved: false,
+            serverSynced: true,
+            isSaving: false,
+            error: undefined,
+            savedAt: undefined,
+          }
+        : {
+            ...prev,
+            serverSynced: false,
+            isSaving: false,
+          },
+    );
     setSubjectivesOpen(false);
   }, [historySignature]);
 
@@ -768,6 +856,7 @@ export function SoapNotePanel({
       return;
     }
     markDirtyPendingSync();
+    markSectionsDirty(SOAP_SECTIONS);
     setDraft(replaceDraftRequest.draft);
     setFeedback(replaceDraftRequest.note ?? 'SOAPドラフトをオーダーセットから反映しました。');
     onDraftDirtyChange?.({
@@ -784,6 +873,7 @@ export function SoapNotePanel({
     meta.receptionId,
     meta.visitDate,
     markDirtyPendingSync,
+    markSectionsDirty,
     onDraftDirtyChange,
     readOnly,
     readOnlyReason,
@@ -797,6 +887,7 @@ export function SoapNotePanel({
       return;
     }
     markDirtyPendingSync();
+    markSectionsDirty([applyDraftPatch.section]);
     setDraft((prev) => ({ ...prev, [applyDraftPatch.section]: applyDraftPatch.body }));
     setFeedback(applyDraftPatch.note ?? `${SOAP_SECTION_LABELS[applyDraftPatch.section]} を転記しました。`);
     onDraftDirtyChange?.({
@@ -810,6 +901,7 @@ export function SoapNotePanel({
   }, [
     applyDraftPatch?.token,
     markDirtyPendingSync,
+    markSectionsDirty,
     meta.appointmentId,
     meta.patientId,
     meta.receptionId,
@@ -832,6 +924,7 @@ export function SoapNotePanel({
     }
     markDirtyPendingSync();
     const targetSection = attachmentInsert.section ?? 'free';
+    markSectionsDirty([targetSection]);
     setDraft((prev) => ({
       ...prev,
       [targetSection]: appendImageAttachmentPlaceholders(prev[targetSection], attachmentInsert.attachment),
@@ -854,6 +947,7 @@ export function SoapNotePanel({
     meta.receptionId,
     meta.visitDate,
     markDirtyPendingSync,
+    markSectionsDirty,
     onAttachmentInserted,
     onDraftDirtyChange,
     readOnly,
@@ -863,6 +957,7 @@ export function SoapNotePanel({
   const updateDraft = useCallback(
     (section: SoapSectionKey, value: string) => {
       markDirtyPendingSync();
+      markSectionsDirty([section]);
       setDraft((prev) => ({ ...prev, [section]: value }));
       setFeedback(null);
       onDraftDirtyChange?.({
@@ -874,7 +969,7 @@ export function SoapNotePanel({
         dirtySources: ['soap'],
       });
     },
-    [markDirtyPendingSync, meta.appointmentId, meta.patientId, meta.receptionId, meta.visitDate, onDraftDirtyChange],
+    [markDirtyPendingSync, markSectionsDirty, meta.appointmentId, meta.patientId, meta.receptionId, meta.visitDate, onDraftDirtyChange],
   );
 
   const handleTemplateInsert = useCallback(
@@ -897,6 +992,7 @@ export function SoapNotePanel({
       setPendingTemplate((prev) => ({ ...prev, [section]: templateId }));
       setTemplateSelection('');
       markDirtyPendingSync();
+      markSectionsDirty([section]);
       const authoredAt = new Date().toISOString();
       recordChartsAuditEvent({
         action: 'SOAP_TEMPLATE_APPLY',
@@ -935,6 +1031,7 @@ export function SoapNotePanel({
     [
       author,
       markDirtyPendingSync,
+      markSectionsDirty,
       meta.appointmentId,
       meta.cacheHit,
       meta.dataSourceTransition,
@@ -969,6 +1066,7 @@ export function SoapNotePanel({
       const body = bodyRaw.trim();
       const prior = latestBySection.get(section);
       const priorBody = (prior?.body ?? '').trim();
+      const sectionDirty = dirtySectionsRef.current.has(section) || Boolean(pendingTemplate[section]);
 
       if (!body) {
         if (priorBody.length > 0) {
@@ -977,6 +1075,7 @@ export function SoapNotePanel({
         return;
       }
 
+      if (!sectionDirty) return;
       if (prior && body === priorBody && !pendingTemplate[section]) return;
 
       const action = prior ? 'update' : 'save';
@@ -1088,14 +1187,18 @@ export function SoapNotePanel({
     }
 
     const performDate = meta.visitDate ?? new Date().toISOString().slice(0, 10);
-    const requests = entries.reduce<ChartSubjectiveEntryRequest[]>((acc, entry) => {
+    const requests = entries.reduce<Array<{ entry: SoapEntry; payload: ChartSubjectiveEntryRequest }>>((acc, entry) => {
       const soapCategory = resolveSoapCategory(entry.section);
       if (!soapCategory) return acc;
       acc.push({
-        patientId: meta.patientId as string,
-        performDate,
-        soapCategory,
-        body: entry.body,
+        entry,
+        payload: {
+          patientId: meta.patientId as string,
+          performDate,
+          soapCategory,
+          displaySection: entry.section,
+          body: entry.body,
+        },
       });
       return acc;
     }, []);
@@ -1126,21 +1229,36 @@ export function SoapNotePanel({
 
     try {
       const results = await Promise.all(
-        requests.map(async (payload) => {
+        requests.map(async ({ entry, payload }) => {
           try {
-            return await postChartSubjectiveEntry(payload);
+            const result = await postChartSubjectiveEntry(payload);
+            return { entry, result };
           } catch (error) {
-            return { ok: false, status: 0, apiResultMessage: String(error) };
+            const result: ChartSubjectiveEntryResponse = { ok: false, status: 0, apiResultMessage: String(error) };
+            return { entry, result };
           }
         }),
       );
-      const failures = results.filter((result) => !result.ok || (result.apiResult && result.apiResult !== '00'));
+      const failures = results.filter(({ result }) => !result.ok || (result.apiResult && result.apiResult !== '00'));
+      const successfulEntries = results
+        .filter(({ result }) => result.ok && (!result.apiResult || result.apiResult === '00'))
+        .map(({ entry, result }) => buildCanonicalSoapEntryFromReadback(entry, result.entry, result.recordedAt));
       if (failures.length > 0) {
-        const detail = failures[0]?.apiResultMessage ?? failures[0]?.apiResult ?? 'unknown';
-        const message = `SOAPローカルカルテ保存に失敗しました: ${detail}（再試行してください）`;
+        const successfulSections = successfulEntries.map((entry) => entry.section);
+        if (successfulEntries.length > 0) {
+          markSectionsClean(successfulSections);
+          clearPendingTemplatesForSections(successfulSections);
+          onAppendHistory?.(successfulEntries);
+          onAuditLogged?.();
+        }
+        const detail = failures[0]?.result.apiResultMessage ?? failures[0]?.result.apiResult ?? 'unknown';
+        const message =
+          successfulEntries.length > 0
+            ? `SOAPローカルカルテ保存は一部失敗しました: 成功 ${successfulEntries.length} 件 / 失敗 ${failures.length} 件。${detail}（未保存欄を再試行してください）`
+            : `SOAPローカルカルテ保存に失敗しました: ${detail}（再試行してください）`;
         setFeedback(message);
         setSyncState({
-          localSaved: false,
+          localSaved: successfulEntries.length > 0,
           serverSynced: false,
           isSaving: false,
           error: detail,
@@ -1154,10 +1272,12 @@ export function SoapNotePanel({
           visitDate: meta.visitDate,
           dirtySources: ['soap'],
         });
-        return { ok: false, message, serverSynced: false, localSaved: false, error: detail };
+        return { ok: false, message, serverSynced: false, localSaved: successfulEntries.length > 0, error: detail };
       }
 
-      onAppendHistory?.(entries);
+      const successfulSections = successfulEntries.map((entry) => entry.section);
+      markSectionsClean(successfulSections);
+      onAppendHistory?.(successfulEntries);
       onAuditLogged?.();
       setPendingTemplate({});
       const message = `SOAP保存完了（ローカル下書き + ローカルカルテ ${results.length} 件）`;
@@ -1201,8 +1321,10 @@ export function SoapNotePanel({
     }
   }, [
     author,
+    clearPendingTemplatesForSections,
     draft,
     latestBySection,
+    markSectionsClean,
     meta.appointmentId,
     meta.cacheHit,
     meta.dataSourceTransition,
@@ -1241,6 +1363,7 @@ export function SoapNotePanel({
 
   const handleClear = useCallback(() => {
     markDirtyPendingSync();
+    markSectionsDirty(SOAP_SECTIONS);
     setDraft({
       free: '',
       subjective: '',
@@ -1258,7 +1381,7 @@ export function SoapNotePanel({
       visitDate: meta.visitDate,
       dirtySources: ['soap'],
     });
-  }, [markDirtyPendingSync, meta.appointmentId, meta.patientId, meta.receptionId, meta.visitDate, onDraftDirtyChange]);
+  }, [markDirtyPendingSync, markSectionsDirty, meta.appointmentId, meta.patientId, meta.receptionId, meta.visitDate, onDraftDirtyChange]);
 
   const handleClearHistory = useCallback(() => {
     if (!onClearHistory) return;
@@ -1818,6 +1941,8 @@ export function SoapNotePanel({
                     if (section === 'free') return viewMode === 'free' ? 6 : 4;
                     return viewMode === 'soap' ? 4 : 2;
                   })();
+                  const textareaId = `soap-note-${section}`;
+                  const supportTextId = `${textareaId}-support`;
                   return (
                     <article key={section} className="soap-note__section" data-section={section}>
                       <div className="soap-note__section-header">
@@ -1825,7 +1950,7 @@ export function SoapNotePanel({
                           <span className="soap-note__section-code" aria-hidden="true">
                             {section === 'free' ? 'F' : resolveSoapCategory(section)}
                           </span>
-                          <strong>{SOAP_SECTION_LABELS[section]}</strong>
+                          <label htmlFor={textareaId}>{SOAP_SECTION_LABELS[section]}</label>
                         </div>
                         <div className="soap-note__section-meta">
                           {templateLabel ? <span className="soap-note__section-chip">テンプレ: {templateLabel}</span> : null}
@@ -1838,8 +1963,11 @@ export function SoapNotePanel({
                           )}
                         </div>
                       </div>
+                      <p id={supportTextId} className="soap-note__section-support">
+                        {SOAP_SECTION_SUPPORT_TEXT[section]}
+                      </p>
                       <textarea
-                        id={`soap-note-${section}`}
+                        id={textareaId}
                         name={`soapNote-${section}`}
                         value={draft[section]}
                         onChange={(event) => updateDraft(section, event.target.value)}
@@ -1847,6 +1975,7 @@ export function SoapNotePanel({
                         placeholder={`${SOAP_SECTION_LABELS[section]} を記載してください。`}
                         readOnly={readOnly}
                         aria-readonly={readOnly}
+                        aria-describedby={supportTextId}
                       />
                       <div className="soap-note__section-actions">
                         {section === 'free' ? (

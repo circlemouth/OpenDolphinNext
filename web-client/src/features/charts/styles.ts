@@ -6475,9 +6475,17 @@ export const chartsStyles = css`
     font-weight: 800;
   }
 
-  .soap-note__section-header strong {
+  .soap-note__section-header label {
     color: #0f172a;
     font-size: 0.96rem;
+    font-weight: 800;
+  }
+
+  .soap-note__section-support {
+    margin: 0;
+    color: #475569;
+    font-size: 0.82rem;
+    line-height: 1.45;
   }
 
   .soap-note__section-meta {
