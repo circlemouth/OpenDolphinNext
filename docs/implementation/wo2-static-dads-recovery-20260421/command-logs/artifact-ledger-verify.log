@@ -1,0 +1,13 @@
+command_log_version=1
+command=shasum -a 256 -c artifact-sha256.txt
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/wo2-static-dads-recovery-20260421
+runId=20260421T111148Z
+start_utc=2026-04-21T11:50:47Z
+--- command output ---
+OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip: OK
+OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip.summary.txt: OK
+OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip.secret-scan-review-bundle.log: OK
+--- command summary ---
+end_utc=2026-04-21T11:50:48Z
+exit_code=0
+result=PASS

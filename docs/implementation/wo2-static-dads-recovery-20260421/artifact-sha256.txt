@@ -1,0 +1,5 @@
+# artifact-sha256 for 20260421T111148Z
+# Verify from this directory with: shasum -a 256 -c artifact-sha256.txt
+0182ee0475406de33dc9dba463ba5ab1bafba91b64b7c7140de9b9de6a02a482  OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip
+def8781c0d753912260a4c03a640ecb154632200db097ceada11eb8564d0d100  OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip.summary.txt
+aee52ade1be48162695fb01e15921d603812fc3573eb825a3ebedbe0c0aa08c1  OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip.secret-scan-review-bundle.log
