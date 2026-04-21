@@ -1,44 +1,54 @@
-# Unified ORCA post-retry + Clinical Wave 1 Codex docset
+# Unified ORCA post-retry + Clinical Wave 1 workplan docset
 
-このドキュメントセットは、OpenDolphinNext の ORCA Trial Phase 3 post-retry hardening と Clinical Input Wave 1 を、1本の巨大プロンプトではなく、**統一された段階計画**として進めるための作業指示セットです。
+This docset is the controlled plan for OpenDolphinNext work after ORCA Phase 3 retry.
 
-## 使い方
+## Current version
 
-Codex には最初に `10_CODEX_BOOTSTRAP_PROMPT.md` だけを貼り付けてください。Codex main agent はこの docset を repository に配置し、`02_WORK_ORDERS.md` の Work Order 順に進めます。
+Autonomous Work Order version: `20260421-autonomous-v2`
 
-## 基本方針
+Use this file first:
 
-- Phase 3 retry は既に 00001 に対して 1回実行済み。二重実行は禁止。
-- Phase 4 / fullflow / 追加 mutation は、この docset の全 Work Order で実行禁止。
-- Clinical Wave 1 は local/server/component/static coverage の hardening であり、live ORCA success claim ではない。
-- 作業は Work Order ごとに停止点を置き、巨大な並列実行を避ける。
-- subagent は使うが、同時 active subagent は原則 2、最大 3。
-- 各 subagent は個別 worktree / branch で作業する。
+```text
+docs/codex/unified-orca-postretry-clinical-wave1-20260421/10_CODEX_BOOTSTRAP_PROMPT.md
+```
 
-## 推奨 current work order
+The bootstrap prompt now tells Codex to run **WO-0 and WO-1 only**, with light self-repair allowed inside WO-1 and explicit hard/soft stop conditions.
 
-まずは **WO-1: ORCA Phase 3 post-retry evidence/C7 hardening** だけを実施してください。Clinical Wave 1 は WO-1/WO-2 の review 後に進めます。
+## Why Work Orders
 
-## 主要ファイル
+The combined scope is too large for one undivided Codex task. The work is staged:
 
-- `00_CURRENT_CONTEXT.md` — 現在の事実関係
-- `01_EXECUTION_STRATEGY.md` — 破綻させない進め方
-- `02_WORK_ORDERS.md` — 統合計画全体
-- `03_ORCA_POSTRETRY_GATE.md` — Phase 3 post-retry hardening
-- `04_STATIC_DADS_GATE.md` — static failure / DADS
-- `05_CLINICAL_WAVE1_GATE.md` — clinical Wave 1 integration
-- `06_PHASE4_HANDOFF_GATE.md` — Phase 4 handoff preparation only
-- `07_EVIDENCE_SANITIZE_POLICY.md` — evidence / sanitize policy
-- `08_PACKAGE_POLICY.md` — final package policy
-- `09_SUBAGENT_PROMPTS.md` — subagent prompts by Work Order
-- `10_CODEX_BOOTSTRAP_PROMPT.md` — Codex へ最初に渡す短い prompt
-- `11_CHATGPT_REVIEW_PROMPT.md` — Work Order 完了後レビュー用 prompt
-- `12_REPORT_TEMPLATES.md` — reports / matrices templates
-- `13_ACCEPTANCE_MATRIX.md` — overall acceptance matrix
+1. WO-0 inventory and docset verification
+2. WO-1 ORCA post-retry evidence/C7 hardening
+3. WO-2 static/DADS recovery
+4. WO-3 Clinical Wave 1 batch 1
+5. WO-4 Clinical Wave 1 batch 2
+6. WO-5 Phase 4 handoff docs only
 
-## Reference material included
+Each Work Order must stop with a review package and report. Do not silently proceed to the next Work Order.
 
-- `references/clinical-input-wave1-20260421/` — uploaded Clinical Input Wave 1 docset copy
-- `references/dads_app_ui_design_rules_20260411.md` — DADS summary used for UI decisions
-- `references/phase3-retry-20260421T060636Z/` — Phase 3 retry sanitized summary snippets
-- `references/readonly-rerun-20260420T044655Z/` — prior read-only rerun summary snippets
+## Universal safety rules
+
+- Phase 3 retry has already run once for candidate `00001`; do not rerun it.
+- Do not run Phase 4 in this docset unless a future explicit Phase 4 execution prompt is created and approved.
+- Do not run fullflow.
+- Do not run new live ORCA mutation.
+- Do not save raw credentials, raw ORCA bodies, raw patient details, raw insurance details, HAR, traces, videos, screenshots, or raw network dumps.
+- Do not treat `not_run` or `not_verified` as success.
+
+## New autonomy policy
+
+Read:
+
+```text
+14_MAIN_AGENT_AUTONOMY_AND_STOP_POLICY.md
+```
+
+It defines:
+
+- light self-repair allowed inside the active Work Order
+- changes that require stopping instead of self-repair
+- hard stop conditions
+- soft stop conditions
+- subagent limits
+- required report fields
