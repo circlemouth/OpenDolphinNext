@@ -106,6 +106,7 @@ class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
         SubjectiveEntryRequest payload = new SubjectiveEntryRequest();
         payload.setPatientId("00001");
         payload.setSoapCategory("S");
+        payload.setPerformDate("2026-04-10");
         payload.setBody("咽頭痛あり");
 
         SubjectiveEntryResponse response = resource.postSubjective(servletRequest, payload);
@@ -121,6 +122,7 @@ class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("主訴", saved.getDocInfoModel().getTitle());
         assertEquals(IInfoModel.DOCTYPE_KARTE, saved.getDocInfoModel().getDocType());
         assertEquals(IInfoModel.PURPOSE_RECORD, saved.getDocInfoModel().getPurpose());
+        assertEquals("2026-04-10", open.dolphin.infomodel.ModelUtils.getDateAsString(saved.getStarted()));
         assertNotNull(saved.getModules());
         assertEquals(1, saved.getModules().size());
 
@@ -134,6 +136,46 @@ class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
         assertTrue(module.getModel() instanceof ProgressCourse);
         ProgressCourse progress = (ProgressCourse) module.getModel();
         assertEquals("咽頭痛あり", progress.getFreeText());
+    }
+
+    @Test
+    void postSubjectivePersistsPlanCategoryWithPlanStampRole() {
+        SubjectiveEntryRequest payload = new SubjectiveEntryRequest();
+        payload.setPatientId("00001");
+        payload.setSoapCategory("P");
+        payload.setPerformDate("2026-04-11");
+        payload.setBody("処方継続");
+
+        SubjectiveEntryResponse response = resource.postSubjective(servletRequest, payload);
+
+        assertEquals("00", response.getApiResult());
+        DocumentModel saved = fakeKarteServiceBean.getLastAddedDocument();
+        assertNotNull(saved);
+        assertEquals("2026-04-11", open.dolphin.infomodel.ModelUtils.getDateAsString(saved.getStarted()));
+        ModuleModel module = saved.getModules().get(0);
+        assertEquals(IInfoModel.ROLE_P_SPEC, module.getModuleInfoBean().getStampRole());
+        ProgressCourse progress = (ProgressCourse) module.getModel();
+        assertEquals("処方継続", progress.getFreeText());
+    }
+
+    @Test
+    void postSubjectiveInvalidPerformDateCurrentlyFallsBackAndPersistsBlockerEvidence() {
+        SubjectiveEntryRequest payload = new SubjectiveEntryRequest();
+        payload.setPatientId("00001");
+        payload.setSoapCategory("S");
+        payload.setPerformDate("not-a-date");
+        payload.setBody("不正日付でも登録される現状確認");
+
+        SubjectiveEntryResponse response = resource.postSubjective(servletRequest, payload);
+
+        assertEquals("00", response.getApiResult());
+        assertEquals(1, fakeKarteServiceBean.getAddDocumentCalls());
+        DocumentModel saved = fakeKarteServiceBean.getLastAddedDocument();
+        assertNotNull(saved);
+        assertNotNull(saved.getStarted());
+        assertNotNull(saved.getConfirmed());
+        ProgressCourse progress = (ProgressCourse) saved.getModules().get(0).getModel();
+        assertEquals("不正日付でも登録される現状確認", progress.getFreeText());
     }
 
     @Test
