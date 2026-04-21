@@ -9,10 +9,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Calendar;
 import java.util.Date;
 import open.dolphin.infomodel.AttachmentModel;
+import open.dolphin.infomodel.BundleDolphin;
+import open.dolphin.infomodel.ClaimItem;
 import open.dolphin.infomodel.DocInfoModel;
 import open.dolphin.infomodel.DocumentModel;
 import open.dolphin.infomodel.ExtRefModel;
+import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.KarteBean;
+import open.dolphin.infomodel.ModelUtils;
 import open.dolphin.infomodel.ModuleInfoBean;
 import open.dolphin.infomodel.ModuleModel;
 import open.dolphin.infomodel.SchemaModel;
@@ -65,6 +69,27 @@ class KarteRevisionSnapshotContractTest {
         assertThat(actualNode.path("modules")).hasSize(1);
         assertThat(actualNode.path("schema")).hasSize(1);
         assertThat(actualNode.path("attachment")).hasSize(1);
+    }
+
+    @Test
+    void getRevisionPreservesOrderModuleEntityMetadataAndBeanJsonInSnapshotResponse() throws Exception {
+        DocumentModel resourceDocument = buildDocument();
+        replaceFirstModuleWithOrderModule(resourceDocument);
+
+        when(httpServletRequest.getRemoteUser()).thenReturn("FAC_A:user01");
+        when(karteRevisionServiceBean.findFacilityIdByRevisionId(111L)).thenReturn("FAC_A");
+        when(karteRevisionServiceBean.getRevisionSnapshotLight(111L)).thenReturn(resourceDocument);
+
+        Object actualResponse = resource.getRevision(111L);
+        JsonNode actualNode = JSON.readTree(JSON.writeValueAsString(actualResponse));
+
+        JsonNode moduleNode = actualNode.path("modules").get(0);
+        assertThat(moduleNode.path("moduleInfoBean").path("entity").asText()).isEqualTo(IInfoModel.ENTITY_MED_ORDER);
+        assertThat(moduleNode.path("moduleInfoBean").path("stampName").asText()).isEqualTo("テスト処方");
+        assertThat(moduleNode.path("moduleInfoBean").path("stampRole").asText()).isEqualTo(IInfoModel.ROLE_P);
+        assertThat(moduleNode.path("moduleInfoBean").path("stampNumber").asInt()).isEqualTo(1);
+        assertThat(moduleNode.path("beanJson").asText()).contains("TEST-DRUG-001", "テスト薬剤", "1日1回");
+        assertThat(resourceDocument.getModules().get(0).getModel()).isInstanceOf(BundleDolphin.class);
     }
 
     private static DocumentModel buildDocument() {
@@ -160,6 +185,38 @@ class KarteRevisionSnapshotContractTest {
         document.addAttachment(attachment);
 
         return document;
+    }
+
+    private static void replaceFirstModuleWithOrderModule(DocumentModel document) {
+        ModuleModel module = document.getModules().get(0);
+        ModuleInfoBean info = module.getModuleInfoBean();
+        info.setEntity(IInfoModel.ENTITY_MED_ORDER);
+        info.setStampName("テスト処方");
+        info.setStampRole(IInfoModel.ROLE_P);
+        info.setStampNumber(1);
+        module.setModel(buildOrderBundle());
+        module.setBeanJson(ModelUtils.encodeModule(module));
+    }
+
+    private static BundleDolphin buildOrderBundle() {
+        BundleDolphin bundle = new BundleDolphin();
+        bundle.setOrderName("テスト薬剤セット");
+        bundle.setClassCode("212");
+        bundle.setClassCodeSystem("Claim007");
+        bundle.setClassName("処方");
+        bundle.setAdmin("1日1回");
+        bundle.setAdminCode("TEST-USAGE-001");
+        bundle.setAdminCodeSystem("Claim007");
+        bundle.setBundleNumber("1");
+
+        ClaimItem item = new ClaimItem();
+        item.setCode("TEST-DRUG-001");
+        item.setCodeSystem("Claim007");
+        item.setName("テスト薬剤");
+        item.setNumber("1");
+        item.setUnit("錠");
+        bundle.setClaimItem(new ClaimItem[]{item});
+        return bundle;
     }
 
     private static Date dateOf(int year, int month, int dayOfMonth) {

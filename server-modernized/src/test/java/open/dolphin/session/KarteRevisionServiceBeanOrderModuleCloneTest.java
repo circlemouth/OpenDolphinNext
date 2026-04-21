@@ -39,13 +39,45 @@ class KarteRevisionServiceBeanOrderModuleCloneTest {
     }
 
     @Test
+    void getRevisionSnapshotReturnsOrderModuleEntityMetadataPayloadModelAndParentBackreference() {
+        DocumentModel source = buildOrderDocument(55L, "DOC-55", 0L, "TEST-DRUG-001", "テスト薬剤");
+        when(karteServiceBean.getDocuments(List.of(55L))).thenReturn(List.of(source));
+
+        DocumentModel snapshot = service.getRevisionSnapshot(55L);
+
+        assertThat(snapshot).isSameAs(source);
+        assertThat(snapshot.getModules()).hasSize(1);
+        ModuleModel module = snapshot.getModules().get(0);
+        assertThat(module.getDocumentModel()).isSameAs(snapshot);
+        assertThat(module.getModuleInfoBean().getEntity()).isEqualTo(IInfoModel.ENTITY_MED_ORDER);
+        assertThat(module.getModuleInfoBean().getStampName()).isEqualTo("テスト処方");
+        assertThat(module.getModuleInfoBean().getStampRole()).isEqualTo(IInfoModel.ROLE_P);
+        assertThat(module.getModuleInfoBean().getStampNumber()).isEqualTo(1);
+        assertThat(module.getBeanJson()).contains("TEST-DRUG-001", "テスト薬剤", "1日1回");
+        assertThat(module.getModel()).isInstanceOf(BundleDolphin.class);
+        BundleDolphin bundle = (BundleDolphin) module.getModel();
+        assertThat(bundle.getOrderName()).isEqualTo("テスト薬剤セット");
+        assertThat(bundle.getClaimItem()).hasSize(1);
+        assertThat(bundle.getClaimItem()[0].getCode()).isEqualTo("TEST-DRUG-001");
+    }
+
+    @Test
     void restoreRevisionPreservesOrderModuleMetadataPayloadAndRebindsParentReferences() {
+        assertRevisionCreatePreservesOrderModule("restore");
+    }
+
+    @Test
+    void reviseRevisionPreservesOrderModuleMetadataPayloadAndRebindsParentReferences() {
+        assertRevisionCreatePreservesOrderModule("revise");
+    }
+
+    private void assertRevisionCreatePreservesOrderModule(String operation) {
         DocumentModel source = buildOrderDocument(55L, "DOC-55", 0L, "TEST-DRUG-001", "テスト薬剤");
         UserModel actor = actor();
         when(karteServiceBean.getDocuments(List.of(55L))).thenReturn(List.of(source));
         when(karteServiceBean.addDocument(any(DocumentModel.class))).thenReturn(88L);
 
-        long createdId = service.createRevisionFromSource(55L, 44L, "restore", actor);
+        long createdId = service.createRevisionFromSource(55L, 44L, operation, actor);
 
         ArgumentCaptor<DocumentModel> captor = ArgumentCaptor.forClass(DocumentModel.class);
         verify(karteServiceBean).addDocument(captor.capture());
@@ -55,10 +87,10 @@ class KarteRevisionServiceBeanOrderModuleCloneTest {
         assertThat(createdId).isEqualTo(88L);
         assertThat(created.getId()).isZero();
         assertThat(created.getLinkId()).isEqualTo(44L);
-        assertThat(created.getLinkRelation()).isEqualTo("restore");
+        assertThat(created.getLinkRelation()).isEqualTo(operation);
         assertThat(created.getUserModel()).isSameAs(actor);
         assertThat(created.getDocInfoModel().getParentPk()).isEqualTo(44L);
-        assertThat(created.getDocInfoModel().getParentIdRelation()).isEqualTo("restore");
+        assertThat(created.getDocInfoModel().getParentIdRelation()).isEqualTo(operation);
         assertThat(created.getDocInfoModel().getDocId()).isNotEqualTo("DOC-55");
         assertThat(created.getModules()).hasSize(1);
         assertThat(createdModule).isNotSameAs(source.getModules().get(0));
@@ -66,7 +98,7 @@ class KarteRevisionServiceBeanOrderModuleCloneTest {
         assertThat(createdModule.getKarteBean()).isSameAs(source.getKarteBean());
         assertThat(createdModule.getUserModel()).isSameAs(actor);
         assertThat(createdModule.getLinkId()).isEqualTo(44L);
-        assertThat(createdModule.getLinkRelation()).isEqualTo("restore");
+        assertThat(createdModule.getLinkRelation()).isEqualTo(operation);
         assertThat(createdModule.getStatus()).isEqualTo(IInfoModel.STATUS_FINAL);
         assertThat(createdModule.getModuleInfoBean().getEntity()).isEqualTo(IInfoModel.ENTITY_MED_ORDER);
         assertThat(createdModule.getModuleInfoBean().getStampName()).isEqualTo("テスト処方");
