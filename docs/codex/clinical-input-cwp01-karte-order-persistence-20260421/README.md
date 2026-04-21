@@ -4,24 +4,23 @@ RUN_ID: `20260421T062850Z`
 
 ## Purpose
 
-This docset is the evidence skeleton for CWP-01 karte/order persistence verification.
+This docset records the CWP-01 karte/order persistence verification evidence.
 
 CWP-01 is scoped to local chart / karte document persistence and local order persistence tests. It is not evidence of ORCA `medicalmodv2` live mutation success, and it must not be reported as Phase 3, Phase 4, fullflow, reception registration, or live ORCA mutation success.
 
-The final test result is owned by the main integration pass. Any result not produced in this Worker D worktree is recorded as `main integrationで確定`.
+The main integration pass merged the fixture, persistence/readback, revision/integrity, and evidence branches, then ran targeted server tests. No runtime, Playwright, e2e, Phase 3, Phase 4, fullflow, or live ORCA mutation command was run for this package.
 
 ## Verified Scope
 
-Worker D verified only the documentation structure and index wiring for this evidence skeleton.
-
 | Area | Status | Notes |
 |---|---|---|
-| Evidence docset directory | Worker D docs-only | This README defines the boundary and reporting template. |
-| `docs/codex/README.md` index | Worker D docs-only | Link added for the CWP-01 evidence docset. |
-| `docs/README.md` index | Worker D docs-only | Link added under Workflow Docs. |
-| Local chart / karte document persistence tests | main integrationで確定 | Worker D did not run or claim application test success. |
-| Local order persistence tests | main integrationで確定 | Worker D did not run or claim application test success. |
-| Runtime / Playwright / e2e evidence | main integrationで確定 | Worker D did not run runtime, Playwright, e2e, Phase 3, Phase 4, or fullflow. |
+| Evidence docset directory | Verified | This README defines the boundary and reporting result. |
+| `docs/codex/README.md` index | Verified | Link added for the CWP-01 evidence docset. |
+| `docs/README.md` index | Verified | Link added under Workflow Docs. |
+| Local chart / karte document persistence tests | Verified | Targeted server tests passed after main integration. |
+| Local order persistence tests | Verified | `medOrder`, `treatmentOrder`, and `radiologyOrder` fixture/persistence coverage passed. |
+| Revision / snapshot / diff / restore / integrity tests | Verified | Targeted server tests passed after main integration. |
+| Runtime / Playwright / e2e evidence | Not verified | Not run and not claimed. |
 | ORCA `medicalmodv2` live mutation | Out of scope | No live ORCA mutation is allowed or claimed by CWP-01. |
 
 ## Explicit ORCA Boundary
@@ -57,16 +56,16 @@ Do not place the following in this docset, reviewer packages, logs, summaries, o
 
 Allowed evidence is limited to sanitized command summaries, exit codes, bounded test output excerpts without secrets or patient identifiers, and human-written conclusions that distinguish local persistence from ORCA mutation.
 
-## Targeted Command Table Template
+## Targeted Command Results
 
-The main integration agent should replace `main integrationで確定` with the exact command and result after merging the CWP-01 implementation work. Do not pre-fill success for commands that were not run.
+Targeted commands were run from the repository root in the main integration worktree.
 
 | Target | Command | Purpose | Expected boundary | Result |
 |---|---|---|---|---|
-| Server local karte/document persistence | main integrationで確定 | Verify chart / karte document persistence and readback. | Local persistence only; no ORCA live mutation. | main integrationで確定 |
-| Server local order persistence | main integrationで確定 | Verify order payload persistence and readback. | Local persistence only; no ORCA `medicalmodv2` success claim. | main integrationで確定 |
-| Web/local contract tests, if applicable | main integrationで確定 | Verify UI or client contract does not overclaim ORCA success. | Client behavior is UX/contract evidence only. | main integrationで確定 |
-| Documentation link/check | main integrationで確定 | Confirm docset and index links resolve after integration. | Docs-only check; no runtime claim. | main integrationで確定 |
+| Server local karte/document persistence | `mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=CanonicalOrderDocumentFixtureTest,KarteDocumentOrderModulePersistenceTest,KarteRevisionServiceBeanOrderModuleCloneTest,KarteRevisionSnapshotContractTest,KarteRevisionDocumentResponseJsonTest,KarteDocumentSnapshotContractTest,DocumentIntegrityServiceTest test` | Verify chart / karte document persistence, readback, revision snapshot, diff/restore, and integrity behavior. | Local persistence only; no ORCA live mutation. | exit code 0; 24 tests run, 0 failures, 0 errors, 0 skipped |
+| Server local order persistence | Same targeted Maven command | Verify order payload persistence and readback. | Local persistence only; no ORCA `medicalmodv2` success claim. | exit code 0; `medOrder`, `treatmentOrder`, and `radiologyOrder` coverage included |
+| Web/local contract tests | Not run | Not required for this server-local evidence package. | No Playwright/e2e/runtime claim. | not verified |
+| Documentation/package checks | `git diff --check`; artifact zip creation/inspection commands in main report | Confirm docset/index changes and sanitized package shape. | Docs/package checks only; no runtime claim. | main integration result recorded in final report |
 
 ## PASS / PARTIAL / BLOCKED Criteria
 
@@ -99,12 +98,15 @@ BLOCKED must be recorded when:
 - A packaging step includes raw HAR, trace, video, screenshot, credentials, cookies, or secrets.
 - A worker records unrun Playwright, e2e, runtime, Phase 3, Phase 4, or fullflow success as if it had been executed.
 
+## Main Integration Evidence
+
+- Fixture: `CanonicalOrderDocumentFixtureTest` covers canonical `DocumentModel` with `medOrder`, `treatmentOrder`, and `radiologyOrder`.
+- Save/readback: `KarteDocumentOrderModulePersistenceTest` covers `KarteDocumentWriteService.addDocument` and bulk detail readback with module entity, metadata, `beanJson`, decoded `BundleDolphin`, and parent backreferences.
+- Revision/snapshot: `KarteRevisionServiceBeanOrderModuleCloneTest` and `KarteRevisionSnapshotContractTest` cover revision snapshot, restore/revise clone paths, snapshot response mapping, and diff digest behavior for order modules.
+- Integrity: `DocumentIntegrityServiceTest` covers order module `beanJson` tamper detection through document integrity conflict.
+
 ## Next Work Package
 
-The main integration package should:
-
-1. Merge the CWP-01 implementation and evidence work without reverting other workers' changes.
-2. Run the targeted local chart / karte document and order persistence commands.
-3. Record exact commands, exit codes, and sanitized result summaries in this docset or the integration report.
-4. Confirm no raw HAR, trace, video, screenshot, credentials, or secrets are included in generated artifacts.
-5. Produce the final artifact zip only after integration, using sanitized evidence and preserving the ORCA boundary.
+1. If HTTP-level revise/restore authorization/history-group behavior is required, add a separate resource-level test package.
+2. If ORCA claim/order field semantics are required, obtain ORCA official specification confirmation first. `classCode`, `adminCode`, and claim item meanings in this CWP-01 package remain local persistence fixtures.
+3. Keep live ORCA mutation, Phase 3, Phase 4, fullflow, Playwright, and runtime evidence in separate authorized work packages.
