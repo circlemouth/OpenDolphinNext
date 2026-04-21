@@ -66,53 +66,46 @@ class KarteDocumentOrderModulePersistenceTest {
         setField(writeService, "documentIntegrityService", documentIntegrityService);
     }
 
+    // Local chart/document persistence only; this does not execute ORCA medicalmodv2 live mutations.
     @Test
-    void addDocumentEncodesOrderModulePayloadBindsParentReferencesAndSealsIntegrity() {
+    void addDocumentLocalChartPersistenceEncodesCanonicalOrderModulesBindsParentsAndSealsIntegrity() {
         DocumentModel document = buildOrderDocument(0L, "DOC-ORDER-001", 0L);
-        document.getModules().get(0).setBeanJson(null);
         doAnswer(invocation -> {
             DocumentModel persisted = invocation.getArgument(0);
             persisted.setId(1001L);
-            persisted.getModules().get(0).setId(2001L);
+            for (int i = 0; i < persisted.getModules().size(); i++) {
+                persisted.getModules().get(i).setId(2001L + i);
+            }
             return null;
         }).when(em).persist(any(DocumentModel.class));
 
         long createdId = writeService.addDocument(document);
 
-        ModuleModel module = document.getModules().get(0);
         assertThat(createdId).isEqualTo(1001L);
         assertThat(document.getDocInfoModel().getDocPk()).isEqualTo(1001L);
-        assertThat(module.getDocumentModel()).isSameAs(document);
-        assertThat(module.getKarteBean()).isSameAs(document.getKarteBean());
-        assertThat(module.getUserModel()).isSameAs(document.getUserModel());
-        assertThat(module.getStarted()).isEqualTo(document.getStarted());
-        assertThat(module.getConfirmed()).isEqualTo(document.getConfirmed());
-        assertThat(module.getStatus()).isEqualTo(IInfoModel.STATUS_FINAL);
-        assertThat(module.getModuleInfoBean().getEntity()).isEqualTo(IInfoModel.ENTITY_MED_ORDER);
-        assertThat(module.getBeanJson()).contains("TEST-DRUG-001", "テスト薬剤", "1日1回");
-
-        Object decoded = ModelUtils.decodeModule(module);
-        assertThat(decoded).isInstanceOf(BundleDolphin.class);
-        BundleDolphin decodedBundle = (BundleDolphin) decoded;
-        assertThat(decodedBundle.getOrderName()).isEqualTo("テスト薬剤セット");
-        assertThat(decodedBundle.getClaimItem()).hasSize(1);
-        assertThat(decodedBundle.getClaimItem()[0].getCode()).isEqualTo("TEST-DRUG-001");
-        assertThat(decodedBundle.getClaimItem()[0].getUnit()).isEqualTo("錠");
+        assertThat(document.getModules()).hasSize(3);
+        assertOrderModule(document, 0, IInfoModel.ENTITY_MED_ORDER, "テスト処方", 1,
+                "TEST-DRUG-001", "テスト薬剤セット", "テスト薬剤");
+        assertOrderModule(document, 1, IInfoModel.ENTITY_TREATMENT, "テスト処置", 2,
+                "TEST-TREAT-001", "テスト処置セット", "テスト創傷処置");
+        assertOrderModule(document, 2, IInfoModel.ENTITY_RADIOLOGY_ORDER, "テスト放射線", 3,
+                "TEST-RAD-001", "テスト放射線セット", "テストX線撮影");
 
         verify(em).persist(document);
         verify(documentIntegrityService).sealDocument(document);
     }
 
     @Test
-    void detailReadbackPreservesOrderModulePayloadModuleInfoAndDocumentParentReference() {
-        DocumentModel document = buildOrderDocument(1001L, "DOC-ORDER-001", 0L);
-        ModuleModel module = document.getModules().get(0);
-        module.setId(2001L);
-        module.setBeanJson(ModelUtils.encodeModule(module));
+    void detailBulkReadbackLocalChartDocumentPreservesOrderModulesPayloadsMetadataAndParents() {
+        DocumentModel document = buildPersistedOrderDocument(1001L, "DOC-ORDER-001", 0L);
+        for (int i = 0; i < document.getModules().size(); i++) {
+            document.getModules().get(i).setId(2001L + i);
+        }
+        List<ModuleModel> persistedModules = new ArrayList<>(document.getModules());
         document.setModules(null);
 
         TypedQuery<DocumentModel> documentQuery = typedQuery(List.of(document));
-        TypedQuery<ModuleModel> moduleQuery = typedQuery(List.of(module));
+        TypedQuery<ModuleModel> moduleQuery = typedQuery(persistedModules);
         TypedQuery<open.dolphin.infomodel.SchemaModel> schemaQuery = typedQuery(List.of());
         TypedQuery<open.dolphin.infomodel.AttachmentModel> attachmentQuery = typedQuery(List.of());
         when(em.createQuery(QUERY_DOCUMENT_BY_IDS, DocumentModel.class)).thenReturn(documentQuery);
@@ -121,11 +114,11 @@ class KarteDocumentOrderModulePersistenceTest {
         when(em.createQuery(QUERY_ATTACHMENTS_BY_DOC_IDS, open.dolphin.infomodel.AttachmentModel.class)).thenReturn(attachmentQuery);
 
         List<Collection<ModuleModel>> decodedBatches = new ArrayList<>();
-        KarteDocumentBulkFetchSupport support = new KarteDocumentBulkFetchSupport(em, modules -> {
-            for (ModuleModel candidate : modules) {
+        KarteDocumentBulkFetchSupport support = new KarteDocumentBulkFetchSupport(em, moduleBatch -> {
+            for (ModuleModel candidate : moduleBatch) {
                 candidate.setModel((open.dolphin.infomodel.IInfoModel) ModelUtils.decodeModule(candidate));
             }
-            decodedBatches.add(new ArrayList<>(modules));
+            decodedBatches.add(new ArrayList<>(moduleBatch));
         });
 
         List<DocumentModel> result = support.loadDocuments(List.of(1001L),
@@ -135,15 +128,15 @@ class KarteDocumentOrderModulePersistenceTest {
         DocumentModel readback = result.get(0);
         assertThat(readback.getId()).isEqualTo(1001L);
         assertThat(readback.getDocInfoModel().getDocId()).isEqualTo("DOC-ORDER-001");
-        assertThat(readback.getModules()).hasSize(1);
-        ModuleModel readbackModule = readback.getModules().get(0);
-        assertThat(readbackModule.getDocumentModel()).isSameAs(readback);
-        assertThat(readbackModule.getModuleInfoBean().getEntity()).isEqualTo(IInfoModel.ENTITY_MED_ORDER);
-        assertThat(readbackModule.getModuleInfoBean().getStampName()).isEqualTo("テスト処方");
-        assertThat(readbackModule.getBeanJson()).contains("TEST-DRUG-001", "テスト医師コメント");
-        assertThat(readbackModule.getModel()).isInstanceOf(BundleDolphin.class);
-        assertThat(((BundleDolphin) readbackModule.getModel()).getClaimItem()[0].getName()).isEqualTo("テスト薬剤");
+        assertThat(readback.getModules()).hasSize(3);
+        assertOrderModule(readback, 0, IInfoModel.ENTITY_MED_ORDER, "テスト処方", 1,
+                "TEST-DRUG-001", "テスト薬剤セット", "テスト薬剤");
+        assertOrderModule(readback, 1, IInfoModel.ENTITY_TREATMENT, "テスト処置", 2,
+                "TEST-TREAT-001", "テスト処置セット", "テスト創傷処置");
+        assertOrderModule(readback, 2, IInfoModel.ENTITY_RADIOLOGY_ORDER, "テスト放射線", 3,
+                "TEST-RAD-001", "テスト放射線セット", "テストX線撮影");
         assertThat(decodedBatches).hasSize(1);
+        assertThat(decodedBatches.get(0)).hasSize(3);
     }
 
     @Test
@@ -216,48 +209,111 @@ class KarteDocumentOrderModulePersistenceTest {
         info.setConfirmDate(now);
         info.setFirstConfirmDate(now);
 
-        ModuleModel module = new ModuleModel();
-        module.setDocumentModel(document);
-        module.setKarteBean(karte);
-        module.setUserModel(user);
-        module.setStarted(now);
-        module.setConfirmed(now);
-        module.setRecorded(now);
-        module.setStatus(IInfoModel.STATUS_FINAL);
-        module.setLinkId(parentPk);
-        module.setLinkRelation(parentPk > 0L ? "revise" : null);
-        ModuleInfoBean moduleInfo = module.getModuleInfoBean();
-        moduleInfo.setEntity(IInfoModel.ENTITY_MED_ORDER);
-        moduleInfo.setStampName("テスト処方");
-        moduleInfo.setStampRole(IInfoModel.ROLE_P);
-        moduleInfo.setStampNumber(1);
-        module.setModel(buildOrderBundle());
-        module.setBeanJson(ModelUtils.encodeModule(module));
-        document.addModule(module);
+        document.addModule(buildOrderModule(IInfoModel.ENTITY_MED_ORDER, "テスト処方", 1,
+                buildOrderBundle("テスト薬剤セット", "212", "処方", "1日1回",
+                        "TEST-DRUG-001", "テスト薬剤", "錠", "テスト医師コメント")));
+        document.addModule(buildOrderModule(IInfoModel.ENTITY_TREATMENT, "テスト処置", 2,
+                buildOrderBundle("テスト処置セット", "400", "処置", null,
+                        "TEST-TREAT-001", "テスト創傷処置", "回", "テスト処置コメント")));
+        document.addModule(buildOrderModule(IInfoModel.ENTITY_RADIOLOGY_ORDER, "テスト放射線", 3,
+                buildOrderBundle("テスト放射線セット", "700", "放射線", null,
+                        "TEST-RAD-001", "テストX線撮影", "回", "テスト放射線コメント")));
         return document;
     }
 
-    private static BundleDolphin buildOrderBundle() {
+    private static DocumentModel buildPersistedOrderDocument(long id, String docId, long parentPk) {
+        DocumentModel document = buildOrderDocument(id, docId, parentPk);
+        bindPersistedOrderModules(document);
+        return document;
+    }
+
+    private static void bindPersistedOrderModules(DocumentModel document) {
+        for (ModuleModel module : document.getModules()) {
+            module.setDocumentModel(document);
+            module.setKarteBean(document.getKarteBean());
+            module.setUserModel(document.getUserModel());
+            module.setStarted(document.getStarted());
+            module.setConfirmed(document.getConfirmed());
+            module.setRecorded(document.getRecorded());
+            module.setStatus(document.getStatus());
+            module.setLinkId(document.getLinkId());
+            module.setLinkRelation(document.getLinkRelation());
+            module.setBeanJson(ModelUtils.encodeModule(module));
+        }
+    }
+
+    private static ModuleModel buildOrderModule(String entity, String stampName, int stampNumber, BundleDolphin bundle) {
+        ModuleModel module = new ModuleModel();
+        ModuleInfoBean moduleInfo = module.getModuleInfoBean();
+        moduleInfo.setEntity(entity);
+        moduleInfo.setStampName(stampName);
+        moduleInfo.setStampRole(IInfoModel.ROLE_P);
+        moduleInfo.setStampNumber(stampNumber);
+        module.setModel(bundle);
+        return module;
+    }
+
+    private static BundleDolphin buildOrderBundle(String orderName,
+                                                  String classCode,
+                                                  String className,
+                                                  String admin,
+                                                  String itemCode,
+                                                  String itemName,
+                                                  String unit,
+                                                  String memo) {
         BundleDolphin bundle = new BundleDolphin();
-        bundle.setOrderName("テスト薬剤セット");
-        bundle.setClassCode("212");
+        bundle.setOrderName(orderName);
+        bundle.setClassCode(classCode);
         bundle.setClassCodeSystem("Claim007");
-        bundle.setClassName("処方");
-        bundle.setAdmin("1日1回");
+        bundle.setClassName(className);
+        bundle.setAdmin(admin);
         bundle.setAdminCode("TEST-USAGE-001");
         bundle.setAdminCodeSystem("Claim007");
-        bundle.setAdminMemo("テスト医師コメント");
+        bundle.setAdminMemo(memo);
         bundle.setBundleNumber("1");
-        bundle.setMemo("テスト医師コメント");
+        bundle.setMemo(memo);
 
         ClaimItem item = new ClaimItem();
-        item.setCode("TEST-DRUG-001");
+        item.setCode(itemCode);
         item.setCodeSystem("Claim007");
-        item.setName("テスト薬剤");
+        item.setName(itemName);
         item.setNumber("1");
-        item.setUnit("錠");
+        item.setUnit(unit);
         bundle.setClaimItem(new ClaimItem[]{item});
         return bundle;
+    }
+
+    private static void assertOrderModule(DocumentModel document,
+                                          int index,
+                                          String entity,
+                                          String stampName,
+                                          int stampNumber,
+                                          String itemCode,
+                                          String orderName,
+                                          String itemName) {
+        ModuleModel module = document.getModules().get(index);
+        ModuleInfoBean info = module.getModuleInfoBean();
+
+        assertThat(module.getDocumentModel()).isSameAs(document);
+        assertThat(module.getKarteBean()).isSameAs(document.getKarteBean());
+        assertThat(module.getUserModel()).isSameAs(document.getUserModel());
+        assertThat(module.getStarted()).isEqualTo(document.getStarted());
+        assertThat(module.getConfirmed()).isEqualTo(document.getConfirmed());
+        assertThat(module.getRecorded()).isEqualTo(document.getRecorded());
+        assertThat(module.getStatus()).isEqualTo(IInfoModel.STATUS_FINAL);
+        assertThat(info.getEntity()).isEqualTo(entity);
+        assertThat(info.getStampName()).isEqualTo(stampName);
+        assertThat(info.getStampRole()).isEqualTo(IInfoModel.ROLE_P);
+        assertThat(info.getStampNumber()).isEqualTo(stampNumber);
+        assertThat(module.getBeanJson()).contains(itemCode, orderName, itemName);
+
+        Object decoded = module.getModel() != null ? module.getModel() : ModelUtils.decodeModule(module);
+        assertThat(decoded).isInstanceOf(BundleDolphin.class);
+        BundleDolphin decodedBundle = (BundleDolphin) decoded;
+        assertThat(decodedBundle.getOrderName()).isEqualTo(orderName);
+        assertThat(decodedBundle.getClaimItem()).hasSize(1);
+        assertThat(decodedBundle.getClaimItem()[0].getCode()).isEqualTo(itemCode);
+        assertThat(decodedBundle.getClaimItem()[0].getName()).isEqualTo(itemName);
     }
 
     @SuppressWarnings("unchecked")
