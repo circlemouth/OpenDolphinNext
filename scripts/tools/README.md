@@ -56,6 +56,7 @@
   - `candidate-rows.sanitized.json`
   - `command-log.jsonl`
   - sanitized status JSON。少なくとも `sourceCommit` / `sourceCommitMatch`、`acceptedCandidateCount`、exact selected-candidate preflight status、Phase 3/4/fullflow/mutation/C7 status、`targetMutationRequestCount`、`checkedRequests`、official patientget status、insurance/appointment status and classification、selector/local/medical-information readiness、primary rejection reason、`rejectionReasons[]`、sanitize result、blocker dimensions、official patientget 500 / insurance 403 / appointment 403 classification を持つこと
+  - status JSON では `phase3ExecutionRunId` / `preflightIdentityRunId` / `childHarnessEvidenceRunId` を分離して持つこと
 - 出力:
   - `final-summary.sanitized.json`
   - `final-summary.sanitized.md`
@@ -68,6 +69,7 @@
   - `worktree_clean` は、package-included git command log がない限り `not_verified` のまま扱う
   - final ZIP の source-scope scan は final ZIP path と SHA-256 に bind されていることを検証する
   - final ZIP metadata validation log も final ZIP path と SHA-256 に bind されていることを検証する
+  - `command-log.jsonl` の各行は `command` / `cwd` / `runId` / actual UTC `start` / actual UTC `end` / `exit_code` / non-empty output evidence を必須にする
   - dynamic evidence secret scan は current `RUN_ID` の evidence dir、candidate rows、command log JSONL、review log manifest だけを対象にする
   - raw ORCA body / raw patient detail / raw insurance detail / nested zip / HAR / trace / video / raw screenshot / raw network dump / credential / cookie / Authorization / JSESSIONID / CSRF / raw session / password / credential-bearing URL を reject する
 - 使い方:

@@ -108,6 +108,20 @@ function sha256File(filePath) {
   return createHash('sha256').update(readFileSync(filePath)).digest('hex');
 }
 
+function assertActualUtcTimestamp(value, label) {
+  const text = String(value ?? '');
+  if (
+    text === '' ||
+    text === 'recorded_in_session_transcript' ||
+    /placeholder|not[_-]?recorded|unknown|not_verified|todo|tbd/i.test(text)
+  ) {
+    fail(`${label} has placeholder-only timestamp`);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/.test(text)) {
+    fail(`${label} must be an actual UTC timestamp`);
+  }
+}
+
 function normalizeHostPath(value) {
   if (process.platform === 'win32') {
     return value.replace(/^\/mnt\/([A-Za-z])\//, (_, drive) => `${drive.toUpperCase()}:/`).replaceAll('/', path.sep);
@@ -160,6 +174,24 @@ function validateJsonl(filePath, label) {
     if (parsed?.runId !== undefined && parsed.runId !== runId) {
       fail(`${label} line ${index + 1} runId mismatch`);
     }
+    for (const key of ['command', 'cwd', 'runId']) {
+      if (parsed?.[key] === undefined || parsed?.[key] === null || parsed?.[key] === '') {
+        fail(`${label} line ${index + 1} missing ${key}`);
+      }
+    }
+    const start = parsed.start ?? parsed.start_utc;
+    const end = parsed.end ?? parsed.end_utc;
+    if (!start) fail(`${label} line ${index + 1} missing start`);
+    if (!end) fail(`${label} line ${index + 1} missing end`);
+    if (parsed.exit_code === undefined && parsed.exit === undefined) {
+      fail(`${label} line ${index + 1} missing exit_code`);
+    }
+    assertActualUtcTimestamp(start, `${label} line ${index + 1} start`);
+    assertActualUtcTimestamp(end, `${label} line ${index + 1} end`);
+    const outputValues = [parsed.output, parsed.stdout, parsed.stderr, parsed.safe_result, parsed.result, parsed.summary].filter(
+      (value) => value !== undefined && value !== null && String(value).trim() !== '',
+    );
+    if (outputValues.length === 0) fail(`${label} line ${index + 1} missing non-empty output evidence`);
   }
 }
 
@@ -175,8 +207,12 @@ function validateCommandLog(text, label) {
   const values = parseKeyValue(text);
   for (const key of ['command', 'cwd', 'runId']) kvRequired(values, key, label);
   if (kvRequired(values, 'runId', label) !== runId) fail(`${label} runId mismatch`);
-  if (!values.has('start') && !values.has('start_utc')) fail(`${label} missing start metadata`);
-  if (!values.has('end') && !values.has('end_utc')) fail(`${label} missing end metadata`);
+  const start = values.get('start') ?? values.get('start_utc');
+  const end = values.get('end') ?? values.get('end_utc');
+  if (!start) fail(`${label} missing start metadata`);
+  if (!end) fail(`${label} missing end metadata`);
+  assertActualUtcTimestamp(start, `${label} start`);
+  assertActualUtcTimestamp(end, `${label} end`);
   if (!values.has('exit') && !values.has('exit_code')) fail(`${label} missing exit code metadata`);
   const output = text.match(/^--- command output ---\r?\n([\s\S]*?)\r?\n--- command summary ---/m)?.[1] ?? '';
   if (output.trim() === '') fail(`${label} has empty command output evidence`);
@@ -192,6 +228,13 @@ function statusRequired(status, key) {
 function normalizeStatusValue(value) {
   if (Array.isArray(value)) return value.map((item) => String(item)).join(',');
   return String(value);
+}
+
+function assertNonPlaceholderStatusValue(value, label) {
+  const text = normalizeStatusValue(value);
+  if (text === '' || /recorded_in_session_transcript|placeholder|unknown|not_verified|todo|tbd/i.test(text)) {
+    fail(`${label} must be explicit and must not be a placeholder`);
+  }
 }
 
 function upsertKeyValues(filePath, updates) {
@@ -366,6 +409,9 @@ if (kvRequired(metadataValidationLog, 'target_sha256', 'final ZIP metadata valid
 const statusKeys = [
   'sourceCommit',
   'sourceCommitMatch',
+  'phase3ExecutionRunId',
+  'preflightIdentityRunId',
+  'childHarnessEvidenceRunId',
   'acceptedCandidateCount',
   'exactSelectedCandidatePreflightStatus',
   'phase3Status',
@@ -393,6 +439,9 @@ const statusKeys = [
 ];
 
 for (const key of statusKeys) statusRequired(status, key);
+for (const key of ['phase3ExecutionRunId', 'preflightIdentityRunId', 'childHarnessEvidenceRunId']) {
+  assertNonPlaceholderStatusValue(status[key], `status JSON ${key}`);
+}
 
 if (String(status.sourceCommit) !== kvRequired(packageSummary, 'source_commit', 'package summary')) {
   fail('status JSON sourceCommit does not match package summary source_commit');
@@ -404,6 +453,9 @@ if (!Array.isArray(status.rejectionReasons)) fail('status JSON rejectionReasons 
 
 const summaryUpdates = new Map([
   ['source_commit_match', normalizeStatusValue(status.sourceCommitMatch)],
+  ['phase3ExecutionRunId', normalizeStatusValue(status.phase3ExecutionRunId)],
+  ['preflightIdentityRunId', normalizeStatusValue(status.preflightIdentityRunId)],
+  ['childHarnessEvidenceRunId', normalizeStatusValue(status.childHarnessEvidenceRunId)],
   ['acceptedCandidateCount', normalizeStatusValue(status.acceptedCandidateCount)],
   ['exact_selected_candidate_preflight_status', normalizeStatusValue(status.exactSelectedCandidatePreflightStatus)],
   ['phase3_status', normalizeStatusValue(status.phase3Status)],
@@ -455,6 +507,11 @@ const finalSummary = {
   source_git_metadata_available: kvRequired(updatedPackageSummary, 'source_git_metadata_available', 'package summary'),
   worktree_clean: kvRequired(updatedPackageSummary, 'worktree_clean', 'package summary'),
   packageMode: kvRequired(updatedPackageSummary, 'packageMode', 'package summary'),
+  runIds: {
+    phase3ExecutionRunId: status.phase3ExecutionRunId,
+    preflightIdentityRunId: status.preflightIdentityRunId,
+    childHarnessEvidenceRunId: status.childHarnessEvidenceRunId,
+  },
   zip: {
     path: packageZipRelative,
     fileCount: Number(kvRequired(updatedPackageSummary, 'zip_file_count', 'package summary')),
@@ -535,6 +592,9 @@ writeFileSync(
     `- source_git_metadata_available: \`${finalSummary.source_git_metadata_available}\``,
     `- worktree_clean: \`${finalSummary.worktree_clean}\``,
     `- packageMode: \`${finalSummary.packageMode}\``,
+    `- phase3ExecutionRunId: \`${status.phase3ExecutionRunId}\``,
+    `- preflightIdentityRunId: \`${status.preflightIdentityRunId}\``,
+    `- childHarnessEvidenceRunId: \`${status.childHarnessEvidenceRunId}\``,
     `- zip_file_count: \`${finalSummary.zip.fileCount}\``,
     `- zip_size_bytes: \`${finalSummary.zip.sizeBytes}\``,
     `- zip_sha256: \`${finalSummary.zip.sha256}\``,
