@@ -98,6 +98,7 @@ export type MedicalModV2BundleIssueCode =
   | 'invalid_other_order_class'
   | 'unsupported_physiology_order'
   | 'unsupported_bacteria_order'
+  | 'missing_body_part'
   | 'unsupported_selection_comment_parameter'
   | 'unsupported_body_part';
 
@@ -329,6 +330,18 @@ const resolveMedicalModV2BlockedBundleIssue = (bundle: OrderBundle) => {
   return null;
 };
 
+const resolveRadiologyMissingBodyPartIssue = (bundle: OrderBundle) => {
+  const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  if (canonicalEntity !== 'radiologyOrder' || resolveMedicalClass(bundle) !== '700' || cloneBodyPartItem(bundle.bodyPart)) {
+    return null;
+  }
+  return buildBundleIssue(
+    bundle,
+    'missing_body_part',
+    'radiologyOrder classCode 700 は ORCA 送信前に 002 系 bodyPart が必須です。',
+  );
+};
+
 const buildInjectionContractItems = (rows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }>) =>
   rows
     .filter((row): row is { item: OrderBundleItem; source: Extract<RpNormalizedRowSource, { kind: 'bundle_item' }> } => row.source.kind === 'bundle_item')
@@ -353,6 +366,10 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
   const blockedIssue = resolveMedicalModV2BlockedBundleIssue(bundle);
   if (blockedIssue) {
     return [blockedIssue];
+  }
+  const radiologyBodyPartIssue = resolveRadiologyMissingBodyPartIssue(bundle);
+  if (radiologyBodyPartIssue) {
+    return [radiologyBodyPartIssue];
   }
   const rows = collectNormalizedRows(bundle);
   if (canonicalEntity === 'injectionOrder') {
@@ -471,7 +488,7 @@ const resolveMedicalClassName = (bundle: OrderBundle, medicalClass: string) => {
 };
 
 export const normalizeOrderBundleToRp = (bundle: OrderBundle): RpNormalizedBundle | null => {
-  if (resolveMedicalModV2BlockedBundleIssue(bundle)) return null;
+  if (resolveMedicalModV2BlockedBundleIssue(bundle) || resolveRadiologyMissingBodyPartIssue(bundle)) return null;
   const bundleRows: RpNormalizedRow[] = collectNormalizedRows(bundle).flatMap(({ item, source }) => {
     const medication = toRpNormalizedMedication(item);
     if (!medication) return [];

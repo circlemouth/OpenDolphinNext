@@ -14,6 +14,7 @@ import java.lang.reflect.Proxy;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.BundleDolphin;
@@ -393,6 +394,39 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void postBundlesRejectsRadiologyClass700WithoutBodyPart() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity("radiologyOrder");
+        op.setBundleName("radiology-body-part-missing");
+        op.setClassCode("700");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem main = new OrderBundleMutationRequest.BundleItem();
+        main.setCode("170017510");
+        main.setName("radiology-main");
+        op.setItems(List.of(main));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals(Boolean.TRUE, body.get("validationError"));
+        assertEquals("bodyPart", body.get("field"));
+        assertEquals("bodyPart is required for radiologyOrder classCode 700", body.get("message"));
+    }
+
+    @Test
     void postBundlesRejectsLegacyBodyPartItemsEvenWhenExplicitBodyPartFieldExists() {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");
@@ -659,6 +693,31 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals(Boolean.TRUE, body.get("validationError"));
         assertEquals("items", body.get("field"));
         assertEquals("selection comment itemNumber / branch is unsupported for order bundle items", body.get("message"));
+    }
+
+    @Test
+    void localOrderBundleResourceDoesNotDeclareOfficialOrcaMutationRoutes() {
+        jakarta.ws.rs.Path classPath = LocalOrderBundleResource.class.getAnnotation(jakarta.ws.rs.Path.class);
+        assertNotNull(classPath);
+        assertEquals("/local/order", classPath.value());
+
+        for (var method : LocalOrderBundleResource.class.getDeclaredMethods()) {
+            jakarta.ws.rs.Path methodPath = method.getAnnotation(jakarta.ws.rs.Path.class);
+            if (methodPath == null) {
+                continue;
+            }
+            String route = methodPath.value();
+            assertFalse(route.contains("/api/orca/" + "official"));
+            assertFalse(route.contains("medical" + "-mod-v2"));
+            assertFalse(route.contains("medical" + "modv2"));
+        }
+
+        for (Field field : LocalOrderBundleResource.class.getDeclaredFields()) {
+            String signature = field.getName() + ":" + field.getType().getName();
+            assertFalse(signature.toLowerCase(Locale.ROOT).contains("transport"));
+            assertFalse(signature.toLowerCase(Locale.ROOT).contains("gateway"));
+            assertFalse(signature.contains("MedicalMod"));
+        }
     }
 
     @Test

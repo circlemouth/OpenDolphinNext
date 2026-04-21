@@ -221,6 +221,76 @@ describe('local-vs-ORCA medicalmodv2 boundary', () => {
     expect(blockedBundles.map((bundle) => toMedicalModV2InformationWithSource(bundle))).toEqual([null, null, null]);
   });
 
+  it('blocks radiology class 700 without a valid bodyPart before static medicalmodv2 payload construction', () => {
+    const radiologyWithoutBodyPart: OrderBundle = {
+      entity: 'radiologyOrder',
+      bundleName: '胸部CT without bodyPart',
+      bundleNumber: '1',
+      classCode: '700',
+      className: '画像診断',
+      items: [{ code: '170017510', name: 'CT撮影', quantity: '1', unit: '回', rowRole: 'main' }],
+    };
+
+    expect(collectMedicalModV2BundleIssues([radiologyWithoutBodyPart])).toEqual([
+      expect.objectContaining({
+        entity: 'radiologyOrder',
+        code: 'missing_body_part',
+        detail: 'radiologyOrder classCode 700 は ORCA 送信前に 002 系 bodyPart が必須です。',
+      }),
+    ]);
+
+    const prepared = prepareMedicalModV2SendData([radiologyWithoutBodyPart]);
+    expect(prepared.medicalInformation).toEqual([]);
+    expect(prepared.bundleIssues.map((issue) => issue.code)).toEqual(['missing_body_part']);
+    expect(toMedicalModV2InformationWithSource(radiologyWithoutBodyPart)).toBeNull();
+  });
+
+  it('maps structured generic claim comments to static carriers and blocks selection comment parameters', () => {
+    const structuredCommentBundle: OrderBundle = {
+      entity: 'testOrder',
+      bundleName: '検体検査 structured comment',
+      bundleNumber: '1',
+      subtype: 'specimen',
+      classCode: '600',
+      className: '検査',
+      items: [
+        { code: '160000010', name: 'CBC', quantity: '1', unit: '回', rowRole: 'main' },
+        {
+          code: '830000001',
+          name: '自由記載コメント',
+          structuredCommentValue: '採血後コメント',
+          rowRole: 'comment',
+        },
+      ],
+    };
+    const parameterizedCommentBundle: OrderBundle = {
+      ...structuredCommentBundle,
+      bundleName: '検体検査 parameterized comment',
+      items: [
+        { code: '160000010', name: 'CBC', quantity: '1', unit: '回', rowRole: 'main' },
+        {
+          code: '0085001',
+          name: '選択式コメント',
+          rowRole: 'comment',
+          selectionCommentItemNumber: '0166',
+          selectionCommentItemNumberBranch: '01',
+        },
+      ],
+    };
+
+    expect(toMedicalModV2InformationWithSource(structuredCommentBundle)?.info.medications).toEqual([
+      { code: '160000010', name: 'CBC', number: '1', genericFlg: undefined },
+      { code: '830000001', name: '採血後コメント', number: undefined, genericFlg: undefined },
+    ]);
+    expect(collectMedicalModV2BundleIssues([parameterizedCommentBundle])).toEqual([
+      expect.objectContaining({
+        entity: 'testOrder',
+        code: 'unsupported_selection_comment_parameter',
+      }),
+    ]);
+    expect(prepareMedicalModV2SendData([parameterizedCommentBundle]).medicalInformation).toEqual([]);
+  });
+
   it('keeps material rows dependent on a clinical parent row in static payload sources', () => {
     const treatment = sendableBundles.find((bundle) => bundle.entity === 'treatmentOrder');
     const surgery = sendableBundles.find((bundle) => bundle.entity === 'surgeryOrder');
