@@ -8,6 +8,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { SoapNotePanel } from '../SoapNotePanel';
 import type { SoapEntry } from '../soapNote';
 import { DiagnosisEditPanel } from '../DiagnosisEditPanel';
+import type { DiagnosisEditPanelMeta } from '../DiagnosisEditPanel';
 import { fetchDiseases, mutateDiseases, searchDiseaseMasterCandidates } from '../diseaseApi';
 import { DocumentCreatePanel } from '../DocumentCreatePanel';
 import { fetchKarteIdByPatientId, fetchLetterDetail, fetchLetterList, saveLetterModule, deleteLetter } from '../letterApi';
@@ -99,7 +100,7 @@ const baseSoapHistory: SoapEntry[] = [
   },
 ];
 
-const baseDiagnosisMeta = {
+const baseDiagnosisMeta: DiagnosisEditPanelMeta = {
   runId: '20260421T044925Z',
   cacheHit: true,
   missingMaster: false,
@@ -109,7 +110,7 @@ const baseDiagnosisMeta = {
   visitDate: '2026-04-21',
 };
 
-const renderDiagnosisPanel = (meta = baseDiagnosisMeta) =>
+const renderDiagnosisPanel = (meta: DiagnosisEditPanelMeta = baseDiagnosisMeta) =>
   renderWithQueryClient(<DiagnosisEditPanel patientId="P-DADS-001" meta={meta} />);
 
 const baseDocumentProps = {
@@ -178,7 +179,7 @@ beforeEach(() => {
   vi.mocked(searchDiseaseMasterCandidates).mockResolvedValue([]);
   vi.mocked(fetchKarteIdByPatientId).mockResolvedValue({ ok: true, karteId: 3201 });
   vi.mocked(fetchLetterList).mockResolvedValue({ ok: true, letters: [] });
-  vi.mocked(fetchLetterDetail).mockResolvedValue({ ok: true, letter: null });
+  vi.mocked(fetchLetterDetail).mockResolvedValue({ ok: true });
   vi.mocked(saveLetterModule).mockResolvedValue({ ok: true, letterId: 1 });
   vi.mocked(deleteLetter).mockResolvedValue({ ok: true });
 });
