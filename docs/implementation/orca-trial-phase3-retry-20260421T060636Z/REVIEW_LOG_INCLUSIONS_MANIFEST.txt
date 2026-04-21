@@ -1,0 +1,13 @@
+review_log_inclusions_manifest_version=1
+run_id=20260421T060636Z
+purpose=include_sanitized_phase3_retry_evidence_in_review_package
+- command-log.sanitized.json
+- phase3-approved-command.sanitized.json
+- phase3-business-evidence.sanitized.json
+- phase3-business-evidence.sanitized.md
+- c7-dynamic-payload-gate.sanitized.json
+- final-summary.sanitized.json
+- final-summary.sanitized.md
+- TEST_LOGS.sanitized.md
+- MAIN_AGENT_REPORT.md
+- secret-scan.sanitized.txt
