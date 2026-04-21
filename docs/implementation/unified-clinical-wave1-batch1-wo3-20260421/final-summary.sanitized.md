@@ -38,4 +38,4 @@ Status: `PASS`
 
 ## Sensitive Artifact Policy
 
-No raw ORCA body, raw patient detail, raw insurance detail, credential/cookie/Authorization/JSESSIONID/CSRF/password value, HAR, trace, video, screenshot, or raw network dump is included.
+No raw ORCA body, raw patient detail, raw insurance detail, credential/cookie/Authorization/JSESSIONID/CSRF/sign-in secret value, HAR, trace, video, screenshot, or raw network dump is included.

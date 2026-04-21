@@ -41,6 +41,9 @@ Review logs:
 - command-logs/20260421T142818Z-cwp05-postmerge-typecheck.log
 - command-logs/20260421T142818Z-cwp05-postmerge-web-tests-rerun.log
 - command-logs/20260421T142818Z-cwp05-postmerge-web-tests.log
+- command-logs/20260421T142818Z-final-artifact-ledger-verify.log
+- command-logs/20260421T142818Z-final-create-review-package-rerun.log
+- command-logs/20260421T142818Z-final-create-review-package.log
 - command-logs/20260421T142818Z-final-cwp01-maven-gate.log
 - command-logs/20260421T142818Z-final-cwp02-maven.log
 - command-logs/20260421T142818Z-final-cwp02-web-tests.log
@@ -55,9 +58,11 @@ Review logs:
 - command-logs/20260421T142818Z-final-npm-test-ci-rerun2.log
 - command-logs/20260421T142818Z-final-npm-test-ci.log
 - command-logs/20260421T142818Z-final-npm-typecheck.log
+- command-logs/20260421T142818Z-final-package-metadata-validation.log
 - command-logs/20260421T142818Z-final-readback-label-targeted.log
 - command-logs/20260421T142818Z-final-review-package-script-tests.log
 - command-logs/20260421T142818Z-final-testci-label-fix-git-diff-check.log
+- command-logs/20260421T142818Z-final-zip-source-scope-scan.log
 - command-logs/20260421T142818Z-initial-git-branch.log
 - command-logs/20260421T142818Z-initial-git-diff-cached-stat.log
 - command-logs/20260421T142818Z-initial-git-diff-stat.log

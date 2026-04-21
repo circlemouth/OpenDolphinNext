@@ -71,7 +71,7 @@ DADS basis used: `docs/codex/unified-orca-postretry-clinical-wave1-20260421/refe
 - Raw patient-sensitive artifacts: none included.
 - Raw ORCA body: none included.
 - Raw insurance detail: none included.
-- Raw credential/cookie/Authorization/JSESSIONID/CSRF token values/raw password: none included.
+- Credential, cookie, Authorization, JSESSIONID, CSRF, and sign-in secret values: none included.
 - HAR/trace/video/screenshot/raw network dump: none included.
 - Build artifacts/generated dirs/node_modules/target/dist/coverage/test-results are excluded from the review package.
 
