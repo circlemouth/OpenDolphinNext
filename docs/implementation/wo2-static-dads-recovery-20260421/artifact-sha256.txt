@@ -1,5 +1,15 @@
-# artifact-sha256 for 20260421T111148Z
-# Verify from this directory with: shasum -a 256 -c artifact-sha256.txt
-0182ee0475406de33dc9dba463ba5ab1bafba91b64b7c7140de9b9de6a02a482  OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip
-def8781c0d753912260a4c03a640ecb154632200db097ceada11eb8564d0d100  OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip.summary.txt
-aee52ade1be48162695fb01e15921d603812fc3573eb825a3ebedbe0c0aa08c1  OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip.secret-scan-review-bundle.log
+# WO-2 package-internal evidence ledger for RUN_ID 20260421T132901Z.
+# Verify from repository root with: shasum -a 256 -c docs/implementation/wo2-static-dads-recovery-20260421/artifact-sha256.txt
+# Scope: sanitized WO-2 reports, manifests, summaries, and JSONL command log included as source evidence.
+# Final ZIP, final ZIP summary sidecar, and final ZIP source-scope scan log are generated after package creation and are covered by review-package/artifact-sha256.txt.
+83b049f398efe4187417ab5d582ea7a9b599ae1d53972bcc1f77a44976d1985d  docs/implementation/wo2-static-dads-recovery-20260421/FINAL_REPORT.md
+896dbb6bb3e33cd548ed4fe038aa753d13e462ef4bfdd1d30fc9c48758202331  docs/implementation/wo2-static-dads-recovery-20260421/MAIN_AGENT_REPORT.md
+8299edf12c471a156171524b0afdf5e1abb19f0fdfb6188e9202fa7934e9b146  docs/implementation/wo2-static-dads-recovery-20260421/TEST_LOGS.sanitized.md
+319bacaaa2d187fdd9780fad92c861df00c1a15ca5c3cf19ba77df2f74f1ec92  docs/implementation/wo2-static-dads-recovery-20260421/REVIEW_LOG_INCLUSIONS_MANIFEST.txt
+6890a9fc153bc9e55b2a7c06868abf583d0034a2f472d58262711ea719cc73ab  docs/implementation/wo2-static-dads-recovery-20260421/command-log.jsonl
+b21850fef0fdc4a5e00abfcea63dc1f828f8800493f9e5601276a409dead24db  docs/implementation/wo2-static-dads-recovery-20260421/final-summary.sanitized.json
+be73a18c390184f9d5c723331d962b8067751328407f95a41af51903a9c4ee94  docs/implementation/wo2-static-dads-recovery-20260421/final-summary.sanitized.md
+aee05fd3fda443900c926d14adc2403026d5f390b7e5e78ed1a676156ea899b1  docs/implementation/wo2-static-dads-recovery-20260421/secret-scan.sanitized.txt
+cd014553edff4146d7db0896c435bce8df109fbc564894d0973b2f9cca794b4c  docs/implementation/wo2-static-dads-recovery-20260421/subagent-A-reopen-source-scope-report.md
+cd4eec5e61893a1b1c1c6fb862a3585eb3b78112c4c1319585330c65c044d4ad  docs/implementation/wo2-static-dads-recovery-20260421/subagent-B-reopen-package-evidence-report.md
+0c16de704fb7f515de0d3a092dd7db474410e928ea859f9bf5eed5a26b289499  docs/implementation/wo2-static-dads-recovery-20260421/subagent-C-reopen-sanitize-validation-report.md

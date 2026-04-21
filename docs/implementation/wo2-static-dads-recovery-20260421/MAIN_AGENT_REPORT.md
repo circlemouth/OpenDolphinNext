@@ -59,6 +59,7 @@ Package-internal evidence:
 - final and main-agent reports
 - sanitized test log summary
 - sanitized final summary files
+- package-internal `artifact-sha256.txt` covering sanitized WO-2 source evidence files only
 - subagent A/B/C reopen reports
 - package inclusion manifest
 - command logs listed by `REVIEW_LOG_INCLUSIONS_MANIFEST.txt`
@@ -68,7 +69,7 @@ External final artifact evidence:
 
 - final ZIP `.summary.txt`
 - final ZIP `.secret-scan-review-bundle.log`
-- `artifact-sha256.txt`
+- `review-package/artifact-sha256.txt` covering the final ZIP and final ZIP sidecars
 - final ZIP metadata validation log
 - artifact ledger verification log
 - final ZIP manifest extraction/consistency logs

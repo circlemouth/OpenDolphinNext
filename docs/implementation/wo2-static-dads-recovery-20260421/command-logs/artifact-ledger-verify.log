@@ -1,13 +1,21 @@
 command_log_version=1
-command=shasum -a 256 -c artifact-sha256.txt
-cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/wo2-static-dads-recovery-20260421
-runId=20260421T111148Z
-start_utc=2026-04-21T11:50:47Z
+command=shasum -a 256 -c docs/implementation/wo2-static-dads-recovery-20260421/artifact-sha256.txt
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main
+runId=20260421T132901Z
+start_utc=2026-04-21T13:47:54Z
 --- command output ---
-OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip: OK
-OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip.summary.txt: OK
-OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip.secret-scan-review-bundle.log: OK
+docs/implementation/wo2-static-dads-recovery-20260421/FINAL_REPORT.md: OK
+docs/implementation/wo2-static-dads-recovery-20260421/MAIN_AGENT_REPORT.md: OK
+docs/implementation/wo2-static-dads-recovery-20260421/TEST_LOGS.sanitized.md: OK
+docs/implementation/wo2-static-dads-recovery-20260421/REVIEW_LOG_INCLUSIONS_MANIFEST.txt: OK
+docs/implementation/wo2-static-dads-recovery-20260421/command-log.jsonl: OK
+docs/implementation/wo2-static-dads-recovery-20260421/final-summary.sanitized.json: OK
+docs/implementation/wo2-static-dads-recovery-20260421/final-summary.sanitized.md: OK
+docs/implementation/wo2-static-dads-recovery-20260421/secret-scan.sanitized.txt: OK
+docs/implementation/wo2-static-dads-recovery-20260421/subagent-A-reopen-source-scope-report.md: OK
+docs/implementation/wo2-static-dads-recovery-20260421/subagent-B-reopen-package-evidence-report.md: OK
+docs/implementation/wo2-static-dads-recovery-20260421/subagent-C-reopen-sanitize-validation-report.md: OK
 --- command summary ---
-end_utc=2026-04-21T11:50:48Z
+end_utc=2026-04-21T13:47:54Z
 exit_code=0
 result=PASS

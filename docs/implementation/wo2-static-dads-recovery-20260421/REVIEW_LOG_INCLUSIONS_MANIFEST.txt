@@ -19,6 +19,7 @@ self_reference_policy=final_zip_hash_summary_scan_metadata_and_ledger_verificati
 - command-logs/npm-run-test-ci.log
 - command-logs/focused-dadsClinicalInputContract.log
 - command-logs/review-package-tests.log
+- command-logs/artifact-ledger-verify.log
 - command-logs/final-git-branch.log
 - command-logs/final-git-head.log
 - command-logs/final-git-status-short.log

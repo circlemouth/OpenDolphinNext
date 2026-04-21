@@ -42,7 +42,7 @@ The final ZIP metadata must retain:
 - `full_source_secret_scan_claim=not_claimed`
 - `package_source_secret_scan_claim=passed`
 
-Final ZIP path, SHA-256, size, file count, and target-bound validation results are recorded in the external final ZIP `.summary.txt`, `.secret-scan-review-bundle.log`, `artifact-sha256.txt`, and post-package command logs.
+Final ZIP path, SHA-256, size, file count, and target-bound validation results are recorded in the external final ZIP `.summary.txt`, `.secret-scan-review-bundle.log`, `review-package/artifact-sha256.txt`, and post-package command logs. The package-internal `artifact-sha256.txt` covers sanitized WO-2 source evidence files only and intentionally does not claim the final ZIP hash.
 
 ## Scope Guard
 
