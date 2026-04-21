@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260421T060636Z",
+  "evidenceRunId": "20260420T123200Z",
+  "source": "phase3-business-evidence.sanitized.json:c7",
+  "candidateId": "00001",
+  "verdict": "accepted",
+  "accepted": true,
+  "ok": true,
+  "targetMutationRequestCount": 1,
+  "checkedRequests": 1,
+  "violationCount": 0,
+  "violatedKeys": [],
+  "bodyKeysObserved": [
+    "acceptanceDate",
+    "acceptancePush",
+    "acceptanceTime",
+    "departmentCode",
+    "patientId",
+    "physicianCode",
+    "requestNumber"
+  ],
+  "targetMutationRequestCaptureRequired": true,
+  "acceptedOnlyBecauseTargetMutationRequestCapturePresent": true,
+  "rawRequestBodyStored": false,
+  "rawResponseBodyStored": false,
+  "rawSensitiveFieldsExcluded": true
+}
