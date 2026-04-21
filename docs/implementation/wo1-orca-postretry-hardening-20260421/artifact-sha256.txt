@@ -1,0 +1,5 @@
+# artifact-sha256 for 20260421T101349Z
+# Verify from this directory with: shasum -a 256 -c artifact-sha256.txt
+f0e37676f3d3cf134063efee984c773011a2eda825e3fd8a1ef8eefee5f272c5  OpenDolphin_WebClient-review-package-20260421T101349Z-WO1_orca-postretry-hardening.zip
+522c45445b04aff8b58262e494de2a37cbbe1af85711a241752713c070daa08e  OpenDolphin_WebClient-review-package-20260421T101349Z-WO1_orca-postretry-hardening.zip.summary.txt
+013b614d331722a2fd124fb92136eb7183e328465d882c5d0aa9a309de5c43f0  OpenDolphin_WebClient-review-package-20260421T101349Z-WO1_orca-postretry-hardening.zip.secret-scan-review-bundle.log

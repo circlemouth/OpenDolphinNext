@@ -1,0 +1,31 @@
+command_log_version=1
+command=shasum -a 256 -c docs/implementation/orca-trial-phase3-retry-20260421T060636Z/artifact-sha256.txt
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260421T101349Z
+start_utc=2026-04-21T10:29:34Z
+--- command output ---
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/MAIN_AGENT_REPORT.md: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/OpenDolphin_WebClient-review-package-20260421T060636Z-phase3-retry.zip.secret-scan-review-bundle.log: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/OpenDolphin_WebClient-review-package-20260421T060636Z-phase3-retry.zip.summary.txt: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/REVIEW_LOG_INCLUSIONS_MANIFEST.txt: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/REVIEW_PACKAGE_MANIFEST.txt: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/TEST_LOGS.sanitized.md: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/acceptmodv2-sanitized/accept-summary.sanitized.json: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/acceptmodv2-sanitized/accept-summary.sanitized.md: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/acceptmodv2-sanitized/steps.log: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/c7-dynamic-payload-gate.sanitized.json: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/command-log.jsonl: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/command-log.sanitized.json: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/dry-run-evidence/phase3-approved-command.sanitized.json: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/final-summary.sanitized.json: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/final-summary.sanitized.md: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/final-zip-metadata-validation.sanitized.txt: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/final-zip-source-scope-secret-scan.sanitized.txt: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/phase3-approved-command.sanitized.json: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/phase3-business-evidence.sanitized.json: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/phase3-business-evidence.sanitized.md: OK
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/secret-scan.sanitized.txt: OK
+--- command summary ---
+end_utc=2026-04-21T10:29:34Z
+exit_code=0
+result=PASS

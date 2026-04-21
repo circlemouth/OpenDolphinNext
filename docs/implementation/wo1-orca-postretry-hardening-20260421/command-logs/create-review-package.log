@@ -1,0 +1,15 @@
+command_log_version=1
+command=./scripts/create-review-package.sh --run-id 20260421T101349Z --out-dir docs/implementation/wo1-orca-postretry-hardening-20260421 --name-suffix -WO1_orca-postretry-hardening --include-review-log-manifest docs/implementation/wo1-orca-postretry-hardening-20260421/REVIEW_LOG_INCLUSIONS_MANIFEST.txt
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260421T101349Z
+start_utc=2026-04-21T10:50:59Z
+--- command output ---
+[INFO] created docs/implementation/wo1-orca-postretry-hardening-20260421/OpenDolphin_WebClient-review-package-20260421T101349Z-WO1_orca-postretry-hardening.zip
+[INFO] files=2339 size=18997117 sha256=f0e37676f3d3cf134063efee984c773011a2eda825e3fd8a1ef8eefee5f272c5
+[INFO] package_summary=docs/implementation/wo1-orca-postretry-hardening-20260421/OpenDolphin_WebClient-review-package-20260421T101349Z-WO1_orca-postretry-hardening.zip.summary.txt
+[INFO] artifact_sha256=docs/implementation/wo1-orca-postretry-hardening-20260421/artifact-sha256.txt
+[DONE] RUN_ID=20260421T101349Z
+--- command summary ---
+end_utc=2026-04-21T10:51:07Z
+exit_code=0
+result=PASS

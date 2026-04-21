@@ -23,7 +23,7 @@
   - zip 内 manifest は self-referential hash drift を避けるため、zip integrity は `recorded_in_external_sidecar` として sidecar を参照する
   - dynamic evidence の secret scan は `dynamic_secret_scan_claim`、生成 review bundle 全体の source-scope scan は `package_source_secret_scan_claim` / `bundle_included_source_scope_secret_scan_claim`、full repo source scan は `full_source_secret_scan_claim` で分離する
   - `secret-scan-review-bundle.log` を含める場合は command log metadata、`exit_code=0`、`result=PASS`、`review bundle included source scope secret scan passed:` の出力が必要。揃わない場合は package 生成を fail する
-  - command log は `command` / `cwd` / `runId` / `start` / `end` / `exit_code` に加えて non-empty command output を必須にする。無出力コマンドは wrapper が明示的な no-output marker を記録する
+  - command log は `command` / `cwd` / `runId` / actual UTC `start` / actual UTC `end` / `exit_code` に加えて non-empty command output を必須にする。`recorded_in_session_transcript` などの placeholder-only timestamp は pass evidence として拒否する。無出力コマンドは wrapper が明示的な no-output marker を記録する
   - manifest-listed evidence は sanitized summaries / reports / command logs に限定し、raw ORCA artifact、nested zip、HAR、network/request/response、画像、trace/video、credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw session、raw password を拒否する
   - nested zip inclusion が将来どうしても必要な場合は、明示 manifest・正当化理由・再帰 scan log を追加するまで許可しない
   - Phase 2.5 の `acceptedCandidateCount=0` は、`00001`〜`00011` について current harness / API / auth / parser / readiness / exact-preflight criteria の read-only evidence が mutation-ready まで揃っていない、という意味に限定する。公式初期患者が存在しない証明として扱わない
@@ -41,7 +41,7 @@
   - `dynamic_secret_scan_claim`、`package_source_secret_scan_claim`、`bundle_included_source_scope_secret_scan_claim` が included log と矛盾しない
   - `secret-scan-review-bundle.log` がある場合、source-scope scan pass marker と command log success metadata が揃う
   - final ZIP source-scope secret scan log の `target_path` / `target_sha256` が final ZIP と一致する
-  - command log の command output section が空なら fail する
+  - command log の command output section が空、または start/end が placeholder-only timestamp なら fail する
   - raw/generated path、nested zip、credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw password などを含む package を拒否する
 - 使い方:
   - `node scripts/tools/validate-review-package-metadata.mjs artifacts/review-bundles/OpenDolphin_WebClient-review-package-<RUN_ID>.zip`
@@ -72,6 +72,16 @@
   - raw ORCA body / raw patient detail / raw insurance detail / nested zip / HAR / trace / video / raw screenshot / raw network dump / credential / cookie / Authorization / JSESSIONID / CSRF / raw session / password / credential-bearing URL を reject する
 - 使い方:
   - `node scripts/tools/orca-readonly-evidence-finalizer.mjs --run-id <RUN_ID> --evidence-dir docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID> --status-json docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/final-summary.status.sanitized.json --candidate-rows-json docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/candidate-rows.sanitized.json --command-log-jsonl docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/command-log.jsonl --package-zip docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/OpenDolphin_WebClient-review-package-<RUN_ID>-with-readonly-diagnostics.zip --package-summary docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/OpenDolphin_WebClient-review-package-<RUN_ID>-with-readonly-diagnostics.zip.summary.txt --package-secret-scan-log docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/OpenDolphin_WebClient-review-package-<RUN_ID>-with-readonly-diagnostics.zip.secret-scan-review-bundle.log --metadata-validation-log docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/final-package-metadata-validation.log`
+
+## validate-artifact-ledger.mjs
+- 位置づけ: support。evidence directory の `artifact-sha256.txt` が存在し、ledger 自身を除く全ファイルを過不足なく SHA-256 で固定していることを検証する。
+- 検証内容:
+  - `artifact-sha256.txt` が存在し空でない
+  - ledger entry が `sha256  relative-path` 形式で、絶対パスや `..` を含まない
+  - evidence dir 内の全ファイルが ledger に存在し、ledger の extra entry がない
+  - 各ファイルの実 SHA-256 が ledger と一致する
+- 使い方:
+  - `node scripts/tools/validate-artifact-ledger.mjs docs/implementation/orca-trial-phase3-retry-<RUN_ID>`
 
 ## create-review-package-curated.sh
 - 位置づけ: support。50MB 制約つきの curated review bundle。

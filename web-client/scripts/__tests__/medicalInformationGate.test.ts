@@ -47,7 +47,7 @@ describe('evaluateMedicalInformationGate', () => {
       requestRecords: [
         {
           url: 'https://localhost/api/orca/official/visits/mutation',
-          postData: '{"visit":{"Medical_Information":""}}',
+          postData: '{"requestNumber":"01","patientId":"00001","visit":{"Medical_Information":""}}',
         },
       ],
     });
@@ -66,14 +66,14 @@ describe('evaluateMedicalInformationGate', () => {
         requestRecords: [
           {
             url: 'https://localhost/api/orca/official/visits/mutation',
-            postData: `{"visit":{ "${key}": }`,
+            postData: `{"requestNumber":"01","patientId":"00001","visit":{ "${key}": }`,
           },
         ],
       });
 
       expect(result.ok).toBe(false);
       expect(result.violationCount).toBe(1);
-      expect(result.violatedKeys).toEqual([key]);
+      expect(result.violatedKeys).toEqual(['rawBodyDecisionRequired']);
       expect(result.medicalInformationFieldPresent).toBe(true);
     },
   );
@@ -123,6 +123,132 @@ describe('evaluateMedicalInformationGate', () => {
     expect(result.checkedRequests).toBe(0);
     expect(result.violatedKeys).toEqual(['targetMutationRequest']);
     expect(result.error).toContain('1 件も捕捉できませんでした');
+  });
+
+  it('target mutation request が複数ある場合は failure にする', () => {
+    const result = evaluateMedicalInformationGate({
+      medicalInformation: '',
+      requestRecords: [
+        {
+          url: 'https://localhost/api/orca/official/visits/mutation',
+          postData: '{"requestNumber":"01","patientId":"00001","acceptancePush":"1"}',
+        },
+        {
+          url: 'https://localhost/api/orca/official/visits/mutation',
+          postData: '{"requestNumber":"01","patientId":"00001","acceptancePush":"1"}',
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.targetMutationRequestCount).toBe(2);
+    expect(result.violatedKeys).toEqual(['targetMutationRequest']);
+    expect(result.error).toContain('1 件だけ');
+  });
+
+  it('Request_Number=01 と patientId=00001 を strict に検証する', () => {
+    const result = evaluateMedicalInformationGate({
+      medicalInformation: '',
+      requestRecords: [
+        {
+          url: 'https://localhost/api/orca/official/visits/mutation',
+          postData: '{"Request_Number":"01","Patient_ID":"00001","acceptancePush":"1"}',
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.intendedRequestNumber01).toBe(true);
+    expect(result.requestNumberKeyPresent).toBe(true);
+    expect(result.requestNumber01ValueVerified).toBe(true);
+    expect(result.requestNumber02_03_04Absent).toBe(true);
+    expect(result.targetPatientId00001Verified).toBe(true);
+    expect(result.targetCandidateOnly00001).toBe(true);
+  });
+
+  it('malformed body は raw body 依存になるため failure にする', () => {
+    const result = evaluateMedicalInformationGate({
+      medicalInformation: '',
+      requestRecords: [
+        {
+          url: 'https://localhost/api/orca/official/visits/mutation',
+          postData: '{"requestNumber":"01","patientId":"00001",',
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.violatedKeys).toEqual(['rawBodyDecisionRequired']);
+    expect(result.error).toContain('malformed body');
+  });
+
+  it.each(['00', '02', '03', '04', '', null, { value: '01' }, ['01'], '1'])(
+    'Request_Number/requestNumber が 01 以外なら failure にする: %s',
+    (requestNumber) => {
+      const result = evaluateMedicalInformationGate({
+        medicalInformation: '',
+        requestRecords: [
+          {
+            url: 'https://localhost/api/orca/official/visits/mutation',
+            postData: JSON.stringify({ requestNumber, patientId: '00001', acceptancePush: '1' }),
+          },
+        ],
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.requestNumber01ValueVerified).toBe(false);
+      expect(result.violatedKeys).toEqual(['requestNumber']);
+    },
+  );
+
+  it('requestNumber missing は failure にする', () => {
+    const result = evaluateMedicalInformationGate({
+      medicalInformation: '',
+      requestRecords: [
+        {
+          url: 'https://localhost/api/orca/official/visits/mutation',
+          postData: '{"patientId":"00001","acceptancePush":"1"}',
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.requestNumberKeyPresent).toBe(false);
+    expect(result.requestNumber01ValueVerified).toBe(false);
+    expect(result.violatedKeys).toEqual(['requestNumber']);
+  });
+
+  it('patientId が 00001 以外なら failure にする', () => {
+    const result = evaluateMedicalInformationGate({
+      medicalInformation: '',
+      requestRecords: [
+        {
+          url: 'https://localhost/api/orca/official/visits/mutation',
+          postData: '{"requestNumber":"01","patientId":"00002","acceptancePush":"1"}',
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.requestNumber01ValueVerified).toBe(true);
+    expect(result.targetPatientId00001Verified).toBe(false);
+    expect(result.violatedKeys).toEqual(['patientId']);
+  });
+
+  it('candidate が 00001 以外なら failure にする', () => {
+    const result = evaluateMedicalInformationGate({
+      medicalInformation: '',
+      requestRecords: [
+        {
+          url: 'https://localhost/api/orca/official/visits/mutation',
+          postData: '{"requestNumber":"01","patientId":"00001","candidateId":"00002","acceptancePush":"1"}',
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.targetCandidateOnly00001).toBe(false);
+    expect(result.violatedKeys).toEqual(['candidateId']);
   });
 
   it('QA_MEDICAL_INFORMATION 未指定で field が無ければ pass にする', () => {

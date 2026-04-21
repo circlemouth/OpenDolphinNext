@@ -12,6 +12,7 @@ const COMMAND_LOG_WRAPPER_PATH = path.resolve('scripts/tools/command-log-wrapper
 const METADATA_VALIDATOR_PATH = path.resolve('scripts/tools/validate-review-package-metadata.mjs');
 const SCAN_REVIEW_BUNDLE_PATH = path.resolve('scripts/tools/scan-review-bundle.mjs');
 const ORCA_READONLY_FINALIZER_PATH = path.resolve('scripts/tools/orca-readonly-evidence-finalizer.mjs');
+const ARTIFACT_LEDGER_VALIDATOR_PATH = path.resolve('scripts/tools/validate-artifact-ledger.mjs');
 const RUN_ID = '20260414T080812Z';
 
 function toBashPath(filePath) {
@@ -301,7 +302,7 @@ test('adds manifest-listed review logs when requested', () => {
     assert(entries.includes('docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/dynamic-evidence/accept-summary.sanitized.json'));
     assert(entries.includes('docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/dynamic-evidence/subagent-command-log.json'));
     assert.match(manifest, /review_package_name=OpenDolphin_WebClient-review-package-20260414T080812Z-with-dynamic-evidence\.zip/);
-    assert.match(manifest, /review_log_include_count=4/);
+    assert.match(manifest, /review_log_include_count=5/);
     assert.match(manifest, /review_log_schema=command_logs_require_command_cwd_runId_start_end_exit_code_and_non_empty_content/);
     assert.match(manifest, /secret_scan_scope=dynamic_review_evidence_only/);
     assert.match(manifest, /secret_scan_file_count=6/);
@@ -395,6 +396,63 @@ test('rejects final package scan evidence that targets a preliminary zip', () =>
     assert.throws(
       () => run('node', [METADATA_VALIDATOR_PATH, zipPath], repoDir),
       /target_sha256/,
+    );
+  } finally {
+    removeTree(sandbox);
+  }
+});
+
+test('rejects missing or stale artifact hash ledger', () => {
+  const { sandbox, repoDir } = setupRepo({
+    'README.md': '# repo\n',
+    'docs/guide.md': '# guide\n',
+  });
+
+  try {
+    run('bash', [SCRIPT_PATH_BASH, '--run-id', RUN_ID, '--out-dir', 'out'], repoDir);
+    const zipPath = path.join(repoDir, 'out', `OpenDolphin_WebClient-review-package-${RUN_ID}.zip`);
+    const ledgerPath = path.join(repoDir, 'out', 'artifact-sha256.txt');
+
+    assert.match(fs.readFileSync(ledgerPath, 'utf8'), new RegExp(`  ${path.basename(zipPath)}$`, 'm'));
+    assert.doesNotThrow(() => run('shasum', ['-a', '256', '-c', 'artifact-sha256.txt'], path.dirname(ledgerPath)));
+
+    fs.rmSync(ledgerPath);
+    assert.throws(
+      () => run('node', [METADATA_VALIDATOR_PATH, zipPath], repoDir),
+      /artifact hash ledger not found/,
+    );
+
+    run('bash', [SCRIPT_PATH_BASH, '--run-id', RUN_ID, '--out-dir', 'out'], repoDir);
+    writeText(ledgerPath, `${'0'.repeat(64)}  ${path.basename(zipPath)}\n`);
+    assert.throws(
+      () => run('node', [METADATA_VALIDATOR_PATH, zipPath], repoDir),
+      /artifact hash ledger review package ZIP/,
+    );
+  } finally {
+    removeTree(sandbox);
+  }
+});
+
+test('validates complete evidence directory artifact ledgers', () => {
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'artifact-ledger-validator-test-'));
+
+  try {
+    const evidenceDir = path.join(sandbox, 'evidence');
+    const summaryPath = path.join(evidenceDir, 'final-summary.sanitized.json');
+    writeText(summaryPath, '{"ok":true}\n');
+    assert.throws(
+      () => run('node', [ARTIFACT_LEDGER_VALIDATOR_PATH, evidenceDir], sandbox),
+      /artifact ledger not found/,
+    );
+
+    const ledgerPath = path.join(evidenceDir, 'artifact-sha256.txt');
+    writeText(ledgerPath, `${sha256File(summaryPath)}  final-summary.sanitized.json\n`);
+    assert.match(run('node', [ARTIFACT_LEDGER_VALIDATOR_PATH, evidenceDir], sandbox), /artifact ledger validation passed/);
+
+    writeText(ledgerPath, `${'0'.repeat(64)}  final-summary.sanitized.json\n`);
+    assert.throws(
+      () => run('node', [ARTIFACT_LEDGER_VALIDATOR_PATH, evidenceDir], sandbox),
+      /artifact ledger hash mismatch/,
     );
   } finally {
     removeTree(sandbox);
@@ -828,6 +886,37 @@ test('rejects manifest-listed command logs with an empty output section', () => 
     assert.throws(
       () => run('bash', [SCRIPT_PATH_BASH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir),
       /empty command output evidence/,
+    );
+  } finally {
+    removeTree(sandbox);
+  }
+});
+
+test('rejects package command logs with placeholder-only timestamps', () => {
+  const manifestPath = 'docs/implementation/postfix/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
+  const { sandbox, repoDir } = setupRepo({
+    'README.md': '# repo\n',
+    [manifestPath]: ['RUN_ID=20260418T224551Z', '- dynamic-logs/placeholder.log', ''].join('\n'),
+    'docs/implementation/postfix/dynamic-logs/placeholder.log': [
+      'command_log_version=1',
+      'command=npm test',
+      'cwd=/repo',
+      `runId=${RUN_ID}`,
+      'start=recorded_in_session_transcript',
+      '--- command output ---',
+      'test output',
+      '--- command summary ---',
+      'end=recorded_in_session_transcript',
+      'exit_code=0',
+      'result=PASS',
+      '',
+    ].join('\n'),
+  });
+
+  try {
+    assert.throws(
+      () => run('bash', [SCRIPT_PATH_BASH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir),
+      /placeholder-only start timestamp/,
     );
   } finally {
     removeTree(sandbox);
