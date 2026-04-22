@@ -1,0 +1,14 @@
+{
+  "status": "active",
+  "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+  "sourceWorkOrder": "WO-8",
+  "blockerId": "phase4-safe-wrapper-action-missing",
+  "priority": "high",
+  "standingTrialOrcaApproval": true,
+  "productionOrcaApproval": false,
+  "lastUpdated": "2026-04-22",
+  "notes": [
+    "WO-8 stopped before live ORCA traffic because an exact safe Phase 4 wrapper/action was not identified.",
+    "The next worker should resolve the safe wrapper/action blocker before attempting live Trial ORCA Phase 4 work."
+  ]
+}
