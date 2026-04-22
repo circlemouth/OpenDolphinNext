@@ -4,7 +4,7 @@ RUN_ID: `20260421T235522Z`
 
 - packageMode: `extracted_review_subset`
 - source_branch: `master`
-- source_commit: `8779b2c61b28cacfadc25c803ccf7a7f58e69bb6`
+- source_commit: `2961b7eb6613e3340d14e1b2fe870f7bac8ced81`
 - source_git_metadata_available: `yes`
 - worktree_clean: `not_verified`
 - final ZIP path/hash/count/size: recorded in external review-package sidecar after ZIP creation
@@ -23,6 +23,9 @@ RUN_ID: `20260421T235522Z`
 - WO-5 status: PASS pending ChatGPT review
 - package tooling test: `node --test tests/review-package/create-review-package.test.mjs` pass
 - corrected previous failure: missing `cwd` fixture fixed; finalizer still rejects malformed command logs
+- package metadata validation: pass
+- final ZIP source-scope scan: pass
+- artifact ledger verification: pass
 - may_run_phase4: `false`
 - may_prepare_future_phase4_prompt: `no_until_ChatGPT_accepts_WO5`
 - may_start_next: `no_until_ChatGPT_accepts_WO5`

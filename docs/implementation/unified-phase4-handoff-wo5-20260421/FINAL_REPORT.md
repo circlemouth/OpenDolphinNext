@@ -29,8 +29,8 @@ RUN_ID: `20260421T235522Z`
 
 ## Source
 
-- master HEAD: `8779b2c61b28cacfadc25c803ccf7a7f58e69bb6`
-- source_commit for package: `8779b2c61b28cacfadc25c803ccf7a7f58e69bb6`
+- master HEAD after package tooling fixture commit: `2961b7eb6613e3340d14e1b2fe870f7bac8ced81`
+- source_commit for package: `2961b7eb6613e3340d14e1b2fe870f7bac8ced81`
 
 ## WO-5 Docs
 
@@ -59,6 +59,8 @@ The final package is validated by external sidecars:
 - metadata validation
 - final ZIP source-scope scan
 - artifact ledger verification
+
+Final package details are recorded in external sidecars under `docs/implementation/unified-phase4-handoff-wo5-20260421/review-package/` because embedding post-package hash details into the ZIP would change the ZIP hash.
 
 Corrected failure retained as negative evidence: `node --test tests/review-package/create-review-package.test.mjs` previously failed because the readonly finalizer positive fixture wrote a sandbox `command-log.jsonl` entry without required `cwd`. The fixture now includes required metadata, and a negative assertion proves `scripts/tools/orca-readonly-evidence-finalizer.mjs` still rejects a malformed JSONL line without `cwd`.
 
