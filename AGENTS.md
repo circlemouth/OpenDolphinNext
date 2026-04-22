@@ -197,6 +197,9 @@
 8. **報告**:
    - `【ワーカー報告】` ヘッダーを使用。
    - 実施内容、結果、残課題、更新したドキュメントを明記。
+   - ファイル・ディレクトリ・ZIP・sidecar などの成果物を提示する場合は、単なるパス文字列ではなく、クリック可能な Markdown リンク形式で提示すること。
+     - 例: `[FINAL_REPORT.md](/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/example/FINAL_REPORT.md)`
+     - sha256 / size / count などのメタデータは併記してよいが、対象ファイル自体は必ずリンクにすること。
    - セキュリティ影響のある変更では、**脅威・対策・検証結果・残リスク** を必ず含めること。
    - "Done" の定義を満たしてから報告せよ。
 
