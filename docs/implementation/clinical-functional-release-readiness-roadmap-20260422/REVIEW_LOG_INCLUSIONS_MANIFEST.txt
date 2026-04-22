@@ -1,0 +1,23 @@
+RUN_ID: 20260422T134401Z
+
+Included logs:
+docs/implementation/clinical-functional-release-readiness-roadmap-20260422/command-log.jsonl
+docs/implementation/clinical-functional-release-readiness-roadmap-20260422/secret-scan.sanitized.txt
+
+Excluded by design:
+live ORCA logs
+ORCA connection test logs
+HAR files
+trace files
+video files
+screenshot files
+raw network dumps
+raw ORCA request bodies
+raw ORCA response bodies
+raw patient detail
+raw insurance detail
+credential/password/cookie/token/session captures
+
+Reason:
+This task is documentation-only. No live ORCA, browser fullflow, credential capture, or raw artifact capture was performed.
+

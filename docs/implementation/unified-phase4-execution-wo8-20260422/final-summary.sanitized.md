@@ -1,0 +1,26 @@
+# WO-8 Final Summary Sanitized
+
+- final verdict: `PHASE4_BLOCKED_HARNESS_OR_EVIDENCE_POLICY`
+- RUN_ID: `20260422T132147Z`
+- branch: `master`
+- observed HEAD: `7071136c8d9fcd55e9edd9373def0aa005dc737c`
+- required HEAD: `fc4652f69aac0868336a9be27f7cd792d3fb29b0`, owner-waived as merge-related
+- owner approval token scope classification: `exact_scope_00001_only_no_fullflow_no_phase3_no_rn02_03_04`
+- approval token consumed: no
+- environment classification: `macOS accepted`
+- git LF classification: `accepted_with_existing_repo_crlf_mixed_noted`
+- WO-6 package verification: pass
+- WO-7 package verification: pass
+- zero-candidate/harness readiness: `resolved_by_existing_local_evidence`
+- target actually used: none; planned target remained `00001 / 00001` only
+- Phase 3 retry rerun: no
+- fullflow: not_run
+- Request_Number `02` / `03` / `04`: not_run
+- `00002` through `00011`: not_run
+- live ORCA action: not_run
+- live ORCA mutation: no
+- business success assessment: not assessed, no live action
+- blocking gate after owner waiver: Gate 6, exact approved Phase 4 wrapper/action not identified
+- raw artifact policy result: pass for generated WO-8 evidence scope
+- credential handling result: values not recorded; credential variables unset; not consumed
+- code change status: no app production code changes; no CWP functional changes

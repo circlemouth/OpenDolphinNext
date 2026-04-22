@@ -1,0 +1,28 @@
+WO-8 review package manifest
+RUN_ID: 20260422T132147Z
+package mode: sanitized blocked-run evidence package
+final verdict: PHASE4_BLOCKED_HARNESS_OR_EVIDENCE_POLICY
+
+Included source files:
+docs/implementation/unified-phase4-execution-wo8-20260422/MAIN_AGENT_REPORT.md
+docs/implementation/unified-phase4-execution-wo8-20260422/FINAL_REPORT.md
+docs/implementation/unified-phase4-execution-wo8-20260422/PHASE4_PRE_LIVE_GATE_REPORT.md
+docs/implementation/unified-phase4-execution-wo8-20260422/PHASE4_EXECUTION_REPORT.sanitized.md
+docs/implementation/unified-phase4-execution-wo8-20260422/PHASE4_BUSINESS_SUCCESS_ASSESSMENT.sanitized.md
+docs/implementation/unified-phase4-execution-wo8-20260422/PHASE4_SCOPE_GUARD_REPORT.md
+docs/implementation/unified-phase4-execution-wo8-20260422/PHASE4_CREDENTIAL_HANDLING_REPORT.sanitized.md
+docs/implementation/unified-phase4-execution-wo8-20260422/PHASE4_EVIDENCE_SANITIZE_REPORT.md
+docs/implementation/unified-phase4-execution-wo8-20260422/PHASE4_STOP_OR_RETRY_POLICY_REPORT.md
+docs/implementation/unified-phase4-execution-wo8-20260422/PHASE4_REMAINING_RISKS.md
+docs/implementation/unified-phase4-execution-wo8-20260422/TEST_LOGS.sanitized.md
+docs/implementation/unified-phase4-execution-wo8-20260422/command-log.jsonl
+docs/implementation/unified-phase4-execution-wo8-20260422/final-summary.sanitized.md
+docs/implementation/unified-phase4-execution-wo8-20260422/final-summary.sanitized.json
+docs/implementation/unified-phase4-execution-wo8-20260422/secret-scan.sanitized.txt
+docs/implementation/unified-phase4-execution-wo8-20260422/REVIEW_PACKAGE_MANIFEST.txt
+docs/implementation/unified-phase4-execution-wo8-20260422/REVIEW_LOG_INCLUSIONS_MANIFEST.txt
+
+Excluded:
+review-package ZIP files are not nested into the package.
+No app production code is included as modified WO-8 output.
+No raw ORCA/network/browser artifacts are included.
