@@ -2,13 +2,106 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "WO-8",
-  "blockerId": "phase4-safe-wrapper-action-missing",
+  "blockerId": "phase4-live-trial-blocked-local-runtime-config-missing",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
-  "lastUpdated": "2026-04-22",
+  "lastUpdated": "2026-04-22T22:45:59Z",
+  "resolvedBlockers": [
+    {
+      "blockerId": "phase4-safe-wrapper-action-missing",
+      "resolvedByRunId": "20260422T145704Z",
+      "result": "PHASE4_SAFE_WRAPPER_ACTION_DEFINED_LOCAL_PASS",
+      "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+      "evidence": "docs/implementation/phase4-safe-wrapper-resolution-20260422T145704Z/FINAL_REPORT.md"
+    },
+    {
+      "blockerId": "phase4-live-trial-blocked-missing-runtime-secret-or-config",
+      "resolvedByRunId": "20260422T224559Z",
+      "result": "PHASE4_DUMMY_JSON_PAYLOADS_PLACED_LOCAL_VALIDATED_NO_LIVE",
+      "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json",
+      "payloadSha256": "e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618",
+      "ownerApproval": "docs/implementation/phase4-orca-trial-payloads-20260422/OWNER_APPROVAL_PHASE4_JSON_SHA_ADDENDUM.md",
+      "evidence": "docs/implementation/phase4-orca-trial-payloads-20260422/PLACEMENT_REPORT.md",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false
+    }
+  ],
+  "blockedAttempts": [
+    {
+      "blockerId": "phase4-live-trial-blocked-missing-runtime-secret-or-config",
+      "blockedByRunId": "20260422T160301Z",
+      "result": "PHASE4_LIVE_TRIAL_BLOCKED_MISSING_RUNTIME_SECRET_OR_CONFIG",
+      "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+      "evidence": "docs/implementation/phase4-live-trial-blocker-20260422T160301Z/FINAL_REPORT.md",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false
+    },
+    {
+      "blockerId": "phase4-live-trial-blocked-missing-runtime-secret-or-config",
+      "blockedByRunId": "20260422T170230Z",
+      "result": "PHASE4_LIVE_TRIAL_BLOCKED_MISSING_RUNTIME_SECRET_OR_CONFIG",
+      "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+      "evidence": "docs/implementation/phase4-live-trial-blocker-20260422T170230Z/FINAL_REPORT.md",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false
+    },
+    {
+      "blockerId": "phase4-live-trial-blocked-missing-runtime-secret-or-config",
+      "blockedByRunId": "20260422T180231Z",
+      "result": "PHASE4_LIVE_TRIAL_BLOCKED_MISSING_RUNTIME_SECRET_OR_CONFIG",
+      "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+      "evidence": "docs/implementation/phase4-live-trial-blocker-20260422T180231Z/FINAL_REPORT.md",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false
+    },
+    {
+      "blockerId": "phase4-live-trial-blocked-missing-runtime-secret-or-config",
+      "blockedByRunId": "20260422T190124Z",
+      "result": "PHASE4_LIVE_TRIAL_BLOCKED_MISSING_RUNTIME_SECRET_OR_CONFIG",
+      "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+      "evidence": "docs/implementation/phase4-live-trial-blocker-20260422T190124Z/FINAL_REPORT.md",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false
+    },
+    {
+      "blockerId": "phase4-live-trial-blocked-missing-runtime-secret-or-config",
+      "blockedByRunId": "20260422T200131Z",
+      "result": "PHASE4_LIVE_TRIAL_BLOCKED_MISSING_RUNTIME_SECRET_OR_CONFIG",
+      "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+      "evidence": "docs/implementation/phase4-live-trial-blocker-20260422T200131Z/FINAL_REPORT.md",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false
+    },
+    {
+      "blockerId": "phase4-live-trial-blocked-local-runtime-config-missing",
+      "blockedByRunId": "20260422T224559Z",
+      "result": "PHASE4_LIVE_TRIAL_BLOCKED_LOCAL_RUNTIME_CONFIG_MISSING",
+      "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json",
+      "payloadSha256": "e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618",
+      "evidence": "docs/implementation/phase4-orca-trial-payloads-20260422/RUNTIME_BLOCKER_REPORT.md",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false
+    }
+  ],
   "notes": [
-    "WO-8 stopped before live ORCA traffic because an exact safe Phase 4 wrapper/action was not identified.",
-    "The next worker should resolve the safe wrapper/action blocker before attempting live Trial ORCA Phase 4 work."
+    "The exact safe Phase 4 wrapper/action is now defined and locally verified.",
+    "RUN_ID 20260422T160301Z checked approved runtime payload path plus sha256 sources without printing values; the inputs were absent and no live Trial traffic was sent.",
+    "RUN_ID 20260422T170230Z repeated the approved runtime input precheck without printing values; the inputs were still absent and no live Trial traffic was sent.",
+    "RUN_ID 20260422T180231Z repeated the approved runtime input precheck without printing values; the inputs were still absent and no live Trial traffic was sent.",
+    "RUN_ID 20260422T190124Z repeated the approved runtime input precheck without printing values; the inputs were still absent and no live Trial traffic was sent.",
+    "RUN_ID 20260422T200131Z repeated the approved runtime input precheck without printing values; the inputs were still absent and no live Trial traffic was sent.",
+    "RUN_ID 20260422T224559Z placed and hash-verified the Phase4 dummy JSON payload package, validated the current-wrapper medicalmodv2 payload by dry-run, and recorded owner approval for the JSON SHA.",
+    "RUN_ID 20260422T224559Z did not send live Trial traffic because the local backend was unreachable; Docker became available, but setup stopped before backend start because MODERNIZED_POSTGRES_PASSWORD was missing.",
+    "The next worker may run exactly one live Trial medicalmodv2 action only after required local runtime config is available and the documented local backend is up with ORCA Trial configuration."
   ]
 }

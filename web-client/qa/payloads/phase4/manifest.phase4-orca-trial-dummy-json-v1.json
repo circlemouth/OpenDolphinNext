@@ -1,0 +1,58 @@
+{
+  "approvedTrialScopeCandidate": {
+    "candidateId": "00001",
+    "departmentCode": "11",
+    "environment": "Live ORCA Trial only",
+    "noGo": [
+      "Request_Number=02",
+      "Request_Number=03",
+      "Request_Number=04",
+      "diseasev3 Request_Number=01",
+      "medicalmodv2 class=02/03/04",
+      "subjectivesv2 class=02",
+      "acceptmodv2 mutation",
+      "Phase3 retry",
+      "fullflow",
+      "patients/candidates 00002-00011"
+    ],
+    "patientId": "00001",
+    "physicianCode": "0005",
+    "productionOrca": "NO-GO"
+  },
+  "classification": "phase4_orca_trial_dummy_payload_json_package",
+  "createdAtJst": "2026-04-22T00:00:00+09:00",
+  "encoding": "UTF-8",
+  "files": {
+    "diseasev3_phase4_dummy_native_intent_v1.json": {
+      "bytes": 715,
+      "repo_path": "web-client/qa/payloads/phase4/diseasev3_phase4_dummy_native_intent_v1.json",
+      "sha256": "da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df"
+    },
+    "medicalmodv2_phase4_dummy_current_wrapper_v1.json": {
+      "bytes": 694,
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json",
+      "sha256": "e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618"
+    },
+    "medicalmodv2_phase4_dummy_owner_aligned_v1.json": {
+      "bytes": 639,
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_owner_aligned_v1.json",
+      "sha256": "2044f175382bbf013ad928cb7ba7431d5a5a0d5bc7c1f26d6448b06c747d9de5"
+    },
+    "subjectivesv2_phase4_dummy_native_intent_v1.json": {
+      "bytes": 389,
+      "repo_path": "web-client/qa/payloads/phase4/subjectivesv2_phase4_dummy_native_intent_v1.json",
+      "sha256": "9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308"
+    }
+  },
+  "hashAlgorithm": "SHA-256 over exact UTF-8 file bytes",
+  "important": [
+    "Prior XML payload hashes do not match these JSON payload files.",
+    "Use the new JSON sha256 values below for wrapper --payload-sha256.",
+    "medicalmodv2_phase4_dummy_current_wrapper_v1.json is the only current-wrapper executable candidate.",
+    "diseasev3 and subjectivesv2 JSON files are native intent payloads for future safe wrappers; do not execute them with the current medicalmodv2 wrapper.",
+    "Do not store raw ORCA request/response, HAR, trace, screenshots, video, raw network, credentials, cookies, tokens, session IDs, or CSRF values."
+  ],
+  "lineEndings": "LF",
+  "ownerApprovalRequired": true,
+  "trailingNewline": true
+}

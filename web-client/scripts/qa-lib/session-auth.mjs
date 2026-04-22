@@ -54,7 +54,7 @@ const normalizePathPrefix = (rawValue, fallback) => {
   return withLeadingSlash.replace(/\/+$/, '') || fallback;
 };
 
-const resolveBackendTarget = () => {
+export const resolveBackendTarget = () => {
   const rawTarget = process.env.VITE_DEV_PROXY_TARGET?.trim() || DEFAULT_PROXY_TARGET;
   const target = new URL(rawTarget);
   const resourcePrefix =
@@ -72,7 +72,7 @@ const resolveBackendTarget = () => {
 
 const parseSessionCookieValue = (setCookieHeader) => setCookieHeader?.match(/(?:^|,\s*)JSESSIONID=([^;]+)/)?.[1] ?? null;
 
-const bootstrapBackendSession = async ({ facilityId, userId, password, clientUuid }) => {
+export const bootstrapBackendSession = async ({ facilityId, userId, password, clientUuid }) => {
   const target = resolveBackendTarget();
   const rootResponse = await fetch(target.appRootUrl, { method: 'GET' });
   const rootHtml = await rootResponse.text();

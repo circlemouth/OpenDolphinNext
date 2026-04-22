@@ -1,0 +1,11 @@
+{"runId":"20260422T200131Z","command":"date -u +%Y%m%dT%H%M%SZ","result":"PASS","summary":"RUN_ID assigned."}
+{"runId":"20260422T200131Z","command":"read automation memory","result":"PASS","summary":"No prior automation memory file existed."}
+{"runId":"20260422T200131Z","command":"git branch/head/status/worktree preflight","result":"PASS","summary":"master at 458426d45; dirty state was pre-existing and not reverted; one registered worktree."}
+{"runId":"20260422T200131Z","command":"read active automation handoff and roadmap docs","result":"PASS","summary":"Active WO-8 Phase 4 medicalmodv2 live Trial handoff selected."}
+{"runId":"20260422T200131Z","command":"read wrapper resolution report and wrapper source","result":"PASS","summary":"Exact safe wrapper/action remains web-client/scripts/qa-phase4-safe-medicalmodv2.mjs."}
+{"runId":"20260422T200131Z","command":"runtime input presence precheck","result":"BLOCKED","summary":"Approved payload path plus sha256 pairs and local handoff file were missing; values were not printed."}
+{"runId":"20260422T200131Z","command":"node --check phase4 safe wrapper modules","result":"PASS","summary":"Wrapper and safe-evidence helper parsed successfully."}
+{"runId":"20260422T200131Z","command":"npm test -- --run scripts/__tests__/phase4Medicalmodv2SafeEvidence.test.ts","result":"PASS","summary":"6 tests passed; web guard pretest passed."}
+{"runId":"20260422T200131Z","command":"qa-phase4-safe-medicalmodv2.mjs dry-run","result":"PASS_WITH_CORRECTED_ARTIFACT_DIR","summary":"Initial artifact-dir was corrected from an external parent path; the mistaken sanitized output created by this run was removed, then the dry-run generated sanitized summary in the repo evidence directory."}
+{"runId":"20260422T200131Z","command":"secret/raw-artifact scan","result":"PASS","summary":"No targeted credential-value matches or forbidden artifact filenames in current-run evidence."}
+{"runId":"20260422T200131Z","command":"external mistaken artifact cleanup check","result":"PASS","summary":"No files remain at the mistaken external phase4-live-trial-blocker-20260422T200131Z evidence path."}

@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-22T17:14:15.389Z",
+  "commandContract": "phase4-safe-medicalmodv2-sanitized-only",
+  "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+  "requestClass": "medicalmodv2",
+  "target": {
+    "candidateId": "00001",
+    "patientId": "00001",
+    "candidateOnly00001": true
+  },
+  "verdict": "mock_passed_no_live_orca",
+  "dryRun": false,
+  "mock": true,
+  "liveTrialAction": "not_run",
+  "phase3": "not_run",
+  "fullflow": "not_run",
+  "browserNetworkArtifactMode": "disabled",
+  "sanitizedEvidenceOnly": true,
+  "rawSensitiveFieldsExcluded": true,
+  "payload": {
+    "sha256": "6e8f7abcd394b26ba785f604825bc22d9e86529e49546c7506f58cda7420e6bb",
+    "bytes": 433,
+    "pathRecorded": false,
+    "rawPayloadStored": false,
+    "summary": {
+      "patientIdMatched": true,
+      "candidateIdMatched": true,
+      "requestNumber": "01",
+      "classCode": "01",
+      "requiredFieldsPresent": {
+        "visitDate": true,
+        "departmentCode": true,
+        "physicianCode": true,
+        "insuranceCombinationNumber": true,
+        "voucherNumber": true,
+        "sequentialNumber": true
+      },
+      "medicalInformation": {
+        "groupCount": 1,
+        "medicationCount": 1,
+        "entityKinds": [
+          "treatmentOrder"
+        ],
+        "medicalClasses": [
+          "700"
+        ],
+        "unsupportedPhysiologyOrderPresent": false
+      },
+      "rawPayloadStored": false,
+      "rawPatientOrInsuranceDetailStored": false
+    }
+  },
+  "requestSemantics": {
+    "requestNumber01Only": true,
+    "requestNumber02To04Forbidden": true,
+    "classCode01Only": true,
+    "http200AloneIsNotBusinessSuccess": true,
+    "apiResultZeroAloneIsNotBusinessSuccess": true,
+    "completionEvidenceRequired": true
+  },
+  "guard": {
+    "ok": true,
+    "blockers": []
+  },
+  "runId": "20260422T170230Z",
+  "traceId": "trace-20260422T170230Z",
+  "evidencePath": "docs/implementation/phase4-live-trial-blocker-20260422T170230Z/wrapper-mock/phase4-medicalmodv2-summary.sanitized.json",
+  "generatedArtifacts": [
+    "phase4-medicalmodv2-summary.sanitized.json",
+    "phase4-medicalmodv2-summary.sanitized.md"
+  ],
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false,
+  "response": {
+    "httpStatus": 200,
+    "apiResult": "0000",
+    "apiOk": true,
+    "ok": true,
+    "apiResultMessageCategory": "ok_like",
+    "warningCount": 0,
+    "responseClassification": "businessAccepted",
+    "businessAccepted": true,
+    "completionEvidence": {
+      "informationTimestampPresent": true,
+      "medicalUidPresent": false,
+      "invoiceNumberPresent": false,
+      "dataIdPresent": true
+    },
+    "rawResponseBodyStored": false,
+    "rawApiResultMessageStored": false,
+    "rawPatientOrInsuranceDetailStored": false
+  }
+}

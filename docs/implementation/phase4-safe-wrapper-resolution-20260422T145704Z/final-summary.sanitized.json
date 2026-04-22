@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260422T145704Z",
+  "workOrder": "WO-8 blocker resolution",
+  "blockerId": "phase4-safe-wrapper-action-missing",
+  "verdict": "PHASE4_SAFE_WRAPPER_ACTION_DEFINED_LOCAL_PASS",
+  "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+  "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+  "requestClass": "medicalmodv2",
+  "target": {
+    "candidateId": "00001",
+    "patientId": "00001"
+  },
+  "localValidation": {
+    "nodeCheck": "pass",
+    "focusedVitest": "pass",
+    "dryRun": "pass",
+    "mock": "pass",
+    "secretScan": "pass",
+    "forbiddenArtifactScan": "pass"
+  },
+  "liveTrialOrca": {
+    "status": "not_run",
+    "businessSuccessClassification": "not_run_for_live"
+  },
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false,
+  "rawOrcaBodiesCaptured": false,
+  "rawPatientOrInsuranceDetailCaptured": false,
+  "nextPromptStatus": "active_follow_on_live_trial_prompt"
+}
