@@ -12,16 +12,16 @@
 | no fullflow | command log and reports | pass | fullflow remains `not_run`. |
 | no live ORCA mutation | command log and reports | pass | live ORCA mutation remains no. |
 | no live ORCA connection test | command log and reports | pass | no ORCA connection tests in WO-6. |
-| no raw sensitive artifact | final package source-scope scan | blocked_until_final_sidecar_validation_passes | Must target final WO-6 ZIP hash. |
-| sidecar naming unique | final sidecar directory | blocked_until_final_sidecar_validation_passes | Uses `<final ZIP basename>.sidecars/`. |
-| source-scope scan | final sidecar log | blocked_until_final_sidecar_validation_passes | Bound to final ZIP path and sha256. |
-| metadata validation | final sidecar log | blocked_until_final_sidecar_validation_passes | Bound to final ZIP path and sha256. |
-| artifact ledger verification | final sidecar log | blocked_until_final_sidecar_validation_passes | Ledger covers final sidecar directory files. |
+| no raw sensitive artifact | final package source-scope scan | pass | Targets final WO-6 ZIP sha256 `f69cca11a97cc9977f3917bf9d626d9403dfc86d5b8e67cd5324f6f5999e0515`. |
+| sidecar naming unique | final sidecar directory | pass | Uses `OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.sidecars/`. |
+| source-scope scan | final sidecar log | pass | Bound to final ZIP path and sha256. |
+| metadata validation | final sidecar log | pass | Bound to final ZIP path and sha256. |
+| artifact ledger verification | final sidecar log | pass | Ledger covers final ZIP and sidecar evidence, excluding its own verification log to avoid self-referential hash drift. |
 | may_run_phase4 | final report | blocked | `may_run_phase4=false`. |
-| may_request_owner_phase4_execution_approval | final report | blocked_until_final_sidecar_validation_passes | `yes` if final package and sidecars pass. |
+| may_request_owner_phase4_execution_approval | final report | pass | `yes`; execution remains blocked until explicit future approval after ChatGPT review. |
 
 ## WO-6 Decision
 
 - `may_run_phase4=false`
-- `may_request_owner_phase4_execution_approval=yes`, after final package/source-scope scan/metadata validation/artifact ledger verification pass.
+- `may_request_owner_phase4_execution_approval=yes`
 - `may_start_phase4_execution=no_until_explicit_owner_approval_after_ChatGPT_review`

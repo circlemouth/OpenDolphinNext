@@ -12,9 +12,9 @@ WO-6 is docs / review-package preparation only. No app regression suite was run 
 | `git diff --cached --check` | pass | `command-logs/final-004-git-diff-cached-check.log` |
 | `bash server-modernized/tools/ci/check-doc-links.sh` | pass | `command-logs/final-002-doc-link-check.log` |
 | `node --test tests/review-package/create-review-package.test.mjs` | pass, 25/25 | `command-logs/final-003-review-package-test.log` |
-| package metadata validation | pending final sidecar | `review-package/<final-zip-basename>.sidecars/<final-zip-basename>.post-package-metadata-validation-final.log` |
-| final ZIP source-scope scan | pending final sidecar | `review-package/<final-zip-basename>.sidecars/<final-zip-basename>.secret-scan-review-bundle.log` |
-| artifact ledger verification | pending final sidecar | `review-package/<final-zip-basename>.sidecars/<final-zip-basename>.post-package-artifact-ledger-verify-final.log` |
+| package metadata validation | pass, target final ZIP sha256 `f69cca11a97cc9977f3917bf9d626d9403dfc86d5b8e67cd5324f6f5999e0515` | `review-package/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.sidecars/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.post-package-metadata-validation-final.log` |
+| final ZIP source-scope scan | pass, target final ZIP sha256 `f69cca11a97cc9977f3917bf9d626d9403dfc86d5b8e67cd5324f6f5999e0515` | `review-package/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.sidecars/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.secret-scan-review-bundle.log` |
+| artifact ledger verification | pass | `review-package/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.sidecars/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.post-package-artifact-ledger-verify-final.log` |
 
 ## Explicitly Not Run
 

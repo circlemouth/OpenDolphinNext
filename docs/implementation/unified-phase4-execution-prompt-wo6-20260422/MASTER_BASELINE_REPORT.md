@@ -48,4 +48,4 @@ Advisory subagents may be used only in individual worktrees. They are reference-
 
 ## Final Baseline
 
-Final HEAD, final status, and final package metadata are recorded in `FINAL_REPORT.md` after package creation and commit.
+Final status and package metadata are recorded in `FINAL_REPORT.md`. Final master HEAD is recorded after the final package/evidence commit by `git rev-parse HEAD` and in the final worker report.

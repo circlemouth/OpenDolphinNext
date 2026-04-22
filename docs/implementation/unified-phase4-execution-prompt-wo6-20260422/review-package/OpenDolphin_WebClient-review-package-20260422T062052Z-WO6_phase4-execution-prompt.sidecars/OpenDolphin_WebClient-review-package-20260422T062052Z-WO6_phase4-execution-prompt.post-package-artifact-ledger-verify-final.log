@@ -1,0 +1,18 @@
+command_log_version=1
+command=shasum -a 256 -c OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.sidecars/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.artifact-sha256.txt
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/unified-phase4-execution-prompt-wo6-20260422/review-package
+runId=20260422T062052Z
+start_utc=2026-04-22T06:55:52Z
+target_path=OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.zip
+target_sha256=f69cca11a97cc9977f3917bf9d626d9403dfc86d5b8e67cd5324f6f5999e0515
+--- command output ---
+OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.zip: OK
+OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.sidecars/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.summary.txt: OK
+OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.sidecars/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.secret-scan-review-bundle.log: OK
+OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.sidecars/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.final-zip-path.txt: OK
+OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.sidecars/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.post-package-metadata-validation-final.log: OK
+OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.sidecars/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.command-log.post-package.jsonl: OK
+--- command summary ---
+end_utc=2026-04-22T06:55:52Z
+exit_code=0
+result=PASS

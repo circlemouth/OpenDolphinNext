@@ -10,7 +10,7 @@
 | Phase 4 not_run | WO-6 command log and reports | pass | No Phase 4 execution in WO-6. |
 | fullflow not_run | WO-6 command log and reports | pass | No fullflow in WO-6. |
 | live ORCA mutation no | WO-6 command log and reports | pass | No live ORCA mutation and no live ORCA connection test. |
-| raw artifacts absent | final package source-scope scan and sidecar ledger | pending_final_package_validation | Must target exact final WO-6 ZIP hash. |
+| raw artifacts absent | final package source-scope scan and sidecar ledger | pass | Targets final WO-6 ZIP sha256 `f69cca11a97cc9977f3917bf9d626d9403dfc86d5b8e67cd5324f6f5999e0515`. |
 | future execution approval | explicit future owner approval after ChatGPT review | blocked | Missing in WO-6 by design. |
 | owner credential channel approved | explicit future owner approval | blocked | WO-6 stores no raw credential values. |
 | command guard complete | `PHASE4_COMMAND_GUARD.md` | pass | Guard is preparation only, not authorization. |
@@ -20,7 +20,7 @@
 
 ## Decision
 
-- WO-6 go for owner approval request preparation: yes, if final package and sidecars validate.
+- WO-6 go for owner approval request preparation: yes.
 - WO-6 go for Phase 4 execution: no.
-- `may_request_owner_phase4_execution_approval`: yes, if WO-6 docs/package evidence are complete.
+- `may_request_owner_phase4_execution_approval`: yes.
 - `may_start_phase4_execution`: no until explicit owner approval after ChatGPT review.

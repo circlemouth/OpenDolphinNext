@@ -4,7 +4,7 @@ RUN_ID: `20260422T062052Z`
 
 ## Status
 
-`PASS_pending_final_package_validation`
+`PASS`
 
 ## Summary
 
@@ -27,18 +27,19 @@ WO-6 prepared a future Phase 4 execution prompt draft and approval gate document
 - live ORCA mutation: no
 - Request_Number `02`/`03`/`04` execution: not_run
 - candidates/patients `00002` through `00011` mutation: not_run
-- raw sensitive artifacts: none intended; final package scan required
+- raw sensitive artifacts: none included by final package source-scope scan
 - may_run_phase4: `false`
-- may_request_owner_phase4_execution_approval: `yes_after_final_package_validation`
+- may_request_owner_phase4_execution_approval: `yes`
 - may_start_phase4_execution: `no_until_explicit_owner_approval_after_ChatGPT_review`
 
 ## Source And Package
 
-- final master HEAD: recorded after final commit
-- package source commit: recorded after docs source commit
-- final ZIP path: recorded in final external sidecar
-- final ZIP sha256: recorded in final external sidecar
-- final ZIP size/count: recorded in final external sidecar
+- final master HEAD: recorded after final package/evidence commit by `git rev-parse HEAD` and in the final worker report
+- package source commit: `b8673fc517a1cf7dff1227eab7db9cd15ed53012`
+- final ZIP path: `docs/implementation/unified-phase4-execution-prompt-wo6-20260422/review-package/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.zip`
+- final ZIP sha256: `f69cca11a97cc9977f3917bf9d626d9403dfc86d5b8e67cd5324f6f5999e0515`
+- final ZIP size/count: `19163831` bytes / `2437` files
+- final sidecar directory: `docs/implementation/unified-phase4-execution-prompt-wo6-20260422/review-package/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.sidecars/`
 
 Embedding final ZIP hash/size/count into the ZIP would change the ZIP hash. The authoritative final ZIP metadata is therefore stored in uniquely named external sidecars under `review-package/<final-zip-basename>.sidecars/`.
 
@@ -64,9 +65,9 @@ Embedding final ZIP hash/size/count into the ZIP would change the ZIP hash. The 
 | git diff --cached --check | pass |
 | docs link check | pass |
 | review package tests | pass, 25/25 |
-| package metadata validation | pending final sidecar |
-| source-scope scan | pending final sidecar |
-| artifact ledger verification | pending final sidecar |
+| package metadata validation | pass, target final ZIP sha256 `f69cca11a97cc9977f3917bf9d626d9403dfc86d5b8e67cd5324f6f5999e0515` |
+| source-scope scan | pass, target final ZIP sha256 `f69cca11a97cc9977f3917bf9d626d9403dfc86d5b8e67cd5324f6f5999e0515` |
+| artifact ledger verification | pass |
 
 ## Boundary
 

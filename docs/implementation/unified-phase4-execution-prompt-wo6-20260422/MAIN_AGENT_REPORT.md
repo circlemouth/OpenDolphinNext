@@ -4,7 +4,7 @@ RUN_ID: `20260422T062052Z`
 
 ## Status
 
-`PASS_pending_final_package_validation`
+`PASS`
 
 ## Branch / Worktree
 
@@ -42,9 +42,9 @@ Required final checks:
 - `git diff --cached --check`: pass.
 - `bash server-modernized/tools/ci/check-doc-links.sh`: pass.
 - `node --test tests/review-package/create-review-package.test.mjs`: pass, 25/25.
-- package metadata validation: pending final sidecar.
-- final ZIP source-scope scan: pending final sidecar.
-- artifact ledger verification: pending final sidecar.
+- package metadata validation: pass, target final ZIP sha256 `f69cca11a97cc9977f3917bf9d626d9403dfc86d5b8e67cd5324f6f5999e0515`.
+- final ZIP source-scope scan: pass, target final ZIP sha256 `f69cca11a97cc9977f3917bf9d626d9403dfc86d5b8e67cd5324f6f5999e0515`.
+- artifact ledger verification: pass.
 
 ## Package Policy
 
@@ -53,10 +53,17 @@ When created, the final WO-6 review package is placed under `docs/implementation
 Final sidecars use a unique directory named after the final ZIP basename:
 
 ```text
-docs/implementation/unified-phase4-execution-prompt-wo6-20260422/review-package/<final-zip-basename>.sidecars/
+docs/implementation/unified-phase4-execution-prompt-wo6-20260422/review-package/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.sidecars/
 ```
 
 The final ZIP source-scope scan, metadata validation, and artifact ledger verification are external sidecars bound to the final ZIP hash. Old WO-5 sidecars are not final evidence for WO-6.
+
+Final package:
+
+- path: `docs/implementation/unified-phase4-execution-prompt-wo6-20260422/review-package/OpenDolphin_WebClient-review-package-20260422T062052Z-WO6_phase4-execution-prompt.zip`
+- sha256: `f69cca11a97cc9977f3917bf9d626d9403dfc86d5b8e67cd5324f6f5999e0515`
+- size/count: `19163831` bytes / `2437` files
+- package source commit: `b8673fc517a1cf7dff1227eab7db9cd15ed53012`
 
 ## Scope Boundary
 
