@@ -1,14 +1,3 @@
-WO-8 review log inclusions manifest
-RUN_ID: 20260422T132147Z
-
-Included logs:
-docs/implementation/unified-phase4-execution-wo8-20260422/command-log.jsonl
-docs/implementation/unified-phase4-execution-wo8-20260422/TEST_LOGS.sanitized.md
-docs/implementation/unified-phase4-execution-wo8-20260422/secret-scan.sanitized.txt
-
-Sidecar logs to be created after final ZIP creation:
-docs/implementation/unified-phase4-execution-wo8-20260422/review-package/OpenDolphin_WebClient-review-package-20260422T132147Z-WO8_phase4-execution-00001-only.sidecars/secret-scan-review-bundle.log
-docs/implementation/unified-phase4-execution-wo8-20260422/review-package/OpenDolphin_WebClient-review-package-20260422T132147Z-WO8_phase4-execution-00001-only.sidecars/metadata-validation.log
-docs/implementation/unified-phase4-execution-wo8-20260422/review-package/OpenDolphin_WebClient-review-package-20260422T132147Z-WO8_phase4-execution-00001-only.sidecars/artifact-ledger-verify.log
-docs/implementation/unified-phase4-execution-wo8-20260422/review-package/OpenDolphin_WebClient-review-package-20260422T132147Z-WO8_phase4-execution-00001-only.sidecars/post-package-command-log.jsonl
-
+review_log_includes=docs/implementation/unified-phase4-execution-wo8-20260422/command-log.jsonl
+post_package_review_log=docs/implementation/unified-phase4-execution-wo8-20260422/review-package/OpenDolphin_WebClient-review-package-20260422T142820Z-WO8_phase4-execution-00001-only.zip.sidecars/post-package-command-log.jsonl
+notes=No live ORCA command logs exist because Gate 6 blocked execution before live action. Prior ChatGPT sandbox blocked package was not included.

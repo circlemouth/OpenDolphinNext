@@ -1,26 +1,29 @@
 # WO-8 Final Summary Sanitized
 
 - final verdict: `PHASE4_BLOCKED_HARNESS_OR_EVIDENCE_POLICY`
-- RUN_ID: `20260422T132147Z`
 - branch: `master`
-- observed HEAD: `7071136c8d9fcd55e9edd9373def0aa005dc737c`
-- required HEAD: `fc4652f69aac0868336a9be27f7cd792d3fb29b0`, owner-waived as merge-related
-- owner approval token scope classification: `exact_scope_00001_only_no_fullflow_no_phase3_no_rn02_03_04`
-- approval token consumed: no
-- environment classification: `macOS accepted`
-- git LF classification: `accepted_with_existing_repo_crlf_mixed_noted`
-- WO-6 package verification: pass
-- WO-7 package verification: pass
-- zero-candidate/harness readiness: `resolved_by_existing_local_evidence`
-- target actually used: none; planned target remained `00001 / 00001` only
-- Phase 3 retry rerun: no
-- fullflow: not_run
-- Request_Number `02` / `03` / `04`: not_run
-- `00002` through `00011`: not_run
-- live ORCA action: not_run
-- live ORCA mutation: no
-- business success assessment: not assessed, no live action
-- blocking gate after owner waiver: Gate 6, exact approved Phase 4 wrapper/action not identified
-- raw artifact policy result: pass for generated WO-8 evidence scope
-- credential handling result: values not recorded; credential variables unset; not consumed
+- HEAD: `ab5b173712741427c9eb8b0d022abc76857e6700`
+- owner approval token scope classification: exact one-time Phase 4 approval for `00001 / 00001` only, no fullflow, no Phase 3 retry rerun, no RN02/03/04
+- token consumed: no
+- environment classification: macOS accepted
+- git LF classification: accepted with existing repo CRLF/mixed files noted
+- WO-6 package verification result: pass
+- WO-7 package verification result: pass
+- zero-candidate/harness readiness status: `resolved_by_existing_local_evidence`, local evidence only
+- target actually used: none; no live action; approved target remained `00001 / 00001`
+- Phase 3 retry status: no rerun
+- fullflow status: not_run
+- Request_Number 02/03/04 status: not_run
+- 00002 through 00011 status: not_run
+- live ORCA action status: not_run
+- live ORCA mutation status: no
+- business success assessment: `not_evaluated_no_live_action`
+- raw artifact policy result: pass; no raw artifacts recorded
+- credential handling result: pass; no credential values recorded
 - code change status: no app production code changes; no CWP functional changes
+- final ZIP path: `docs/implementation/unified-phase4-execution-wo8-20260422/review-package/OpenDolphin_WebClient-review-package-20260422T142820Z-WO8_phase4-execution-00001-only.zip`
+- final ZIP sha256: external sidecar `artifact-sha256.txt`
+- final ZIP size/count: external sidecar `summary.txt`
+- sidecar directory: `docs/implementation/unified-phase4-execution-wo8-20260422/review-package/OpenDolphin_WebClient-review-package-20260422T142820Z-WO8_phase4-execution-00001-only.zip.sidecars/`
+- remaining risks or follow-up actions: new explicit owner approval and exact safe Phase 4 wrapper/action required
+- prior ChatGPT sandbox `PHASE4_BLOCKED_REPO_STATE` package was not used as Codex evidence

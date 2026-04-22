@@ -1,26 +1,9 @@
-# WO-8 Business Success Assessment Sanitized
+# WO-8 Phase 4 Business Success Assessment Sanitized
 
-## Assessment
+- Business success criteria source: WO-5 `PHASE4_EVIDENCE_REQUIREMENTS.md`, WO-6 `PHASE4_EVIDENCE_TEMPLATE.md`, `PHASE4_COMMAND_GUARD.md`, and `PHASE4_STOP_POLICY.md`.
+- Criteria safely observable: no, because no exact safe Phase 4 command was available to execute.
+- Criteria met: no.
+- HTTP 200 / wrapper exit 0 alone used as success: no.
+- Final business assessment: `not_evaluated_no_live_action`.
 
-`not_assessed_no_live_action`
-
-No live ORCA action was attempted because Gate 6 failed. Therefore there is no business success, business failure, or live ORCA inconclusive result to classify.
-
-## Non-Success Evidence
-
-The following were not treated as business success:
-
-- HTTP 200
-- wrapper exit 0
-- dry-run
-- precheck
-- local/static/server/package checks
-- not_run
-- not_verified
-- owner-waived evidence
-- WO-2 package evidence
-- WO-7 zero-candidate/harness readiness
-
-## Business Criteria Status
-
-Endpoint-/harness-specific parsed success criteria were not observed because the live command was not executed. No success was fabricated from non-live evidence.
+Business success was not evaluated because no live ORCA action was attempted. Local/static/server/package checks, HTTP 200, wrapper exit 0, dry-run, precheck, not_run, not_verified, and owner-waived evidence were not promoted to success.

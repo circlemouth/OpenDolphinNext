@@ -1,22 +1,13 @@
 # WO-8 Phase 4 Execution Report Sanitized
 
-## Execution Status
+- execution status: not_run
+- token consumed: no
+- approved target: `00001 / 00001` only
+- command category: no live ORCA command executed
+- sanitized command description: Gate 6 blocked selection of any live Phase 4 command
+- raw ORCA request/response bodies: none recorded
+- patient/insurance details: none recorded
+- credentials/sessions/tokens/cookies: none recorded
+- sanitized outcome only: `PHASE4_BLOCKED_HARNESS_OR_EVIDENCE_POLICY`
 
-- final verdict: `PHASE4_BLOCKED_HARNESS_OR_EVIDENCE_POLICY`
-- live ORCA action: not_run
-- live ORCA authentication/session establishment: not_run
-- live ORCA mutation: no
-- target actually used: none; planned scope remained `00001 / 00001` only
-- approval token consumed: no
-
-## Stop Point
-
-Stopped at Gate 6 before live ORCA traffic. The owner waived the merge-related HEAD mismatch, but no exact approved Phase 4 wrapper/action could be identified safely.
-
-## Sanitized Live Evidence
-
-No live ORCA request, response, patient detail, insurance detail, credential, cookie, token, session, Authorization value, JSESSIONID value, CSRF value, HAR, trace, video, screenshot, or raw network dump was created or recorded.
-
-## Command Policy
-
-No Phase 4 wrapper/action was executed. No standalone live ORCA connection test was run. No manual retry occurred.
+No execution occurred because WO-5/WO-6/WO-7 did not define an exact approved Phase 4 wrapper/action that could run under the no-raw-artifact policy.

@@ -1,19 +1,13 @@
-# WO-8 Stop Or Retry Policy Report
+# WO-8 Phase 4 Stop Or Retry Policy Report
 
-## Stop Result
+- no retry without new owner approval: enforced
+- token consumption behavior: token remained unconsumed because no live ORCA traffic began
+- stopped verdict: `PHASE4_BLOCKED_HARNESS_OR_EVIDENCE_POLICY`
+- manual retry: no
+- exploratory live checks: no
+- Phase 3 retry: no
+- fullflow: not_run
+- RN02/RN03/RN04: not_run
+- 00002-00011: not_run
 
-Live execution stopped before any ORCA action due Gate 6 harness/evidence policy failure.
-
-## Retry Policy
-
-- manual live mutation retry: not applicable, no live attempt occurred
-- approval token consumed: no
-- a later live attempt requires fresh owner approval and a repository state that satisfies the required gates
-- no Phase 3 retry rerun is permitted by this report
-- no fullflow is permitted by this report
-- no Request_Number `02` / `03` / `04` execution is permitted by this report
-- no mutation for `00002` through `00011` is permitted by this report
-
-## Stop Condition Applied
-
-`PHASE4_BLOCKED_HARNESS_OR_EVIDENCE_POLICY`: exact approved Phase 4 wrapper/action was not identified.
+Any future attempt requires new explicit owner approval and an exact safe Phase 4 wrapper/action that satisfies the no-raw-artifact policy.
