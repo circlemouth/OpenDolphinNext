@@ -1,0 +1,19 @@
+{
+  "runId": "20260422T062052Z",
+  "workOrder": "WO-6 Phase 4 execution prompt preparation / approval gate",
+  "packageMode": "extracted_review_subset",
+  "branch": "master",
+  "mainDedicatedWorktree": "not_created",
+  "phase3RetryRerun": "no",
+  "phase4Status": "not_run",
+  "fullflowStatus": "not_run",
+  "liveOrcaConnectionTest": "no",
+  "liveOrcaMutation": "no",
+  "requestNumber020304Execution": "not_run",
+  "candidate00002Through00011Mutation": "not_run",
+  "mayRunPhase4": false,
+  "mayRequestOwnerPhase4ExecutionApproval": "yes_after_final_package_validation",
+  "mayStartPhase4Execution": "no_until_explicit_owner_approval_after_ChatGPT_review",
+  "rawSensitiveArtifacts": "none_intended_final_package_scan_required",
+  "finalZipMetadata": "recorded_in_unique_external_sidecars_after_zip_creation"
+}
