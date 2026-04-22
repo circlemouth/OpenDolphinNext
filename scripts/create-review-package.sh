@@ -185,7 +185,7 @@ repo_relative_path() {
 
 is_excluded_package_path() {
   case "$1" in
-    .git|.git/*|client/*|server/*|artifacts/*|web-client/artifacts/*|node_modules/*|*/node_modules/*|dist/*|*/dist/*|target/*|*/target/*|build/*|*/build/*|out/*|*/out/*|coverage/*|*/coverage/*|test-results/*|*/test-results/*|tmp/*|output/*|.cache/*|*/.cache/*|.vite/*|*/.vite/*|.parcel-cache/*|*/.parcel-cache/*|.turbo/*|*/.turbo/*|.nyc_output/*|*/.nyc_output/*|.env|*/.env|*.env|*/*.env|.env.local|*/.env.local|.env.production|*/.env.production|.env.prod|*/.env.prod|.env.stage|*/.env.stage|*.tsbuildinfo|*.zip|*/*.zip|OpenDolphin_WebClient-review-package-*.zip.summary.txt|*/OpenDolphin_WebClient-review-package-*.zip.summary.txt|*.har|*/*.har|traces/*|*/traces/*|trace/*|*/trace/*|videos/*|*/videos/*|video/*|*/video/*|screenshots/*|*/screenshots/*|raw-screenshots/*|*/raw-screenshots/*|raw-network/*|*/raw-network/*|raw-network-dumps/*|*/raw-network-dumps/*|raw-xml/*|*/raw-xml/*|network/*|*/network/*|requests/*|*/requests/*|request-xml/*|*/request-xml/*|response-xml/*|*/response-xml/*|*.png|*/*.png|*.jpg|*/*.jpg|*.jpeg|*/*.jpeg|*.webm|*/*.webm|*.mp4|*/*.mp4|*/.DS_Store|*/Thumbs.db)
+    .git|.git/*|client/*|server/*|artifacts/*|web-client/artifacts/*|node_modules/*|*/node_modules/*|dist/*|*/dist/*|target/*|*/target/*|build/*|*/build/*|out/*|*/out/*|coverage/*|*/coverage/*|test-results/*|*/test-results/*|tmp/*|output/*|.cache/*|*/.cache/*|.vite/*|*/.vite/*|.parcel-cache/*|*/.parcel-cache/*|.turbo/*|*/.turbo/*|.nyc_output/*|*/.nyc_output/*|.env|*/.env|*.env|*/*.env|.env.local|*/.env.local|.env.production|*/.env.production|.env.prod|*/.env.prod|.env.stage|*/.env.stage|*.tsbuildinfo|*.zip|*/*.zip|OpenDolphin_WebClient-review-package-*.zip.summary.txt|*/OpenDolphin_WebClient-review-package-*.zip.summary.txt|*.har|*/*.har|traces/*|*/traces/*|trace/*|*/trace/*|videos/*|*/videos/*|video/*|*/video/*|screenshots/*|*/screenshots/*|raw-screenshots/*|*/raw-screenshots/*|raw-network/*|*/raw-network/*|raw-network-dumps/*|*/raw-network-dumps/*|raw-xml/*|*/raw-xml/*|network/*|*/network/*|requests/*|*/requests/*|request-xml/*|*/request-xml/*|response-xml/*|*/response-xml/*|*.png|*/*.png|*.jpg|*/*.jpg|*.jpeg|*/*.jpeg|*.webm|*/*.webm|*.mp4|*/*.mp4|.DS_Store|*/.DS_Store|Thumbs.db|*/Thumbs.db)
       return 0
       ;;
     *)
@@ -519,7 +519,9 @@ if [[ "$IS_GIT_WORKTREE" -eq 1 ]]; then
     ':(exclude)**/*.jpeg' \
     ':(exclude)**/*.webm' \
     ':(exclude)**/*.mp4' \
+    ':(exclude).DS_Store' \
     ':(exclude)**/.DS_Store' \
+    ':(exclude)Thumbs.db' \
     ':(exclude)**/Thumbs.db' \
     > "$RAW_FILE_LIST"
 else

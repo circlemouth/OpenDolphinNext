@@ -17,7 +17,7 @@ if (!existsSync(zipPath)) {
 const entries = listEntries(zipPath).map((entry) => entry.name);
 
 const forbiddenPathPattern =
-  /^(?:\.git\/|client\/|server\/|artifacts\/|web-client\/artifacts\/|node_modules\/|dist\/|target\/|build\/|out\/|tmp\/|output\/|coverage\/|test-results\/)|\/(?:\.git|node_modules|dist|target|build|out|tmp|output|coverage|test-results|har|traces?|videos?|raw-screenshots?|screenshots?|raw-network|raw-network-dumps?|raw-xml|network|requests|request-xml|response-xml)\/|(?:^|\/)(?:\.env|[^/]+\.env)$|(?:^|\/)\.env\.(?:local|production|prod|stage)$|(?:^|\/).*\.(?:zip|har)$/i;
+  /^(?:\.git\/|client\/|server\/|artifacts\/|web-client\/artifacts\/|node_modules\/|dist\/|target\/|build\/|out\/|tmp\/|output\/|coverage\/|test-results\/)|\/(?:\.git|node_modules|dist|target|build|out|tmp|output|coverage|test-results|har|traces?|videos?|raw-screenshots?|screenshots?|raw-network|raw-network-dumps?|raw-xml|network|requests|request-xml|response-xml)\/|(?:^|\/)(?:\.DS_Store|Thumbs\.db|\.env|[^/]+\.env)$|(?:^|\/)\.env\.(?:local|production|prod|stage)$|(?:^|\/).*\.(?:zip|har)$/i;
 
 const forbiddenPath = entries.find((entry) => forbiddenPathPattern.test(entry));
 if (forbiddenPath) {

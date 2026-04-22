@@ -139,6 +139,8 @@ test('creates a reviewer package without artifacts or legacy client content', ()
     'docs/implementation/old/videos/browser.webm': 'raw video\n',
     'docs/implementation/old/session.env': 'SESSION_SECRET=raw\n',
     'docs/sample.har': '{}\n',
+    'docs/.DS_Store': 'finder metadata\n',
+    '.DS_Store': 'finder metadata\n',
     'web-client/dist/assets/app.js': 'compiled\n',
     'tmp/debug.txt': 'temporary\n',
   });
@@ -191,6 +193,7 @@ test('creates a reviewer package without artifacts or legacy client content', ()
     assert(!entries.some((entry) => entry.endsWith('.zip')));
     assert(!entries.some((entry) => /OpenDolphin_WebClient-review-package-.*\.zip\.summary\.txt$/.test(entry)));
     assert(!entries.some((entry) => entry.endsWith('.har')));
+    assert(!entries.some((entry) => entry.endsWith('.DS_Store')));
     assert(!entries.some((entry) => entry.endsWith('.env')));
     assert(!entries.some((entry) => entry.includes('/dist/')));
     assert(!entries.some((entry) => entry.includes('/node_modules/')));
@@ -814,6 +817,8 @@ test('scan tool rejects raw sensitive package path categories', () => {
     'docs/response-xml/patientget.xml',
     'docs/implementation/old/OpenDolphin_WebClient-review-package-20260401T000000Z.zip',
     'docs/archive/nested.zip',
+    'docs/.DS_Store',
+    '.DS_Store',
     '.git/HEAD',
   ];
 
