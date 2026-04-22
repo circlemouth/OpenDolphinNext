@@ -79,3 +79,11 @@ Final package:
 ## Stop Condition
 
 Stop after WO-6 final package and sidecars. Do not run Phase 4, fullflow, live ORCA connection tests, live ORCA mutation, or new implementation work.
+
+## Worktree Cleanup
+
+- Removed subagent worktrees:
+  - `../odn-wo6-phase4-prompt-safety-review`
+  - `../odn-wo6-phase4-evidence-sanitize-review`
+- Integrated advisory content: yes, the relevant findings were reflected in canonical WO-6 docs and summarized in `subagent-reports/`.
+- Remaining registered worktrees after `git worktree prune`: original repository worktree only.

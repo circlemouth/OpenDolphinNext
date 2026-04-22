@@ -72,3 +72,11 @@ Embedding final ZIP hash/size/count into the ZIP would change the ZIP hash. The 
 ## Boundary
 
 This WO-6 package may be submitted for ChatGPT review as prompt-preparation / owner-approval-gate evidence. It must not be treated as approval to start Phase 4.
+
+## Worktree Cleanup
+
+- Removed subagent worktrees:
+  - `../odn-wo6-phase4-prompt-safety-review`
+  - `../odn-wo6-phase4-evidence-sanitize-review`
+- Integrated unreflected subagent content: none; advisory findings were incorporated into canonical WO-6 docs before final package creation.
+- Remaining registered worktrees: original repository worktree only.
