@@ -1,0 +1,3 @@
+review_log_includes=none
+notes=WO-5 review ZIP includes command-log.jsonl and command-logs as review context, but final package-source scan and post-package validation logs are external sidecars to avoid ZIP hash drift.
+

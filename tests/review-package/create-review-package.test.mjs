@@ -538,6 +538,9 @@ test('finalizes sanitized ORCA readonly evidence summary and package sidecar fie
         {
           sourceCommit,
           sourceCommitMatch: true,
+          phase3ExecutionRunId: '20260414T080812Z-phase3-execution',
+          preflightIdentityRunId: '20260414T080812Z-preflight-identity',
+          childHarnessEvidenceRunId: '20260414T080812Z-child-harness',
           acceptedCandidateCount: '1/11',
           exactSelectedCandidatePreflightStatus: 'passed',
           phase3Status: 'not_run_pending_explicit_authorization',
@@ -581,43 +584,62 @@ test('finalizes sanitized ORCA readonly evidence summary and package sidecar fie
         2,
       ),
     );
+    writeText(reviewLogManifestPath, ['RUN_ID=20260414T080812Z', 'Review logs:', '- final-summary.sanitized.json', ''].join('\n'));
+
+    const finalizerArgs = [
+      ORCA_READONLY_FINALIZER_PATH,
+      '--run-id',
+      RUN_ID,
+      '--evidence-dir',
+      evidenceDir,
+      '--status-json',
+      statusJsonPath,
+      '--package-zip',
+      zipPath,
+      '--package-summary',
+      summaryPath,
+      '--package-secret-scan-log',
+      packageSecretScanLogPath,
+      '--metadata-validation-log',
+      metadataValidationLogPath,
+      '--candidate-rows-json',
+      candidateRowsJsonPath,
+      '--command-log-jsonl',
+      commandLogJsonlPath,
+      '--review-log-manifest',
+      reviewLogManifestPath,
+    ];
+
     writeText(
       commandLogJsonlPath,
       `${JSON.stringify({
         runId: RUN_ID,
         command: 'node scripts/qa-weborca-candidate-discovery.mjs',
+        start_utc: '2026-04-14T08:08:12Z',
+        end_utc: '2026-04-14T08:08:13Z',
+        exit_code: 0,
         result: 'sanitized read-only discovery fixture',
       })}\n`,
     );
-    writeText(reviewLogManifestPath, ['RUN_ID=20260414T080812Z', 'Review logs:', '- final-summary.sanitized.json', ''].join('\n'));
-
-    const output = run(
-      'node',
-      [
-        ORCA_READONLY_FINALIZER_PATH,
-        '--run-id',
-        RUN_ID,
-        '--evidence-dir',
-        evidenceDir,
-        '--status-json',
-        statusJsonPath,
-        '--package-zip',
-        zipPath,
-        '--package-summary',
-        summaryPath,
-        '--package-secret-scan-log',
-        packageSecretScanLogPath,
-        '--metadata-validation-log',
-        metadataValidationLogPath,
-        '--candidate-rows-json',
-        candidateRowsJsonPath,
-        '--command-log-jsonl',
-        commandLogJsonlPath,
-        '--review-log-manifest',
-        reviewLogManifestPath,
-      ],
-      repoDir,
+    assert.throws(
+      () => run('node', finalizerArgs, repoDir),
+      /command log JSONL line 1 missing cwd/,
     );
+
+    writeText(
+      commandLogJsonlPath,
+      `${JSON.stringify({
+        runId: RUN_ID,
+        cwd: repoDir,
+        command: 'node scripts/qa-weborca-candidate-discovery.mjs',
+        start_utc: '2026-04-14T08:08:12Z',
+        end_utc: '2026-04-14T08:08:13Z',
+        exit_code: 0,
+        result: 'sanitized read-only discovery fixture',
+      })}\n`,
+    );
+
+    const output = run('node', finalizerArgs, repoDir);
 
     assert.match(output, /final sanitized summary written/);
     const summary = parseKeyValue(fs.readFileSync(summaryPath, 'utf8'));
