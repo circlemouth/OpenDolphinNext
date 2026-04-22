@@ -26,7 +26,7 @@ All mandatory WO-6, WO-5, and `docs/codex/unified-orca-postretry-clinical-wave1-
 ## Preflight Summary
 
 - Environment: macOS accepted.
-- pwd: accepted Mac `/Users/...` path.
+- working directory: accepted Mac `/Users/...` path.
 - git LF: accepted with existing repository CRLF/mixed files noted; `core.autocrlf` is not true.
 - toolchain: bash, git, node, npm, Java, Maven, zip, unzip, and shasum versions recorded.
 - WO-6 ZIP: exists and sha256 matches `f69cca11a97cc9977f3917bf9d626d9403dfc86d5b8e67cd5324f6f5999e0515`.
@@ -62,4 +62,3 @@ Their findings were reviewed by the main agent before final WO-7 documents were 
 - live ORCA mutation: no.
 - live ORCA business success: not claimed.
 - WO-2 package evidence remains owner-waived / not_verified.
-
