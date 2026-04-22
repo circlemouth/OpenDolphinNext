@@ -4,34 +4,35 @@ RUN_ID: `20260421T235522Z`
 
 REOPEN_RUN_ID: `20260422T050934Z`
 
-Complete command metadata is in `command-log.jsonl`; individual logs are under `command-logs/`.
+FINAL_CLEANUP_RUN_ID: `20260422T054647Z`
+
+Complete command metadata is in `command-log.jsonl`; final cleanup logs are under `command-logs/`.
 
 ## Required Results
 
 | command | result | log |
 |---|---:|---|
-| `git branch --show-current` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/003_git_branch_show_current.log` |
-| `git rev-parse HEAD` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/004_git_rev_parse_head.log` |
-| `git status --short` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/005_git_status_short.log` |
-| `git diff --stat` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/006_git_diff_stat.log` |
-| `git diff --cached --stat` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/007_git_diff_cached_stat.log` |
-| `git diff --check` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/reopen-final-git-diff-check.log` |
-| `bash server-modernized/tools/ci/check-doc-links.sh` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/reopen-final-doc-link-check.log` |
-| `node --test tests/review-package/create-review-package.test.mjs` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/reopen-final-review-package-script-tests.log` |
-| package metadata validation for final WO-5 ZIP | 0 after ledger path correction | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/post-package-metadata-validation-current.log` |
-| final ZIP source-scope scan | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/review-package/<final-zip>.secret-scan-review-bundle.log` |
-| artifact ledger verification | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/post-package-artifact-ledger-verify-current.log` |
+| `git checkout master` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/final-cleanup-001-git-checkout-master.log` |
+| `git branch --show-current` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/final-cleanup-002-git-branch.log` |
+| `git rev-parse HEAD` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/final-cleanup-003-git-head.log` |
+| `git status --short` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/final-cleanup-004-git-status.log` |
+| `git diff --stat` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/final-cleanup-005-git-diff-stat.log` |
+| `git diff --cached --stat` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/final-cleanup-006-git-diff-cached-stat.log` |
+| `git cat-file -t 2961b7eb6613e3340d14e1b2fe870f7bac8ced81` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/final-cleanup-007-git-cat-file-package-source.log` |
+| `git cat-file -t 46075a9d7d4205a2beab3b5750bb515bd1d803d8` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/final-cleanup-008-git-cat-file-final-evidence.log` |
+| `git diff --check` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/final-cleanup-020-git-diff-check-final-docs.log` |
+| `bash server-modernized/tools/ci/check-doc-links.sh` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/final-cleanup-021-doc-link-check-final-docs.log` |
+| `node --test tests/review-package/create-review-package.test.mjs` | 0 | `docs/implementation/unified-phase4-handoff-wo5-20260421/command-logs/final-cleanup-022-review-package-test-final-docs.log` |
+| package metadata validation for final WO-5 ZIP | 0 by final external sidecar | `docs/implementation/unified-phase4-handoff-wo5-20260421/review-package/post-package-metadata-validation-final.log` |
+| final ZIP source-scope scan | 0 by final external sidecar | `docs/implementation/unified-phase4-handoff-wo5-20260421/review-package/<final-zip>.secret-scan-review-bundle.log` |
+| artifact ledger verification | 0 by final external sidecar | `docs/implementation/unified-phase4-handoff-wo5-20260421/review-package/post-package-artifact-ledger-verify-final.log` |
 
 ## Corrected Findings
 
-- `node --test tests/review-package/create-review-package.test.mjs` failed in existing package tooling test `finalizes sanitized ORCA readonly evidence summary and package sidecar fields`.
-- Failure detail: the sandbox fixture writes a `command-log.jsonl` entry without required `cwd`, and `scripts/tools/orca-readonly-evidence-finalizer.mjs` correctly rejects it with `command log JSONL line 1 missing cwd`.
-- Reopen fix: the positive fixture now includes `cwd`, `start_utc`, `end_utc`, and `exit_code`.
-- Reopen negative coverage: the same test first writes malformed JSONL without `cwd` and asserts the finalizer rejects it.
-- Finalizer behavior was not relaxed.
-- Final rerun exits 0.
-- First package metadata validation attempt failed because `artifact-sha256.txt` used repo-root-relative entries while the validator resolves review-package sidecar entries relative to `review-package/`; the ZIP was not changed for that correction.
-- `artifact-sha256.txt` was regenerated relative to `review-package/`, then metadata validation passed.
+- Reopen blocker fixed: missing `cwd` in a package tooling fixture was corrected; finalizer still rejects malformed command logs without `cwd`.
+- Final cleanup blocker fixed: root `.DS_Store` was initially still packaged by git pathspec; the pathspec now excludes root `.DS_Store` and package tooling test passes 25/25.
+- `scripts/tools/orca-readonly-evidence-finalizer.mjs` remains unchanged.
+- Old/preliminary post-package logs for previous ZIPs are not final evidence for the regenerated final ZIP.
 
 ## Explicitly Not Run
 

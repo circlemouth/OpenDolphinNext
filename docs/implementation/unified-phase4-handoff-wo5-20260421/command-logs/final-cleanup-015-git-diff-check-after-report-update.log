@@ -1,0 +1,11 @@
+command_log_version=1
+command=git diff --check
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260422T054647Z
+start_utc=2026-04-22T05:51:42Z
+--- command output ---
+[no stdout/stderr emitted]
+--- command summary ---
+end_utc=2026-04-22T05:51:42Z
+exit_code=0
+result=PASS

@@ -2,16 +2,20 @@
 
 RUN_ID: `20260421T235522Z`
 
+REOPEN_RUN_ID: `20260422T050934Z`
+
+FINAL_CLEANUP_RUN_ID: `20260422T054647Z`
+
 ## Status
 
-`PASS`
+`PASS_pending_ChatGPT_review`
 
 ## Branch / Worktree
 
 - main worked on: `master`
-- main dedicated worktree: `not_created`
 - original repository worktree: used
-- subagents: used individual worktrees only
+- main dedicated worktree: `not_created`
+- subagents: individual worktrees only during the original WO-5 handoff review
 - subagent reports: advisory only, not final gate evidence
 
 ## Master Baseline Resolution
@@ -23,40 +27,21 @@ RUN_ID: `20260421T235522Z`
 - WO-2 reopen final ZIP: `not_available_owner_waived`
 - WO-2 reopen package evidence: `waived_by_owner_for_WO3_start`
 
-## Docs Created
+## Final Cleanup
 
-- `MASTER_BASELINE_REPORT.md`
-- `PHASE4_HANDOFF_RUNBOOK.md`
-- `PHASE4_PRECHECK_MATRIX.md`
-- `PHASE4_EVIDENCE_REQUIREMENTS.md`
-- `PHASE4_FORBIDDEN_ACTIONS.md`
-- `PHASE4_FUTURE_CODEX_PROMPT_DRAFT.md`
-- `WO5_ACCEPTANCE_MATRIX.md`
-- `TEST_LOGS.sanitized.md`
-- `MAIN_AGENT_REPORT.md`
-- `FINAL_REPORT.md`
-
-## Scope Boundary
-
-- Phase 3 retry rerun: no
-- Phase 4: not_run
-- fullflow: not_run
-- live ORCA mutation: no
-- live medicalmodv2/diseasev3/subjectivesv2 success: not claimed
-- no new Clinical Wave implementation started
-- no CWP-01/02/03/04/05/06 code changed
+- package source commit for regenerated final ZIP: `63607063044af55c2be377bc75acda38507e1bbf`
+- previous evidence/package-sidecar commit: `46075a9d7d4205a2beab3b5750bb515bd1d803d8`
+- final evidence commit: recorded after the final package/sidecar commit by post-commit `git rev-parse HEAD`
+- `.DS_Store`: removed from WO-5 evidence tree and rejected by package tooling
+- stale preliminary sidecars: not used as final evidence
 
 ## Tests / Commands
 
-Final command results are recorded in `TEST_LOGS.sanitized.md` and `command-log.jsonl`.
+Final cleanup command results are recorded in `TEST_LOGS.sanitized.md`, `command-log.jsonl`, and selected `command-logs/final-cleanup-*.log`.
 
-Reopen correction:
-
-- Previous blocker: `node --test tests/review-package/create-review-package.test.mjs` failed because the readonly finalizer positive fixture wrote a sandbox `command-log.jsonl` entry without required `cwd`.
-- Fix: `tests/review-package/create-review-package.test.mjs` now adds realistic `cwd`, `start_utc`, `end_utc`, and `exit_code` to the positive JSONL fixture.
-- Negative coverage: the same test first writes a malformed JSONL line without `cwd` and asserts `scripts/tools/orca-readonly-evidence-finalizer.mjs` rejects it with `command log JSONL line 1 missing cwd`.
-- Finalizer behavior was not relaxed.
-- Rerun result: `node --test tests/review-package/create-review-package.test.mjs` exits 0.
+- `git diff --check`: pass
+- `bash server-modernized/tools/ci/check-doc-links.sh`: pass
+- `node --test tests/review-package/create-review-package.test.mjs`: pass 25/25 after the `.DS_Store` root pathspec correction
 
 ## Package
 
@@ -66,15 +51,18 @@ Final WO-5 package information is recorded in:
 - `docs/implementation/unified-phase4-handoff-wo5-20260421/final-summary.sanitized.md`
 - `docs/implementation/unified-phase4-handoff-wo5-20260421/final-summary.sanitized.json`
 
-Package metadata validation, final ZIP source-scope scan, and artifact ledger verification pass in post-package sidecars. The package tooling gate is green after the fixture correction.
+The final ZIP source-scope scan, metadata validation, and artifact ledger verification are external sidecars bound to the final ZIP hash. Old preliminary validation logs are historical/corrected records only and are excluded from final package evidence.
 
-## Worktree Cleanup
+## Scope Boundary
 
-- Removed subagent worktree `../odn-wo5-phase4-runbook-review`.
-- Removed subagent worktree `../odn-wo5-evidence-sanitize-review`.
-- Integrated unreflected subagent content: advisory reports only, copied into `subagent-reports/`.
-- Final registered worktree list after cleanup: original repository worktree only.
-- Remaining directories intentionally left: none for WO-5 subagent worktrees.
+- Phase 3 retry rerun: no
+- Phase 4: not_run
+- fullflow: not_run
+- live ORCA mutation: no
+- live medicalmodv2/diseasev3/subjectivesv2 success: not claimed
+- no new Clinical Wave implementation started
+- no CWP-01/02/03/04/05/06 functional changes
+- app production code changed: no
 
 ## Stop Condition
 
