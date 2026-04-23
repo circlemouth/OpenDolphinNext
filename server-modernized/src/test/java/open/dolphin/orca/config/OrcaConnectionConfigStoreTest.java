@@ -1,6 +1,7 @@
 package open.dolphin.orca.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -383,6 +384,85 @@ class OrcaConnectionConfigStoreTest {
     }
 
     @Test
+    void resolveFallsBackToRuntimeWeborcaTrialConfigOnlyForTrialLocal() throws Exception {
+        TotpSecretProtector storedProtector = buildProtector(7);
+        TotpSecretProtector activeProtector = buildProtector(8);
+        Map<String, String> db = new LinkedHashMap<>();
+        String staleCipher = storedProtector.encrypt("stale-password");
+        db.put(STATE_CATEGORY + ":" + STATE_KEY, """
+                {
+                  "version": 2,
+                  "defaultFacilityId": "F001",
+                  "facilities": {
+                    "F001": {
+                      "facilityId": "F001",
+                      "useWeborca": true,
+                      "serverUrl": "https://weborca-trial.orca.med.or.jp/",
+                      "port": 443,
+                      "username": "stale-user",
+                      "passwordEncrypted": "%s",
+                      "clientAuthEnabled": false
+                    }
+                  }
+                }
+                """.formatted(staleCipher));
+
+        OrcaConnectionConfigStore store = newStore(activeProtector, db, trialLocalRuntimeResolver());
+
+        OrcaConnectionConfigStore.ResolvedOrcaConnection resolved = store.resolve("F001");
+
+        assertEquals("https://weborca-trial.orca.med.or.jp/", resolved.baseUrl());
+        assertEquals("runtime-user", resolved.username());
+        assertEquals("runtime-pass", resolved.password());
+        assertTrue(resolved.useWeborca());
+        assertFalse(resolved.clientAuthEnabled());
+    }
+
+    @Test
+    void resolveDoesNotUseRuntimeFallbackOutsideTrialLocal() throws Exception {
+        TotpSecretProtector storedProtector = buildProtector(7);
+        TotpSecretProtector activeProtector = buildProtector(8);
+        Map<String, String> db = new LinkedHashMap<>();
+        String staleCipher = storedProtector.encrypt("stale-password");
+        db.put(STATE_CATEGORY + ":" + STATE_KEY, """
+                {
+                  "version": 2,
+                  "defaultFacilityId": "F001",
+                  "facilities": {
+                    "F001": {
+                      "facilityId": "F001",
+                      "useWeborca": true,
+                      "serverUrl": "https://weborca-trial.orca.med.or.jp/",
+                      "port": 443,
+                      "username": "stale-user",
+                      "passwordEncrypted": "%s",
+                      "clientAuthEnabled": false
+                    }
+                  }
+                }
+                """.formatted(staleCipher));
+
+        OrcaConnectionConfigStore store = newStore(activeProtector, db, TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_ENVIRONMENT, "production",
+                ServerConfigurationResolver.KEY_FACILITY_ID, "F001",
+                ServerConfigurationResolver.KEY_ORCA_API_BASE_URL, "https://weborca-trial.orca.med.or.jp/",
+                ServerConfigurationResolver.KEY_ORCA_API_MODE, "weborca",
+                ServerConfigurationResolver.KEY_ORCA_API_USER, "runtime-user",
+                ServerConfigurationResolver.KEY_ORCA_API_PASSWORD, "runtime-pass"));
+
+        assertThrows(IllegalStateException.class, () -> store.resolve("F001"));
+    }
+
+    @Test
+    void defaultFacilityUsesRuntimeFallbackOnlyForTrialLocalWhenStoreIsEmpty() throws Exception {
+        OrcaConnectionConfigStore store = newStore(buildProtector(8), new LinkedHashMap<>(), trialLocalRuntimeResolver());
+
+        assertEquals("F001", store.getDefaultFacilityId());
+        OrcaConnectionConfigStore.ResolvedOrcaConnection resolved = store.resolve("F001");
+        assertEquals("runtime-user", resolved.username());
+    }
+
+    @Test
     void orcaCredentialProtectorIsSeparatedFromTotpProtector() throws Exception {
         OrcaCredentialSecurityConfig orcaConfig = new OrcaCredentialSecurityConfig();
         setField(orcaConfig, "configurationResolver", TestServerConfigurationResolvers.resolver(
@@ -400,6 +480,13 @@ class OrcaConnectionConfigStoreTest {
     }
 
     private OrcaConnectionConfigStore newStore(TotpSecretProtector protector, Map<String, String> db) throws Exception {
+        return newStore(protector, db, TestServerConfigurationResolvers.resolver());
+    }
+
+    private OrcaConnectionConfigStore newStore(
+            TotpSecretProtector protector,
+            Map<String, String> db,
+            ServerConfigurationResolver resolver) throws Exception {
         OrcaConnectionConfigStore store = new OrcaConnectionConfigStore();
 
         RuntimeStateRepository repository = mock(RuntimeStateRepository.class);
@@ -417,8 +504,19 @@ class OrcaConnectionConfigStoreTest {
 
         setField(store, "orcaCredentialSecurityConfig", credentialSecurityConfig);
         setField(store, "stateRepository", repository);
+        setField(store, "configurationResolver", resolver);
         store.init();
         return store;
+    }
+
+    private ServerConfigurationResolver trialLocalRuntimeResolver() {
+        return TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_ENVIRONMENT, "trial-local",
+                ServerConfigurationResolver.KEY_FACILITY_ID, "F001",
+                ServerConfigurationResolver.KEY_ORCA_API_BASE_URL, "https://weborca-trial.orca.med.or.jp/",
+                ServerConfigurationResolver.KEY_ORCA_API_MODE, "weborca",
+                ServerConfigurationResolver.KEY_ORCA_API_USER, "runtime-user",
+                ServerConfigurationResolver.KEY_ORCA_API_PASSWORD, "runtime-pass");
     }
 
     private TotpSecretProtector buildProtector(int seed) {

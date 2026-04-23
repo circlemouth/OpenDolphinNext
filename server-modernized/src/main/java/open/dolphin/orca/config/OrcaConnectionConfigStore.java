@@ -17,6 +17,8 @@ import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.OrcaTransportSecurityPolicy;
 import open.dolphin.rest.AbstractResource;
 import open.dolphin.runtime.RuntimeStateRepository;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 import open.dolphin.security.OrcaCredentialSecurityConfig;
 import open.dolphin.security.totp.TotpSecretProtector;
 import org.slf4j.Logger;
@@ -39,6 +41,8 @@ public class OrcaConnectionConfigStore {
     private OrcaCredentialSecurityConfig orcaCredentialSecurityConfig;
     @Inject
     private RuntimeStateRepository stateRepository;
+    @Inject
+    private ServerConfigurationResolver configurationResolver;
     private TotpSecretProtector protector;
     private String defaultFacilityId;
     private Map<String, OrcaConnectionConfigRecord> facilities = new LinkedHashMap<>();
@@ -61,7 +65,11 @@ public class OrcaConnectionConfigStore {
     public String getDefaultFacilityId() {
         lock.readLock().lock();
         try {
-            return defaultFacilityId;
+            String activeDefault = defaultFacilityId;
+            if (activeDefault != null) {
+                return activeDefault;
+            }
+            return runtimeTrialFallbackFacilityId();
         } finally {
             lock.readLock().unlock();
         }
@@ -92,11 +100,23 @@ public class OrcaConnectionConfigStore {
     public ResolvedOrcaConnection resolve(String facilityId) {
         OrcaConnectionConfigRecord snapshot = getSnapshot(facilityId);
         if (snapshot == null) {
+            ResolvedOrcaConnection fallback = resolveRuntimeTrialFallback(facilityId, null);
+            if (fallback != null) {
+                return fallback;
+            }
             throw new OrcaConnectionPolicyException(
                     REASON_CODE_FACILITY_CONFIGURATION_MISSING,
                     "ORCA facility configuration is not available");
         }
-        return resolveFromRecord(snapshot);
+        try {
+            return resolveFromRecord(snapshot);
+        } catch (RuntimeException ex) {
+            ResolvedOrcaConnection fallback = resolveRuntimeTrialFallback(facilityId, ex);
+            if (fallback != null) {
+                return fallback;
+            }
+            throw ex;
+        }
     }
     public OrcaConnectionConfigRecord update(UpdateRequest update, UploadedBinary clientCertificate,
             UploadedBinary caCertificate, String runId, String actor) {
@@ -293,6 +313,121 @@ public class OrcaConnectionConfigStore {
                 resolvePushUrl(record),
                 trimToNull(record.getPushTenantId())
         );
+    }
+
+    private ResolvedOrcaConnection resolveRuntimeTrialFallback(String requestedFacilityId, RuntimeException sourceFailure) {
+        ServerConfigurationResolver resolver = resolver();
+        if (!isTrialLocalRuntime(resolver)) {
+            return null;
+        }
+        String runtimeFacilityId = runtimeTrialFallbackFacilityId(resolver);
+        String normalizedRequestedFacilityId = normalizeOptionalFacilityId(requestedFacilityId, "facilityId");
+        if (runtimeFacilityId == null
+                || (normalizedRequestedFacilityId != null && !runtimeFacilityId.equals(normalizedRequestedFacilityId))) {
+            return null;
+        }
+        ServerRuntimeConfiguration.OrcaApiSettings api = resolver.orcaApi();
+        String baseUrl = buildRuntimeOrcaBaseUrl(api);
+        boolean weborca = isWeborcaRuntime(api, baseUrl);
+        if (!weborca || !isWeborcaTrialBaseUrl(baseUrl)) {
+            return null;
+        }
+        String user = trimToNull(api.user());
+        String password = trimToNull(api.password());
+        if (user == null || password == null) {
+            return null;
+        }
+        OrcaTransportSecurityPolicy.validateBaseUrl(baseUrl, true);
+        if (sourceFailure != null) {
+            LOGGER.warn(
+                    "Using trial-local ORCA runtime fallback after stored facility config could not be resolved. facilityId={} reasonClass={}",
+                    runtimeFacilityId,
+                    sourceFailure.getClass().getSimpleName());
+        } else {
+            LOGGER.warn("Using trial-local ORCA runtime fallback because no stored facility config is available. facilityId={}",
+                    runtimeFacilityId);
+        }
+        return new ResolvedOrcaConnection(
+                true,
+                baseUrl,
+                user,
+                password,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null);
+    }
+
+    private String runtimeTrialFallbackFacilityId() {
+        return runtimeTrialFallbackFacilityId(resolver());
+    }
+
+    private String runtimeTrialFallbackFacilityId(ServerConfigurationResolver resolver) {
+        if (!isTrialLocalRuntime(resolver)) {
+            return null;
+        }
+        return normalizeOptionalFacilityId(resolver.orcaRuntime().facilityId(), "facilityId");
+    }
+
+    private boolean isTrialLocalRuntime(ServerConfigurationResolver resolver) {
+        ServerRuntimeConfiguration.RuntimeSettings runtime = resolver.runtime();
+        String environment = trimToNull(runtime.environment());
+        return environment != null && "trial-local".equalsIgnoreCase(environment);
+    }
+
+    private static boolean isWeborcaRuntime(ServerRuntimeConfiguration.OrcaApiSettings api, String baseUrl) {
+        if (Boolean.TRUE.equals(api.weborca())) {
+            return true;
+        }
+        String mode = trimToNull(api.mode());
+        if (mode != null && "weborca".equalsIgnoreCase(mode)) {
+            return true;
+        }
+        return isWeborcaTrialBaseUrl(baseUrl);
+    }
+
+    private static boolean isWeborcaTrialBaseUrl(String baseUrl) {
+        URI uri = tryParseUri(baseUrl);
+        return uri != null
+                && "https".equalsIgnoreCase(uri.getScheme())
+                && "weborca-trial.orca.med.or.jp".equalsIgnoreCase(uri.getHost());
+    }
+
+    private static String buildRuntimeOrcaBaseUrl(ServerRuntimeConfiguration.OrcaApiSettings api) {
+        String baseUrl = trimToNull(api.baseUrl());
+        if (baseUrl != null) {
+            return baseUrl;
+        }
+        String host = trimToNull(api.host());
+        if (host == null) {
+            return null;
+        }
+        URI hostUri = tryParseUri(host);
+        if (hostUri != null && hostUri.getHost() != null) {
+            return host;
+        }
+        String scheme = trimToNull(api.scheme());
+        boolean weborca = Boolean.TRUE.equals(api.weborca())
+                || "weborca".equalsIgnoreCase(trimToNull(api.mode()))
+                || "weborca-trial.orca.med.or.jp".equalsIgnoreCase(host);
+        if (scheme == null) {
+            scheme = weborca ? "https" : "http";
+        }
+        Integer port = api.port();
+        StringBuilder builder = new StringBuilder();
+        builder.append(scheme).append("://").append(host);
+        if (port != null && port > 0
+                && !("https".equalsIgnoreCase(scheme) && port == 443)
+                && !("http".equalsIgnoreCase(scheme) && port == 80)) {
+            builder.append(':').append(port);
+        }
+        return builder.toString();
+    }
+
+    private ServerConfigurationResolver resolver() {
+        return configurationResolver != null ? configurationResolver : new ServerConfigurationResolver();
     }
     private StoredState loadState() {
         OrcaConnectionConfigRecord raw = loadRaw();

@@ -2,14 +2,69 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06",
-  "blockerId": "phase4-medicalmodv2-runtime-readiness-blocked-before-live",
+  "blockerId": "phase4-medicalmodv2-business-rejected-api-result-14",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T13:02:47Z",
+  "lastUpdated": "2026-04-23T14:01:51Z",
+  "latestRwo06Medicalmodv2RuntimeFallbackLiveAttempt": {
+    "runId": "20260423T140151Z",
+    "workOrder": "RWO-06",
+    "result": "RWO06_MEDICALMODV2_RUNTIME_FALLBACK_READINESS_FIXED_LIVE_NOT_ACCEPTED",
+    "sourceBlockerId": "phase4-medicalmodv2-runtime-readiness-blocked-before-live",
+    "nextBlockerId": "phase4-medicalmodv2-business-rejected-api-result-14",
+    "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+    "endpoint": "POST /api/orca/official/chart-support/medical-mod-v2",
+    "requestClass": "medicalmodv2",
+    "target": "00001/00001",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json",
+    "payloadSha256": "e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618",
+    "runtimeProfile": "orca-trial-no-object-storage",
+    "evidence": "docs/implementation/rwo06-medicalmodv2-runtime-fallback-20260423T140151Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06-medicalmodv2-runtime-fallback-20260423T140151Z/summary.sanitized.json",
+    "dryRunSummary": "docs/implementation/rwo06-medicalmodv2-runtime-fallback-20260423T140151Z/wrapper-dry-run/phase4-medicalmodv2-summary.sanitized.json",
+    "liveSummary": "docs/implementation/rwo06-medicalmodv2-runtime-fallback-20260423T140151Z/wrapper-live/phase4-medicalmodv2-summary.sanitized.json",
+    "fixed": [
+      "trial_local_non_persisted_weborca_trial_runtime_fallback_for_absent_or_undecryptable_stored_orca_config",
+      "fallback_restricted_to_trial_local_matching_runtime_facility_weborca_trial_https_target_and_present_runtime_credentials",
+      "production_and_non_trial_runtimes_remain_fail_closed"
+    ],
+    "runtimeReadiness": {
+      "healthHttpStatus": 200,
+      "readinessHttpStatus": 200,
+      "ok": true,
+      "orcaStatus": "UP",
+      "orcaMode": "weborca",
+      "credentialConfigured": true,
+      "clientAuthConfigured": false
+    },
+    "sanitizedResult": {
+      "liveTrialAction": "executed_once",
+      "verdict": "live_trial_not_accepted",
+      "httpStatus": 200,
+      "apiResult": "14",
+      "responseClassification": "businessRejected",
+      "businessAccepted": false,
+      "completionEvidencePresent": false
+    },
+    "tests": {
+      "focusedServerTests": {
+        "result": "pass",
+        "tests": 31,
+        "failures": 0,
+        "errors": 0
+      },
+      "setupModernizedEnv": "pass",
+      "wrapperDryRun": "pass"
+    },
+    "claimBoundary": "Trial-local runtime readiness fallback and one sanitized medicalmodv2 Trial classification only; not medicalmodv2 business acceptance, production ORCA readiness, S3/object-storage readiness, fullflow success, or final release readiness.",
+    "recommendedNextTask": "Investigate apiResult=14 businessRejected with sanitized no-live contract tests, then perform another fix-and-retry cycle only after a repo-local fix and safe wrapper preflight.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "latestOwnerMedicalmodv2IterativeRetryDirection": {
     "runId": "20260423T122650Z",
     "workOrder": "RWO-06",
