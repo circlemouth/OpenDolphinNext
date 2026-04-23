@@ -1,0 +1,51 @@
+{
+  "runId": "20260423T130247Z",
+  "workOrder": "RWO-06",
+  "result": "RWO06_MEDICALMODV2_READINESS_GATE_REPAIR_BLOCKED_NO_LIVE",
+  "sourceBlockerId": "phase4-medicalmodv2-post-repair-transport-rejected-no-live-investigation",
+  "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+  "endpoint": "POST /api/orca/official/chart-support/medical-mod-v2",
+  "requestClass": "medicalmodv2",
+  "target": "00001/00001",
+  "payload": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json",
+  "payloadSha256": "e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618",
+  "rootCauseClassification": "wrapper_preflight_did_not_enforce_backend_readiness",
+  "runtimeBlockerClassification": "blocked_runtime_not_ready",
+  "fixed": [
+    "phase4_safe_wrapper_checks_health_and_readiness_status_before_live_execution",
+    "readiness_failure_blocks_before_session_bootstrap_or_orca_post",
+    "runtime_readiness_summary_records_status_only_without_response_bodies"
+  ],
+  "runtimeReadiness": {
+    "healthHttpStatus": 200,
+    "readinessHttpStatus": 503,
+    "ok": false,
+    "blockers": [
+      "backend readiness endpoint is not ready"
+    ],
+    "rawReadinessBodyStored": false,
+    "rawHealthBodyStored": false
+  },
+  "liveTrialAction": "not_run",
+  "verdict": "blocked_runtime_not_ready",
+  "businessAccepted": false,
+  "evidence": {
+    "finalReport": "docs/implementation/rwo06-medicalmodv2-readiness-gate-20260423T130247Z/FINAL_REPORT.md",
+    "dryRunSummary": "docs/implementation/rwo06-medicalmodv2-readiness-gate-20260423T130247Z/wrapper-dry-run/phase4-medicalmodv2-summary.sanitized.json",
+    "readinessBlockedSummary": "docs/implementation/rwo06-medicalmodv2-readiness-gate-20260423T130247Z/wrapper-readiness-blocked/phase4-medicalmodv2-summary.sanitized.json"
+  },
+  "tests": {
+    "nodeCheckWrapper": "pass",
+    "nodeCheckSafeEvidence": "pass",
+    "focusedSafeEvidenceTests": {
+      "result": "pass",
+      "tests": 7
+    },
+    "wrapperDryRun": "pass",
+    "wrapperReadinessGate": "blocked_before_live_orca"
+  },
+  "claimBoundary": "Readiness fail-closed wrapper repair only; not live Trial medicalmodv2 business acceptance, production ORCA readiness, S3/object-storage readiness, fullflow success, or final release readiness.",
+  "recommendedNextTask": "Investigate and repair the non-S3 Trial runtime readiness blocker; do not run live medicalmodv2 until readiness is 2xx and wrapper preflight passes.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}

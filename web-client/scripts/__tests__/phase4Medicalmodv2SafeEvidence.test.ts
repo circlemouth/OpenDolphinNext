@@ -6,6 +6,7 @@ import {
   classifyPhase4BusinessResult,
   parsePhase4SafeArgs,
   sanitizePhase4Response,
+  summarizeRuntimeReadiness,
   validatePhase4Payload,
   validatePhase4SafeCommand,
 } from '../qa-lib/phase4-medicalmodv2-safe-evidence.mjs';
@@ -104,5 +105,19 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(summary.responseClassification).toBe('businessRejected');
     expect(summary.apiResultMessageCategory).toBe('present_redacted_sensitive_shape');
     expect(JSON.stringify(summary)).not.toContain('保険未確認');
+  });
+
+  it('requires readiness before live Trial execution and stores status only', () => {
+    const summary = summarizeRuntimeReadiness({
+      healthStatus: 200,
+      readinessStatus: 503,
+    });
+
+    expect(summary.ok).toBe(false);
+    expect(summary.healthHttpStatus).toBe(200);
+    expect(summary.readinessHttpStatus).toBe(503);
+    expect(summary.blockers).toEqual(['backend readiness endpoint is not ready']);
+    expect(summary.rawReadinessBodyStored).toBe(false);
+    expect(summary.rawHealthBodyStored).toBe(false);
   });
 });

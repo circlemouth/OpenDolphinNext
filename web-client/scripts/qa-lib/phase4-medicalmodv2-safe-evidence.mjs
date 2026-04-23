@@ -275,6 +275,24 @@ export const sanitizePhase4Response = ({ httpStatus, responseJson }) => {
   };
 };
 
+export const summarizeRuntimeReadiness = ({ healthStatus = 0, readinessStatus = 0 } = {}) => {
+  const healthHttpStatus = Number(healthStatus) || 0;
+  const readinessHttpStatus = Number(readinessStatus) || 0;
+  const healthOk = healthHttpStatus >= 200 && healthHttpStatus < 300;
+  const readinessOk = readinessHttpStatus >= 200 && readinessHttpStatus < 300;
+  const blockers = [];
+  if (!healthOk) blockers.push('backend health endpoint is not reachable');
+  if (!readinessOk) blockers.push('backend readiness endpoint is not ready');
+  return {
+    ok: healthOk && readinessOk,
+    healthHttpStatus,
+    readinessHttpStatus,
+    blockers,
+    rawReadinessBodyStored: false,
+    rawHealthBodyStored: false,
+  };
+};
+
 export const validatePhase4SafeCommand = ({
   argv = [],
   env = process.env,

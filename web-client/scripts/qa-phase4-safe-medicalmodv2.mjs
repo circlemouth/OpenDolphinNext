@@ -6,6 +6,7 @@ import {
   PHASE4_ENDPOINT_PATH,
   PHASE4_WRAPPER_CONTRACT,
   sanitizePhase4Response,
+  summarizeRuntimeReadiness,
   validatePhase4SafeCommand,
 } from './qa-lib/phase4-medicalmodv2-safe-evidence.mjs';
 import {
@@ -121,6 +122,44 @@ if (guard.options.mock) {
   process.exit(0);
 }
 
+const target = resolveBackendTarget();
+
+const probeStatusOnly = async (pathName) => {
+  const url = new URL(pathName.replace(/^\//, ''), target.appRootUrl).toString();
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'X-Request-Id': runId,
+        'X-Trace-Id': traceId,
+      },
+    });
+    return response.status;
+  } catch {
+    return 0;
+  }
+};
+
+const runtimeReadiness = summarizeRuntimeReadiness({
+  healthStatus: await probeStatusOnly('/api/health'),
+  readinessStatus: await probeStatusOnly('/api/health/readiness'),
+});
+
+if (!runtimeReadiness.ok) {
+  const summary = {
+    ...baseSummary,
+    verdict: 'blocked_runtime_not_ready',
+    liveTrialAction: 'not_run',
+    runtimeReadiness,
+    response: sanitizePhase4Response({ httpStatus: 0, responseJson: {} }),
+  };
+  persistSummary(summary);
+  console.error(`Phase 4 safe wrapper blocked before live ORCA: ${runtimeReadiness.blockers.join('; ')}`);
+  console.error(`sanitized evidence: ${summaryJsonPath}`);
+  process.exit(1);
+}
+
 const facilityId = resolveQaFacilityId();
 const authUserId = resolveQaUserId();
 const authPasswordPlain = resolveQaPasswordPlain();
@@ -135,7 +174,6 @@ const session = buildQaSession({
     : [process.env.QA_ROLE ?? 'admin'],
 });
 
-const target = resolveBackendTarget();
 const { csrfToken, sessionCookie } = await bootstrapBackendSession({
   facilityId,
   userId: authUserId,
