@@ -11,4 +11,5 @@ RUN_ID: `20260422T134401Z`
 | Phase 3 prior acceptmodv2 evidence used narrowly. | `00_CURRENT_CONTEXT.md` and Phase 3 final summary. | Only `00001 / 00001` Trial acceptmodv2 limited success is allowed. |
 | Release-ready claim rejected. | Release gates, manager docs, WO-8, fullflow/browser gaps. | Release remains blocked pending multiple gates. |
 | DADS used only as reference boundary. | No UI change in this task. | No current UI compliance claim. |
-
+| Production ORCA remains a non-claim. | RUN_ID `20260423T034854Z` RWO-10/RWO-11 boundary refresh and Trial-only automation scope. | Production ORCA readiness is `not_applicable_trial_only`; no production ORCA execution is required or allowed by this automation. |
+| RWO-09 static/CI evidence does not equal release GO. | RUN_ID `20260423T030122Z` passed repo-local non-S3 static/CI checks, but runtime/live/fullflow/package/owner gates remain open. | Final Trial-backed release decision remains `not_ready`. |

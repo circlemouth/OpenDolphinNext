@@ -9,7 +9,7 @@
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T03:21:24Z",
+  "lastUpdated": "2026-04-23T03:48:54Z",
   "latestSafeBrowserSmoke": {
     "runId": "20260423T020225Z",
     "workOrder": "RWO-02",
@@ -109,6 +109,28 @@
       "facilityIdDrift": "zero_hits"
     },
     "claimBoundary": "Trial-backed non-S3 repo-local security/static/CI evidence; not runtime-ready smoke, live Trial ORCA, fullflow, production ORCA, S3/object-storage, package, or final release GO",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestRwo10Rwo11TrialNonclaimBoundary": {
+    "runId": "20260423T034854Z",
+    "workOrders": [
+      "RWO-10",
+      "RWO-11"
+    ],
+    "result": "RWO10_RWO11_TRIAL_NONCLAIM_BOUNDARY_DOCS_UPDATED_NOT_READY",
+    "evidence": "docs/implementation/rwo10-rwo11-trial-nonclaim-boundary-20260423T034854Z/FINAL_REPORT.md",
+    "productionOrcaReadiness": "not_applicable_trial_only",
+    "s3ObjectStorageReadiness": "not_applicable_out_of_scope",
+    "finalTrialBackedReleaseDecision": "not_ready",
+    "remainingGates": [
+      "full_ui_click_through_browser_coverage",
+      "approved_non_s3_live_trial_expansion",
+      "safe_fullflow",
+      "package_refresh",
+      "owner_go_no_go"
+    ],
     "liveTrialAction": "not_run",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
@@ -289,6 +311,8 @@
     "RUN_ID 20260423T023456Z added artifact-free browser local persistence coverage for RWO-03/RWO-04/RWO-05 and passed 3 new Playwright tests, plus the 4-test combined safe browser suite.",
     "RUN_ID 20260423T023456Z verified web-client guard and typecheck after the new safe browser spec; live Trial ORCA, production ORCA, and S3/object-storage were not used.",
     "RUN_ID 20260423T030122Z advanced RWO-09 non-S3 security/static/CI evidence: web guard, typecheck, safe no-artifacts browser suite, server CI guard scripts, direct grep guards, and server-modernized Maven static-analysis verify all passed.",
-    "RUN_ID 20260423T030122Z did not run live Trial ORCA, production ORCA, fullflow, runtime-ready smoke, package generation, or S3/object-storage setup; credentials and raw artifacts were not captured."
+    "RUN_ID 20260423T030122Z did not run live Trial ORCA, production ORCA, fullflow, runtime-ready smoke, package generation, or S3/object-storage setup; credentials and raw artifacts were not captured.",
+    "RUN_ID 20260423T034854Z refreshed RWO-10/RWO-11 claim boundaries: production ORCA remains not_applicable_trial_only, S3/object-storage remains not_applicable_out_of_scope, and final Trial-backed release decision remains not_ready.",
+    "RUN_ID 20260423T034854Z did not run live Trial ORCA, production ORCA, fullflow, package generation, or S3/object-storage setup; credentials and raw artifacts were not captured."
   ]
 }
