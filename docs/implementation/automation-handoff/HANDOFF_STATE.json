@@ -135,6 +135,26 @@
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   },
+  "latestReviewPackageRefresh": {
+    "runId": "20260423T034854Z",
+    "workOrders": [
+      "RWO-09",
+      "RWO-11"
+    ],
+    "result": "RWO09_RWO11_REVIEW_PACKAGE_REFRESH_PASS_EXTERNAL_ARTIFACT",
+    "evidence": "docs/implementation/rwo09-rwo11-review-package-refresh-20260423T034854Z/FINAL_REPORT.md",
+    "zip": "artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260423T034854Z-trial-nonclaim-current.zip",
+    "zipSha256": "320eafec0c3c8555b01892752525c14687891fd9b7b9098d7bf9bb2f544eb037",
+    "zipSizeBytes": 19397108,
+    "zipFileCount": 2595,
+    "sourceCommit": "8199a7dde940b3a9650c2268002fb912365d8577",
+    "packageSourceSecretScan": "passed",
+    "excludedPathScan": "pass_zero_hits",
+    "claimBoundary": "reviewer support package only; not runtime-ready smoke, live Trial ORCA, fullflow, production ORCA, S3/object-storage, or final release GO",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "resolvedBlockers": [
     {
       "blockerId": "phase4-safe-wrapper-action-missing",
@@ -313,6 +333,7 @@
     "RUN_ID 20260423T030122Z advanced RWO-09 non-S3 security/static/CI evidence: web guard, typecheck, safe no-artifacts browser suite, server CI guard scripts, direct grep guards, and server-modernized Maven static-analysis verify all passed.",
     "RUN_ID 20260423T030122Z did not run live Trial ORCA, production ORCA, fullflow, runtime-ready smoke, package generation, or S3/object-storage setup; credentials and raw artifacts were not captured.",
     "RUN_ID 20260423T034854Z refreshed RWO-10/RWO-11 claim boundaries: production ORCA remains not_applicable_trial_only, S3/object-storage remains not_applicable_out_of_scope, and final Trial-backed release decision remains not_ready.",
-    "RUN_ID 20260423T034854Z did not run live Trial ORCA, production ORCA, fullflow, package generation, or S3/object-storage setup; credentials and raw artifacts were not captured."
+    "RUN_ID 20260423T034854Z did not run live Trial ORCA, production ORCA, fullflow, package generation, or S3/object-storage setup; credentials and raw artifacts were not captured.",
+    "RUN_ID 20260423T034854Z generated current reviewer package artifacts under artifacts/review-bundles for source commit 8199a7dde940b3a9650c2268002fb912365d8577; package source secret scan passed and excluded-path scan found zero forbidden entries."
   ]
 }
