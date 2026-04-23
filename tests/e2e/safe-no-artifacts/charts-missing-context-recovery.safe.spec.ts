@@ -546,6 +546,13 @@ const closeRightDrawerIfOpen = async (page: Page) => {
   }
 };
 
+const expandOrderGroupIfClosed = async (page: Page, groupLabel: string) => {
+  const toggleButton = page.locator('#charts-order-pane').getByRole('button', { name: `${groupLabel}を開く` });
+  if ((await toggleButton.count()) > 0 && (await toggleButton.first().isVisible())) {
+    await toggleButton.first().click();
+  }
+};
+
 test.describe('Charts missing context recovery safe smoke', () => {
   test.use({ ignoreHTTPSErrors: true });
 
@@ -694,10 +701,7 @@ test.describe('Charts missing context recovery safe smoke', () => {
     expect(blockedOrcaPaths).toEqual([]);
   });
 
-  // RWO-04 full treatment-order UI remains blocked: the editor reflects the coded row, but no local save
-  // mutation is emitted from this Charts/right-drawer path yet. Keep the attempted contract here as a
-  // transparent follow-up target instead of counting it as release evidence.
-  test.skip('Charts UI saves, updates, and deletes representative treatment orders through local-only routes', async ({ page }) => {
+  test('Charts UI saves, updates, and deletes representative treatment orders through local-only routes', async ({ page }) => {
     const { readOnlyOrcaPaths, blockedOrcaPaths, orderBundleMutationBodies } = await stubChartsShell(page, {
       includeSafeVisit: true,
     });
@@ -718,7 +722,10 @@ test.describe('Charts missing context recovery safe smoke', () => {
     await editor.getByRole('button', { name: '保存して閉じる' }).click();
     await expect.poll(() => orderBundleMutationBodies.length, { timeout: 20_000 }).toBe(1);
     await closeRightDrawerIfOpen(page);
-    await expect(page.getByText('UI処置束')).toBeVisible({ timeout: 20_000 });
+    await expandOrderGroupIfClosed(page, '処置');
+    await expect(
+      page.locator('#charts-order-pane').getByRole('button', { name: 'UI処置束を編集', exact: true }),
+    ).toBeVisible({ timeout: 20_000 });
 
     await page.locator('#charts-order-pane').getByRole('button', { name: 'UI処置束を編集', exact: true }).click();
     await expect(editor).toBeVisible({ timeout: 20_000 });
@@ -726,11 +733,18 @@ test.describe('Charts missing context recovery safe smoke', () => {
     await editor.getByRole('button', { name: '保存して閉じる' }).click();
     await expect.poll(() => orderBundleMutationBodies.length, { timeout: 20_000 }).toBe(2);
     await closeRightDrawerIfOpen(page);
-    await expect(page.getByText('UI処置束更新')).toBeVisible({ timeout: 20_000 });
+    await expandOrderGroupIfClosed(page, '処置');
+    await expect(
+      page.locator('#charts-order-pane').getByRole('button', { name: 'UI処置束更新を編集', exact: true }),
+    ).toBeVisible({ timeout: 20_000 });
 
-    await page.locator('#charts-order-pane').getByRole('button', { name: 'UI処置束更新を編集', exact: true }).click();
-    await expect(editor).toBeVisible({ timeout: 20_000 });
-    await editor.getByRole('button', { name: /^削除$/ }).last().click();
+    await page
+      .locator('#charts-order-pane .order-dock__bundle')
+      .filter({ hasText: 'UI処置束更新' })
+      .getByRole('button', { name: /削除/ })
+      .click();
+    await expect(page.getByRole('alertdialog', { name: 'オーダーを削除しますか？' })).toBeVisible({ timeout: 20_000 });
+    await page.getByRole('button', { name: '削除する' }).click();
     await expect(page.getByText('オーダーを削除しました。')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('UI処置束更新')).toHaveCount(0);
 

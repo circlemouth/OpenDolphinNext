@@ -2952,6 +2952,9 @@ export function OrderBundleEditPanel({
           medicationName: item.name?.trim() || undefined,
         }))
         .filter((item) => item.medicationCode && isDrugMedicationCode(item.medicationCode));
+      if (medications.length === 0) {
+        return true;
+      }
       const result = await fetchOrcaContraindicationCheck({
         patientId,
         performMonth: bundleForm.startDate,

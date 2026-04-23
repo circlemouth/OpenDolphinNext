@@ -2,7 +2,7 @@
   "runId": "20260423T212450Z",
   "recordedAt": "2026-04-23T21:50:20Z",
   "workOrders": ["RWO-03", "RWO-04"],
-  "result": "RWO03_PRESCRIPTION_UI_SAFE_BROWSER_PASS_RWO04_TREATMENT_UI_BLOCKER_RECORDED",
+  "result": "RWO03_PRESCRIPTION_UI_SAFE_BROWSER_PASS_RWO04_TREATMENT_CONTRA_SKIP_REPAIRED_UI_READBACK_BLOCKER_RECORDED",
   "branch": "master",
   "startHead": "1fe8178128f93666a95d083466a7e1e1ca7a77e8",
   "liveTrialOrca": {
@@ -29,13 +29,20 @@
     "Expanded the safe Charts browser shell with local-only prescription order save/readback stubs.",
     "Allowed read-only ORCA master route stubs for youhou, drug, and generic-price while blocking unexpected ORCA paths.",
     "Added a browser-executed prescription UI save/update flow through the right drawer and Charts order pane.",
-    "Kept the representative treatment-order UI save/update/delete attempt as skipped release evidence because the coded row reflects but the Charts/right-drawer path does not emit a local save mutation."
+    "Repaired treatment-order save preflight so non-drug treatment rows do not call the patient-aware ORCA contraindication route when no medication code exists.",
+    "Kept the representative treatment-order UI save/update/delete attempt as skipped release evidence because the longer Charts/right-drawer update/delete readback still needs a stable UI contract."
   ],
   "verification": [
     {
       "command": "PLAYWRIGHT_DISABLE_MSW=1 npm run --prefix web-client test:e2e:no-artifacts -- --run-id 20260423T212450Z tests/e2e/safe-no-artifacts/charts-missing-context-recovery.safe.spec.ts tests/e2e/safe-no-artifacts/local-clinical-persistence.safe.spec.ts",
       "result": "pass",
       "testsPassed": 7,
+      "testsSkipped": 1
+    },
+    {
+      "command": "npm run --prefix web-client test:ci -- src/features/charts/__tests__/orderBundleItemActions.test.tsx",
+      "result": "pass",
+      "testsPassed": 25,
       "testsSkipped": 1
     },
     {
@@ -52,8 +59,8 @@
   "blockers": [
     {
       "workOrder": "RWO-04",
-      "classification": "safe_browser_ui_treatment_save_path_blocked",
-      "details": "The representative treatment-order editor reflects the coded row, but the current Charts/right-drawer path did not emit a local order-bundles save mutation during focused retry. The skipped test remains as the next implementation target."
+      "classification": "safe_browser_ui_treatment_readback_update_delete_path_blocked",
+      "details": "The non-drug treatment save preflight no longer depends on the ORCA contraindication endpoint. The remaining skipped browser target is the longer Charts/right-drawer readback, update, and delete flow."
     }
   ],
   "credentialsCaptured": false,

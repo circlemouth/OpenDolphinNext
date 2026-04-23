@@ -16,7 +16,7 @@
       "RWO-03",
       "RWO-04"
     ],
-    "result": "RWO03_PRESCRIPTION_UI_SAFE_BROWSER_PASS_RWO04_TREATMENT_UI_BLOCKER_RECORDED",
+    "result": "RWO03_PRESCRIPTION_UI_SAFE_BROWSER_PASS_RWO04_TREATMENT_CONTRA_SKIP_REPAIRED_UI_READBACK_BLOCKER_RECORDED",
     "branch": "master",
     "startHead": "1fe8178128f93666a95d083466a7e1e1ca7a77e8",
     "evidence": "docs/implementation/rwo03-rwo04-safe-browser-ui-prescription-20260423T212450Z/FINAL_REPORT.md",
@@ -34,11 +34,11 @@
     },
     "blocker": {
       "workOrder": "RWO-04",
-      "classification": "safe_browser_ui_treatment_save_path_blocked",
-      "details": "The representative treatment-order editor reflects the coded row, but the current Charts/right-drawer path did not emit a local order-bundles save mutation during focused retry."
+      "classification": "safe_browser_ui_treatment_readback_update_delete_path_blocked",
+      "details": "The non-drug treatment save preflight no longer depends on the ORCA contraindication endpoint. The remaining skipped browser target is the longer Charts/right-drawer readback, update, and delete flow."
     },
     "claimBoundary": "No-live artifact-free browser evidence only; not live ORCA Trial evidence, production ORCA readiness, S3/object-storage readiness, fullflow success, or final release readiness.",
-    "recommendedNextTask": "Repair the RWO-04 treatment-order Charts/right-drawer save path, then unskip and rerun the representative UI create/update/delete safe browser test.",
+    "recommendedNextTask": "Repair the RWO-04 treatment-order Charts/right-drawer readback/update/delete flow, then unskip and rerun the representative UI create/update/delete safe browser test.",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   },

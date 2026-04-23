@@ -624,6 +624,10 @@ describe('OrderBundleEditPanel item actions', () => {
     expect(operation?.classCode).toBe('400');
     expect(operation?.classCodeSystem).toBe('Claim007');
     expect(operation?.className).toBe('処置');
+    expect(vi.mocked(globalThis.fetch).mock.calls.some(([input]) => {
+      const requestUrl = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
+      return requestUrl.includes('/api/orca/official/chart-support/contraindication-check');
+    })).toBe(false);
   });
 
   it('baseChargeOrder の再編集保存でも canonical className を優先する', async () => {
