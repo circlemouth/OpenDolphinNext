@@ -9,7 +9,7 @@
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T11:33:21Z",
+  "lastUpdated": "2026-04-23T11:43:27Z",
   "latestRwo06Phase4Medicalmodv2LiveInvestigation": {
     "runId": "20260423T100216Z",
     "workOrder": "RWO-06",
@@ -436,21 +436,22 @@
     "rawArtifactsCaptured": false
   },
   "latestReviewPackageRefresh": {
-    "runId": "20260423T034854Z",
+    "runId": "20260423T114327Z",
     "workOrders": [
       "RWO-09",
       "RWO-11"
     ],
-    "result": "RWO09_RWO11_REVIEW_PACKAGE_REFRESH_PASS_EXTERNAL_ARTIFACT",
-    "evidence": "docs/implementation/rwo09-rwo11-review-package-refresh-20260423T034854Z/FINAL_REPORT.md",
-    "zip": "artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260423T034854Z-trial-nonclaim-current.zip",
-    "zipSha256": "320eafec0c3c8555b01892752525c14687891fd9b7b9098d7bf9bb2f544eb037",
-    "zipSizeBytes": 19397108,
-    "zipFileCount": 2595,
-    "sourceCommit": "8199a7dde940b3a9650c2268002fb912365d8577",
+    "result": "RWO09_RWO11_REVIEW_PACKAGE_REFRESH_PASS_SOURCE_HEAD_EXTERNAL_ARTIFACT",
+    "evidence": "docs/implementation/rwo09-rwo11-review-package-refresh-20260423T114327Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-rwo11-review-package-refresh-20260423T114327Z/summary.sanitized.json",
+    "zip": "artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260423T114327Z-trial-nonclaim-current-head.zip",
+    "zipSha256": "1ac73ec894f0c5e6bba1a4a288d118618b06841da94511f11347cc899c849c69",
+    "zipSizeBytes": 19458778,
+    "zipFileCount": 2628,
+    "sourceCommit": "b99d3a6a20311dc8a3c565edfe5b4d968e2ed82f",
     "packageSourceSecretScan": "passed",
     "excludedPathScan": "pass_zero_hits",
-    "claimBoundary": "reviewer support package only; not runtime-ready smoke, live Trial ORCA, fullflow, production ORCA, S3/object-storage, or final release GO",
+    "claimBoundary": "reviewer support package for the recorded package source head only; later evidence-recording commits may advance master without changing the package contents; not runtime-ready smoke, live Trial ORCA, fullflow, production ORCA, S3/object-storage, or final release GO",
     "liveTrialAction": "not_run",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
@@ -681,6 +682,7 @@
     "RUN_ID 20260423T070049Z skipped the RWO-06 Phase4 medicalmodv2 live Trial action as skipped_environment_unavailable_missing_runtime_secret_or_config because required non-S3 local runtime inputs were absent; the approved payload hash, wrapper syntax, wrapper dry-run, and Phase4 evidence contract tests passed, with no credentials or raw artifacts captured.",
     "RUN_ID 20260423T080150Z rechecked the same Trial-only RWO-06 handoff after owner clarification to use WebORCA / ORCA Trial. Trial remains the only target, but live traffic was not sent because MODERNIZED_POSTGRES_PASSWORD, PHR_EXPORT_SIGNING_SECRET, and FACTOR2_AES_KEY_B64 were still absent from approved local runtime paths. Payload hash, wrapper dry-run, evidence contract tests, and server guard scripts passed with no credentials or raw artifacts captured.",
     "RUN_ID 20260423T100216Z recorded that RUN_ID 20260423T091324Z consumed the single approved Phase4 medicalmodv2 live Trial action and classified it as live_trial_not_accepted / transportRejected / businessAccepted=false. The next active handoff is no-live investigation only; do not repeat live medicalmodv2 without new explicit approval. During investigation one command printed ORCA Trial Basic values from ignored generated runtime config to terminal output; values were not committed or written to evidence.",
-    "RUN_ID 20260423T110051Z completed the RWO-06 no-live handoff without another live Trial mutation. Disabled attachment storage is no longer overall-readiness-blocking in the non-S3 profile when storage-dependent features are disabled, patient image readiness still fails closed when enabled without attachment storage, ORCA connection policy/gateway failures map to sanitized gateway envelopes, gateway 5xx logging avoids raw exception stack material, and 23 focused server tests passed. Future medicalmodv2 live mutation still requires fresh explicit owner approval."
+    "RUN_ID 20260423T110051Z completed the RWO-06 no-live handoff without another live Trial mutation. Disabled attachment storage is no longer overall-readiness-blocking in the non-S3 profile when storage-dependent features are disabled, patient image readiness still fails closed when enabled without attachment storage, ORCA connection policy/gateway failures map to sanitized gateway envelopes, gateway 5xx logging avoids raw exception stack material, and 23 focused server tests passed. Future medicalmodv2 live mutation still requires fresh explicit owner approval.",
+    "RUN_ID 20260423T114327Z refreshed the RWO-09/RWO-11 reviewer support package for package source head b99d3a6a20311dc8a3c565edfe5b4d968e2ed82f; package source secret scan, artifact sha256 verification, and forbidden-path scan passed. Live Trial ORCA, production ORCA, fullflow, runtime-ready smoke, and S3/object-storage setup were not run."
   ]
 }
