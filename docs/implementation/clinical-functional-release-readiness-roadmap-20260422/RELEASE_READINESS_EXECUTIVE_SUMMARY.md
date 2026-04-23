@@ -8,7 +8,7 @@ RUN_ID: `20260422T134401Z`
 
 The roadmap documentation can be completed from repo-local evidence, but one expected input filename is missing: `docs/implementation/unified-clinical-wave1-batch1-wo3-20260421/CWP01_KARTE_ORDER_PERSISTENCE_REPORT.md`. The available equivalent CWP-01 evidence is `CWP01_INTEGRATION_GATE_REPORT.md`.
 
-Since the original roadmap package, artifact-free browser local persistence evidence and RWO-09 non-S3 static/CI evidence have been added. These improve Trial-backed release-readiness progress, but they do not close full UI click-through, fullflow, live Trial expansion, package, or owner sign-off gates.
+Since the original roadmap package, artifact-free browser local persistence evidence and RWO-09 non-S3 static/CI evidence have been added. Owner standing approval is present for the automation to continue Trial-backed non-S3 roadmap work. These improve Trial-backed release-readiness progress, but they do not close full UI click-through, fullflow, live Trial expansion, package, or final release GO/NO-GO gates.
 
 ## Functional Conclusion
 
@@ -25,7 +25,7 @@ Since the original roadmap package, artifact-free browser local persistence evid
 2. Fullflow is missing.
 3. `medicalmodv2`, `diseasev3`, and `subjectivesv2` live verification is missing.
 4. Trial-scope non-S3 runtime config/secrets and deployment readiness are not fully verified.
-5. Owner release sign-off is not present.
+5. Owner standing approval to proceed is present, but final release GO/NO-GO is not recorded.
 6. Expected CWP-01 filename is missing and should be accepted or corrected by owner review.
 
 ## Latest Evidence Markers
@@ -33,6 +33,7 @@ Since the original roadmap package, artifact-free browser local persistence evid
 - RUN_ID `20260423T010054Z` / `20260423T023456Z`: artifact-free browser local persistence evidence added for selected RWO-02 through RWO-05 workflows.
 - RUN_ID `20260423T030122Z`: RWO-09 non-S3 static/CI evidence passed, including web guards, typecheck, safe browser suite, server CI guard scripts, and server-modernized static-analysis verify.
 - RUN_ID `20260423T034854Z`: RWO-10/RWO-11 non-claim boundary refreshed. Production ORCA remains `not_applicable_trial_only`; S3/object storage remains `not_applicable_out_of_scope`.
+- RUN_ID `20260423T035517Z`: owner standing approval is recorded as present for Trial-backed non-S3 roadmap continuation. Final release GO/NO-GO remains separate and not recorded.
 
 ## ORCA Connection Scope
 

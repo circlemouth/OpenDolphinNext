@@ -13,3 +13,4 @@ RUN_ID: `20260422T134401Z`
 | DADS used only as reference boundary. | No UI change in this task. | No current UI compliance claim. |
 | Production ORCA remains a non-claim. | RUN_ID `20260423T034854Z` RWO-10/RWO-11 boundary refresh and Trial-only automation scope. | Production ORCA readiness is `not_applicable_trial_only`; no production ORCA execution is required or allowed by this automation. |
 | RWO-09 static/CI evidence does not equal release GO. | RUN_ID `20260423T030122Z` passed repo-local non-S3 static/CI checks, but runtime/live/fullflow/package/owner gates remain open. | Final Trial-backed release decision remains `not_ready`. |
+| Owner standing approval is present. | RUN_ID `20260423T035517Z` owner approval clarification. | Automation may continue Trial-backed non-S3 roadmap work, including WebORCA / ORCA Trial verification when a safe approved non-S3 runtime path exists; this is not production ORCA/S3 approval and not final release GO. |

@@ -9,7 +9,7 @@
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T03:48:54Z",
+  "lastUpdated": "2026-04-23T03:55:17Z",
   "latestSafeBrowserSmoke": {
     "runId": "20260423T020225Z",
     "workOrder": "RWO-02",
@@ -151,6 +151,20 @@
     "packageSourceSecretScan": "passed",
     "excludedPathScan": "pass_zero_hits",
     "claimBoundary": "reviewer support package only; not runtime-ready smoke, live Trial ORCA, fullflow, production ORCA, S3/object-storage, or final release GO",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestOwnerStandingApprovalMarker": {
+    "runId": "20260423T035517Z",
+    "workOrder": "RWO-01",
+    "result": "RWO01_OWNER_STANDING_APPROVAL_PRESENT_FINAL_GO_NOT_RECORDED",
+    "evidence": "docs/implementation/rwo01-owner-standing-approval-20260423T035517Z/FINAL_REPORT.md",
+    "standingOwnerApproval": true,
+    "approvalScope": "Trial-backed non-S3 roadmap continuation, including WebORCA / ORCA Trial verification when required by an active Work Order and a safe approved non-S3 runtime path exists",
+    "productionOrcaApproval": false,
+    "s3ObjectStorageApproval": false,
+    "finalReleaseGoNoGoRecorded": false,
     "liveTrialAction": "not_run",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
@@ -334,6 +348,7 @@
     "RUN_ID 20260423T030122Z did not run live Trial ORCA, production ORCA, fullflow, runtime-ready smoke, package generation, or S3/object-storage setup; credentials and raw artifacts were not captured.",
     "RUN_ID 20260423T034854Z refreshed RWO-10/RWO-11 claim boundaries: production ORCA remains not_applicable_trial_only, S3/object-storage remains not_applicable_out_of_scope, and final Trial-backed release decision remains not_ready.",
     "RUN_ID 20260423T034854Z did not run live Trial ORCA, production ORCA, fullflow, package generation, or S3/object-storage setup; credentials and raw artifacts were not captured.",
-    "RUN_ID 20260423T034854Z generated current reviewer package artifacts under artifacts/review-bundles for source commit 8199a7dde940b3a9650c2268002fb912365d8577; package source secret scan passed and excluded-path scan found zero forbidden entries."
+    "RUN_ID 20260423T034854Z generated current reviewer package artifacts under artifacts/review-bundles for source commit 8199a7dde940b3a9650c2268002fb912365d8577; package source secret scan passed and excluded-path scan found zero forbidden entries.",
+    "RUN_ID 20260423T035517Z recorded that owner standing approval is present for Trial-backed non-S3 roadmap continuation. This does not authorize production ORCA, S3/object-storage, raw artifact capture, or final release GO."
   ]
 }
