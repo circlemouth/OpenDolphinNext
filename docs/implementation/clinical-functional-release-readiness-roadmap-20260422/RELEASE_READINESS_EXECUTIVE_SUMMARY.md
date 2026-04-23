@@ -25,7 +25,7 @@ Since the original roadmap package, artifact-free browser chart-open/local persi
 2. Fullflow is missing; scoped `medicalmodv2` acceptance is not a fullflow substitute.
 3. `diseasev3` and `subjectivesv2` live verification is missing; Request_Number `02` / `03` / `04` remains separately gated and forbidden for this automation without separate approval.
 4. Trial-scope non-S3 runtime config/secrets and deployment readiness are still not fully verified, though the object-storage-free dev/Trial runtime profile and scoped `medicalmodv2` acceptance now exist.
-5. Reviewer submission packet / accepted-ref freeze evidence is still missing.
+5. Reviewer submission packet / accepted-ref freeze evidence is still missing, although RUN_ID `20260423T180102Z` hardened the canonical packet flow to a sanitized-only extracted-subset contract.
 6. Owner standing approval to proceed is present, but final release GO/NO-GO is not recorded.
 7. Expected CWP-01 filename is missing and should be accepted or corrected by owner review.
 
@@ -44,6 +44,7 @@ Since the original roadmap package, artifact-free browser chart-open/local persi
 - RUN_ID `20260423T112258Z`: RWO-09 non-live release/security gate refresh passed after repairing stale ORCA transport missing-facility tests; full web CI, final server static-analysis verify, guard scripts, and 6-test artifact-free safe browser suite passed.
 - RUN_ID `20260423T150257Z`: RWO-06 `apiResult=14` root cause classified as stale Phase4 department/physician context; new active payload passed no-live checks and one sanitized live Trial retry was business accepted.
 - RUN_ID `20260423T170226Z`: RWO-09/RWO-11 refreshed the current-head reviewer support package; regression tests, metadata validation, sidecar sha verification, source-scope secret scan, and forbidden-path scan all passed.
+- RUN_ID `20260423T180102Z`: RWO-11 hardened the canonical reviewer submission packet flow so it copies only allowlisted sanitized closeout files and rejects raw XML / stacktrace / HAR / request XML / raw-network references. Historical closeout `20260414T010624Z` still fails the new contract because `qa/acceptmodv2/accept-summary.sanitized.json` is absent.
 
 ## ORCA Connection Scope
 

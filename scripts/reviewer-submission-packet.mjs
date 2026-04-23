@@ -18,7 +18,6 @@ const REQUIRED_CLOSEOUT_FILES = [
   'reports/final-report.md',
   'reports/command-log.md',
   'reports/blocker-classification.md',
-  'qa/acceptmodv2/accept-summary.json',
   'qa/acceptmodv2/accept-summary.sanitized.json',
   'qa/acceptmodv2/steps.log',
   'qa/acceptmodv2/console.json',
@@ -27,18 +26,9 @@ const REQUIRED_CLOSEOUT_FILES = [
   'qa/fullflow/steps.log',
   'qa/fullflow/console.json',
   'qa/fullflow/page-errors.json',
-  'qa/fullflow/network/network.json',
-  'qa/fullflow/network/requests.json',
   'evidence/patients-import/import-summary.json',
-  'evidence/patients-import/raw-upstream-request.xml',
-  'evidence/patients-import/raw-upstream-response.xml',
-  'evidence/patients-import/server-stacktrace.log',
-  'evidence/patients-import/audit.log',
   'evidence/medical-information-probe/probe-summary.json',
-  'evidence/medical-information-probe/raw-request.xml',
-  'evidence/medical-information-probe/raw-response.xml',
   'evidence/medical-information-probe/route-response.json',
-  'evidence/medical-information-probe/server-stacktrace.log',
   'evidence/runtime-blockers/blocker-summary.json',
   'evidence/runtime-blockers/selected-visit-row.json',
   'evidence/runtime-blockers/handoff-state.json',
@@ -66,7 +56,6 @@ const REQUIRED_PACKET_FILES = [
   'closeout-packet/reports/final-report.md',
   'closeout-packet/reports/command-log.md',
   'closeout-packet/reports/blocker-classification.md',
-  'closeout-packet/qa/acceptmodv2/accept-summary.json',
   'closeout-packet/qa/acceptmodv2/accept-summary.sanitized.json',
   'closeout-packet/qa/acceptmodv2/steps.log',
   'closeout-packet/qa/acceptmodv2/console.json',
@@ -75,24 +64,44 @@ const REQUIRED_PACKET_FILES = [
   'closeout-packet/qa/fullflow/steps.log',
   'closeout-packet/qa/fullflow/console.json',
   'closeout-packet/qa/fullflow/page-errors.json',
-  'closeout-packet/qa/fullflow/network/network.json',
-  'closeout-packet/qa/fullflow/network/requests.json',
   'closeout-packet/evidence/patients-import/import-summary.json',
-  'closeout-packet/evidence/patients-import/raw-upstream-request.xml',
-  'closeout-packet/evidence/patients-import/raw-upstream-response.xml',
-  'closeout-packet/evidence/patients-import/server-stacktrace.log',
-  'closeout-packet/evidence/patients-import/audit.log',
   'closeout-packet/evidence/medical-information-probe/probe-summary.json',
-  'closeout-packet/evidence/medical-information-probe/raw-request.xml',
-  'closeout-packet/evidence/medical-information-probe/raw-response.xml',
   'closeout-packet/evidence/medical-information-probe/route-response.json',
-  'closeout-packet/evidence/medical-information-probe/server-stacktrace.log',
   'closeout-packet/evidence/runtime-blockers/blocker-summary.json',
   'closeout-packet/evidence/runtime-blockers/selected-visit-row.json',
   'closeout-packet/evidence/runtime-blockers/handoff-state.json',
   'closeout-packet/docs/release-validation.md',
   'closeout-packet/docs/orca-remediation-cutover.md',
   'closeout-packet/docs/packet-skill.md',
+];
+
+const CLOSEOUT_TEXT_SCAN_ROOTS = [
+  'closeout-packet/reports',
+  'closeout-packet/qa',
+  'closeout-packet/evidence',
+];
+
+const FORBIDDEN_CLOSEOUT_TEXT_PATTERNS = [
+  {
+    label: 'raw_xml_reference',
+    pattern: /\braw-(?:upstream-)?(?:request|response)\.xml\b/i,
+  },
+  {
+    label: 'server_stacktrace_reference',
+    pattern: /\bserver-stacktrace\.log\b/i,
+  },
+  {
+    label: 'request_xml_reference',
+    pattern: /\brequest-xml\/medicalmodv2\.xml\b/i,
+  },
+  {
+    label: 'raw_network_reference',
+    pattern: /\bnetwork\/(?:network|requests)\.json\b/i,
+  },
+  {
+    label: 'har_reference',
+    pattern: /\bhar\/|\.har\b/i,
+  },
 ];
 
 const TEXT_EXTENSIONS = new Set([
@@ -275,22 +284,6 @@ function relativePosix(baseDir, targetPath) {
   return toPosix(path.relative(baseDir, targetPath));
 }
 
-function looksLikeSuccessfulSend(summary) {
-  const statusText = String(summary?.sendResult?.status ?? '');
-  const statusCode = Number.parseInt(statusText, 10);
-  return Number.isInteger(statusCode) && statusCode >= 200 && statusCode < 300;
-}
-
-function requiresMedicalmodXml(summary) {
-  if (summary?.sendResult?.requestXmlPath || summary?.evidencePaths?.requestXml) {
-    return true;
-  }
-  if (looksLikeSuccessfulSend(summary)) {
-    return true;
-  }
-  return String(summary?.blockerClassification ?? '') === 'none';
-}
-
 function validateRequiredFiles(rootDir, relativePaths) {
   const missing = relativePaths.filter((relativePath) => !fs.existsSync(path.join(rootDir, relativePath)));
   if (missing.length > 0) {
@@ -327,14 +320,15 @@ function normalizePacketText(content, repoRoot, runId) {
   return normalized;
 }
 
-function copyAndNormalizeCloseout(closeoutRoot, targetRoot, repoRoot, runId) {
-  fs.cpSync(closeoutRoot, targetRoot, { recursive: true });
-  for (const filePath of walkFiles(targetRoot, { includeDotDirs: true })) {
-    if (!TEXT_EXTENSIONS.has(path.extname(filePath))) {
-      continue;
+function copyCloseoutSubset(closeoutRoot, targetRoot, relativePaths, repoRoot, runId) {
+  for (const relativePath of relativePaths) {
+    const sourcePath = path.join(closeoutRoot, relativePath);
+    const targetPath = path.join(targetRoot, relativePath);
+    ensureDir(path.dirname(targetPath));
+    fs.copyFileSync(sourcePath, targetPath);
+    if (TEXT_EXTENSIONS.has(path.extname(targetPath))) {
+      writeText(targetPath, normalizePacketText(readText(targetPath), repoRoot, runId));
     }
-    const normalized = normalizePacketText(readText(filePath), repoRoot, runId);
-    writeText(filePath, normalized);
   }
 }
 
@@ -429,6 +423,28 @@ function verifyReviewCheckout(reviewCheckoutDir, acceptedHead) {
     .filter((relativePath) => FORBIDDEN_REVIEW_CHECKOUT_SEGMENTS.some((segment) => relativePath.includes(segment)));
   if (forbidden.length > 0) {
     fail(`Forbidden generated artifacts were copied into review-checkout:\n${forbidden.join('\n')}`);
+  }
+}
+
+function validateSanitizedAcceptSummary(summary) {
+  if (summary?.rawSensitiveFieldsExcluded !== true) {
+    fail('qa/acceptmodv2/accept-summary.sanitized.json must assert rawSensitiveFieldsExcluded=true');
+  }
+
+  const serialized = JSON.stringify(summary);
+  for (const { label, pattern } of FORBIDDEN_CLOSEOUT_TEXT_PATTERNS) {
+    if (pattern.test(serialized)) {
+      fail(`qa/acceptmodv2/accept-summary.sanitized.json contains forbidden ${label}`);
+    }
+  }
+}
+
+function validateSanitizedFullflowSummary(summary) {
+  const serialized = JSON.stringify(summary);
+  for (const { label, pattern } of FORBIDDEN_CLOSEOUT_TEXT_PATTERNS) {
+    if (pattern.test(serialized)) {
+      fail(`qa/fullflow/summary.json contains forbidden ${label}`);
+    }
   }
 }
 
@@ -536,11 +552,8 @@ function validateSourceInputs(repoRoot, runId, acceptedRef, acceptedHeadOverride
     fail(`closeout git-head-current mismatch: expected ${acceptedHead}, got ${closeoutHead}`);
   }
 
-  const fullflowSummary = readJson(path.join(closeoutRoot, 'qa/fullflow/summary.json'));
-  const medicalmodXmlPath = path.join(closeoutRoot, 'qa/fullflow/request-xml/medicalmodv2.xml');
-  if (requiresMedicalmodXml(fullflowSummary) && !fs.existsSync(medicalmodXmlPath)) {
-    fail('medicalmodv2.xml is required for a send-reached fullflow run but is missing');
-  }
+  validateSanitizedAcceptSummary(readJson(path.join(closeoutRoot, 'qa/acceptmodv2/accept-summary.sanitized.json')));
+  validateSanitizedFullflowSummary(readJson(path.join(closeoutRoot, 'qa/fullflow/summary.json')));
 
   return {
     acceptedHead,
@@ -612,6 +625,31 @@ function validateNoAbsolutePaths(packetDir) {
   }
 }
 
+function validateNoForbiddenCloseoutText(packetDir) {
+  const offenders = [];
+  for (const scanRoot of CLOSEOUT_TEXT_SCAN_ROOTS) {
+    const absoluteScanRoot = path.join(packetDir, scanRoot);
+    if (!fs.existsSync(absoluteScanRoot)) {
+      continue;
+    }
+    for (const filePath of walkFiles(absoluteScanRoot, { includeDotDirs: true })) {
+      if (!TEXT_EXTENSIONS.has(path.extname(filePath))) {
+        continue;
+      }
+      const content = readText(filePath);
+      for (const { label, pattern } of FORBIDDEN_CLOSEOUT_TEXT_PATTERNS) {
+        if (pattern.test(content)) {
+          offenders.push(`${relativePosix(packetDir, filePath)} (${label})`);
+          break;
+        }
+      }
+    }
+  }
+  if (offenders.length > 0) {
+    fail(`Forbidden raw artifact references remain in packet evidence:\n${offenders.join('\n')}`);
+  }
+}
+
 function validatePacket(outputDir, runId, acceptedRef, acceptedHead) {
   const packetDir = packetDirFor(outputDir, runId);
   if (!fs.existsSync(packetDir)) {
@@ -653,13 +691,11 @@ function validatePacket(outputDir, runId, acceptedRef, acceptedHead) {
     fail(`closeout packet accepted branch mismatch: expected ${acceptedRef}, got ${closeoutAcceptedBranch}`);
   }
 
-  const summary = readJson(path.join(packetDir, 'closeout-packet/qa/fullflow/summary.json'));
-  const medicalmodXmlPath = path.join(packetDir, 'closeout-packet/qa/fullflow/request-xml/medicalmodv2.xml');
-  if (requiresMedicalmodXml(summary) && !fs.existsSync(medicalmodXmlPath)) {
-    fail('Packet is missing qa/fullflow/request-xml/medicalmodv2.xml for a send-reached run');
-  }
+  validateSanitizedAcceptSummary(readJson(path.join(packetDir, 'closeout-packet/qa/acceptmodv2/accept-summary.sanitized.json')));
+  validateSanitizedFullflowSummary(readJson(path.join(packetDir, 'closeout-packet/qa/fullflow/summary.json')));
 
   validateNoAbsolutePaths(packetDir);
+  validateNoForbiddenCloseoutText(packetDir);
 
   const zipPath = zipPathFor(outputDir, runId);
   if (fs.existsSync(zipPath)) {
@@ -711,7 +747,13 @@ function createPacket(repoRoot, runId, acceptedRef, acceptedHeadOverride, output
       sourceOriginMasterHead,
       path.join(stagingPacketDir, 'review-checkout'),
     );
-    copyAndNormalizeCloseout(closeoutRoot, path.join(stagingPacketDir, 'closeout-packet'), repoRoot, runId);
+    copyCloseoutSubset(
+      closeoutRoot,
+      path.join(stagingPacketDir, 'closeout-packet'),
+      REQUIRED_CLOSEOUT_FILES,
+      repoRoot,
+      runId,
+    );
 
     for (const [sourcePath, destinationPath] of DOC_MAPPINGS) {
       const sourceAbsolutePath = path.join(repoRoot, sourcePath);

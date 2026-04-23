@@ -64,16 +64,9 @@ function populateCloseout(repoDir, acceptedHead, mergeBase, options = {}) {
     blockerClassification: 'none',
     sendResult: {
       status: '200',
-      requestXmlPath: 'request-xml/medicalmodv2.xml',
     },
-    evidencePaths: {
-      requestXml: 'request-xml/medicalmodv2.xml',
-    },
-  };
-  const acceptSummary = {
-    runId: RUN_ID,
-    blockerClassification: 'none',
-    harPath: `${repoDir}/artifacts/orca-remediation/${RUN_ID}/qa/acceptmodv2/har/network.har`,
+    responseClassification: 'businessAccepted',
+    rawSensitiveFieldsExcluded: true,
   };
   const sanitizedAcceptSummary = {
     schemaVersion: 1,
@@ -110,29 +103,17 @@ function populateCloseout(repoDir, acceptedHead, mergeBase, options = {}) {
     'reports/final-report.md': options.finalReport ?? `# Final report\n\n- packet path: ${repoDir}/artifacts/orca-remediation/closeout/${RUN_ID}/qa/fullflow/summary.json\n`,
     'reports/command-log.md': '# command log\n',
     'reports/blocker-classification.md': options.blockerReport ?? '# blocker classification\n',
-    'qa/acceptmodv2/accept-summary.json': `${JSON.stringify(acceptSummary, null, 2)}\n`,
     'qa/acceptmodv2/accept-summary.sanitized.json': `${JSON.stringify(sanitizedAcceptSummary, null, 2)}\n`,
     'qa/acceptmodv2/steps.log': 'accept step\n',
     'qa/acceptmodv2/console.json': '[]\n',
     'qa/acceptmodv2/page-errors.json': '[]\n',
-    'qa/acceptmodv2/har/network.har': '{}\n',
     'qa/fullflow/summary.json': `${JSON.stringify(fullflowSummary, null, 2)}\n`,
     'qa/fullflow/steps.log': 'fullflow step\n',
     'qa/fullflow/console.json': '[]\n',
     'qa/fullflow/page-errors.json': '[]\n',
-    'qa/fullflow/network/network.json': '[]\n',
-    'qa/fullflow/network/requests.json': '[]\n',
-    'qa/fullflow/request-xml/medicalmodv2.xml': '<medicalmodv2 />\n',
     'evidence/patients-import/import-summary.json': '{"status":"ok"}\n',
-    'evidence/patients-import/raw-upstream-request.xml': '<request />\n',
-    'evidence/patients-import/raw-upstream-response.xml': '<response />\n',
-    'evidence/patients-import/server-stacktrace.log': 'no stacktrace\n',
-    'evidence/patients-import/audit.log': 'audit\n',
     'evidence/medical-information-probe/probe-summary.json': '{"status":"ok"}\n',
-    'evidence/medical-information-probe/raw-request.xml': '<request />\n',
-    'evidence/medical-information-probe/raw-response.xml': '<response />\n',
     'evidence/medical-information-probe/route-response.json': '{"status":200}\n',
-    'evidence/medical-information-probe/server-stacktrace.log': 'no stacktrace\n',
     'evidence/runtime-blockers/blocker-summary.json': '{"status":"ok"}\n',
     'evidence/runtime-blockers/selected-visit-row.json': '{"row":"ok"}\n',
     'evidence/runtime-blockers/handoff-state.json': '{"handoff":"ok"}\n',
@@ -143,10 +124,6 @@ function populateCloseout(repoDir, acceptedHead, mergeBase, options = {}) {
       continue;
     }
     writeText(path.join(packetRoot, relativePath), content);
-  }
-
-  if (options.removeMedicalmodXml) {
-    fs.rmSync(path.join(packetRoot, 'qa/fullflow/request-xml/medicalmodv2.xml'), { force: true });
   }
 
   return closeoutRoot;
@@ -245,12 +222,12 @@ test('creates a clean review-checkout and validates the packet layout', () => {
     const reviewCheckout = path.join(packetDir, 'review-checkout');
     const status = run('git', ['status', '--short'], reviewCheckout).trim();
     const originMaster = run('git', ['rev-parse', '--verify', 'origin/master^{commit}'], reviewCheckout).trim();
-    const acceptSummary = JSON.parse(fs.readFileSync(path.join(packetDir, 'closeout-packet/qa/acceptmodv2/accept-summary.json'), 'utf8'));
+    const acceptSummary = JSON.parse(fs.readFileSync(path.join(packetDir, 'closeout-packet/qa/acceptmodv2/accept-summary.sanitized.json'), 'utf8'));
     const fileList = listPacket(packetDir);
 
     assert.equal(status, '');
     assert.equal(originMaster, mergeBase);
-    assert.equal(acceptSummary.harPath, 'closeout-packet/qa/acceptmodv2/har/network.har');
+    assert.equal(acceptSummary.rawSensitiveFieldsExcluded, true);
     assert.deepEqual(
       fileList.filter((entry) =>
         [
@@ -260,7 +237,7 @@ test('creates a clean review-checkout and validates the packet layout', () => {
           'review-checkout/.git/HEAD',
           'closeout-packet/docs/packet-skill.md',
           'closeout-packet/evidence/patients-import/import-summary.json',
-          'closeout-packet/qa/fullflow/request-xml/medicalmodv2.xml',
+          'closeout-packet/qa/acceptmodv2/accept-summary.sanitized.json',
           'closeout-packet/reports/final-report.md',
         ].includes(entry),
       ),
@@ -268,7 +245,7 @@ test('creates a clean review-checkout and validates the packet layout', () => {
         'README_REVIEW.md',
         'closeout-packet/docs/packet-skill.md',
         'closeout-packet/evidence/patients-import/import-summary.json',
-        'closeout-packet/qa/fullflow/request-xml/medicalmodv2.xml',
+        'closeout-packet/qa/acceptmodv2/accept-summary.sanitized.json',
         'closeout-packet/reports/final-report.md',
         'manifest.json',
         'manifest.sha256',
@@ -276,6 +253,56 @@ test('creates a clean review-checkout and validates the packet layout', () => {
       ],
     );
     assert.ok(fs.existsSync(path.join(outputDir, `submission-packet-${RUN_ID}.zip`)));
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('fails when a sanitized summary still references request XML', () => {
+  const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
+  try {
+    populateCloseout(repoDir, acceptedHead, mergeBase, {
+      fullflowSummary: {
+        runId: RUN_ID,
+        blockerClassification: 'none',
+        sendResult: {
+          status: '200',
+          requestXmlPath: 'request-xml/medicalmodv2.xml',
+        },
+        rawSensitiveFieldsExcluded: true,
+      },
+    });
+    assert.throws(
+      () =>
+        run(
+          process.execPath,
+          [SCRIPT_PATH, '--run-id', RUN_ID, '--accepted-ref', ACCEPTED_REF],
+          repoDir,
+          { REVIEWER_PACKET_REPO_ROOT: repoDir },
+        ),
+      /qa\/fullflow\/summary\.json contains forbidden request_xml_reference/,
+    );
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('fails when copied reports still reference raw artifacts', () => {
+  const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
+  try {
+    populateCloseout(repoDir, acceptedHead, mergeBase, {
+      finalReport: '# Final report\n\n- raw response: raw-response.xml\n',
+    });
+    assert.throws(
+      () =>
+        run(
+          process.execPath,
+          [SCRIPT_PATH, '--run-id', RUN_ID, '--accepted-ref', ACCEPTED_REF],
+          repoDir,
+          { REVIEWER_PACKET_REPO_ROOT: repoDir },
+        ),
+      /Forbidden raw artifact references remain in packet evidence/,
+    );
   } finally {
     fs.rmSync(sandbox, { recursive: true, force: true });
   }

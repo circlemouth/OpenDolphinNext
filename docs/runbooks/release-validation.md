@@ -155,7 +155,7 @@ cd web-client && QA_PATIENT_ID=<summary.phase3AttemptPatientId> node scripts/qa-
 - `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` は `QA_MEDICAL_INFORMATION` 未指定時に `medicalInformation` を browser request body へ送らず、含まれた場合は script 自身が failure で停止する。指定時だけ current select option を送る。
 - WebORCA Trial で `Acceptance_Push` workaround が必要な環境では、client 側ではなく server runtime config `ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH=true` を明示する。`setup-modernized-env.sh` の dev 起動はこの flag を既定で有効化する。
 - artifact が `RUN_ID` 単位でまとまり、accept / fullflow / runtime-ready smoke の結果を同じ受入れ束へ添付できる。official `Voucher_Number` / `Sequential_Number` が不足する場合は fail-close のまま `official-visit-row-blocker` または `test-data-blocker` として summary / steps / network へ残す。
-- fullflow が send 到達を示した run だけ `qa/fullflow/request-xml/medicalmodv2.xml` を必須とする。send 未到達 run では XML 不在を許容する代わりに、`summary.json`、`blocker-summary.json`、`handoff-state.json`、`selected-visit-row.json` で停止理由を third party が再読できることを必須とする。
+- safe fullflow mode では send 到達の有無にかかわらず `request-xml/medicalmodv2.xml`、HAR、raw network dump、raw request/response body を reviewer packet 正本へ含めない。third party が再読する証跡は `summary.json`、`blocker-summary.json`、`handoff-state.json`、`selected-visit-row.json`、allowlisted completion/status fields、hash に限定する。
 - C7 dynamic evidence は target mutation request capture が存在する場合だけ verified とする。`targetMutationRequestCount=0` / `checkedRequests=0` の summary は accepted にしない。
 - MSW/local/static tests は live ORCA fullflow success と混ぜない。MSW mock/test-only legacy route surface、local smoke、static helper tests は live ORCA mutation / fullflow の代替証跡ではない。
 
@@ -169,6 +169,7 @@ cd web-client && QA_PATIENT_ID=<summary.phase3AttemptPatientId> node scripts/qa-
 - packet は `submission-packet-<RUN_ID>/README_REVIEW.md`、`manifest.json`、`review-checkout/.git/HEAD`、`closeout-packet/` を含む。
 - `review-checkout/HEAD`、`closeout-packet/git/git-head-current.txt`、`manifest.json.acceptedHead` が一致する。
 - packet 内テキストに絶対ローカルパスが残らない。
+- packet にコピーされた report / QA / evidence には raw XML、stacktrace、HAR、request XML、raw network dump 参照が残らない。
 - `scripts/create-review-archive.sh` は reviewer 提出用の正本ではなく、受入れ手順に含めない。
 - evidence freeze 後に accepted branch が別 commit を指した場合は、`--accepted-head <ACCEPTED_HEAD>` を付けて packet HEAD を固定する。
 
@@ -255,7 +256,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - `closeout-packet/` の required file が欠けていたら fail する。欠落を別 zip や old RUN_ID で補わない。
 - packet 生成後は `./scripts/validate-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>` を必ず通す。branch drift がある場合は create/validate の両方へ `--accepted-head <ACCEPTED_HEAD>` を付ける。
 - reviewer が辿る path は packet-relative に統一し、絶対ローカルパスを残さない。
-- reviewer submission packet に live evidence を含める場合は、closeout evidence から reviewer が再読するための extracted subset だけを同梱する。candidate discovery / preflight / accept / fullflow の raw network から credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw password、氏名・住所・電話番号・保険記号番号などの患者機微 detail を除外し、sanitized summary、redacted selected id、hash、classification、artifact-relative path に限定する。抽出 subset は exact selected-candidate preflight handoff の存在確認には使えるが、raw live success や Phase 3 実行許可を新たに推定する材料にしない。
+- reviewer submission packet に live evidence を含める場合は、closeout evidence から reviewer が再読するための sanitized extracted subset だけを同梱する。candidate discovery / preflight / accept / fullflow の raw network、request XML、response XML、server stacktrace から credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw password、氏名・住所・電話番号・保険記号番号などの患者機微 detail を除外し、sanitized summary、redacted selected id、hash、classification、artifact-relative path に限定する。抽出 subset は exact selected-candidate preflight handoff の存在確認には使えるが、raw live success や Phase 3 実行許可を新たに推定する材料にしない。
 
 ## 補足
 - `check-no-generated-artifacts.sh` は tracked / untracked の両方を検査する。

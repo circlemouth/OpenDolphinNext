@@ -117,6 +117,7 @@
   - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --dry-run`
 - Evidence policy:
   - closeout evidence から reviewer 再読用の extracted subset だけを同梱する
+  - raw XML、server stacktrace、HAR、request XML、raw network dump は reviewer submission packet 正本へ入れない
   - exact selected-candidate `qa/weborca-readonly-preflight/summary.json` だけを Phase 3 handoff artifact として扱う
   - candidate discovery は sanitized proposal であり、Phase 3 許可や live success の根拠にしない
   - accepted candidate 0 件は公式初期患者 `00001`〜`00011` の不在ではなく、`PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER` として扱う
@@ -124,7 +125,7 @@
 
 ## validate-reviewer-submission-packet.sh
 - 位置づけ: canonical support。reviewer submission packet の検証ステップ。
-- 目的: 生成済み packet の required file、HEAD 一致、review-checkout clean、絶対パス混入なしを再検証する。
+- 目的: 生成済み packet の required file、HEAD 一致、review-checkout clean、絶対パス混入なし、raw artifact 参照なしを再検証する。
 - 使い方:
   - `./scripts/validate-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z`
   - `./scripts/validate-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --output ./artifacts/reviewer-submission-packets`
