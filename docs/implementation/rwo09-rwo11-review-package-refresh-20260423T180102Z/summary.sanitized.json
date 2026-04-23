@@ -1,0 +1,32 @@
+{
+  "runId": "20260423T180102Z",
+  "workOrders": [
+    "RWO-09",
+    "RWO-11"
+  ],
+  "result": "RWO09_RWO11_REVIEW_PACKAGE_REFRESH_PASS_CURRENT_HEAD_EXTERNAL_ARTIFACT",
+  "evidence": "docs/implementation/rwo09-rwo11-review-package-refresh-20260423T180102Z/FINAL_REPORT.md",
+  "zip": "artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260423T180102Z-trial-nonclaim-current-head.zip",
+  "zipSha256": "4ce9a039b7c3dcd00605f8289d53a7a24a206a088740e90f2c81e8b0ccb3b2e1",
+  "zipSizeBytes": 19528283,
+  "zipFileCount": 2674,
+  "sourceBranch": "master",
+  "sourceCommit": "2eee5777770484a570c777570d4310c8b1b50a20",
+  "summarySidecar": "artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260423T180102Z-trial-nonclaim-current-head.zip.summary.txt",
+  "packageSourceSecretScan": "passed",
+  "secretScanLogSha256": "7df53d5b124c483463a6c02d92bfc4b881fe2ca16116321d5e15a066072dc9c4",
+  "verification": {
+    "reviewPackageRegressionTests": {
+      "result": "pass",
+      "tests": 27
+    },
+    "metadataValidation": "pass",
+    "artifactSha256Check": "pass",
+    "packageSourceSecretScan": "pass",
+    "excludedPathScan": "pass_zero_hits"
+  },
+  "claimBoundary": "reviewer support package for current master HEAD only; not runtime-ready smoke, live Trial ORCA beyond already recorded scoped evidence, fullflow, reviewer submission packet readiness, production ORCA, S3/object-storage, or final release GO",
+  "liveTrialAction": "not_run",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}
