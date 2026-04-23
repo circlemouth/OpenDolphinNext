@@ -1,0 +1,30 @@
+{
+  "runId": "20260423T190300Z",
+  "workOrders": [
+    "RWO-11"
+  ],
+  "result": "RWO11_CURRENT_SANITIZED_REVIEWER_PACKET_CREATED_VALIDATED",
+  "branch": "master",
+  "headAtRunStart": "5a141e8e9256475904f14ba47ac5d459c4ea421e",
+  "acceptedRef": "master",
+  "acceptedHead": "5a141e8e9256475904f14ba47ac5d459c4ea421e",
+  "closeoutRoot": "artifacts/orca-remediation/closeout/20260423T190300Z",
+  "packetDir": "artifacts/reviewer-submission-packets/submission-packet-20260423T190300Z",
+  "packetZip": "artifacts/reviewer-submission-packets/submission-packet-20260423T190300Z.zip",
+  "packetStatus": "created_and_validated",
+  "verification": {
+    "reviewPacketRegression": {
+      "result": "pass",
+      "tests": 7
+    },
+    "packetCreate": "pass",
+    "packetValidate": "pass",
+    "docLinks": "pass",
+    "packetSubsetForbiddenPatternScan": "pass_zero_hits",
+    "gitDiffCheck": "pass"
+  },
+  "claimBoundary": "Canonical reviewer submission packet exists for the frozen accepted head and current sanitized closeout subset only; no runtime-ready smoke, no new live Trial ORCA, no browser fullflow, no production ORCA, no S3/object-storage, and no final release GO.",
+  "recommendedNextAction": "Continue RWO-09/RWO-11 browser/fullflow/rollback/owner sign-off gates without overclaiming packet completion as release readiness.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}

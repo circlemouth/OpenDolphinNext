@@ -60,6 +60,7 @@ output/
 artifacts/source-archives/
 # Generated review support packages and sidecar integrity summaries.
 # Review ZIPs are local handoff artifacts; include source/log files via scripts/create-review-package.sh.
+artifacts/reviewer-submission-packets/
 artifacts/review-bundles/
 artifacts/review-*.zip
 artifacts/review-*.zip.*

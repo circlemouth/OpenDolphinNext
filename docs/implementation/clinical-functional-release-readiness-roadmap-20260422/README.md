@@ -25,7 +25,7 @@ This roadmap does not claim attachment storage, PHR export storage, S3 persisten
 - Prescription and generic order input have local/static/server/component evidence only; ORCA-backed browser/fullflow/live verification remains pending.
 - Existing live ORCA evidence includes the earlier Trial Phase 3 `acceptmodv2` retry for `00001 / 00001`, classified as `businessAcceptedWithWarnings`, plus RUN_ID `20260423T150257Z` scoped Phase 4 `medicalmodv2` business acceptance for target `00001`, Request_Number `01`, class `01`; it does not prove diseasev3, subjectivesv2, fullflow, all patients, or production ORCA.
 - WO-8 exists and was incorporated; it stopped before live ORCA traffic with `PHASE4_BLOCKED_HARNESS_OR_EVIDENCE_POLICY`.
-- Trial-backed non-S3 release readiness cannot be claimed until browser e2e, runtime/fullflow validation, reviewer submission packet, rollback, and owner sign-off gates have actual evidence. Production ORCA and S3/object-storage readiness are non-claims for this roadmap.
+- Trial-backed non-S3 release readiness cannot be claimed until browser e2e, runtime/fullflow validation, rollback, and owner sign-off gates have actual evidence. A current sanitized reviewer submission packet now exists for a frozen accepted head, but packet completion alone is not release GO. Production ORCA and S3/object-storage readiness are non-claims for this roadmap.
 
 ## Documents
 

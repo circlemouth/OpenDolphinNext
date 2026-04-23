@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260423T190300Z",
+  "result": "not_run",
+  "responseClassification": "notRun",
+  "blockerClassification": "safe_fullflow_prerequisites_not_complete",
+  "reason": "browser_full_ui_coverage_and_safe_fullflow_gate_remain_open",
+  "acceptedHead": "5a141e8e9256475904f14ba47ac5d459c4ea421e",
+  "carriedForwardScopedTrialEvidence": "docs/implementation/rwo06-medicalmodv2-api14-context-repair-20260423T150257Z/summary.sanitized.json",
+  "claimBoundary": "No fullflow was executed for this packet closeout; the packet preserves fullflow as not_run.",
+  "rawSensitiveFieldsExcluded": true
+}
