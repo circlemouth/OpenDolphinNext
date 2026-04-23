@@ -1,82 +1,65 @@
 # NEXT_WORKER_PROMPT
 
 status: active
-created_at: 2026-04-23T11:55:35Z
+created_at: 2026-04-23T12:01:55Z
 source_work_order: RWO-06
-blocker_id: phase4-medicalmodv2-post-repair-live-owner-approved
+blocker_id: phase4-medicalmodv2-post-repair-transport-rejected-no-live-investigation
 priority: high
 supersedes:
-- completed no-live investigation prompt from 2026-04-23T10:02:16Z
+- completed post-repair live attempt prompt from 2026-04-23T11:55:35Z
 
 ## Context
 
-RUN_ID `20260423T091324Z` executed the prior one-shot Phase4 `medicalmodv2` WebORCA Trial action through `web-client/scripts/qa-phase4-safe-medicalmodv2.mjs`. It was sanitized but not accepted:
+RUN_ID `20260423T120155Z` consumed the fresh owner-approved post-repair WebORCA Trial `medicalmodv2` action through `web-client/scripts/qa-phase4-safe-medicalmodv2.mjs`.
+
+Sanitized result:
 
 - endpoint: `POST /api/orca/official/chart-support/medical-mod-v2`
 - request class: `medicalmodv2`
 - target: `00001 / 00001`
 - payload SHA-256: `e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618`
+- live Trial action: `executed_once`
 - verdict: `live_trial_not_accepted`
+- HTTP status: `500`
 - response classification: `transportRejected`
 - business accepted: `false`
 
-RUN_ID `20260423T110051Z` completed the required no-live repair:
+Evidence:
 
-- disabled attachment storage is no longer overall-readiness-blocking in the non-S3 profile when storage-dependent features are disabled
-- patient image readiness still fails closed when enabled without attachment storage
-- ORCA connection policy and gateway failures map to sanitized gateway envelopes
-- gateway 5xx logging avoids raw exception stack material
-- 23 focused server tests passed
+- `docs/implementation/rwo06-phase4-medicalmodv2-post-repair-live-20260423T120155Z/FINAL_REPORT.md`
+- `docs/implementation/rwo06-phase4-medicalmodv2-post-repair-live-20260423T120155Z/summary.sanitized.json`
+- `docs/implementation/rwo06-phase4-medicalmodv2-post-repair-live-20260423T120155Z/live-wrapper/phase4-medicalmodv2-summary.sanitized.json`
 
-RUN_ID `20260423T115535Z` records fresh explicit owner approval for exactly one additional post-repair WebORCA Trial `medicalmodv2` live attempt. Approval evidence:
-
-- `docs/implementation/rwo06-phase4-medicalmodv2-live-approval-20260423T115535Z/OWNER_APPROVAL.md`
-- `docs/implementation/rwo06-phase4-medicalmodv2-live-approval-20260423T115535Z/summary.sanitized.json`
+The prior no-live repair RUN_ID `20260423T110051Z` remains valid for code-level repair evidence, but it did not produce live business acceptance. The one-shot post-repair live approval is now consumed.
 
 ## Goal
 
-Execute or classify the approved post-repair Phase4 `medicalmodv2` WebORCA Trial action exactly once, using only the safe wrapper and sanitized evidence path. If the local environment cannot safely execute it, record a sanitized skip and continue to independent safe roadmap work according to the automation policy.
-
-## Approved Live Action
-
-The next worker may send exactly one post-repair live Trial request only with all of the following:
-
-- wrapper: `web-client/scripts/qa-phase4-safe-medicalmodv2.mjs`
-- endpoint: `POST /api/orca/official/chart-support/medical-mod-v2`
-- request class: `medicalmodv2`
-- target: `00001 / 00001`
-- payload: `web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json`
-- payload SHA-256: `e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618`
-- runtime profile: `orca-trial-no-object-storage`
-- required command flags: `--execute-approved-phase4 --sanitized-evidence-only --disable-browser-artifacts --phase4-only`
+Investigate the remaining `transportRejected` outcome without sending another live mutation. Produce a sanitized blocker analysis and, if the root cause is repo-local and safely fixable, implement the fix and run focused non-live verification.
 
 ## Allowed Actions
 
 - Confirm branch, HEAD, status, registered worktrees, and no unrelated unsafe repo state.
 - Read sanitized evidence from:
+  - `docs/implementation/rwo06-phase4-medicalmodv2-post-repair-live-20260423T120155Z/`
   - `docs/implementation/rwo06-phase4-medicalmodv2-no-live-repair-20260423T110051Z/`
-  - `docs/implementation/rwo06-phase4-medicalmodv2-live-approval-20260423T115535Z/`
   - `docs/implementation/rwo06-phase4-medicalmodv2-live-20260423T091324Z/`
-- Verify payload SHA-256 without printing payload body.
-- Run wrapper dry-run and safe-evidence contract checks before any live attempt.
-- Use existing repo scripts, documented wrappers, or narrowly reviewed repo-local commands only.
-- Generate missing approved local-only dev/Trial runtime values only if allowed by the automation prompt and store them only in an approved gitignored local runtime file without printing values.
-- Run the approved wrapper live action once if all safe prerequisites are available.
-- Record sanitized live result or sanitized skip evidence.
-- Update `HANDOFF_STATE.json`, this prompt, the release gate matrix, and any run-specific sanitized evidence docs.
+- Inspect source, tests, configuration contracts, and sanitized readiness/health paths.
+- Run no-live unit/component/contract tests, guard scripts, wrapper dry-runs, parser/sanitizer tests, and static checks.
+- Use sanitized readiness/health probes that do not print secrets or raw ORCA bodies.
+- Generate missing approved local-only dev/Trial runtime values only if needed for local no-live verification and only under the automation's local-only secret policy.
+- Fix repo-local, testable defects that explain the sanitized `transportRejected` path.
+- Update `HANDOFF_STATE.json`, the release gate matrix, and run-specific sanitized evidence docs.
 - Commit roadmap/handoff-scoped tracked changes before reporting.
 
 ## Forbidden Actions
 
-- More than one post-repair `medicalmodv2` live Trial action under this approval.
-- Any live action if wrapper dry-run, payload hash, command contract, target, or evidence-sanitization checks fail.
-- Production ORCA execution or production ORCA readiness claims.
-- S3/MinIO/object-storage setup, dummy S3, fake credentials, object-storage emulation, or storage readiness claims.
-- Fullflow execution.
+- Any additional live `medicalmodv2` action under the consumed approval.
 - Phase3 / `acceptmodv2` rerun.
+- Fullflow execution.
 - Request_Number `02` / `03` / `04`.
 - `diseasev3` or `subjectivesv2` live execution.
-- Patients/candidates other than `00001 / 00001`.
+- Production ORCA execution or production ORCA readiness claims.
+- S3/MinIO/object-storage setup, dummy S3, fake credentials, object-storage emulation, or storage readiness claims.
 - Printing, requesting, committing, or working around ORCA credentials, production credentials, external-service passwords/tokens, cookies, session IDs, Authorization headers, CSRF values, credential-bearing URLs, or raw ORCA bodies.
 - Reading or printing generated runtime files that may contain credentials except through presence-only/sanitized classification.
 - HAR, trace, video, screenshot, raw network dump, request XML, raw request/response body, raw network JSON, or body-derived artifacts.
@@ -85,9 +68,10 @@ The next worker may send exactly one post-repair live Trial request only with al
 
 ## Required Evidence
 
-- Sanitized preflight summary: branch/HEAD, payload hash, wrapper dry-run, and safe-evidence checks.
-- Sanitized live wrapper summary if executed.
-- Sanitized skip record if execution is blocked by environment, missing allowed runtime inputs, S3/object-storage requirement, target drift, parser ambiguity, or raw-artifact risk.
+- Sanitized investigation summary with branch/HEAD, relevant sanitized prior evidence, and root-cause hypothesis.
+- Focused tests/checks run and results.
+- If fixed: source/doc changes, focused verification, and remaining claim boundary.
+- If not fixable in this run: sanitized blocker record with precise next independent task.
 - Secret/raw-artifact scan over any new tracked evidence docs.
 - Files changed and verification commands.
 
@@ -95,9 +79,9 @@ The next worker may send exactly one post-repair live Trial request only with al
 
 This prompt is complete when one of the following is true:
 
-- The approved post-repair live action is executed exactly once and classified from sanitized endpoint-specific business evidence.
-- The action is skipped with a sanitized, machine-readable reason and a precise next independent task.
-- A stop condition is reached and a new blocker prompt is written.
+- A repo-local root cause for the remaining `transportRejected` outcome is fixed and focused non-live verification passes.
+- The outcome is classified as environment, Trial data, Trial service, or parser ambiguity with sanitized evidence and no unsafe overclaim.
+- A stop condition is reached and a more specific blocker prompt is written.
 
 In every completion path:
 
@@ -107,12 +91,10 @@ In every completion path:
 
 ## Stop Conditions
 
-- Target is not WebORCA / ORCA Trial, or target cannot be verified without printing secrets.
-- Payload SHA-256, wrapper command contract, endpoint, target, or request class drifts from this prompt.
-- Success cannot be classified without raw ORCA bodies or forbidden browser/network artifacts.
-- Parser ambiguity or sanitizer/redaction uncertainty.
-- A second live `medicalmodv2` action would be required.
+- Root-cause classification would require raw ORCA request/response bodies, raw patient or insurance details, credentials, HAR/trace/video/screenshot/raw network artifacts, or backend logs containing unredacted secrets.
+- Another live mutation would be required.
 - Production ORCA or S3/object-storage configuration would be required instead of being skippable.
+- Target/scope ambiguity.
 - Unsafe repo state or unrelated worktree changes make a safe commit impossible.
 
 ## Final Report Requirements
@@ -120,11 +102,9 @@ In every completion path:
 Use `【ワーカー報告】` and include:
 
 - branch and HEAD
-- active handoff prompt and approval evidence path
+- active handoff prompt and source evidence path
 - current Work Order and next Work Order
-- whether the live action was executed, skipped, or blocked
-- endpoint/target/request class if executed
-- sanitized result and business-success classification
+- root-cause classification or blocker classification
 - files changed and commit id
 - tests/checks run
 - blockers and recommended next action
