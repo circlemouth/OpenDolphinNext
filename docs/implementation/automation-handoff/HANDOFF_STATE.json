@@ -9,7 +9,52 @@
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T23:09:11Z",
+  "lastUpdated": "2026-04-23T23:41:55Z",
+  "latestRwo09Rwo11OwnerGoStaticRefresh": {
+    "runId": "20260423T234155Z",
+    "workOrders": [
+      "RWO-09",
+      "RWO-11"
+    ],
+    "result": "RWO09_RWO11_OWNER_NEXT_WORK_GO_STATIC_REFRESH_PASS",
+    "branch": "master",
+    "startHead": "c6d5e6dfd74b1725bcc6652d6f5cad6050349bbe",
+    "ownerDirection": {
+      "classification": "owner_next_work_go_recorded",
+      "finalReleaseGo": false,
+      "productionOrcaApproval": false,
+      "s3ObjectStorageApproval": false,
+      "fullflowApproval": false
+    },
+    "evidence": "docs/implementation/rwo09-rwo11-owner-go-static-refresh-20260423T234155Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-rwo11-owner-go-static-refresh-20260423T234155Z/summary.sanitized.json",
+    "tests": {
+      "webGuard": "pass",
+      "webTypecheck": "pass",
+      "reviewPackageContractTests": {
+        "result": "pass",
+        "tests": 27
+      },
+      "reviewerPacketContractTests": {
+        "result": "pass",
+        "tests": 7
+      },
+      "serverGuards": "pass",
+      "safeBrowserNoArtifacts": {
+        "result": "pass",
+        "tests": 8,
+        "retainedForbiddenArtifacts": 0
+      }
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_static_refresh"
+    },
+    "claimBoundary": "Owner next-work GO plus non-live RWO-09/RWO-11 static/contract/safe-browser evidence only; not final release GO, live Trial expansion, production ORCA readiness, S3/object-storage readiness, safe fullflow success, rollback acceptance, or final release readiness.",
+    "recommendedNextTask": "Continue RWO-09/RWO-11 current-head package/packet refresh, rollback evidence, and final Trial-backed non-S3 summary work; keep fullflow separately gated.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "latestRwo05SafeBrowserSoapDiseaseUi": {
     "runId": "20260423T230911Z",
     "workOrder": "RWO-05",
@@ -1108,7 +1153,8 @@
     "RUN_ID 20260423T180102Z refreshed the RWO-09/RWO-11 reviewer support package for current source head 2eee5777770484a570c777570d4310c8b1b50a20 after the packet-contract hardening commit advanced master; review-package regression tests (27), metadata validation, package source secret scan, artifact sha256 verification, and excluded-path scan all passed. Live Trial ORCA, production ORCA, fullflow, runtime-ready smoke, and S3/object-storage setup were not run.",
     "RUN_ID 20260423T190300Z created a current sanitized closeout subset and validated the canonical reviewer submission packet for accepted ref master frozen at 5a141e8e9256475904f14ba47ac5d459c4ea421e. This advanced the packet gate only; browser prescription/order UI coverage, safe fullflow, rollback acceptance, and final owner GO/NO-GO remain open. No credentials or raw artifacts were captured.",
     "RUN_ID 20260423T200259Z repaired runtime-ready-smoke safe evidence so it no longer writes screenshots, started the approved orca-trial-no-object-storage runtime pair, and reran runtime-ready smoke successfully with JSON-only retained evidence and zero blocked-route hits. No credentials or raw artifacts were captured.",
-    "RUN_ID 20260423T115535Z recorded fresh explicit owner approval for exactly one post-repair WebORCA Trial medicalmodv2 live attempt through web-client/scripts/qa-phase4-safe-medicalmodv2.mjs using payload SHA-256 e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618 and target 00001/00001. The approval does not authorize production ORCA, S3/object-storage, fullflow, Phase3 rerun, Request_Number 02/03/04, diseasev3/subjectivesv2, raw artifacts, credentials, repeated mutation, or final release GO. The live action remains not_run in this approval-recording commit."
+    "RUN_ID 20260423T115535Z recorded fresh explicit owner approval for exactly one post-repair WebORCA Trial medicalmodv2 live attempt through web-client/scripts/qa-phase4-safe-medicalmodv2.mjs using payload SHA-256 e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618 and target 00001/00001. The approval does not authorize production ORCA, S3/object-storage, fullflow, Phase3 rerun, Request_Number 02/03/04, diseasev3/subjectivesv2, raw artifacts, credentials, repeated mutation, or final release GO. The live action remains not_run in this approval-recording commit.",
+    "RUN_ID 20260423T234155Z recorded owner next-work GO for RWO-09/RWO-11 continuation and passed non-live web guard, typecheck, server guards, review package/packet contract tests, and the 8-test artifact-free browser suite. Final release GO, production ORCA, S3/object-storage, fullflow, and raw artifacts remain non-claims."
   ],
   "latestRwo04SafeBrowserUiTreatment": {
     "runId": "20260423T220304Z",
