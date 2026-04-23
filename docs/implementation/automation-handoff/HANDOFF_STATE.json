@@ -9,7 +9,7 @@
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T15:18:28Z",
+  "lastUpdated": "2026-04-23T17:02:26Z",
   "latestRwo06Medicalmodv2Api14ContextRepair": {
     "runId": "20260423T150257Z",
     "workOrder": "RWO-06",
@@ -692,26 +692,28 @@
     "rawArtifactsCaptured": false
   },
   "latestReviewPackageRefresh": {
-    "runId": "20260423T160225Z",
+    "runId": "20260423T170226Z",
     "workOrders": [
       "RWO-09",
       "RWO-11"
     ],
-    "result": "RWO09_RWO11_REVIEW_PACKAGE_REFRESH_PASS_SOURCE_HEAD_EXTERNAL_ARTIFACT",
-    "evidence": "docs/implementation/rwo09-rwo11-review-package-refresh-20260423T160225Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-rwo11-review-package-refresh-20260423T160225Z/summary.sanitized.json",
-    "zip": "artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260423T160225Z-trial-nonclaim-current-head.zip",
-    "zipSha256": "962732c5b01b1c62c0e56c821e1a887b9fac28df87c3c68c72fa6f67b8c1417c",
-    "zipSizeBytes": 19516633,
-    "zipFileCount": 2668,
-    "sourceCommit": "c2a578808e3b760798b99127e92eda4db6e85c3e",
+    "result": "RWO09_RWO11_REVIEW_PACKAGE_REFRESH_PASS_CURRENT_HEAD_EXTERNAL_ARTIFACT",
+    "evidence": "docs/implementation/rwo09-rwo11-review-package-refresh-20260423T170226Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-rwo11-review-package-refresh-20260423T170226Z/summary.sanitized.json",
+    "zip": "artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260423T170226Z-trial-nonclaim-current-head.zip",
+    "zipSha256": "9e29a2058f4c1fd6fc18b8390074762696e2b1451ca6f1ba9d56061246094fe3",
+    "zipSizeBytes": 19519804,
+    "zipFileCount": 2670,
+    "sourceCommit": "2dd8343dd2c04a4659c37d01c38fe513cd21add2",
     "reviewPackageRegressionTests": {
       "result": "pass",
       "tests": 27
     },
+    "metadataValidation": "pass",
+    "artifactSha256Check": "pass",
     "packageSourceSecretScan": "passed",
     "excludedPathScan": "pass_zero_hits",
-    "claimBoundary": "reviewer support package for the recorded package source head only; later evidence-recording commits may advance master without changing the package contents; not runtime-ready smoke, live Trial ORCA, fullflow, production ORCA, S3/object-storage, or final release GO",
+    "claimBoundary": "reviewer support package for current master HEAD only; not runtime-ready smoke, live Trial ORCA beyond already recorded scoped evidence, fullflow, reviewer submission packet readiness, production ORCA, S3/object-storage, or final release GO",
     "liveTrialAction": "not_run",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
@@ -945,6 +947,7 @@
     "RUN_ID 20260423T110051Z completed the RWO-06 no-live handoff without another live Trial mutation. Disabled attachment storage is no longer overall-readiness-blocking in the non-S3 profile when storage-dependent features are disabled, patient image readiness still fails closed when enabled without attachment storage, ORCA connection policy/gateway failures map to sanitized gateway envelopes, gateway 5xx logging avoids raw exception stack material, and 23 focused server tests passed. Future medicalmodv2 live mutation still requires fresh explicit owner approval.",
     "RUN_ID 20260423T114327Z refreshed the RWO-09/RWO-11 reviewer support package for package source head b99d3a6a20311dc8a3c565edfe5b4d968e2ed82f; package source secret scan, artifact sha256 verification, and forbidden-path scan passed. Live Trial ORCA, production ORCA, fullflow, runtime-ready smoke, and S3/object-storage setup were not run.",
     "RUN_ID 20260423T160225Z refreshed the RWO-09/RWO-11 reviewer support package for current source head c2a578808e3b760798b99127e92eda4db6e85c3e; review-package regression tests (27), package source secret scan, artifact sha256 verification, metadata validation, and forbidden-path scan all passed. Live Trial ORCA, production ORCA, fullflow, runtime-ready smoke, and S3/object-storage setup were not run.",
+    "RUN_ID 20260423T170226Z refreshed the RWO-09/RWO-11 reviewer support package for current source head 2dd8343dd2c04a4659c37d01c38fe513cd21add2 after the prior evidence commit advanced master; review-package regression tests (27), metadata validation, package source secret scan, artifact sha256 verification, and forbidden-path scan all passed. Live Trial ORCA, production ORCA, fullflow, runtime-ready smoke, and S3/object-storage setup were not run.",
     "RUN_ID 20260423T115535Z recorded fresh explicit owner approval for exactly one post-repair WebORCA Trial medicalmodv2 live attempt through web-client/scripts/qa-phase4-safe-medicalmodv2.mjs using payload SHA-256 e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618 and target 00001/00001. The approval does not authorize production ORCA, S3/object-storage, fullflow, Phase3 rerun, Request_Number 02/03/04, diseasev3/subjectivesv2, raw artifacts, credentials, repeated mutation, or final release GO. The live action remains not_run in this approval-recording commit."
   ]
 }
