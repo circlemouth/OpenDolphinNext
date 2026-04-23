@@ -142,6 +142,28 @@ class AttachmentStorageManagerTest {
     }
 
     @Test
+    void disabledModeFailsClosedWithoutObjectStorageClient() throws Exception {
+        setField(manager, "settings", new AttachmentStorageSettings(
+                AttachmentStorageMode.DISABLED,
+                null,
+                null,
+                null));
+        setField(manager, "objectStorageClient", null);
+        AttachmentModel attachment = buildAttachment("report.txt", "payload".getBytes(StandardCharsets.UTF_8));
+
+        assertThat(manager.isBackendReachable()).isFalse();
+        assertThatThrownBy(() -> manager.uploadToS3OutsideTransaction(attachment))
+                .isInstanceOf(AttachmentStorageException.class)
+                .hasMessageContaining("disabled");
+        assertThatThrownBy(() -> manager.prepareExternalAssetForPersist(
+                attachment,
+                new ByteArrayInputStream("payload".getBytes(StandardCharsets.UTF_8)),
+                7))
+                .isInstanceOf(AttachmentStorageException.class)
+                .hasMessageContaining("disabled");
+    }
+
+    @Test
     void prepareExternalAssetForPersist_registersRollbackHook() throws Exception {
         byte[] payload = "persist-stream".getBytes(StandardCharsets.UTF_8);
         AttachmentModel attachment = buildAttachment("stream.txt", null);

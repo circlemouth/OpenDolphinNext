@@ -30,6 +30,8 @@ public class AttachmentStorageConfigLoader {
         AttachmentStorageSettings.S3Settings s3Settings = null;
         if (mode.isS3()) {
             s3Settings = buildS3Settings(configuration.s3());
+        } else if (mode.isDisabled()) {
+            rejectS3SettingsForDisabledMode(configuration.s3());
         }
 
         return new AttachmentStorageSettings(mode, null, s3Settings, null);
@@ -57,6 +59,27 @@ public class AttachmentStorageConfigLoader {
         if (blankToNull(databaseLobTable) != null) {
             throw new AttachmentStorageException(
                     ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_DATABASE_LOB_TABLE + " is not supported");
+        }
+    }
+
+    private void rejectS3SettingsForDisabledMode(ServerRuntimeConfiguration.S3StorageSettings settings) {
+        if (settings == null) {
+            return;
+        }
+        boolean configured = blankToNull(settings.bucket()) != null
+                || blankToNull(settings.region()) != null
+                || blankToNull(settings.endpoint()) != null
+                || blankToNull(settings.basePath()) != null
+                || settings.forcePathStyle() != null
+                || blankToNull(settings.serverSideEncryption()) != null
+                || blankToNull(settings.kmsKeyId()) != null
+                || settings.multipartThresholdMb() != null
+                || blankToNull(settings.accessKey()) != null
+                || blankToNull(settings.secretKey()) != null;
+        if (configured) {
+            throw new AttachmentStorageException(
+                    "attachment.storage.s3.* must not be configured when "
+                            + ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE + "=disabled");
         }
     }
 

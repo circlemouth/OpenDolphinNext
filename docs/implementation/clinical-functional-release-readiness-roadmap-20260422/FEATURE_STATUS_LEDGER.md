@@ -11,12 +11,12 @@ RUN_ID: `20260422T134401Z`
 | Generic order input | Accepted local matrix | Local/static only | CWP-04 |
 | Document two-phase failure | Accepted local/component behavior | Local/static only | CWP-06 |
 | acceptmodv2 | Limited Trial ORCA success for prior `00001` Phase 3 | Limited trial-only acceptmodv2 | Phase 3 retry summary |
-| medicalmodv2 | Not run live | No | CWP-03/04 boundaries |
+| medicalmodv2 | Not run live; latest Trial-only handoff skipped for missing local non-S3 runtime inputs | No | CWP-03/04 boundaries / RWO-06 skip RUN_ID `20260423T080150Z` |
 | diseasev3 | Not run live | No | CWP-05 boundary |
 | subjectivesv2 | Not run live | No | CWP-02 boundary |
 | Browser e2e | Not run for Clinical Wave 1 | No | WO-3/4 |
 | Fullflow | Not run | No | WO-3/4/5/6/7/8 |
 | Trial ORCA | Limited | Limited acceptmodv2 only | Phase 3 retry, WO-8 |
 | Production ORCA | Not applicable to Trial-only roadmap | No production ORCA claim | Roadmap ORCA connection scope |
-| S3/object storage | Not applicable to current roadmap | No S3/object-storage claim | Roadmap S3/object-storage scope |
+| S3/object storage | Not applicable to current roadmap; disabled profile implemented for Trial runtime only | No S3/object-storage claim | Roadmap S3/object-storage scope / RWO-06A |
 | Trial-backed non-S3 release readiness | Not ready | No | Release gate matrix |

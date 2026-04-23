@@ -65,6 +65,7 @@ public class PatientImagesResource extends AbstractResource {
                                              MultipartFormDataInput input) {
         PatientImagesSupport support = support();
         support.requireFeatureEnabled();
+        support.requireStorageAvailable();
         String fid = support.requireActorFacilityId();
         String actor = support.resolveActorId();
         support.requirePatientAccessible(fid, patientId);
@@ -109,6 +110,7 @@ public class PatientImagesResource extends AbstractResource {
     public Response list(@PathParam("patientId") String patientId) {
         PatientImagesSupport support = support();
         support.requireFeatureEnabled();
+        support.requireStorageAvailable();
         String fid = support.requireActorFacilityId();
         support.requirePatientAccessible(fid, patientId);
         List<PatientImageEntryResponse> items = patientImageServiceBean.listImages(fid, patientId);
@@ -127,6 +129,7 @@ public class PatientImagesResource extends AbstractResource {
                              @PathParam("imageId") long imageId) {
         PatientImagesSupport support = support();
         support.requireFeatureEnabled();
+        support.requireStorageAvailable();
         String fid = support.requireActorFacilityId();
         support.requirePatientAccessible(fid, patientId);
 

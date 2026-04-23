@@ -2,14 +2,14 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06",
-  "blockerId": "non-s3-runtime-profile-required",
+  "blockerId": "phase4-medicalmodv2-live-trial-ready",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T05:48:33Z",
+  "lastUpdated": "2026-04-23T09:04:13Z",
   "latestOwnerNonS3RuntimeDirection": {
     "runId": "20260423T054833Z",
     "result": "NON_S3_RUNTIME_PROFILE_DIRECTION_RECORDED",
@@ -25,6 +25,135 @@
       "production_orca_execution"
     ],
     "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestOwnerLocalRuntimeSecretDirection": {
+    "runId": "20260423T090413Z",
+    "result": "LOCAL_ONLY_RUNTIME_SECRET_GENERATION_ALLOWED",
+    "decision": "Allow generating only MODERNIZED_POSTGRES_PASSWORD, PHR_EXPORT_SIGNING_SECRET, and FACTOR2_AES_KEY_B64 as local-only non-S3 runtime values for the local dev/Trial backend.",
+    "allowedStorage": [
+      "./orca.env.local",
+      "ORCA_ENV_FILE when already set to a readable local untracked runtime file"
+    ],
+    "requiredControls": [
+      "generate_with_os_backed_cryptographic_random_source",
+      "do_not_print_values",
+      "do_not_commit_values",
+      "do_not_include_values_in_evidence_logs_toml_or_review_packages",
+      "do_not_overwrite_existing_non_empty_values"
+    ],
+    "stillForbidden": [
+      "orca_trial_credential_generation",
+      "production_credential_generation",
+      "s3_minio_object_storage_secret_generation",
+      "raw_credential_capture",
+      "raw_orca_body_capture"
+    ],
+    "automationPrompt": "/Users/Hayato/.codex/automations/orca/automation.toml",
+    "handoffPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestOwnerGeneralLocalRuntimeValueDirection": {
+    "runId": "20260423T090559Z",
+    "result": "GENERAL_LOCAL_ONLY_RUNTIME_VALUE_GENERATION_ALLOWED",
+    "decision": "Allow generating missing local-only dev/Trial runtime values when they are needed for local containers or repo-local services and are not credentials/config for ORCA Trial accounts, production systems, S3/MinIO/object storage, external services, sessions, cookies, Authorization headers, patient/insurance data, or raw ORCA artifacts.",
+    "knownAllowedExamples": [
+      "MODERNIZED_POSTGRES_PASSWORD",
+      "PHR_EXPORT_SIGNING_SECRET",
+      "FACTOR2_AES_KEY_B64"
+    ],
+    "classificationRequired": [
+      "local_runtime_only",
+      "safe_to_rotate_or_recreate",
+      "not_external_service_credential",
+      "not_object_storage",
+      "not_production",
+      "not_raw_orca_or_patient_or_insurance_data",
+      "stored_only_in_gitignored_local_runtime_file"
+    ],
+    "automationPrompt": "/Users/Hayato/.codex/automations/orca/automation.toml",
+    "handoffPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestRwo06aNonS3RuntimeProfile": {
+    "runId": "20260423T060115Z",
+    "workOrder": "RWO-06A",
+    "result": "RWO06A_NON_S3_RUNTIME_PROFILE_IMPLEMENTED_LOCAL_TESTED",
+    "profile": "orca-trial-no-object-storage",
+    "attachmentStorageMode": "disabled",
+    "evidence": "docs/implementation/rwo06a-non-s3-runtime-profile-20260423T060115Z/FINAL_REPORT.md",
+    "tests": {
+      "focusedServerTests": 73,
+      "result": "pass"
+    },
+    "checks": {
+      "setupShellSyntax": "pass",
+      "diffWhitespace": "pass",
+      "configContractGuard": "pass",
+      "docLinksGuard": "pass",
+      "noGeneratedArtifactsGuard": "pass"
+    },
+    "claimBoundary": "repo-local non-S3 runtime profile only; not attachment storage, PHR export storage, object-storage deployment, live Trial ORCA, production ORCA, or final release readiness",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false,
+    "recommendedNextTask": "Run exactly one approved Phase4 medicalmodv2 Trial action through web-client/scripts/qa-phase4-safe-medicalmodv2.mjs if non-S3 runtime prerequisites are available."
+  },
+  "latestRwo06Phase4Medicalmodv2EnvironmentSkip": {
+    "runId": "20260423T080150Z",
+    "workOrder": "RWO-06",
+    "result": "RWO06_PHASE4_MEDICALMODV2_SKIPPED_ENVIRONMENT_UNAVAILABLE_MISSING_RUNTIME_SECRET_OR_CONFIG",
+    "blockerId": "phase4-medicalmodv2-live-trial-missing-non-s3-runtime-inputs",
+    "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+    "endpoint": "POST /api/orca/official/chart-support/medical-mod-v2",
+    "requestClass": "medicalmodv2",
+    "target": "00001/00001",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json",
+    "payloadSha256": "e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618",
+    "evidence": "docs/implementation/rwo06-phase4-medicalmodv2-skip-20260423T080150Z/FINAL_REPORT.md",
+    "runtimeInputPresence": {
+      "repoOrcaEnvLocal": "present",
+      "homeOrcaEnv": "absent",
+      "orcaEnvFile": "unset",
+      "orcaApiCredentials": "present",
+      "orcaCredentialsAesKey": "present",
+      "modernizedPostgresPassword": "missing",
+      "phrExportSigningSecret": "missing",
+      "factor2AesKey": "missing",
+      "s3MinioObjectStorageValues": "absent"
+    },
+    "localBackendHealth": {
+      "statusOnly": "http_000_unreachable",
+      "responseBodyCaptured": false
+    },
+    "dryRun": {
+      "result": "pass",
+      "businessAccepted": false,
+      "liveTrialAction": "not_run"
+    },
+    "checks": {
+      "dockerDaemonVersionOnly": "pass",
+      "payloadSha256": "pass",
+      "wrapperSyntax": "pass",
+      "evidenceContractTests": "pass_6_tests",
+      "setupShellSyntax": "pass",
+      "handoffStateJson": "pass",
+      "diffWhitespace": "pass",
+      "docLinksGuard": "pass",
+      "noGeneratedArtifactsGuard": "pass",
+      "configContractGuard": "pass",
+      "noDirectRuntimeLookupGuard": "pass",
+      "noRuntimeDdlGuard": "pass",
+      "persistenceEntitiesGuard": "pass",
+      "secretValueScan": "pass_zero_hits",
+      "forbiddenArtifactScan": "pass_zero_hits"
+    },
+    "recommendedNextTask": "Run exactly one approved Phase4 medicalmodv2 Trial action only if the missing non-S3 runtime inputs are available through the approved local runtime path; otherwise continue with safe non-live roadmap work.",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   },
@@ -325,6 +454,28 @@
   ],
   "skippedWorkOrders": [
     {
+      "workOrder": "RWO-06",
+      "blockerId": "phase4-medicalmodv2-live-trial-missing-non-s3-runtime-inputs",
+      "result": "SKIPPED_ENVIRONMENT_UNAVAILABLE_MISSING_RUNTIME_SECRET_OR_CONFIG",
+      "evidence": "docs/implementation/rwo06-phase4-medicalmodv2-skip-20260423T080150Z/FINAL_REPORT.md",
+      "recommendedNextTask": "Run the approved Phase4 medicalmodv2 live Trial action only after missing non-S3 runtime inputs are available; keep S3/object-storage and production ORCA out of scope.",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false,
+      "notes": "Presence-only precheck found ORCA Trial env present, but MODERNIZED_POSTGRES_PASSWORD, PHR_EXPORT_SIGNING_SECRET, and FACTOR2_AES_KEY_B64 missing. S3/MinIO/object-storage values were absent and not requested. The Trial server remains the only intended ORCA target for this handoff."
+    },
+    {
+      "workOrder": "RWO-06",
+      "blockerId": "phase4-medicalmodv2-live-trial-missing-non-s3-runtime-inputs",
+      "result": "SKIPPED_ENVIRONMENT_UNAVAILABLE_MISSING_RUNTIME_SECRET_OR_CONFIG",
+      "evidence": "docs/implementation/rwo06-phase4-medicalmodv2-skip-20260423T070049Z/FINAL_REPORT.md",
+      "recommendedNextTask": "Run the approved Phase4 medicalmodv2 live Trial action only after missing non-S3 runtime inputs are available; keep S3/object-storage out of scope.",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false,
+      "notes": "Presence-only precheck found ORCA Trial env present, but MODERNIZED_POSTGRES_PASSWORD, PHR_EXPORT_SIGNING_SECRET, and FACTOR2_AES_KEY_B64 missing. S3/MinIO/object-storage values were absent and not requested."
+    },
+    {
       "workOrder": "WO-8",
       "blockerId": "phase4-live-trial-skipped-s3-required-runtime",
       "result": "SKIPPED_S3_REQUIRED_OUT_OF_SCOPE",
@@ -421,6 +572,10 @@
     "RUN_ID 20260423T050222Z added artifact-free Charts UI clickthrough coverage for SOAP S/O local save and insurance disease add, passed the 6-test combined safe browser suite, and verified no retained forbidden artifacts.",
     "RUN_ID 20260423T050222Z verified web-client typecheck and web guard after the new safe browser UI spec; live Trial ORCA, production ORCA, fullflow, and S3/object-storage were not used.",
     "RUN_ID 20260423T054833Z recorded owner direction to unblock RWO-06 with an explicit object-storage-free dev/Trial runtime profile instead of local dummy S3/MinIO.",
-    "RUN_ID 20260423T054833Z made NEXT_WORKER_PROMPT.md active for non-S3 runtime profile implementation and local verification; live Trial ORCA remains not_run until that profile is implemented and verified."
+    "RUN_ID 20260423T054833Z made NEXT_WORKER_PROMPT.md active for non-S3 runtime profile implementation and local verification; live Trial ORCA remains not_run until that profile is implemented and verified.",
+    "RUN_ID 20260423T060115Z implemented and focused-test verified the object-storage-free dev/Trial runtime profile with attachment.storage.mode=disabled, setup profile orca-trial-no-object-storage, fail-closed storage behavior, readiness sanitization, and no S3/MinIO/object-storage credential capture.",
+    "RUN_ID 20260423T060115Z replaced NEXT_WORKER_PROMPT.md with the narrow follow-up for exactly one Phase4 medicalmodv2 live Trial action through web-client/scripts/qa-phase4-safe-medicalmodv2.mjs if non-S3 runtime prerequisites are available.",
+    "RUN_ID 20260423T070049Z skipped the RWO-06 Phase4 medicalmodv2 live Trial action as skipped_environment_unavailable_missing_runtime_secret_or_config because required non-S3 local runtime inputs were absent; the approved payload hash, wrapper syntax, wrapper dry-run, and Phase4 evidence contract tests passed, with no credentials or raw artifacts captured.",
+    "RUN_ID 20260423T080150Z rechecked the same Trial-only RWO-06 handoff after owner clarification to use WebORCA / ORCA Trial. Trial remains the only target, but live traffic was not sent because MODERNIZED_POSTGRES_PASSWORD, PHR_EXPORT_SIGNING_SECRET, and FACTOR2_AES_KEY_B64 were still absent from approved local runtime paths. Payload hash, wrapper dry-run, evidence contract tests, and server guard scripts passed with no credentials or raw artifacts captured."
   ]
 }

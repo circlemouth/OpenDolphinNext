@@ -77,6 +77,34 @@ class ServerConfigurationValidatorTest {
     }
 
     @Test
+    void acceptsDisabledAttachmentStorageWithoutS3Configuration() {
+        ServerConfigurationValidator validator = new ServerConfigurationValidator(
+                resolverWithBaseConfig(
+                        ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "disabled",
+                        ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_BUCKET, "",
+                        ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_REGION, "",
+                        ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_ACCESS_KEY, "",
+                        ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_SECRET_KEY, ""));
+
+        assertDoesNotThrow(validator::validateOrThrow);
+    }
+
+    @Test
+    void rejectsS3ConfigurationWhenAttachmentStorageIsDisabled() {
+        ServerConfigurationValidator validator = new ServerConfigurationValidator(
+                resolverWithBaseConfig(
+                        ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "disabled",
+                        ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_BUCKET, "attachments",
+                        ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_REGION, "",
+                        ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_ACCESS_KEY, "",
+                        ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_SECRET_KEY, ""));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, validator::validateOrThrow);
+
+        assertTrue(ex.getMessage().contains("attachment.storage.s3.*"));
+    }
+
+    @Test
     void rejectsDatabaseLobTableEvenWhenModeIsS3() {
         ServerConfigurationValidator validator = new ServerConfigurationValidator(
                 resolverWithBaseConfig(

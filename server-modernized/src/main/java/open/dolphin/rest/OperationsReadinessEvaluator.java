@@ -39,6 +39,7 @@ public class OperationsReadinessEvaluator {
     private static final String STATUS_DEGRADED = "DEGRADED";
     private static final String REASON_DATABASE_UNREACHABLE = "database_unreachable";
     private static final String REASON_ATTACHMENT_STORAGE_NOT_READY = "attachment_storage_not_ready";
+    private static final String REASON_ATTACHMENT_STORAGE_DISABLED = "attachment_storage_disabled";
     private static final String REASON_ATTACHMENT_STORAGE_BACKEND_UNREACHABLE = "attachment_storage_backend_unreachable";
     private static final String REASON_PATIENT_IMAGES_STORAGE_UNAVAILABLE = "patient_images_storage_unavailable";
     private static final String REASON_ORCA_PUSH_NOT_CONFIGURED = "orca_push_not_configured";
@@ -205,11 +206,18 @@ public class OperationsReadinessEvaluator {
         OperationsReadinessCheck detail = new OperationsReadinessCheck();
         try {
             AttachmentStorageMode mode = attachmentStorageManager != null ? attachmentStorageManager.getMode() : null;
+            detail.setMode(mode != null ? mode.name().toLowerCase(java.util.Locale.ROOT) : null);
+            if (mode != null && mode.isDisabled()) {
+                detail.setStatus(STATUS_DISABLED);
+                detail.setBackendReachable(Boolean.FALSE);
+                detail.setReasonCode(REASON_ATTACHMENT_STORAGE_DISABLED);
+                checks.put(CHECK_ATTACHMENT_STORAGE, detail);
+                return false;
+            }
             boolean backendReachable = attachmentStorageManager != null && attachmentStorageManager.isBackendReachable();
             boolean supportedMode = mode != null && mode.isS3();
             boolean up = supportedMode && backendReachable;
             detail.setStatus(up ? STATUS_UP : STATUS_DOWN);
-            detail.setMode(mode != null ? mode.name().toLowerCase(java.util.Locale.ROOT) : null);
             detail.setBackendReachable(backendReachable);
             if (!up) {
                 detail.setReasonCode(!supportedMode

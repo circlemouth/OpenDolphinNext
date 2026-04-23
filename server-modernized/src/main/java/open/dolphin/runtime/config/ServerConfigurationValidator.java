@@ -436,8 +436,9 @@ public class ServerConfigurationValidator {
         String mode = settings.mode().trim().toLowerCase();
         switch (mode) {
             case "s3" -> validateAttachmentS3(errors, settings.s3());
-            case "database" -> errors.add(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE + " must be s3");
-            default -> errors.add(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE + " must be s3");
+            case "disabled" -> validateAttachmentDisabled(errors, settings.s3());
+            case "database" -> errors.add(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE + " must be s3 or disabled");
+            default -> errors.add(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE + " must be s3 or disabled");
         }
     }
 
@@ -462,6 +463,25 @@ public class ServerConfigurationValidator {
             } catch (URISyntaxException ex) {
                 errors.add(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_ENDPOINT + " must be a valid URI");
             }
+        }
+    }
+
+    private void validateAttachmentDisabled(List<String> errors, ServerRuntimeConfiguration.S3StorageSettings settings) {
+        if (settings == null) {
+            return;
+        }
+        if (!isBlank(settings.bucket())
+                || !isBlank(settings.region())
+                || !isBlank(settings.endpoint())
+                || !isBlank(settings.basePath())
+                || settings.forcePathStyle() != null
+                || !isBlank(settings.serverSideEncryption())
+                || !isBlank(settings.kmsKeyId())
+                || settings.multipartThresholdMb() != null
+                || !isBlank(settings.accessKey())
+                || !isBlank(settings.secretKey())) {
+            errors.add("attachment.storage.s3.* must not be configured when "
+                    + ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE + "=disabled");
         }
     }
 

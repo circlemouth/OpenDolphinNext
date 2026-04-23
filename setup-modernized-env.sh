@@ -92,6 +92,10 @@ export MODERNIZED_APP_HTTP_PORT
 SERVER_HEALTH_URL="http://localhost:${MODERNIZED_APP_HTTP_PORT}/openDolphin/api/health"
 API_HEALTH_BASE_URL="${API_HEALTH_BASE_URL:-http://localhost:${MODERNIZED_APP_HTTP_PORT}/openDolphin}"
 WORKTREE_CONTAINER_SUFFIX="${WORKTREE_CONTAINER_SUFFIX:-}"
+OPENDOLPHIN_RUNTIME_PROFILE_EFFECTIVE="${OPENDOLPHIN_RUNTIME_PROFILE:-}"
+OPENDOLPHIN_ENVIRONMENT_EFFECTIVE="${OPENDOLPHIN_ENVIRONMENT:-production}"
+ATTACHMENT_STORAGE_MODE_EFFECTIVE="${ATTACHMENT_STORAGE_MODE:-s3}"
+OBJECT_STORAGE_FREE_RUNTIME=0
 OPENDOLPHIN_SCHEMA_ACTION="${OPENDOLPHIN_SCHEMA_ACTION:-create}"
 export OPENDOLPHIN_SCHEMA_ACTION
 SCHEMA_INITIALIZED=0
@@ -239,6 +243,67 @@ mask_state() {
   else
     printf 'unset'
   fi
+}
+
+has_forbidden_object_storage_value() {
+  local value="${1:-}"
+  [[ -n "$value" ]]
+}
+
+resolve_object_storage_runtime_profile() {
+  local profile_lc
+  profile_lc="$(printf '%s' "${OPENDOLPHIN_RUNTIME_PROFILE_EFFECTIVE:-}" | tr '[:upper:]' '[:lower:]')"
+  local storage_mode_lc
+  storage_mode_lc="$(printf '%s' "${ATTACHMENT_STORAGE_MODE_EFFECTIVE:-}" | tr '[:upper:]' '[:lower:]')"
+
+  if [[ "$profile_lc" == "orca-trial-no-object-storage" ]]; then
+    ATTACHMENT_STORAGE_MODE_EFFECTIVE="disabled"
+    storage_mode_lc="disabled"
+  fi
+
+  if [[ "$storage_mode_lc" == "disabled" ]]; then
+    OBJECT_STORAGE_FREE_RUNTIME=1
+    OPENDOLPHIN_RUNTIME_PROFILE_EFFECTIVE="${OPENDOLPHIN_RUNTIME_PROFILE_EFFECTIVE:-orca-trial-no-object-storage}"
+    if [[ -z "${OPENDOLPHIN_ENVIRONMENT:-}" ]]; then
+      OPENDOLPHIN_ENVIRONMENT_EFFECTIVE="trial-local"
+    fi
+
+    local forbidden_keys=()
+    for key in \
+      ATTACHMENT_STORAGE_S3_BUCKET \
+      ATTACHMENT_STORAGE_S3_REGION \
+      ATTACHMENT_STORAGE_S3_ENDPOINT \
+      ATTACHMENT_STORAGE_S3_BASE_PATH \
+      ATTACHMENT_STORAGE_S3_FORCE_PATH_STYLE \
+      ATTACHMENT_STORAGE_S3_SERVER_SIDE_ENCRYPTION \
+      ATTACHMENT_STORAGE_S3_KMS_KEY_ID \
+      ATTACHMENT_STORAGE_S3_MULTIPART_THRESHOLD_MB \
+      ATTACHMENT_STORAGE_S3_ACCESS_KEY \
+      ATTACHMENT_STORAGE_S3_SECRET_KEY \
+      PHR_EXPORT_S3_BUCKET \
+      PHR_EXPORT_S3_REGION \
+      PHR_EXPORT_S3_PREFIX \
+      PHR_EXPORT_S3_ENDPOINT \
+      PHR_EXPORT_S3_FORCE_PATH_STYLE \
+      PHR_EXPORT_S3_ACCESS_KEY \
+      PHR_EXPORT_S3_SECRET_KEY \
+      PHR_EXPORT_STORAGE_TYPE \
+      PHR_EXPORT_STORAGE_FILESYSTEM_BASE_PATH \
+      MINIO_ROOT_USER \
+      MINIO_ROOT_PASSWORD; do
+      if has_forbidden_object_storage_value "${!key:-}"; then
+        forbidden_keys+=("$key")
+      fi
+    done
+    if [[ "${#forbidden_keys[@]}" -gt 0 ]]; then
+      echo "Object-storage-free runtime rejected: object-storage variables are configured (${forbidden_keys[*]}). Unset them or use ATTACHMENT_STORAGE_MODE=s3." >&2
+      exit 1
+    fi
+    log "RUNTIME_PROFILE object_storage=disabled profile=${OPENDOLPHIN_RUNTIME_PROFILE_EFFECTIVE} environment=${OPENDOLPHIN_ENVIRONMENT_EFFECTIVE}"
+    return
+  fi
+
+  log "RUNTIME_PROFILE object_storage=s3 profile=${OPENDOLPHIN_RUNTIME_PROFILE_EFFECTIVE:-default} environment=${OPENDOLPHIN_ENVIRONMENT_EFFECTIVE}"
 }
 
 resolve_proxy_auth_env() {
@@ -536,14 +601,39 @@ generate_custom_properties() {
 generate_compose_override() {
   log "Generating $COMPOSE_OVERRIDE_FILE..."
   log "ORCADS route host=${ORCA_DB_HOST} port=${ORCA_DB_PORT} db=${ORCA_DB_NAME} user=${ORCA_DB_USER} sslmode=${ORCA_DB_SSLMODE}"
+  local storage_env_block=""
+  if [[ "$OBJECT_STORAGE_FREE_RUNTIME" == "1" ]]; then
+    storage_env_block="      OPENDOLPHIN_RUNTIME_PROFILE: ${OPENDOLPHIN_RUNTIME_PROFILE_EFFECTIVE}
+      ATTACHMENT_STORAGE_MODE: disabled
+      ATTACHMENT_STORAGE_S3_BUCKET: ''
+      ATTACHMENT_STORAGE_S3_REGION: ''
+      ATTACHMENT_STORAGE_S3_ENDPOINT: ''
+      ATTACHMENT_STORAGE_S3_BASE_PATH: ''
+      ATTACHMENT_STORAGE_S3_FORCE_PATH_STYLE: ''
+      ATTACHMENT_STORAGE_S3_SERVER_SIDE_ENCRYPTION: ''
+      ATTACHMENT_STORAGE_S3_KMS_KEY_ID: ''
+      ATTACHMENT_STORAGE_S3_MULTIPART_THRESHOLD_MB: ''
+      ATTACHMENT_STORAGE_S3_ACCESS_KEY: ''
+      ATTACHMENT_STORAGE_S3_SECRET_KEY: ''
+      PHR_EXPORT_STORAGE_TYPE: disabled
+      PHR_EXPORT_SIGNING_SECRET: ''
+      PHR_EXPORT_S3_BUCKET: ''
+      PHR_EXPORT_S3_REGION: ''
+      PHR_EXPORT_S3_PREFIX: ''
+      PHR_EXPORT_S3_ENDPOINT: ''
+      PHR_EXPORT_S3_FORCE_PATH_STYLE: ''
+      PHR_EXPORT_S3_ACCESS_KEY: ''
+      PHR_EXPORT_S3_SECRET_KEY: ''"
+  fi
   cat > "$COMPOSE_OVERRIDE_FILE" <<EOF
 services:
   server-modernized-dev:
     container_name: ${SERVER_CONTAINER_NAME}
     environment:
-      OPENDOLPHIN_ENVIRONMENT: ${OPENDOLPHIN_ENVIRONMENT:-production}
+      OPENDOLPHIN_ENVIRONMENT: ${OPENDOLPHIN_ENVIRONMENT_EFFECTIVE}
       OPENDOLPHIN_FACILITY_ID: ${FACILITY_ID}
       OPENDOLPHIN_STUB_ENDPOINTS_MODE: ${OPENDOLPHIN_STUB_ENDPOINTS_MODE:-block}
+${storage_env_block}
       ORCA_API_HOST: ${ORCA_API_HOST}
       ORCA_API_PORT: ${ORCA_API_PORT}
       ORCA_API_SCHEME: ${ORCA_API_SCHEME}
@@ -583,7 +673,11 @@ EOF
 
 start_modernized_server() {
   log "Starting Modernized Server..."
-  docker compose -f docker-compose.modernized.dev.yml -f "$COMPOSE_OVERRIDE_FILE" up -d --build --force-recreate
+  local profile_args=()
+  if [[ "$OBJECT_STORAGE_FREE_RUNTIME" != "1" ]]; then
+    profile_args=(--profile object-storage)
+  fi
+  docker compose -f docker-compose.modernized.dev.yml -f "$COMPOSE_OVERRIDE_FILE" "${profile_args[@]}" up -d --build --force-recreate
 }
 
 ensure_orca_db_bridge() {
@@ -1354,6 +1448,7 @@ wait_for_web_client_dev_server() {
 
 main() {
   read_orca_info
+  resolve_object_storage_runtime_profile
   resolve_dev_admin_credentials
   if [[ "${ORCA_CONFIG_ONLY:-0}" == "1" ]]; then
     log "ORCA_CONFIG_ONLY=1: skipping docker startup."

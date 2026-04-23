@@ -20,6 +20,28 @@ class AttachmentStorageConfigLoaderTest {
     }
 
     @Test
+    void acceptsDisabledModeWithoutS3Settings() {
+        AttachmentStorageConfigLoader loader = new AttachmentStorageConfigLoader(TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "disabled"));
+
+        AttachmentStorageSettings settings = loader.load();
+
+        assertThat(settings.getMode()).isEqualTo(AttachmentStorageMode.DISABLED);
+        assertThat(settings.getS3()).isEmpty();
+    }
+
+    @Test
+    void rejectsS3SettingsWhenDisabledModeIsEnabled() {
+        AttachmentStorageConfigLoader loader = new AttachmentStorageConfigLoader(TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "disabled",
+                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_BUCKET, "bucket-a"));
+
+        assertThatThrownBy(loader::load)
+                .isInstanceOf(AttachmentStorageException.class)
+                .hasMessageContaining("attachment.storage.s3.*");
+    }
+
+    @Test
     void rejectsDatabaseLobTableWhenS3ModeIsEnabled() {
         AttachmentStorageConfigLoader loader = new AttachmentStorageConfigLoader(TestServerConfigurationResolvers.resolver(
                 ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "s3",

@@ -115,6 +115,22 @@ class ServletStartupSecurityGuardTest {
         }
     }
 
+    @Test
+    void productionLikeEnvironmentRejectsDisabledAttachmentStorage() throws Exception {
+        Path keyring = writeKeyring("guard-storage-disabled.json");
+        try (AutoCloseable ignored = MicroProfileConfigTestSupport.withConfig(
+                ServerConfigurationResolver.KEY_ENVIRONMENT, "production",
+                ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES, "127.0.0.1/32",
+                ServerConfigurationResolver.KEY_FACTOR2_AES_KEY_B64, validAesKey(),
+                ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "enforce",
+                ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH, keyring.toString(),
+                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "disabled")) {
+            IllegalStateException ex = assertThrows(IllegalStateException.class, ServletStartup::enforceStartupSecurityGuards);
+
+            assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE));
+        }
+    }
+
     private Path writeKeyring(String fileName) throws IOException {
         Path path = tempDir.resolve(fileName).toAbsolutePath();
         Files.writeString(path, """

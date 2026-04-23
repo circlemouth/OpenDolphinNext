@@ -41,6 +41,7 @@ import open.dolphin.security.audit.AuditTrailService;
 import open.dolphin.session.PatientImageServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.storage.attachment.AttachmentStorageManager;
+import open.dolphin.storage.attachment.AttachmentStorageMode;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 import org.junit.jupiter.api.BeforeEach;
@@ -110,6 +111,7 @@ class PatientImagesResourceTest {
                 .thenReturn(java.net.URI.create("https://example.test/app/api/patients/P001/images/10"));
         lenient().when(patientServiceBean.getPatientById("F001", "P001"))
                 .thenReturn(new open.dolphin.infomodel.PatientModel());
+        lenient().when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
 
         lenient().when(input.getFormDataMap()).thenReturn(Map.of("file", List.of(part)));
         MultivaluedHashMap<String, String> partHeaders = new MultivaluedHashMap<>();

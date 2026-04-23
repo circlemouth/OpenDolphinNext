@@ -100,6 +100,7 @@
 - `orca_push_not_configured`
 - `orca_push_runtime_unavailable`
 - `attachment_storage_not_ready`
+- `attachment_storage_disabled`
 - `attachment_storage_backend_unreachable`
 - `pvt_queue_over_capacity`
 - `pvt_worker_unavailable`
@@ -119,4 +120,5 @@
 - [x] readiness payload に URL / host / port / scheme / username / statusCode / raw exception / stack trace / secret path が含まれない。
 - [x] default facility 未設定時は `facility_configuration_missing` で fail-close し、runtime ORCA config へ fallback しない。
 - [x] ORCA / storage / PVT / patient images の DOWN ケースを固定 reasonCode で返す。
+- [x] `attachment.storage.mode=disabled` は `attachmentStorage.status=DISABLED` / `reasonCode=attachment_storage_disabled` のみを返し、bucket / endpoint / prefix / secret reference は返さない。
 - [x] ログと API 応答の双方で secret と接続先詳細を出力しない。

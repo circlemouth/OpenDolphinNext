@@ -38,6 +38,7 @@ import open.dolphin.session.PatientImageServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.UserServiceBean;
 import open.dolphin.storage.attachment.AttachmentStorageManager;
+import open.dolphin.storage.attachment.AttachmentStorageMode;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 
@@ -91,6 +92,17 @@ final class PatientImagesSupport {
         throw AbstractResource.restError(request, Response.Status.NOT_FOUND,
                 "feature_disabled", "Images PhaseA is disabled",
                 Map.of("requiredConfig", ServerConfigurationResolver.KEY_PATIENT_IMAGES_ENABLED),
+                null);
+    }
+
+    void requireStorageAvailable() {
+        AttachmentStorageMode mode = attachmentStorageManager != null ? attachmentStorageManager.getMode() : null;
+        if (mode != null && mode.isS3()) {
+            return;
+        }
+        throw AbstractResource.restError(request, Response.Status.SERVICE_UNAVAILABLE,
+                "patient_images_storage_unavailable", "Patient image storage is unavailable",
+                Map.of("storageMode", mode != null ? mode.name().toLowerCase(java.util.Locale.ROOT) : "unavailable"),
                 null);
     }
 

@@ -163,6 +163,34 @@ class OperationsHealthResourceTest {
     }
 
     @Test
+    void readinessReportsDisabledAttachmentStorageWithoutBackendDetails() throws Exception {
+        when(em.createNativeQuery(anyString())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(1);
+        when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn("F001");
+        ((StubRestOrcaTransport) restOrcaTransport).probeResult =
+                new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.DISABLED);
+        when(pvtService.workerHealthBody()).thenReturn(Map.of(
+                "status", "UP",
+                "reasonCodes", List.of()));
+
+        Response response = resource.readiness();
+
+        assertThat(response.getStatus()).isEqualTo(503);
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ATTACHMENT_STORAGE).getStatus())
+                .isEqualTo("DISABLED");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ATTACHMENT_STORAGE).getMode())
+                .isEqualTo("disabled");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ATTACHMENT_STORAGE).getReasonCode())
+                .isEqualTo("attachment_storage_disabled");
+        String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);
+        assertThat(rendered).doesNotContain("bucket");
+        assertThat(rendered).doesNotContain("endpoint");
+        assertThat(rendered).doesNotContain("minio");
+    }
+
+    @Test
     void readinessReturnsDownWhenOrcaPushEnabledWithoutConfiguration() throws Exception {
         setField(OperationsReadinessEvaluator.class, evaluator, "configurationResolver",
                 TestServerConfigurationResolvers.resolver(

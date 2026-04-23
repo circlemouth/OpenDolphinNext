@@ -33,6 +33,20 @@ S3 / object storage scope:
 - Do not claim attachment storage, S3 persistence, PHR export storage, or object-storage deployment readiness from this roadmap.
 - A repo-local object-storage-free dev/Trial runtime profile is allowed as blocker-resolution work if it requires no S3/MinIO/object-storage credentials, does not emulate S3, keeps attachment/patient-image/PHR storage features fail-closed, and preserves explicit non-claims for storage readiness.
 
+Local-only dev/Trial runtime secret/config policy:
+- The automation may generate missing local-only dev/Trial runtime values when needed to start local containers or repo-local services for WebORCA / ORCA Trial verification, as long as every generated value satisfies all of these conditions:
+  - used only by the local dev/Trial runtime on this machine or local Docker containers;
+  - not an account credential for ORCA Trial, production ORCA, S3/MinIO/object storage, external APIs, package registries, cloud services, or any other external system;
+  - not a cookie, session, Authorization header, CSRF token, patient identifier, insurance identifier, raw ORCA body, or production data;
+  - safe to rotate or recreate for this local runtime without changing production, Trial account access, or external service state;
+  - stored only in an approved gitignored local runtime file and never committed.
+- Known allowed local-only examples include `MODERNIZED_POSTGRES_PASSWORD`, `PHR_EXPORT_SIGNING_SECRET`, and `FACTOR2_AES_KEY_B64`. Other local-only values may be generated only if the worker can document the same classification without printing the value.
+- Generate local-only secrets with an OS-backed cryptographic random source. Non-secret local config may be created from repo-documented safe defaults only when it is local and non-external.
+- Never print generated values, never include them in command logs, summaries, inbox items, committed files, review packages, or evidence artifacts.
+- Store generated values only in an approved gitignored local runtime file such as `./orca.env.local`, or in `ORCA_ENV_FILE` only when it is already set to a readable local untracked runtime file. Do not store them in tracked samples, docs, TOML, package artifacts, or shell history.
+- Do not overwrite existing non-empty values. If an existing value is malformed or its local-only classification is ambiguous, stop and record sanitized evidence rather than printing or replacing it silently.
+- This exception does not permit generating, requesting, printing, or storing ORCA Trial credentials, production credentials, passwords/tokens for external services, S3/MinIO/object-storage values, cookies, sessions, Authorization headers, patient/insurance data, or raw ORCA bodies.
+
 This standing approval applies only to:
 - WebORCA / ORCA Trial server verification
 - roadmap-scoped clinical verification work
@@ -65,15 +79,16 @@ Every run:
 6. If no active handoff exists, select the next unblocked Work Order from the roadmap.
 7. Execute the next safe step autonomously.
 8. If a repo-local error blocks progress and is fixable, fix it, run relevant verification, and document the result.
-9. If the next required step is ORCA Trial live verification, proceed under standing approval only if credentials/config are already available through the approved runtime path.
-10. If non-S3 credentials/config are absent due to the local environment, skip that task as `skipped_environment_unavailable_missing_runtime_secret_or_config`; do not ask for or print values.
-11. If S3/MinIO/object-storage credentials/config are required, skip the current task as `skipped_s3_required_out_of_scope` and continue with the next non-S3 Work Order.
-12. Continue within the same run after every completed task, skipped out-of-scope task, or skipped environment-unavailable task. Stop only when no safe unblocked task remains, the run time budget is exhausted, or a non-skippable safety stop condition is reached.
+9. If the next required step is ORCA Trial live verification, proceed under standing approval only if ORCA Trial credentials/config are already available through the approved runtime path.
+10. If only approved local-only dev/Trial runtime secret/config values are missing, generate and store them according to the Local-only dev/Trial runtime secret/config policy, then continue toward local runtime startup.
+11. If other non-S3 credentials/config are absent due to the local environment, skip that task as `skipped_environment_unavailable_missing_runtime_secret_or_config`; do not ask for or print values.
+12. If S3/MinIO/object-storage credentials/config are required, skip the current task as `skipped_s3_required_out_of_scope` and continue with the next non-S3 Work Order.
+13. Continue within the same run after every completed task, skipped out-of-scope task, or skipped environment-unavailable task. Stop only when no safe unblocked task remains, the run time budget is exhausted, or a non-skippable safety stop condition is reached.
 
 Current-run exhaustion policy:
 - Do all currently possible repo-local work in priority order during the same run.
 - Treat environment-only blockers as skip records, not terminal blockers, when the next Work Order has independent safe work available.
-- Environment-only blockers include Docker unavailable, local backend unavailable, browser runtime unavailable, missing local runtime secret/config, missing local test seed, unavailable safe browser harness, and unavailable non-S3 runtime path.
+- Environment-only blockers include Docker unavailable, local backend unavailable, browser runtime unavailable, missing local runtime secret/config that cannot be safely generated under the local-only policy, missing local test seed, unavailable safe browser harness, and unavailable non-S3 runtime path.
 - For each skipped environment task, write a sanitized skip record with task id, reason, evidence checked, credentialsCaptured=false, rawArtifactsCaptured=false, and recommended next independent task.
 - After a skip, immediately select the next safe non-skipped Work Order.
 - Prefer docs, static analysis, unit/component tests, guard scripts, wrapper dry-runs, sanitizer/parser contract tests, package metadata checks, claim-boundary updates, and risk/gate matrix updates that do not require production ORCA, S3/object storage, raw artifacts, browser screenshots/HAR/traces/videos, or unavailable secrets.
@@ -114,7 +129,8 @@ Fullflow may run only after a safe fullflow mode exists that does not create scr
 
 Credential and artifact policy:
 - Do not run env, printenv, set, history, or set -x.
-- Do not print or store passwords, tokens, cookies, Authorization headers, JSESSIONID, CSRF values, sessions, credential-bearing URLs, raw ORCA bodies, raw patient details, or raw insurance details.
+- Do not print passwords, tokens, cookies, Authorization headers, JSESSIONID, CSRF values, sessions, credential-bearing URLs, raw ORCA bodies, raw patient details, or raw insurance details.
+- Do not store passwords or tokens except for approved local-only dev/Trial runtime values, which may be stored only in an approved gitignored local runtime file and must never be copied into evidence, logs, docs, samples, TOML, review packages, or committed files.
 - Do not capture HAR, traces, videos, screenshots, or raw network dumps.
 - Evidence must be sanitized JSON/MD summaries, command logs, hashes, status classifications, and allowlisted parsed fields only.
 
@@ -152,7 +168,7 @@ Each run must open an inbox item with:
 Stop conditions:
 - production ORCA would be required by the current task instead of being skippable as out-of-scope
 - S3/MinIO/object-storage configuration would be required by the current task instead of being skippable as out-of-scope
-- missing runtime secret/config with no independent safe task remaining in this run
+- missing runtime secret/config that cannot be safely generated under the local-only policy, with no independent safe task remaining in this run
 - raw artifact capture would be needed to decide success
 - target/scope ambiguity
 - unsafe repo state

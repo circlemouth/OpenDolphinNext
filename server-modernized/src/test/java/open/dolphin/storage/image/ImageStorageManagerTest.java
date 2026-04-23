@@ -1,6 +1,7 @@
 package open.dolphin.storage.image;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -13,6 +14,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.List;
 import jakarta.transaction.Status;
 import jakarta.transaction.Synchronization;
 import jakarta.transaction.TransactionSynchronizationRegistry;
@@ -107,6 +109,24 @@ class ImageStorageManagerTest {
     }
 
     @Test
+    void disabledModeFailsClosedForExternalImages() throws Exception {
+        setField(manager, "settings", new AttachmentStorageSettings(
+                AttachmentStorageMode.DISABLED,
+                null,
+                null,
+                null));
+        setField(manager, "objectStorageClient", null);
+        SchemaModel schema = buildSchema("image/png", "payload".getBytes(StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> manager.persistExternalAssets(List.of(schema)))
+                .isInstanceOf(open.dolphin.storage.attachment.AttachmentStorageException.class)
+                .hasMessageContaining("disabled");
+        assertThatThrownBy(() -> manager.populateBinary(externalSchema()))
+                .isInstanceOf(open.dolphin.storage.attachment.AttachmentStorageException.class)
+                .hasMessageContaining("disabled");
+    }
+
+    @Test
     void scheduleDeleteExternalAssetAfterCommit_waitsForCommit() throws Exception {
         TransactionSynchronizationRegistry registry = mock(TransactionSynchronizationRegistry.class);
         when(registry.getTransactionStatus()).thenReturn(Status.STATUS_ACTIVE);
@@ -142,6 +162,13 @@ class ImageStorageManagerTest {
         extRef.setTitle("schema");
         extRef.setHref("schema.png");
         schema.setExtRefModel(extRef);
+        return schema;
+    }
+
+    private static SchemaModel externalSchema() {
+        SchemaModel schema = buildSchema("image/png", null);
+        schema.setStorageBucket("test-bucket");
+        schema.setStorageKey("images/doc-20/img-10.png");
         return schema;
     }
 

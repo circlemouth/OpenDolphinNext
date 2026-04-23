@@ -145,10 +145,14 @@
 - `smtp.auth=true` のとき `smtp.username` / `smtp.password` は必須。旧 `cloud.zero.mail.*` / `opendolphin.smtp.*` fallback は廃止。
 
 ### 6. Attachment Storage
-- `attachment.storage.mode` は `s3` 固定で必須。
+- `attachment.storage.mode` は `s3` または `disabled` で必須。
+- `s3` は production-like / storage-enabled runtime の唯一の保存 mode。
+- `disabled` は WebORCA Trial 検証用の object-storage-free dev/Trial profile 専用。production-like environment では `ServletStartup` guard が拒否する。
 - `attachment.storage.mode=database` やその他の mode は起動失敗にする。
 - local filesystem fallback は追加しない。
 - database LOB fallback は復活させない。
+- `disabled` 時は `attachment.storage.s3.*` を一切設定してはならない。bucket / region / endpoint / base-path / force-path-style / 暗号化 / multipart threshold / access-key / secret-key の混入は起動前 validation で拒否する。
+- `disabled` 時は attachment upload/download、patient image upload/download、legacy image externalization は fail closed とし、object storage ready とは扱わない。
 - `s3` は AWS 専用ではなく、S3 互換 object storage を意味する。
 - `s3` 時は以下を必須。
   - `attachment.storage.s3.bucket`
@@ -198,7 +202,8 @@
 - [x] 列挙値不正・URI 不正・Base64 不正・Path 不正も起動失敗にする。
 - [x] PVT 無効時のみ PVT 詳細設定の欠落を許可する。
 - [x] PVT worker health 閾値は未設定時に利用側既定値（`staleSuccessSeconds=180`, `maxProcessingMillis=30000`）を使用できる。
-- [x] `attachment.storage.mode=s3` のみ許可し、それ以外は起動失敗にする。
+- [x] `attachment.storage.mode=s3` を storage-enabled runtime として許可し、それ以外の保存 mode は起動失敗にする。
+- [x] WebORCA Trial 用に `attachment.storage.mode=disabled` を明示 profile として許可する。ただし production-like では拒否し、S3/MinIO/PHR S3 設定の混入を拒否する。
 - [x] runtime 必須値として `opendolphin.environment` / `opendolphin.timezone` / `jboss.server.data.dir` を検証する。
 - [x] ORCA runtime 必須値として `opendolphin.facility-id` / `opendolphin.cloud.zero` と、PVT 有効時の listener 詳細を検証する。
 - [x] datasource 必須値として `*.host` / `*.port` / `*.name` / `*.user` / `*.password` / `*.sslmode` / `*.sslrootcert` を検証する。

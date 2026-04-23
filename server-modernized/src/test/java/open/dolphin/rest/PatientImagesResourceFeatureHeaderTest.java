@@ -20,6 +20,8 @@ import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import open.dolphin.session.PatientImageServiceBean;
 import open.dolphin.session.PatientServiceBean;
+import open.dolphin.storage.attachment.AttachmentStorageManager;
+import open.dolphin.storage.attachment.AttachmentStorageMode;
 import open.dolphin.testsupport.RuntimeDelegateTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,7 @@ class PatientImagesResourceFeatureHeaderTest extends RuntimeDelegateTestSupport 
     private jakarta.ws.rs.core.UriBuilder uriBuilder;
     private PatientServiceBean patientServiceBean;
     private PatientImageServiceBean patientImageServiceBean;
+    private AttachmentStorageManager attachmentStorageManager;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -44,6 +47,7 @@ class PatientImagesResourceFeatureHeaderTest extends RuntimeDelegateTestSupport 
         uriBuilder = mock(jakarta.ws.rs.core.UriBuilder.class);
         patientServiceBean = mock(PatientServiceBean.class);
         patientImageServiceBean = mock(PatientImageServiceBean.class);
+        attachmentStorageManager = mock(AttachmentStorageManager.class);
 
         resource = new PatientImagesResource();
         setField(resource, "httpServletRequest", request);
@@ -51,6 +55,7 @@ class PatientImagesResourceFeatureHeaderTest extends RuntimeDelegateTestSupport 
         setField(resource, "uriInfo", uriInfo);
         setField(resource, "patientServiceBean", patientServiceBean);
         setField(resource, "patientImageServiceBean", patientImageServiceBean);
+        setField(resource, "attachmentStorageManager", attachmentStorageManager);
         setField(resource, "configurationResolver", TestServerConfigurationResolvers.resolver(
                 ServerConfigurationResolver.KEY_PATIENT_IMAGES_ENABLED, "true"));
 
@@ -61,6 +66,7 @@ class PatientImagesResourceFeatureHeaderTest extends RuntimeDelegateTestSupport 
         when(uriBuilder.path("11")).thenReturn(uriBuilder);
         when(uriBuilder.build())
                 .thenReturn(java.net.URI.create("https://example.test/app/api/patients/" + PATIENT_ID + "/images/10"));
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
     }
 
     @Test

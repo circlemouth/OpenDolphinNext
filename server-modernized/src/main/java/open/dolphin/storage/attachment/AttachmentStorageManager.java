@@ -42,6 +42,7 @@ public class AttachmentStorageManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(AttachmentStorageManager.class);
     private static final int STREAM_BUFFER_SIZE = 8192;
     private static final String STORAGE_PROVIDER_S3 = "s3";
+    private static final String STORAGE_DISABLED_MESSAGE = "Attachment storage is disabled for this runtime profile";
     public static final String LINK_RELATION_REFERENCE_ONLY = "attachment_reference";
 
     @Inject
@@ -76,6 +77,12 @@ public class AttachmentStorageManager {
                     s3Settings.getBucket(), s3Settings.getRegion(), settings.getSourcePath().orElse(null));
             return;
         }
+        if (settings.getMode().isDisabled()) {
+            keyResolver = null;
+            objectStorageClient = null;
+            LOGGER.info("Attachment storage initialized in disabled mode; object-storage-dependent features fail closed.");
+            return;
+        }
         throw new AttachmentStorageException("Unsupported attachment storage mode: " + settings.getMode());
     }
 
@@ -92,6 +99,9 @@ public class AttachmentStorageManager {
 
     public boolean isBackendReachable() {
         if (settings == null) {
+            return false;
+        }
+        if (settings.getMode().isDisabled()) {
             return false;
         }
         requireS3Mode();
@@ -270,8 +280,10 @@ public class AttachmentStorageManager {
 
     private void requireS3Mode() {
         if (settings == null || !settings.getMode().isS3()) {
-            throw new AttachmentStorageException("Unsupported attachment storage mode: "
-                    + (settings != null ? settings.getMode() : "null"));
+            if (settings != null && settings.getMode().isDisabled()) {
+                throw new AttachmentStorageException(STORAGE_DISABLED_MESSAGE);
+            }
+            throw new AttachmentStorageException("Unsupported attachment storage mode");
         }
     }
 
@@ -279,6 +291,7 @@ public class AttachmentStorageManager {
         if (attachment == null) {
             return false;
         }
+        requireS3Mode();
         byte[] bytes = attachment.getContentBytes();
         if (isAlreadyExternalized(attachment, bytes)) {
             LOGGER.debug("Attachment {} is already externalized (uri={}, digest={}); skipping upload.",
@@ -297,6 +310,7 @@ public class AttachmentStorageManager {
         if (attachment == null) {
             return false;
         }
+        requireS3Mode();
         if (isAlreadyExternalized(attachment, attachment.getContentBytes())) {
             LOGGER.debug("Attachment {} is already externalized (uri={}, digest={}); skipping upload.",
                     attachment.getId(), attachment.getUri(), attachment.getDigest());

@@ -55,6 +55,11 @@ public class ImageStorageManager {
     @PostConstruct
     void init() {
         settings = configLoader.load();
+        if (settings.getMode().isDisabled()) {
+            objectStorageClient = null;
+            LOGGER.info("Image storage initialized in disabled mode; object-storage-dependent features fail closed.");
+            return;
+        }
         if (!settings.getMode().isS3()) {
             throw new AttachmentStorageException("Unsupported image storage mode: " + settings.getMode());
         }
@@ -101,6 +106,7 @@ public class ImageStorageManager {
         if (schema == null || schema.getImageBytes() != null) {
             return;
         }
+        requireS3Mode();
         if (!hasText(schema.getUri()) && !hasText(schema.getStorageBucket())) {
             throw new AttachmentStorageException("Image " + schema.getId() + " has no external uri");
         }
@@ -313,8 +319,10 @@ public class ImageStorageManager {
 
     private void requireS3Mode() {
         if (settings == null || !settings.getMode().isS3()) {
-            throw new AttachmentStorageException("Unsupported image storage mode: "
-                    + (settings != null ? settings.getMode() : "null"));
+            if (settings != null && settings.getMode().isDisabled()) {
+                throw new AttachmentStorageException("Image storage is disabled for this runtime profile");
+            }
+            throw new AttachmentStorageException("Unsupported image storage mode");
         }
     }
 }

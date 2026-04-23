@@ -113,6 +113,7 @@ PLAYWRIGHT_DISABLE_MSW=1 npm run --prefix web-client test:e2e:no-artifacts -- --
 
 6. runtime-ready smoke と ORCA smoke scripts を pair release 前提で実行する。
 ```bash
+OPENDOLPHIN_RUNTIME_PROFILE=orca-trial-no-object-storage WEB_CLIENT_MODE=npm ./setup-modernized-env.sh
 cd web-client && node scripts/runtime-ready-smoke.mjs
 curl -sk https://127.0.0.1:8443/openDolphin/api/orca/official/appointments/medical-information
 cd web-client && node scripts/qa-weborca-candidate-discovery.mjs
@@ -122,6 +123,8 @@ cd web-client && QA_PATIENT_ID=<summary.phase3AttemptPatientId> node scripts/qa-
 ```
 期待結果:
 - web-client と server-modernized を同じ remediation pair として起動した状態で成功する。
+- `OPENDOLPHIN_RUNTIME_PROFILE=orca-trial-no-object-storage` は Trial 検証専用の non-S3 runtime profile。`ATTACHMENT_STORAGE_MODE=disabled` を生成し、MinIO profile を起動せず、`ATTACHMENT_STORAGE_S3_*` / `PHR_EXPORT_S3_*` / `MINIO_*` が既に設定されている場合は値を表示せず fail closed する。
+- この profile では attachment storage / patient image storage / PHR export storage readiness は claim しない。保存系 route は fail closed、readiness は `attachment_storage_disabled` の sanitized reason のみを返す。
 - `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` は Vite PID だけを成功条件にしない。`https://localhost:5173/` が連続して応答し、dev server process が生存していることを setup log に残す。
 - `runtime-ready-smoke` は current local smoke seed を前提に動作する。smoke seed 不一致で受付行が現れない場合は repo defect と決め打ちせず、`tests/runtime-ready-smoke.log` を保存して `test-data-blocker` または `environment-blocker` として切り分ける。
 - local smoke seed の既定キーは `encounterKey=1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001`、`scheduleKey=SMOKE-SCHEDULE-20251129-0001`、`DEV_SMOKE_PATIENT_ID=0000001`、Asia/Tokyo 当日 `09:00` の `scheduled_datetime` とする。`DEV_SMOKE_PATIENT_ID` を変更する場合は schedule / encounter projection が同じ患者を指すことを確認する。
