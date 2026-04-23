@@ -1,15 +1,33 @@
 {
-  "status": "superseded",
+  "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "WO-8",
-  "blockerId": "phase4-live-trial-skipped-s3-required-runtime",
-  "priority": "superseded",
+  "sourceWorkOrder": "RWO-06",
+  "blockerId": "non-s3-runtime-profile-required",
+  "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T05:02:22Z",
+  "lastUpdated": "2026-04-23T05:48:33Z",
+  "latestOwnerNonS3RuntimeDirection": {
+    "runId": "20260423T054833Z",
+    "result": "NON_S3_RUNTIME_PROFILE_DIRECTION_RECORDED",
+    "decision": "Use an explicit object-storage-free dev/Trial runtime profile instead of local dummy S3 or MinIO.",
+    "handoff": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "plan": "docs/implementation/non-s3-runtime-profile-20260423T054833Z/PLAN.md",
+    "allowedNextWork": "Implement and locally verify the non-S3 runtime profile; keep object-storage features fail-closed and non-claimed.",
+    "forbidden": [
+      "local_dummy_s3",
+      "minio_setup",
+      "fake_s3_credentials",
+      "object_storage_readiness_claim",
+      "production_orca_execution"
+    ],
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "latestSafeBrowserSmoke": {
     "runId": "20260423T020225Z",
     "workOrder": "RWO-02",
@@ -401,6 +419,8 @@
     "RUN_ID 20260423T034854Z generated current reviewer package artifacts under artifacts/review-bundles for source commit 8199a7dde940b3a9650c2268002fb912365d8577; package source secret scan passed and excluded-path scan found zero forbidden entries.",
     "RUN_ID 20260423T035517Z recorded that owner standing approval is present for Trial-backed non-S3 roadmap continuation. This does not authorize production ORCA, S3/object-storage, raw artifact capture, or final release GO.",
     "RUN_ID 20260423T050222Z added artifact-free Charts UI clickthrough coverage for SOAP S/O local save and insurance disease add, passed the 6-test combined safe browser suite, and verified no retained forbidden artifacts.",
-    "RUN_ID 20260423T050222Z verified web-client typecheck and web guard after the new safe browser UI spec; live Trial ORCA, production ORCA, fullflow, and S3/object-storage were not used."
+    "RUN_ID 20260423T050222Z verified web-client typecheck and web guard after the new safe browser UI spec; live Trial ORCA, production ORCA, fullflow, and S3/object-storage were not used.",
+    "RUN_ID 20260423T054833Z recorded owner direction to unblock RWO-06 with an explicit object-storage-free dev/Trial runtime profile instead of local dummy S3/MinIO.",
+    "RUN_ID 20260423T054833Z made NEXT_WORKER_PROMPT.md active for non-S3 runtime profile implementation and local verification; live Trial ORCA remains not_run until that profile is implemented and verified."
   ]
 }

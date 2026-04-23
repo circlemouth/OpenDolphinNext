@@ -8,7 +8,7 @@ RUN_ID: `20260422T134401Z`
 
 The roadmap documentation can be completed from repo-local evidence, but one expected input filename is missing: `docs/implementation/unified-clinical-wave1-batch1-wo3-20260421/CWP01_KARTE_ORDER_PERSISTENCE_REPORT.md`. The available equivalent CWP-01 evidence is `CWP01_INTEGRATION_GATE_REPORT.md`.
 
-Since the original roadmap package, artifact-free browser chart-open/local persistence/UI clickthrough evidence and RWO-09 non-S3 static/CI evidence have been added. Owner standing approval is present for the automation to continue Trial-backed non-S3 roadmap work. These improve Trial-backed release-readiness progress, but they do not close full prescription/order UI click-through, fullflow, live Trial expansion, package, or final release GO/NO-GO gates.
+Since the original roadmap package, artifact-free browser chart-open/local persistence/UI clickthrough evidence and RWO-09 non-S3 static/CI evidence have been added. Owner standing approval is present for the automation to continue Trial-backed non-S3 roadmap work. RUN_ID `20260423T054833Z` also records the owner direction to unblock Trial ORCA with an object-storage-free dev/Trial runtime profile rather than dummy S3/MinIO. These improve Trial-backed release-readiness progress, but they do not close full prescription/order UI click-through, fullflow, live Trial expansion, package, or final release GO/NO-GO gates.
 
 ## Functional Conclusion
 
@@ -24,7 +24,7 @@ Since the original roadmap package, artifact-free browser chart-open/local persi
 1. Full UI click-through browser evidence remains partial for Clinical Wave 1 workflows, especially prescription and representative order editing.
 2. Fullflow is missing.
 3. `medicalmodv2`, `diseasev3`, and `subjectivesv2` live verification is missing.
-4. Trial-scope non-S3 runtime config/secrets and deployment readiness are not fully verified.
+4. Trial-scope non-S3 runtime config/secrets and deployment readiness are not fully verified; the object-storage-free dev/Trial runtime profile is planned but not implemented.
 5. Owner standing approval to proceed is present, but final release GO/NO-GO is not recorded.
 6. Expected CWP-01 filename is missing and should be accepted or corrected by owner review.
 
@@ -36,6 +36,7 @@ Since the original roadmap package, artifact-free browser chart-open/local persi
 - RUN_ID `20260423T030122Z`: RWO-09 non-S3 static/CI evidence passed, including web guards, typecheck, safe browser suite, server CI guard scripts, and server-modernized static-analysis verify.
 - RUN_ID `20260423T034854Z`: RWO-10/RWO-11 non-claim boundary refreshed. Production ORCA remains `not_applicable_trial_only`; S3/object storage remains `not_applicable_out_of_scope`.
 - RUN_ID `20260423T035517Z`: owner standing approval is recorded as present for Trial-backed non-S3 roadmap continuation. Final release GO/NO-GO remains separate and not recorded.
+- RUN_ID `20260423T054833Z`: active handoff created for an object-storage-free dev/Trial runtime profile; dummy S3/MinIO remains forbidden and storage readiness remains a non-claim.
 
 ## ORCA Connection Scope
 

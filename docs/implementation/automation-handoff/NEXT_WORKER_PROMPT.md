@@ -1,11 +1,11 @@
 # NEXT_WORKER_PROMPT
 
-status: superseded
-created_at: 2026-04-22
-last_checked_at: 2026-04-23T00:02:13Z
-source_work_order: WO-8
-blocker_id: phase4-live-trial-skipped-s3-required-runtime
-priority: superseded
+status: active
+created_at: 2026-04-23T05:48:33Z
+last_checked_at: 2026-04-23T05:48:33Z
+source_work_order: RWO-06
+blocker_id: non-s3-runtime-profile-required
+priority: high
 supersedes:
 - docs/implementation/automation-handoff/history/NEXT_WORKER_PROMPT-20260422T145704Z-phase4-safe-wrapper-action-missing-completed.md
 - docs/implementation/automation-handoff/history/NEXT_WORKER_PROMPT-20260422T160301Z-phase4-live-trial-blocked-missing-runtime-secret-or-config.md
@@ -13,113 +13,72 @@ supersedes:
 - docs/implementation/automation-handoff/history/NEXT_WORKER_PROMPT-20260422T180231Z-phase4-live-trial-blocked-missing-runtime-secret-or-config.md
 - docs/implementation/automation-handoff/history/NEXT_WORKER_PROMPT-20260422T190124Z-phase4-live-trial-blocked-missing-runtime-secret-or-config.md
 - docs/implementation/automation-handoff/history/NEXT_WORKER_PROMPT-20260422T200131Z-phase4-live-trial-blocked-missing-runtime-secret-or-config.md
+- docs/implementation/automation-handoff/history/NEXT_WORKER_PROMPT-20260422T224559Z-phase4-live-trial-blocked-missing-runtime-secret-or-config.md
 
 ## Context
 
-WO-8 Phase4 `medicalmodv2` now has a safe wrapper, an in-repo JSON payload, and owner approval for the JSON SHA-256.
+WO-8 Phase4 `medicalmodv2` has a safe wrapper, an in-repo JSON payload, and owner approval for the JSON SHA-256. Live execution is still blocked because the documented local backend path currently requires S3/MinIO/object-storage runtime configuration before the server can be started for the wrapper path.
 
-## Superseded By S3 Skip Policy
-
-This prompt is no longer an active task. The documented local backend path currently requires S3/MinIO/object-storage runtime configuration before the safe `medicalmodv2` wrapper can execute. The automation scope now skips tasks that require S3, MinIO, object-storage credentials, attachment-storage S3 configuration, or PHR export S3 configuration.
-
-Do not request, generate, print, or commit `ATTACHMENT_STORAGE_S3_*`, `PHR_EXPORT_S3_*`, `MINIO_*`, or equivalent object-storage secrets to run this prompt. Classify WO-8 Phase4 live execution as `skipped_s3_required_out_of_scope` unless a non-S3 approved runtime path is introduced in a future owner-approved handoff.
-
-Next automation runs should select the next non-S3 Work Order from the roadmap.
-
-The consolidated worker plan is:
-
-- `docs/implementation/phase4-orca-trial-payloads-20260422/PHASE4_WORKER_UNBLOCKING_PLAN.md`
-
-Resolved blockers:
-
-- `phase4-safe-wrapper-action-missing`: resolved by RUN_ID `20260422T145704Z`.
-- `phase4-live-trial-blocked-missing-runtime-secret-or-config`: resolved for payload availability by RUN_ID `20260422T224559Z`; the executable payload is now in-repo.
-- JSON SHA approval gap: resolved by owner addendum recorded at `docs/implementation/phase4-orca-trial-payloads-20260422/OWNER_APPROVAL_PHASE4_JSON_SHA_ADDENDUM.md`.
-
-Current blocker:
-
-- RUN_ID `20260422T224559Z` did not execute live ORCA because the local backend at `http://127.0.0.1:9080/openDolphin/api/health` was unreachable. Docker daemon became available after Docker Desktop start, but `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` stopped before backend start because `MODERNIZED_POSTGRES_PASSWORD` was missing. Generated setup files containing runtime configuration were removed after the failed setup attempt.
-
-## Approved Live Trial Scope
-
-- environment: Live ORCA Trial only
-- wrapper: `web-client/scripts/qa-phase4-safe-medicalmodv2.mjs`
-- server route: `POST /api/orca/official/chart-support/medical-mod-v2`
-- native target class: `/api21/medicalmodv2?class=01`
-- request class: `medicalmodv2`
-- target candidate/patient scope: `00001 / 00001`
-- payload: `web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json`
-- payload SHA-256: `e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618`
-- owner approval token: `OWNER_APPROVAL_PHASE4_EXECUTE_00001_ONLY_ONE_TIME_NO_FULLFLOW_NO_PHASE3_RERUN_NO_RN02_03_04_JSON_SHA_E0F34FA28177155BF19CC0476863BF540F8B1FF4D844DDF189B88AB327645618`
-- execution limit: one live Trial action only
+The owner clarified on 2026-04-23 that the preferred path is **not** a local dummy S3/MinIO server. The preferred path is a first-class non-S3 runtime profile that lets the Trial ORCA verification runtime start without initializing object storage, while object-storage-dependent features fail closed and remain explicitly out of scope.
 
 ## Goal
 
-Provide or generate required local runtime configuration through an approved non-logged path, start or confirm the repo-local modernized backend with approved ORCA Trial configuration, then run exactly one live Trial Phase4 `medicalmodv2` dummy execution through the exact safe wrapper above.
+Define and implement a repo-local object-storage-free dev/Trial runtime profile that can support ORCA Trial endpoint verification without requesting, generating, printing, or committing S3/MinIO/object-storage credentials.
+
+This is a blocker-resolution task. Do not run live Trial ORCA in the same step unless the implementation is complete, locally verified, the exact wrapper remains unchanged, and the safe runtime path can be confirmed without S3/object-storage credentials or raw artifact capture. Prefer ending this task with a verified non-S3 runtime-profile report and a follow-up prompt for the single approved Phase4 live action.
+
+## Design Requirements
+
+- The profile must be explicit and fail closed. Suggested names are `attachment.storage.mode=disabled` or an equally clear runtime profile name such as `orca-trial-no-object-storage`.
+- It must not emulate S3, start MinIO, create fake S3 credentials, or use `ATTACHMENT_STORAGE_S3_*`, `PHR_EXPORT_S3_*`, `MINIO_*`, or equivalent object-storage secret/config values.
+- Object-storage-dependent routes must fail closed with sanitized client responses when the profile is active. At minimum, attachment upload/download, patient image upload/download, and PHR export storage paths must not silently succeed.
+- Readiness/health must not expose internal object-storage detail. If readiness reports the disabled storage profile, the status must be sanitized and must not claim object-storage readiness.
+- ORCA official routes needed by the safe wrappers must not require object-storage initialization when the profile is active.
+- The implementation must update the relevant contracts/runbooks/sample configuration in the same change set, without adding real secrets.
 
 ## Allowed Actions
 
 - Confirm branch, HEAD, status, worktrees, and no unrelated unsafe repo state.
-- Read `docs/implementation/phase4-orca-trial-payloads-20260422/PHASE4_WORKER_UNBLOCKING_PLAN.md`.
-- Confirm `orca.env.local` or documented ORCA env path is present without printing values.
-- Confirm required local runtime secrets/config for backend startup are present without printing values.
-- Start the documented local runtime using `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` if the runtime is not already up and Docker is available.
-- Run health/readiness checks that do not expose secrets or internal details.
-- Run focused wrapper tests or dry-run checks if needed.
-- Run exactly one live Trial `medicalmodv2` action with:
-
-```bash
-RUN_ID=<run_id> node web-client/scripts/qa-phase4-safe-medicalmodv2.mjs \
-  --execute-approved-phase4 \
-  --sanitized-evidence-only \
-  --disable-browser-artifacts \
-  --phase4-only \
-  --payload web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json \
-  --payload-sha256 e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618
-```
-
-- Record sanitized JSON/MD evidence only.
-- Update handoff state and release-readiness docs after the live attempt or runtime blocker classification.
+- Inspect `server-modernized/`, `setup-modernized-env.sh`, `docker-compose.modernized.dev.yml`, and current runtime config tests.
+- Implement the minimal server/runtime changes needed for the object-storage-free profile.
+- Update docs under `docs/contracts/`, `docs/runbooks/`, and the roadmap package to describe the profile and its non-claims.
+- Update sample config with placeholders or disabled-mode values only if the code contract requires it.
+- Add focused tests for resolver/validator behavior, storage manager fail-closed behavior, readiness sanitization, and no S3 credential requirement in the disabled profile.
+- Run focused server tests and existing guard scripts relevant to config contracts.
+- Record sanitized evidence only.
+- Update `HANDOFF_STATE.json`, gate matrix, and write a completion report.
 
 ## Forbidden Actions
 
 - Production ORCA execution.
-- Phase3 retry.
-- fullflow.
-- acceptmodv2 mutation.
-- diseasev3 live execution.
-- subjectivesv2 live execution.
-- Request_Number `02` / `03` / `04`.
-- Mutating `00002` through `00011`.
-- Using any wrapper/action other than `web-client/scripts/qa-phase4-safe-medicalmodv2.mjs` for this live Phase4 attempt.
-- Printing or committing credentials, cookies, tokens, sessions, raw ORCA request body, raw ORCA response body, raw patient detail, raw insurance detail, or credential-bearing URL.
+- Live Trial ORCA execution before the non-S3 profile is implemented and locally verified.
+- Local dummy S3, MinIO, fake S3 credentials, or object-storage credential generation.
+- Requesting, printing, committing, or working around `ATTACHMENT_STORAGE_S3_*`, `PHR_EXPORT_S3_*`, `MINIO_*`, or equivalent values.
+- Claiming attachment storage readiness, PHR export readiness, S3 persistence, object-storage deployment readiness, production ORCA readiness, or final release readiness.
+- Raw ORCA request/response body capture.
+- Raw patient/insurance detail capture.
 - HAR, trace, video, screenshot, raw network dump, request XML, raw request/response body, or body-derived artifacts.
 - `env`, `printenv`, `set`, `history`, or `set -x`.
-- Treating HTTP 200, wrapper exit 0, dry-run, mock, precheck, `not_run`, `not_verified`, or owner-waived evidence as business success.
+- Changes under legacy `client/` or `server/`.
 
-## Business Success Criteria
+## Required Misuse Cases
 
-The live Trial Phase4 action is business success only if the sanitized wrapper summary shows all of:
+Before implementation, explicitly check at least these misuse cases:
 
-- `response.httpStatus` is 2xx.
-- `response.apiResult` is zero-like.
-- `response.businessAccepted=true`.
-- At least one endpoint-specific completion field is present in `response.completionEvidence`: information timestamp, `medicalUid`, `invoiceNumber`, or `dataId`.
-- `rawResponseBodyStored=false`, `rawPayloadStored=false`, `rawPatientOrInsuranceDetailStored=false`, and `rawArtifactsCaptured=false`.
+1. A user tries to upload/download attachments or patient images while the profile is active.
+2. Readiness or health leaks storage endpoint/configuration detail or overclaims storage readiness.
+3. A developer accidentally supplies S3/MinIO variables and the profile silently uses them.
+4. ORCA Trial wrapper execution is blocked by object-storage initialization even though the endpoint does not need storage.
 
-If those fields are absent or ambiguous, classify the result as `INCONCLUSIVE` / `notVerified` / blocker, not success.
+## Completion Criteria
 
-## Stop Conditions
-
-- Production ORCA would be required.
-- Docker/local backend remains unavailable.
-- Required local runtime secrets/config for backend startup are absent.
-- ORCA runtime config is absent or unreadable.
-- Payload SHA mismatch.
-- Raw artifact capture would be needed to decide success.
-- Target/scope ambiguity.
-- Wrapper/action drift.
-- Repeated local repair loop without new evidence.
+- The object-storage-free profile is documented and locally testable.
+- Object-storage-dependent features fail closed and are not claimed ready.
+- ORCA official wrapper prerequisites can be checked without object-storage credentials.
+- Relevant tests/checks pass.
+- Credentials captured: `false`.
+- Raw artifacts captured: `false`.
+- If live Trial ORCA is not run, create or leave an active follow-up prompt for exactly one approved Phase4 `medicalmodv2` action through `web-client/scripts/qa-phase4-safe-medicalmodv2.mjs`.
 
 ## Final Report Requirements
 
@@ -127,9 +86,10 @@ Report:
 
 - files changed
 - tests/checks run
+- whether the profile is implemented or still blocked
+- object-storage behavior in disabled profile
+- readiness/health sanitization result
 - live Trial ORCA action status
-- endpoint/target/request class
-- sanitized result and business-success classification
 - credentials captured: expected `no`
 - raw artifacts captured: expected `no`
 - next prompt status

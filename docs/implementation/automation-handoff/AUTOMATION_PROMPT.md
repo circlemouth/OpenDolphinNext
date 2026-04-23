@@ -31,6 +31,7 @@ S3 / object storage scope:
 - Do not request, generate, print, commit, or workaround `ATTACHMENT_STORAGE_S3_*`, `PHR_EXPORT_S3_*`, `MINIO_*`, or equivalent object-storage secret values.
 - If the documented runtime path cannot proceed because S3/MinIO/object-storage configuration is required, classify the current task as `skipped_s3_required_out_of_scope`, record sanitized evidence, and select the next non-S3 Work Order.
 - Do not claim attachment storage, S3 persistence, PHR export storage, or object-storage deployment readiness from this roadmap.
+- A repo-local object-storage-free dev/Trial runtime profile is allowed as blocker-resolution work if it requires no S3/MinIO/object-storage credentials, does not emulate S3, keeps attachment/patient-image/PHR storage features fail-closed, and preserves explicit non-claims for storage readiness.
 
 This standing approval applies only to:
 - WebORCA / ORCA Trial server verification
@@ -44,6 +45,7 @@ This standing approval does not apply to:
 - production patient data
 - production credentials
 - S3 / MinIO / object-storage credentials or configuration
+- local dummy S3/MinIO or fake object-storage credentials
 - raw credential capture
 - raw ORCA request/response capture
 - HAR/trace/video/screenshot/raw network capture
@@ -76,6 +78,7 @@ Current-run exhaustion policy:
 - After a skip, immediately select the next safe non-skipped Work Order.
 - Prefer docs, static analysis, unit/component tests, guard scripts, wrapper dry-runs, sanitizer/parser contract tests, package metadata checks, claim-boundary updates, and risk/gate matrix updates that do not require production ORCA, S3/object storage, raw artifacts, browser screenshots/HAR/traces/videos, or unavailable secrets.
 - If browser e2e/fullflow is blocked only because the current harness would create forbidden artifacts, skip the unsafe execution, create or update the safe-harness hardening record, and continue to non-browser static/local work in the same run.
+- If live Trial ORCA is blocked only because backend startup unnecessarily requires object-storage configuration, prefer implementing or documenting an explicit object-storage-free dev/Trial runtime profile before skipping the endpoint again. This must not use local dummy S3/MinIO or fake credentials.
 - If a Work Order requires a human business decision outside standing Trial approval, record it as pending human decision and continue to independent work that does not depend on that decision.
 
 Handoff prompt rules:
@@ -127,6 +130,7 @@ Work progression:
 - Run fullflow only after prerequisite browser and Trial ORCA gates are satisfied and safe fullflow mode exists.
 - Skip any production ORCA Work Order as out of scope; continue with Trial, browser, security, CI, packaging, rollback, and owner sign-off gates that do not require production ORCA execution.
 - Skip any S3/MinIO/object-storage-dependent Work Order as out of scope; continue with Trial, browser, security, CI, packaging, rollback, and owner sign-off gates that do not require S3/MinIO/object-storage configuration.
+- Implement or verify an explicit object-storage-free dev/Trial runtime profile when an active handoff requests it. In that profile, object-storage-dependent features must fail closed and must not be claimed ready.
 - Skip any environment-unavailable Work Order that cannot proceed in the current runtime, then continue with the next independent safe Work Order in the same run.
 - Create or update docs, matrices, risk registers, command logs, sanitized summaries, review packages, and sidecars after each completed Work Order.
 - Do not overclaim. Keep allowed/prohibited claims updated.
