@@ -129,13 +129,13 @@ class RestOrcaTransportTest {
         setField(transport, "orcaConnectionConfigStore", Mockito.mock(OrcaConnectionConfigStore.class));
         setField(transport, "configurationResolver", resolver());
 
-        assertThrows(IllegalStateException.class, () -> transport.currentSettings(null));
-        assertThrows(IllegalStateException.class, () -> transport.rawHttpClient(null));
-        assertThrows(IllegalStateException.class, () -> transport.buildOrcaUrl(null, "/api01rv2/systeminfv2"));
-        assertThrows(IllegalStateException.class, () -> transport.resolveBasicAuthHeader(null));
-        assertThrows(IllegalStateException.class, () -> transport.auditSummary(null));
-        assertThrows(IllegalStateException.class, () -> transport.reloadSettings(null));
-        assertThrows(IllegalStateException.class, () ->
+        assertMissingFacility(() -> transport.currentSettings(null));
+        assertMissingFacility(() -> transport.rawHttpClient(null));
+        assertMissingFacility(() -> transport.buildOrcaUrl(null, "/api01rv2/systeminfv2"));
+        assertMissingFacility(() -> transport.resolveBasicAuthHeader(null));
+        assertMissingFacility(() -> transport.auditSummary(null));
+        assertMissingFacility(() -> transport.reloadSettings(null));
+        assertMissingFacility(() ->
                 transport.invoke(null, OrcaEndpoint.SYSTEM_INFO, OrcaTransportRequest.post("<request/>")));
     }
 
@@ -195,5 +195,14 @@ class RestOrcaTransportTest {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private static void assertMissingFacility(Executable action) {
+        OrcaConnectionPolicyException ex = assertThrows(OrcaConnectionPolicyException.class, action);
+        assertEquals(OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING, ex.getErrorCategory());
+    }
+
+    @FunctionalInterface
+    private interface Executable extends org.junit.jupiter.api.function.Executable {
     }
 }

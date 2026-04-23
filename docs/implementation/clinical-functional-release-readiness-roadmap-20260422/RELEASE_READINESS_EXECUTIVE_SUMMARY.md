@@ -8,7 +8,7 @@ RUN_ID: `20260422T134401Z`
 
 The roadmap documentation can be completed from repo-local evidence, but one expected input filename is missing: `docs/implementation/unified-clinical-wave1-batch1-wo3-20260421/CWP01_KARTE_ORDER_PERSISTENCE_REPORT.md`. The available equivalent CWP-01 evidence is `CWP01_INTEGRATION_GATE_REPORT.md`.
 
-Since the original roadmap package, artifact-free browser chart-open/local persistence/UI clickthrough evidence, RWO-09 non-S3 static/CI evidence, the object-storage-free dev/Trial runtime profile, and RWO-06 no-live readiness/transport repair evidence have been added. Owner standing approval is present for the automation to continue Trial-backed non-S3 roadmap work. These improve Trial-backed release-readiness progress, but they do not close full prescription/order UI click-through, fullflow, live Trial business acceptance, package, or final release GO/NO-GO gates.
+Since the original roadmap package, artifact-free browser chart-open/local persistence/UI clickthrough evidence, RWO-09 non-S3 static/CI evidence, the object-storage-free dev/Trial runtime profile, RWO-06 no-live readiness/transport repair evidence, and RUN_ID `20260423T112258Z` RWO-09 release/security gate refresh evidence have been added. Owner standing approval is present for the automation to continue Trial-backed non-S3 roadmap work. These improve Trial-backed release-readiness progress, but they do not close full prescription/order UI click-through, fullflow, live Trial business acceptance, package, or final release GO/NO-GO gates.
 
 ## Functional Conclusion
 
@@ -40,6 +40,7 @@ Since the original roadmap package, artifact-free browser chart-open/local persi
 - RUN_ID `20260423T060115Z`: object-storage-free dev/Trial runtime profile implemented and focused-test verified.
 - RUN_ID `20260423T091324Z`: one approved Phase4 `medicalmodv2` Trial action executed and classified as not business accepted.
 - RUN_ID `20260423T110051Z`: no-live repair completed for disabled-storage readiness aggregation, ORCA gateway/config exception mapping, and gateway log sanitization; 23 focused server tests passed.
+- RUN_ID `20260423T112258Z`: RWO-09 non-live release/security gate refresh passed after repairing stale ORCA transport missing-facility tests; full web CI, final server static-analysis verify, guard scripts, and 6-test artifact-free safe browser suite passed.
 
 ## ORCA Connection Scope
 

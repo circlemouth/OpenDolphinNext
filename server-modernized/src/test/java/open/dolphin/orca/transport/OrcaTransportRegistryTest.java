@@ -21,11 +21,11 @@ class OrcaTransportRegistryTest {
                 60_000L,
                 resolver());
 
-        assertThrows(IllegalStateException.class, () -> registry.currentTransport(null));
-        assertThrows(IllegalStateException.class, () -> registry.currentTransport(""));
-        assertThrows(IllegalStateException.class, () -> registry.currentTransport("default"));
-        assertThrows(IllegalStateException.class, () -> registry.currentTransport("DeFaUlT"));
-        assertThrows(IllegalStateException.class, () -> registry.reloadSettings(null));
+        assertMissingFacility(() -> registry.currentTransport(null));
+        assertMissingFacility(() -> registry.currentTransport(""));
+        assertMissingFacility(() -> registry.currentTransport("default"));
+        assertMissingFacility(() -> registry.currentTransport("DeFaUlT"));
+        assertMissingFacility(() -> registry.reloadSettings(null));
     }
 
     @Test
@@ -106,5 +106,14 @@ class OrcaTransportRegistryTest {
     private static ServerConfigurationResolver resolver() {
         return TestServerConfigurationResolvers.resolver(
                 ServerConfigurationResolver.KEY_ORCA_TRANSPORT_CACHE_TTL_MS, "60000");
+    }
+
+    private static void assertMissingFacility(Executable action) {
+        OrcaConnectionPolicyException ex = assertThrows(OrcaConnectionPolicyException.class, action);
+        assertEquals(OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING, ex.getErrorCategory());
+    }
+
+    @FunctionalInterface
+    private interface Executable extends org.junit.jupiter.api.function.Executable {
     }
 }

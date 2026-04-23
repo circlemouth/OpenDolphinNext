@@ -1,0 +1,57 @@
+{
+  "runId": "20260423T112258Z",
+  "workOrder": "RWO-09",
+  "result": "RWO09_NON_S3_STATIC_GUARD_REFRESH_PASS_WITH_TRANSPORT_TEST_CONTRACT_REPAIR",
+  "branch": "master",
+  "headAtStart": "dc4f1d193",
+  "liveTrialAction": "not_run",
+  "productionOrcaAction": "not_run",
+  "s3ObjectStorageAction": "not_run",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false,
+  "fixed": [
+    "orca_transport_missing_facility_tests_now_assert_fail_closed_orca_connection_policy_exception",
+    "missing_facility_reason_code_asserted_as_facility_configuration_missing"
+  ],
+  "checks": {
+    "webGuard": "pass",
+    "webTypecheck": "pass",
+    "serverConfigContract": "pass",
+    "serverNoDirectRuntimeLookup": "pass",
+    "serverNoRuntimeDdl": "pass",
+    "serverPersistenceEntities": "pass",
+    "serverNoGeneratedArtifacts": "pass",
+    "serverDocLinks": "pass",
+    "safePlaywrightDryRun": "pass",
+    "webCi": {
+      "result": "pass",
+      "testFiles": 197,
+      "testsPassed": 1331,
+      "testsSkipped": 2,
+      "build": "pass_with_existing_chunk_size_warning"
+    },
+    "initialServerStaticAnalysisVerify": {
+      "result": "fail",
+      "failureClass": "stale_transport_test_contract",
+      "failures": 2
+    },
+    "focusedTransportTestsAfterRepair": {
+      "result": "pass",
+      "tests": 11
+    },
+    "finalServerStaticAnalysisVerify": {
+      "result": "pass",
+      "unitTests": 972,
+      "unitTestsSkipped": 3,
+      "integrationTests": 9,
+      "spotbugsBugCount": 0
+    },
+    "safeBrowserNoArtifacts": {
+      "result": "pass",
+      "tests": 6,
+      "forbiddenRetainedArtifacts": 0
+    }
+  },
+  "claimBoundary": "Non-live RWO-09 release/security guard refresh only; not live Trial business acceptance, production ORCA readiness, S3/object-storage readiness, fullflow success, or final release readiness.",
+  "recommendedNextTask": "Continue RWO-09/RWO-11 package, rollback, and final Trial-backed non-S3 summary work; require fresh owner approval before any new live Trial mutation."
+}

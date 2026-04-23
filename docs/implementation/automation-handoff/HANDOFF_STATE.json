@@ -9,7 +9,7 @@
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T11:00:51Z",
+  "lastUpdated": "2026-04-23T11:33:21Z",
   "latestRwo06Phase4Medicalmodv2LiveInvestigation": {
     "runId": "20260423T100216Z",
     "workOrder": "RWO-06",
@@ -67,6 +67,49 @@
     },
     "claimBoundary": "No-live root-cause repair only; not live Trial medicalmodv2 business acceptance, production ORCA readiness, S3/object-storage readiness, fullflow success, or final release readiness.",
     "recommendedNextTask": "Proceed to independent non-live roadmap work, or require fresh explicit owner approval before any future medicalmodv2 live mutation.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestRwo09NonS3StaticGuardRefresh": {
+    "runId": "20260423T112258Z",
+    "workOrder": "RWO-09",
+    "result": "RWO09_NON_S3_STATIC_GUARD_REFRESH_PASS_WITH_TRANSPORT_TEST_CONTRACT_REPAIR",
+    "evidence": "docs/implementation/rwo09-non-s3-static-guard-refresh-20260423T112258Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-non-s3-static-guard-refresh-20260423T112258Z/summary.sanitized.json",
+    "liveTrialAction": "not_run",
+    "productionOrcaAction": "not_run",
+    "s3ObjectStorageAction": "not_run",
+    "fixed": [
+      "orca_transport_missing_facility_tests_now_assert_fail_closed_orca_connection_policy_exception",
+      "missing_facility_reason_code_asserted_as_facility_configuration_missing"
+    ],
+    "checks": {
+      "webCi": {
+        "result": "pass",
+        "testFiles": 197,
+        "testsPassed": 1331,
+        "testsSkipped": 2,
+        "build": "pass_with_existing_chunk_size_warning"
+      },
+      "focusedTransportTestsAfterRepair": {
+        "result": "pass",
+        "tests": 11
+      },
+      "finalServerStaticAnalysisVerify": {
+        "result": "pass",
+        "unitTests": 972,
+        "unitTestsSkipped": 3,
+        "integrationTests": 9,
+        "spotbugsBugCount": 0
+      },
+      "safeBrowserNoArtifacts": {
+        "result": "pass",
+        "tests": 6,
+        "forbiddenRetainedArtifacts": 0
+      }
+    },
+    "claimBoundary": "Non-live RWO-09 release/security guard refresh only; not live Trial business acceptance, production ORCA readiness, S3/object-storage readiness, fullflow success, or final release readiness.",
+    "recommendedNextTask": "Continue RWO-09/RWO-11 package, rollback, and final Trial-backed non-S3 summary work; require fresh owner approval before any new live Trial mutation.",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   },
