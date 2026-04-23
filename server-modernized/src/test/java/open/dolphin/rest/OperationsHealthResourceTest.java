@@ -2,6 +2,8 @@ package open.dolphin.rest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import jakarta.persistence.EntityManager;
@@ -176,8 +178,10 @@ class OperationsHealthResourceTest {
 
         Response response = resource.readiness();
 
-        assertThat(response.getStatus()).isEqualTo(503);
+        assertThat(response.getStatus()).isEqualTo(200);
+        verify(attachmentStorageManager, never()).isBackendReachable();
         OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getStatus()).isEqualTo("UP");
         assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ATTACHMENT_STORAGE).getStatus())
                 .isEqualTo("DISABLED");
         assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ATTACHMENT_STORAGE).getMode())
@@ -188,6 +192,34 @@ class OperationsHealthResourceTest {
         assertThat(rendered).doesNotContain("bucket");
         assertThat(rendered).doesNotContain("endpoint");
         assertThat(rendered).doesNotContain("minio");
+    }
+
+    @Test
+    void readinessFailsClosedWhenPatientImagesEnabledButAttachmentStorageIsDisabled() throws Exception {
+        setField(OperationsReadinessEvaluator.class, evaluator, "configurationResolver",
+                TestServerConfigurationResolvers.resolver(
+                        ServerConfigurationResolver.KEY_PATIENT_IMAGES_ENABLED, "true"));
+        when(em.createNativeQuery(anyString())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(1);
+        when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn("F001");
+        ((StubRestOrcaTransport) restOrcaTransport).probeResult =
+                new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.DISABLED);
+        when(pvtService.workerHealthBody()).thenReturn(Map.of(
+                "status", "UP",
+                "reasonCodes", List.of()));
+
+        Response response = resource.readiness();
+
+        assertThat(response.getStatus()).isEqualTo(503);
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getStatus()).isEqualTo("DOWN");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ATTACHMENT_STORAGE).getStatus())
+                .isEqualTo("DISABLED");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_PATIENT_IMAGES).getStatus())
+                .isEqualTo("DOWN");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_PATIENT_IMAGES).getReasonCode())
+                .isEqualTo("patient_images_storage_unavailable");
     }
 
     @Test

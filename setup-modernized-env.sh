@@ -52,16 +52,28 @@ load_orca_env_file() {
       return 1
     fi
     log "Loading ORCA env from $env_file..."
+    local had_allexport=0
+    [[ "$-" == *a* ]] && had_allexport=1
+    set -a
     # shellcheck disable=SC1090
     source "$env_file"
+    if [[ "$had_allexport" != "1" ]]; then
+      set +a
+    fi
     return 0
   fi
 
   for candidate in "$repo_local" "$home_local"; do
     if [[ -r "$candidate" ]]; then
       log "Loading ORCA env from $candidate..."
+      local had_allexport=0
+      [[ "$-" == *a* ]] && had_allexport=1
+      set -a
       # shellcheck disable=SC1090
       source "$candidate"
+      if [[ "$had_allexport" != "1" ]]; then
+        set +a
+      fi
       return 0
     fi
   done
@@ -673,11 +685,11 @@ EOF
 
 start_modernized_server() {
   log "Starting Modernized Server..."
-  local profile_args=()
   if [[ "$OBJECT_STORAGE_FREE_RUNTIME" != "1" ]]; then
-    profile_args=(--profile object-storage)
+    docker compose -f docker-compose.modernized.dev.yml -f "$COMPOSE_OVERRIDE_FILE" --profile object-storage up -d --build --force-recreate
+    return
   fi
-  docker compose -f docker-compose.modernized.dev.yml -f "$COMPOSE_OVERRIDE_FILE" "${profile_args[@]}" up -d --build --force-recreate
+  docker compose -f docker-compose.modernized.dev.yml -f "$COMPOSE_OVERRIDE_FILE" up -d --build --force-recreate
 }
 
 ensure_orca_db_bridge() {

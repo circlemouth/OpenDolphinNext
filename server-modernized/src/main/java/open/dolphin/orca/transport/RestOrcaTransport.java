@@ -256,7 +256,9 @@ public class RestOrcaTransport implements OrcaTransport {
             }
             return normalized;
         } catch (IllegalArgumentException ex) {
-            throw new IllegalStateException("ORCA facilityId is not resolved");
+            throw new OrcaConnectionPolicyException(
+                    OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING,
+                    "ORCA facility configuration is not available");
         }
     }
 

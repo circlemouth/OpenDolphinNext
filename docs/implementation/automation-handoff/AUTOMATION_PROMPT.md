@@ -84,6 +84,7 @@ Every run:
 11. If other non-S3 credentials/config are absent due to the local environment, skip that task as `skipped_environment_unavailable_missing_runtime_secret_or_config`; do not ask for or print values.
 12. If S3/MinIO/object-storage credentials/config are required, skip the current task as `skipped_s3_required_out_of_scope` and continue with the next non-S3 Work Order.
 13. Continue within the same run after every completed task, skipped out-of-scope task, or skipped environment-unavailable task. Stop only when no safe unblocked task remains, the run time budget is exhausted, or a non-skippable safety stop condition is reached.
+14. If any tracked source/doc/evidence file or new repo evidence artifact is changed, run the relevant verification, then commit the current roadmap/handoff-scoped changes before reporting. Do not commit local runtime secret files, raw ORCA bodies, HAR/trace/video/screenshot/raw network artifacts, or unrelated user changes.
 
 Current-run exhaustion policy:
 - Do all currently possible repo-local work in priority order during the same run.

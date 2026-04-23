@@ -24,6 +24,12 @@ Priority order:
 
 If a handoff prompt is active, the next worker must treat it as the next task unless it conflicts with global safety rules. If a conflict exists, the stricter rule wins and the conflict must be reported.
 
+## Commit Rule
+
+Every worker that changes tracked or newly generated repo evidence files must commit those changes before reporting completion. The commit must include only reviewed, relevant roadmap/handoff/source changes, must not include local runtime secret files or forbidden raw artifacts, and must be created after the relevant tests/checks pass or after a documented sanitized skip record is written.
+
+If the worktree contains unrelated user or worker changes, do not revert them. Either leave unrelated changes uncommitted with a clear report, or include only the changes that are part of the current roadmap/handoff task when they can be safely staged separately.
+
 ## Status Values
 
 | Status | Meaning |

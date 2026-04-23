@@ -167,7 +167,9 @@ final class OrcaTransportRegistry {
             }
             return normalized;
         } catch (IllegalArgumentException ex) {
-            throw new IllegalStateException("ORCA facilityId is required");
+            throw new OrcaConnectionPolicyException(
+                    OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING,
+                    "ORCA facility configuration is not available");
         }
     }
 

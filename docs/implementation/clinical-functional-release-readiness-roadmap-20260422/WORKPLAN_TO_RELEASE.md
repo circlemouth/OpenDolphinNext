@@ -26,6 +26,12 @@ When a Work Order is skipped, the same run should continue with docs, static gua
 
 Only stop the run when no independent safe task remains, the run time budget is exhausted, the repo state is unsafe, raw artifacts would be required to decide success, or the next action requires a non-skippable human decision outside standing Trial approval.
 
+## Commit Requirement
+
+Each worker run that changes source, docs, gate matrices, handoff state, sanitized evidence, review-package metadata, or roadmap summaries must commit the roadmap-scoped changes before returning the final report. Commit only after relevant verification has passed or after a sanitized skip/blocker record has been written.
+
+Do not commit approved local runtime secret files, ORCA credentials, S3/MinIO/object-storage values, raw ORCA bodies, HAR/trace/video/screenshot/raw network artifacts, or unrelated user changes. If unrelated worktree changes are present and cannot be safely staged apart from the current task, leave them uncommitted and report the reason.
+
 ## Recommended Sequence
 
 1. RWO-01: owner accepts this roadmap and claim boundaries.

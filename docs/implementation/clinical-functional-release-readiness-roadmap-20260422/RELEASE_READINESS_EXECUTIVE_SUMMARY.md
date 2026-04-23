@@ -8,14 +8,14 @@ RUN_ID: `20260422T134401Z`
 
 The roadmap documentation can be completed from repo-local evidence, but one expected input filename is missing: `docs/implementation/unified-clinical-wave1-batch1-wo3-20260421/CWP01_KARTE_ORDER_PERSISTENCE_REPORT.md`. The available equivalent CWP-01 evidence is `CWP01_INTEGRATION_GATE_REPORT.md`.
 
-Since the original roadmap package, artifact-free browser chart-open/local persistence/UI clickthrough evidence and RWO-09 non-S3 static/CI evidence have been added. Owner standing approval is present for the automation to continue Trial-backed non-S3 roadmap work. RUN_ID `20260423T054833Z` also records the owner direction to unblock Trial ORCA with an object-storage-free dev/Trial runtime profile rather than dummy S3/MinIO. These improve Trial-backed release-readiness progress, but they do not close full prescription/order UI click-through, fullflow, live Trial expansion, package, or final release GO/NO-GO gates.
+Since the original roadmap package, artifact-free browser chart-open/local persistence/UI clickthrough evidence, RWO-09 non-S3 static/CI evidence, the object-storage-free dev/Trial runtime profile, and RWO-06 no-live readiness/transport repair evidence have been added. Owner standing approval is present for the automation to continue Trial-backed non-S3 roadmap work. These improve Trial-backed release-readiness progress, but they do not close full prescription/order UI click-through, fullflow, live Trial business acceptance, package, or final release GO/NO-GO gates.
 
 ## Functional Conclusion
 
 - Prescription input: not release-complete; local/server/component/static evidence plus partial artifact-free browser local persistence evidence.
 - Generic order input: not release-complete; local/server/component/static evidence plus partial artifact-free browser local persistence evidence.
 - Electronic chart fullflow: `not_run`.
-- ORCA live: limited prior Trial `acceptmodv2` `00001` evidence only; WO-8 did not execute live ORCA.
+- ORCA live: limited prior Trial `acceptmodv2` `00001` evidence plus one non-accepted Phase4 `medicalmodv2` Trial attempt. RUN_ID `20260423T110051Z` repaired no-live readiness/transport handling, but did not retry live Trial.
 - Production ORCA readiness: out of scope for this Trial-only roadmap and not claimed.
 - S3/object-storage readiness: out of scope for this roadmap and not claimed.
 
@@ -23,8 +23,8 @@ Since the original roadmap package, artifact-free browser chart-open/local persi
 
 1. Full UI click-through browser evidence remains partial for Clinical Wave 1 workflows, especially prescription and representative order editing.
 2. Fullflow is missing.
-3. `medicalmodv2`, `diseasev3`, and `subjectivesv2` live verification is missing.
-4. Trial-scope non-S3 runtime config/secrets and deployment readiness are not fully verified; the object-storage-free dev/Trial runtime profile is planned but not implemented.
+3. `medicalmodv2` has no live business acceptance; the consumed one-shot attempt must not be repeated without fresh explicit owner approval. `diseasev3` and `subjectivesv2` live verification is missing.
+4. Trial-scope non-S3 runtime config/secrets and deployment readiness are still not fully verified, though the object-storage-free dev/Trial runtime profile and no-live readiness/transport repair are now implemented.
 5. Owner standing approval to proceed is present, but final release GO/NO-GO is not recorded.
 6. Expected CWP-01 filename is missing and should be accepted or corrected by owner review.
 
@@ -37,6 +37,9 @@ Since the original roadmap package, artifact-free browser chart-open/local persi
 - RUN_ID `20260423T034854Z`: RWO-10/RWO-11 non-claim boundary refreshed. Production ORCA remains `not_applicable_trial_only`; S3/object storage remains `not_applicable_out_of_scope`.
 - RUN_ID `20260423T035517Z`: owner standing approval is recorded as present for Trial-backed non-S3 roadmap continuation. Final release GO/NO-GO remains separate and not recorded.
 - RUN_ID `20260423T054833Z`: active handoff created for an object-storage-free dev/Trial runtime profile; dummy S3/MinIO remains forbidden and storage readiness remains a non-claim.
+- RUN_ID `20260423T060115Z`: object-storage-free dev/Trial runtime profile implemented and focused-test verified.
+- RUN_ID `20260423T091324Z`: one approved Phase4 `medicalmodv2` Trial action executed and classified as not business accepted.
+- RUN_ID `20260423T110051Z`: no-live repair completed for disabled-storage readiness aggregation, ORCA gateway/config exception mapping, and gateway log sanitization; 23 focused server tests passed.
 
 ## ORCA Connection Scope
 

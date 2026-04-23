@@ -1,72 +1,80 @@
 # NEXT_WORKER_PROMPT
 
-status: active
-created_at: 2026-04-23T06:01:15Z
-last_checked_at: 2026-04-23T08:01:50Z
+status: completed
+created_at: 2026-04-23T10:02:16Z
+last_checked_at: 2026-04-23T11:00:51Z
 source_work_order: RWO-06
-blocker_id: phase4-medicalmodv2-live-trial-ready
+blocker_id: phase4-medicalmodv2-live-transport-rejected-investigation
 priority: high
 supersedes:
-- RWO-06A non-S3 runtime profile handoff from 2026-04-23T05:48:33Z
+- RWO-06 Phase4 medicalmodv2 live Trial ready handoff from 2026-04-23T06:01:15Z
 
 ## Context
 
-RUN_ID `20260423T060115Z` implemented and locally verified the object-storage-free WebORCA Trial dev/runtime profile:
+RUN_ID `20260423T091324Z` executed the single approved Phase4 `medicalmodv2` WebORCA Trial action through `web-client/scripts/qa-phase4-safe-medicalmodv2.mjs`.
 
-- `OPENDOLPHIN_RUNTIME_PROFILE=orca-trial-no-object-storage`
-- `attachment.storage.mode=disabled`
+The action was sanitized and classified, but it was not business accepted:
 
-The implementation keeps object-storage features fail-closed, rejects S3/MinIO/PHR S3 configuration mixing, keeps production-like startup S3-only, and documents the non-claim boundary.
-
-Phase4 `medicalmodv2` still has not been run live through this new profile. The safe wrapper and approved payload path already exist:
-
-- wrapper: `web-client/scripts/qa-phase4-safe-medicalmodv2.mjs`
 - endpoint: `POST /api/orca/official/chart-support/medical-mod-v2`
-- payload package: `web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json`
+- request class: `medicalmodv2`
+- target: `00001 / 00001`
+- payload SHA-256: `e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618`
+- live Trial action: `executed_once`
+- verdict: `live_trial_not_accepted`
+- response classification: `transportRejected`
+- business accepted: `false`
 
-RUN_ID `20260423T080150Z` rechecked this handoff after owner clarification that WebORCA / ORCA Trial should be used. Trial remains the only allowed ORCA target, but live traffic was not sent because the approved local non-S3 runtime path still lacked `MODERNIZED_POSTGRES_PASSWORD`, `PHR_EXPORT_SIGNING_SECRET`, and `FACTOR2_AES_KEY_B64`. The payload hash, wrapper dry-run, evidence contract tests, and server guard scripts passed with no credential or raw artifact capture.
-
-Owner clarification after that run: because the database/backend runtime is local, the automation may generate missing local-only dev/Trial runtime values to unblock local startup when they are not external credentials and can be safely regenerated for this machine. Known allowed examples are `MODERNIZED_POSTGRES_PASSWORD`, `PHR_EXPORT_SIGNING_SECRET`, and `FACTOR2_AES_KEY_B64`. Values must be generated with an OS-backed cryptographic random source when secret, stored only in an approved gitignored local runtime file such as `./orca.env.local` or an already configured readable local `ORCA_ENV_FILE`, never printed, never committed, never included in evidence, and never used to justify object-storage readiness.
+RUN_ID `20260423T100216Z` investigated without sending another live mutation. Sanitized readiness showed database `UP`, ORCA `DOWN` with `orca_probe_failed`, and attachment storage `DISABLED` under the non-S3 profile. The server container was running but Docker health was unhealthy. A safety incident occurred during investigation: one command printed ORCA Trial Basic values from ignored generated runtime config to terminal output. The values were not written to tracked evidence.
 
 ## Goal
 
-Run exactly one approved Phase4 `medicalmodv2` live Trial action through the safe wrapper. If the only missing runtime prerequisites are approved local-only dev/Trial runtime values, generate and store them safely first, then start/verify the non-S3 runtime path.
-
-If any other runtime secrets/config are missing, record `skipped_environment_unavailable_missing_runtime_secret_or_config` and continue to the next independent safe non-S3 Work Order. Do not request, print, generate, or workaround non-approved secret values.
+Perform no-live root-cause investigation and repair for the Phase4 `medicalmodv2` `transportRejected` result. Prevent accidental repeat live mutation until the no-live readiness/transport path is understood and fixed or reclassified.
 
 ## Allowed Actions
 
 - Confirm branch, HEAD, status, worktrees, and no unrelated unsafe repo state.
-- Confirm the non-S3 runtime profile implementation evidence in `docs/implementation/rwo06a-non-s3-runtime-profile-20260423T060115Z/FINAL_REPORT.md`.
-- Generate missing local-only dev/Trial runtime values when they are needed for local backend startup, using an OS-backed cryptographic random source for secrets and storing them only in an approved gitignored local runtime file without printing values. Known allowed examples are `MODERNIZED_POSTGRES_PASSWORD`, `PHR_EXPORT_SIGNING_SECRET`, and `FACTOR2_AES_KEY_B64`.
-- Use `OPENDOLPHIN_RUNTIME_PROFILE=orca-trial-no-object-storage` for local runtime startup if startup is needed.
-- Run the exact safe wrapper `web-client/scripts/qa-phase4-safe-medicalmodv2.mjs` once when prerequisites are available.
-- Record only sanitized wrapper summaries and business-success classification.
-- Update HANDOFF_STATE.json, release gate matrix, and a final sanitized evidence report.
+- Read only sanitized evidence under `docs/implementation/rwo06-phase4-medicalmodv2-live-20260423T091324Z/`.
+- Run static checks, unit tests, mapper tests, wrapper dry-runs, and status-only health/readiness probes that do not send a live mutation and do not print credentials.
+- Investigate and, if repo-local, fix non-S3 readiness aggregation for `attachment.storage.mode=disabled`.
+- Investigate and, if repo-local, fix ORCA gateway exception mapping for `OrcaChartSupportResource.medicalModV2` so transport failures produce sanitized `502` or `503`, not ambiguous `500`.
+- Update HANDOFF_STATE.json, release gate matrix, and sanitized evidence after changes.
 
 ## Forbidden Actions
 
+- Any additional live `medicalmodv2` mutation under the completed one-shot handoff.
 - Production ORCA execution.
-- More than one live `medicalmodv2` action in this handoff.
 - S3/MinIO/object-storage setup, dummy S3, fake credentials, or object-storage readiness claims.
-- Requesting, printing, committing, or working around `ATTACHMENT_STORAGE_S3_*`, `PHR_EXPORT_S3_*`, `MINIO_*`, ORCA credentials, production credentials, external-service passwords/tokens, cookies, session IDs, Authorization headers, or raw ORCA bodies.
-- Generating ORCA Trial credentials, production credentials, S3/MinIO/object-storage secrets, external-service credentials, cookies, sessions, Authorization headers, CSRF values, patient/insurance data, or any value whose local-only classification is ambiguous.
-- Overwriting existing non-empty local runtime values without a sanitized stop record.
+- Printing, requesting, committing, or working around ORCA credentials, production credentials, external-service passwords/tokens, cookies, session IDs, Authorization headers, CSRF values, or raw ORCA bodies.
+- Reading or printing generated runtime files that may contain credentials except through presence-only/sanitized classification.
 - HAR, trace, video, screenshot, raw network dump, request XML, raw request/response body, or body-derived artifacts.
 - `env`, `printenv`, `set`, `history`, or `set -x`.
 - Changes under legacy `client/` or `server/`.
 
 ## Completion Criteria
 
-- Either one live Trial `medicalmodv2` action is executed through the safe wrapper and classified with endpoint-specific parsed business criteria, or the task is skipped with sanitized environment-unavailable evidence.
-- Credentials captured: `false`.
+- No additional live Trial mutation is sent.
+- Root cause is either fixed with focused no-live tests or classified with sanitized evidence and a precise next action.
+- Credentials printed/captured in the new run: `false`.
 - Raw artifacts captured: `false`.
 - No production ORCA, S3/MinIO/object-storage, or final release readiness claim.
 
+## Completion Result
+
+RUN_ID `20260423T110051Z` completed this no-live handoff.
+
+- live Trial mutation: `not_run`
+- repair result: `RWO06_PHASE4_MEDICALMODV2_NO_LIVE_REPAIR_COMPLETE`
+- readiness fix: `attachmentStorage=DISABLED` remains a sanitized non-claim but is no longer readiness-blocking when storage-dependent features are disabled
+- fail-closed guard: patient image readiness remains `DOWN` if patient images are enabled while attachment storage is disabled
+- transport mapping fix: ORCA connection policy failures and wrapped ORCA gateway failures map to sanitized gateway envelopes instead of ambiguous internal errors
+- focused verification: 23 server tests passed
+- evidence: `docs/implementation/rwo06-phase4-medicalmodv2-no-live-repair-20260423T110051Z/FINAL_REPORT.md`
+
+Do not run another `medicalmodv2` live mutation without fresh explicit owner approval for a new live attempt.
+
 ## Stop Conditions
 
-- Non-Trial endpoint detected.
-- Raw artifact capture would be required to decide success.
-- Required non-S3 runtime secret/config is absent, cannot be safely generated under the local-only policy, and no independent safe task remains.
-- S3/MinIO/object-storage configuration becomes required.
+- A diagnosis would require raw ORCA request/response bodies or forbidden browser/network artifacts.
+- Another live `medicalmodv2` mutation would be required before no-live fixes/tests.
 - Target/scope ambiguity or parser ambiguity.
+- Any command would print or capture credentials.

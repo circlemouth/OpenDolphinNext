@@ -74,9 +74,10 @@ public class OperationsReadinessEvaluator {
         boolean databaseReady = checkDatabase(checks);
         boolean orcaReady = checkOrca(checks);
         boolean orcaPushReady = checkOrcaPush(checks);
-        boolean storageReady = checkAttachmentStorage(checks);
+        boolean storageAvailable = checkAttachmentStorage(checks);
+        boolean storageReady = storageAvailable || isDisabled(checks.get(CHECK_ATTACHMENT_STORAGE));
         boolean pvtQueueReady = checkPvtQueue(checks);
-        boolean patientImagesReady = checkPatientImages(checks, storageReady);
+        boolean patientImagesReady = checkPatientImages(checks, storageAvailable);
 
         boolean overallReady = databaseReady && orcaReady && orcaPushReady && storageReady && pvtQueueReady && patientImagesReady;
         OperationsReadinessResponse body = new OperationsReadinessResponse();
@@ -253,6 +254,10 @@ public class OperationsReadinessEvaluator {
             checks.put(CHECK_PVT_QUEUE, detail);
             return false;
         }
+    }
+
+    private boolean isDisabled(OperationsReadinessCheck check) {
+        return check != null && STATUS_DISABLED.equalsIgnoreCase(check.getStatus());
     }
 
     private boolean checkPatientImages(Map<String, OperationsReadinessCheck> checks, boolean attachmentStorageReady) {

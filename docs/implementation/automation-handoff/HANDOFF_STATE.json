@@ -1,15 +1,75 @@
 {
-  "status": "active",
+  "status": "completed",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06",
-  "blockerId": "phase4-medicalmodv2-live-trial-ready",
+  "blockerId": "phase4-medicalmodv2-live-transport-rejected-investigation",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T09:04:13Z",
+  "lastUpdated": "2026-04-23T11:00:51Z",
+  "latestRwo06Phase4Medicalmodv2LiveInvestigation": {
+    "runId": "20260423T100216Z",
+    "workOrder": "RWO-06",
+    "result": "RWO06_PHASE4_MEDICALMODV2_EXECUTED_ONCE_NOT_ACCEPTED_INVESTIGATION_REQUIRED",
+    "previousLiveRunId": "20260423T091324Z",
+    "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+    "endpoint": "POST /api/orca/official/chart-support/medical-mod-v2",
+    "requestClass": "medicalmodv2",
+    "target": "00001/00001",
+    "payloadSha256": "e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618",
+    "evidence": "docs/implementation/rwo06-phase4-medicalmodv2-live-20260423T091324Z/FINAL_REPORT.md",
+    "sanitizedResult": {
+      "liveTrialAction": "executed_once",
+      "verdict": "live_trial_not_accepted",
+      "httpStatus": 500,
+      "responseClassification": "transportRejected",
+      "businessAccepted": false
+    },
+    "readinessStatusOnly": {
+      "livenessHttpStatus": 200,
+      "readinessHttpStatus": 503,
+      "database": "UP",
+      "orca": "DOWN:orca_probe_failed",
+      "attachmentStorage": "DISABLED:attachment_storage_disabled",
+      "serverContainerHealth": "unhealthy"
+    },
+    "nextPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "recommendedNextTask": "No-live investigation and focused fixes/tests for non-S3 readiness aggregation and ORCA gateway exception mapping before any future owner-approved live attempt.",
+    "credentialsCaptured": true,
+    "credentialsCaptureNote": "One investigation command printed ORCA Trial Basic values from ignored generated runtime config to terminal output; values were not committed or written to evidence.",
+    "rawArtifactsCaptured": false
+  },
+  "latestRwo06Phase4Medicalmodv2NoLiveRepair": {
+    "runId": "20260423T110051Z",
+    "workOrder": "RWO-06",
+    "result": "RWO06_PHASE4_MEDICALMODV2_NO_LIVE_REPAIR_COMPLETE",
+    "previousLiveRunId": "20260423T091324Z",
+    "sourceBlockerId": "phase4-medicalmodv2-live-transport-rejected-investigation",
+    "evidence": "docs/implementation/rwo06-phase4-medicalmodv2-no-live-repair-20260423T110051Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06-phase4-medicalmodv2-no-live-repair-20260423T110051Z/summary.sanitized.json",
+    "liveTrialAction": "not_run",
+    "endpoint": "POST /api/orca/official/chart-support/medical-mod-v2",
+    "requestClass": "medicalmodv2",
+    "target": "00001/00001",
+    "fixed": [
+      "attachment_storage_disabled_non_blocking_for_non_s3_readiness_when_storage_dependent_features_are_disabled",
+      "patient_images_enabled_still_fails_closed_when_attachment_storage_is_disabled",
+      "orca_connection_policy_failures_map_to_sanitized_503_gateway_envelope",
+      "wrapped_orca_gateway_failures_map_to_sanitized_gateway_envelope_without_raw_target_material",
+      "orca_gateway_5xx_logging_avoids_exception_stack_material"
+    ],
+    "tests": {
+      "focusedServerTests": 23,
+      "result": "pass"
+    },
+    "claimBoundary": "No-live root-cause repair only; not live Trial medicalmodv2 business acceptance, production ORCA readiness, S3/object-storage readiness, fullflow success, or final release readiness.",
+    "recommendedNextTask": "Proceed to independent non-live roadmap work, or require fresh explicit owner approval before any future medicalmodv2 live mutation.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "latestOwnerNonS3RuntimeDirection": {
     "runId": "20260423T054833Z",
     "result": "NON_S3_RUNTIME_PROFILE_DIRECTION_RECORDED",
@@ -576,6 +636,8 @@
     "RUN_ID 20260423T060115Z implemented and focused-test verified the object-storage-free dev/Trial runtime profile with attachment.storage.mode=disabled, setup profile orca-trial-no-object-storage, fail-closed storage behavior, readiness sanitization, and no S3/MinIO/object-storage credential capture.",
     "RUN_ID 20260423T060115Z replaced NEXT_WORKER_PROMPT.md with the narrow follow-up for exactly one Phase4 medicalmodv2 live Trial action through web-client/scripts/qa-phase4-safe-medicalmodv2.mjs if non-S3 runtime prerequisites are available.",
     "RUN_ID 20260423T070049Z skipped the RWO-06 Phase4 medicalmodv2 live Trial action as skipped_environment_unavailable_missing_runtime_secret_or_config because required non-S3 local runtime inputs were absent; the approved payload hash, wrapper syntax, wrapper dry-run, and Phase4 evidence contract tests passed, with no credentials or raw artifacts captured.",
-    "RUN_ID 20260423T080150Z rechecked the same Trial-only RWO-06 handoff after owner clarification to use WebORCA / ORCA Trial. Trial remains the only target, but live traffic was not sent because MODERNIZED_POSTGRES_PASSWORD, PHR_EXPORT_SIGNING_SECRET, and FACTOR2_AES_KEY_B64 were still absent from approved local runtime paths. Payload hash, wrapper dry-run, evidence contract tests, and server guard scripts passed with no credentials or raw artifacts captured."
+    "RUN_ID 20260423T080150Z rechecked the same Trial-only RWO-06 handoff after owner clarification to use WebORCA / ORCA Trial. Trial remains the only target, but live traffic was not sent because MODERNIZED_POSTGRES_PASSWORD, PHR_EXPORT_SIGNING_SECRET, and FACTOR2_AES_KEY_B64 were still absent from approved local runtime paths. Payload hash, wrapper dry-run, evidence contract tests, and server guard scripts passed with no credentials or raw artifacts captured.",
+    "RUN_ID 20260423T100216Z recorded that RUN_ID 20260423T091324Z consumed the single approved Phase4 medicalmodv2 live Trial action and classified it as live_trial_not_accepted / transportRejected / businessAccepted=false. The next active handoff is no-live investigation only; do not repeat live medicalmodv2 without new explicit approval. During investigation one command printed ORCA Trial Basic values from ignored generated runtime config to terminal output; values were not committed or written to evidence.",
+    "RUN_ID 20260423T110051Z completed the RWO-06 no-live handoff without another live Trial mutation. Disabled attachment storage is no longer overall-readiness-blocking in the non-S3 profile when storage-dependent features are disabled, patient image readiness still fails closed when enabled without attachment storage, ORCA connection policy/gateway failures map to sanitized gateway envelopes, gateway 5xx logging avoids raw exception stack material, and 23 focused server tests passed. Future medicalmodv2 live mutation still requires fresh explicit owner approval."
   ]
 }

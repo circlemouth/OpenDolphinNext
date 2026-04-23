@@ -11,6 +11,7 @@ import jakarta.ws.rs.WebApplicationException;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
+import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
@@ -21,6 +22,7 @@ import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoRequest;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetRequest;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetResponse;
+import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
 import org.junit.jupiter.api.Test;
 
 class OrcaChartSupportResourceTest {
@@ -262,6 +264,24 @@ class OrcaChartSupportResourceTest {
         assertNull(response.getEntries().get(0).getIcMoney());
     }
 
+    @Test
+    void medicalModV2PropagatesTransportPolicyFailureForSanitizedMapperHandling() {
+        CapturingTransport transport = new CapturingTransport(new OrcaConnectionPolicyException(
+                "facility_configuration_missing",
+                "ORCA facility configuration is not available"));
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+
+        OrcaConnectionPolicyException exception = assertThrows(
+                OrcaConnectionPolicyException.class,
+                () -> resource.medicalModV2(buildRequest(), newMedicalModPayload()));
+
+        assertEquals("facility_configuration_missing", exception.getErrorCategory());
+        assertEquals(OrcaEndpoint.MEDICAL_MOD, transport.endpoint());
+        assertTrue(transport.requestXml().contains("<Patient_ID type=\"string\">12345</Patient_ID>"));
+        assertTrue(transport.requestXml().contains("<Request_Number type=\"string\">01</Request_Number>"));
+    }
+
     private static HttpServletRequest buildRequest() {
         return (HttpServletRequest) Proxy.newProxyInstance(
                 OrcaChartSupportResourceTest.class.getClassLoader(),
@@ -284,10 +304,34 @@ class OrcaChartSupportResourceTest {
                 });
     }
 
+    private static ChartSupportMedicalModV2Request newMedicalModPayload() {
+        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
+        payload.setPatientId("12345");
+        payload.setPerformDate("2026-03-22T08:00:00");
+        payload.setDepartmentCode("01");
+        payload.setPhysicianCode("10001");
+        payload.setInsuranceCombinationNumber("0001");
+        payload.setVoucherNumber("1234");
+        payload.setSequentialNumber("1");
+        payload.setClassCode("01");
+        ChartSupportMedicalModV2Request.MedicalInformation information =
+                new ChartSupportMedicalModV2Request.MedicalInformation();
+        information.setMedicalClass("120");
+        information.setMedicalClassNumber("1");
+        ChartSupportMedicalModV2Request.Medication medication = new ChartSupportMedicalModV2Request.Medication();
+        medication.setCode("120000001");
+        medication.setName("test-medical");
+        medication.setNumber("1");
+        information.setMedications(List.of(medication));
+        payload.setMedicalInformation(List.of(information));
+        return payload;
+    }
+
     private static final class CapturingTransport implements OrcaTransport {
         private String requestXml;
         private String requestNumber;
         private final String responseXml;
+        private final RuntimeException failure;
         private OrcaEndpoint endpoint;
 
         CapturingTransport() {
@@ -307,6 +351,12 @@ class OrcaChartSupportResourceTest {
 
         CapturingTransport(String responseXml) {
             this.responseXml = responseXml;
+            this.failure = null;
+        }
+
+        CapturingTransport(RuntimeException failure) {
+            this.responseXml = null;
+            this.failure = failure;
         }
 
         @Override
@@ -314,6 +364,9 @@ class OrcaChartSupportResourceTest {
             this.endpoint = endpoint;
             requestXml = request.getBody();
             requestNumber = extractTag(requestXml, "Request_Number");
+            if (failure != null) {
+                throw failure;
+            }
             return OrcaTransportResult.fallback(responseXml, "application/xml");
         }
 

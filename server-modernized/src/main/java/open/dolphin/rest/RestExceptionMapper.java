@@ -21,6 +21,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.orca.OrcaGatewayException;
+import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.rest.orca.LocalOrderBundleResource;
 import open.dolphin.session.framework.SessionServiceException;
 
@@ -66,6 +67,13 @@ public class RestExceptionMapper implements ExceptionMapper<Throwable> {
         OrcaGatewayException orcaCause = findOrcaGatewayCause(exception);
         if (orcaCause != null && (message == null || message.startsWith("Session layer failure"))) {
             message = orcaCause.getMessage();
+        }
+        if (orcaCause != null) {
+            message = AbstractResource.sanitizeOrcaTransportMessage(message);
+        }
+        OrcaConnectionPolicyException policyCause = findOrcaConnectionPolicyCause(exception);
+        if (policyCause != null) {
+            message = AbstractResource.sanitizeOrcaTransportMessage(policyCause.getMessage());
         }
         return buildErrorResponse(status, message, exception, null);
     }
@@ -145,6 +153,9 @@ public class RestExceptionMapper implements ExceptionMapper<Throwable> {
         if (orcaCause != null) {
             return resolveOrcaGatewayStatus(orcaCause);
         }
+        if (findOrcaConnectionPolicyCause(exception) != null) {
+            return Response.Status.SERVICE_UNAVAILABLE.getStatusCode();
+        }
         if (exception instanceof SessionServiceException && hasCause(exception, NoResultException.class)) {
             return Response.Status.NOT_FOUND.getStatusCode();
         }
@@ -198,6 +209,9 @@ public class RestExceptionMapper implements ExceptionMapper<Throwable> {
         if (orcaCause != null) {
             return "orca_gateway_error";
         }
+        if (findOrcaConnectionPolicyCause(exception) != null) {
+            return "orca_gateway_error";
+        }
         return switch (status) {
             case 400, 422 -> "invalid_request";
             case 401 -> "unauthorized";
@@ -229,6 +243,23 @@ public class RestExceptionMapper implements ExceptionMapper<Throwable> {
         while (current != null) {
             if (current instanceof OrcaGatewayException orca) {
                 return orca;
+            }
+            current = current.getCause();
+        }
+        return null;
+    }
+
+    private OrcaConnectionPolicyException findOrcaConnectionPolicyCause(Throwable exception) {
+        if (exception == null) {
+            return null;
+        }
+        if (exception instanceof OrcaConnectionPolicyException policy) {
+            return policy;
+        }
+        Throwable current = exception.getCause();
+        while (current != null) {
+            if (current instanceof OrcaConnectionPolicyException policy) {
+                return policy;
             }
             current = current.getCause();
         }
@@ -438,6 +469,10 @@ public class RestExceptionMapper implements ExceptionMapper<Throwable> {
             return;
         }
         if (status >= 500) {
+            if (findOrcaGatewayCause(exception) != null || findOrcaConnectionPolicyCause(exception) != null) {
+                LOGGER.log(Level.WARNING, "ORCA gateway exception mapped to HTTP {0}", status);
+                return;
+            }
             LOGGER.log(Level.SEVERE, "REST exception mapped to HTTP " + status, exception);
             return;
         }
