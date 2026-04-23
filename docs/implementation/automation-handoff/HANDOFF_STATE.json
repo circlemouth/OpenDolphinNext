@@ -9,7 +9,45 @@
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T12:01:55Z",
+  "lastUpdated": "2026-04-23T12:26:50Z",
+  "latestOwnerMedicalmodv2IterativeRetryDirection": {
+    "runId": "20260423T122650Z",
+    "workOrder": "RWO-06",
+    "result": "RWO06_MEDICALMODV2_ITERATIVE_FIX_AND_RETRY_APPROVED",
+    "approvalSource": "owner_message_in_current_thread",
+    "approvalScope": "repeat medicalmodv2 fix-and-retry cycles as many times as needed",
+    "automationAutonomy": "orca automation should proceed without waiting for additional user permission until medicalmodv2 is accepted or a non-skippable safety stop condition is reached",
+    "supersedesConstraint": "fresh owner approval required for each additional medicalmodv2 live retry",
+    "allowedRetryCount": "unbounded_for_medicalmodv2_fix_and_retry_cycles",
+    "evidence": "docs/implementation/rwo06-medicalmodv2-iterative-retry-approval-20260423T122650Z/OWNER_DIRECTION.md",
+    "summary": "docs/implementation/rwo06-medicalmodv2-iterative-retry-approval-20260423T122650Z/summary.sanitized.json",
+    "requiredCycle": [
+      "sanitized_failure_investigation",
+      "repo_local_fix_if_root_cause_is_in_scope",
+      "focused_no_live_verification",
+      "safe_wrapper_preflight",
+      "single_sanitized_live_medicalmodv2_attempt_per_cycle_when_prerequisites_pass",
+      "sanitized_evidence_and_handoff_update",
+      "continue_same_run_when_time_and_safety_allow"
+    ],
+    "stillForbidden": [
+      "production_orca_execution",
+      "s3_minio_object_storage_setup_or_credentials",
+      "phase3_acceptmodv2_rerun_without_separate_approval",
+      "request_number_02_03_04",
+      "diseasev3_or_subjectivesv2_live_execution",
+      "fullflow_execution",
+      "raw_orca_body_capture",
+      "raw_patient_or_insurance_detail_capture",
+      "credential_cookie_session_authorization_csrf_capture",
+      "har_trace_video_screenshot_raw_network_or_request_xml_artifacts",
+      "legacy_client_or_server_changes"
+    ],
+    "claimBoundary": "Iterative retry approval only; not release GO, production ORCA approval, S3/object-storage approval, fullflow approval, or evidence of live business success.",
+    "recommendedNextTask": "Investigate and fix the current medicalmodv2 transportRejected blocker, verify no-live, then retry through the safe wrapper when prerequisites pass; repeat without asking for fresh owner approval while safety boundaries hold.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "latestRwo06PostRepairMedicalmodv2LiveAttempt": {
     "runId": "20260423T120155Z",
     "workOrder": "RWO-06",
@@ -48,8 +86,8 @@
       "healthHttpStatus": 200,
       "readinessHttpStatus": 503
     },
-    "claimBoundary": "One-shot post-repair Trial medicalmodv2 approval consumed and not accepted; not release GO, production ORCA, S3/object-storage, fullflow, repeated mutation, or final release readiness.",
-    "recommendedNextTask": "No-live RWO-06 investigation of the remaining transportRejected outcome; no additional live medicalmodv2 action without fresh owner approval.",
+    "claimBoundary": "One-shot post-repair Trial medicalmodv2 attempt was not accepted; later owner direction now allows iterative fix-and-retry cycles for medicalmodv2 only.",
+    "recommendedNextTask": "Investigate and fix the remaining transportRejected outcome, run focused no-live verification, then retry through the safe wrapper when prerequisites pass; repeat as needed under RUN_ID 20260423T122650Z direction.",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   },

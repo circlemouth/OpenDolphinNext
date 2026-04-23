@@ -8,6 +8,14 @@ This roadmap assumes WebORCA / ORCA Trial as the only ORCA connection target. Pr
 
 Trial evidence must not be used to claim production ORCA readiness. If production ORCA readiness is requested later, it requires a separate owner-approved production plan outside this roadmap.
 
+## medicalmodv2 Iterative Retry Scope
+
+Owner direction recorded by RUN_ID `20260423T122650Z`: RWO-06 `medicalmodv2` fix-and-retry cycles may be repeated as many times as needed. The `orca` automation should proceed as autonomously as possible without waiting for additional user permission until `medicalmodv2` is accepted or a non-skippable safety stop condition is reached. A later worker does not need fresh owner approval for each additional `medicalmodv2` retry when the retry follows a repo-local investigation/fix/focused no-live verification cycle, uses the approved safe wrapper/evidence mode, and stays within the Trial-only non-S3 scope.
+
+This does not authorize blind retry loops or stopping at a proposal. Each live retry must be preceded by a documented investigation and focused no-live verification, and each result must be recorded as sanitized endpoint-specific business evidence.
+
+This direction applies only to `medicalmodv2`. Phase3 / `acceptmodv2`, Request_Number `02` / `03` / `04`, `diseasev3`, `subjectivesv2`, fullflow, production ORCA, and S3/object-storage remain separately gated or out of scope.
+
 ## S3 / Object Storage Scope
 
 This roadmap also skips tasks that require S3, MinIO, object-storage credentials, attachment-storage S3 configuration, or PHR export S3 configuration. Those tasks are `skipped_s3_required_out_of_scope` unless a non-S3 approved runtime path exists.
@@ -72,7 +80,7 @@ The sequence avoids using live ORCA to discover basic browser or local persisten
 | Docs-only | RWO-01 | No runtime or live execution. |
 | Browser tests | RWO-02, RWO-03, RWO-04, RWO-05 | No live ORCA; sanitized evidence only. |
 | Non-S3 runtime blocker resolution | RWO-06A | Repo-local implementation/docs/tests for an object-storage-free dev/Trial profile; no dummy S3/MinIO and no storage readiness claim. |
-| Live ORCA requiring explicit owner approval | RWO-06, RWO-07, RWO-08 | Trial credentials/config required through approved channel; raw artifact capture prohibited; skip if S3/MinIO/object-storage config is required. |
+| Live ORCA requiring explicit owner approval | RWO-06, RWO-07, RWO-08 | Trial credentials/config required through approved channel; raw artifact capture prohibited; skip if S3/MinIO/object-storage config is required. RWO-06 `medicalmodv2` has standing iterative retry approval after repo-local fix and focused no-live verification. |
 | Release-readiness without production ORCA or S3 execution | RWO-09, RWO-11 | Includes CI, non-S3 deployment config, rollback, owner sign-off, and explicit production-ORCA/S3 non-claims. |
 | Production ORCA out-of-scope marker | RWO-10 | Records that production ORCA execution/readiness is not part of this Trial-only roadmap. |
 
