@@ -26,6 +26,12 @@ ORCA connection scope:
 - Do not create, select, or block on a Work Order whose required next action is production ORCA connectivity, production ORCA credentials, or production ORCA functional execution.
 - If a document still refers to production ORCA readiness, treat it as an out-of-scope claim boundary, not as a task to execute.
 
+S3 / object storage scope:
+- Tasks that require S3, MinIO, object-storage credentials, attachment-storage S3 configuration, or PHR export S3 configuration are out of scope for this automation.
+- Do not request, generate, print, commit, or workaround `ATTACHMENT_STORAGE_S3_*`, `PHR_EXPORT_S3_*`, `MINIO_*`, or equivalent object-storage secret values.
+- If the documented runtime path cannot proceed because S3/MinIO/object-storage configuration is required, classify the current task as `skipped_s3_required_out_of_scope`, record sanitized evidence, and select the next non-S3 Work Order.
+- Do not claim attachment storage, S3 persistence, PHR export storage, or object-storage deployment readiness from this roadmap.
+
 This standing approval applies only to:
 - WebORCA / ORCA Trial server verification
 - roadmap-scoped clinical verification work
@@ -37,6 +43,7 @@ This standing approval does not apply to:
 - production ORCA execution
 - production patient data
 - production credentials
+- S3 / MinIO / object-storage credentials or configuration
 - raw credential capture
 - raw ORCA request/response capture
 - HAR/trace/video/screenshot/raw network capture
@@ -57,7 +64,19 @@ Every run:
 7. Execute the next safe step autonomously.
 8. If a repo-local error blocks progress and is fixable, fix it, run relevant verification, and document the result.
 9. If the next required step is ORCA Trial live verification, proceed under standing approval only if credentials/config are already available through the approved runtime path.
-10. If credentials/config are absent, stop and report blocked_missing_runtime_secret_or_config; do not ask for or print values.
+10. If non-S3 credentials/config are absent due to the local environment, skip that task as `skipped_environment_unavailable_missing_runtime_secret_or_config`; do not ask for or print values.
+11. If S3/MinIO/object-storage credentials/config are required, skip the current task as `skipped_s3_required_out_of_scope` and continue with the next non-S3 Work Order.
+12. Continue within the same run after every completed task, skipped out-of-scope task, or skipped environment-unavailable task. Stop only when no safe unblocked task remains, the run time budget is exhausted, or a non-skippable safety stop condition is reached.
+
+Current-run exhaustion policy:
+- Do all currently possible repo-local work in priority order during the same run.
+- Treat environment-only blockers as skip records, not terminal blockers, when the next Work Order has independent safe work available.
+- Environment-only blockers include Docker unavailable, local backend unavailable, browser runtime unavailable, missing local runtime secret/config, missing local test seed, unavailable safe browser harness, and unavailable non-S3 runtime path.
+- For each skipped environment task, write a sanitized skip record with task id, reason, evidence checked, credentialsCaptured=false, rawArtifactsCaptured=false, and recommended next independent task.
+- After a skip, immediately select the next safe non-skipped Work Order.
+- Prefer docs, static analysis, unit/component tests, guard scripts, wrapper dry-runs, sanitizer/parser contract tests, package metadata checks, claim-boundary updates, and risk/gate matrix updates that do not require production ORCA, S3/object storage, raw artifacts, browser screenshots/HAR/traces/videos, or unavailable secrets.
+- If browser e2e/fullflow is blocked only because the current harness would create forbidden artifacts, skip the unsafe execution, create or update the safe-harness hardening record, and continue to non-browser static/local work in the same run.
+- If a Work Order requires a human business decision outside standing Trial approval, record it as pending human decision and continue to independent work that does not depend on that decision.
 
 Handoff prompt rules:
 - Follow the handoff prompt's scope, allowed actions, forbidden actions, evidence requirements, completion criteria, and stop conditions.
@@ -107,6 +126,8 @@ Work progression:
 - Run ORCA Trial live verification only after local/browser prerequisites are reasonably satisfied or the roadmap explicitly requires live verification to unblock.
 - Run fullflow only after prerequisite browser and Trial ORCA gates are satisfied and safe fullflow mode exists.
 - Skip any production ORCA Work Order as out of scope; continue with Trial, browser, security, CI, packaging, rollback, and owner sign-off gates that do not require production ORCA execution.
+- Skip any S3/MinIO/object-storage-dependent Work Order as out of scope; continue with Trial, browser, security, CI, packaging, rollback, and owner sign-off gates that do not require S3/MinIO/object-storage configuration.
+- Skip any environment-unavailable Work Order that cannot proceed in the current runtime, then continue with the next independent safe Work Order in the same run.
 - Create or update docs, matrices, risk registers, command logs, sanitized summaries, review packages, and sidecars after each completed Work Order.
 - Do not overclaim. Keep allowed/prohibited claims updated.
 
@@ -126,10 +147,11 @@ Each run must open an inbox item with:
 
 Stop conditions:
 - production ORCA would be required by the current task instead of being skippable as out-of-scope
-- missing runtime secret/config
+- S3/MinIO/object-storage configuration would be required by the current task instead of being skippable as out-of-scope
+- missing runtime secret/config with no independent safe task remaining in this run
 - raw artifact capture would be needed to decide success
 - target/scope ambiguity
 - unsafe repo state
 - repeated failing repair loop without new evidence
-- current Work Order requires a human business decision outside standing Trial approval
+- current Work Order requires a human business decision outside standing Trial approval and no independent safe task remains
 ```

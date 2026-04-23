@@ -1,12 +1,15 @@
 {
-  "status": "active",
+  "status": "superseded",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "WO-8",
-  "blockerId": "phase4-live-trial-blocked-local-runtime-config-missing",
-  "priority": "high",
+  "blockerId": "phase4-live-trial-skipped-s3-required-runtime",
+  "priority": "superseded",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
-  "lastUpdated": "2026-04-22T22:45:59Z",
+  "s3ObjectStorageApproval": false,
+  "continueAfterSkips": true,
+  "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
+  "lastUpdated": "2026-04-23T00:02:13Z",
   "resolvedBlockers": [
     {
       "blockerId": "phase4-safe-wrapper-action-missing",
@@ -93,6 +96,44 @@
       "rawArtifactsCaptured": false
     }
   ],
+  "skippedWorkOrders": [
+    {
+      "workOrder": "WO-8",
+      "blockerId": "phase4-live-trial-skipped-s3-required-runtime",
+      "result": "SKIPPED_S3_REQUIRED_OUT_OF_SCOPE",
+      "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json",
+      "payloadSha256": "e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false,
+      "notes": "The documented local backend path requires S3/MinIO/object-storage runtime configuration. S3-required tasks are out of scope for the automation and should be skipped unless a non-S3 approved runtime path is introduced."
+    }
+  ],
+  "nextSelectionPolicy": {
+    "mode": "exhaust_current_safe_work",
+    "afterSkippedTask": "continue_to_next_independent_safe_work_order",
+    "skipClassifications": [
+      "skipped_s3_required_out_of_scope",
+      "skipped_environment_unavailable_missing_runtime_secret_or_config",
+      "skipped_environment_unavailable_local_backend",
+      "skipped_environment_unavailable_docker",
+      "skipped_environment_unavailable_safe_browser_harness_missing",
+      "skipped_environment_unavailable_runtime_seed_missing",
+      "skipped_production_orca_out_of_scope"
+    ],
+    "preferredCurrentRunWork": [
+      "docs",
+      "static_guards",
+      "unit_component_tests",
+      "parser_sanitizer_contract_tests",
+      "safe_wrapper_dry_runs",
+      "package_metadata_checks",
+      "claim_boundary_updates",
+      "release_gate_updates",
+      "risk_register_updates"
+    ]
+  },
   "notes": [
     "The exact safe Phase 4 wrapper/action is now defined and locally verified.",
     "RUN_ID 20260422T160301Z checked approved runtime payload path plus sha256 sources without printing values; the inputs were absent and no live Trial traffic was sent.",
@@ -102,6 +143,8 @@
     "RUN_ID 20260422T200131Z repeated the approved runtime input precheck without printing values; the inputs were still absent and no live Trial traffic was sent.",
     "RUN_ID 20260422T224559Z placed and hash-verified the Phase4 dummy JSON payload package, validated the current-wrapper medicalmodv2 payload by dry-run, and recorded owner approval for the JSON SHA.",
     "RUN_ID 20260422T224559Z did not send live Trial traffic because the local backend was unreachable; Docker became available, but setup stopped before backend start because MODERNIZED_POSTGRES_PASSWORD was missing.",
-    "The next worker may run exactly one live Trial medicalmodv2 action only after required local runtime config is available and the documented local backend is up with ORCA Trial configuration."
+    "The next worker must not run the WO-8 live Trial medicalmodv2 action through the current documented local backend path if S3/MinIO/object-storage runtime configuration is required.",
+    "S3-required tasks are out of scope. Select the next non-S3 Work Order from the roadmap unless a future owner-approved handoff introduces a non-S3 runtime path.",
+    "Environment-unavailable tasks should be skipped for the current run and must not stop the run while independent safe work remains."
   ]
 }

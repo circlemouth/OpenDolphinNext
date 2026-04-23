@@ -12,6 +12,12 @@ This roadmap assumes WebORCA / ORCA Trial as the only ORCA connection target. Pr
 
 Trial evidence must remain bounded to Trial-backed release-readiness progress. It must not be used to claim production ORCA readiness.
 
+## S3 / Object Storage Scope
+
+This roadmap skips tasks that require S3, MinIO, object-storage credentials, attachment-storage S3 configuration, or PHR export S3 configuration. S3-required tasks are classified as `skipped_s3_required_out_of_scope`, not as blockers for the rest of the automation.
+
+This roadmap does not claim attachment storage, PHR export storage, S3 persistence, or object-storage deployment readiness.
+
 ## Final Working Conclusion
 
 - Electronic chart / karte local persistence has targeted local/server/component/static evidence, but full end-to-end release readiness is not established.
@@ -19,7 +25,7 @@ Trial evidence must remain bounded to Trial-backed release-readiness progress. I
 - Prescription and generic order input have local/static/server/component evidence only; ORCA-backed browser/fullflow/live verification remains pending.
 - Existing live ORCA evidence is limited to the earlier Trial Phase 3 `acceptmodv2` retry for `00001 / 00001`, classified as `businessAcceptedWithWarnings`; it does not prove medicalmodv2, diseasev3, subjectivesv2, fullflow, all patients, or production ORCA.
 - WO-8 exists and was incorporated; it stopped before live ORCA traffic with `PHASE4_BLOCKED_HARNESS_OR_EVIDENCE_POLICY`.
-- Trial-backed release readiness cannot be claimed until browser e2e, Trial ORCA expansion, security/config/deployment, package, CI, rollback, and owner sign-off gates have actual evidence. Production ORCA readiness is a non-claim for this roadmap.
+- Trial-backed non-S3 release readiness cannot be claimed until browser e2e, non-S3 Trial ORCA expansion, security/config/deployment, package, CI, rollback, and owner sign-off gates have actual evidence. Production ORCA and S3/object-storage readiness are non-claims for this roadmap.
 
 ## Documents
 

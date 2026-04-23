@@ -6,7 +6,11 @@ RUN_ID: `20260422T224559Z`
 
 `PHASE4_LIVE_TRIAL_BLOCKED_LOCAL_RUNTIME_CONFIG_MISSING`
 
+Superseded classification: `SKIPPED_S3_REQUIRED_OUT_OF_SCOPE`.
+
 The payload package is in the repository, the current-wrapper JSON SHA-256 is owner-approved, and the current `medicalmodv2` wrapper dry-run passes. Live ORCA Trial execution was not attempted because the local backend required by `web-client/scripts/qa-phase4-safe-medicalmodv2.mjs` was unavailable and the documented setup stopped on missing local runtime configuration.
+
+After the roadmap was narrowed further, tasks that require S3/MinIO/object-storage configuration are out of scope. The current documented backend path requires S3/MinIO/object-storage inputs in addition to other local runtime inputs, so this Phase4 live action should be skipped unless a future owner-approved non-S3 runtime path is introduced.
 
 ## Runtime Check
 
@@ -29,7 +33,9 @@ The payload package is in the repository, the current-wrapper JSON SHA-256 is ow
 
 ## Next Safe Action
 
-Follow [PHASE4_WORKER_UNBLOCKING_PLAN.md](/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/phase4-orca-trial-payloads-20260422/PHASE4_WORKER_UNBLOCKING_PLAN.md): provide required local runtime configuration through an approved non-logged path, start the repo-local modernized backend with ORCA Trial configuration through the documented path, then run exactly one live Trial `medicalmodv2` action with the safe wrapper:
+Follow [PHASE4_WORKER_UNBLOCKING_PLAN.md](/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/phase4-orca-trial-payloads-20260422/PHASE4_WORKER_UNBLOCKING_PLAN.md): if the runtime path still requires S3/MinIO/object-storage configuration, skip this Phase4 task as `SKIPPED_S3_REQUIRED_OUT_OF_SCOPE` and select the next non-S3 Work Order. Do not request or generate S3/MinIO/object-storage secrets.
+
+Only if a future approved non-S3 runtime path exists, start the repo-local modernized backend with ORCA Trial configuration and run exactly one live Trial `medicalmodv2` action with the safe wrapper:
 
 ```bash
 RUN_ID=<new_run_id> node web-client/scripts/qa-phase4-safe-medicalmodv2.mjs \

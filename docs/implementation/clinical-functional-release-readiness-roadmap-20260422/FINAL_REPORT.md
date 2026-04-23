@@ -32,6 +32,7 @@ RUN_ID: `20260422T134401Z`
 | browser e2e status | not_run for Clinical Wave 1 evidence reviewed here |
 | live ORCA status | prior Trial `acceptmodv2` `00001` limited evidence only; no WO-8 live action |
 | production ORCA status | not_applicable_trial_only / not_claimed |
+| S3/object-storage status | not_applicable_out_of_scope / not_claimed |
 | release-ready status | not_ready |
 
 ## Functional Verdict
@@ -41,6 +42,7 @@ RUN_ID: `20260422T134401Z`
 - Electronic chart fullflow: not_run.
 - ORCA live: limited prior Trial `acceptmodv2` for `00001 / 00001`; `medicalmodv2`, `diseasev3`, `subjectivesv2`, and Request_Number `02/03/04` are not verified.
 - Production ORCA readiness: out of scope for this Trial-only roadmap and not claimed.
+- S3/object-storage readiness: out of scope for this roadmap and not claimed.
 
 ## Final Package
 
@@ -60,10 +62,14 @@ Note: the ZIP contains the pre-package metadata state of this report. Final ZIP 
 1. Browser e2e evidence is missing.
 2. Fullflow is not run.
 3. Live `medicalmodv2`, `diseasev3`, and `subjectivesv2` evidence is missing.
-4. Trial-scope runtime config/secrets and deployment readiness are not fully verified.
+4. Trial-scope non-S3 runtime config/secrets and deployment readiness are not fully verified.
 5. Owner release sign-off is missing.
 6. Expected CWP-01 filename is missing, although equivalent CWP-01 integration gate evidence exists.
 
 ## ORCA Connection Scope
 
 The planned ORCA connection target is WebORCA / ORCA Trial only. Production ORCA execution, production ORCA credentials, production patient data, and production ORCA readiness are not part of this automation plan.
+
+## S3 / Object Storage Scope
+
+S3, MinIO, attachment-storage S3, PHR export S3, and equivalent object-storage setup are not part of this automation plan. Tasks requiring those inputs are skipped as `skipped_s3_required_out_of_scope`.

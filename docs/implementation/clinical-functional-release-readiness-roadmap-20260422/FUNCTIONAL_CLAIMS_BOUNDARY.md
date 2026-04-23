@@ -10,7 +10,8 @@ RUN_ID: `20260422T134401Z`
 | Disease ORCA registration verified? | Disease local persistence/date/readback verified. | Live diseasev3 registration verified. | CWP-05 says live diseasev3 not claimed. | Owner-approved live diseasev3 trial evidence. | RWO-05 then RWO-06. |
 | SOAP ORCA registration verified? | SOAP local save/reload and dirty-state behavior verified. | Live subjectivesv2 registration verified. | CWP-02 says SOAP local save does not call ORCA subjectivesv2. | Owner-approved subjectivesv2 live plan/evidence. | RWO-05 then RWO-06. |
 | Fullflow verified? | Fullflow is documented as required future work. | Fullflow verified. | WO-3/4/5/6/7/8 consistently mark fullflow `not_run`. | Safe fullflow execution evidence. | RWO-08. |
-| Trial-backed release readiness? | Repo-local roadmap and local/static evidence are consolidated for a Trial-only ORCA connection scope. | Production-ready, production ORCA ready, or production release-ready. | Current roadmap scope and manager/release docs. | Trial-scope deployment config, security, owner sign-off, CI, browser/fullflow evidence. Production ORCA is `not_applicable_trial_only`. | RWO-09-RWO-11. |
+| S3/object-storage readiness? | S3-required tasks are out of scope and skipped. | Attachment storage ready, PHR export storage ready, S3 persistence ready, or object-storage deployment ready. | Current roadmap scope. | None required for this roadmap; separate owner-approved S3 plan would be needed. | RWO-09-RWO-11. |
+| Trial-backed release readiness? | Repo-local roadmap and local/static evidence are consolidated for a Trial-only, non-S3 ORCA connection scope. | Production-ready, production ORCA ready, S3/object-storage ready, or production release-ready. | Current roadmap scope and manager/release docs. | Trial-scope non-S3 deployment config, security, owner sign-off, CI, browser/fullflow evidence. Production ORCA is `not_applicable_trial_only`; S3/object-storage is `not_applicable_out_of_scope`. | RWO-09-RWO-11. |
 
 ## Explicit Answers
 
@@ -22,3 +23,4 @@ RUN_ID: `20260422T134401Z`
 - Can we claim fullflow is verified? No.
 - Can we claim Trial-backed release readiness? Not yet.
 - Can we claim production ORCA readiness or production release readiness from this roadmap? No.
+- Can we claim S3/object-storage readiness from this roadmap? No.

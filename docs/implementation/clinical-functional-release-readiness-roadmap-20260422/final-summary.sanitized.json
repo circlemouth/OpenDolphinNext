@@ -23,6 +23,7 @@
   "browserE2eStatus": "not_run_for_clinical_wave1_evidence_reviewed_here",
   "liveOrcaStatus": "prior_trial_acceptmodv2_00001_limited_only_no_wo8_live_action",
   "productionOrcaStatus": "not_applicable_trial_only_not_claimed",
+  "s3ObjectStorageStatus": "not_applicable_out_of_scope_not_claimed",
   "releaseReadyStatus": "not_ready",
   "missingInputs": [
     "docs/implementation/unified-clinical-wave1-batch1-wo3-20260421/CWP01_KARTE_ORDER_PERSISTENCE_REPORT.md"

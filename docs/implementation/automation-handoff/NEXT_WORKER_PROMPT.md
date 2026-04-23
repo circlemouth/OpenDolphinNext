@@ -1,11 +1,11 @@
 # NEXT_WORKER_PROMPT
 
-status: active
+status: superseded
 created_at: 2026-04-22
-last_checked_at: 2026-04-22T22:45:59Z
+last_checked_at: 2026-04-23T00:02:13Z
 source_work_order: WO-8
-blocker_id: phase4-live-trial-blocked-local-runtime-config-missing
-priority: high
+blocker_id: phase4-live-trial-skipped-s3-required-runtime
+priority: superseded
 supersedes:
 - docs/implementation/automation-handoff/history/NEXT_WORKER_PROMPT-20260422T145704Z-phase4-safe-wrapper-action-missing-completed.md
 - docs/implementation/automation-handoff/history/NEXT_WORKER_PROMPT-20260422T160301Z-phase4-live-trial-blocked-missing-runtime-secret-or-config.md
@@ -17,6 +17,14 @@ supersedes:
 ## Context
 
 WO-8 Phase4 `medicalmodv2` now has a safe wrapper, an in-repo JSON payload, and owner approval for the JSON SHA-256.
+
+## Superseded By S3 Skip Policy
+
+This prompt is no longer an active task. The documented local backend path currently requires S3/MinIO/object-storage runtime configuration before the safe `medicalmodv2` wrapper can execute. The automation scope now skips tasks that require S3, MinIO, object-storage credentials, attachment-storage S3 configuration, or PHR export S3 configuration.
+
+Do not request, generate, print, or commit `ATTACHMENT_STORAGE_S3_*`, `PHR_EXPORT_S3_*`, `MINIO_*`, or equivalent object-storage secrets to run this prompt. Classify WO-8 Phase4 live execution as `skipped_s3_required_out_of_scope` unless a non-S3 approved runtime path is introduced in a future owner-approved handoff.
+
+Next automation runs should select the next non-S3 Work Order from the roadmap.
 
 The consolidated worker plan is:
 

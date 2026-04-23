@@ -18,4 +18,5 @@ RUN_ID: `20260422T134401Z`
 | Fullflow | Not run | No | WO-3/4/5/6/7/8 |
 | Trial ORCA | Limited | Limited acceptmodv2 only | Phase 3 retry, WO-8 |
 | Production ORCA | Not applicable to Trial-only roadmap | No production ORCA claim | Roadmap ORCA connection scope |
-| Trial-backed release readiness | Not ready | No | Release gate matrix |
+| S3/object storage | Not applicable to current roadmap | No S3/object-storage claim | Roadmap S3/object-storage scope |
+| Trial-backed non-S3 release readiness | Not ready | No | Release gate matrix |

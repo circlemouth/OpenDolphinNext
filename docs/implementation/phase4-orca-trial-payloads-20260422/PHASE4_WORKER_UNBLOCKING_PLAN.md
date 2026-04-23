@@ -17,7 +17,13 @@ This document consolidates the information needed for the next worker to continu
 | Owner JSON-SHA approval | READY | [OWNER_APPROVAL_PHASE4_JSON_SHA_ADDENDUM.md](/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/phase4-orca-trial-payloads-20260422/OWNER_APPROVAL_PHASE4_JSON_SHA_ADDENDUM.md) |
 | Payload local dry-run | READY | [phase4-medicalmodv2-summary.sanitized.json](/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/phase4-orca-trial-payloads-20260422/wrapper-dry-run-current-wrapper/phase4-medicalmodv2-summary.sanitized.json) |
 | ORCA Trial env file | PRESENT_LOCALLY | repo-local `orca.env.local` exists and is intentionally untracked; do not print values. |
-| Local backend | NOT_READY | [RUNTIME_BLOCKER_REPORT.md](/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/phase4-orca-trial-payloads-20260422/RUNTIME_BLOCKER_REPORT.md) |
+| Local backend | SKIPPED_S3_REQUIRED_OUT_OF_SCOPE | [RUNTIME_BLOCKER_REPORT.md](/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/phase4-orca-trial-payloads-20260422/RUNTIME_BLOCKER_REPORT.md) |
+
+## S3 / MinIO Skip Policy
+
+The current documented local backend path may require S3/MinIO/object-storage runtime configuration before the safe wrapper can execute. S3, MinIO, attachment-storage S3, PHR export S3, and equivalent object-storage credentials/configuration are now out of scope for the automation.
+
+Do not request, generate, print, commit, or workaround S3/MinIO/object-storage secret values to run this Phase4 task. If the current runtime path requires those values, classify the task as `SKIPPED_S3_REQUIRED_OUT_OF_SCOPE` and select the next non-S3 Work Order.
 
 ## Approved Phase4 Live Scope
 
@@ -38,6 +44,7 @@ This document consolidates the information needed for the next worker to continu
 Do not run:
 
 - production ORCA
+- S3 / MinIO / object-storage setup or credential provisioning
 - fullflow
 - Phase3 retry
 - acceptmodv2 mutation
@@ -50,7 +57,7 @@ Do not run:
 - patients/candidates `00002` through `00011`
 - exploratory standalone connection tests outside the documented wrapper/runtime checks
 
-## Runtime Inputs Still Needed Before Live Execution
+## Runtime Inputs Still Needed Before Live Execution If A Non-S3 Runtime Path Exists
 
 These are local backend startup inputs, not ORCA payload inputs. They must be provided through an approved local secret/config path and must not be committed, printed, or copied into docs:
 
@@ -58,11 +65,14 @@ These are local backend startup inputs, not ORCA payload inputs. They must be pr
 |---|---|---|
 | `MODERNIZED_POSTGRES_PASSWORD` | local dev PostgreSQL password | `setup-modernized-env.sh` stopped before backend start when this was absent. |
 | `ORCA_CREDENTIALS_AES_KEY_B64` | server-side ORCA credential encryption key | 32-byte random Base64 value; do not reuse production material. |
-| `ATTACHMENT_STORAGE_S3_SECRET_KEY` | local MinIO/S3 secret | local runtime only. |
 | `PHR_EXPORT_SIGNING_SECRET` | local PHR export signing secret | random local runtime value. |
-| `PHR_EXPORT_S3_SECRET_KEY` | local PHR export S3 secret | local runtime only. |
-| `MINIO_ROOT_PASSWORD` | local MinIO root password | local runtime only. |
 | `FACTOR2_AES_KEY_B64` | 2FA encryption key | 32-byte random Base64 value; required for server startup. |
+
+The following previously required inputs are S3/MinIO/object-storage scoped and must not be requested by this automation:
+
+- `ATTACHMENT_STORAGE_S3_SECRET_KEY`
+- `PHR_EXPORT_S3_SECRET_KEY`
+- `MINIO_ROOT_PASSWORD`
 
 `ORCA_API_USER` / `ORCA_API_PASSWORD` are expected to come from the existing ignored ORCA env path (`orca.env.local` or `ORCA_ENV_FILE`). Do not print their values.
 
@@ -84,15 +94,16 @@ Expected:
 e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618
 ```
 
-4. Confirm required local runtime variables are present by presence only. Do not print values.
-5. Start backend via the documented path:
+4. Confirm required non-S3 local runtime variables are present by presence only. Do not print values.
+5. If the runtime still requires S3/MinIO/object-storage variables, stop this Phase4 task as `SKIPPED_S3_REQUIRED_OUT_OF_SCOPE` and select the next non-S3 Work Order.
+6. Start backend via an approved non-S3 documented path only:
 
 ```bash
 WEB_CLIENT_MODE=npm ./setup-modernized-env.sh
 ```
 
-6. Confirm sanitized backend health/readiness without exposing internal URLs, exception details, or credentials.
-7. Run exactly one live Trial action:
+7. Confirm sanitized backend health/readiness without exposing internal URLs, exception details, or credentials.
+8. Run exactly one live Trial action:
 
 ```bash
 RUN_ID=<run_id> node web-client/scripts/qa-phase4-safe-medicalmodv2.mjs \
@@ -104,7 +115,7 @@ RUN_ID=<run_id> node web-client/scripts/qa-phase4-safe-medicalmodv2.mjs \
   --payload-sha256 e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618
 ```
 
-8. Classify the result from sanitized wrapper evidence only.
+9. Classify the result from sanitized wrapper evidence only.
 
 ## Business Success Criteria
 

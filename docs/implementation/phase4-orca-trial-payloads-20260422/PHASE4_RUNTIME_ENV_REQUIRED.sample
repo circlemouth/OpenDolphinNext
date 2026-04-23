@@ -1,16 +1,22 @@
-# Phase4 local runtime configuration checklist
+# Phase4 local runtime configuration checklist for non-S3 runtime paths
 #
 # This file is documentation only. Do not fill real values here.
 # Provide real values through an approved ignored local environment path or
 # secret manager. Do not print values in command logs.
+#
+# S3/MinIO/object-storage credentials are out of scope for the current
+# automation. If the runtime path requires those values, skip the task as
+# SKIPPED_S3_REQUIRED_OUT_OF_SCOPE instead of requesting or generating them.
 
 MODERNIZED_POSTGRES_PASSWORD=<local-dev-db-password>
 ORCA_CREDENTIALS_AES_KEY_B64=<32-byte-random-base64>
-ATTACHMENT_STORAGE_S3_SECRET_KEY=<local-dev-s3-secret>
 PHR_EXPORT_SIGNING_SECRET=<local-dev-random-secret>
-PHR_EXPORT_S3_SECRET_KEY=<local-dev-s3-secret>
-MINIO_ROOT_PASSWORD=<local-dev-minio-password>
 FACTOR2_AES_KEY_B64=<32-byte-random-base64>
 
 # ORCA Trial credentials/config are expected from repo-local ignored
 # ./orca.env.local or ORCA_ENV_FILE. Do not copy those values here.
+#
+# Do not request or fill:
+# ATTACHMENT_STORAGE_S3_SECRET_KEY
+# PHR_EXPORT_S3_SECRET_KEY
+# MINIO_ROOT_PASSWORD
