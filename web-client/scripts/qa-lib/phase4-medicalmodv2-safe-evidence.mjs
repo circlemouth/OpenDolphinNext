@@ -7,6 +7,8 @@ export const PHASE4_ENDPOINT_PATH = '/api/orca/official/chart-support/medical-mo
 export const PHASE4_REQUEST_CLASS = 'medicalmodv2';
 export const PHASE4_TARGET_PATIENT_ID = '00001';
 export const PHASE4_TARGET_CANDIDATE_ID = '00001';
+export const PHASE4_TRIAL_DEPARTMENT_CODE = '01';
+export const PHASE4_TRIAL_PHYSICIAN_CODE = '10001';
 export const PHASE4_ALLOWED_REQUEST_NUMBER = '01';
 export const PHASE4_ALLOWED_CLASS_CODE = '01';
 export const PHASE4_FORBIDDEN_REQUEST_NUMBERS = ['02', '03', '04'];
@@ -133,8 +135,8 @@ export const buildSyntheticPayloadFixture = () => ({
   encounterContext: {
     patientId: PHASE4_TARGET_PATIENT_ID,
     visitDate: '2026-04-22',
-    departmentCode: '01',
-    physicianCode: '10001',
+    departmentCode: PHASE4_TRIAL_DEPARTMENT_CODE,
+    physicianCode: PHASE4_TRIAL_PHYSICIAN_CODE,
     insuranceCombinationNumber: 'SYNTHETIC',
     voucherNumber: 'SYNTHETIC',
     sequentialNumber: 'SYNTHETIC',
@@ -173,6 +175,10 @@ export const summarizePayload = (payload) => {
   return {
     patientIdMatched: normalizeCode(encounter?.patientId || payload?.patientId) === PHASE4_TARGET_PATIENT_ID,
     candidateIdMatched: true,
+    departmentCodeMatched:
+      normalizeCode(encounter?.departmentCode || payload?.departmentCode) === PHASE4_TRIAL_DEPARTMENT_CODE,
+    physicianCodeMatched:
+      normalizeCode(encounter?.physicianCode || payload?.physicianCode) === PHASE4_TRIAL_PHYSICIAN_CODE,
     requestNumber,
     classCode,
     requiredFieldsPresent: {
@@ -199,6 +205,12 @@ export const validatePhase4Payload = ({ payload, payloadSha256, expectedPayloadS
   const summary = summarizePayload(payload);
   const blockers = [];
   if (!summary.patientIdMatched) blockers.push(`target patient must be ${PHASE4_TARGET_PATIENT_ID}`);
+  if (!summary.departmentCodeMatched) {
+    blockers.push(`departmentCode must be ${PHASE4_TRIAL_DEPARTMENT_CODE}`);
+  }
+  if (!summary.physicianCodeMatched) {
+    blockers.push(`physicianCode must be ${PHASE4_TRIAL_PHYSICIAN_CODE}`);
+  }
   if (summary.requestNumber !== PHASE4_ALLOWED_REQUEST_NUMBER) {
     blockers.push(`requestNumber must be ${PHASE4_ALLOWED_REQUEST_NUMBER}`);
   }

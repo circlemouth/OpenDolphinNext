@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  PHASE4_TRIAL_DEPARTMENT_CODE,
+  PHASE4_TRIAL_PHYSICIAN_CODE,
   PHASE4_TARGET_PATIENT_ID,
   buildSyntheticPayloadFixture,
   classifyPhase4BusinessResult,
@@ -24,6 +26,8 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(result.evidence.endpoint).toBe('/api/orca/official/chart-support/medical-mod-v2');
     expect(result.evidence.requestClass).toBe('medicalmodv2');
     expect(result.evidence.target.patientId).toBe(PHASE4_TARGET_PATIENT_ID);
+    expect(result.evidence.payload.summary.departmentCodeMatched).toBe(true);
+    expect(result.evidence.payload.summary.physicianCodeMatched).toBe(true);
     expect(result.evidence.payload.summary.rawPayloadStored).toBe(false);
     expect(result.evidence.rawSensitiveFieldsExcluded).toBe(true);
   });
@@ -55,6 +59,18 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(gate.blockers).toContain('requestNumber must be 01');
     expect(gate.blockers).toContain('Request_Number 02/03/04 is forbidden for this Phase 4 wrapper');
     expect(gate.blockers).toContain('classCode must be 01');
+  });
+
+  it('rejects the stale Phase 4 department and physician context before live ORCA', () => {
+    const payload = buildSyntheticPayloadFixture();
+    payload.encounterContext.departmentCode = '11';
+    payload.encounterContext.physicianCode = '0005';
+
+    const gate = validatePhase4Payload({ payload, payloadSha256: 'abc' });
+
+    expect(gate.ok).toBe(false);
+    expect(gate.blockers).toContain(`departmentCode must be ${PHASE4_TRIAL_DEPARTMENT_CODE}`);
+    expect(gate.blockers).toContain(`physicianCode must be ${PHASE4_TRIAL_PHYSICIAN_CODE}`);
   });
 
   it('does not treat HTTP 200 and apiResult zero alone as business success', () => {

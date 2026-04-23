@@ -1,12 +1,35 @@
 # NEXT_WORKER_PROMPT
 
-status: active
+status: completed
 created_at: 2026-04-23T14:01:51Z
+completed_at: 2026-04-23T15:18:28Z
 source_work_order: RWO-06
 blocker_id: phase4-medicalmodv2-business-rejected-api-result-14
 priority: high
 supersedes:
 - phase4-medicalmodv2-runtime-readiness-blocked-before-live
+
+## Completion Update
+
+RUN_ID `20260423T150257Z` completed this handoff. The stale Phase4 payload used `departmentCode=11` / `physicianCode=0005`; repo-local sanitized semantics mapped `apiResult=14` to stale physician context, and prior sanitized Phase3 Trial evidence for target `00001` used `departmentCode=01` / `physicianCode=10001`.
+
+The worker added `web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_phase3_context_v1.json`, hardened the safe wrapper to reject the stale department/physician context before live ORCA, passed focused no-live verification, then executed one sanitized live Trial retry through `web-client/scripts/qa-phase4-safe-medicalmodv2.mjs`.
+
+Sanitized live result:
+
+- HTTP status: `200`
+- `apiResult`: `00`
+- response classification: `businessAccepted`
+- business accepted: `true`
+- completion evidence: information timestamp and medical UID present
+- credentials captured: `false`
+- raw artifacts captured: `false`
+
+Evidence:
+
+- `docs/implementation/rwo06-medicalmodv2-api14-context-repair-20260423T150257Z/FINAL_REPORT.md`
+- `docs/implementation/rwo06-medicalmodv2-api14-context-repair-20260423T150257Z/summary.sanitized.json`
+- `docs/implementation/rwo06-medicalmodv2-api14-context-repair-20260423T150257Z/wrapper-live/phase4-medicalmodv2-summary.sanitized.json`
 
 ## Context
 

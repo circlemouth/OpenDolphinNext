@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-23T15:18:28.108Z",
+  "commandContract": "phase4-safe-medicalmodv2-sanitized-only",
+  "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+  "requestClass": "medicalmodv2",
+  "target": {
+    "candidateId": "00001",
+    "patientId": "00001",
+    "candidateOnly00001": true
+  },
+  "verdict": "live_trial_business_accepted",
+  "dryRun": false,
+  "mock": false,
+  "liveTrialAction": "executed_once",
+  "phase3": "not_run",
+  "fullflow": "not_run",
+  "browserNetworkArtifactMode": "disabled",
+  "sanitizedEvidenceOnly": true,
+  "rawSensitiveFieldsExcluded": true,
+  "payload": {
+    "sha256": "c2dc84307c9f8ae83f2361525a6c127938cb1ef308c4ef125ebaaa0408809627",
+    "bytes": 695,
+    "pathRecorded": false,
+    "rawPayloadStored": false,
+    "summary": {
+      "patientIdMatched": true,
+      "candidateIdMatched": true,
+      "departmentCodeMatched": true,
+      "physicianCodeMatched": true,
+      "requestNumber": "01",
+      "classCode": "01",
+      "requiredFieldsPresent": {
+        "visitDate": true,
+        "departmentCode": true,
+        "physicianCode": true,
+        "insuranceCombinationNumber": true,
+        "voucherNumber": true,
+        "sequentialNumber": true
+      },
+      "medicalInformation": {
+        "groupCount": 1,
+        "medicationCount": 1,
+        "entityKinds": [],
+        "medicalClasses": [
+          "120"
+        ],
+        "unsupportedPhysiologyOrderPresent": false
+      },
+      "rawPayloadStored": false,
+      "rawPatientOrInsuranceDetailStored": false
+    }
+  },
+  "requestSemantics": {
+    "requestNumber01Only": true,
+    "requestNumber02To04Forbidden": true,
+    "classCode01Only": true,
+    "http200AloneIsNotBusinessSuccess": true,
+    "apiResultZeroAloneIsNotBusinessSuccess": true,
+    "completionEvidenceRequired": true
+  },
+  "guard": {
+    "ok": true,
+    "blockers": []
+  },
+  "runId": "20260423T150257Z",
+  "traceId": "trace-20260423T150257Z",
+  "evidencePath": "docs/implementation/rwo06-medicalmodv2-api14-context-repair-20260423T150257Z/wrapper-live/phase4-medicalmodv2-summary.sanitized.json",
+  "generatedArtifacts": [
+    "phase4-medicalmodv2-summary.sanitized.json",
+    "phase4-medicalmodv2-summary.sanitized.md"
+  ],
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false,
+  "response": {
+    "httpStatus": 200,
+    "apiResult": "00",
+    "apiOk": true,
+    "ok": true,
+    "apiResultMessageCategory": "present_redacted",
+    "warningCount": 1,
+    "responseClassification": "businessAccepted",
+    "businessAccepted": true,
+    "completionEvidence": {
+      "informationTimestampPresent": true,
+      "medicalUidPresent": true,
+      "invoiceNumberPresent": false,
+      "dataIdPresent": false
+    },
+    "rawResponseBodyStored": false,
+    "rawApiResultMessageStored": false,
+    "rawPatientOrInsuranceDetailStored": false
+  }
+}

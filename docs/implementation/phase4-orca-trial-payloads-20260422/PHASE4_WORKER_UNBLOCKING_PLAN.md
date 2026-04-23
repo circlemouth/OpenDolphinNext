@@ -12,8 +12,9 @@ This document consolidates the information needed for the next worker to continu
 |---|---|---|
 | Trial-only scope | READY | Owner stated ORCA use is Trial only; production ORCA remains NO-GO. |
 | Safe `medicalmodv2` wrapper | READY | `web-client/scripts/qa-phase4-safe-medicalmodv2.mjs` |
-| Current-wrapper payload | READY | [medicalmodv2_phase4_dummy_current_wrapper_v1.json](/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json) |
-| Current-wrapper payload SHA-256 | READY | `e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618` |
+| Active Phase4 payload | READY | [medicalmodv2_phase4_dummy_phase3_context_v1.json](/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_phase3_context_v1.json) |
+| Active Phase4 payload SHA-256 | READY | `c2dc84307c9f8ae83f2361525a6c127938cb1ef308c4ef125ebaaa0408809627` |
+| Historical current-wrapper payload | SUPERSEDED | [medicalmodv2_phase4_dummy_current_wrapper_v1.json](/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json); stale `departmentCode=11` / `physicianCode=0005` context is blocked by the current no-live wrapper gate. |
 | Owner JSON-SHA approval | READY | [OWNER_APPROVAL_PHASE4_JSON_SHA_ADDENDUM.md](/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/phase4-orca-trial-payloads-20260422/OWNER_APPROVAL_PHASE4_JSON_SHA_ADDENDUM.md) |
 | Payload local dry-run | READY | [phase4-medicalmodv2-summary.sanitized.json](/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/phase4-orca-trial-payloads-20260422/wrapper-dry-run-current-wrapper/phase4-medicalmodv2-summary.sanitized.json) |
 | ORCA Trial env file | PRESENT_LOCALLY | repo-local `orca.env.local` exists and is intentionally untracked; do not print values. |
@@ -33,10 +34,10 @@ Do not request, generate, print, commit, or workaround S3/MinIO/object-storage s
 - Native target class: `/api21/medicalmodv2?class=01`.
 - Request class: `medicalmodv2`.
 - Target patient/candidate: `00001 / 00001`.
-- Department: `11`.
-- Physician: `0005`.
-- Payload: `web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json`.
-- Payload SHA-256: `e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618`.
+- Department: `01`.
+- Physician: `10001`.
+- Payload: `web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_phase3_context_v1.json`.
+- Payload SHA-256: `c2dc84307c9f8ae83f2361525a6c127938cb1ef308c4ef125ebaaa0408809627`.
 - Execution count: one live Trial action only.
 
 ## Explicit Non-Scope
@@ -85,13 +86,13 @@ Generated files such as `custom.properties.dev` and `docker-compose.override.dev
 3. Confirm payload SHA-256:
 
 ```bash
-shasum -a 256 web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json
+shasum -a 256 web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_phase3_context_v1.json
 ```
 
 Expected:
 
 ```text
-e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618
+c2dc84307c9f8ae83f2361525a6c127938cb1ef308c4ef125ebaaa0408809627
 ```
 
 4. Confirm required non-S3 local runtime variables are present by presence only. Do not print values.
@@ -111,8 +112,8 @@ RUN_ID=<run_id> node web-client/scripts/qa-phase4-safe-medicalmodv2.mjs \
   --sanitized-evidence-only \
   --disable-browser-artifacts \
   --phase4-only \
-  --payload web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json \
-  --payload-sha256 e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618
+  --payload web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_phase3_context_v1.json \
+  --payload-sha256 c2dc84307c9f8ae83f2361525a6c127938cb1ef308c4ef125ebaaa0408809627
 ```
 
 9. Classify the result from sanitized wrapper evidence only.

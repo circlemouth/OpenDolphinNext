@@ -1,7 +1,7 @@
 {
   "approvedTrialScopeCandidate": {
     "candidateId": "00001",
-    "departmentCode": "11",
+    "departmentCode": "01",
     "environment": "Live ORCA Trial only",
     "noGo": [
       "Request_Number=02",
@@ -16,7 +16,7 @@
       "patients/candidates 00002-00011"
     ],
     "patientId": "00001",
-    "physicianCode": "0005",
+    "physicianCode": "10001",
     "productionOrca": "NO-GO"
   },
   "classification": "phase4_orca_trial_dummy_payload_json_package",
@@ -31,7 +31,14 @@
     "medicalmodv2_phase4_dummy_current_wrapper_v1.json": {
       "bytes": 694,
       "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json",
-      "sha256": "e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618"
+      "sha256": "e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618",
+      "status": "deprecated_stale_trial_context"
+    },
+    "medicalmodv2_phase4_dummy_phase3_context_v1.json": {
+      "bytes": 695,
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_phase3_context_v1.json",
+      "sha256": "c2dc84307c9f8ae83f2361525a6c127938cb1ef308c4ef125ebaaa0408809627",
+      "status": "active_medicalmodv2_candidate"
     },
     "medicalmodv2_phase4_dummy_owner_aligned_v1.json": {
       "bytes": 639,
@@ -48,7 +55,8 @@
   "important": [
     "Prior XML payload hashes do not match these JSON payload files.",
     "Use the new JSON sha256 values below for wrapper --payload-sha256.",
-    "medicalmodv2_phase4_dummy_current_wrapper_v1.json is the only current-wrapper executable candidate.",
+    "medicalmodv2_phase4_dummy_phase3_context_v1.json is the active medicalmodv2 executable candidate after apiResult=14 investigation.",
+    "medicalmodv2_phase4_dummy_current_wrapper_v1.json is retained as historical evidence and is blocked by the current wrapper because its Trial department/physician context is stale.",
     "diseasev3 and subjectivesv2 JSON files are native intent payloads for future safe wrappers; do not execute them with the current medicalmodv2 wrapper.",
     "Do not store raw ORCA request/response, HAR, trace, screenshots, video, raw network, credentials, cookies, tokens, session IDs, or CSRF values."
   ],

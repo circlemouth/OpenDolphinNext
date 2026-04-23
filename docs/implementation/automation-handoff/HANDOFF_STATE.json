@@ -1,15 +1,67 @@
 {
-  "status": "active",
+  "status": "completed",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06",
-  "blockerId": "phase4-medicalmodv2-business-rejected-api-result-14",
-  "priority": "high",
+  "blockerId": "none",
+  "priority": "closed",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T14:01:51Z",
+  "lastUpdated": "2026-04-23T15:18:28Z",
+  "latestRwo06Medicalmodv2Api14ContextRepair": {
+    "runId": "20260423T150257Z",
+    "workOrder": "RWO-06",
+    "result": "RWO06_MEDICALMODV2_API14_CONTEXT_REPAIR_LIVE_BUSINESS_ACCEPTED",
+    "sourceBlockerId": "phase4-medicalmodv2-business-rejected-api-result-14",
+    "wrapper": "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs",
+    "endpoint": "POST /api/orca/official/chart-support/medical-mod-v2",
+    "requestClass": "medicalmodv2",
+    "target": "00001/00001",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_phase3_context_v1.json",
+    "payloadSha256": "c2dc84307c9f8ae83f2361525a6c127938cb1ef308c4ef125ebaaa0408809627",
+    "supersededPayload": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json",
+    "rootCauseClassification": "stale_phase4_dummy_payload_department_physician_context",
+    "fixed": [
+      "active Phase4 payload aligned to prior sanitized Phase3 Trial context departmentCode=01 and physicianCode=10001",
+      "safe wrapper rejects stale departmentCode=11 and physicianCode=0005 before live ORCA",
+      "historical e0f34fa current-wrapper payload retained as deprecated evidence only"
+    ],
+    "runtimeReadiness": {
+      "healthHttpStatus": 200,
+      "readinessHttpStatus": 200,
+      "ok": true
+    },
+    "sanitizedResult": {
+      "liveTrialAction": "executed_once",
+      "verdict": "live_trial_business_accepted",
+      "httpStatus": 200,
+      "apiResult": "00",
+      "responseClassification": "businessAccepted",
+      "businessAccepted": true,
+      "completionEvidencePresent": true
+    },
+    "tests": {
+      "nodeCheckSafeEvidence": "pass",
+      "nodeCheckWrapper": "pass",
+      "wrapperDryRunActivePayload": "pass",
+      "wrapperDryRunStalePayload": "expected_fail_closed_before_live",
+      "focusedVitest": {
+        "result": "pass",
+        "tests": 8
+      },
+      "statusOnlyReadinessProbe": "pass"
+    },
+    "evidence": "docs/implementation/rwo06-medicalmodv2-api14-context-repair-20260423T150257Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06-medicalmodv2-api14-context-repair-20260423T150257Z/summary.sanitized.json",
+    "dryRunSummary": "docs/implementation/rwo06-medicalmodv2-api14-context-repair-20260423T150257Z/wrapper-dry-run/phase4-medicalmodv2-summary.sanitized.json",
+    "liveSummary": "docs/implementation/rwo06-medicalmodv2-api14-context-repair-20260423T150257Z/wrapper-live/phase4-medicalmodv2-summary.sanitized.json",
+    "claimBoundary": "Scoped Trial medicalmodv2 business acceptance for 00001 Request_Number 01 class 01 only; not production ORCA readiness, S3/object-storage readiness, Request_Number 02/03/04, diseasev3, subjectivesv2, fullflow, or final release readiness.",
+    "recommendedNextTask": "Continue roadmap claim-boundary and release-readiness gates; do not broaden live ORCA scope without the relevant separate gate.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "latestRwo06Medicalmodv2RuntimeFallbackLiveAttempt": {
     "runId": "20260423T140151Z",
     "workOrder": "RWO-06",
