@@ -34,6 +34,7 @@ Since the original roadmap package, artifact-free browser chart-open/local persi
 - RUN_ID `20260423T010054Z` / `20260423T023456Z`: artifact-free browser local persistence evidence added for selected RWO-02 through RWO-05 workflows.
 - RUN_ID `20260423T040145Z`: artifact-free RWO-02 reception-to-Charts chart-open path added; combined safe browser suite passed 5 tests with no retained forbidden artifacts.
 - RUN_ID `20260423T050222Z`: artifact-free Charts UI clickthrough added for SOAP S/O local save and insurance disease add; combined safe browser suite passed 6 tests with no retained forbidden artifacts.
+- RUN_ID `20260423T220304Z`: artifact-free RWO-04 treatment-order UI create/readback/update/delete path passed; combined safe browser suite passed 8 tests with zero skips and no retained forbidden artifacts.
 - RUN_ID `20260423T030122Z`: RWO-09 non-S3 static/CI evidence passed, including web guards, typecheck, safe browser suite, server CI guard scripts, and server-modernized static-analysis verify.
 - RUN_ID `20260423T034854Z`: RWO-10/RWO-11 non-claim boundary refreshed. Production ORCA remains `not_applicable_trial_only`; S3/object storage remains `not_applicable_out_of_scope`.
 - RUN_ID `20260423T035517Z`: owner standing approval is recorded as present for Trial-backed non-S3 roadmap continuation. Final release GO/NO-GO remains separate and not recorded.

@@ -220,6 +220,7 @@ const normalizeOptionalText = (value?: string | null) => {
 };
 
 const validateOperationClassCode = (operation: OrderBundleOperation) => {
+  if (operation.operation === 'delete') return null;
   const canonicalEntity = normalizeOrderEntityValue(operation.entity) ?? 'treatmentOrder';
   const normalizedClassCode = normalizeOrcaClassCode(operation.classCode);
   if (canonicalEntity === 'otherOrder') {

@@ -18,6 +18,7 @@ type OrderSummaryPaneProps = {
   orderBundlesLoading?: boolean;
   orderBundlesError?: string;
   onBundleSelect?: (payload: { group: OrderGroupKey; entity: OrderEntity; bundle: OrderBundle }) => void;
+  onBundleDeleteRequest?: (payload: { group: OrderGroupKey; entity: OrderEntity; bundle: OrderBundle; label: string }) => void;
   onDocumentSelect?: () => void;
   activeOrderPanel?: ReactNode;
   activeOrderTitle?: string;
@@ -26,6 +27,7 @@ type OrderSummaryPaneProps = {
   documentPanelVisible?: boolean;
   onDocumentClose?: () => void;
   orcaPanel?: ReactNode;
+  notice?: { tone: 'success' | 'error'; message: string } | null;
 };
 
 const renderCardBody = (row: OrderDetailDisplayViewModel) => {
@@ -67,6 +69,7 @@ export function OrderSummaryPane({
   orderBundlesLoading = false,
   orderBundlesError,
   onBundleSelect,
+  onBundleDeleteRequest,
   onDocumentSelect,
   activeOrderPanel,
   activeOrderTitle,
@@ -75,6 +78,7 @@ export function OrderSummaryPane({
   documentPanelVisible = false,
   onDocumentClose,
   orcaPanel,
+  notice,
 }: OrderSummaryPaneProps) {
   const groupedBundles = useMemo<OrderDetailDisplayCategoryViewModel[]>(
     () => buildOrderDetailDisplayCategories({ orderBundles, prescriptionBundles }),
@@ -104,6 +108,11 @@ export function OrderSummaryPane({
 
       {orderBundlesLoading ? <p className="soap-note__paper-empty">オーダー情報を取得しています...</p> : null}
       {orderBundlesError ? <p className="soap-note__paper-empty">{resolveUserSafeFetchFailure('オーダー情報', orderBundlesError)}</p> : null}
+      {notice ? (
+        <p className={`soap-note__paper-empty soap-note__paper-empty--${notice.tone}`} role={notice.tone === 'error' ? 'alert' : 'status'}>
+          {notice.message}
+        </p>
+      ) : null}
       {!contentDisabled && !hasAnyOrderBundle ? (
         <p className="soap-note__paper-empty">当日のオーダーはありません。</p>
       ) : null}
@@ -148,6 +157,25 @@ export function OrderSummaryPane({
                           <p className="soap-note__summary-meta">{row.operatorLine}</p>
                           {renderCardBody(row)}
                         </button>
+                        {onBundleDeleteRequest ? (
+                          <div className="soap-note__summary-card-actions" role="group" aria-label={`${row.bundleLabel}操作`}>
+                            <button
+                              type="button"
+                              className="order-dock__bundle-action order-dock__bundle-action--danger"
+                              onClick={() =>
+                                onBundleDeleteRequest({
+                                  group: row.group,
+                                  entity: row.entity,
+                                  bundle: row.bundle,
+                                  label: row.bundleLabel,
+                                })
+                              }
+                              aria-label={`${row.bundleLabel}を削除`}
+                            >
+                              削除
+                            </button>
+                          </div>
+                        ) : null}
                       </li>
                     ))}
                   </ul>

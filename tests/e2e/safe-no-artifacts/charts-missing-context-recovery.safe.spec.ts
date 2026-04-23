@@ -216,6 +216,24 @@ const stubChartsShell = async (page: Page, options: { includeSafeVisit?: boolean
           : [];
       return route.fulfill(jsonResponse({ runId, totalCount: items.length, items }));
     }
+    if (pathname === '/api/orca/master/material') {
+      readOnlyOrcaPaths.push(pathname);
+      return route.fulfill(jsonResponse({ runId, totalCount: 0, items: [] }));
+    }
+    if (pathname === '/api/orca/official/chart-support/medication-get') {
+      readOnlyOrcaPaths.push(pathname);
+      return route.fulfill(
+        jsonResponse({
+          ok: true,
+          runId,
+          status: 200,
+          apiResult: '00',
+          apiResultMessage: '処理終了',
+          selections: [],
+          dataSource: 'safe-no-artifacts-local',
+        }),
+      );
+    }
     if (pathname === '/api/orca/official/appointments/list') {
       readOnlyOrcaPaths.push(pathname);
       return route.fulfill(
@@ -738,11 +756,7 @@ test.describe('Charts missing context recovery safe smoke', () => {
       page.locator('#charts-order-pane').getByRole('button', { name: 'UI処置束更新を編集', exact: true }),
     ).toBeVisible({ timeout: 20_000 });
 
-    await page
-      .locator('#charts-order-pane .order-dock__bundle')
-      .filter({ hasText: 'UI処置束更新' })
-      .getByRole('button', { name: /削除/ })
-      .click();
+    await page.locator('#charts-order-pane').getByRole('button', { name: 'UI処置束更新を削除', exact: true }).click();
     await expect(page.getByRole('alertdialog', { name: 'オーダーを削除しますか？' })).toBeVisible({ timeout: 20_000 });
     await page.getByRole('button', { name: '削除する' }).click();
     await expect(page.getByText('オーダーを削除しました。')).toBeVisible({ timeout: 20_000 });
@@ -769,6 +783,8 @@ test.describe('Charts missing context recovery safe smoke', () => {
         '/api/orca/official/appointments/list',
         '/api/orca/official/visits/list',
         '/api/orca/master/etensu',
+        '/api/orca/master/material',
+        '/api/orca/official/chart-support/medication-get',
       ]),
     );
     expect(blockedOrcaPaths).toEqual([]);

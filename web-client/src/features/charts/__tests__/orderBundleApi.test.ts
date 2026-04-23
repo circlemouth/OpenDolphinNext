@@ -269,6 +269,35 @@ describe('orderBundleApi bodyPart contract', () => {
     expect(httpFetch).not.toHaveBeenCalled();
   });
 
+  it('mutation allows delete without client-side classCode backfill', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true, runId: 'RUN-META', deletedDocumentIds: [8100] }), { status: 200 }),
+    );
+
+    const result = await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        {
+          operation: 'delete',
+          entity: 'treatmentOrder',
+          documentId: 8100,
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    const request = vi.mocked(httpFetch).mock.calls[0]?.[1];
+    const body = JSON.parse(String((request as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+    expect(body.operations[0]).toEqual(
+      expect.objectContaining({
+        operation: 'delete',
+        entity: 'treatmentOrder',
+        documentId: 8100,
+      }),
+    );
+    expect(body.operations[0]?.classCode).toBeUndefined();
+  });
+
   it('fetch canonicalizes radiology className from classCode without trusting response label', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(

@@ -9,36 +9,32 @@
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T21:50:20Z",
+  "lastUpdated": "2026-04-23T22:03:04Z",
   "latestRwo03Rwo04SafeBrowserUiPrescription": {
     "runId": "20260423T212450Z",
     "workOrders": [
       "RWO-03",
       "RWO-04"
     ],
-    "result": "RWO03_PRESCRIPTION_UI_SAFE_BROWSER_PASS_RWO04_TREATMENT_CONTRA_SKIP_REPAIRED_UI_READBACK_BLOCKER_RECORDED",
+    "result": "RWO03_PRESCRIPTION_UI_SAFE_BROWSER_PASS_RWO04_TREATMENT_UI_PASS",
     "branch": "master",
     "startHead": "1fe8178128f93666a95d083466a7e1e1ca7a77e8",
     "evidence": "docs/implementation/rwo03-rwo04-safe-browser-ui-prescription-20260423T212450Z/FINAL_REPORT.md",
     "summary": "docs/implementation/rwo03-rwo04-safe-browser-ui-prescription-20260423T212450Z/summary.sanitized.json",
     "safeBrowser": {
       "wrapper": "web-client/scripts/run-safe-playwright-no-artifacts.mjs",
-      "result": "pass_with_one_intentional_skip",
-      "testsPassed": 7,
-      "testsSkipped": 1,
+      "result": "pass",
+      "testsPassed": 8,
+      "testsSkipped": 0,
       "retainedForbiddenArtifacts": 0
     },
     "liveTrialOrca": {
       "executed": false,
       "businessSuccessClassification": "not_applicable_no_live_browser_gate"
     },
-    "blocker": {
-      "workOrder": "RWO-04",
-      "classification": "safe_browser_ui_treatment_readback_update_delete_path_blocked",
-      "details": "The non-drug treatment save preflight no longer depends on the ORCA contraindication endpoint. The remaining skipped browser target is the longer Charts/right-drawer readback, update, and delete flow."
-    },
+    "blocker": null,
     "claimBoundary": "No-live artifact-free browser evidence only; not live ORCA Trial evidence, production ORCA readiness, S3/object-storage readiness, fullflow success, or final release readiness.",
-    "recommendedNextTask": "Repair the RWO-04 treatment-order Charts/right-drawer readback/update/delete flow, then unskip and rerun the representative UI create/update/delete safe browser test.",
+    "recommendedNextTask": "Continue RWO-05/RWO-09/RWO-11 safe non-live release-readiness work; keep fullflow/live expansion separately gated.",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   },
@@ -1076,5 +1072,58 @@
     "RUN_ID 20260423T190300Z created a current sanitized closeout subset and validated the canonical reviewer submission packet for accepted ref master frozen at 5a141e8e9256475904f14ba47ac5d459c4ea421e. This advanced the packet gate only; browser prescription/order UI coverage, safe fullflow, rollback acceptance, and final owner GO/NO-GO remain open. No credentials or raw artifacts were captured.",
     "RUN_ID 20260423T200259Z repaired runtime-ready-smoke safe evidence so it no longer writes screenshots, started the approved orca-trial-no-object-storage runtime pair, and reran runtime-ready smoke successfully with JSON-only retained evidence and zero blocked-route hits. No credentials or raw artifacts were captured.",
     "RUN_ID 20260423T115535Z recorded fresh explicit owner approval for exactly one post-repair WebORCA Trial medicalmodv2 live attempt through web-client/scripts/qa-phase4-safe-medicalmodv2.mjs using payload SHA-256 e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618 and target 00001/00001. The approval does not authorize production ORCA, S3/object-storage, fullflow, Phase3 rerun, Request_Number 02/03/04, diseasev3/subjectivesv2, raw artifacts, credentials, repeated mutation, or final release GO. The live action remains not_run in this approval-recording commit."
+  ],
+  "latestRwo04SafeBrowserUiTreatment": {
+    "runId": "20260423T220304Z",
+    "workOrder": "RWO-04",
+    "result": "RWO04_TREATMENT_UI_SAFE_BROWSER_CREATE_UPDATE_DELETE_PASS",
+    "branch": "master",
+    "startHead": "a7ea113a13c0eb354bd693f1726e083e03792316",
+    "evidence": "docs/implementation/rwo04-safe-browser-treatment-ui-20260423T220304Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo04-safe-browser-treatment-ui-20260423T220304Z/summary.sanitized.json",
+    "safeBrowser": {
+      "wrapper": "web-client/scripts/run-safe-playwright-no-artifacts.mjs",
+      "result": "pass",
+      "testsPassed": 8,
+      "testsSkipped": 0,
+      "retainedForbiddenArtifacts": 0
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_browser_gate"
+    },
+    "fixed": [
+      "representative treatment-order UI safe browser scenario unskipped",
+      "Charts order summary pane now has a confirmation-based delete action",
+      "order-bundle delete mutation no longer requires create/update classCode validation",
+      "no-live safe browser fixture allows only sanitized read-only material and medication-get stubs while unexpected ORCA paths remain blocked"
+    ],
+    "tests": {
+      "focusedOrderBundleApiVitest": {
+        "result": "pass",
+        "tests": 27
+      },
+      "focusedSafeBrowserSpec": {
+        "result": "pass",
+        "tests": 5
+      },
+      "combinedSafeBrowserSuite": {
+        "result": "pass",
+        "tests": 8,
+        "skipped": 0
+      },
+      "typecheck": "pass",
+      "retainedForbiddenArtifactScan": {
+        "result": "pass",
+        "retainedFiles": 0
+      }
+    },
+    "claimBoundary": "No-live artifact-free browser evidence only; not live ORCA Trial evidence, production ORCA readiness, S3/object-storage readiness, fullflow success, broad per-order-class live acceptance, or final release readiness.",
+    "recommendedNextTask": "Continue RWO-05/RWO-09/RWO-11 safe non-live release-readiness work; keep fullflow/live expansion separately gated.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "history": [
+    "RUN_ID 20260423T220304Z completed the RWO-04 treatment-order safe browser create/update/delete UI path, passed the 8-test artifact-free combined suite, and retained zero forbidden browser artifacts."
   ]
 }

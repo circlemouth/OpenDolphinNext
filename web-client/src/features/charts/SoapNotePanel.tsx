@@ -10,6 +10,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { DataSourceTransition } from './authService';
 import { recordChartsAuditEvent } from './audit';
@@ -36,7 +37,7 @@ import {
 } from './soap/subjectiveChartApi';
 import { RevisionHistoryDrawer } from './revisions/RevisionHistoryDrawer';
 import type { RpHistoryEntry } from './karteExtrasApi';
-import type { OrderBundle } from './orderBundleApi';
+import { mutateOrderBundles, type OrderBundle } from './orderBundleApi';
 import {
   OrderBundleEditPanel,
   type OrderBundleEditPanelRequest,
@@ -59,6 +60,7 @@ import {
 } from './orderCategoryRegistry';
 import { resolveAriaLive } from '../../libs/observability/observability';
 import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
+import { logAuditEvent } from '../../libs/audit/auditLogger';
 
 export type SoapNoteMeta = {
   runId?: string;
@@ -288,6 +290,13 @@ const loadStoredRightDrawerWidth = (viewportWidth: number) => {
   }
 };
 
+type OrderSummaryDeleteTarget = {
+  group: OrderGroupKey;
+  entity: OrderEntity;
+  bundle: OrderBundle;
+  label: string;
+};
+
 export function SoapNotePanel({
   history,
   meta,
@@ -325,6 +334,7 @@ export function SoapNotePanel({
   onAuditLogged,
 }: SoapNotePanelProps) {
   const isRevisionHistoryEnabled = import.meta.env.VITE_CHARTS_REVISION_HISTORY === '1';
+  const queryClient = useQueryClient();
   type SoapNoteViewMode = 'both' | 'soap' | 'free';
   const SOAP_VIEW_MODE_STORAGE_KEY = 'opendolphin:web-client:charts:soap-view-mode:v1';
   const loadViewMode = (): SoapNoteViewMode => {
@@ -494,6 +504,8 @@ export function SoapNotePanel({
   const [activeCenterPanel, setActiveCenterPanel] = useState<'order' | 'document' | null>(null);
   const [activeOrderContext, setActiveOrderContext] = useState<OrderBundleEditingContext>(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
   const [activeOrderSource, setActiveOrderSource] = useState<SoapOrderDockState['source']>(null);
+  const [orderSummaryNotice, setOrderSummaryNotice] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
+  const [orderSummaryDeleteTarget, setOrderSummaryDeleteTarget] = useState<OrderSummaryDeleteTarget | null>(null);
   const [pendingDocumentHistoryCopyRequest, setPendingDocumentHistoryCopyRequest] = useState<{
     requestId: string;
     letterId: number;
@@ -757,6 +769,7 @@ export function SoapNotePanel({
     });
   }, [
     activeOrderContext.hasRpRequiredIssue,
+    activeCenterPanel,
     activeOrderEntity,
     activeOrderSource,
     activeTool,
@@ -773,6 +786,99 @@ export function SoapNotePanel({
   const handleCloseCenterPanel = useCallback(() => {
     setActiveCenterPanel(null);
   }, []);
+
+  const orderSummaryDeleteMutation = useMutation({
+    mutationFn: async (target: OrderSummaryDeleteTarget) => {
+      if (readOnly) throw new Error(readOnlyReason ?? '読み取り専用のため削除できません。');
+      if (!meta.patientId) throw new Error('patientId is required');
+      return mutateOrderBundles({
+        patientId: meta.patientId,
+        operations: [
+          {
+            operation: 'delete',
+            documentId: target.bundle.documentId,
+            moduleId: target.bundle.moduleId,
+            entity: target.entity,
+          },
+        ],
+      });
+    },
+    onSuccess: (result, target) => {
+      const message = result.ok ? 'オーダーを削除しました。' : result.message ?? 'オーダーの削除に失敗しました。';
+      setOrderSummaryNotice({ tone: result.ok ? 'success' : 'error', message });
+      logAuditEvent({
+        runId: result.runId ?? meta.runId,
+        cacheHit: meta.cacheHit,
+        missingMaster: meta.missingMaster,
+        fallbackUsed: meta.fallbackUsed,
+        dataSourceTransition: meta.dataSourceTransition,
+        payload: {
+          action: 'CHARTS_ORDER_BUNDLE_MUTATION',
+          outcome: result.ok ? 'success' : 'error',
+          subject: 'charts',
+          details: {
+            runId: result.runId ?? meta.runId,
+            operation: 'delete',
+            entity: target.entity,
+            patientId: meta.patientId,
+            documentId: target.bundle.documentId,
+            moduleId: target.bundle.moduleId,
+            bundleName: target.bundle.bundleName,
+            itemCount: target.bundle.items?.length ?? 0,
+            ...(result.ok ? {} : { error: message }),
+          },
+        },
+      });
+      if (result.ok) {
+        queryClient.invalidateQueries({ queryKey: ['charts-order-bundles'] });
+        const activeEditBundle =
+          activeOrderRequest && (activeOrderRequest.kind === 'edit' || activeOrderRequest.kind === 'copy')
+            ? activeOrderRequest.bundle
+            : null;
+        if (activeEditBundle?.documentId === target.bundle.documentId && activeEditBundle?.moduleId === target.bundle.moduleId) {
+          setActiveOrderRequest(null);
+          setActiveCenterPanel(null);
+        }
+      }
+      onAuditLogged?.();
+    },
+    onError: (error: unknown, target) => {
+      const message = error instanceof Error ? error.message : String(error);
+      setOrderSummaryNotice({ tone: 'error', message: `オーダーの削除に失敗しました: ${message}` });
+      logAuditEvent({
+        runId: meta.runId,
+        cacheHit: meta.cacheHit,
+        missingMaster: meta.missingMaster,
+        fallbackUsed: meta.fallbackUsed,
+        dataSourceTransition: meta.dataSourceTransition,
+        payload: {
+          action: 'CHARTS_ORDER_BUNDLE_MUTATION',
+          outcome: 'error',
+          subject: 'charts',
+          details: {
+            runId: meta.runId,
+            operation: 'delete',
+            entity: target.entity,
+            patientId: meta.patientId,
+            documentId: target.bundle.documentId,
+            moduleId: target.bundle.moduleId,
+            bundleName: target.bundle.bundleName,
+            itemCount: target.bundle.items?.length ?? 0,
+            error: message,
+          },
+        },
+      });
+      onAuditLogged?.();
+    },
+    onSettled: () => {
+      setOrderSummaryDeleteTarget(null);
+    },
+  });
+
+  const closeOrderSummaryDeleteDialog = useCallback(() => {
+    if (orderSummaryDeleteMutation.isPending) return;
+    setOrderSummaryDeleteTarget(null);
+  }, [orderSummaryDeleteMutation.isPending]);
 
   const historySignature = useMemo(
     () => history.map((entry) => entry.id ?? entry.authoredAt ?? '').join('|'),
@@ -2024,6 +2130,15 @@ export function SoapNotePanel({
           orderBundlesError={resolvedOrderBundlesError}
           prescriptionBundles={prescriptionBundles}
           onBundleSelect={handleOrderSummaryBundleSelect}
+          onBundleDeleteRequest={
+            readOnly
+              ? undefined
+              : (payload) => {
+                  setOrderSummaryNotice(null);
+                  setOrderSummaryDeleteTarget(payload);
+                }
+          }
+          notice={orderSummaryNotice}
           onDocumentSelect={handleOpenDocumentPanel}
           activeOrderPanel={centerOrderPanel}
           activeOrderTitle={activeOrderEntity ? `${resolveOrderEntityLabel(activeOrderEntity)}入力` : undefined}
@@ -2037,6 +2152,50 @@ export function SoapNotePanel({
           <RightUtilityDock activeTool={activeTool} onSelectTool={handleDockToolSelect} />
         </div>
         <RightUtilityDrawer {...rightUtilityDrawerProps} />
+        <FocusTrapDialog
+          open={Boolean(orderSummaryDeleteTarget)}
+          role="alertdialog"
+          title="オーダーを削除しますか？"
+          description="対象と影響範囲を確認して実行してください。"
+          onClose={closeOrderSummaryDeleteDialog}
+          testId="order-summary-delete-dialog"
+        >
+          <section className="charts-tab-guard" aria-label="オーダー削除確認">
+            <dl className="charts-actions__send-confirm-list">
+              <div>
+                <dt>対象名</dt>
+                <dd>{orderSummaryDeleteTarget?.label ?? '—'}</dd>
+              </div>
+              <div>
+                <dt>患者ID</dt>
+                <dd>{meta.patientId ?? '—'}</dd>
+              </div>
+              <div>
+                <dt>対象カテゴリ</dt>
+                <dd>{orderSummaryDeleteTarget ? resolveOrderEntityLabel(orderSummaryDeleteTarget.entity) : '—'}</dd>
+              </div>
+              <div>
+                <dt>影響範囲</dt>
+                <dd>該当オーダー束が一覧から削除されます。</dd>
+              </div>
+            </dl>
+            <div className="charts-tab-guard__actions" role="group" aria-label="オーダー削除操作">
+              <button type="button" onClick={closeOrderSummaryDeleteDialog} disabled={orderSummaryDeleteMutation.isPending}>
+                キャンセル
+              </button>
+              <button
+                type="button"
+                className="charts-tab-guard__danger"
+                onClick={() => {
+                  if (orderSummaryDeleteTarget) orderSummaryDeleteMutation.mutate(orderSummaryDeleteTarget);
+                }}
+                disabled={orderSummaryDeleteMutation.isPending}
+              >
+                削除する
+              </button>
+            </div>
+          </section>
+        </FocusTrapDialog>
       </div>
     </section>
   );

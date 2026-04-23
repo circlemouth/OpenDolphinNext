@@ -108,7 +108,7 @@ PLAYWRIGHT_DISABLE_MSW=1 npm run --prefix web-client test:e2e:no-artifacts -- --
 - wrapper は `PLAYWRIGHT_NO_COPY_PROMPT=1` を設定し、Playwright failure snapshot の `error-context.md` を生成・保持しない。
 - 実行後に `test-results/no-artifacts` 配下へ HAR / trace / video / screenshot / raw network JSON / `error-context.md` が残らない。
 - wrapper は Playwright の `.last-run.json` metadata を実行後に削除する。
-- `local-clinical-persistence.safe.spec.ts` は browser-executed client modules による RWO-03 prescription save/reload/edit/delete/copy、RWO-04 representative generic order create/readback/update/delete、RWO-05 SOAP/disease local readback を検証し、guarded ORCA endpoint への呼び出しが 0 件であることを確認する。
+- `local-clinical-persistence.safe.spec.ts` は browser-executed client modules による RWO-03 prescription save/reload/edit/delete/copy、RWO-04 representative generic order create/readback/update/delete、RWO-05 SOAP/disease local readback を検証し、`charts-missing-context-recovery.safe.spec.ts` は Charts UI の prescription save/update と representative treatment create/readback/update/delete を検証する。guarded ORCA endpoint は safe fixture の read-only allowlist 以外をブロックする。
 - この suite は no-live browser gate の local persistence 証跡であり、full UI click-through、live Trial ORCA、fullflow、production ORCA、S3/object-storage readiness の代替証跡ではない。
 
 6. runtime-ready smoke と ORCA smoke scripts を pair release 前提で実行する。
