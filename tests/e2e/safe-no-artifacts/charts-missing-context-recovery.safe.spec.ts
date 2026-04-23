@@ -42,6 +42,23 @@ const jsonResponse = (body: unknown, status = 200) => ({
 });
 
 const stubChartsShell = async (page: Page, options: { includeSafeVisit?: boolean } = {}) => {
+  let nextSubjectiveId = 5100;
+  let nextDiagnosisId = 6100;
+  const subjectiveBodies: Array<Record<string, any>> = [];
+  const diagnosisMutationBodies: Array<Record<string, any>> = [];
+  let diseases: Array<Record<string, any>> = [
+    {
+      diagnosisId: 6001,
+      diagnosisName: 'Safe ORCA mirror',
+      diagnosisCode: 'I10',
+      startDate: SAFE_VISIT_DATE,
+      outcome: '継続',
+      layer: 'orca-mirror',
+      readOnly: true,
+      syncState: 'manual-resolution',
+    },
+  ];
+
   const sessionPayload = {
     facilityId: FACILITY_ID,
     userId: USER_ID,
@@ -153,6 +170,21 @@ const stubChartsShell = async (page: Page, options: { includeSafeVisit?: boolean
         }),
       );
     }
+    if (pathname.startsWith('/api/orca/official/disease-master/name/')) {
+      readOnlyOrcaPaths.push('/api/orca/official/disease-master/name/:term');
+      return route.fulfill(
+        jsonResponse({
+          runId,
+          Disease_Master_Information: [
+            {
+              Disease_Code: 'J00',
+              Disease_Name: 'browser UI diagnosis',
+              IcdTen: 'J00',
+            },
+          ],
+        }),
+      );
+    }
     blockedOrcaPaths.push(pathname);
     return route.fulfill(jsonResponse({ ok: false, routeBlocked: true, runId }, 451));
   });
@@ -208,16 +240,69 @@ const stubChartsShell = async (page: Page, options: { includeSafeVisit?: boolean
   await page.route('**/api/local/order/bundles**', (route: Route) =>
     route.fulfill(jsonResponse({ ok: true, runId, patientId: SAFE_PATIENT_ID, recordsReturned: 0, bundles: [] })),
   );
-  await page.route('**/api/local/diagnoses/**', (route: Route) =>
-    route.fulfill(jsonResponse({ ok: true, runId, patientId: SAFE_PATIENT_ID, diseases: [] })),
+  await page.route('**/api/local/charts/subjectives', (route: Route) => {
+    if (route.request().method().toUpperCase() !== 'POST') {
+      return route.fulfill(jsonResponse({ ok: false, message: 'unsupported method', runId }, 405));
+    }
+    const body = JSON.parse(route.request().postData() ?? '{}') as Record<string, any>;
+    subjectiveBodies.push(body);
+    return route.fulfill(
+      jsonResponse({
+        ok: true,
+        status: 200,
+        apiResult: '00',
+        apiResultMessage: '処理終了',
+        runId,
+        recordedAt: `${SAFE_VISIT_DATE}T00:00:00Z`,
+        entry: {
+          documentId: nextSubjectiveId++,
+          patientId: body.patientId,
+          performDate: body.performDate,
+          soapCategory: body.soapCategory,
+          displaySection: body.displaySection,
+          body: body.body,
+          recordedAt: `${SAFE_VISIT_DATE}T00:00:00Z`,
+          authorName: 'Safe Browser Doctor',
+        },
+      }),
+    );
+  });
+  await page.route('**/api/local/diagnoses/*', (route: Route) =>
+    route.fulfill(jsonResponse({ ok: true, runId, patientId: SAFE_PATIENT_ID, karteId: 9001, diseases })),
   );
+  await page.route('**/api/local/diagnoses', (route: Route) => {
+    if (route.request().method().toUpperCase() !== 'POST') {
+      return route.fulfill(jsonResponse({ ok: false, message: 'unsupported method', runId }, 405));
+    }
+    const body = JSON.parse(route.request().postData() ?? '{}') as Record<string, any>;
+    diagnosisMutationBodies.push(body);
+    const createdDiagnosisIds: number[] = [];
+    const updatedDiagnosisIds: number[] = [];
+    const removedDiagnosisIds: number[] = [];
+    for (const operation of body.operations ?? []) {
+      if (operation.operation === 'create') {
+        const diagnosisId = nextDiagnosisId++;
+        createdDiagnosisIds.push(diagnosisId);
+        diseases.push({ ...operation, operation: undefined, diagnosisId, layer: 'insurance-local' });
+      } else if (operation.operation === 'update') {
+        updatedDiagnosisIds.push(operation.diagnosisId);
+        diseases = diseases.map((entry) =>
+          entry.diagnosisId === operation.diagnosisId ? { ...entry, ...operation, operation: undefined } : entry,
+        );
+      } else if (operation.operation === 'delete') {
+        removedDiagnosisIds.push(operation.diagnosisId);
+        diseases = diseases.filter((entry) => entry.diagnosisId !== operation.diagnosisId);
+      }
+    }
+    return route.fulfill(jsonResponse({ ok: true, runId, createdDiagnosisIds, updatedDiagnosisIds, removedDiagnosisIds }));
+  });
   await page.route('**/api/local/order/recommendations**', (route: Route) =>
     route.fulfill(jsonResponse({ ok: true, runId, recommendations: [] })),
   );
   await page.route('**/api/karte/freedocument/**', (route: Route) => route.fulfill(jsonResponse({ list: [], runId })));
   await page.route('**/odletter/**', (route: Route) => route.fulfill(jsonResponse({ list: [], runId })));
 
-  return { readOnlyOrcaPaths, blockedOrcaPaths };
+  return { readOnlyOrcaPaths, blockedOrcaPaths, subjectiveBodies, diagnosisMutationBodies };
 };
 
 const establishSession = async (page: Page) => {
@@ -291,6 +376,57 @@ test.describe('Charts missing context recovery safe smoke', () => {
     expect(retainedEncounterStorage).toEqual([]);
     expect(readOnlyOrcaPaths).toEqual(
       expect.arrayContaining(['/api/orca/official/appointments/list', '/api/orca/official/visits/list']),
+    );
+    expect(blockedOrcaPaths).toEqual([]);
+  });
+
+  test('Charts UI saves SOAP and adds insurance disease through local-only routes', async ({ page }) => {
+    const { readOnlyOrcaPaths, blockedOrcaPaths, subjectiveBodies, diagnosisMutationBodies } = await stubChartsShell(page, {
+      includeSafeVisit: true,
+    });
+    await establishSession(page);
+
+    await expect(page.getByRole('region', { name: '受付一覧' })).toBeVisible({ timeout: 20_000 });
+    const safePatientEntry = page.locator(
+      '[data-test-id="reception-entry-card"][data-patient-id="PW-SAFE-UI-001"], [data-test-id="reception-entry-row"][data-patient-id="PW-SAFE-UI-001"]',
+    );
+    await expect(safePatientEntry).toBeVisible({ timeout: 20_000 });
+    await safePatientEntry.getByRole('button', { name: /カルテを開く/ }).first().click();
+
+    await expect(page.getByRole('region', { name: '外来カルテ作業台' })).toBeVisible({ timeout: 20_000 });
+    const soapRegion = page.getByRole('region', { name: 'SOAP 記載' });
+    await expect(soapRegion).toBeVisible({ timeout: 20_000 });
+    await page.locator('#soap-note-subjective').fill('browser UI subjective note');
+    await page.locator('#soap-note-objective').fill('browser UI objective note');
+    await soapRegion.getByRole('button', { name: '保存' }).click();
+    await expect.poll(() => subjectiveBodies.length, { timeout: 20_000 }).toBe(2);
+
+    await page.locator('#diagnosis-quick-name').fill('browser UI diagnosis');
+    await page.locator('#diagnosis-quick-code').fill('J00');
+    await page.locator('#diagnosis-quick-start').fill(SAFE_VISIT_DATE);
+    await page.getByRole('button', { name: '保険病名に追加' }).click();
+    await expect(page.getByText('病名を保存しました。')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('browser UI diagnosis')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('Safe ORCA mirror')).toBeVisible();
+
+    expect(subjectiveBodies.map((body) => body.displaySection).sort()).toEqual(['objective', 'subjective']);
+    expect(subjectiveBodies.every((body) => body.patientId === SAFE_PATIENT_ID)).toBe(true);
+    expect(diagnosisMutationBodies).toHaveLength(1);
+    expect(diagnosisMutationBodies[0].patientId).toBe(SAFE_PATIENT_ID);
+    expect(diagnosisMutationBodies[0].operations).toEqual([
+      expect.objectContaining({
+        operation: 'create',
+        diagnosisName: 'browser UI diagnosis',
+        diagnosisCode: 'J00',
+        startDate: SAFE_VISIT_DATE,
+        category: '副病名',
+      }),
+    ]);
+    expect(readOnlyOrcaPaths).toEqual(
+      expect.arrayContaining([
+        '/api/orca/official/appointments/list',
+        '/api/orca/official/visits/list',
+      ]),
     );
     expect(blockedOrcaPaths).toEqual([]);
   });

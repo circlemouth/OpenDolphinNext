@@ -9,7 +9,7 @@
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T04:01:45Z",
+  "lastUpdated": "2026-04-23T05:02:22Z",
   "latestSafeBrowserSmoke": {
     "runId": "20260423T020225Z",
     "workOrder": "RWO-02",
@@ -87,6 +87,34 @@
       "disease_create_update_delete_with_orca_mirror_readonly"
     ],
     "claimBoundary": "browser-level local persistence evidence; not full UI click-through, fullflow, live Trial ORCA, production ORCA, or S3 readiness",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestSafeBrowserUiClickthrough": {
+    "runId": "20260423T050222Z",
+    "workOrders": [
+      "RWO-02",
+      "RWO-05"
+    ],
+    "result": "RWO02_RWO05_SAFE_BROWSER_UI_CLICKTHROUGH_PASS_PARTIAL_SCOPE",
+    "wrapper": "web-client/scripts/run-safe-playwright-no-artifacts.mjs",
+    "config": "playwright.no-artifacts.config.ts",
+    "spec": "tests/e2e/safe-no-artifacts/charts-missing-context-recovery.safe.spec.ts",
+    "evidence": "docs/implementation/rwo02-rwo05-safe-browser-ui-clickthrough-20260423T050222Z/FINAL_REPORT.md",
+    "tests": {
+      "updatedSpecTests": 3,
+      "combinedSafeBrowserSuiteTests": 6,
+      "result": "pass"
+    },
+    "coverage": [
+      "reception_to_charts_chart_open_volatile_context_no_patient_url",
+      "soap_subjective_objective_ui_input_local_subjectives_post",
+      "insurance_disease_ui_add_local_diagnoses_post",
+      "orca_mirror_disease_readonly_visible",
+      "unknown_orca_paths_fail_closed"
+    ],
+    "claimBoundary": "browser-level no-live UI clickthrough evidence with local stubs; not full prescription/order UI coverage, fullflow, live Trial ORCA, production ORCA, or S3 readiness",
     "liveTrialAction": "not_run",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
@@ -371,6 +399,8 @@
     "RUN_ID 20260423T034854Z refreshed RWO-10/RWO-11 claim boundaries: production ORCA remains not_applicable_trial_only, S3/object-storage remains not_applicable_out_of_scope, and final Trial-backed release decision remains not_ready.",
     "RUN_ID 20260423T034854Z did not run live Trial ORCA, production ORCA, fullflow, package generation, or S3/object-storage setup; credentials and raw artifacts were not captured.",
     "RUN_ID 20260423T034854Z generated current reviewer package artifacts under artifacts/review-bundles for source commit 8199a7dde940b3a9650c2268002fb912365d8577; package source secret scan passed and excluded-path scan found zero forbidden entries.",
-    "RUN_ID 20260423T035517Z recorded that owner standing approval is present for Trial-backed non-S3 roadmap continuation. This does not authorize production ORCA, S3/object-storage, raw artifact capture, or final release GO."
+    "RUN_ID 20260423T035517Z recorded that owner standing approval is present for Trial-backed non-S3 roadmap continuation. This does not authorize production ORCA, S3/object-storage, raw artifact capture, or final release GO.",
+    "RUN_ID 20260423T050222Z added artifact-free Charts UI clickthrough coverage for SOAP S/O local save and insurance disease add, passed the 6-test combined safe browser suite, and verified no retained forbidden artifacts.",
+    "RUN_ID 20260423T050222Z verified web-client typecheck and web guard after the new safe browser UI spec; live Trial ORCA, production ORCA, fullflow, and S3/object-storage were not used."
   ]
 }
