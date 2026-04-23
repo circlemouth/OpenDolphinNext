@@ -9,7 +9,110 @@
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T00:02:13Z",
+  "lastUpdated": "2026-04-23T03:21:24Z",
+  "latestSafeBrowserSmoke": {
+    "runId": "20260423T020225Z",
+    "workOrder": "RWO-02",
+    "result": "RWO02_MINIMAL_SAFE_BROWSER_SMOKE_PASS_WITH_NO_ARTIFACT_RUNNER_HARDENING",
+    "wrapper": "web-client/scripts/run-safe-playwright-no-artifacts.mjs",
+    "config": "playwright.no-artifacts.config.ts",
+    "spec": "tests/e2e/safe-no-artifacts/charts-missing-context-recovery.safe.spec.ts",
+    "evidence": "docs/implementation/rwo03-rwo05-local-contract-and-safe-browser-skip-20260423T020225Z/FINAL_REPORT.md",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestClinicalLocalContractCheck": {
+    "runId": "20260423T020225Z",
+    "workOrders": [
+      "RWO-03",
+      "RWO-04",
+      "RWO-05"
+    ],
+    "result": "RWO03_RWO05_LOCAL_CONTRACT_PASS_BROWSER_E2E_SAFE_MIGRATION_REQUIRED",
+    "evidence": "docs/implementation/rwo03-rwo05-local-contract-and-safe-browser-skip-20260423T020225Z/FINAL_REPORT.md",
+    "tests": {
+      "files": 9,
+      "count": 92,
+      "result": "pass"
+    },
+    "legacyBrowserNegativeCheck": "expected_block",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestClinicalSafeBrowserPersistence": {
+    "runId": "20260423T023456Z",
+    "workOrders": [
+      "RWO-03",
+      "RWO-04",
+      "RWO-05"
+    ],
+    "result": "RWO03_RWO05_SAFE_BROWSER_LOCAL_PERSISTENCE_PASS_PARTIAL_UI_SCOPE",
+    "wrapper": "web-client/scripts/run-safe-playwright-no-artifacts.mjs",
+    "config": "playwright.no-artifacts.config.ts",
+    "spec": "tests/e2e/safe-no-artifacts/local-clinical-persistence.safe.spec.ts",
+    "evidence": "docs/implementation/rwo03-rwo05-safe-browser-local-persistence-20260423T023456Z/FINAL_REPORT.md",
+    "tests": {
+      "newSpecTests": 3,
+      "combinedSafeBrowserSuiteTests": 4,
+      "result": "pass"
+    },
+    "coverage": [
+      "prescription_save_reload_edit_delete_copy",
+      "generic_order_representative_create_readback_update_delete",
+      "soap_free_soap_sections_readback",
+      "disease_create_update_delete_with_orca_mirror_readonly"
+    ],
+    "claimBoundary": "browser-level local persistence evidence; not full UI click-through, fullflow, live Trial ORCA, production ORCA, or S3 readiness",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestWebClientCi": {
+    "runId": "20260423T020225Z",
+    "result": "WEB_CLIENT_CI_PASS",
+    "command": "npm run --prefix web-client ci",
+    "evidence": "docs/implementation/rwo03-rwo05-local-contract-and-safe-browser-skip-20260423T020225Z/FINAL_REPORT.md",
+    "testCi": {
+      "filesPassed": 197,
+      "testsPassed": 1331,
+      "testsSkipped": 2
+    },
+    "build": "pass_with_existing_chunk_size_warning",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestRwo09NonS3SecurityCiStatic": {
+    "runId": "20260423T030122Z",
+    "workOrder": "RWO-09",
+    "result": "RWO09_NON_S3_SECURITY_CI_STATIC_PASS_PARTIAL_RUNTIME_SCOPE",
+    "evidence": "docs/implementation/rwo09-non-s3-security-ci-static-20260423T030122Z/FINAL_REPORT.md",
+    "checks": {
+      "webGuard": "pass",
+      "webTypecheck": "pass",
+      "safeBrowserSuite": {
+        "result": "pass",
+        "tests": 4,
+        "retainedForbiddenArtifacts": 0
+      },
+      "serverCiGuardScripts": "pass",
+      "serverStaticAnalysisVerify": {
+        "result": "pass",
+        "serverSurefireTests": 959,
+        "serverSurefireSkipped": 3,
+        "failsafeTests": 9,
+        "spotbugsBugCount": 0
+      },
+      "directRuntimeLookup": "expected_single_resolver_lookup_only",
+      "facilityIdDrift": "zero_hits"
+    },
+    "claimBoundary": "Trial-backed non-S3 repo-local security/static/CI evidence; not runtime-ready smoke, live Trial ORCA, fullflow, production ORCA, S3/object-storage, package, or final release GO",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "resolvedBlockers": [
     {
       "blockerId": "phase4-safe-wrapper-action-missing",
@@ -108,6 +211,39 @@
       "credentialsCaptured": false,
       "rawArtifactsCaptured": false,
       "notes": "The documented local backend path requires S3/MinIO/object-storage runtime configuration. S3-required tasks are out of scope for the automation and should be skipped unless a non-S3 approved runtime path is introduced."
+    },
+    {
+      "workOrder": "RWO-03",
+      "blockerId": "rwo03-safe-browser-spec-migration-required",
+      "result": "SKIPPED_ENVIRONMENT_UNAVAILABLE_SAFE_BROWSER_HARNESS_MIGRATION_REQUIRED",
+      "evidence": "docs/implementation/rwo03-rwo05-local-contract-and-safe-browser-skip-20260423T020225Z/FINAL_REPORT.md",
+      "recommendedNextTask": "Add artifact-free prescription save/reload/edit/delete/copy browser spec.",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false,
+      "notes": "Focused prescription local/unit component contract checks passed, but browser e2e remains unsafe until migrated away from artifact-capturing fixtures."
+    },
+    {
+      "workOrder": "RWO-04",
+      "blockerId": "rwo04-safe-browser-spec-migration-required",
+      "result": "SKIPPED_ENVIRONMENT_UNAVAILABLE_SAFE_BROWSER_HARNESS_MIGRATION_REQUIRED",
+      "evidence": "docs/implementation/rwo03-rwo05-local-contract-and-safe-browser-skip-20260423T020225Z/FINAL_REPORT.md",
+      "recommendedNextTask": "Add artifact-free generic order representative browser spec.",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false,
+      "notes": "Focused generic order local/unit component contract checks passed, but browser e2e remains unsafe until migrated away from artifact-capturing fixtures."
+    },
+    {
+      "workOrder": "RWO-05",
+      "blockerId": "rwo05-safe-browser-spec-migration-required",
+      "result": "SKIPPED_ENVIRONMENT_UNAVAILABLE_SAFE_BROWSER_HARNESS_MIGRATION_REQUIRED",
+      "evidence": "docs/implementation/rwo03-rwo05-local-contract-and-safe-browser-skip-20260423T020225Z/FINAL_REPORT.md",
+      "recommendedNextTask": "Add artifact-free SOAP and disease browser specs.",
+      "liveTrialAction": "not_run",
+      "credentialsCaptured": false,
+      "rawArtifactsCaptured": false,
+      "notes": "Focused SOAP/disease local/unit component contract checks passed, but browser e2e remains unsafe until safe no-artifacts specs are added."
     }
   ],
   "nextSelectionPolicy": {
@@ -145,6 +281,14 @@
     "RUN_ID 20260422T224559Z did not send live Trial traffic because the local backend was unreachable; Docker became available, but setup stopped before backend start because MODERNIZED_POSTGRES_PASSWORD was missing.",
     "The next worker must not run the WO-8 live Trial medicalmodv2 action through the current documented local backend path if S3/MinIO/object-storage runtime configuration is required.",
     "S3-required tasks are out of scope. Select the next non-S3 Work Order from the roadmap unless a future owner-approved handoff introduces a non-S3 runtime path.",
-    "Environment-unavailable tasks should be skipped for the current run and must not stop the run while independent safe work remains."
+    "Environment-unavailable tasks should be skipped for the current run and must not stop the run while independent safe work remains.",
+    "RUN_ID 20260423T010054Z added the first safe no-artifacts Playwright wrapper/config/spec and passed one minimal RWO-02 browser smoke.",
+    "RUN_ID 20260423T020225Z hardened the safe Playwright wrapper to suppress Playwright error-context snapshots, remove .last-run metadata, and reject retained forbidden artifacts.",
+    "RUN_ID 20260423T020225Z passed 9 focused prescription/order/SOAP/disease local contract test files with 92 tests, while recording RWO-03/RWO-04/RWO-05 browser e2e as migration-required skips.",
+    "RUN_ID 20260423T020225Z passed full web-client ci: verify:web-guard, typecheck, test:ci 197 files / 1331 passed / 2 skipped, and build with existing chunk-size warning only.",
+    "RUN_ID 20260423T023456Z added artifact-free browser local persistence coverage for RWO-03/RWO-04/RWO-05 and passed 3 new Playwright tests, plus the 4-test combined safe browser suite.",
+    "RUN_ID 20260423T023456Z verified web-client guard and typecheck after the new safe browser spec; live Trial ORCA, production ORCA, and S3/object-storage were not used.",
+    "RUN_ID 20260423T030122Z advanced RWO-09 non-S3 security/static/CI evidence: web guard, typecheck, safe no-artifacts browser suite, server CI guard scripts, direct grep guards, and server-modernized Maven static-analysis verify all passed.",
+    "RUN_ID 20260423T030122Z did not run live Trial ORCA, production ORCA, fullflow, runtime-ready smoke, package generation, or S3/object-storage setup; credentials and raw artifacts were not captured."
   ]
 }

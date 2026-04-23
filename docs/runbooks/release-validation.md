@@ -91,6 +91,26 @@ cd web-client && npm run ci
 - public route は `/api/orca/official/*` と `/api/orca/master/*` だけを意味する。production fail-close sentinel、MSW mock/test-only legacy route surface、e2e/QA fixture surface、blocked-route detector、docs/reference、server route inventory negative assertion、web.xml exposure negative assertion は public route ではない。
 - typecheck / test / build まで成功する。
 
+### Artifact-free browser smoke
+この automation の browser e2e / fullflow evidence policy では、既定の `playwright.config.ts` をそのまま使わない。既定 config は失敗時 trace / screenshot を保持し、既存 `tests/playwright/fixtures.ts` は HAR / screenshots / videos を生成するため、safe evidence には不適合である。
+
+RWO-02 以降の no-live browser smoke は、対象 spec を事前検査する wrapper から実行する。
+
+```bash
+PLAYWRIGHT_DISABLE_MSW=1 npm run --prefix web-client test:e2e:no-artifacts -- --run-id <RUN_ID> \
+  tests/e2e/safe-no-artifacts/charts-missing-context-recovery.safe.spec.ts \
+  tests/e2e/safe-no-artifacts/local-clinical-persistence.safe.spec.ts
+```
+
+期待結果:
+- wrapper が artifact-capturing fixture import、明示的 screenshot/HAR/trace/video/raw-network artifact 出力を含む spec を拒否する。
+- `playwright.no-artifacts.config.ts` の `trace` / `screenshot` / `video` は `off`。
+- wrapper は `PLAYWRIGHT_NO_COPY_PROMPT=1` を設定し、Playwright failure snapshot の `error-context.md` を生成・保持しない。
+- 実行後に `test-results/no-artifacts` 配下へ HAR / trace / video / screenshot / raw network JSON / `error-context.md` が残らない。
+- wrapper は Playwright の `.last-run.json` metadata を実行後に削除する。
+- `local-clinical-persistence.safe.spec.ts` は browser-executed client modules による RWO-03 prescription save/reload/edit/delete/copy、RWO-04 representative generic order create/readback/update/delete、RWO-05 SOAP/disease local readback を検証し、guarded ORCA endpoint への呼び出しが 0 件であることを確認する。
+- この suite は no-live browser gate の local persistence 証跡であり、full UI click-through、live Trial ORCA、fullflow、production ORCA、S3/object-storage readiness の代替証跡ではない。
+
 6. runtime-ready smoke と ORCA smoke scripts を pair release 前提で実行する。
 ```bash
 cd web-client && node scripts/runtime-ready-smoke.mjs

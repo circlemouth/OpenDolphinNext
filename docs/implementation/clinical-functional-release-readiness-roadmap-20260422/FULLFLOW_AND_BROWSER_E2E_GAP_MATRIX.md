@@ -4,18 +4,17 @@ RUN_ID: `20260422T134401Z`
 
 | Area | Current status | Evidence source | Gap | Safe evidence approach | Required next tests |
 |---|---|---|---|---|---|
-| Runtime browser e2e status | NOT_RUN for Clinical Wave 1 docs reviewed here. | WO-3/WO-4 ORCA/runtime claims. | Runtime UI path not proven. | Run browser e2e with sanitized logs only; no screenshots/HAR/trace/video unless policy is explicitly changed. | Patient select, chart open, save, reload, edit/delete smoke. |
-| Playwright or equivalent e2e | NOT_RUN in WO-3/WO-4. | WO-3/WO-4 final reports. | No Playwright-backed workflow proof. | Use text/JSON summaries, step status, hashes, and redacted classifications. | Core chart workflow e2e without live ORCA first. |
+| Runtime browser e2e status | PARTIAL_SAFE_BROWSER_LOCAL_PERSISTENCE_PASS. | RUN_ID `20260423T010054Z` safe no-artifacts Charts fail-closed smoke; RUN_ID `20260423T020225Z` reran it after wrapper hardening and passed 9 focused prescription/order/SOAP/disease local contract test files; RUN_ID `20260423T023456Z` added artifact-free browser local persistence checks for prescription, representative generic orders, SOAP, and disease. | Runtime UI path is broader but still partial: current evidence covers browser-executed client modules and local stubs, not every full chart click-through or fullflow path. | Continue using `web-client/scripts/run-safe-playwright-no-artifacts.mjs`; no screenshots/HAR/trace/video/raw network artifacts or Playwright `error-context.md`. | Add safe chart-open and full UI interaction specs, then gate live Trial endpoint checks through non-S3 runtime paths only. |
+| Playwright or equivalent e2e | PARTIAL_SAFE_BROWSER_SUITE_PASS. | `tests/e2e/safe-no-artifacts/charts-missing-context-recovery.safe.spec.ts` and `tests/e2e/safe-no-artifacts/local-clinical-persistence.safe.spec.ts` passed through `playwright.no-artifacts.config.ts`. RUN_ID `20260423T023456Z` passed 4 safe browser tests in the combined suite. | Existing legacy Playwright suites mostly import `tests/playwright/fixtures.ts`, which creates HAR/screenshots/videos, and several specs explicitly write screenshots, trace zips, or artifact files. Full UI click-through coverage still needs safe replacements. | Migrate or replace specs with direct no-artifacts fixtures and sanitized assertions; keep wrapper negative checks in place. | Core chart workflow UI e2e without live ORCA, then safe fullflow harness hardening. |
 | Fullflow | NOT_RUN. | WO-3/4/5/6/7/8. | End-to-end chart entry through ORCA send not proven. | Run only after browser and live ORCA prerequisites; capture sanitized summary, not raw request/response. | Safe fullflow plan and execution. |
 | Patient selection through ORCA send | NOT_VERIFIED. | Release validation says this is required future evidence. | Combined workflow evidence missing. | Stage no-live browser tests first, then live trial endpoint-by-endpoint. | RWO-02 through RWO-08. |
-| Screenshot/HAR/trace/video restrictions | Prohibited by this task and evidence policy. | User policy, evidence sanitize policy. | Visual/raw network proof cannot be used here. | Use sanitized step logs, status classifications, command logs, and hash ledgers. | Define future safe evidence format before execution. |
+| Screenshot/HAR/trace/video restrictions | Prohibited by this task and evidence policy. | User policy, evidence sanitize policy; RUN_ID `20260423T020225Z` no-artifacts output scan. | Visual/raw network proof cannot be used here; Playwright failure snapshots such as `error-context.md` are also prohibited for this automation. | Use sanitized step logs, status classifications, command logs, and hash ledgers. | Define future safe evidence format before execution. |
 | Raw network / request / response | Prohibited. | Evidence sanitize policy. | Cannot inspect raw ORCA bodies to fill gaps. | Endpoint-specific parsed success fields only, redacted and allowlisted. | Design safe evidence parser. |
 
 ## Required Before Release
 
-1. Browser smoke for chart open, SOAP, disease, prescription, generic order, document save/reload, and failure recovery.
-2. Prescription and generic order browser e2e persistence/readback.
-3. Disease/SOAP browser e2e.
+1. Browser smoke for chart open, document save/reload, and full UI interaction coverage beyond module-level local persistence.
+2. Prescription and generic order full UI browser e2e persistence/readback.
+3. Disease/SOAP full UI browser e2e.
 4. Owner-approved trial ORCA live verification for each needed endpoint.
 5. Fullflow only after prior gates provide safe prerequisites.
-

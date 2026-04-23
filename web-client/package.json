@@ -25,6 +25,7 @@
     "test": "vitest run",
     "test:ci": "vitest run --silent --reporter=dot",
     "test:ci:shards": "node scripts/run-vitest-shards.mjs",
+    "test:e2e:no-artifacts": "node scripts/run-safe-playwright-no-artifacts.mjs",
     "ci": "npm run verify:web-guard && npm run typecheck && npm run test:ci && npm run build",
     "test:watch": "vitest",
     "test:load": "tsx scripts/load-test.ts",
