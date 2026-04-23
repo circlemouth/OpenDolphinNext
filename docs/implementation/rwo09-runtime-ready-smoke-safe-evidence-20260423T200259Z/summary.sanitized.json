@@ -1,0 +1,69 @@
+{
+  "runId": "20260423T200259Z",
+  "workOrder": "RWO-09",
+  "result": "RWO09_RUNTIME_READY_SMOKE_PASS_SAFE_JSON_ONLY",
+  "branch": "master",
+  "sourceHead": "1949438b40d0241d55434274858ea1043e52c4a5",
+  "evidence": "docs/implementation/rwo09-runtime-ready-smoke-safe-evidence-20260423T200259Z/FINAL_REPORT.md",
+  "summary": "docs/implementation/rwo09-runtime-ready-smoke-safe-evidence-20260423T200259Z/summary.sanitized.json",
+  "runtimeProfile": "orca-trial-no-object-storage",
+  "setup": {
+    "command": "OPENDOLPHIN_RUNTIME_PROFILE=orca-trial-no-object-storage WEB_CLIENT_MODE=npm ./setup-modernized-env.sh",
+    "result": "pass",
+    "serverUp": true,
+    "apiHealthCheck": "pass",
+    "webClientHttpsConsecutiveChecks": 5,
+    "orcaDbBridge": "warning_orca_db_container_missing_master_apis_may_fail"
+  },
+  "runtimeReadySmoke": {
+    "command": "cd web-client && RUN_ID=20260423T200259Z node scripts/runtime-ready-smoke.mjs",
+    "result": "pass",
+    "sessionMeStatus": 200,
+    "queryDate": "2026-04-24",
+    "authoritativeReadSourcePath": "/api/orca/official/appointments/list",
+    "selectionReason": "preferred_keys",
+    "chartReadyEntryCount": 1,
+    "selectedEntry": {
+      "encounterKeyPresent": true,
+      "scheduleKeyPresent": true,
+      "status": "予約",
+      "appointmentTime": "09:00"
+    },
+    "chartsUi": {
+      "missingKeyWarning": false,
+      "placeholderPatientLabel": false,
+      "patientLabelResolvedBeforeReload": true,
+      "patientLabelResolvedAfterReload": true,
+      "patientLabelResolvedAfterStart": true,
+      "startDisabledBeforeReload": false,
+      "startDisabledAfterReload": false,
+      "printDisabledAfterReload": true,
+      "startSuccessVisible": true
+    },
+    "blockedRouteHits": {
+      "blocked-legacy-orca-queue-hit": 0,
+      "blocked-legacy-orca-push-event-hit": 0,
+      "invalid-orca-taxonomy": 0,
+      "legacy-operations-readiness": 0
+    },
+    "requestShape": {
+      "appointmentsApiResult": "21",
+      "visitsApiResult": "13",
+      "summaryResponseStatus": 200,
+      "transitionResponseStatus": 200
+    }
+  },
+  "safeEvidence": {
+    "unsafeInitialArtifactsRemoved": true,
+    "runtimeReadySmokeScreenshotWritesRemoved": true,
+    "retainedForbiddenArtifacts": 0,
+    "retainedArtifactFiles": [
+      "runtime-ready-before-row-wait.json",
+      "runtime-ready-result.json"
+    ]
+  },
+  "claimBoundary": "Non-S3 Trial-local runtime smoke only; not production ORCA readiness, S3/object-storage readiness, new live Trial mutation success, fullflow, or final release readiness.",
+  "recommendedNextTask": "Continue RWO-11 final-summary and current-head package/packet refresh work after this committed runtime-safe evidence update, while keeping browser/fullflow and owner GO blockers explicit.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}

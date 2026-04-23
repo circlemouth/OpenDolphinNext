@@ -127,6 +127,7 @@ cd web-client && QA_PATIENT_ID=<summary.phase3AttemptPatientId> node scripts/qa-
 - この profile では attachment storage / patient image storage / PHR export storage readiness は claim しない。保存系 route は fail closed、readiness は `attachment_storage_disabled` の sanitized reason を返す。RUN_ID `20260423T110051Z` 以降、storage-dependent features が disabled の場合は `attachmentStorage=DISABLED` 自体を overall readiness の失敗理由にしない。ただし patient image storage を有効化した状態で attachment storage が disabled の場合は `patient_images_storage_unavailable` で fail closed する。
 - `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` は Vite PID だけを成功条件にしない。`https://localhost:5173/` が連続して応答し、dev server process が生存していることを setup log に残す。
 - `runtime-ready-smoke` は current local smoke seed を前提に動作する。smoke seed 不一致で受付行が現れない場合は repo defect と決め打ちせず、`tests/runtime-ready-smoke.log` を保存して `test-data-blocker` または `environment-blocker` として切り分ける。
+- `runtime-ready-smoke` は sanitized JSON-only evidence に限定し、screenshot / HAR / trace / video / raw network dump / `error-context.md` を生成・保持しない。RUN_ID `20260423T200259Z` 以降の retained file は `runtime-ready-before-row-wait.json` と `runtime-ready-result.json` だけを正本とする。
 - local smoke seed の既定キーは `encounterKey=1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001`、`scheduleKey=SMOKE-SCHEDULE-20251129-0001`、`DEV_SMOKE_PATIENT_ID=0000001`、Asia/Tokyo 当日 `09:00` の `scheduled_datetime` とする。`DEV_SMOKE_PATIENT_ID` を変更する場合は schedule / encounter projection が同じ患者を指すことを確認する。
 - `runtime-ready-smoke` は `/api/orca/queue` と `/api/orca/pusheventgetv2` を current public route とみなさない。blocked route detector として browser request が出た場合に failure にするもので、success route の証跡ではない。
 - `appointments/medical-information` の direct probe で `system01lstv2 Request_Number=06` 相当の応答可否を smoke 前に evidence 化する。
@@ -203,6 +204,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - `npm run ci` が成功する。
 - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` が成功する。
 - `runtime-ready-smoke` が成功する。
+- `runtime-ready-smoke` の artifact scan は `*.png` / `*.har` / trace / video / raw network dump の 0 hit を返す。
 - `qa-weborca-candidate-discovery.mjs` が Trial native mutation-ready candidate を 1 件以上 accepted にした場合でも、その summary は selected-candidate proposal に留める。同一 RUN_ID / candidate の `qa-weborca-readonly-preflight.mjs` exact selected-candidate preflight が `source=qa-weborca-readonly-preflight`、`flowMode=exact-readonly-preflight`、`acceptedForPhase3Attempt=true`、artifact path/hash/input identity 一致を満たした後、別タスクで `qa-acceptmodv2-weborca.mjs` を実行できる。`qa-fullflow-weborca.mjs` は Phase 3 business accepted 後に実行し、`medicalInformation` 未選択時は browser request body 未送信の証跡を残す。未指定 run で request body に `medicalInformation` が含まれた場合は fail と判定される。
 - patient search が 0 件なら、script は `QA_PATIENT_ID` の不足/不一致を明示したエラーで停止する。
 - direct runtime lookup grep は `ServerConfigurationResolver.java` の `ConfigProvider.getConfig()` 1 件だけを返す。

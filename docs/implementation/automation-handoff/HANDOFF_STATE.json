@@ -370,6 +370,44 @@
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   },
+  "latestRwo09RuntimeReadySmoke": {
+    "runId": "20260423T200259Z",
+    "workOrder": "RWO-09",
+    "result": "RWO09_RUNTIME_READY_SMOKE_PASS_SAFE_JSON_ONLY",
+    "evidence": "docs/implementation/rwo09-runtime-ready-smoke-safe-evidence-20260423T200259Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-runtime-ready-smoke-safe-evidence-20260423T200259Z/summary.sanitized.json",
+    "runtimeProfile": "orca-trial-no-object-storage",
+    "setup": {
+      "result": "pass",
+      "serverUp": true,
+      "apiHealthCheck": "pass",
+      "webClientHttpsConsecutiveChecks": 5,
+      "orcaDbBridge": "warning_orca_db_container_missing_master_apis_may_fail"
+    },
+    "smoke": {
+      "result": "pass",
+      "sessionMeStatus": 200,
+      "queryDate": "2026-04-24",
+      "selectionReason": "preferred_keys",
+      "chartReadyEntryCount": 1,
+      "selectedEntryStatus": "予約",
+      "blockedRouteHits": {
+        "blocked-legacy-orca-queue-hit": 0,
+        "blocked-legacy-orca-push-event-hit": 0,
+        "invalid-orca-taxonomy": 0,
+        "legacy-operations-readiness": 0
+      }
+    },
+    "fixed": [
+      "runtime_ready_smoke_no_longer_writes_screenshots",
+      "unsafe_initial_local_screenshot_output_removed_before_rerun",
+      "runtime_ready_smoke_retains_json_only_sanitized_evidence"
+    ],
+    "claimBoundary": "Non-S3 Trial-local runtime smoke only; not production ORCA readiness, S3/object-storage readiness, new live Trial mutation success, fullflow, or final release readiness.",
+    "recommendedNextTask": "Continue RWO-11 final-summary and current-head package/packet refresh work after this committed runtime-safe evidence update, while keeping browser/fullflow and owner GO blockers explicit.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "latestOwnerNonS3RuntimeDirection": {
     "runId": "20260423T054833Z",
     "result": "NON_S3_RUNTIME_PROFILE_DIRECTION_RECORDED",
@@ -1004,6 +1042,7 @@
     "RUN_ID 20260423T160225Z refreshed the RWO-09/RWO-11 reviewer support package for current source head c2a578808e3b760798b99127e92eda4db6e85c3e; review-package regression tests (27), package source secret scan, artifact sha256 verification, metadata validation, and forbidden-path scan all passed. Live Trial ORCA, production ORCA, fullflow, runtime-ready smoke, and S3/object-storage setup were not run.",
     "RUN_ID 20260423T180102Z refreshed the RWO-09/RWO-11 reviewer support package for current source head 2eee5777770484a570c777570d4310c8b1b50a20 after the packet-contract hardening commit advanced master; review-package regression tests (27), metadata validation, package source secret scan, artifact sha256 verification, and excluded-path scan all passed. Live Trial ORCA, production ORCA, fullflow, runtime-ready smoke, and S3/object-storage setup were not run.",
     "RUN_ID 20260423T190300Z created a current sanitized closeout subset and validated the canonical reviewer submission packet for accepted ref master frozen at 5a141e8e9256475904f14ba47ac5d459c4ea421e. This advanced the packet gate only; browser prescription/order UI coverage, safe fullflow, rollback acceptance, and final owner GO/NO-GO remain open. No credentials or raw artifacts were captured.",
+    "RUN_ID 20260423T200259Z repaired runtime-ready-smoke safe evidence so it no longer writes screenshots, started the approved orca-trial-no-object-storage runtime pair, and reran runtime-ready smoke successfully with JSON-only retained evidence and zero blocked-route hits. No credentials or raw artifacts were captured.",
     "RUN_ID 20260423T115535Z recorded fresh explicit owner approval for exactly one post-repair WebORCA Trial medicalmodv2 live attempt through web-client/scripts/qa-phase4-safe-medicalmodv2.mjs using payload SHA-256 e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618 and target 00001/00001. The approval does not authorize production ORCA, S3/object-storage, fullflow, Phase3 rerun, Request_Number 02/03/04, diseasev3/subjectivesv2, raw artifacts, credentials, repeated mutation, or final release GO. The live action remains not_run in this approval-recording commit."
   ]
 }

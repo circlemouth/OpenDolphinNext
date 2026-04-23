@@ -468,7 +468,6 @@ try {
     rowResolution = await waitForSmokeRow(page, appointmentEvidence.smokeEntry, smokePatientDisplayName);
     smokeRowLocator = rowResolution.row;
   } catch (error) {
-    await page.screenshot({ path: path.join(artifactRoot, 'runtime-ready-before-row-wait-timeout.png'), fullPage: true });
     const afterTimeoutEvidence = {
       ...beforeRowWaitEvidence,
       ...(await collectReceptionRowEvidence(page)),
@@ -526,8 +525,6 @@ try {
     throw new Error('smoke patient display name is not rendered in Charts UI');
   }
 
-  await page.screenshot({ path: path.join(artifactRoot, 'charts-selected-entry-before-reload.png'), fullPage: true });
-
   await waitFor(
     () => responseLog.filter((entry) => entry.url.includes('/api/local/encounters/')).length >= 1,
     30_000,
@@ -556,8 +553,6 @@ try {
   if (uiAfterReload.hasPlaceholderName || !uiAfterReload.patientLabelContainsSmokeName) {
     throw new Error('smoke patient display name regressed after summary refresh');
   }
-
-  await page.screenshot({ path: path.join(artifactRoot, 'charts-selected-entry-after-refresh.png'), fullPage: true });
 
   const printState = await page.evaluate(() => {
     const print = document.getElementById('charts-action-print');
@@ -606,8 +601,6 @@ try {
   if (uiAfterStart.hasPlaceholderName || !uiAfterStart.patientLabelContainsSmokeName) {
     throw new Error('smoke patient display name regressed after start transition');
   }
-
-  await page.screenshot({ path: path.join(artifactRoot, 'charts-after-start.png'), fullPage: true });
 
   const result = {
     runId,
