@@ -24,7 +24,7 @@ RUN_ID: `20260422T134401Z`
 - fullflow status: not_run
 - browser e2e status: not_run for Clinical Wave 1 evidence reviewed here
 - live ORCA status: prior Trial `acceptmodv2` `00001` limited evidence only; no WO-8 live action
-- production ORCA status: not_run / not_verified
+- production ORCA status: not_applicable_trial_only / not_claimed
 - release-ready status: not_ready
 - final ZIP path: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/review-package/OpenDolphin_WebClient-review-package-20260422T134401Z-clinical-functional-release-readiness-roadmap.zip`
 - final ZIP sha256: `1e1153dc6254d62c3d0e289ff2b7cf8e2a9ac4a4c0207ef65c00b80715f0c440`

@@ -14,14 +14,17 @@ The roadmap documentation can be completed from repo-local evidence, but one exp
 - Generic order input: not release-complete; local/server/component/static evidence only.
 - Electronic chart fullflow: `not_run`.
 - ORCA live: limited prior Trial `acceptmodv2` `00001` evidence only; WO-8 did not execute live ORCA.
-- Production readiness: not verified and not release-ready.
+- Production ORCA readiness: out of scope for this Trial-only roadmap and not claimed.
 
 ## Main Blockers
 
 1. Browser e2e evidence is missing for Clinical Wave 1 workflows.
 2. Fullflow is missing.
 3. `medicalmodv2`, `diseasev3`, and `subjectivesv2` live verification is missing.
-4. Production ORCA and production config/secrets are not verified.
+4. Trial-scope runtime config/secrets and deployment readiness are not fully verified.
 5. Owner release sign-off is not present.
 6. Expected CWP-01 filename is missing and should be accepted or corrected by owner review.
 
+## ORCA Connection Scope
+
+This plan connects only to WebORCA / ORCA Trial. Production ORCA connectivity, production ORCA credentials, and production patient data are not required for this roadmap.

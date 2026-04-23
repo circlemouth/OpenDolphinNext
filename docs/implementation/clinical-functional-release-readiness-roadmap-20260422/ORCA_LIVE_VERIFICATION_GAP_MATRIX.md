@@ -12,12 +12,11 @@ RUN_ID: `20260422T134401Z`
 | Request_Number 02 | Explicitly not run. | Forbidden in current evidence scope. | no | no | no | Separate planning/approval if business requires it. | yes | yes | yes |
 | Request_Number 03 | Explicitly not run. | Forbidden in current evidence scope. | no | no | no | Separate planning/approval if business requires it. | yes | yes | yes |
 | Request_Number 04 | Explicitly not run. | Forbidden in current evidence scope. | no | no | no | Separate planning/approval if business requires it. | yes | yes | yes |
-| `00001` | Prior Trial acceptmodv2 Phase 3 limited success; WO-8 planned target but did not execute. | Cannot infer fullflow, medicalmodv2, diseasev3, subjectivesv2, or production. | yes, prior acceptmodv2 only | yes, acceptmodv2 only | yes | Safe next target/action definition if more live work is approved. | yes | yes | yes |
+| `00001` | Prior Trial acceptmodv2 Phase 3 limited success; WO-8 planned target but did not execute. | Cannot infer fullflow, medicalmodv2, diseasev3, or subjectivesv2. Production ORCA is out of scope. | yes, prior acceptmodv2 only | yes, acceptmodv2 only | yes | Safe next target/action definition if more live Trial work is approved. | yes | yes | yes |
 | `00002` through `00011` | Not run. | Mutation prohibited in current scope. | no | no | no | Separate explicit owner approval and readiness evidence. | yes | yes | yes |
 | Trial ORCA | Limited prior acceptmodv2 success; WO-8 no live traffic. | Trial only, not production. | yes, limited | yes, limited | yes | Expand one endpoint/target at a time. | yes | yes | yes |
-| Production ORCA | No production ORCA evidence. | Production config/secrets unknown. | no | no | no | Production readiness, secure credentials, owner approval, release gate. | yes | yes | yes |
+| Production ORCA | Not applicable to this roadmap. | Production ORCA connectivity, credentials, patient data, and functional execution are out of scope. | no | no | no | No action in this automation; keep as explicit non-claim. | separate production plan only | no for this roadmap | yes |
 
 ## WO-8 Incorporated Verdict
 
 WO-8 was found and incorporated. Its verdict was `PHASE4_BLOCKED_HARNESS_OR_EVIDENCE_POLICY`; live ORCA action, authentication/session establishment, mutation, fullflow, Request_Number `02/03/04`, and `00002` through `00011` all remained `not_run`.
-

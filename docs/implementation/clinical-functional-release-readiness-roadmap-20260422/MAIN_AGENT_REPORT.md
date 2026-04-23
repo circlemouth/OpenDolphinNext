@@ -32,7 +32,7 @@ One expected input path was missing: `docs/implementation/unified-clinical-wave1
 - Live ORCA evidence is limited to prior Phase 3 `acceptmodv2` for `00001 / 00001`.
 - WO-8 did not add live ORCA evidence.
 - `medicalmodv2`, `diseasev3`, and `subjectivesv2` live success are not claimed.
-- Production ORCA readiness is not verified.
+- Production ORCA readiness is out of scope for this Trial-only roadmap and not claimed.
 
 ## Subagents
 
@@ -45,10 +45,9 @@ Subagents were used for offline advisory review in individual worktrees. Initial
 | Local/static tests are presented as live ORCA success. | Matrices cap Clinical Wave 1 at local/server/component/static. |
 | Prior `00001` acceptmodv2 success is generalized to all ORCA endpoints or patients. | ORCA matrix limits it to Trial `acceptmodv2` `00001` only. |
 | WO-8 no-live result is treated as business success. | WO-8 is recorded as blocked before live traffic; business success not assessed. |
-| Production readiness is inferred from Trial evidence. | Production ORCA is `NOT_RUN` and blocked pending external config/sign-off. |
+| Production readiness is inferred from Trial evidence. | Production ORCA is `NOT_APPLICABLE_TRIAL_ONLY`; Trial evidence must not be used for production ORCA readiness claims. |
 | Raw evidence is requested to fill gaps. | Gaps are marked pending; raw ORCA/network/patient/credential artifacts remain prohibited. |
 
 ## Package Note
 
 Final ZIP metadata is stored in external sidecars to avoid self-referential package hash drift. The final report outside the ZIP is updated with final ZIP path, SHA-256, size, and file count after packaging.
-

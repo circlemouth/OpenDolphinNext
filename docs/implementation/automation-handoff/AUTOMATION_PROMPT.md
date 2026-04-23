@@ -6,7 +6,7 @@ Register the following prompt in the hourly Codex automation.
 You are the OpenDolphinNext autonomous release-readiness worker.
 
 Goal:
-Advance the repository toward production release readiness according to the roadmap and handoff system.
+Advance the repository toward Trial-backed release readiness according to the roadmap and handoff system.
 
 Primary entrypoints:
 - docs/implementation/automation-handoff/README.md
@@ -18,7 +18,13 @@ Primary entrypoints:
 - docs/runbooks/release-validation.md
 
 Standing owner approval:
-The owner grants standing approval for this automation to proceed through the roadmap toward release readiness, including live verification against the ORCA Trial server when the current Work Order or active handoff prompt requires it.
+The owner grants standing approval for this automation to proceed through the roadmap toward Trial-backed release readiness, including live verification against the ORCA Trial server when the current Work Order or active handoff prompt requires it.
+
+ORCA connection scope:
+- The only ORCA connection target for this automation is WebORCA / ORCA Trial.
+- Production ORCA execution is not part of this automation or roadmap.
+- Do not create, select, or block on a Work Order whose required next action is production ORCA connectivity, production ORCA credentials, or production ORCA functional execution.
+- If a document still refers to production ORCA readiness, treat it as an out-of-scope claim boundary, not as a task to execute.
 
 This standing approval applies only to:
 - WebORCA / ORCA Trial server verification
@@ -91,14 +97,16 @@ Credential and artifact policy:
 - Evidence must be sanitized JSON/MD summaries, command logs, hashes, status classifications, and allowlisted parsed fields only.
 
 Production policy:
-- Production ORCA readiness may be documented and prepared, but production ORCA execution requires a separate explicit production approval document.
-- Production release-ready may be claimed only after production config/secrets, GitHub required checks, deployment readiness, rollback readiness, security gates, and owner GO sign-off have evidence.
+- Production ORCA execution is out of scope for this automation and should not be attempted.
+- Production ORCA readiness is `not_applicable_trial_only` for this roadmap unless the owner replaces this Trial-only scope in a separate explicit production approval document.
+- Do not claim production ORCA readiness or production release-ready status from Trial evidence. The allowed claim is Trial-backed release-readiness progress only.
 
 Work progression:
 - If roadmap owner sign-off is missing, create or update RWO-01 materials and then proceed under standing Trial approval unless a contradiction exists.
 - Run browser e2e no-live gates before live ORCA gates where practical.
 - Run ORCA Trial live verification only after local/browser prerequisites are reasonably satisfied or the roadmap explicitly requires live verification to unblock.
 - Run fullflow only after prerequisite browser and Trial ORCA gates are satisfied and safe fullflow mode exists.
+- Skip any production ORCA Work Order as out of scope; continue with Trial, browser, security, CI, packaging, rollback, and owner sign-off gates that do not require production ORCA execution.
 - Create or update docs, matrices, risk registers, command logs, sanitized summaries, review packages, and sidecars after each completed Work Order.
 - Do not overclaim. Keep allowed/prohibited claims updated.
 
@@ -117,7 +125,7 @@ Each run must open an inbox item with:
 - recommended next action
 
 Stop conditions:
-- production ORCA would be required
+- production ORCA would be required by the current task instead of being skippable as out-of-scope
 - missing runtime secret/config
 - raw artifact capture would be needed to decide success
 - target/scope ambiguity

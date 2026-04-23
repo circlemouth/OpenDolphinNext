@@ -17,6 +17,5 @@ RUN_ID: `20260422T134401Z`
 | Browser e2e | Not run for Clinical Wave 1 | No | WO-3/4 |
 | Fullflow | Not run | No | WO-3/4/5/6/7/8 |
 | Trial ORCA | Limited | Limited acceptmodv2 only | Phase 3 retry, WO-8 |
-| Production ORCA | Not verified | No | Manager/release docs |
-| Release readiness | Not ready | No | Release gate matrix |
-
+| Production ORCA | Not applicable to Trial-only roadmap | No production ORCA claim | Roadmap ORCA connection scope |
+| Trial-backed release readiness | Not ready | No | Release gate matrix |

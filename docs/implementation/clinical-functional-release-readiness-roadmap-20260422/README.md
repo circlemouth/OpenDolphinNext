@@ -6,14 +6,20 @@ RUN_ID: `20260422T134401Z`
 
 This documentation set consolidates the current OpenDolphinNext clinical functional verification status from existing repo-local evidence. It is documentation-only and does not implement features, execute live ORCA, run fullflow, request credentials, or change CWP functional code.
 
+## ORCA Connection Scope
+
+This roadmap assumes WebORCA / ORCA Trial as the only ORCA connection target. Production ORCA connectivity, production ORCA credentials, production patient data, and production ORCA functional execution are out of scope and are not required for this automation plan.
+
+Trial evidence must remain bounded to Trial-backed release-readiness progress. It must not be used to claim production ORCA readiness.
+
 ## Final Working Conclusion
 
 - Electronic chart / karte local persistence has targeted local/server/component/static evidence, but full end-to-end release readiness is not established.
 - SOAP and disease local workflows have targeted local/server/component/static evidence, but `subjectivesv2` and `diseasev3` live ORCA success are not claimed.
 - Prescription and generic order input have local/static/server/component evidence only; ORCA-backed browser/fullflow/live verification remains pending.
-- Existing live ORCA evidence is limited to the earlier Phase 3 `acceptmodv2` retry for `00001 / 00001`, classified as `businessAcceptedWithWarnings`; it does not prove medicalmodv2, diseasev3, subjectivesv2, fullflow, all patients, or production ORCA.
+- Existing live ORCA evidence is limited to the earlier Trial Phase 3 `acceptmodv2` retry for `00001 / 00001`, classified as `businessAcceptedWithWarnings`; it does not prove medicalmodv2, diseasev3, subjectivesv2, fullflow, all patients, or production ORCA.
 - WO-8 exists and was incorporated; it stopped before live ORCA traffic with `PHASE4_BLOCKED_HARNESS_OR_EVIDENCE_POLICY`.
-- Release-ready cannot be claimed until browser e2e, trial ORCA expansion, production ORCA readiness, security/config/deployment, package, CI, and owner sign-off gates have actual evidence.
+- Trial-backed release readiness cannot be claimed until browser e2e, Trial ORCA expansion, security/config/deployment, package, CI, rollback, and owner sign-off gates have actual evidence. Production ORCA readiness is a non-claim for this roadmap.
 
 ## Documents
 
@@ -33,4 +39,3 @@ This documentation set consolidates the current OpenDolphinNext clinical functio
 - [RISK_REGISTER.md](RISK_REGISTER.md)
 - [UI_DADS_RELEASE_READINESS_NOTES.md](UI_DADS_RELEASE_READINESS_NOTES.md)
 - [SUBAGENT_REPORTS_SUMMARY.md](SUBAGENT_REPORTS_SUMMARY.md)
-
