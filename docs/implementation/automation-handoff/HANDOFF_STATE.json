@@ -9,7 +9,7 @@
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-23T03:55:17Z",
+  "lastUpdated": "2026-04-23T04:01:45Z",
   "latestSafeBrowserSmoke": {
     "runId": "20260423T020225Z",
     "workOrder": "RWO-02",
@@ -18,6 +18,28 @@
     "config": "playwright.no-artifacts.config.ts",
     "spec": "tests/e2e/safe-no-artifacts/charts-missing-context-recovery.safe.spec.ts",
     "evidence": "docs/implementation/rwo03-rwo05-local-contract-and-safe-browser-skip-20260423T020225Z/FINAL_REPORT.md",
+    "liveTrialAction": "not_run",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestRwo02SafeBrowserChartOpen": {
+    "runId": "20260423T040145Z",
+    "workOrder": "RWO-02",
+    "result": "RWO02_SAFE_BROWSER_CHART_OPEN_PASS_PARTIAL_UI_SCOPE",
+    "wrapper": "web-client/scripts/run-safe-playwright-no-artifacts.mjs",
+    "config": "playwright.no-artifacts.config.ts",
+    "spec": "tests/e2e/safe-no-artifacts/charts-missing-context-recovery.safe.spec.ts",
+    "evidence": "docs/implementation/rwo02-safe-browser-chart-open-20260423T040145Z/FINAL_REPORT.md",
+    "tests": {
+      "updatedSpecTests": 2,
+      "combinedSafeBrowserSuiteTests": 5,
+      "result": "pass"
+    },
+    "coverage": [
+      "missing_context_fail_closed",
+      "reception_to_charts_chart_open_volatile_context_no_patient_url"
+    ],
+    "claimBoundary": "browser-level no-live chart-open evidence with local stubs; not full UI click-through, fullflow, live Trial ORCA, production ORCA, or S3 readiness",
     "liveTrialAction": "not_run",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false

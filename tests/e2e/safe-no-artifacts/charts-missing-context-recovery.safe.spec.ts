@@ -6,8 +6,42 @@ import { baseUrl, runId } from '../helpers/orcaMaster';
 
 const FACILITY_ID = '1.3.6.1.4.1.9414.72.103';
 const USER_ID = 'doctor1';
+const SAFE_PATIENT_ID = 'PW-SAFE-UI-001';
+const SAFE_ENCOUNTER_KEY = `${FACILITY_ID}:SAFE-CHART-OPEN-001`;
+const SAFE_SCHEDULE_KEY = 'SAFE-SCHEDULE-CHART-OPEN-001';
+const SAFE_VISIT_DATE = '2026-04-23';
 
-const stubChartsShell = async (page: Page) => {
+const safeVisit = {
+  patient: {
+    patientId: SAFE_PATIENT_ID,
+    wholeName: 'Safe Browser Patient',
+    wholeNameKana: 'セーフブラウザ',
+    birthDate: '1980-01-02',
+    sex: '1',
+  },
+  receptionId: 'SAFE-REC-001',
+  acceptanceId: 'SAFE-REC-001',
+  sequentialNumber: 'SAFE-SEQ-001',
+  voucherNumber: 'SAFE-VOUCHER-001',
+  scheduleKey: SAFE_SCHEDULE_KEY,
+  encounterKey: SAFE_ENCOUNTER_KEY,
+  departmentCode: '01',
+  departmentName: '内科',
+  physicianCode: '1001',
+  physicianName: 'Safe Doctor',
+  insuranceCombinationNumber: 'SAFE-COMBINATION',
+  visitDate: SAFE_VISIT_DATE,
+  acceptanceTime: '0900',
+  visitInformation: '受付',
+};
+
+const jsonResponse = (body: unknown, status = 200) => ({
+  status,
+  contentType: 'application/json',
+  body: JSON.stringify(body),
+});
+
+const stubChartsShell = async (page: Page, options: { includeSafeVisit?: boolean } = {}) => {
   const sessionPayload = {
     facilityId: FACILITY_ID,
     userId: USER_ID,
@@ -16,6 +50,23 @@ const stubChartsShell = async (page: Page) => {
     clientUuid: 'safe-no-artifacts-e2e',
     runId,
   };
+
+  await page.addInitScript(() => {
+    const ensureCsrfMeta = () => {
+      const existing = document.querySelector("meta[name='csrf-token']");
+      if (existing instanceof HTMLMetaElement) {
+        existing.content = 'safe-browser-csrf-token';
+        return;
+      }
+      if (!document.head) return;
+      const meta = document.createElement('meta');
+      meta.name = 'csrf-token';
+      meta.content = 'safe-browser-csrf-token';
+      document.head.appendChild(meta);
+    };
+    ensureCsrfMeta();
+    document.addEventListener('DOMContentLoaded', ensureCsrfMeta, { once: true });
+  });
 
   await page.route('**/session/me**', (route: Route) =>
     route.fulfill({
@@ -54,41 +105,57 @@ const stubChartsShell = async (page: Page) => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(adminConfig) }),
   );
 
-  await page.route('**/api/orca/official/appointments/list**', (route: Route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        runId,
-        cacheHit: true,
-        missingMaster: false,
-        fallbackUsed: false,
-        dataSourceTransition: 'server',
-        entries: [],
-        page: 1,
-        size: 50,
-        recordsReturned: 0,
-        hasNextPage: false,
-        fetchedAt: new Date().toISOString(),
-      }),
-    }),
-  );
-  await page.route('**/api/orca/official/visits/list**', (route: Route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        runId,
-        cacheHit: true,
-        missingMaster: false,
-        fallbackUsed: false,
-        dataSourceTransition: 'server',
-        visits: [],
-        recordsReturned: 0,
-        fetchedAt: new Date().toISOString(),
-      }),
-    }),
-  );
+  const readOnlyOrcaPaths: string[] = [];
+  const blockedOrcaPaths: string[] = [];
+  await page.route('**/api/orca/**', (route: Route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname === '/api/orca/official/appointments/list') {
+      readOnlyOrcaPaths.push(pathname);
+      return route.fulfill(
+        jsonResponse({
+          runId,
+          cacheHit: true,
+          missingMaster: false,
+          fallbackUsed: false,
+          dataSourceTransition: 'server',
+          entries: [],
+          page: 1,
+          size: 50,
+          recordsReturned: 0,
+          hasNextPage: false,
+          fetchedAt: new Date().toISOString(),
+        }),
+      );
+    }
+    if (pathname === '/api/orca/official/appointments/medical-information') {
+      readOnlyOrcaPaths.push(pathname);
+      return route.fulfill(
+        jsonResponse({
+          runId,
+          items: [{ code: '01', name: '外来' }],
+        }),
+      );
+    }
+    if (pathname === '/api/orca/official/visits/list') {
+      readOnlyOrcaPaths.push(pathname);
+      const visits = options.includeSafeVisit ? [safeVisit] : [];
+      return route.fulfill(
+        jsonResponse({
+          runId,
+          cacheHit: true,
+          missingMaster: false,
+          fallbackUsed: false,
+          dataSourceTransition: 'server',
+          visitDate: SAFE_VISIT_DATE,
+          visits,
+          recordsReturned: visits.length,
+          fetchedAt: new Date().toISOString(),
+        }),
+      );
+    }
+    blockedOrcaPaths.push(pathname);
+    return route.fulfill(jsonResponse({ ok: false, routeBlocked: true, runId }, 451));
+  });
   await page.route('**/orca21/medicalmodv2/outpatient**', (route: Route) =>
     route.fulfill({
       status: 200,
@@ -104,6 +171,53 @@ const stubChartsShell = async (page: Page) => {
       }),
     }),
   );
+
+  await page.route('**/api/local/encounters/*/medical-summary**', (route: Route) =>
+    route.fulfill(
+      jsonResponse({
+        runId,
+        fetchedAt: new Date().toISOString(),
+        recordsReturned: 0,
+        outcome: 'MISSING',
+        payload: { outpatientList: [] },
+      }),
+    ),
+  );
+  await page.route('**/api/local/patients/search**', (route: Route) =>
+    route.fulfill(
+      jsonResponse({
+        runId,
+        patients: [
+          {
+            patientId: SAFE_PATIENT_ID,
+            name: 'Safe Browser Patient',
+            kana: 'セーフブラウザ',
+            birthDate: '1980-01-02',
+            sex: '1',
+          },
+        ],
+        recordsReturned: 1,
+      }),
+    ),
+  );
+  await page.route('**/api/karte/pid/**', (route: Route) => route.fulfill(jsonResponse({ id: 9001, runId })));
+  await page.route('**/api/karte/rpHistory/list/**', (route: Route) => route.fulfill(jsonResponse([])));
+  await page.route('**/api/local/prescription-orders**', (route: Route) =>
+    route.fulfill(jsonResponse({ found: false, runId, sourceBundles: [], order: null })),
+  );
+  await page.route('**/api/local/order/bundles**', (route: Route) =>
+    route.fulfill(jsonResponse({ ok: true, runId, patientId: SAFE_PATIENT_ID, recordsReturned: 0, bundles: [] })),
+  );
+  await page.route('**/api/local/diagnoses/**', (route: Route) =>
+    route.fulfill(jsonResponse({ ok: true, runId, patientId: SAFE_PATIENT_ID, diseases: [] })),
+  );
+  await page.route('**/api/local/order/recommendations**', (route: Route) =>
+    route.fulfill(jsonResponse({ ok: true, runId, recommendations: [] })),
+  );
+  await page.route('**/api/karte/freedocument/**', (route: Route) => route.fulfill(jsonResponse({ list: [], runId })));
+  await page.route('**/odletter/**', (route: Route) => route.fulfill(jsonResponse({ list: [], runId })));
+
+  return { readOnlyOrcaPaths, blockedOrcaPaths };
 };
 
 const establishSession = async (page: Page) => {
@@ -150,5 +264,34 @@ test.describe('Charts missing context recovery safe smoke', () => {
     const recovery = page.locator('.charts-context-recovery');
     await expect(recovery.getByRole('button', { name: '受付へ戻る' })).toBeVisible();
     await expect(page.locator('#charts-action-send')).toBeDisabled();
+  });
+
+  test('reception card opens Charts with volatile encounter context only', async ({ page }) => {
+    const { readOnlyOrcaPaths, blockedOrcaPaths } = await stubChartsShell(page, { includeSafeVisit: true });
+    await establishSession(page);
+
+    await expect(page.getByRole('region', { name: '受付一覧' })).toBeVisible({ timeout: 20_000 });
+    const safePatientEntry = page.locator(
+      '[data-test-id="reception-entry-card"][data-patient-id="PW-SAFE-UI-001"], [data-test-id="reception-entry-row"][data-patient-id="PW-SAFE-UI-001"]',
+    );
+    await expect(safePatientEntry).toBeVisible({ timeout: 20_000 });
+    await safePatientEntry.getByRole('button', { name: /カルテを開く/ }).first().click();
+
+    await expect(page).toHaveURL(new RegExp(`/f/${encodeURIComponent(FACILITY_ID)}/charts`));
+    expect(new URL(page.url()).searchParams.get('patientId')).toBeNull();
+    await expect(page.getByRole('region', { name: '外来カルテ作業台' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('.charts-context-recovery')).toHaveCount(0);
+    await expect(page.locator('#charts-patient-summary')).toContainText(SAFE_PATIENT_ID);
+    await expect(page.locator('#charts-patient-summary')).toContainText('Safe Browser Patient');
+    await expect(page.locator('#charts-action-send')).toBeVisible();
+
+    const retainedEncounterStorage = await page.evaluate(() =>
+      Object.keys(window.sessionStorage).filter((key) => key.includes('charts:encounter-context')),
+    );
+    expect(retainedEncounterStorage).toEqual([]);
+    expect(readOnlyOrcaPaths).toEqual(
+      expect.arrayContaining(['/api/orca/official/appointments/list', '/api/orca/official/visits/list']),
+    );
+    expect(blockedOrcaPaths).toEqual([]);
   });
 });
