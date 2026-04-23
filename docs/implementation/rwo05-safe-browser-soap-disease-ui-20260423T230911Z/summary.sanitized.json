@@ -1,0 +1,49 @@
+{
+  "runId": "20260423T230911Z",
+  "workOrder": "RWO-05",
+  "result": "RWO05_SAFE_BROWSER_SOAP_ALL_SECTIONS_DISEASE_CRUD_UI_PASS",
+  "branch": "master",
+  "startHead": "8e8bcb1dad195729e5c5bc0e5dd61bb20fd21f4a",
+  "activeHandoffPrompt": null,
+  "coverageAdded": [
+    "Charts UI saves SOAP free/S/O/A/P sections through local subjectives only",
+    "Charts UI creates, updates, and deletes insurance disease through local diagnoses only",
+    "ORCA mirror disease row remains visible and has no edit/delete controls"
+  ],
+  "safeBrowser": {
+    "wrapper": "web-client/scripts/run-safe-playwright-no-artifacts.mjs",
+    "focusedSpec": {
+      "result": "pass",
+      "testsPassed": 5,
+      "testsSkipped": 0
+    },
+    "combinedSuite": {
+      "result": "pass",
+      "testsPassed": 8,
+      "testsSkipped": 0
+    },
+    "retainedForbiddenArtifacts": 0
+  },
+  "typecheck": {
+    "result": "pass",
+    "includesWebGuard": true
+  },
+  "webClientCi": {
+    "result": "pass",
+    "testFilesPassed": 197,
+    "testsPassed": 1334,
+    "testsSkipped": 2,
+    "build": "pass_with_existing_chunk_size_warning"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "endpoint": null,
+    "target": null,
+    "requestClass": null,
+    "businessSuccessClassification": "not_applicable_no_live_browser_gate"
+  },
+  "claimBoundary": "No-live artifact-free browser evidence only; not live ORCA Trial evidence, production ORCA readiness, S3/object-storage readiness, fullflow success, or final release readiness.",
+  "recommendedNextTask": "Continue RWO-09/RWO-11 non-S3 release-readiness evidence and safe fullflow harness hardening when prerequisites are available.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}

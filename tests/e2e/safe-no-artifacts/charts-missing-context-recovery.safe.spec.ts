@@ -610,7 +610,7 @@ test.describe('Charts missing context recovery safe smoke', () => {
     expect(blockedOrcaPaths).toEqual([]);
   });
 
-  test('Charts UI saves SOAP and adds insurance disease through local-only routes', async ({ page }) => {
+  test('Charts UI saves SOAP and creates, updates, and deletes insurance disease through local-only routes', async ({ page }) => {
     const { readOnlyOrcaPaths, blockedOrcaPaths, subjectiveBodies, diagnosisMutationBodies } = await stubChartsShell(page, {
       includeSafeVisit: true,
     });
@@ -619,10 +619,13 @@ test.describe('Charts missing context recovery safe smoke', () => {
     await openSafeChartsFromReception(page);
     const soapRegion = page.getByRole('region', { name: 'SOAP 記載' });
     await expect(soapRegion).toBeVisible({ timeout: 20_000 });
+    await page.locator('#soap-note-free').fill('browser UI free note');
     await page.locator('#soap-note-subjective').fill('browser UI subjective note');
     await page.locator('#soap-note-objective').fill('browser UI objective note');
+    await page.locator('#soap-note-assessment').fill('browser UI assessment note');
+    await page.locator('#soap-note-plan').fill('browser UI plan note');
     await soapRegion.getByRole('button', { name: '保存' }).click();
-    await expect.poll(() => subjectiveBodies.length, { timeout: 20_000 }).toBe(2);
+    await expect.poll(() => subjectiveBodies.length, { timeout: 20_000 }).toBe(5);
 
     await page.locator('#diagnosis-quick-name').fill('browser UI diagnosis');
     await page.locator('#diagnosis-quick-code').fill('J00');
@@ -632,10 +635,37 @@ test.describe('Charts missing context recovery safe smoke', () => {
     await expect(page.getByText('browser UI diagnosis')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('Safe ORCA mirror')).toBeVisible();
 
-    expect(subjectiveBodies.map((body) => body.displaySection).sort()).toEqual(['objective', 'subjective']);
+    const insuranceList = page.getByRole('list', { name: '保険病名（活動中）' });
+    await expect(insuranceList.getByText('browser UI diagnosis')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('list', { name: 'ORCA mirror' }).getByText('Safe ORCA mirror')).toBeVisible();
+    await expect(page.getByRole('list', { name: 'ORCA mirror' }).getByRole('button', { name: '編集' })).toHaveCount(0);
+    await expect(page.getByRole('list', { name: 'ORCA mirror' }).getByRole('button', { name: '削除' })).toHaveCount(0);
+
+    const createdDiagnosisRow = insuranceList.locator('li').filter({ hasText: 'browser UI diagnosis' });
+    await createdDiagnosisRow.getByRole('button', { name: '編集' }).click();
+    const editDialog = page.getByRole('dialog', { name: '病名の編集' });
+    await expect(editDialog).toBeVisible({ timeout: 20_000 });
+    await editDialog.locator('#diagnosis-name').fill('browser UI diagnosis updated');
+    await editDialog.getByRole('button', { name: '更新' }).click();
+    await expect(page.getByText('browser UI diagnosis updated')).toBeVisible({ timeout: 20_000 });
+
+    const updatedDiagnosisRow = insuranceList.locator('li').filter({ hasText: 'browser UI diagnosis updated' });
+    await updatedDiagnosisRow.getByRole('button', { name: '削除' }).click();
+    await expect(page.getByText('病名を削除しました。')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('browser UI diagnosis updated')).toHaveCount(0);
+    await expect(page.getByText('Safe ORCA mirror')).toBeVisible();
+
+    expect(subjectiveBodies.map((body) => body.displaySection).sort()).toEqual([
+      'assessment',
+      'free',
+      'objective',
+      'plan',
+      'subjective',
+    ]);
     expect(subjectiveBodies.every((body) => body.patientId === SAFE_PATIENT_ID)).toBe(true);
-    expect(diagnosisMutationBodies).toHaveLength(1);
-    expect(diagnosisMutationBodies[0].patientId).toBe(SAFE_PATIENT_ID);
+    expect(diagnosisMutationBodies).toHaveLength(3);
+    expect(diagnosisMutationBodies.every((body) => body.patientId === SAFE_PATIENT_ID)).toBe(true);
+    expect(diagnosisMutationBodies.map((body) => body.operations[0]?.operation)).toEqual(['create', 'update', 'delete']);
     expect(diagnosisMutationBodies[0].operations).toEqual([
       expect.objectContaining({
         operation: 'create',
@@ -643,6 +673,21 @@ test.describe('Charts missing context recovery safe smoke', () => {
         diagnosisCode: 'J00',
         startDate: SAFE_VISIT_DATE,
         category: '副病名',
+      }),
+    ]);
+    expect(diagnosisMutationBodies[1].operations).toEqual([
+      expect.objectContaining({
+        operation: 'update',
+        diagnosisName: 'browser UI diagnosis updated',
+        diagnosisCode: 'J00',
+        startDate: SAFE_VISIT_DATE,
+        category: '副病名',
+      }),
+    ]);
+    expect(diagnosisMutationBodies[2].operations).toEqual([
+      expect.objectContaining({
+        operation: 'delete',
+        diagnosisName: 'browser UI diagnosis updated',
       }),
     ]);
     expect(readOnlyOrcaPaths).toEqual(
