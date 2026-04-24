@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T063936Z",
+  "workOrder": "RWO-06B-next",
+  "result": "RWO06B_SUBJECTIVESV2_DISEASEV3_NO_LIVE_WRAPPERS_READY",
+  "branch": "master",
+  "startHead": "1a8fafe5f",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "subjectivesv2-diseasev3-no-live-wrapper-implementation-not-created",
+    "completedByThisRun": true
+  },
+  "nextActiveHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "status": "active",
+    "blockerId": "subjectivesv2-diseasev3-live-integration-official-wrapper-not-created"
+  },
+  "scope": {
+    "liveTrialOrca": "not_run_forbidden_by_prompt",
+    "productionOrca": "not_run_out_of_scope",
+    "s3ObjectStorage": "not_run_out_of_scope",
+    "fullflow": "not_run",
+    "requestNumber02To04": "not_run_forbidden"
+  },
+  "wrappers": {
+    "module": "web-client/scripts/qa-lib/phase4-soap-disease-safe-evidence.mjs",
+    "cli": "web-client/scripts/qa-phase4-safe-soap-disease.mjs",
+    "contract": "phase4-safe-subjectivesv2-diseasev3-no-live-sanitized-only",
+    "liveExecutionSupported": false,
+    "rawArtifactsStored": false
+  },
+  "endpointEvidence": {
+    "subjectivesv2": {
+      "endpoint": "/orca25/subjectivesv2",
+      "localProductRoute": "/api/local/charts/subjectives",
+      "payloadSha256": "9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
+      "duplicateCheckpointKey": "rwo06b:subjectivesv2:rwo06b-subjectivesv2-no-live-v1:target-00001:operation-create:payload-sha256-9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
+      "dryRun": "pass",
+      "fixtureParserClassification": "notVerified",
+      "businessAccepted": false
+    },
+    "diseasev3": {
+      "endpoint": "/orca22/diseasev3",
+      "localProductRoute": "/api/local/diagnoses",
+      "payloadSha256": "da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+      "duplicateCheckpointKey": "rwo06b:diseasev3:rwo06b-diseasev3-create-no-live-v1:target-00001:operation-create:payload-sha256-da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+      "dryRun": "pass",
+      "fixtureParserClassification": "notVerified",
+      "businessAccepted": false,
+      "updateDeleteRequestNumbers": "not_authorized"
+    }
+  },
+  "tests": {
+    "nodeCheck": "pass",
+    "focusedWebClientScriptTests": {
+      "result": "pass",
+      "testFiles": 1,
+      "tests": 8
+    },
+    "wrapperDryRuns": "pass_subjectivesv2_and_diseasev3"
+  },
+  "businessSuccessClassification": "not_applicable_no_live_contract_only",
+  "claimBoundary": "No SOAP subjectivesv2 Trial reachability, diseasev3 Trial reachability, disease update/delete, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
+  "recommendedNextTask": "Create or approve endpoint-specific server official wrappers and business success criteria for subjectivesv2/diseasev3 before any live mutation; keep Request_Number 02/03/04 separately gated.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}
