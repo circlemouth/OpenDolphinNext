@@ -113,3 +113,12 @@ Exit criteria:
 This plan allows adding and batching reachability verification tasks. It does not by itself claim that prescription, treatment/generic orders, SOAP, disease CRUD, Request_Number `02` / `03` / `04`, or fullflow are verified through ORCA Trial.
 
 Successful future checks must be recorded endpoint by endpoint in the release gate matrix and functional claims boundary.
+
+## RWO-06B Inventory Checkpoint
+
+RUN_ID `20260424T030710Z` completed the first static inventory:
+
+- Prescription and representative treatment/generic order send paths map to the existing official `medicalmodv2` route, but endpoint-specific payload identities and duplicate-live checkpoints are still required before new RWO-06D live claims.
+- SOAP remains local-only through `/api/local/charts/subjectives`; `subjectivesv2` is blocked pending a safe wrapper/parser/success criteria and business-scope record.
+- Disease CRUD remains local-only through `/api/local/diagnoses`; disease master candidate read is not a substitute for `diseasev3` CRUD reachability.
+- Request_Number `02` / `03` / `04` remain RWO-07 only, and fullflow remains blocked behind artifact-free harness hardening.

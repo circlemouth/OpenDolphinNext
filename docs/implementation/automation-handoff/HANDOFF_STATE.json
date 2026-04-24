@@ -1,15 +1,53 @@
 {
-  "status": "completed",
+  "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-06",
-  "blockerId": "none",
-  "priority": "closed",
+  "sourceWorkOrder": "RWO-06D",
+  "blockerId": "rwo06b-endpoint-specific-medicalmodv2-wrapper-gap",
+  "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-24T02:57:33Z",
+  "lastUpdated": "2026-04-24T03:07:10Z",
+  "latestRwo06BReachabilityInventory": {
+    "runId": "20260424T030710Z",
+    "workOrder": "RWO-06B",
+    "result": "RWO06B_TRIAL_REACHABILITY_INVENTORY_READY",
+    "branch": "master",
+    "startHead": "b39763ff7c9d654441f2b401736ba04d82e9adee",
+    "evidence": "docs/implementation/rwo06b-trial-reachability-inventory-20260424T030710Z/FINAL_REPORT.md",
+    "matrix": "docs/implementation/rwo06b-trial-reachability-inventory-20260424T030710Z/REACHABILITY_MATRIX.md",
+    "summary": "docs/implementation/rwo06b-trial-reachability-inventory-20260424T030710Z/summary.sanitized.json",
+    "inventoryStatus": {
+      "prescription": "no_live_verified_for_prescription_specific_payload",
+      "treatmentGeneric": "no_live_verified_for_representative_treatment_payload",
+      "soap": "blocked_by_missing_subjectivesv2_safe_wrapper_and_business_scope",
+      "diseaseCrud": "blocked_by_missing_diseasev3_safe_wrapper_and_business_scope",
+      "requestNumber02To04": "not_applicable_until_rwo07_approval",
+      "fullflow": "blocked_by_unsafe_harness"
+    },
+    "tests": {
+      "jsonValidation": "pass",
+      "focusedWebClientBoundaryTests": {
+        "result": "pass",
+        "testFiles": 3,
+        "tests": 15
+      },
+      "docLinks": "pass",
+      "gitDiffCheck": "pass",
+      "focusedForbiddenPatternScan": "pass_no_retained_raw_artifact_values",
+      "focusedSecretPatternScan": "pass_no_secret_values"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_static_inventory_only"
+    },
+    "claimBoundary": "RWO-06B inventory only; no new Trial reachability execution or acceptance evidence.",
+    "recommendedNextTask": "Implement prescription/treatment medicalmodv2 endpoint-specific safe payload contracts and dry-runs before any live mutation.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "latestOrcaTrialReachabilityExpansionPlan": {
     "runId": "20260424T025733Z",
     "workOrdersAdded": [
