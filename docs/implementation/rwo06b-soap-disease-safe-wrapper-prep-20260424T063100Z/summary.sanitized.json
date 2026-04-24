@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T063100Z",
+  "workOrder": "RWO-06B-next",
+  "result": "RWO06B_SOAP_DISEASE_SAFE_WRAPPER_PREP_READY_NO_LIVE",
+  "branch": "master",
+  "startHead": "88d9728aa",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "soap-disease-safe-wrapper-business-scope-not-created",
+    "completedByThisRun": true
+  },
+  "nextActiveHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "status": "active",
+    "blockerId": "subjectivesv2-diseasev3-no-live-wrapper-implementation-not-created"
+  },
+  "scope": {
+    "liveTrialOrca": "not_run_forbidden_by_prompt",
+    "productionOrca": "not_run_out_of_scope",
+    "s3ObjectStorage": "not_run_out_of_scope",
+    "fullflow": "not_run",
+    "requestNumber02To04": "not_run_forbidden"
+  },
+  "endpointPrep": {
+    "subjectivesv2": {
+      "currentProductRoute": "/api/local/charts/subjectives",
+      "currentServerResource": "LocalChartSubjectiveResource",
+      "orcaEndpoint": "/orca25/subjectivesv2",
+      "endpointEnum": "OrcaEndpoint.SUBJECTIVES_MOD",
+      "payload": "web-client/qa/payloads/phase4/subjectivesv2_phase4_dummy_native_intent_v1.json",
+      "payloadSha256": "9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
+      "status": "blocked_no_live_wrapper_business_scope_missing"
+    },
+    "diseasev3": {
+      "currentProductRoute": "/api/local/diagnoses",
+      "currentServerResource": "LocalDiagnosisResource",
+      "orcaEndpoint": "/orca22/diseasev3",
+      "endpointEnum": "OrcaEndpoint.DISEASE_MOD_V3",
+      "payload": "web-client/qa/payloads/phase4/diseasev3_phase4_dummy_native_intent_v1.json",
+      "payloadSha256": "da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+      "status": "blocked_no_live_wrapper_business_scope_missing"
+    }
+  },
+  "tests": {
+    "jsonValidation": "pass",
+    "focusedWebClientBoundaryTests": {
+      "result": "pass",
+      "testFiles": [
+        "web-client/src/features/charts/__tests__/soapSubjectivesOrcaBoundary.test.tsx",
+        "web-client/src/features/charts/__tests__/orderLocalPersistenceMatrix.test.ts",
+        "web-client/src/features/charts/__tests__/prescriptionOrderLocalRoundtripBoundary.test.ts"
+      ]
+    },
+    "secretRawArtifactScan": "pass",
+    "gitDiffCheck": "pass"
+  },
+  "businessSuccessClassification": "not_applicable_no_live_prep_only",
+  "claimBoundary": "No SOAP subjectivesv2 Trial reachability, diseasev3 Trial reachability, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
+  "recommendedNextTask": "Implement subjectivesv2 and diseasev3 no-live safe wrappers and parser/sanitizer contract tests; do not run live mutations until a later endpoint-specific approval exists.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}
