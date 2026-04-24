@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T061549Z",
+  "workOrder": "RWO-06K",
+  "result": "RWO06K_RADIOLOGY_MEDICALMODV2_LIVE_BUSINESS_REJECTED",
+  "branch": "master",
+  "startHead": "0bef0d80f",
+  "activeHandoffPromptAtStart": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "status": "active",
+    "sourceWorkOrder": "RWO-06E-next",
+    "blockerId": "radiology-class-700-no-live-wrapper-not-created"
+  },
+  "trialOrcaEndpointTargetRequestClass": {
+    "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+    "orcaApi": "/api21/medicalmodv2",
+    "target": "00001",
+    "requestNumber": "01",
+    "classCode": "01"
+  },
+  "payloadIdentity": {
+    "workflow": "radiology",
+    "workflowId": "rwo06k-radiology-medicalmodv2-v1",
+    "entity": "radiologyOrder",
+    "claim007Class": "700",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v1.json",
+    "sha256": "d4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e",
+    "bytes": 897,
+    "duplicateLiveCheckpointKey": "rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-d4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e"
+  },
+  "repoLocalJustification": {
+    "webSmoke": "web-client/src/features/charts/__tests__/orderSendSmoke.test.ts verifies radiologyOrder class 700 sends bodyPart, main CT, auxiliary contrast, and comment rows without local memo/admin leakage.",
+    "actionBarSmoke": "web-client/src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx accepts radiology bodyPart and material rows on valid medicalmodv2 payloads.",
+    "inputSetApi": "web-client/src/features/charts/__tests__/orcaOrderInputSetApi.test.ts parses radiology input-set bodyPart/main/auxiliary/comment row roles.",
+    "localPersistence": "web-client/src/features/charts/__tests__/orderLocalPersistenceMatrix.test.ts covers first-class radiology bodyPart persistence/readback."
+  },
+  "noLiveVerification": {
+    "jsonValidation": "pass",
+    "nodeCheck": "pass",
+    "phase4Medicalmodv2SafeEvidence": {
+      "result": "pass",
+      "tests": 18
+    },
+    "wrapperDryRun": {
+      "result": "pass",
+      "evidence": "docs/implementation/rwo06k-radiology-medicalmodv2-20260424T061549Z/wrapper-dry-run/phase4-medicalmodv2-summary.sanitized.json"
+    },
+    "focusedSecretPatternScan": "pass_no_secret_values_policy_terms_only_on_broad_scan",
+    "focusedForbiddenArtifactFileScan": "pass_zero_hits"
+  },
+  "readiness": {
+    "healthHttpStatus": 200,
+    "readinessHttpStatus": 200,
+    "rawBodiesStored": false
+  },
+  "liveTrialOrca": {
+    "executed": true,
+    "attemptCount": 1,
+    "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+    "target": "00001",
+    "requestNumber": "01",
+    "classCode": "01",
+    "httpStatus": 200,
+    "apiResultCategory": "nonzero_business_rejection",
+    "businessSuccessClassification": "businessRejected",
+    "businessAccepted": false,
+    "evidence": "docs/implementation/rwo06k-radiology-medicalmodv2-20260424T061549Z/live-wrapper/phase4-medicalmodv2-summary.sanitized.json"
+  },
+  "claimBoundary": "RWO-06K added and verified an endpoint-specific radiologyOrder/700 medicalmodv2 payload identity, but the single live Trial attempt was businessRejected. No radiology Trial acceptance, all-radiology coverage, all-order readiness, fullflow, production ORCA, S3/object-storage, Request_Number 02/03/04, diseasev3, subjectivesv2, or final release readiness is claimed.",
+  "recommendedNextTask": "Do not repeat the RWO-06K v1 checkpoint. Continue with SOAP/subjectivesv2 and diseasev3 only through separate safe wrapper/business-scope prep; no live execution until endpoint-specific wrappers and success criteria exist.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false,
+  "productionOrcaExecuted": false,
+  "s3ObjectStorageConfigured": false
+}

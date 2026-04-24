@@ -62,6 +62,13 @@ export const PHASE4_ENDPOINT_WORKFLOWS = {
     requiredEntityKinds: ['testOrder'],
     allowedMedicalClasses: ['600'],
   },
+  radiology: {
+    checkpointNamespace: 'rwo06k',
+    workflowId: 'rwo06k-radiology-medicalmodv2-v1',
+    endpointEvidenceLevel: 'L3',
+    requiredEntityKinds: ['radiologyOrder'],
+    allowedMedicalClasses: ['700'],
+  },
 };
 
 const FORBIDDEN_FLAGS = new Set([

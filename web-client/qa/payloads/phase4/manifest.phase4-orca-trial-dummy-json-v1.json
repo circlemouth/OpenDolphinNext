@@ -112,6 +112,14 @@
       "status": "rwo06j_endpoint_specific_candidate_live_business_rejected_do_not_repeat",
       "workflow": "test-order"
     },
+    "medicalmodv2_radiology_trial_reachability_v1.json": {
+      "bytes": 897,
+      "duplicateLiveCheckpointKey": "rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-d4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v1.json",
+      "sha256": "d4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e",
+      "status": "active_rwo06k_endpoint_specific_candidate",
+      "workflow": "radiology"
+    },
     "medicalmodv2_phase4_dummy_owner_aligned_v1.json": {
       "bytes": 639,
       "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_owner_aligned_v1.json",
@@ -136,6 +144,7 @@
     "RWO-06H injection is the endpoint-specific injectionOrder class 310 candidate; use --workflow injection and do not treat one injection class as all injection variants.",
     "RWO-06I surgery is the endpoint-specific surgeryOrder class 500 candidate; the v1 live Trial attempt was businessRejected, so do not repeat it or treat it as surgery acceptance.",
     "RWO-06J test-order is the endpoint-specific testOrder class 600 candidate; the v1 live Trial attempt was businessRejected, so do not repeat it or treat it as test-order acceptance.",
+    "RWO-06K radiology is the endpoint-specific radiologyOrder class 700 candidate; use --workflow radiology and do not treat one radiology class as all radiology variants.",
     "Do not store raw ORCA request/response, HAR, trace, screenshots, video, raw network, credentials, cookies, tokens, session IDs, or CSRF values."
   ],
   "lineEndings": "LF",

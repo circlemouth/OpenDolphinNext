@@ -1,15 +1,15 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-06E-next",
-  "blockerId": "radiology-class-700-no-live-wrapper-not-created",
+  "sourceWorkOrder": "RWO-06B-next",
+  "blockerId": "soap-disease-safe-wrapper-business-scope-not-created",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-24T06:04:21Z",
+  "lastUpdated": "2026-04-24T06:15:49Z",
   "latestRwo06HInjectionMedicalmodv2": {
     "runId": "20260424T052654Z",
     "workOrder": "RWO-06H",
@@ -1752,6 +1752,65 @@
     },
     "claimBoundary": "RWO-06J testOrder/600 v1 executed once and was businessRejected; no test-order Trial acceptance, all-test coverage, physiology/bacteria coverage, all-order readiness, fullflow, production ORCA, S3/object-storage, Request_Number 02/03/04, diseasev3, subjectivesv2, or final release readiness is claimed.",
     "recommendedNextTask": "Do not repeat the RWO-06J v1 checkpoint. Continue with the next independent non-S3 matrix row, radiologyOrder/700, only through a separate payload identity and safe wrapper verification.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestRwo06KRadiologyMedicalmodv2": {
+    "runId": "20260424T061549Z",
+    "workOrder": "RWO-06K",
+    "result": "RWO06K_RADIOLOGY_MEDICALMODV2_LIVE_BUSINESS_REJECTED",
+    "branch": "master",
+    "startHead": "0bef0d80f",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "blockerId": "radiology-class-700-no-live-wrapper-not-created",
+      "completedByThisRun": true
+    },
+    "nextActiveHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "status": "active",
+      "blockerId": "soap-disease-safe-wrapper-business-scope-not-created"
+    },
+    "evidence": "docs/implementation/rwo06k-radiology-medicalmodv2-20260424T061549Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06k-radiology-medicalmodv2-20260424T061549Z/summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "radiology",
+      "workflowId": "rwo06k-radiology-medicalmodv2-v1",
+      "entity": "radiologyOrder",
+      "claim007Class": "700",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v1.json",
+      "sha256": "d4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e",
+      "duplicateLiveCheckpointKey": "rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-d4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e"
+    },
+    "tests": {
+      "jsonValidation": "pass",
+      "nodeCheck": "pass",
+      "phase4Medicalmodv2SafeEvidence": {
+        "result": "pass",
+        "tests": 18
+      },
+      "wrapperDryRun": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "attemptCount": 1,
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "target": "00001",
+      "requestNumber": "01",
+      "classCode": "01",
+      "readiness": {
+        "healthHttpStatus": 200,
+        "readinessHttpStatus": 200,
+        "rawBodiesStored": false
+      },
+      "httpStatus": 200,
+      "apiResultCategory": "nonzero_business_rejection",
+      "businessSuccessClassification": "businessRejected",
+      "businessAccepted": false
+    },
+    "claimBoundary": "RWO-06K radiologyOrder/700 v1 executed once and was businessRejected; no radiology Trial acceptance, all-radiology coverage, all-order readiness, fullflow, production ORCA, S3/object-storage, Request_Number 02/03/04, diseasev3, subjectivesv2, or final release readiness is claimed.",
+    "recommendedNextTask": "Do not repeat the RWO-06K v1 checkpoint. Prepare SOAP/subjectivesv2 and diseasev3 only through no-live safe wrapper/business-scope records before any endpoint-specific live attempt.",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   }

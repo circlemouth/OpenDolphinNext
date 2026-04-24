@@ -68,6 +68,7 @@ Do not commit approved local runtime secret files, ORCA credentials, S3/MinIO/ob
 14. RWO-06H: investigate and verify `injectionOrder` / `注射` class `310` through a separate safe payload identity; v1 was safely tested but Trial-rejected and must not be repeated without a justified v2 candidate.
 15. RWO-06I: investigate and verify `surgeryOrder` / `手術` class `500` through a separate safe payload identity; v1 was safely tested but Trial-rejected and must not be repeated without a justified v2 candidate.
 16. RWO-06J: investigate and verify `testOrder` / `検査` class `600` through a separate safe payload identity; v1 was safely tested but Trial-rejected and must not be repeated without a justified v2 candidate.
+17. RWO-06K: investigate and verify `radiologyOrder` / `画像診断` class `700` through a separate safe payload identity; v1 was safely tested but Trial-rejected and must not be repeated without a justified v2 candidate.
 17. RWO-07: Request_Number 02/03/04 only if business scope requires it and owner approves.
 18. RWO-08: safe fullflow after browser and live endpoint prerequisites.
 19. RWO-08B: safe fullflow reachability variants, batched only through an artifact-free harness.

@@ -33,6 +33,8 @@ const SURGERY_PAYLOAD = payloadPath('medicalmodv2_surgery_trial_reachability_v1.
 const SURGERY_SHA256 = '23441f818148820c2b1364c6a7424b1255995738cd05fa35e1328f41db96c000';
 const TEST_ORDER_PAYLOAD = payloadPath('medicalmodv2_test_order_trial_reachability_v1.json');
 const TEST_ORDER_SHA256 = 'b4fd3a422ac38f51b73a2fb2a56d07e2418339878f9451a6d73eb185bbd334d2';
+const RADIOLOGY_PAYLOAD = payloadPath('medicalmodv2_radiology_trial_reachability_v1.json');
+const RADIOLOGY_SHA256 = 'd4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e';
 
 describe('phase4 medicalmodv2 safe evidence', () => {
   it('accepts only the fixed Phase 4 medicalmodv2 target and sanitized mode', () => {
@@ -302,6 +304,41 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(result.evidence.payload.summary.medicalInformation.medicalClasses).toEqual(['600']);
     expect(result.evidence.duplicateLiveCheckpoint.key).toBe(
       `rwo06j:medicalmodv2:rwo06j-test-order-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-${TEST_ORDER_SHA256}`,
+    );
+  });
+
+  it('accepts the representative radiology endpoint payload identity', () => {
+    const result = validatePhase4SafeCommand({
+      argv: [
+        '--dry-run',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--phase4-only',
+        '--workflow',
+        'radiology',
+        '--payload',
+        RADIOLOGY_PAYLOAD,
+        '--payload-sha256',
+        RADIOLOGY_SHA256,
+      ],
+      env: {},
+      cwd: '/repo/web-client',
+      now: new Date('2026-04-24T06:15:49Z'),
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.evidence.endpointWorkflow).toEqual(
+      expect.objectContaining({
+        workflow: 'radiology',
+        workflowId: 'rwo06k-radiology-medicalmodv2-v1',
+        requiredEntityKindsPresent: true,
+        allowedMedicalClassesOnly: true,
+      }),
+    );
+    expect(result.evidence.payload.summary.medicalInformation.entityKinds).toEqual(['radiologyOrder']);
+    expect(result.evidence.payload.summary.medicalInformation.medicalClasses).toEqual(['700']);
+    expect(result.evidence.duplicateLiveCheckpoint.key).toBe(
+      `rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-${RADIOLOGY_SHA256}`,
     );
   });
 
