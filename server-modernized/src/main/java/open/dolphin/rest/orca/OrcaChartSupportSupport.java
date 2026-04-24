@@ -11,12 +11,16 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckRequest;
 import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckResponse;
+import open.dolphin.rest.dto.orca.ChartSupportDiseaseModV3Request;
+import open.dolphin.rest.dto.orca.ChartSupportDiseaseModV3Response;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoRequest;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetRequest;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
+import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Request;
+import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Response;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -24,6 +28,10 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 final class OrcaChartSupportSupport {
+
+    private static final java.util.regex.Pattern SENSITIVE_MESSAGE_PATTERN =
+            java.util.regex.Pattern.compile("患者|保険|番号|氏名|住所|電話|記号|cookie|authorization|password|passwd|token|session|csrf|jsessionid",
+                    java.util.regex.Pattern.CASE_INSENSITIVE);
 
     String buildMedicalModV2RequestXml(ChartSupportMedicalModV2Request payload) {
         validateMedicalModV2Request(payload);
@@ -450,6 +458,185 @@ final class OrcaChartSupportSupport {
         builder.append("</incomeinfv2req>");
         builder.append("</data>");
         return builder.toString();
+    }
+
+    String buildSubjectivesModV2RequestXml(ChartSupportSubjectivesModV2Request payload) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("<data>");
+        builder.append("<subjectivesreq type=\"record\">");
+        appendTag(builder, "Request_Number", "01");
+        appendTag(builder, "InOut", fallback(payload.getInOut(), "O"));
+        appendTag(builder, "Patient_ID", payload.getPatientId());
+        appendTag(builder, "Perform_Date", payload.getPerformDate());
+        appendTag(builder, "Department_Code", payload.getDepartmentCode());
+        builder.append("<HealthInsurance_Information type=\"record\">");
+        appendTag(builder, "Insurance_Combination_Number", payload.getInsuranceCombinationNumber());
+        builder.append("</HealthInsurance_Information>");
+        appendTag(builder, "Subjectives_Detail_Record", payload.getSubjectivesDetailRecord());
+        appendTag(builder, "Subjectives_Code", payload.getSubjectivesCode());
+        builder.append("</subjectivesreq>");
+        builder.append("</data>");
+        return builder.toString();
+    }
+
+    ChartSupportSubjectivesModV2Response parseSubjectivesModV2Response(
+            OrcaTransportResult result,
+            String runId,
+            String traceId) {
+        ChartSupportSubjectivesModV2Response response = new ChartSupportSubjectivesModV2Response();
+        response.setRunId(runId);
+        response.setTraceId(traceId);
+        response.setStatus(result != null ? result.getStatus() : 500);
+        try {
+            Document document = parseXml(result != null ? result.getBody() : null);
+            response.setApiResult(readFirst(document, "Api_Result"));
+            String apiResultMessage = readFirst(document, "Api_Result_Message");
+            response.setApiResultMessageCategory(classifySafeMessage(apiResultMessage));
+            response.setInformationDate(readFirst(document, "Information_Date"));
+            response.setInformationTime(readFirst(document, "Information_Time"));
+            boolean transportOk = response.getStatus() >= 200 && response.getStatus() < 300;
+            boolean apiOk = response.getApiResult() != null && response.getApiResult().matches("0+");
+            boolean completionEvidencePresent = !isBlank(response.getInformationDate())
+                    && !isBlank(response.getInformationTime());
+            response.setApiOk(apiOk);
+            response.setBusinessAccepted(transportOk && apiOk && completionEvidencePresent);
+            response.setOk(response.isBusinessAccepted());
+            response.setResponseClassification(classifyOfficialMutationResult(
+                    transportOk,
+                    document,
+                    "subjectivesmodres",
+                    apiOk,
+                    completionEvidencePresent));
+            if (!response.isOk() && !isBlank(apiResultMessage)) {
+                response.setError(response.getApiResultMessageCategory());
+            }
+        } catch (Exception ex) {
+            response.setOk(false);
+            response.setApiOk(false);
+            response.setBusinessAccepted(false);
+            response.setResponseClassification("parserAmbiguous");
+            response.setError("parser_error");
+        }
+        return response;
+    }
+
+    String buildDiseaseModV3RequestXml(ChartSupportDiseaseModV3Request payload) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("<data>");
+        builder.append("<diseasereq type=\"record\">");
+        appendTag(builder, "Request_Number", "01");
+        appendTag(builder, "Patient_ID", payload.getPatientId());
+        appendTag(builder, "Perform_Date", payload.getPerformDate());
+        appendTag(builder, "Perform_Time", fallback(payload.getPerformTime(), "00:00:00"));
+        builder.append("<Diagnosis_Information type=\"record\">");
+        appendTag(builder, "Department_Code", payload.getDepartmentCode());
+        builder.append("</Diagnosis_Information>");
+        builder.append("<Disease_Information type=\"array\">");
+        if (payload.getDiseaseInformation() != null) {
+            for (ChartSupportDiseaseModV3Request.DiseaseInformation entry : payload.getDiseaseInformation()) {
+                if (entry == null) {
+                    continue;
+                }
+                builder.append("<Disease_Information_child type=\"record\">");
+                appendTag(builder, "Disease_InOut", fallback(entry.getDiseaseInOut(), "O"));
+                appendTag(builder, "Disease_Code", entry.getDiseaseCode());
+                appendTag(builder, "Disease_Name", entry.getDiseaseName());
+                appendTag(builder, "Disease_StartDate", entry.getDiseaseStartDate());
+                appendTag(builder, "Disease_EndDate", entry.getDiseaseEndDate());
+                appendTag(builder, "Disease_SuspectedFlag", entry.getDiseaseSuspectedFlag());
+                appendTag(builder, "Disease_OutCome", entry.getDiseaseOutCome());
+                appendTag(builder, "Insurance_Combination_Number", entry.getInsuranceCombinationNumber());
+                builder.append("</Disease_Information_child>");
+            }
+        }
+        builder.append("</Disease_Information>");
+        builder.append("</diseasereq>");
+        builder.append("</data>");
+        return builder.toString();
+    }
+
+    ChartSupportDiseaseModV3Response parseDiseaseModV3Response(
+            OrcaTransportResult result,
+            String runId,
+            String traceId) {
+        ChartSupportDiseaseModV3Response response = new ChartSupportDiseaseModV3Response();
+        response.setRunId(runId);
+        response.setTraceId(traceId);
+        response.setStatus(result != null ? result.getStatus() : 500);
+        try {
+            Document document = parseXml(result != null ? result.getBody() : null);
+            response.setApiResult(readFirst(document, "Api_Result"));
+            String apiResultMessage = readFirst(document, "Api_Result_Message");
+            response.setApiResultMessageCategory(classifySafeMessage(apiResultMessage));
+            response.setInformationDate(readFirst(document, "Information_Date"));
+            response.setInformationTime(readFirst(document, "Information_Time"));
+            boolean transportOk = response.getStatus() >= 200 && response.getStatus() < 300;
+            boolean apiOk = response.getApiResult() != null && response.getApiResult().matches("0+");
+            boolean completionEvidencePresent = !isBlank(response.getInformationDate())
+                    && !isBlank(response.getInformationTime());
+            response.setApiOk(apiOk);
+            response.setBusinessAccepted(transportOk && apiOk && completionEvidencePresent);
+            response.setOk(response.isBusinessAccepted());
+            response.setResponseClassification(classifyOfficialMutationResult(
+                    transportOk,
+                    document,
+                    "diseaseres",
+                    apiOk,
+                    completionEvidencePresent));
+            if (!response.isOk() && !isBlank(apiResultMessage)) {
+                response.setError(response.getApiResultMessageCategory());
+            }
+        } catch (Exception ex) {
+            response.setOk(false);
+            response.setApiOk(false);
+            response.setBusinessAccepted(false);
+            response.setResponseClassification("parserAmbiguous");
+            response.setError("parser_error");
+        }
+        return response;
+    }
+
+    private String classifyOfficialMutationResult(
+            boolean transportOk,
+            Document document,
+            String expectedRoot,
+            boolean apiOk,
+            boolean completionEvidencePresent) {
+        if (!transportOk) {
+            return "transportRejected";
+        }
+        if (document == null || elements(document, expectedRoot).isEmpty()) {
+            return "parserAmbiguous";
+        }
+        if (!apiOk) {
+            return "businessRejected";
+        }
+        if (!completionEvidencePresent) {
+            return "notVerified";
+        }
+        return "businessAccepted";
+    }
+
+    private String classifySafeMessage(String value) {
+        if (isBlank(value)) {
+            return "none";
+        }
+        String normalized = value.trim();
+        if (SENSITIVE_MESSAGE_PATTERN.matcher(normalized).find()) {
+            return "present_redacted_sensitive_shape";
+        }
+        String lower = normalized.toLowerCase(java.util.Locale.ROOT);
+        if (lower.contains("ok") || normalized.contains("正常") || normalized.contains("完了")) {
+            return "ok_like";
+        }
+        if (lower.contains("warning") || normalized.contains("警告")) {
+            return "warning_like";
+        }
+        if (lower.contains("error") || lower.contains("reject") || normalized.contains("エラー")
+                || normalized.contains("失敗") || normalized.contains("不可")) {
+            return "error_like";
+        }
+        return "present_redacted";
     }
 
     private void setResponseResultFlags(

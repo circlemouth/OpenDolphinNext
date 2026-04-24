@@ -19,12 +19,16 @@ import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckRequest;
 import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckResponse;
+import open.dolphin.rest.dto.orca.ChartSupportDiseaseModV3Request;
+import open.dolphin.rest.dto.orca.ChartSupportDiseaseModV3Response;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoRequest;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetRequest;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
+import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Request;
+import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Response;
 import open.dolphin.rest.dto.orca.OrcaEncounterContext;
 
 @Path("/orca/official/chart-support")
@@ -34,6 +38,8 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
     private static final String AUDIT_MEDICATION_GET_ACTION = "ORCA_OFFICIAL_MEDICATION_GET";
     private static final String AUDIT_CONTRAINDICATION_CHECK_ACTION = "ORCA_OFFICIAL_CONTRAINDICATION_CHECK";
     private static final String AUDIT_INCOME_INFO_ACTION = "ORCA_OFFICIAL_INCOME_INFO";
+    private static final String AUDIT_SUBJECTIVES_MOD_ACTION = "ORCA_OFFICIAL_SUBJECTIVES_MOD_V2";
+    private static final String AUDIT_DISEASE_MOD_ACTION = "ORCA_OFFICIAL_DISEASE_MOD_V3";
 
     @Inject
     private OrcaTransport orcaTransport;
@@ -242,6 +248,102 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("routeNamespace", ROUTE_NAMESPACE);
         recordAudit(request, AUDIT_INCOME_INFO_ACTION, details,
                 response.isOk() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
+        return response;
+    }
+
+    @POST
+    @Path("/subjectives-mod-v2")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public ChartSupportSubjectivesModV2Response subjectivesModV2(
+            @Context HttpServletRequest request,
+            ChartSupportSubjectivesModV2Request payload) {
+        requireRemoteUser(request);
+        String facilityId = requireFacilityId(request);
+        if (payload == null || isBlank(payload.getPatientId()) || isBlank(payload.getPerformDate())
+                || isBlank(payload.getDepartmentCode()) || isBlank(payload.getSubjectivesCode())
+                || isBlank(payload.getSubjectivesDetailRecord())) {
+            throw validationError(request, "payload",
+                    "patientId, performDate, departmentCode, subjectivesCode, and subjectivesDetailRecord are required");
+        }
+        if (!isBlank(payload.getInOut()) && !"O".equals(payload.getInOut().trim())) {
+            throw validationError(request, "payload.inOut", "inOut must be O for the outpatient subjectivesv2 wrapper");
+        }
+        if (!payload.getPerformDate().trim().matches("\\d{4}-\\d{2}(-\\d{2})?|\\d{6}|\\d{8}")) {
+            throw validationError(request, "payload.performDate", "performDate must be yyyy-MM, yyyy-MM-dd, yyyymm, or yyyymmdd");
+        }
+
+        String runId = resolveRunId(request);
+        String traceId = resolveTraceId(request);
+        String requestXml = support().buildSubjectivesModV2RequestXml(payload);
+        OrcaTransportResult result = orcaTransport.invoke(
+                facilityId,
+                OrcaEndpoint.SUBJECTIVES_MOD,
+                OrcaTransportRequest.post(requestXml).withQuery("class=01"));
+        ChartSupportSubjectivesModV2Response response = support().parseSubjectivesModV2Response(result, runId, traceId);
+
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("runId", runId);
+        details.put("traceId", traceId);
+        details.put("patientIdPresent", true);
+        details.put("departmentCode", payload.getDepartmentCode());
+        details.put("subjectivesDetailRecord", payload.getSubjectivesDetailRecord());
+        details.put("apiResult", response.getApiResult());
+        details.put("responseClassification", response.getResponseClassification());
+        details.put("httpStatus", response.getStatus());
+        details.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_SUBJECTIVES_MOD_ACTION, details,
+                response.isBusinessAccepted() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
+        return response;
+    }
+
+    @POST
+    @Path("/disease-mod-v3")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public ChartSupportDiseaseModV3Response diseaseModV3(
+            @Context HttpServletRequest request,
+            ChartSupportDiseaseModV3Request payload) {
+        requireRemoteUser(request);
+        String facilityId = requireFacilityId(request);
+        if (payload == null || isBlank(payload.getPatientId()) || isBlank(payload.getPerformDate())
+                || isBlank(payload.getDepartmentCode()) || payload.getDiseaseInformation() == null
+                || payload.getDiseaseInformation().isEmpty()) {
+            throw validationError(request, "payload",
+                    "patientId, performDate, departmentCode, and diseaseInformation are required");
+        }
+        if (!isBlank(payload.getRequestNumber()) && !"01".equals(payload.getRequestNumber().trim())) {
+            throw validationError(request, "payload.requestNumber",
+                    "diseaseModV3 currently allows only create semantics; Request_Number must be absent or 01");
+        }
+        for (ChartSupportDiseaseModV3Request.DiseaseInformation entry : payload.getDiseaseInformation()) {
+            if (entry == null || isBlank(entry.getDiseaseCode()) || isBlank(entry.getDiseaseStartDate())) {
+                throw validationError(request, "payload.diseaseInformation",
+                        "diseaseCode and diseaseStartDate are required for every create candidate");
+            }
+        }
+
+        String runId = resolveRunId(request);
+        String traceId = resolveTraceId(request);
+        String requestXml = support().buildDiseaseModV3RequestXml(payload);
+        OrcaTransportResult result = orcaTransport.invoke(
+                facilityId,
+                OrcaEndpoint.DISEASE_MOD_V3,
+                OrcaTransportRequest.post(requestXml).withQuery("class=01"));
+        ChartSupportDiseaseModV3Response response = support().parseDiseaseModV3Response(result, runId, traceId);
+
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("runId", runId);
+        details.put("traceId", traceId);
+        details.put("patientIdPresent", true);
+        details.put("departmentCode", payload.getDepartmentCode());
+        details.put("diseaseCandidateCount", payload.getDiseaseInformation().size());
+        details.put("apiResult", response.getApiResult());
+        details.put("responseClassification", response.getResponseClassification());
+        details.put("httpStatus", response.getStatus());
+        details.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_DISEASE_MOD_ACTION, details,
+                response.isBusinessAccepted() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
     }
 

@@ -1,15 +1,52 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-06B-next",
-  "blockerId": "subjectivesv2-diseasev3-live-integration-official-wrapper-not-created",
+  "sourceWorkOrder": "RWO-06B-next2",
+  "blockerId": "subjectivesv2-diseasev3-live-payload-identity-and-approval-not-created",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-24T06:39:36Z",
+  "lastUpdated": "2026-04-24T07:02:17Z",
+  "latestRwo06BSoapDiseaseServerWrapper": {
+    "runId": "20260424T070217Z",
+    "workOrder": "RWO-06B-next",
+    "result": "RWO06B_SUBJECTIVESV2_DISEASEV3_SERVER_OFFICIAL_WRAPPER_SCAFFOLDING_READY",
+    "branch": "master",
+    "startHead": "c8e39e91c",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "blockerId": "subjectivesv2-diseasev3-live-integration-official-wrapper-not-created",
+      "completedByThisRun": true
+    },
+    "nextActiveHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "status": "active",
+      "blockerId": "subjectivesv2-diseasev3-live-payload-identity-and-approval-not-created"
+    },
+    "evidence": "docs/implementation/rwo06b-soap-disease-server-wrapper-20260424T070217Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06b-soap-disease-server-wrapper-20260424T070217Z/summary.sanitized.json",
+    "serverRoutes": [
+      "POST /api/orca/official/chart-support/subjectives-mod-v2",
+      "POST /api/orca/official/chart-support/disease-mod-v3"
+    ],
+    "tests": {
+      "serverFocused": "pass_19_tests",
+      "phase4SoapDiseaseSafeEvidence": "pass_8_tests",
+      "nodeCheck": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_server_scaffolding_only"
+    },
+    "claimBoundary": "No SOAP subjectivesv2 Trial reachability, diseasev3 Trial reachability, disease update/delete, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
+    "recommendedNextTask": "Create endpoint-specific no-live payload identity and live approval/business-scope record for one SOAP/disease endpoint before any Trial mutation.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "latestRwo06BSoapDiseaseNoLiveWrapper": {
     "runId": "20260424T063936Z",
     "workOrder": "RWO-06B-next",

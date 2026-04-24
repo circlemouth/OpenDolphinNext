@@ -18,11 +18,15 @@ import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckRequest;
 import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckResponse;
+import open.dolphin.rest.dto.orca.ChartSupportDiseaseModV3Request;
+import open.dolphin.rest.dto.orca.ChartSupportDiseaseModV3Response;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoRequest;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetRequest;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
+import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Request;
+import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Response;
 import org.junit.jupiter.api.Test;
 
 class OrcaChartSupportResourceTest {
@@ -282,6 +286,102 @@ class OrcaChartSupportResourceTest {
         assertTrue(transport.requestXml().contains("<Request_Number type=\"string\">01</Request_Number>"));
     }
 
+    @Test
+    void subjectivesModV2UsesFixedOfficialEndpointAndDoesNotAcceptHttp200AloneAsBusinessSuccess() {
+        CapturingTransport transport = new CapturingTransport("""
+                <xmlio2>
+                  <subjectivesmodres>
+                    <Api_Result>0000</Api_Result>
+                    <Api_Result_Message>OK</Api_Result_Message>
+                  </subjectivesmodres>
+                </xmlio2>
+                """);
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+
+        ChartSupportSubjectivesModV2Response response = resource.subjectivesModV2(
+                buildRequest(),
+                newSubjectivesPayload());
+
+        assertEquals(OrcaEndpoint.SUBJECTIVES_MOD, transport.endpoint());
+        assertEquals("class=01", transport.query());
+        assertTrue(transport.requestXml().contains("<subjectivesreq type=\"record\">"));
+        assertTrue(transport.requestXml().contains("<Request_Number type=\"string\">01</Request_Number>"));
+        assertTrue(transport.requestXml().contains("<Patient_ID type=\"string\">00001</Patient_ID>"));
+        assertTrue(transport.requestXml().contains("<Subjectives_Detail_Record type=\"string\">07</Subjectives_Detail_Record>"));
+        assertTrue(transport.requestXml().contains("<Subjectives_Code type=\"string\">phase4-no-live-subjective</Subjectives_Code>"));
+        assertEquals("0000", response.getApiResult());
+        assertEquals("notVerified", response.getResponseClassification());
+        assertTrue(!response.isBusinessAccepted());
+        assertEquals("ok_like", response.getApiResultMessageCategory());
+        assertNull(response.getApiResultMessage());
+    }
+
+    @Test
+    void subjectivesModV2RejectsNonOutpatientInOutBeforeOfficialInvoke() {
+        CapturingTransport transport = new CapturingTransport();
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        ChartSupportSubjectivesModV2Request payload = newSubjectivesPayload();
+        payload.setInOut("I");
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> resource.subjectivesModV2(buildRequest(), payload));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        assertNull(transport.endpoint());
+    }
+
+    @Test
+    void diseaseModV3UsesFixedOfficialEndpointAndCreateOnlyRequestNumber() {
+        CapturingTransport transport = new CapturingTransport("""
+                <xmlio2>
+                  <diseaseres>
+                    <Api_Result>0000</Api_Result>
+                    <Api_Result_Message>正常終了</Api_Result_Message>
+                  </diseaseres>
+                </xmlio2>
+                """);
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+
+        ChartSupportDiseaseModV3Response response = resource.diseaseModV3(
+                buildRequest(),
+                newDiseasePayload());
+
+        assertEquals(OrcaEndpoint.DISEASE_MOD_V3, transport.endpoint());
+        assertEquals("class=01", transport.query());
+        assertTrue(transport.requestXml().contains("<diseasereq type=\"record\">"));
+        assertTrue(transport.requestXml().contains("<Request_Number type=\"string\">01</Request_Number>"));
+        assertTrue(transport.requestXml().contains("<Patient_ID type=\"string\">00001</Patient_ID>"));
+        assertTrue(transport.requestXml().contains("<Disease_Code type=\"string\">3089002</Disease_Code>"));
+        assertEquals("0000", response.getApiResult());
+        assertEquals("notVerified", response.getResponseClassification());
+        assertTrue(!response.isBusinessAccepted());
+        assertEquals("ok_like", response.getApiResultMessageCategory());
+        assertNull(response.getApiResultMessage());
+    }
+
+    @Test
+    void diseaseModV3RejectsRequestNumber02BeforeOfficialInvoke() {
+        CapturingTransport transport = new CapturingTransport();
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        ChartSupportDiseaseModV3Request payload = newDiseasePayload();
+        payload.setRequestNumber("02");
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> resource.diseaseModV3(buildRequest(), payload));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
+        assertEquals("payload.requestNumber", body.get("field"));
+        assertNull(transport.endpoint());
+    }
+
     private static HttpServletRequest buildRequest() {
         return (HttpServletRequest) Proxy.newProxyInstance(
                 OrcaChartSupportResourceTest.class.getClassLoader(),
@@ -327,12 +427,42 @@ class OrcaChartSupportResourceTest {
         return payload;
     }
 
+    private static ChartSupportSubjectivesModV2Request newSubjectivesPayload() {
+        ChartSupportSubjectivesModV2Request payload = new ChartSupportSubjectivesModV2Request();
+        payload.setPatientId("00001");
+        payload.setPerformDate("2026-04");
+        payload.setInOut("O");
+        payload.setDepartmentCode("11");
+        payload.setInsuranceCombinationNumber("");
+        payload.setSubjectivesDetailRecord("07");
+        payload.setSubjectivesCode("phase4-no-live-subjective");
+        return payload;
+    }
+
+    private static ChartSupportDiseaseModV3Request newDiseasePayload() {
+        ChartSupportDiseaseModV3Request payload = new ChartSupportDiseaseModV3Request();
+        payload.setPatientId("00001");
+        payload.setPerformDate("2026-04-22");
+        payload.setPerformTime("14:23:00");
+        payload.setDepartmentCode("11");
+        ChartSupportDiseaseModV3Request.DiseaseInformation disease =
+                new ChartSupportDiseaseModV3Request.DiseaseInformation();
+        disease.setDiseaseCode("3089002");
+        disease.setDiseaseStartDate("2026-04-22");
+        disease.setDiseaseInOut("O");
+        disease.setDiseaseSuspectedFlag("S");
+        disease.setInsuranceCombinationNumber("");
+        payload.setDiseaseInformation(List.of(disease));
+        return payload;
+    }
+
     private static final class CapturingTransport implements OrcaTransport {
         private String requestXml;
         private String requestNumber;
         private final String responseXml;
         private final RuntimeException failure;
         private OrcaEndpoint endpoint;
+        private String query;
 
         CapturingTransport() {
             this("""
@@ -364,6 +494,7 @@ class OrcaChartSupportResourceTest {
             this.endpoint = endpoint;
             requestXml = request.getBody();
             requestNumber = extractTag(requestXml, "Request_Number");
+            query = request.getQuery();
             if (failure != null) {
                 throw failure;
             }
@@ -380,6 +511,10 @@ class OrcaChartSupportResourceTest {
 
         OrcaEndpoint endpoint() {
             return endpoint;
+        }
+
+        String query() {
+            return query;
         }
 
         private static String extractTag(String xml, String tagName) {
