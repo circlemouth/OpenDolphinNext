@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06D-soap-next",
-  "blockerId": "subjectivesv2-live-trial-post-insurance-field-fix-transport-rejected-502-investigation",
+  "blockerId": "subjectivesv2-live-trial-post-request-number-fix-exact-retry-not-run",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -25,7 +25,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-24T13:56:00Z",
+  "lastUpdated": "2026-04-24T14:01:30Z",
   "latestRwo06DSubjectivesv2RuntimeRouteCheck": {
     "runId": "20260424T110223Z",
     "workOrder": "RWO-06D-soap-next",
@@ -2486,6 +2486,66 @@
     },
     "claimBoundary": "No SOAP subjectivesv2 Trial business acceptance, diseasev3 Trial reachability, disease update/delete, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
     "recommendedNextTask": "Investigate the post-insurance-field-fix subjectivesv2 HTTP 502 with no-live contract/runtime checks first; do not rerun live subjectivesv2 until a new concrete repo-local defect is fixed and a new handoff explicitly permits one exact retry.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestRwo06DSubjectivesv2502RequestNumberInvestigation": {
+    "runId": "20260424T140130Z",
+    "workOrder": "RWO-06D-soap-next",
+    "result": "RWO06D_SUBJECTIVESV2_502_REQUEST_NUMBER_CONTRACT_FIX_NO_LIVE",
+    "branch": "master",
+    "startHead": "90c5a8115",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "blockerId": "subjectivesv2-live-trial-post-insurance-field-fix-transport-rejected-502-investigation",
+      "completedByThisRun": true
+    },
+    "nextActiveHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "status": "active",
+      "blockerId": "subjectivesv2-live-trial-post-request-number-fix-exact-retry-not-run"
+    },
+    "evidence": "docs/implementation/rwo06d-subjectivesv2-502-request-number-investigation-20260424T140130Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06d-subjectivesv2-502-request-number-investigation-20260424T140130Z/summary.sanitized.json",
+    "dryRunSummary": "docs/implementation/rwo06d-subjectivesv2-502-request-number-investigation-20260424T140130Z/wrapper-dry-run/phase4-soap-disease-summary.sanitized.json",
+    "contractFinding": {
+      "officialContractUrl": "https://www.orca.med.or.jp/receipt/tec/api/subjectives.html",
+      "officialOperationSelector": "query class=01",
+      "requestBodyRequestNumberField": "not_in_official_subjectivesmodreq_contract",
+      "fix": "removed Request_Number from subjectivesmodreq XML"
+    },
+    "payloadIdentity": {
+      "workflow": "subjectivesv2",
+      "workflowId": "rwo06b-subjectivesv2-live-readiness-v1",
+      "endpoint": "/orca25/subjectivesv2",
+      "officialServerRoute": "/api/orca/official/chart-support/subjectives-mod-v2",
+      "target": "00001",
+      "operation": "create",
+      "requestNumber": "01-equivalent-query-class-only",
+      "classCode": "01",
+      "payload": "web-client/qa/payloads/phase4/subjectivesv2_phase4_dummy_native_intent_v1.json",
+      "sha256": "9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
+      "duplicateLiveCheckpointKey": "rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308"
+    },
+    "tests": {
+      "serverFocused": {
+        "result": "pass",
+        "tests": 13
+      },
+      "phase4SoapDiseaseSafeEvidence": {
+        "result": "pass",
+        "tests": 11
+      },
+      "wrapperDryRun": "pass_subjectivesv2_notVerified_no_live"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_contract_fix_only",
+      "businessAccepted": false
+    },
+    "claimBoundary": "No SOAP subjectivesv2 Trial business acceptance, diseasev3 Trial reachability, disease update/delete, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
+    "recommendedNextTask": "Rebuild/recreate the current non-S3 server-modernized runtime, verify status-only route readiness, then run exactly one subjectivesv2 live Trial retry through the safe wrapper for the same checkpoint.",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   }

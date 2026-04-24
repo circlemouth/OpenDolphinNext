@@ -1,43 +1,58 @@
 # NEXT_WORKER_PROMPT
 
 status: active
-created_at: 2026-04-24T13:56:00Z
+created_at: 2026-04-24T14:01:30Z
 source_work_order: RWO-06D-soap-next
-blocker_id: subjectivesv2-live-trial-post-insurance-field-fix-transport-rejected-502-investigation
+blocker_id: subjectivesv2-live-trial-post-request-number-fix-exact-retry-not-run
 priority: high
 supersedes:
-- subjectivesv2-live-trial-post-insurance-field-fix-exact-retry-not-run
+- subjectivesv2-live-trial-post-insurance-field-fix-transport-rejected-502-investigation
 
 ## Context
 
-RUN_ID `20260424T133658Z` completed the prior exact live retry prompt.
+RUN_ID `20260424T140130Z` completed the prior no-live `subjectivesv2` HTTP `502` investigation prompt.
 
-- Report: `docs/implementation/rwo06d-subjectivesv2-post-insurance-field-live-retry-20260424T133658Z/FINAL_REPORT.md`
-- Summary: `docs/implementation/rwo06d-subjectivesv2-post-insurance-field-live-retry-20260424T133658Z/summary.sanitized.json`
-- Route/readiness preflight: `docs/implementation/rwo06d-subjectivesv2-post-insurance-field-live-retry-20260424T133658Z/preflight/route-readiness.sanitized.json`
-- Live wrapper summary: `docs/implementation/rwo06d-subjectivesv2-post-insurance-field-live-retry-20260424T133658Z/wrapper-live-attempt-1/phase4-soap-disease-summary.sanitized.json`
+- Report: `docs/implementation/rwo06d-subjectivesv2-502-request-number-investigation-20260424T140130Z/FINAL_REPORT.md`
+- Summary: `docs/implementation/rwo06d-subjectivesv2-502-request-number-investigation-20260424T140130Z/summary.sanitized.json`
+- Dry-run evidence: `docs/implementation/rwo06d-subjectivesv2-502-request-number-investigation-20260424T140130Z/wrapper-dry-run/phase4-soap-disease-summary.sanitized.json`
 
-The runtime route is deployed and authenticated validation rejects an empty JSON request with HTTP `400`, but the exact approved live Trial retry still returned sanitized HTTP `502`, classified as `transportRejected`, with `businessAccepted=false`.
+Investigation found and fixed a third repo-local `subjectivesv2` request XML contract defect:
+
+- Official ORCA contract reviewed: `https://www.orca.med.or.jp/receipt/tec/api/subjectives.html`
+- Official create selector: `POST /orca25/subjectivesv2?class=01`
+- Official request body: `subjectivesmodreq` starts at `InOut`; no `Request_Number` body field is defined.
+- Previous emitted shape: `class=01` query plus `<Request_Number type="string">01</Request_Number>` inside `subjectivesmodreq`
+- Fixed emitted shape: `class=01` query only, no `Request_Number` body field
+- Files changed:
+  - `server-modernized/src/main/java/open/dolphin/rest/orca/OrcaChartSupportSupport.java`
+  - `server-modernized/src/test/java/open/dolphin/rest/orca/OrcaChartSupportResourceTest.java`
+
+Verification before this handoff:
+
+- `mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=OrcaChartSupportResourceTest test`: pass / 13 tests
+- `npm --prefix web-client test -- phase4SoapDiseaseSafeEvidence.test.ts`: pass / 11 tests
+- wrapper dry-run: pass, no live ORCA
 
 Current classification:
 
 - The prior `subjectivesmodreq` root-name defect remains fixed.
 - The prior `Insurance_Combination_Number` top-level field-location defect remains fixed.
-- A post-insurance-field-fix live retry has now been consumed exactly once.
+- The extra `Request_Number` body-field defect is fixed and verified no-live.
+- No post-request-number-fix live Trial retry has been run.
 - No `subjectivesv2` Trial business acceptance exists.
 
 ## Goal
 
-Investigate the post-insurance-field-fix HTTP `502` using no-live, repo-local, sanitized checks first. Do not run another live `subjectivesv2` retry in this prompt.
+Rebuild/recreate the current non-S3 `server-modernized` runtime with the request-number omission fix, prove status-only route readiness, then run exactly one sanitized live Trial retry for the same approved `subjectivesv2` checkpoint. Do not run multiple attempts.
 
-## Exact Identity Already Consumed
+## Exact Retry Identity
 
 - Workflow: `subjectivesv2`
 - ORCA endpoint: `/orca25/subjectivesv2`
 - Official server route: `/api/orca/official/chart-support/subjectives-mod-v2`
 - Target: `00001`
 - Operation: `create`
-- Request number/class: `01` equivalent / `01`
+- Request number/class: `01` equivalent by query `class=01` only
 - Payload: `web-client/qa/payloads/phase4/subjectivesv2_phase4_dummy_native_intent_v1.json`
 - Payload SHA-256: `9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308`
 - Duplicate-live checkpoint key: `rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308`
@@ -45,25 +60,27 @@ Investigate the post-insurance-field-fix HTTP `502` using no-live, repo-local, s
 ## Required Workflow
 
 1. Confirm branch, HEAD, git status, and worktrees.
-2. Review the sanitized evidence from RUN_ID `20260424T133658Z`.
-3. Inspect server-side `subjectivesv2` request mapping, request XML shape tests, and safe wrapper payload contract against the official ORCA `subjectivesv2` contract.
-4. Add or update no-live focused tests only if a concrete repo-local defect is found.
-5. Run relevant no-live verification.
-6. If and only if a concrete repo-local defect is fixed, update this handoff for a future worker with a new exact one-attempt retry scope. Do not execute that live retry in the same investigation prompt.
-7. If no repo-local defect can be established from sanitized/no-live evidence, record the blocker as `blocked_trial_transport_502_no_repo_local_fix_identified` and continue to independent non-live roadmap work.
+2. Confirm no already accepted checkpoint exists for the exact duplicate-live key.
+3. Rebuild and recreate only the appropriate local non-S3 `server-modernized` runtime.
+4. Record sanitized status-only health/readiness and authenticated empty-payload route preflight.
+5. Run the safe wrapper dry-run for the exact payload.
+6. Run exactly one live Trial retry through `web-client/scripts/qa-phase4-safe-soap-disease.mjs` using sanitized evidence mode.
+7. Stop after the single attempt and classify the result using endpoint-specific parsed business criteria.
 
 ## Allowed Actions
 
-- Read and update `web-client/` and `server-modernized/` only.
-- Use official `subjectivesv2` contract documentation for field placement and request/response semantics.
-- Run no-live unit/component/contract tests and wrapper dry-runs.
-- Update sanitized evidence, summary, handoff state, matrices, and claim boundaries.
+- Use documented repo-local build/runtime commands for `server-modernized` under the object-storage-free dev/Trial profile.
+- Generate or use approved local-only dev/Trial runtime values only under the automation policy; never print values.
+- Run status-only health/readiness and authenticated empty-payload route checks.
+- Run the exact safe SOAP/disease wrapper dry-run and one exact live Trial retry.
+- Update sanitized evidence, summary, handoff state, and claim boundaries.
+- If the live retry is still rejected, create a new investigation handoff; do not retry again.
 
 ## Forbidden Actions
 
-- Any live `subjectivesv2` retry in this investigation prompt.
+- More than one live `subjectivesv2` retry for this prompt.
 - Running live `diseasev3`.
-- Any endpoint/request identity other than no-live checks for the `subjectivesv2` checkpoint above.
+- Any endpoint/request identity other than the `subjectivesv2` checkpoint above.
 - Request_Number `02` / `03` / `04`.
 - Fullflow execution.
 - Production ORCA execution or production readiness claims.
@@ -75,15 +92,16 @@ Investigate the post-insurance-field-fix HTTP `502` using no-live, repo-local, s
 
 ## Required Evidence
 
-- Sanitized review of the RUN_ID `20260424T133658Z` live retry.
-- No-live test/dry-run evidence for any contract hypothesis.
-- If code changes are made, focused tests proving the fix.
+- Sanitized duplicate-checkpoint decision.
+- Sanitized current-runtime route/readiness status.
+- Wrapper dry-run evidence.
+- One live Trial wrapper summary with only allowlisted fields.
 - Secret/raw-artifact scan over new tracked evidence docs and wrapper outputs.
-- Claim boundary showing no SOAP business acceptance and no diseasev3, fullflow, production ORCA, or S3/object-storage claim.
+- Claim boundary showing no SOAP business acceptance unless endpoint-specific parsed success criteria are met, and no diseasev3, fullflow, production ORCA, or S3/object-storage claim.
 
 ## Completion Criteria
 
-This prompt is complete when a concrete no-live repo-local fix is implemented and verified, or when the investigation is classified as blocked/inconclusive without another live retry.
+This prompt is complete when exactly one post-request-number-fix live Trial retry is classified and documented, or a safety stop condition is reached before live execution.
 
 In every completion path:
 

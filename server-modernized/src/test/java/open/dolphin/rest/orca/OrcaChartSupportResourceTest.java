@@ -306,7 +306,7 @@ class OrcaChartSupportResourceTest {
         assertEquals(OrcaEndpoint.SUBJECTIVES_MOD, transport.endpoint());
         assertEquals("class=01", transport.query());
         assertTrue(transport.requestXml().contains("<subjectivesmodreq type=\"record\">"));
-        assertTrue(transport.requestXml().contains("<Request_Number type=\"string\">01</Request_Number>"));
+        assertTrue(!transport.requestXml().contains("<Request_Number"));
         assertTrue(transport.requestXml().contains("<Patient_ID type=\"string\">00001</Patient_ID>"));
         assertTrue(transport.requestXml().contains("<Insurance_Combination_Number type=\"string\"></Insurance_Combination_Number>"));
         assertTrue(!transport.requestXml().contains(

@@ -464,7 +464,6 @@ final class OrcaChartSupportSupport {
         StringBuilder builder = new StringBuilder();
         builder.append("<data>");
         builder.append("<subjectivesmodreq type=\"record\">");
-        appendTag(builder, "Request_Number", "01");
         appendTag(builder, "InOut", fallback(payload.getInOut(), "O"));
         appendTag(builder, "Patient_ID", payload.getPatientId());
         appendTag(builder, "Perform_Date", payload.getPerformDate());
