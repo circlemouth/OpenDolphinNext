@@ -109,6 +109,9 @@ Live ORCA Trial policy:
 - Use only existing repo scripts, documented wrappers, or narrowly reviewed repo-local commands.
 - If a required safe wrapper/action is missing, do not repeat a blocked path. First define, implement, or document a safe sanitized wrapper/action with local tests.
 - Prefer one endpoint, one target, and one request class at a time.
+- For every future roadmap/handoff-scoped live Trial retry task, the owner grants standing approval for up to three live attempts by each subsequent worker, as long as every attempt uses the same exact approved endpoint/target/request class/payload identity for that task and the safe wrapper/evidence mode.
+- Multiple live attempts are not blind retries: before each attempt, record sanitized preflight evidence for current runtime readiness, route/target scope, duplicate checkpoint decision, exact payload hash/identity, and attempt number; after each attempt, record sanitized classification and stop if business acceptance, target drift, parser ambiguity, credential/raw-artifact risk, or any safety stop condition is reached.
+- A fourth live attempt for the same worker/task requires a new explicit owner approval or a new handoff prompt with a new approved identity/scope.
 - Record sanitized business evidence only.
 - Do not treat HTTP 200, wrapper exit 0, dry-run, precheck, not_run, not_verified, or owner-waived evidence as business success.
 - Require endpoint-specific parsed business success criteria.

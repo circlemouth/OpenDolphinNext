@@ -41,23 +41,26 @@ Current classification:
 
 - Runtime route/deployment blocker is resolved for current local Trial runtime.
 - No post-rebuild live Trial business evidence exists yet.
-- The only permitted next live action is the same exact `subjectivesv2` checkpoint key below, once, through the safe wrapper.
+- The owner/responsible approver has explicitly authorized every subsequent worker to run up to three post-rebuild live retry attempts for the same exact `subjectivesv2` checkpoint key below, through the safe wrapper only.
 
 ## Goal
 
-Run the same exact `subjectivesv2` checkpoint once through the safe wrapper against the rebuilt current local Trial runtime. Classify business success only from allowlisted parsed fields. Do not run any other SOAP/disease endpoint or request class.
+Run the same exact `subjectivesv2` checkpoint through the safe wrapper against the rebuilt current local Trial runtime. Each subsequent worker may perform up to three live attempts for this active handoff. Classify business success only from allowlisted parsed fields. Stop immediately after business acceptance, a non-skippable safety stop, target drift, parser ambiguity, credential/raw-artifact risk, or after that worker's third non-accepted attempt. Do not run any other SOAP/disease endpoint or request class.
 
 ## Allowed Actions
 
 - Confirm the current runtime still has health/readiness `200/200`.
 - Confirm authenticated empty-payload `POST /api/orca/official/chart-support/subjectives-mod-v2` still returns `400` rather than `404`.
 - Run wrapper syntax/tests and the exact payload dry-run if needed.
-- Run one live retry of the exact `subjectivesv2` checkpoint only once through `web-client/scripts/qa-phase4-safe-soap-disease.mjs`.
+- Run up to three live retry attempts per subsequent worker of the exact `subjectivesv2` checkpoint through `web-client/scripts/qa-phase4-safe-soap-disease.mjs`.
+- Before each live attempt, record sanitized preflight evidence: current route status, runtime readiness, duplicate checkpoint decision, exact payload SHA, and attempt number `1` / `2` / `3`.
+- After each live attempt, record sanitized result evidence and decide whether another attempt is justified by new evidence or the same still-valid post-rebuild preflight state.
 - Write sanitized evidence, route deployment blocker records, summaries, and handoff updates.
 
 ## Forbidden Actions
 
 - Running live before confirming post-rebuild route status is still not `404`.
+- A single worker running a fourth live retry for this prompt without a new explicit owner approval or updated handoff scope.
 - Live `diseasev3` execution.
 - Any `subjectivesv2` identity other than the exact checkpoint key above.
 - Request_Number `02` / `03` / `04`.
@@ -73,13 +76,13 @@ Run the same exact `subjectivesv2` checkpoint once through the safe wrapper agai
 - Sanitized post-rebuild route deployment/current-runtime check showing `subjectives-mod-v2` is available.
 - No-live wrapper syntax/tests and exact payload dry-run.
 - Duplicate-live checkpoint decision.
-- Sanitized Trial result with endpoint, target, request class, parsed business-success classification, credentialsCaptured=false, rawArtifactsCaptured=false.
+- Sanitized Trial result for every live attempt with attempt number, endpoint, target, request class, parsed business-success classification, credentialsCaptured=false, rawArtifactsCaptured=false.
 - Secret/raw-artifact scan over new tracked evidence docs and wrapper outputs.
 - Updated claim boundary showing no broad SOAP/disease, fullflow, production ORCA, or S3/object-storage claim.
 
 ## Completion Criteria
 
-This prompt is complete when the exact post-rebuild `subjectivesv2` checkpoint is rerun once and classified.
+This prompt is complete when the exact post-rebuild `subjectivesv2` checkpoint is classified as business accepted, a worker exhausts its three allowed live retries without acceptance and records the next precise handoff decision, or a safety stop condition is reached with sanitized evidence.
 
 In every completion path:
 
