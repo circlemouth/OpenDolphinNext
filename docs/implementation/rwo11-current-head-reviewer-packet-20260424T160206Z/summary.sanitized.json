@@ -1,0 +1,41 @@
+{
+  "runId": "20260424T160206Z",
+  "workOrders": [
+    "RWO-11"
+  ],
+  "result": "RWO11_CURRENT_HEAD_REVIEWER_PACKET_CREATED_VALIDATED",
+  "branch": "master",
+  "acceptedRef": "master",
+  "acceptedHead": "4eb8e140a6d79398b7e55192de3d893edfaa65ea",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "status": "completed"
+  },
+  "closeoutRoot": "artifacts/orca-remediation/closeout/20260424T160206Z",
+  "packetDir": "artifacts/reviewer-submission-packets/submission-packet-20260424T160206Z",
+  "packetZip": "artifacts/reviewer-submission-packets/submission-packet-20260424T160206Z.zip",
+  "packetSha256": "0f561933abf0bd41e99e36a37b0e6ae3464760cef3d415da37e9b68abdb2ce7b",
+  "packetSize": "3.3G",
+  "packetEntries": 9708,
+  "verification": {
+    "reviewPacketRegression": {
+      "result": "pass",
+      "tests": 7
+    },
+    "packetCreate": "pass",
+    "packetValidate": "pass",
+    "docLinks": "pass",
+    "retainedForbiddenArtifactFileScan": "pass_zero_hits",
+    "focusedForbiddenTextScan": "pass_zero_hits",
+    "focusedSecretPatternScan": "pass_zero_hits",
+    "diffWhitespace": "pass"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_no_live_packet_refresh"
+  },
+  "claimBoundary": "Canonical reviewer submission packet exists and validates for accepted source HEAD 4eb8e140a6d79398b7e55192de3d893edfaa65ea only; not final release GO, new live Trial ORCA, production ORCA readiness, S3/object-storage readiness, safe fullflow success, rollback rehearsal, or final release readiness.",
+  "recommendedNextTask": "Run operator rollback rehearsal or record final owner GO/NO-GO when prerequisites are satisfied; keep fullflow separately gated.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}
