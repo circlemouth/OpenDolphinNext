@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T120148Z",
+  "attempt": 2,
+  "generatedAt": "2026-04-24T12:03:55.922Z",
+  "workOrder": "RWO-06D-soap-next",
+  "activeHandoffBlockerId": "subjectivesv2-live-trial-post-rebuild-exact-retry-not-run",
+  "payloadSha256": "9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
+  "duplicateCheckpointDecision": "not_found_in_accepted_evidence_via_wrapper_guard_on_live_attempt",
+  "readiness": {
+    "healthHttpStatus": 200,
+    "readinessHttpStatus": 200,
+    "rawBodiesStored": false
+  },
+  "authenticatedRouteProbe": {
+    "endpoint": "/api/orca/official/chart-support/subjectives-mod-v2",
+    "httpStatus": 400,
+    "classification": "route_deployed_validation_rejected_empty_payload",
+    "rawBodiesStored": false
+  },
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false,
+  "decision": {
+    "proceedToExactLiveRetry": true
+  }
+}

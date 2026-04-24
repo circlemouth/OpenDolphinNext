@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T120148Z",
+  "generatedAt": "2026-04-24T12:08:00Z",
+  "workOrder": "RWO-06D-soap-next",
+  "result": "RWO06D_SUBJECTIVESV2_POST_REBUILD_LIVE_RETRY_TRANSPORT_REJECTED_502",
+  "branch": "master",
+  "head": "ba94513f1",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "subjectivesv2-live-trial-post-rebuild-exact-retry-not-run",
+    "completedByThisRun": true,
+    "completionReason": "This worker used all three authorized live retries without business acceptance."
+  },
+  "nextActiveHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "status": "active",
+    "blockerId": "subjectivesv2-live-trial-post-rebuild-transport-rejected-502-investigation"
+  },
+  "payloadIdentity": {
+    "workflow": "subjectivesv2",
+    "workflowId": "rwo06b-subjectivesv2-live-readiness-v1",
+    "endpoint": "/orca25/subjectivesv2",
+    "officialServerRoute": "/api/orca/official/chart-support/subjectives-mod-v2",
+    "target": "00001",
+    "operation": "create",
+    "requestNumber": "01-equivalent",
+    "classCode": "01",
+    "payload": "web-client/qa/payloads/phase4/subjectivesv2_phase4_dummy_native_intent_v1.json",
+    "sha256": "9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
+    "duplicateLiveCheckpointKey": "rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308"
+  },
+  "preflight": {
+    "healthHttpStatus": 200,
+    "readinessHttpStatus": 200,
+    "authenticatedSubjectivesModV2EmptyPayloadStatus": 400,
+    "routeClassification": "route_deployed_validation_rejected_empty_payload",
+    "rawBodiesStored": false
+  },
+  "tests": {
+    "wrapperSyntax": "pass",
+    "phase4SoapDiseaseSafeEvidence": {
+      "result": "pass",
+      "tests": 11
+    },
+    "wrapperDryRun": "pass_subjectivesv2_notVerified_no_live"
+  },
+  "liveTrialOrca": {
+    "executed": true,
+    "attempts": [
+      {
+        "attempt": 1,
+        "endpoint": "/api/orca/official/chart-support/subjectives-mod-v2",
+        "orcaEndpoint": "/orca25/subjectivesv2",
+        "target": "00001",
+        "requestClass": "subjectivesv2",
+        "transportHttpStatus": 502,
+        "businessSuccessClassification": "transportRejected",
+        "businessAccepted": false
+      },
+      {
+        "attempt": 2,
+        "endpoint": "/api/orca/official/chart-support/subjectives-mod-v2",
+        "orcaEndpoint": "/orca25/subjectivesv2",
+        "target": "00001",
+        "requestClass": "subjectivesv2",
+        "transportHttpStatus": 502,
+        "businessSuccessClassification": "transportRejected",
+        "businessAccepted": false
+      },
+      {
+        "attempt": 3,
+        "endpoint": "/api/orca/official/chart-support/subjectives-mod-v2",
+        "orcaEndpoint": "/orca25/subjectivesv2",
+        "target": "00001",
+        "requestClass": "subjectivesv2",
+        "transportHttpStatus": 502,
+        "businessSuccessClassification": "transportRejected",
+        "businessAccepted": false
+      }
+    ],
+    "businessSuccessClassification": "transportRejected",
+    "businessAccepted": false
+  },
+  "claimBoundary": "No SOAP subjectivesv2 Trial business acceptance, diseasev3 Trial reachability, disease update/delete readiness, Request_Number 02/03/04, fullflow, production ORCA readiness, S3/object-storage readiness, broad clinical release readiness, or final release GO is claimed.",
+  "retryControlCorrection": {
+    "unchangedPreconditionRetriesShouldNotBeRepeated": true,
+    "futureRetryPermittedOnlyAfter": [
+      "documented sanitized 502 hypothesis",
+      "verified repo-local fix or material runtime/upstream state change",
+      "no-live verification",
+      "new one-attempt retry decision"
+    ],
+    "defaultRetryPermitted": false
+  },
+  "recommendedNextTask": "Investigate sanitized subjectivesv2 HTTP 502 transport rejection first; retry only after a changed precondition or verified fix justifies one attempt.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}
