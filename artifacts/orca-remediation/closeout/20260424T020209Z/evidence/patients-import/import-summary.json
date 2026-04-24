@@ -1,0 +1,7 @@
+{
+  "runId": "20260424T000139Z",
+  "status": "historical_reference_not_rerun",
+  "sourceEvidenceRunId": "20260414T010624Z",
+  "claimBoundary": "Patients import was not rerun for this packet-only closeout; this file exists as a sanitized placeholder required by the packet subset contract.",
+  "rawSensitiveFieldsExcluded": true
+}
