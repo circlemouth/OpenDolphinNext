@@ -1,0 +1,9 @@
+{
+  "runId": "20260424T160206Z",
+  "activeHandoffPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+  "activeHandoffStatus": "completed",
+  "selectedWorkOrder": "RWO-11",
+  "nextWorkOrder": "RWO-09/RWO-11 rollback rehearsal or final owner GO/NO-GO materials when prerequisites are available",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}
