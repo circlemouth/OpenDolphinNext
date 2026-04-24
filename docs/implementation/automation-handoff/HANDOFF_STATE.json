@@ -11,7 +11,7 @@
     "approvedByOwner": true,
     "approvedAt": "2026-04-24T11:22:00Z",
     "maxAttemptsPerSubsequentWorker": 3,
-    "scope": "future roadmap/handoff-scoped live Trial retry tasks, using the same exact approved endpoint, target, request class, and payload identity for that task",
+    "scope": "future roadmap/handoff-scoped live Trial retry tasks, as up to three fix-and-retry cycles for the same exact approved endpoint, target, request class, payload identity, and safe wrapper/evidence mode",
     "safeWrapperRequired": true,
     "sanitizedPreflightRequiredBeforeEachAttempt": true,
     "sanitizedResultRequiredAfterEachAttempt": true,
@@ -21,11 +21,16 @@
     "rawArtifactsAllowed": false,
     "credentialsCaptureAllowed": false,
     "productionOrcaApproval": false,
-    "s3ObjectStorageApproval": false
+    "s3ObjectStorageApproval": false,
+    "retrySemantics": "up_to_3_means_try_investigate_fix_no_live_verify_retry_cycles_not_repeated_unchanged_live_sends",
+    "concreteFixOrChangedPreconditionRequiredBeforeRetry": true,
+    "unchangedRepeatSendAllowed": false,
+    "processCorrectionRecordedAt": "2026-04-24T14:40:00Z",
+    "processCorrectionReason": "Owner clarified that 3 attempts means up to 3 try->fix loops, not 3 identical live sends."
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-24T14:37:30Z",
+  "lastUpdated": "2026-04-24T14:40:00Z",
   "latestRwo06DSubjectivesv2RuntimeRouteCheck": {
     "runId": "20260424T110223Z",
     "workOrder": "RWO-06D-soap-next",
@@ -2612,7 +2617,23 @@
       "businessAccepted": false
     },
     "claimBoundary": "No SOAP subjectivesv2 Trial business acceptance, diseasev3 Trial reachability, disease update/delete, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
-    "recommendedNextTask": "Investigate the post-request-number-fix subjectivesv2 HTTP 502 with no-live contract/runtime checks first; do not rerun live subjectivesv2 until a concrete repo-local defect is fixed and a new exact retry scope is explicitly approved.",
+    "recommendedNextTask": "Investigate the post-request-number-fix subjectivesv2 HTTP 502 with no-live contract/runtime checks. Do not rerun live subjectivesv2 until a concrete fix or changed precondition is documented and verified no-live.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false,
+    "processCorrection": {
+      "status": "process_error_recorded",
+      "reason": "Attempts 2 and 3 repeated the unchanged request after attempt 1 returned the same HTTP 502; owner clarified this was not intended.",
+      "correctedRule": "Do not retry live after failure until no-live investigation finds a concrete fix or changed precondition and verifies it no-live.",
+      "futureRetryPermittedNow": false
+    }
+  },
+  "retryRuleCorrection20260424T144000Z": {
+    "runId": "20260424T142513Z",
+    "correction": "The three unchanged subjectivesv2 live sends were not the intended interpretation of owner approval.",
+    "correctedRule": "Up to 3 live wrapper attempts means up to 3 fix-and-retry cycles: live failure, no-live investigation, concrete fix or changed precondition, focused no-live verification, then retry.",
+    "repeatedUnchangedLiveSendAllowed": false,
+    "appliesTo": "future roadmap/handoff-scoped Trial live retry tasks unless a stricter prompt applies",
+    "requiredNextAction": "Update prompts and roadmap docs so later workers do not consume attempts without a fix or changed precondition.",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   }

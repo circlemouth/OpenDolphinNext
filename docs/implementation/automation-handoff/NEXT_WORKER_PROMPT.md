@@ -19,7 +19,9 @@ RUN_ID `20260424T142513Z` rebuilt/recreated the current non-S3 Trial runtime aft
   - attempt 2: HTTP `502`, `transportRejected`, `businessAccepted=false`
   - attempt 3: HTTP `502`, `transportRejected`, `businessAccepted=false`
 
-The owner permitted live wrapper operation up to 3 attempts during that run. All allowed attempts were consumed. Do not run another live `subjectivesv2` retry from this prompt.
+Correction recorded after RUN_ID `20260424T142513Z`: the owner intended "up to 3 live wrapper attempts" to mean up to 3 `try -> investigate -> fix -> no-live verify -> retry` cycles, not 3 repeated sends of the unchanged request. The 3 unchanged live sends in that run are classified as a process error and must not be repeated.
+
+Do not run another live `subjectivesv2` retry from this prompt. A future retry prompt may be created only after a concrete repo-local fix or documented changed precondition is found and verified no-live.
 
 Previously fixed repo-local defects remain fixed:
 
@@ -37,6 +39,13 @@ Current classification:
 ## Goal
 
 Investigate the repeated post-request-number-fix `subjectivesv2` HTTP `502` with no-live contract/runtime checks only. Identify a concrete repo-local defect if one exists, fix it, and run focused no-live verification. If no concrete repo-local defect can be established without raw ORCA artifacts, record the blocker as inconclusive/Trial-side or parser/sanitizer-limited and continue to the next independent safe Work Order.
+
+## Retry Rule Correction
+
+- `3 attempts` means at most 3 fix-and-retry cycles, not 3 unchanged live sends.
+- A cycle is live failure -> no-live investigation -> concrete fix or changed precondition -> focused no-live verification -> next live retry.
+- Repeating the same live request after the same failure without a fix/changed precondition is forbidden.
+- Any future live retry handoff must name the fix or changed precondition that justifies the retry.
 
 ## Exact Identity Under Investigation
 
@@ -61,6 +70,7 @@ Investigate the repeated post-request-number-fix `subjectivesv2` HTTP `502` with
 ## Forbidden Actions
 
 - Live `subjectivesv2` retry from this prompt.
+- Repeating the same unchanged live request after the same failure.
 - Live `diseasev3`.
 - Request_Number `02` / `03` / `04`.
 - Fullflow execution.

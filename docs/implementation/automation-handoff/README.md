@@ -50,3 +50,9 @@ No handoff prompt may authorize:
 - HAR, trace, video, screenshot, or raw network dump capture
 - `env`, `printenv`, `set`, `history`, or `set -x`
 - treating HTTP 200, wrapper exit 0, dry-run, precheck, not_run, not_verified, or owner-waived evidence as business success
+
+## Live Retry Semantics
+
+When the owner authorizes "up to 3 live wrapper attempts" for a failing Trial endpoint, that means up to 3 `try -> investigate -> fix -> no-live verify -> retry` cycles for the same approved endpoint/target/request-class/payload identity.
+
+It does not authorize sending the identical live request repeatedly after the same failure. After any live failure, the next live attempt is forbidden until a worker has documented a concrete changed precondition, preferably a repo-local fix with focused no-live verification. If no concrete fix or changed precondition exists, record the blocker and continue to independent safe work instead of consuming another live attempt.

@@ -4,9 +4,11 @@ Run ID: `20260424T142513Z`
 
 ## Result
 
-The active handoff `subjectivesv2-live-trial-post-request-number-fix-exact-retry-not-run` was completed for the exact approved identity. During the run, the owner expanded the live wrapper allowance to at most 3 attempts; all 3 attempts were executed with preflight before each attempt.
+The active handoff `subjectivesv2-live-trial-post-request-number-fix-exact-retry-not-run` was completed for the exact approved identity. During the run, the owner wrote that live wrapper operation was allowed up to 3 attempts; this worker misinterpreted that as permission for 3 unchanged sends.
 
 All live attempts remained HTTP `502` / `transportRejected` / `businessAccepted=false`.
+
+Correction: the owner later clarified that "3 attempts" means up to 3 `try -> investigate -> fix -> no-live verify -> retry` cycles, not 3 repeated sends of the unchanged request. Attempts 2 and 3 in this run are therefore recorded as a process error and must not be used as a precedent.
 
 ## Exact Identity
 
@@ -52,10 +54,11 @@ All live attempts remained HTTP `502` / `transportRejected` / `businessAccepted=
 1. Duplicate accepted checkpoint was checked before each attempt and none was found.
 2. Request_Number `02` / `03` / `04`, live `diseasev3`, fullflow, production ORCA, and S3/object-storage paths were not executed.
 3. HTTP status, wrapper exit status, and dry-run success were not promoted to business success.
+4. Process correction after the run: repeating the same unchanged live request after a failure is forbidden; future retry attempts require a concrete fix or changed precondition plus focused no-live verification.
 
 ## Next Handoff
 
-The next prompt is a no-live investigation handoff for the repeated post-request-number-fix HTTP `502`. Do not run live `subjectivesv2` again until a concrete repo-local defect is found/fixed and a new exact retry scope is explicitly approved.
+The next prompt is a no-live investigation handoff for the repeated post-request-number-fix HTTP `502`. Do not run live `subjectivesv2` again until a concrete repo-local defect or changed precondition is found, verified no-live, and a new exact retry scope is explicitly approved.
 
 ## Claim Boundary
 
