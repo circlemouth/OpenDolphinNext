@@ -46,7 +46,9 @@ const buildMarkdown = (summary) =>
   `- Contract: ${summary.commandContract}\n` +
   `- Endpoint: ${summary.endpoint}\n` +
   `- Request class: ${summary.requestClass}\n` +
+  `- Workflow: ${summary.endpointWorkflow?.workflow ?? 'unspecified'}\n` +
   `- Target: ${summary.target.patientId}\n` +
+  `- Duplicate checkpoint: ${summary.duplicateLiveCheckpoint?.status ?? 'unknown'}\n` +
   `- Verdict: ${summary.verdict}\n` +
   `- Live Trial action: ${summary.liveTrialAction}\n` +
   `- Response classification: ${summary.response?.responseClassification ?? 'not_run'}\n` +
@@ -210,6 +212,7 @@ const summary = {
   ...baseSummary,
   verdict: response.businessAccepted ? 'live_trial_business_accepted' : 'live_trial_not_accepted',
   liveTrialAction: 'executed_once',
+  runtimeReadiness,
   response,
 };
 persistSummary(summary);

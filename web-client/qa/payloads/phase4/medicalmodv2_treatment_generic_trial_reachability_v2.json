@@ -1,0 +1,35 @@
+{
+  "classCode": "01",
+  "encounterContext": {
+    "departmentCode": "01",
+    "insuranceCombinationNumber": "0001",
+    "patientId": "00001",
+    "physicianCode": "10001",
+    "sequentialNumber": "PHASE4-RWO06D-TREATMENT-V2-SEQUENTIAL",
+    "visitDate": "2026-04-24T10:22:00+09:00",
+    "voucherNumber": "PHASE4-RWO06D-TREATMENT-V2-VOUCHER"
+  },
+  "includeInitialConsultation": false,
+  "medicalInformation": [
+    {
+      "entity": "treatmentOrder",
+      "medicalClass": "400",
+      "medicalClassName": "treatment",
+      "medicalClassNumber": "3",
+      "medications": [
+        {
+          "code": "140000610",
+          "number": "1"
+        },
+        {
+          "code": "700000021",
+          "number": "1"
+        },
+        {
+          "code": "0085002"
+        }
+      ]
+    }
+  ],
+  "requestNumber": "01"
+}

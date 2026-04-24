@@ -114,6 +114,16 @@ This plan allows adding and batching reachability verification tasks. It does no
 
 Successful future checks must be recorded endpoint by endpoint in the release gate matrix and functional claims boundary.
 
+## RWO-06D medicalmodv2 Checkpoint
+
+RUN_ID `20260424T031608Z` completed the first endpoint-specific mutation batch for `medicalmodv2`:
+
+- Prescription active v2 identity: `medicalmodv2_prescription_trial_reachability_v2.json`, SHA-256 `9146d2ba3cbc5f037ba90c9620a50a36f5c1696de0d4cd36dc2b6fc6d5f876b7`, duplicate-live checkpoint `rwo06d:medicalmodv2:rwo06d-prescription-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-9146d2ba3cbc5f037ba90c9620a50a36f5c1696de0d4cd36dc2b6fc6d5f876b7`, live `businessAccepted`.
+- Representative treatment/generic active v2 identity: `medicalmodv2_treatment_generic_trial_reachability_v2.json`, SHA-256 `89885a031fa98c95a5fc4758dbac55f4375167178edb12fc9a78e9817a16fe7c`, duplicate-live checkpoint `rwo06d:medicalmodv2:rwo06d-treatment-generic-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-89885a031fa98c95a5fc4758dbac55f4375167178edb12fc9a78e9817a16fe7c`, live `businessAccepted`.
+- Evidence: [../rwo06d-medicalmodv2-endpoint-wrapper-prep-20260424T031608Z/FINAL_REPORT.md](../rwo06d-medicalmodv2-endpoint-wrapper-prep-20260424T031608Z/FINAL_REPORT.md).
+
+Do not repeat these accepted checkpoint identities in hourly automation. They are L3 endpoint-specific Trial evidence only, not broad order-matrix, fullflow, production ORCA, or S3/object-storage readiness evidence.
+
 ## RWO-06B Inventory Checkpoint
 
 RUN_ID `20260424T030710Z` completed the first static inventory:

@@ -12,6 +12,20 @@ export const PHASE4_TRIAL_PHYSICIAN_CODE = '10001';
 export const PHASE4_ALLOWED_REQUEST_NUMBER = '01';
 export const PHASE4_ALLOWED_CLASS_CODE = '01';
 export const PHASE4_FORBIDDEN_REQUEST_NUMBERS = ['02', '03', '04'];
+export const PHASE4_ENDPOINT_WORKFLOWS = {
+  prescription: {
+    workflowId: 'rwo06d-prescription-medicalmodv2-v1',
+    endpointEvidenceLevel: 'L3',
+    requiredEntityKinds: ['medOrder'],
+    allowedMedicalClasses: ['212'],
+  },
+  'treatment-generic': {
+    workflowId: 'rwo06d-treatment-generic-medicalmodv2-v1',
+    endpointEvidenceLevel: 'L3',
+    requiredEntityKinds: ['treatmentOrder'],
+    allowedMedicalClasses: ['400'],
+  },
+};
 
 const FORBIDDEN_FLAGS = new Set([
   '--phase3',
@@ -46,7 +60,7 @@ const FORBIDDEN_ENV = [
   ['QA_ALLOW_LOCAL_OPTION_INJECTION', '1', 'local option injection is forbidden'],
 ];
 
-const VALUE_FLAGS = new Set(['--payload', '--payload-sha256', '--artifact-dir']);
+const VALUE_FLAGS = new Set(['--payload', '--payload-sha256', '--artifact-dir', '--workflow']);
 const BOOLEAN_FLAGS = new Set([
   '--dry-run',
   '--mock',
@@ -94,6 +108,7 @@ export const parsePhase4SafeArgs = (argv) => {
       if (arg === '--payload') options.payload = value;
       if (arg === '--payload-sha256') options.payloadSha256 = value;
       if (arg === '--artifact-dir') options.artifactDir = value;
+      if (arg === '--workflow') options.workflow = value;
       continue;
     }
     if (BOOLEAN_FLAGS.has(arg)) {
@@ -156,6 +171,8 @@ export const buildSyntheticPayloadFixture = () => ({
     },
   ],
 });
+
+const getWorkflowContract = (workflow) => PHASE4_ENDPOINT_WORKFLOWS[normalizeCode(workflow)] ?? null;
 
 export const loadPhase4Payload = ({ payloadPath } = {}) => {
   const buffer = readPayloadBuffer(payloadPath);
@@ -237,6 +254,125 @@ export const validatePhase4Payload = ({ payload, payloadSha256, expectedPayloadS
     blockers,
     summary,
   };
+};
+
+export const buildPhase4DuplicateLiveCheckpointKey = ({ workflow, payloadSha256 }) => {
+  const workflowContract = getWorkflowContract(workflow);
+  const workflowId = workflowContract?.workflowId ?? 'generic';
+  const hash = normalizeCode(payloadSha256) || 'no-payload-sha256';
+  return [
+    'rwo06d',
+    PHASE4_REQUEST_CLASS,
+    workflowId,
+    `target-${PHASE4_TARGET_PATIENT_ID}`,
+    `request-${PHASE4_ALLOWED_REQUEST_NUMBER}`,
+    `class-${PHASE4_ALLOWED_CLASS_CODE}`,
+    `payload-sha256-${hash}`,
+  ].join(':');
+};
+
+export const validatePhase4EndpointWorkflow = ({ workflow, payloadSummary }) => {
+  const workflowContract = getWorkflowContract(workflow);
+  const blockers = [];
+  if (!workflowContract) {
+    blockers.push('--workflow must be one of: prescription, treatment-generic');
+    return {
+      ok: false,
+      blockers,
+      workflow: normalizeCode(workflow) || 'unspecified',
+      workflowId: 'unknown',
+      endpointEvidenceLevel: 'unknown',
+      requiredEntityKindsPresent: false,
+      allowedMedicalClassesOnly: false,
+    };
+  }
+
+  const entityKinds = payloadSummary?.medicalInformation?.entityKinds ?? [];
+  const medicalClasses = payloadSummary?.medicalInformation?.medicalClasses ?? [];
+  const requiredEntityKindsPresent = workflowContract.requiredEntityKinds.every((entity) => entityKinds.includes(entity));
+  const allowedMedicalClassesOnly =
+    medicalClasses.length > 0 && medicalClasses.every((medicalClass) => workflowContract.allowedMedicalClasses.includes(medicalClass));
+
+  if (!requiredEntityKindsPresent) {
+    blockers.push(`workflow ${workflow} requires entity kind ${workflowContract.requiredEntityKinds.join(',')}`);
+  }
+  if (!allowedMedicalClassesOnly) {
+    blockers.push(`workflow ${workflow} allows only medical class ${workflowContract.allowedMedicalClasses.join(',')}`);
+  }
+
+  return {
+    ok: blockers.length === 0,
+    blockers,
+    workflow: normalizeCode(workflow),
+    workflowId: workflowContract.workflowId,
+    endpointEvidenceLevel: workflowContract.endpointEvidenceLevel,
+    requiredEntityKinds: workflowContract.requiredEntityKinds,
+    allowedMedicalClasses: workflowContract.allowedMedicalClasses,
+    requiredEntityKindsPresent,
+    allowedMedicalClassesOnly,
+  };
+};
+
+const walkJsonFiles = (root, predicate, limit = 400) => {
+  const results = [];
+  if (!fs.existsSync(root)) return results;
+  const stack = [root];
+  while (stack.length > 0 && results.length < limit) {
+    const current = stack.pop();
+    let entries = [];
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const entryPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+        continue;
+      }
+      if (entry.isFile() && entry.name.endsWith('.json') && predicate(entryPath)) {
+        results.push(entryPath);
+      }
+    }
+  }
+  return results;
+};
+
+export const findAcceptedPhase4Checkpoint = ({ repoRoot, checkpointKey }) => {
+  const normalizedCheckpointKey = normalizeCode(checkpointKey);
+  if (!normalizedCheckpointKey) return null;
+  const candidates = [
+    path.join(repoRoot, 'artifacts', 'orca-remediation', 'closeout'),
+    path.join(repoRoot, 'docs', 'implementation'),
+  ].flatMap((root) =>
+    walkJsonFiles(root, (entryPath) => {
+      const basename = path.basename(entryPath);
+      return basename === 'phase4-medicalmodv2-summary.sanitized.json' || basename === 'summary.sanitized.json';
+    }),
+  );
+
+  for (const candidate of candidates) {
+    let parsed = null;
+    try {
+      parsed = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+    } catch {
+      continue;
+    }
+    const duplicateLiveCheckpoint = parsed?.duplicateLiveCheckpoint ?? parsed?.phase4?.duplicateLiveCheckpoint;
+    const sameKey = duplicateLiveCheckpoint?.key === normalizedCheckpointKey;
+    const accepted =
+      parsed?.response?.businessAccepted === true ||
+      parsed?.liveTrialOrca?.businessSuccessClassification === 'live_trial_business_accepted';
+    if (sameKey && accepted) {
+      return {
+        status: 'accepted_checkpoint_found',
+        evidencePath: path.relative(repoRoot, candidate).split(path.sep).join('/'),
+      };
+    }
+  }
+
+  return null;
 };
 
 export const classifyMessageCategory = (message) => {
@@ -325,6 +461,9 @@ export const validatePhase4SafeCommand = ({
   if (options.executeApprovedPhase4 && !options.payloadSha256) {
     blockers.push('--payload-sha256 is required for live Phase 4 execution');
   }
+  if (options.executeApprovedPhase4 && !options.workflow) {
+    blockers.push('--workflow is required for endpoint-specific live Phase 4 execution');
+  }
 
   for (const [key, forbiddenValue, reason] of FORBIDDEN_ENV) {
     if (env[key] === forbiddenValue) blockers.push(`${key}=${forbiddenValue}: ${reason}`);
@@ -351,6 +490,25 @@ export const validatePhase4SafeCommand = ({
     blockers.push(...payloadGate.blockers);
   } catch (error) {
     blockers.push(`payload cannot be parsed: ${String(error)}`);
+  }
+
+  const endpointWorkflow = validatePhase4EndpointWorkflow({
+    workflow: options.workflow,
+    payloadSummary: payloadGate.summary,
+  });
+  if (options.workflow || options.executeApprovedPhase4) {
+    blockers.push(...endpointWorkflow.blockers);
+  }
+
+  const checkpointKey = buildPhase4DuplicateLiveCheckpointKey({
+    workflow: endpointWorkflow.workflow,
+    payloadSha256,
+  });
+  const acceptedCheckpoint = options.executeApprovedPhase4
+    ? findAcceptedPhase4Checkpoint({ repoRoot, checkpointKey })
+    : null;
+  if (acceptedCheckpoint) {
+    blockers.push('duplicate live checkpoint already accepted');
   }
 
   const ok = blockers.length === 0;
@@ -380,6 +538,13 @@ export const validatePhase4SafeCommand = ({
       pathRecorded: false,
       rawPayloadStored: false,
       summary: payloadGate.summary,
+    },
+    endpointWorkflow,
+    duplicateLiveCheckpoint: {
+      key: checkpointKey,
+      status: acceptedCheckpoint?.status ?? (options.executeApprovedPhase4 ? 'not_found' : 'not_checked_no_live'),
+      evidencePath: acceptedCheckpoint?.evidencePath,
+      liveMutationPermittedWhenReady: !acceptedCheckpoint,
     },
     requestSemantics: {
       requestNumber01Only: true,

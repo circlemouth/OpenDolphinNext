@@ -24,17 +24,26 @@ Use the JSON file hashes in this package and update the Owner approval/handoff a
 | `web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_phase3_context_v1.json` | Active medicalmodv2 wrapper candidate after RWO-06 `apiResult=14` investigation. Keeps patient `00001`, Request_Number `01`, class `01`, and uses the sanitized Phase3 Trial context `departmentCode=01` / `physicianCode=10001`. | `c2dc84307c9f8ae83f2361525a6c127938cb1ef308c4ef125ebaaa0408809627` |
 | `web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json` | Historical candidate from RUN_ID `20260422T224559Z`. Retained for audit, but no longer active because `departmentCode=11` / `physicianCode=0005` is blocked by the current no-live wrapper gate. | `e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618` |
 | `web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_owner_aligned_v1.json` | Owner-aligned variant with blank insurance/voucher/sequential fields. Expected to fail current wrapper unless the wrapper contract is changed. | `2044f175382bbf013ad928cb7ba7431d5a5a0d5bc7c1f26d6448b06c747d9de5` |
+| `web-client/qa/payloads/phase4/medicalmodv2_prescription_trial_reachability_v2.json` | RWO-06D active endpoint-specific prescription `medicalmodv2` identity. Accepted in RUN_ID `20260424T031608Z`; do not repeat the same duplicate-live checkpoint. | `9146d2ba3cbc5f037ba90c9620a50a36f5c1696de0d4cd36dc2b6fc6d5f876b7` |
+| `web-client/qa/payloads/phase4/medicalmodv2_treatment_generic_trial_reachability_v2.json` | RWO-06D active endpoint-specific representative treatment/generic `medicalmodv2` identity. Accepted in RUN_ID `20260424T031608Z`; do not repeat the same duplicate-live checkpoint. | `89885a031fa98c95a5fc4758dbac55f4375167178edb12fc9a78e9817a16fe7c` |
 | `web-client/qa/payloads/phase4/diseasev3_phase4_dummy_native_intent_v1.json` | Native intent JSON for future diseasev3 safe wrapper only. Not executable by current medicalmodv2 wrapper. | `da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df` |
 | `web-client/qa/payloads/phase4/subjectivesv2_phase4_dummy_native_intent_v1.json` | Native intent JSON for future subjectivesv2 safe wrapper only. Not executable by current medicalmodv2 wrapper. | `9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308` |
 | `web-client/qa/payloads/phase4/manifest.phase4-orca-trial-dummy-json-v1.json` | Manifest and safety scope. | `f1707e5c0248d4ca01beb4de658645ff45fb6ba4e2fba90fbcf92dd6fd94521b` |
 
 ## Execution recommendation
 
-For current RWO-06 `medicalmodv2` retry cycles, use only:
+For endpoint-specific RWO-06D `medicalmodv2` retry cycles, use the matching `--workflow` and active v2 payload. Do not repeat an already accepted duplicate-live checkpoint.
 
 ```bash
---payload web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_phase3_context_v1.json \
---payload-sha256 c2dc84307c9f8ae83f2361525a6c127938cb1ef308c4ef125ebaaa0408809627
+--workflow prescription \
+--payload web-client/qa/payloads/phase4/medicalmodv2_prescription_trial_reachability_v2.json \
+--payload-sha256 9146d2ba3cbc5f037ba90c9620a50a36f5c1696de0d4cd36dc2b6fc6d5f876b7
+```
+
+```bash
+--workflow treatment-generic \
+--payload web-client/qa/payloads/phase4/medicalmodv2_treatment_generic_trial_reachability_v2.json \
+--payload-sha256 89885a031fa98c95a5fc4758dbac55f4375167178edb12fc9a78e9817a16fe7c
 ```
 
 ## Owner approval addendum

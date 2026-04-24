@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T031608Z",
+  "source": "status_only_probe_after_live_wrapper_run",
+  "target": "local_non_s3_trial_runtime",
+  "healthHttpStatus": 200,
+  "readinessHttpStatus": 200,
+  "ok": true,
+  "rawHealthBodyStored": false,
+  "rawReadinessBodyStored": false,
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}

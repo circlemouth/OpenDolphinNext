@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T031608Z",
+  "workOrder": "RWO-06D",
+  "result": "RWO06D_PRESCRIPTION_AND_TREATMENT_MEDICALMODV2_LIVE_ACCEPTED",
+  "branch": "master",
+  "startHead": "31eb4402865035ac70df88e3fe6edcd242e354dd",
+  "activeHandoffPromptAtStart": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "status": "active",
+    "blockerId": "rwo06b-endpoint-specific-medicalmodv2-wrapper-gap"
+  },
+  "trialOrcaEndpointTargetRequestClass": {
+    "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+    "orcaApi": "/api21/medicalmodv2",
+    "target": "00001",
+    "requestNumber": "01",
+    "classCode": "01"
+  },
+  "payloadIdentities": {
+    "prescription": {
+      "workflowId": "rwo06d-prescription-medicalmodv2-v1",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_prescription_trial_reachability_v2.json",
+      "sha256": "9146d2ba3cbc5f037ba90c9620a50a36f5c1696de0d4cd36dc2b6fc6d5f876b7",
+      "duplicateLiveCheckpointKey": "rwo06d:medicalmodv2:rwo06d-prescription-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-9146d2ba3cbc5f037ba90c9620a50a36f5c1696de0d4cd36dc2b6fc6d5f876b7",
+      "classification": "live_trial_business_accepted",
+      "evidence": "docs/implementation/rwo06d-medicalmodv2-endpoint-wrapper-prep-20260424T031608Z/qa/prescription-v2-live/phase4-medicalmodv2-summary.sanitized.json"
+    },
+    "treatmentGeneric": {
+      "workflowId": "rwo06d-treatment-generic-medicalmodv2-v1",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_treatment_generic_trial_reachability_v2.json",
+      "sha256": "89885a031fa98c95a5fc4758dbac55f4375167178edb12fc9a78e9817a16fe7c",
+      "duplicateLiveCheckpointKey": "rwo06d:medicalmodv2:rwo06d-treatment-generic-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-89885a031fa98c95a5fc4758dbac55f4375167178edb12fc9a78e9817a16fe7c",
+      "classification": "live_trial_business_accepted",
+      "evidence": "docs/implementation/rwo06d-medicalmodv2-endpoint-wrapper-prep-20260424T031608Z/qa/treatment-generic-v2-live/phase4-medicalmodv2-summary.sanitized.json"
+    }
+  },
+  "intermediateResult": {
+    "prescriptionV1": {
+      "classification": "business_rejected_api_result_80",
+      "responseClassification": "businessRejected",
+      "supersededBy": "medicalmodv2_prescription_trial_reachability_v2.json",
+      "evidence": "docs/implementation/rwo06d-medicalmodv2-endpoint-wrapper-prep-20260424T031608Z/qa/prescription-live-preflight/phase4-medicalmodv2-summary.sanitized.json"
+    }
+  },
+  "runtimeReadiness": {
+    "healthHttpStatus": 200,
+    "readinessHttpStatus": 200,
+    "ok": true,
+    "rawHealthBodyStored": false,
+    "rawReadinessBodyStored": false
+  },
+  "tests": {
+    "phase4Medicalmodv2SafeEvidence": {
+      "result": "pass",
+      "tests": 12
+    },
+    "webClientCi": {
+      "result": "pass",
+      "testFilesPassed": 197,
+      "testsPassed": 1338,
+      "testsSkipped": 2,
+      "build": "pass_with_existing_chunk_size_warning"
+    },
+    "webGuardPretest": "pass",
+    "wrapperDryRuns": "pass_prescription_and_treatment_generic_v2",
+    "jsonValidation": "pass",
+    "gitDiffCheck": "pass",
+    "docLinks": "pass",
+    "focusedSecretPatternScan": "pass_zero_hits",
+    "focusedForbiddenArtifactFileScan": "pass_zero_hits",
+    "focusedRawBodyReferenceScan": "pass_zero_hits"
+  },
+  "liveTrialOrca": {
+    "executed": true,
+    "prescriptionBusinessSuccessClassification": "live_trial_business_accepted",
+    "treatmentGenericBusinessSuccessClassification": "live_trial_business_accepted"
+  },
+  "nextWorkOrder": "RWO-06C/RWO-06D for SOAP/disease only after endpoint-specific safe wrappers and business scope; otherwise continue RWO-08B/RWO-09/RWO-11 safe non-S3 work",
+  "recommendedNextTask": "Keep SOAP, diseasev3, Request_Number 02/03/04, and fullflow gated; continue non-S3 release-readiness work without broadening claims.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false,
+  "productionOrcaExecuted": false,
+  "s3ObjectStorageConfigured": false,
+  "claimBoundary": "Prescription and representative treatment/generic medicalmodv2 L3 Trial reachability accepted only for target 00001, Request_Number 01, class 01, endpoint-specific payload identities; not fullflow, broad order matrix, production ORCA, S3/object-storage, SOAP, diseasev3, Request_Number 02/03/04, or final release readiness."
+}

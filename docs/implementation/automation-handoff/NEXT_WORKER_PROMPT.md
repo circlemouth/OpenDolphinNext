@@ -1,6 +1,6 @@
 # NEXT_WORKER_PROMPT
 
-status: active
+status: completed
 created_at: 2026-04-24T03:07:10Z
 source_work_order: RWO-06D
 blocker_id: rwo06b-endpoint-specific-medicalmodv2-wrapper-gap
@@ -10,6 +10,15 @@ supersedes:
 - rwo06b-trial-reachability-inventory-20260424T030710Z
 
 ## Context
+
+RUN_ID `20260424T031608Z` completed this prompt. Prescription and representative treatment/generic endpoint-specific `medicalmodv2` payload identities were defined, no-live wrapper tests and dry-runs passed, duplicate-live checkpoint keys were recorded, and one sanitized live Trial mutation for each active v2 identity returned `businessAccepted`.
+
+Evidence:
+
+- `docs/implementation/rwo06d-medicalmodv2-endpoint-wrapper-prep-20260424T031608Z/FINAL_REPORT.md`
+- `docs/implementation/rwo06d-medicalmodv2-endpoint-wrapper-prep-20260424T031608Z/summary.sanitized.json`
+- `docs/implementation/rwo06d-medicalmodv2-endpoint-wrapper-prep-20260424T031608Z/qa/prescription-v2-live/phase4-medicalmodv2-summary.sanitized.json`
+- `docs/implementation/rwo06d-medicalmodv2-endpoint-wrapper-prep-20260424T031608Z/qa/treatment-generic-v2-live/phase4-medicalmodv2-summary.sanitized.json`
 
 RUN_ID `20260424T030710Z` completed RWO-06B as a static, sanitized Trial reachability inventory:
 
