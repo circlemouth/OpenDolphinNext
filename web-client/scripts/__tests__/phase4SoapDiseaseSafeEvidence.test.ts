@@ -7,6 +7,7 @@ import {
   buildSoapDiseaseLiveReadinessCheckpointKey,
   classifySoapDiseaseBusinessResult,
   parseSoapDiseaseSafeArgs,
+  sanitizeSoapDiseaseOfficialResponse,
   sanitizeSoapDiseaseResponse,
   validateSoapDiseasePayload,
   validateSoapDiseaseSafeCommand,
@@ -124,7 +125,7 @@ describe('phase4 SOAP/disease no-live safe evidence', () => {
     );
   });
 
-  it('rejects live, fullflow, and raw artifact flags before any action', () => {
+  it('rejects fullflow and raw artifact flags before any action', () => {
     const parsed = parseSoapDiseaseSafeArgs([
       '--dry-run',
       '--sanitized-evidence-only',
@@ -132,14 +133,40 @@ describe('phase4 SOAP/disease no-live safe evidence', () => {
       '--phase4-only',
       '--workflow',
       'subjectivesv2',
-      '--execute-approved-phase4',
       '--fullflow',
       '--request-xml',
     ]);
 
-    expect(parsed.errors).toContain('forbidden flag: --execute-approved-phase4');
     expect(parsed.errors).toContain('forbidden flag: --fullflow');
     expect(parsed.errors).toContain('forbidden flag: --request-xml');
+  });
+
+  it('accepts the exact subjectivesv2 live checkpoint command without running network', () => {
+    const result = validateSoapDiseaseSafeCommand({
+      argv: [
+        '--execute-approved-phase4',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--phase4-only',
+        '--workflow',
+        'subjectivesv2',
+        '--payload',
+        SUBJECTIVES_PAYLOAD,
+        '--payload-sha256',
+        SUBJECTIVES_SHA256,
+      ],
+      env: {},
+      cwd: '/repo/web-client',
+      now: new Date('2026-04-24T10:02:23Z'),
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.evidence.liveTrialAction).toBe('approved_to_execute_by_command_contract');
+    expect(result.evidence.liveReadinessIdentity.key).toBe(
+      `rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-${SUBJECTIVES_SHA256}`,
+    );
+    expect(result.evidence.liveReadinessIdentity.liveMutationPermittedByThisPrompt).toBe(true);
+    expect(result.evidence.duplicateCheckpoint.liveMutationPermittedWhenReady).toBe(true);
   });
 
   it('fails closed on target drift, endpoint drift, forbidden Request_Number, and sha mismatch', () => {
@@ -210,5 +237,25 @@ describe('phase4 SOAP/disease no-live safe evidence', () => {
 
     expect(business.responseClassification).toBe('notVerified');
     expect(business.businessAccepted).toBe(false);
+  });
+
+  it('classifies official subjectivesv2 JSON only with completion evidence', () => {
+    const response = sanitizeSoapDiseaseOfficialResponse({
+      workflow: 'subjectivesv2',
+      httpStatus: 200,
+      responseJson: {
+        ok: true,
+        apiOk: true,
+        businessAccepted: true,
+        apiResult: '00',
+        informationDate: '2026-04-24',
+        informationTime: '10:15:00',
+      },
+    });
+
+    expect(response.responseClassification).toBe('businessAccepted');
+    expect(response.businessAccepted).toBe(true);
+    expect(response.completionEvidence.subjectivesCompletionMarkerPresent).toBe(true);
+    expect(response.rawResponseBodyStored).toBe(false);
   });
 });

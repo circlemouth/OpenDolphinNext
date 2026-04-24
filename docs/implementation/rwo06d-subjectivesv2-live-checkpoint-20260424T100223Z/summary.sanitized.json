@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T100223Z",
+  "workOrder": "RWO-06D-soap-next",
+  "result": "RWO06D_SUBJECTIVESV2_LIVE_TRIAL_TRANSPORT_REJECTED",
+  "branch": "master",
+  "startHead": "acd9cbd42",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "subjectivesv2-live-trial-checkpoint-readiness-not-run",
+    "completedByThisRun": true
+  },
+  "payloadIdentity": {
+    "workflow": "subjectivesv2",
+    "workflowId": "rwo06b-subjectivesv2-live-readiness-v1",
+    "endpoint": "/orca25/subjectivesv2",
+    "officialServerRoute": "/api/orca/official/chart-support/subjectives-mod-v2",
+    "target": "00001",
+    "operation": "create",
+    "requestNumber": "01-equivalent",
+    "classCode": "01",
+    "payload": "web-client/qa/payloads/phase4/subjectivesv2_phase4_dummy_native_intent_v1.json",
+    "sha256": "9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
+    "duplicateLiveCheckpointKey": "rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308"
+  },
+  "duplicateLiveCheckpointDecision": {
+    "statusBeforeAttempt": "not_found",
+    "acceptedCheckpointFound": false,
+    "repeatedAcceptedMutationPrevented": true
+  },
+  "tests": {
+    "nodeCheck": "pass",
+    "phase4SoapDiseaseSafeEvidence": {
+      "result": "pass",
+      "tests": 11
+    },
+    "serverFocused": {
+      "result": "pass",
+      "tests": 16
+    },
+    "wrapperDryRun": "pass_subjectivesv2_notVerified_no_live"
+  },
+  "liveTrialOrca": {
+    "executed": true,
+    "endpoint": "/api/orca/official/chart-support/subjectives-mod-v2",
+    "orcaEndpoint": "/orca25/subjectivesv2",
+    "target": "00001",
+    "requestClass": "subjectivesv2",
+    "transportHttpStatus": 404,
+    "businessSuccessClassification": "transportRejected",
+    "businessAccepted": false,
+    "runtimeReadiness": {
+      "healthHttpStatus": 200,
+      "readinessHttpStatus": 200
+    }
+  },
+  "blocker": {
+    "id": "subjectivesv2-live-trial-transport-rejected-404",
+    "classification": "runtime_route_or_deployment_blocker",
+    "reason": "The safe wrapper preflight passed and backend health/readiness were 200/200, but the authenticated official server route returned sanitized HTTP 404. Focused server tests confirm the route exists in the current source, so the next run must verify the current non-S3 runtime pair/deployment before any retry.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "claimBoundary": "No SOAP subjectivesv2 Trial business acceptance, diseasev3 Trial reachability, disease update/delete, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
+  "recommendedNextTask": "Refresh or verify the current non-S3 server-modernized runtime pair, prove the subjectives-mod-v2 official route is deployed, then rerun this exact subjectivesv2 checkpoint only once through the safe wrapper.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}

@@ -38,7 +38,6 @@ export const SOAP_DISEASE_ENDPOINTS = {
 const FORBIDDEN_FLAGS = new Set([
   '--execute',
   '--execute-live',
-  '--execute-approved-phase4',
   '--live',
   '--phase3',
   '--run-phase3',
@@ -74,7 +73,14 @@ const FORBIDDEN_ENV = [
 ];
 
 const VALUE_FLAGS = new Set(['--workflow', '--payload', '--payload-sha256', '--fixture', '--artifact-dir']);
-const BOOLEAN_FLAGS = new Set(['--dry-run', '--mock', '--sanitized-evidence-only', '--disable-browser-artifacts', '--phase4-only']);
+const BOOLEAN_FLAGS = new Set([
+  '--dry-run',
+  '--mock',
+  '--execute-approved-phase4',
+  '--sanitized-evidence-only',
+  '--disable-browser-artifacts',
+  '--phase4-only',
+]);
 const ZERO_API_RESULT_PATTERN = /^0+$/;
 const SENSITIVE_MESSAGE_PATTERN =
   /患者|保険|番号|氏名|住所|電話|記号|cookie|authorization|password|passwd|token|session|csrf|jsessionid/i;
@@ -90,6 +96,7 @@ export const parseSoapDiseaseSafeArgs = (argv) => {
   const options = {
     dryRun: false,
     mock: false,
+    executeApprovedPhase4: false,
     sanitizedEvidenceOnly: false,
     disableBrowserArtifacts: false,
     phase4Only: false,
@@ -119,6 +126,7 @@ export const parseSoapDiseaseSafeArgs = (argv) => {
     if (BOOLEAN_FLAGS.has(arg)) {
       if (arg === '--dry-run') options.dryRun = true;
       if (arg === '--mock') options.mock = true;
+      if (arg === '--execute-approved-phase4') options.executeApprovedPhase4 = true;
       if (arg === '--sanitized-evidence-only') options.sanitizedEvidenceOnly = true;
       if (arg === '--disable-browser-artifacts') options.disableBrowserArtifacts = true;
       if (arg === '--phase4-only') options.phase4Only = true;
@@ -246,6 +254,45 @@ export const classifySoapDiseaseBusinessResult = ({ httpStatus = 200, parsedResp
   return { responseClassification: 'businessAccepted', businessAccepted: true };
 };
 
+export const sanitizeSoapDiseaseOfficialResponse = ({ workflow = '', httpStatus = 0, responseJson = {} }) => {
+  const apiResult = normalizeCode(responseJson?.apiResult ?? responseJson?.Api_Result);
+  const apiResultMessageCategory = normalizeCode(responseJson?.apiResultMessageCategory)
+    || classifySoapDiseaseMessageCategory(responseJson?.apiResultMessage ?? responseJson?.Api_Result_Message);
+  const completionEvidence = {
+    subjectivesCompletionMarkerPresent:
+      normalizeCode(workflow) === 'subjectivesv2'
+      && Boolean(normalizeCode(responseJson?.informationDate))
+      && Boolean(normalizeCode(responseJson?.informationTime)),
+    diseaseMutationMarkerPresent:
+      normalizeCode(workflow) === 'diseasev3'
+      && Boolean(normalizeCode(responseJson?.informationDate))
+      && Boolean(normalizeCode(responseJson?.informationTime)),
+  };
+  const business = classifySoapDiseaseBusinessResult({
+    httpStatus,
+    parsedResponse: {
+      apiResultZeroEquivalent: responseJson?.apiOk === true || ZERO_API_RESULT_PATTERN.test(apiResult),
+      parserAmbiguous: !normalizeCode(responseJson?.responseClassification) && !apiResult,
+      completionEvidence,
+    },
+  });
+  return {
+    httpStatus: Number(httpStatus) || 0,
+    apiResult,
+    apiOk: responseJson?.apiOk === true,
+    ok: responseJson?.ok === true,
+    apiResultZeroEquivalent: responseJson?.apiOk === true || ZERO_API_RESULT_PATTERN.test(apiResult),
+    apiResultMessageCategory,
+    completionEvidence,
+    responseClassification:
+      responseJson?.businessAccepted === true ? 'businessAccepted' : business.responseClassification,
+    businessAccepted: responseJson?.businessAccepted === true && business.businessAccepted === true,
+    rawResponseBodyStored: false,
+    rawApiResultMessageStored: false,
+    rawPatientOrInsuranceDetailStored: false,
+  };
+};
+
 export const sanitizeSoapDiseaseResponse = ({ workflow, httpStatus = 200, xml = '' }) => {
   const parsedResponse = parseSoapDiseaseStubResponse({ workflow, xml });
   const business = classifySoapDiseaseBusinessResult({ httpStatus, parsedResponse });
@@ -285,6 +332,87 @@ export const buildSoapDiseaseLiveReadinessCheckpointKey = ({ workflow, payloadSh
   ].join(':');
 };
 
+const walkJsonFiles = (root, predicate, limit = 500) => {
+  const results = [];
+  if (!fs.existsSync(root)) return results;
+  const stack = [root];
+  while (stack.length > 0 && results.length < limit) {
+    const current = stack.pop();
+    let entries = [];
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const entryPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+      } else if (entry.isFile() && entry.name.endsWith('.json') && predicate(entryPath)) {
+        results.push(entryPath);
+      }
+    }
+  }
+  return results;
+};
+
+export const findAcceptedSoapDiseaseCheckpoint = ({ repoRoot, checkpointKey }) => {
+  const normalizedCheckpointKey = normalizeCode(checkpointKey);
+  if (!normalizedCheckpointKey) return null;
+  const candidates = [
+    path.join(repoRoot, 'artifacts', 'orca-remediation', 'closeout'),
+    path.join(repoRoot, 'docs', 'implementation'),
+  ].flatMap((root) =>
+    walkJsonFiles(root, (entryPath) => {
+      const basename = path.basename(entryPath);
+      return basename === 'phase4-soap-disease-summary.sanitized.json' || basename === 'summary.sanitized.json';
+    }),
+  );
+
+  for (const candidate of candidates) {
+    let parsed = null;
+    try {
+      parsed = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+    } catch {
+      continue;
+    }
+    const liveReadinessIdentity = parsed?.liveReadinessIdentity ?? parsed?.payloadIdentity;
+    const sameKey =
+      liveReadinessIdentity?.key === normalizedCheckpointKey
+      || liveReadinessIdentity?.duplicateLiveCheckpointKey === normalizedCheckpointKey
+      || parsed?.duplicateLiveCheckpoint?.key === normalizedCheckpointKey;
+    const accepted =
+      parsed?.response?.businessAccepted === true
+      || parsed?.liveTrialOrca?.businessSuccessClassification === 'live_trial_business_accepted';
+    if (sameKey && accepted) {
+      return {
+        status: 'accepted_checkpoint_found',
+        evidencePath: path.relative(repoRoot, candidate).split(path.sep).join('/'),
+      };
+    }
+  }
+
+  return null;
+};
+
+export const summarizeRuntimeReadiness = ({ healthStatus = 0, readinessStatus = 0 } = {}) => {
+  const healthHttpStatus = Number(healthStatus) || 0;
+  const readinessHttpStatus = Number(readinessStatus) || 0;
+  const healthOk = healthHttpStatus >= 200 && healthHttpStatus < 300;
+  const readinessOk = readinessHttpStatus >= 200 && readinessHttpStatus < 300;
+  const blockers = [];
+  if (!healthOk) blockers.push('backend health endpoint is not reachable');
+  if (!readinessOk) blockers.push('backend readiness endpoint is not ready');
+  return {
+    ok: healthOk && readinessOk,
+    healthHttpStatus,
+    readinessHttpStatus,
+    blockers,
+    rawReadinessBodyStored: false,
+    rawHealthBodyStored: false,
+  };
+};
+
 export const validateSoapDiseaseSafeCommand = ({
   argv = [],
   env = process.env,
@@ -294,12 +422,16 @@ export const validateSoapDiseaseSafeCommand = ({
   const repoRoot = repoRootFromCwd(cwd);
   const { options, errors } = parseSoapDiseaseSafeArgs(argv);
   const blockers = [...errors];
-  const modeCount = [options.dryRun, options.mock].filter(Boolean).length;
-  if (modeCount !== 1) blockers.push('exactly one of --dry-run or --mock is required');
+  const modeCount = [options.dryRun, options.mock, options.executeApprovedPhase4].filter(Boolean).length;
+  if (modeCount !== 1) blockers.push('exactly one of --dry-run, --mock, or --execute-approved-phase4 is required');
   if (!options.workflow) blockers.push('--workflow is required');
   if (!options.sanitizedEvidenceOnly) blockers.push('--sanitized-evidence-only is required');
   if (!options.disableBrowserArtifacts) blockers.push('--disable-browser-artifacts is required');
   if (!options.phase4Only) blockers.push('--phase4-only is required');
+  if (options.executeApprovedPhase4 && !options.payload) blockers.push('--payload is required for live SOAP/disease execution');
+  if (options.executeApprovedPhase4 && !options.payloadSha256) {
+    blockers.push('--payload-sha256 is required for live SOAP/disease execution');
+  }
 
   for (const [key, forbiddenValue, reason] of FORBIDDEN_ENV) {
     if (env[key] === forbiddenValue) blockers.push(`${key}=${forbiddenValue}: ${reason}`);
@@ -345,6 +477,12 @@ export const validateSoapDiseaseSafeCommand = ({
     workflow: options.workflow,
     payloadSha256,
   });
+  const acceptedCheckpoint = options.executeApprovedPhase4
+    ? findAcceptedSoapDiseaseCheckpoint({ repoRoot, checkpointKey: liveReadinessCheckpointKey })
+    : null;
+  if (acceptedCheckpoint) {
+    blockers.push('duplicate live checkpoint already accepted');
+  }
   const ok = blockers.length === 0;
   const evidence = {
     schemaVersion: 1,
@@ -363,7 +501,9 @@ export const validateSoapDiseaseSafeCommand = ({
     },
     dryRun: options.dryRun === true,
     mock: options.mock === true,
-    liveTrialAction: 'not_run_forbidden_by_contract',
+    liveTrialAction: options.executeApprovedPhase4 && ok
+      ? 'approved_to_execute_by_command_contract'
+      : 'not_run_forbidden_by_contract',
     phase3: 'not_run',
     fullflow: 'not_run',
     browserNetworkArtifactMode: 'disabled',
@@ -379,18 +519,19 @@ export const validateSoapDiseaseSafeCommand = ({
     response,
     duplicateCheckpoint: {
       key: checkpointKey,
-      status: 'not_checked_no_live',
-      liveMutationPermittedWhenReady: false,
+      status: options.executeApprovedPhase4 ? 'checked_via_live_readiness_key' : 'not_checked_no_live',
+      liveMutationPermittedWhenReady: options.executeApprovedPhase4 && !acceptedCheckpoint,
     },
     liveReadinessIdentity: {
       key: liveReadinessCheckpointKey,
-      status: 'prepared_no_live',
+      status: acceptedCheckpoint?.status ?? (options.executeApprovedPhase4 ? 'not_found' : 'prepared_no_live'),
+      evidencePath: acceptedCheckpoint?.evidencePath,
       selectedEndpointJustification: normalizeCode(options.workflow) === 'subjectivesv2'
         ? 'lower first-step product risk than diseasev3 because it avoids diagnosis-list create/update/delete ambiguity and uses a fixed dummy SOAP create payload'
         : 'prepared only when a separate prompt selects diseasev3; disease update/delete remains unauthorized',
       approvalRecordStatus: 'recorded_no_live_only',
       businessScope: contract?.businessScope ?? 'unknown',
-      liveMutationPermittedByThisPrompt: false,
+      liveMutationPermittedByThisPrompt: options.executeApprovedPhase4 && ok && !acceptedCheckpoint,
       endpointSpecificParsedBusinessSuccessRequired: true,
       successCriteria: {
         transport2xxRequired: true,
