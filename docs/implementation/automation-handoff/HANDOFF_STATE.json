@@ -2914,5 +2914,53 @@
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06JTestOrderV2LiveCheckpoint": {
+    "runId": "20260424T222329Z",
+    "workOrder": "RWO-06J",
+    "result": "TEST_ORDER_V2_LIVE_TRIAL_BUSINESS_REJECTED",
+    "branch": "master",
+    "startHead": "460e0fd04",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "completed"
+    },
+    "evidence": "docs/implementation/rwo06j-test-order-v2-live-20260424T222329Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06j-test-order-v2-live-20260424T222329Z/summary.sanitized.json",
+    "endpointIdentity": {
+      "officialServerRoute": "/api/orca/official/chart-support/medical-mod-v2",
+      "requestClass": "medicalmodv2",
+      "workflow": "test-order",
+      "entity": "testOrder",
+      "target": "00001",
+      "requestNumber": "01",
+      "classCode": "01",
+      "claim007Class": "600",
+      "candidateCode": "160000310",
+      "payloadSha256": "35f787437641e3aa16981465f62277ad9d080de0d93b8c105d5a63f43a3df9d9",
+      "duplicateLiveCheckpointKey": "rwo06j:medicalmodv2:rwo06j-test-order-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-35f787437641e3aa16981465f62277ad9d080de0d93b8c105d5a63f43a3df9d9"
+    },
+    "runtimeReadiness": {
+      "healthHttpStatus": 200,
+      "readinessHttpStatus": 200
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "attempt": 1,
+      "httpStatus": 200,
+      "apiResult": "80",
+      "businessSuccessClassification": "businessRejected",
+      "businessAccepted": false
+    },
+    "tests": {
+      "testOrderV2DryRun": "pass_no_live",
+      "forbiddenArtifactFileScan": "pass_zero_hits",
+      "focusedSecretRawArtifactTextScan": "pass_zero_hits"
+    },
+    "claimBoundary": "TestOrder/600 v2 reached one sanitized Trial attempt and was businessRejected. No testOrder Trial acceptance, all-test coverage, physiology/bacteria coverage, diseasev3 acceptance, subjectivesv2 acceptance, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
+    "recommendedNextTask": "Do not repeat this v2 checkpoint without a source-backed v3 candidate or changed Trial/business precondition; continue diseasev3 no-live investigation, next order-family v2 candidate work, or diagnostic fullflow inventory.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
   }
 }
