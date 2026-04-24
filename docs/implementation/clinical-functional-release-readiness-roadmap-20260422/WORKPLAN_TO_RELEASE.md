@@ -65,7 +65,7 @@ Do not commit approved local runtime secret files, ORCA credentials, S3/MinIO/ob
 11. RWO-06E: maintain an exhaustive order-item matrix covering documents, `指導料`, tests, treatments, injections, charges, surgery, radiology, local-only rows, and accepted endpoint-specific identities.
 12. RWO-06F/RWO-06F2: verify `instractionChargeOrder` / `指導料` representative Trial reachability before broader charge/order families; v1 is safely tested but Trial-rejected, and v2 is blocked until a business/Trial data decision identifies a justified candidate.
 13. RWO-06G: run the no-live-prepared `baseChargeOrder` / `基本診療料` class `110` Trial classification through the same safe wrapper; v1 was Trial-rejected and must not be repeated without a justified v2 candidate.
-14. RWO-06H: investigate and verify `injectionOrder` / `注射` class `310` through a separate safe payload identity.
+14. RWO-06H: investigate and verify `injectionOrder` / `注射` class `310` through a separate safe payload identity; v1 was safely tested but Trial-rejected and must not be repeated without a justified v2 candidate.
 15. RWO-07: Request_Number 02/03/04 only if business scope requires it and owner approves.
 16. RWO-08: safe fullflow after browser and live endpoint prerequisites.
 17. RWO-08B: safe fullflow reachability variants, batched only through an artifact-free harness.

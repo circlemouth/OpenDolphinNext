@@ -88,6 +88,14 @@
       "status": "rwo06g_endpoint_specific_candidate_live_business_rejected_do_not_repeat",
       "workflow": "base-charge"
     },
+    "medicalmodv2_injection_trial_reachability_v1.json": {
+      "bytes": 818,
+      "duplicateLiveCheckpointKey": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-c01169729cb86d1c68211e4b01f6c38bf3dde0ac948100c53855ec91f1b9010e",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v1.json",
+      "sha256": "c01169729cb86d1c68211e4b01f6c38bf3dde0ac948100c53855ec91f1b9010e",
+      "status": "active_rwo06h_endpoint_specific_candidate",
+      "workflow": "injection"
+    },
     "medicalmodv2_phase4_dummy_owner_aligned_v1.json": {
       "bytes": 639,
       "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_owner_aligned_v1.json",
@@ -109,6 +117,7 @@
     "RWO-06D prescription and treatment-generic payloads are endpoint-specific medicalmodv2 candidates; use --workflow plus the matching duplicateLiveCheckpointKey before any live mutation.",
     "RWO-06F instruction-charge is the endpoint-specific instractionChargeOrder class 130 candidate; use --workflow instruction-charge and do not treat one accepted class as all guidance-fee variants.",
     "RWO-06G base-charge is the endpoint-specific baseChargeOrder class 110 candidate; the v1 live Trial attempt was businessRejected, so do not repeat it or treat it as base-charge acceptance.",
+    "RWO-06H injection is the endpoint-specific injectionOrder class 310 candidate; use --workflow injection and do not treat one injection class as all injection variants.",
     "Do not store raw ORCA request/response, HAR, trace, screenshots, video, raw network, credentials, cookies, tokens, session IDs, or CSRF values."
   ],
   "lineEndings": "LF",

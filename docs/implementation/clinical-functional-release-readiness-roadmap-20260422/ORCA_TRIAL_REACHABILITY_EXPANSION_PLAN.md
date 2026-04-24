@@ -158,6 +158,19 @@ Checkpoint:
 - The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
 - Do not repeat the v1 checkpoint. Continue with the next independent order family, `injectionOrder/310`, unless a justified base-charge v2 candidate is established.
 
+### RWO-06H: Injection Trial Reachability
+
+Scope:
+
+- Verify the next independent order family: `injectionOrder` / `注射` / Claim007 class `310`.
+- Proceed to live Trial only after no-live contract tests, sanitizer/parser tests, wrapper dry-run, readiness 2xx, and duplicate-live checkpointing pass.
+
+Checkpoint:
+
+- RUN_ID `20260424T052654Z` added the `injection` workflow, payload `medicalmodv2_injection_trial_reachability_v1.json`, SHA-256 `c01169729cb86d1c68211e4b01f6c38bf3dde0ac948100c53855ec91f1b9010e`, and a passing wrapper dry-run.
+- The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
+- Do not repeat the v1 checkpoint. Continue with the next independent order family, `surgeryOrder/500`, unless a justified injection v2 candidate is established.
+
 ## Claim Boundary
 
 This plan allows adding and batching reachability verification tasks. It does not by itself claim that prescription, treatment/generic orders, SOAP, disease CRUD, Request_Number `02` / `03` / `04`, or fullflow are verified through ORCA Trial.
@@ -180,7 +193,7 @@ RUN_ID `20260424T044007Z` created the exhaustive static matrix:
 
 - Evidence: [../rwo06e-order-item-reachability-matrix-20260424T044007Z/ORDER_ITEM_TRIAL_REACHABILITY_MATRIX.md](../rwo06e-order-item-reachability-matrix-20260424T044007Z/ORDER_ITEM_TRIAL_REACHABILITY_MATRIX.md).
 - Current accepted live rows remain `medOrder/212` and `treatmentOrder/400` only.
-- `instractionChargeOrder` / `指導料`, `baseChargeOrder`, `injectionOrder`, `surgeryOrder`, `testOrder`, and `radiologyOrder` remain queued for endpoint-specific safe payload work.
+- `instractionChargeOrder` / `指導料`, `baseChargeOrder`, and `injectionOrder` each have one safely tested but Trial-rejected v1 identity; `surgeryOrder`, `testOrder`, and `radiologyOrder` remain queued for endpoint-specific safe payload work.
 - Clinical documents are not ORCA order mutation evidence; `文書料` currently maps to local-only `otherOrder` / `LOCAL_OTHER:*` and remains fail-closed unless a business mapping is approved.
 
 ## RWO-06B Inventory Checkpoint
