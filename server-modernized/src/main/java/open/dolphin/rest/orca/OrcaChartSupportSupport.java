@@ -469,8 +469,8 @@ final class OrcaChartSupportSupport {
         appendTag(builder, "Patient_ID", payload.getPatientId());
         appendTag(builder, "Perform_Date", payload.getPerformDate());
         appendTag(builder, "Department_Code", payload.getDepartmentCode());
-        builder.append("<HealthInsurance_Information type=\"record\">");
         appendTag(builder, "Insurance_Combination_Number", payload.getInsuranceCombinationNumber());
+        builder.append("<HealthInsurance_Information type=\"record\">");
         builder.append("</HealthInsurance_Information>");
         appendTag(builder, "Subjectives_Detail_Record", payload.getSubjectivesDetailRecord());
         appendTag(builder, "Subjectives_Code", payload.getSubjectivesCode());

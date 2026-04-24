@@ -308,6 +308,9 @@ class OrcaChartSupportResourceTest {
         assertTrue(transport.requestXml().contains("<subjectivesmodreq type=\"record\">"));
         assertTrue(transport.requestXml().contains("<Request_Number type=\"string\">01</Request_Number>"));
         assertTrue(transport.requestXml().contains("<Patient_ID type=\"string\">00001</Patient_ID>"));
+        assertTrue(transport.requestXml().contains("<Insurance_Combination_Number type=\"string\"></Insurance_Combination_Number>"));
+        assertTrue(!transport.requestXml().contains(
+                "<HealthInsurance_Information type=\"record\"><Insurance_Combination_Number type=\"string\">"));
         assertTrue(transport.requestXml().contains("<Subjectives_Detail_Record type=\"string\">07</Subjectives_Detail_Record>"));
         assertTrue(transport.requestXml().contains("<Subjectives_Code type=\"string\">phase4-no-live-subjective</Subjectives_Code>"));
         assertEquals("0000", response.getApiResult());
