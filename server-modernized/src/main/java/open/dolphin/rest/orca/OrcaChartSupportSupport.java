@@ -463,7 +463,7 @@ final class OrcaChartSupportSupport {
     String buildSubjectivesModV2RequestXml(ChartSupportSubjectivesModV2Request payload) {
         StringBuilder builder = new StringBuilder();
         builder.append("<data>");
-        builder.append("<subjectivesreq type=\"record\">");
+        builder.append("<subjectivesmodreq type=\"record\">");
         appendTag(builder, "Request_Number", "01");
         appendTag(builder, "InOut", fallback(payload.getInOut(), "O"));
         appendTag(builder, "Patient_ID", payload.getPatientId());
@@ -474,7 +474,7 @@ final class OrcaChartSupportSupport {
         builder.append("</HealthInsurance_Information>");
         appendTag(builder, "Subjectives_Detail_Record", payload.getSubjectivesDetailRecord());
         appendTag(builder, "Subjectives_Code", payload.getSubjectivesCode());
-        builder.append("</subjectivesreq>");
+        builder.append("</subjectivesmodreq>");
         builder.append("</data>");
         return builder.toString();
     }
