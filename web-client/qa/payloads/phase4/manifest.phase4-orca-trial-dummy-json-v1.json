@@ -115,6 +115,16 @@
       "status": "rwo06j_endpoint_specific_candidate_live_business_rejected_do_not_repeat",
       "workflow": "test-order"
     },
+    "medicalmodv2_test_order_trial_reachability_v2.json": {
+      "bytes": 690,
+      "candidateSourceRunId": "20260424T210000Z",
+      "candidateSourceUrl": "https://www.orca.med.or.jp/receipt/tec/api/medicalmod.html",
+      "duplicateLiveCheckpointKey": "rwo06j:medicalmodv2:rwo06j-test-order-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-35f787437641e3aa16981465f62277ad9d080de0d93b8c105d5a63f43a3df9d9",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_test_order_trial_reachability_v2.json",
+      "sha256": "35f787437641e3aa16981465f62277ad9d080de0d93b8c105d5a63f43a3df9d9",
+      "status": "rwo06j_v2_endpoint_specific_candidate_no_live_prepared_not_live_executed",
+      "workflow": "test-order"
+    },
     "medicalmodv2_radiology_trial_reachability_v1.json": {
       "bytes": 897,
       "duplicateLiveCheckpointKey": "rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-d4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e",
@@ -150,6 +160,7 @@
     "RWO-06H injection is the endpoint-specific injectionOrder class 310 candidate; use --workflow injection and do not treat one injection class as all injection variants.",
     "RWO-06I surgery is the endpoint-specific surgeryOrder class 500 candidate; the v1 live Trial attempt was businessRejected, so do not repeat it or treat it as surgery acceptance.",
     "RWO-06J test-order is the endpoint-specific testOrder class 600 candidate; the v1 live Trial attempt was businessRejected, so do not repeat it or treat it as test-order acceptance.",
+    "RWO-06J test-order v2 is a source-backed no-live candidate using code 160000310; do not execute it live until wrapper dry-run, runtime readiness, duplicate checkpoint, and endpoint-specific success criteria are recorded for the current run.",
     "RWO-06K radiology is the endpoint-specific radiologyOrder class 700 candidate; use --workflow radiology and do not treat one radiology class as all radiology variants.",
     "Do not store raw ORCA request/response, HAR, trace, screenshots, video, raw network, credentials, cookies, tokens, session IDs, or CSRF values."
   ],

@@ -2865,5 +2865,54 @@
     "recommendedNextTask": "Run diseasev3 create live checkpoint only after current runtime readiness, duplicate-live checkpoint, endpoint target identity, and sanitized evidence mode are confirmed.",
     "credentialsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestDiseasev3LiveAndTestOrderV2NoLive": {
+    "runId": "20260424T220109Z",
+    "workOrders": [
+      "RWO-06D",
+      "RWO-06J"
+    ],
+    "result": "DISEASEV3_LIVE_TRANSPORT_REJECTED_TEST_ORDER_V2_NO_LIVE_PREPARED",
+    "branch": "master",
+    "startHead": "470f9076b",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "completed"
+    },
+    "evidence": "docs/implementation/rwo06d-diseasev3-rwo06j-test-order-v2-20260424T220109Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06d-diseasev3-rwo06j-test-order-v2-20260424T220109Z/summary.sanitized.json",
+    "diseasev3": {
+      "officialServerRoute": "/api/orca/official/chart-support/disease-mod-v3",
+      "orcaEndpoint": "/orca22/diseasev3",
+      "target": "00001",
+      "operation": "create",
+      "requestNumber": "01",
+      "payloadSha256": "da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+      "runtimeReadiness": {
+        "healthHttpStatus": 200,
+        "readinessHttpStatus": 200
+      },
+      "liveTrialOrca": {
+        "executed": true,
+        "attempt": 1,
+        "httpStatus": 400,
+        "businessSuccessClassification": "transportRejected",
+        "businessAccepted": false
+      },
+      "nextAction": "no_live_investigation_required_before_any_retry"
+    },
+    "testOrderV2": {
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_test_order_trial_reachability_v2.json",
+      "payloadSha256": "35f787437641e3aa16981465f62277ad9d080de0d93b8c105d5a63f43a3df9d9",
+      "candidateCode": "160000310",
+      "noLiveDryRun": "pass",
+      "liveTrialOrcaExecuted": false,
+      "nextAction": "eligible_for_future_runtime_readiness_and_single_endpoint_live_checkpoint_after_current preflight"
+    },
+    "claimBoundary": "No diseasev3 Trial business acceptance, disease update/delete, Request_Number 02/03/04, testOrder live acceptance, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
+    "recommendedNextTask": "Investigate diseasev3 HTTP 400 without another live send; independently advance testOrder/600 v2 only after current preflight.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
   }
 }

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T220109Z",
+  "workOrders": [
+    "RWO-06D",
+    "RWO-06J"
+  ],
+  "result": "DISEASEV3_LIVE_TRANSPORT_REJECTED_TEST_ORDER_V2_NO_LIVE_PREPARED",
+  "branch": "master",
+  "startHead": "470f9076b",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "completed"
+  },
+  "diseasev3": {
+    "endpoint": "/api/orca/official/chart-support/disease-mod-v3",
+    "orcaEndpoint": "/orca22/diseasev3",
+    "target": "00001",
+    "requestClass": "diseasev3",
+    "operation": "create",
+    "requestNumber": "01",
+    "payload": "web-client/qa/payloads/phase4/diseasev3_phase4_dummy_native_intent_v1.json",
+    "payloadSha256": "da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+    "duplicateLiveCheckpointKey": "rwo06b:diseasev3:rwo06b-diseasev3-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+    "runtimeReadiness": {
+      "healthHttpStatus": 200,
+      "readinessHttpStatus": 200,
+      "rawReadinessBodyStored": false,
+      "rawHealthBodyStored": false
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "attempt": 1,
+      "httpStatus": 400,
+      "responseClassification": "transportRejected",
+      "businessSuccessClassification": "transportRejected",
+      "businessAccepted": false
+    }
+  },
+  "testOrderV2": {
+    "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+    "requestClass": "medicalmodv2",
+    "workflow": "test-order",
+    "classCode": "600",
+    "candidateCode": "160000310",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_test_order_trial_reachability_v2.json",
+    "payloadSha256": "35f787437641e3aa16981465f62277ad9d080de0d93b8c105d5a63f43a3df9d9",
+    "duplicateLiveCheckpointKey": "rwo06j:medicalmodv2:rwo06j-test-order-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-35f787437641e3aa16981465f62277ad9d080de0d93b8c105d5a63f43a3df9d9",
+    "noLiveDryRun": "pass",
+    "liveTrialOrcaExecuted": false
+  },
+  "tests": {
+    "soapDiseaseNodeCheck": "pass",
+    "phase4SoapDiseaseSafeEvidence": {
+      "result": "pass",
+      "tests": 11
+    },
+    "diseasev3DryRun": "pass_notVerified_no_live",
+    "testOrderV2DryRun": "pass_no_live",
+    "secretRawArtifactScan": "pass_reviewed_false_positives_only",
+    "gitDiffCheck": "pass"
+  },
+  "claimBoundary": "Diseasev3 create reached one sanitized Trial attempt but was not accepted. Test-order v2 is no-live prepared only. No disease Trial business acceptance, disease update/delete, Request_Number 02/03/04, testOrder live acceptance, fullflow, production ORCA readiness, S3/object-storage readiness, broad clinical release readiness, or final release GO is claimed.",
+  "recommendedNextTask": "Investigate diseasev3 HTTP 400 without another live send, then run focused no-live verification before any retry; separately decide whether to advance testOrder/600 v2 to runtime readiness/live checkpoint.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false
+}
