@@ -230,6 +230,7 @@ Checkpoint:
 - RUN_ID `20260424T061549Z` added the `radiology` workflow, payload `medicalmodv2_radiology_trial_reachability_v1.json`, SHA-256 `d4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e`, and a passing wrapper dry-run.
 - The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
 - Do not repeat the v1 checkpoint. Use web-researched official/public sources and local no-live contract checks to propose a justified radiology v2 candidate before any live retry.
+- RUN_ID `20260424T225533Z` added source-backed v2 payload `medicalmodv2_radiology_trial_reachability_v2.json`, SHA-256 `ba41ca8d029b362d197361def1653a334ea27032935a6979298548465df4d436`, using body-part code `002000099` and imaging fee code `170027910`. The safe wrapper dry-run and focused contract test passed with no live ORCA execution. Next step is sanitized runtime readiness and duplicate-checkpoint preflight before at most one live Trial checkpoint.
 
 ## Claim Boundary
 

@@ -133,6 +133,16 @@
       "status": "active_rwo06k_endpoint_specific_candidate",
       "workflow": "radiology"
     },
+    "medicalmodv2_radiology_trial_reachability_v2.json": {
+      "bytes": 972,
+      "candidateSourceRunId": "20260424T210000Z",
+      "candidateSourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/comment842-830-bui-api.html",
+      "duplicateLiveCheckpointKey": "rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-ba41ca8d029b362d197361def1653a334ea27032935a6979298548465df4d436",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v2.json",
+      "sha256": "ba41ca8d029b362d197361def1653a334ea27032935a6979298548465df4d436",
+      "status": "rwo06k_v2_endpoint_specific_candidate_no_live_prepared_not_live_executed",
+      "workflow": "radiology"
+    },
     "medicalmodv2_phase4_dummy_owner_aligned_v1.json": {
       "bytes": 639,
       "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_owner_aligned_v1.json",
@@ -162,6 +172,7 @@
     "RWO-06J test-order is the endpoint-specific testOrder class 600 candidate; the v1 live Trial attempt was businessRejected, so do not repeat it or treat it as test-order acceptance.",
     "RWO-06J test-order v2 is a source-backed no-live candidate using code 160000310; do not execute it live until wrapper dry-run, runtime readiness, duplicate checkpoint, and endpoint-specific success criteria are recorded for the current run.",
     "RWO-06K radiology is the endpoint-specific radiologyOrder class 700 candidate; use --workflow radiology and do not treat one radiology class as all radiology variants.",
+    "RWO-06K radiology v2 is a source-backed no-live candidate using body-part code 002000099 and imaging fee code 170027910; do not execute it live until wrapper dry-run, runtime readiness, duplicate checkpoint, and endpoint-specific success criteria are recorded for the current run.",
     "Do not store raw ORCA request/response, HAR, trace, screenshots, video, raw network, credentials, cookies, tokens, session IDs, or CSRF values."
   ],
   "lineEndings": "LF",
