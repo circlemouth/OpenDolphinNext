@@ -2,14 +2,14 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06E-next",
-  "blockerId": "surgery-class-500-no-live-wrapper-not-created",
+  "blockerId": "test-class-600-no-live-wrapper-not-created",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-24T05:26:54Z",
+  "lastUpdated": "2026-04-24T05:53:30Z",
   "latestRwo06HInjectionMedicalmodv2": {
     "runId": "20260424T052654Z",
     "workOrder": "RWO-06H",
@@ -90,6 +90,7 @@
       "document_fee_otherOrder_mapping",
       "instractionChargeOrder/130",
       "baseChargeOrder/110",
+      "injectionOrder/310",
       "surgeryOrder/500",
       "testOrder/600",
       "radiologyOrder/700"
@@ -98,8 +99,8 @@
       "executed": false,
       "businessSuccessClassification": "not_applicable_static_matrix_only"
     },
-    "claimBoundary": "Matrix plus RWO-06F/RWO-06G/RWO-06H updates; all-order-item Trial success is not claimed. Accepted live evidence remains limited to medOrder/212 and treatmentOrder/400 endpoint-specific payload identities. RWO-06F, RWO-06G, and RWO-06H added safe v1 routes for instractionChargeOrder/130, baseChargeOrder/110, and injectionOrder/310, but live Trial classified each as businessRejected. Clinical documents and document fee otherOrder rows are not ORCA mutation evidence.",
-    "recommendedNextTask": "Continue with surgeryOrder/500 only through a separate safe payload identity; keep document fee as fail-closed unless a business mapping is approved; do not repeat rejected v1 checkpoints.",
+    "claimBoundary": "Matrix plus RWO-06F/RWO-06G/RWO-06H/RWO-06I updates; all-order-item Trial success is not claimed. Accepted live evidence remains limited to medOrder/212 and treatmentOrder/400 endpoint-specific payload identities. RWO-06F, RWO-06G, RWO-06H, and RWO-06I added safe v1 routes for instractionChargeOrder/130, baseChargeOrder/110, injectionOrder/310, and surgeryOrder/500, but live Trial classified each as businessRejected. Clinical documents and document fee otherOrder rows are not ORCA mutation evidence.",
+    "recommendedNextTask": "Continue with testOrder/600 only through a separate safe payload identity; keep document fee as fail-closed unless a business mapping is approved; do not repeat rejected v1 checkpoints.",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   },
@@ -1633,6 +1634,65 @@
     },
     "claimBoundary": "baseChargeOrder/110 v1 was no-live verified and executed once, but live Trial classified it as businessRejected; no base-charge acceptance, all base-charge variants, all order items, final release readiness, production ORCA readiness, or S3/object-storage readiness is claimed.",
     "recommendedNextTask": "Do not repeat the RWO-06G v1 checkpoint. Continue with RWO-06H injectionOrder/310 only through a separate payload identity and safe wrapper verification.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestRwo06ISurgeryMedicalmodv2": {
+    "runId": "20260424T055036Z",
+    "workOrder": "RWO-06I",
+    "result": "RWO06I_SURGERY_MEDICALMODV2_LIVE_BUSINESS_REJECTED",
+    "branch": "master",
+    "startHead": "6954520a1",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "blockerId": "surgery-class-500-no-live-wrapper-not-created",
+      "completedByThisRun": true
+    },
+    "nextActiveHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "status": "active",
+      "blockerId": "test-class-600-no-live-wrapper-not-created"
+    },
+    "evidence": "docs/implementation/rwo06i-surgery-medicalmodv2-20260424T055036Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06i-surgery-medicalmodv2-20260424T055036Z/summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "surgery",
+      "workflowId": "rwo06i-surgery-medicalmodv2-v1",
+      "entity": "surgeryOrder",
+      "claim007Class": "500",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_surgery_trial_reachability_v1.json",
+      "sha256": "23441f818148820c2b1364c6a7424b1255995738cd05fa35e1328f41db96c000",
+      "duplicateLiveCheckpointKey": "rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-23441f818148820c2b1364c6a7424b1255995738cd05fa35e1328f41db96c000"
+    },
+    "tests": {
+      "jsonValidation": "pass",
+      "nodeCheck": "pass",
+      "phase4Medicalmodv2SafeEvidence": {
+        "result": "pass",
+        "tests": 16
+      },
+      "wrapperDryRun": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "attemptCount": 1,
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "target": "00001",
+      "requestNumber": "01",
+      "classCode": "01",
+      "readiness": {
+        "healthHttpStatus": 200,
+        "readinessHttpStatus": 200,
+        "rawBodiesStored": false
+      },
+      "httpStatus": 200,
+      "apiResultCategory": "nonzero_business_rejection",
+      "businessSuccessClassification": "businessRejected",
+      "businessAccepted": false
+    },
+    "claimBoundary": "RWO-06I surgeryOrder/500 v1 executed once and was businessRejected; no surgery Trial acceptance, all-surgery coverage, all-order readiness, fullflow, production ORCA, S3/object-storage, Request_Number 02/03/04, diseasev3, subjectivesv2, or final release readiness is claimed.",
+    "recommendedNextTask": "Do not repeat the RWO-06I v1 checkpoint. Continue with the next independent non-S3 matrix row, testOrder/600, only through a separate payload identity and safe wrapper verification.",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   }
