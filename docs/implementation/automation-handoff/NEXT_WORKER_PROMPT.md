@@ -1,6 +1,6 @@
 # NEXT_WORKER_PROMPT
 
-status: active
+status: completed
 created_at: 2026-04-24T14:37:30Z
 source_work_order: RWO-06D-soap-next
 blocker_id: subjectivesv2-live-trial-post-request-number-fix-transport-rejected-502-investigation
@@ -9,6 +9,8 @@ supersedes:
 - subjectivesv2-live-trial-post-request-number-fix-exact-retry-not-run
 
 ## Context
+
+Completion update RUN_ID `20260424T144858Z`: this prompt was handled with no-live source, contract, focused test, and wrapper dry-run checks. No additional concrete repo-local `subjectivesv2` defect was established after the already-fixed `subjectivesmodreq` root, direct `Insurance_Combination_Number`, and body `Request_Number` removal. The repeated HTTP `502` is recorded as `inconclusive_transport_or_trial_side_limited_by_sanitized_evidence`; no future live retry is authorized by this completion.
 
 RUN_ID `20260424T142513Z` rebuilt/recreated the current non-S3 Trial runtime after the `subjectivesv2` request-number omission fix and executed the exact approved live wrapper scope.
 
