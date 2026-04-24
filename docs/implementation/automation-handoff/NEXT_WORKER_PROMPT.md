@@ -1,6 +1,6 @@
 # NEXT_WORKER_PROMPT
 
-status: active
+status: completed
 created_at: 2026-04-24T21:00:00Z
 source_work_order: RWO-08B/RWO-06D/RWO-07/RWO-06F-through-06K
 blocker_id: owner-expanded-fullflow-disease-request-number-order-v2-scope

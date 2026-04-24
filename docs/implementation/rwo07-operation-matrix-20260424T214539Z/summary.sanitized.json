@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T214539Z",
+  "workOrder": "RWO-07",
+  "result": "RWO07_OPERATION_MATRIX_RECORDED_NEXT_ENDPOINT_TASK_QUEUED",
+  "branch": "master",
+  "startHead": "134ecb1379e8a657a572623856f130502d19a115",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "owner-expanded-fullflow-disease-request-number-order-v2-scope",
+    "completedByThisRun": true
+  },
+  "operationStatusCounts": {
+    "live_accepted_scoped_create_only": 2,
+    "queued_rwo07_no_live_contract_missing": 6,
+    "not_applicable_ui_staging_only": 1,
+    "queued_v2_no_live_verification": 1,
+    "blocked_until_create_family_accepted_or_business_mapping_defined": 2,
+    "blocked_subjectivesv2_502_no_concrete_fix": 1,
+    "next_executable_endpoint_task": 1,
+    "blocked_create_only_server_contract": 2,
+    "not_applicable_readonly_lookup_not_chart_mutation": 1,
+    "not_applicable_readonly_supporting_check": 1,
+    "not_applicable_or_blocked_business_mapping_missing": 1,
+    "queued_fullflow_diagnostic_or_artifact_free": 1
+  },
+  "nextExecutableEndpointTask": {
+    "workflow": "diseasev3",
+    "officialServerRoute": "/api/orca/official/chart-support/disease-mod-v3",
+    "orcaEndpoint": "/orca22/diseasev3",
+    "target": "00001",
+    "operation": "create",
+    "requestNumber": "01",
+    "classCode": "01",
+    "payload": "web-client/qa/payloads/phase4/diseasev3_phase4_dummy_native_intent_v1.json",
+    "sha256": "da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+    "duplicateLiveCheckpointKey": "rwo06b:diseasev3:rwo06b-diseasev3-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+    "currentRunAction": "no_live_dry_run_only",
+    "businessSuccessClassification": "not_applicable_no_live_matrix_and_dry_run_only"
+  },
+  "tests": {
+    "phase4SoapDiseaseSafeEvidence": {
+      "result": "pass",
+      "tests": 11
+    },
+    "diseasev3NoLiveDryRun": {
+      "result": "pass_dry_run_no_live",
+      "evidence": "docs/implementation/rwo07-operation-matrix-20260424T214539Z/diseasev3-dry-run/phase4-soap-disease-summary.sanitized.json"
+    },
+    "docLinks": {
+      "result": "pass"
+    },
+    "gitDiffCheck": {
+      "result": "pass"
+    },
+    "secretRawArtifactScan": {
+      "result": "pass_allowlisted_sanitized_raw_body_stored_false_only"
+    }
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "endpoint": "/api/orca/official/chart-support/disease-mod-v3",
+    "target": "00001",
+    "requestClass": "diseasev3",
+    "businessSuccessClassification": "not_applicable_no_live_matrix_and_dry_run_only",
+    "businessAccepted": false
+  },
+  "diagnosticArtifacts": {
+    "captured": false,
+    "localOnlyUntracked": true,
+    "sanitizedExtractedEvidenceCommitted": false
+  },
+  "claimBoundary": "RWO-07 operation matrix and next diseasev3 create task recorded only; no Request_Number 02/03/04 Trial success, diseasev3 live success, SOAP/subjectivesv2 success, update/delete/cancel readiness, fullflow success, production ORCA, S3/object-storage, all-order readiness, or final release readiness is claimed.",
+  "recommendedNextTask": "Run diseasev3 create live checkpoint only after current runtime readiness, duplicate-live checkpoint, endpoint target identity, and sanitized evidence mode are confirmed.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false
+}
