@@ -1,16 +1,32 @@
 # NEXT_WORKER_PROMPT
 
 status: active
-created_at: 2026-04-24T10:02:23Z
+created_at: 2026-04-24T11:10:30Z
 source_work_order: RWO-06D-soap-next
-blocker_id: subjectivesv2-live-trial-transport-rejected-404-runtime-route-check
+blocker_id: subjectivesv2-live-trial-post-rebuild-exact-retry-not-run
 priority: high
 supersedes:
-- subjectivesv2-live-trial-checkpoint-readiness-not-run
+- subjectivesv2-live-trial-transport-rejected-404-runtime-route-check
 
 ## Context
 
-RUN_ID `20260424T100223Z` executed the exact approved `subjectivesv2` live Trial checkpoint through the safe wrapper/evidence mode.
+RUN_ID `20260424T110223Z` investigated the prior `subjectivesv2` HTTP `404` transport rejection without raw artifact capture.
+
+- Report: `docs/implementation/rwo06d-subjectivesv2-runtime-route-check-20260424T110223Z/FINAL_REPORT.md`
+- Summary: `docs/implementation/rwo06d-subjectivesv2-runtime-route-check-20260424T110223Z/summary.sanitized.json`
+- Route evidence: `docs/implementation/rwo06d-subjectivesv2-runtime-route-check-20260424T110223Z/route-deployment.sanitized.json`
+- Wrapper dry-run evidence: `docs/implementation/rwo06d-subjectivesv2-runtime-route-check-20260424T110223Z/wrapper-dry-run/phase4-soap-disease-summary.sanitized.json`
+- Live retry evidence: `docs/implementation/rwo06d-subjectivesv2-runtime-route-check-20260424T110223Z/wrapper-live-retry/phase4-soap-disease-summary.sanitized.json`
+
+Findings:
+
+- Pre-rebuild authenticated route probe showed `medical-mod-v2=400`, `subjectives-mod-v2=404`, `disease-mod-v3=404`, narrowing the blocker to a stale running WAR.
+- `server-modernized-dev` was rebuilt from current `master` and recreated using local gitignored runtime config without printing secret values.
+- Post-rebuild health/readiness were `200/200`.
+- Post-rebuild authenticated empty-payload route probe showed `medical-mod-v2=400`, `subjectives-mod-v2=400`, `disease-mod-v3=400`, proving the current runtime contains the SOAP/disease routes.
+- One exact live retry was executed before the rebuild evidence existed and was again `transportRejected` / HTTP `404`; it is not post-fix business evidence.
+
+Earlier RUN_ID `20260424T100223Z` executed the exact approved `subjectivesv2` live Trial checkpoint through the safe wrapper/evidence mode.
 
 - Report: `docs/implementation/rwo06d-subjectivesv2-live-checkpoint-20260424T100223Z/FINAL_REPORT.md`
 - Summary: `docs/implementation/rwo06d-subjectivesv2-live-checkpoint-20260424T100223Z/summary.sanitized.json`
@@ -23,27 +39,25 @@ RUN_ID `20260424T100223Z` executed the exact approved `subjectivesv2` live Trial
 
 Current classification:
 
-- No accepted duplicate checkpoint existed before the attempt.
-- Backend health/readiness were `200/200`.
-- The sanitized authenticated live wrapper POST returned HTTP `404`.
-- Business classification is `transportRejected`; `businessAccepted=false`.
-- Focused source-level server tests passed for `OrcaChartSupportResourceTest` and `PublicRouteInventoryContractTest`, so the current source contains the route contract.
+- Runtime route/deployment blocker is resolved for current local Trial runtime.
+- No post-rebuild live Trial business evidence exists yet.
+- The only permitted next live action is the same exact `subjectivesv2` checkpoint key below, once, through the safe wrapper.
 
 ## Goal
 
-Resolve the runtime route/deployment blocker without blind live retry. Verify that the active non-S3 local Trial runtime is running the current `server-modernized` build that exposes `POST /api/orca/official/chart-support/subjectives-mod-v2`. Only after that evidence exists, rerun the same exact `subjectivesv2` checkpoint once through the safe wrapper.
+Run the same exact `subjectivesv2` checkpoint once through the safe wrapper against the rebuilt current local Trial runtime. Classify business success only from allowlisted parsed fields. Do not run any other SOAP/disease endpoint or request class.
 
 ## Allowed Actions
 
-- Inspect `setup-modernized-env.sh`, Docker compose config, server route deployment, and non-S3 runtime startup logs without printing secrets.
-- Rebuild/restart only the current master worktree local dev/Trial runtime if needed.
-- Run source-level server tests and wrapper dry-runs.
-- Run one retry of the exact `subjectivesv2` checkpoint only after route deployment evidence shows the current route is available.
+- Confirm the current runtime still has health/readiness `200/200`.
+- Confirm authenticated empty-payload `POST /api/orca/official/chart-support/subjectives-mod-v2` still returns `400` rather than `404`.
+- Run wrapper syntax/tests and the exact payload dry-run if needed.
+- Run one live retry of the exact `subjectivesv2` checkpoint only once through `web-client/scripts/qa-phase4-safe-soap-disease.mjs`.
 - Write sanitized evidence, route deployment blocker records, summaries, and handoff updates.
 
 ## Forbidden Actions
 
-- Blindly rerunning the live checkpoint before route deployment/current-runtime evidence is recorded.
+- Running live before confirming post-rebuild route status is still not `404`.
 - Live `diseasev3` execution.
 - Any `subjectivesv2` identity other than the exact checkpoint key above.
 - Request_Number `02` / `03` / `04`.
@@ -56,17 +70,16 @@ Resolve the runtime route/deployment blocker without blind live retry. Verify th
 
 ## Required Evidence
 
-- Sanitized route deployment/current-runtime check showing whether the active backend contains `subjectives-mod-v2`.
+- Sanitized post-rebuild route deployment/current-runtime check showing `subjectives-mod-v2` is available.
 - No-live wrapper syntax/tests and exact payload dry-run.
 - Duplicate-live checkpoint decision.
-- If retry runs: sanitized Trial result with endpoint, target, request class, parsed business-success classification, credentialsCaptured=false, rawArtifactsCaptured=false.
-- If retry does not run: sanitized blocker record with reason and next smallest safe step.
+- Sanitized Trial result with endpoint, target, request class, parsed business-success classification, credentialsCaptured=false, rawArtifactsCaptured=false.
 - Secret/raw-artifact scan over new tracked evidence docs and wrapper outputs.
 - Updated claim boundary showing no broad SOAP/disease, fullflow, production ORCA, or S3/object-storage claim.
 
 ## Completion Criteria
 
-This prompt is complete when the route/deployment blocker is either resolved and the exact checkpoint is rerun/classified, or the blocker is narrowed with sanitized evidence and a precise next action.
+This prompt is complete when the exact post-rebuild `subjectivesv2` checkpoint is rerun once and classified.
 
 In every completion path:
 

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T110223Z",
+  "workOrder": "RWO-06D-soap-next",
+  "result": "RWO06D_SUBJECTIVESV2_RUNTIME_ROUTE_DEPLOYMENT_RESOLVED_RETRY_NOT_RERUN",
+  "branch": "master",
+  "head": "1c6d6ffc6",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "subjectivesv2-live-trial-transport-rejected-404-runtime-route-check",
+    "completedByThisRun": false,
+    "reason": "Route deployment blocker was resolved, but this run already consumed the one authorized live retry before the rebuild evidence existed."
+  },
+  "payloadIdentity": {
+    "workflow": "subjectivesv2",
+    "workflowId": "rwo06b-subjectivesv2-live-readiness-v1",
+    "endpoint": "/orca25/subjectivesv2",
+    "officialServerRoute": "/api/orca/official/chart-support/subjectives-mod-v2",
+    "target": "00001",
+    "operation": "create",
+    "requestNumber": "01-equivalent",
+    "classCode": "01",
+    "payload": "web-client/qa/payloads/phase4/subjectivesv2_phase4_dummy_native_intent_v1.json",
+    "sha256": "9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
+    "duplicateLiveCheckpointKey": "rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308"
+  },
+  "runtimeRouteDeployment": {
+    "preRebuildSubjectivesModV2AuthenticatedStatus": 404,
+    "postRebuildSubjectivesModV2AuthenticatedStatus": 400,
+    "postRebuildDiseaseModV3AuthenticatedStatus": 400,
+    "classification": "current_runtime_routes_deployed_after_rebuild"
+  },
+  "tests": {
+    "nodeCheck": "pass",
+    "phase4SoapDiseaseSafeEvidence": {
+      "result": "pass",
+      "tests": 11
+    },
+    "serverFocused": {
+      "result": "pass",
+      "tests": 16
+    },
+    "wrapperDryRun": "pass_subjectivesv2_notVerified_no_live",
+    "dockerBuild": "pass_server-modernized-dev_current_master",
+    "dockerRecreate": "pass_server-modernized-dev_current_master",
+    "secretRawArtifactScan": "pass_reviewed_false_positives_only"
+  },
+  "liveTrialOrca": {
+    "executed": true,
+    "endpoint": "/api/orca/official/chart-support/subjectives-mod-v2",
+    "orcaEndpoint": "/orca25/subjectivesv2",
+    "target": "00001",
+    "requestClass": "subjectivesv2",
+    "transportHttpStatus": 404,
+    "businessSuccessClassification": "transportRejected",
+    "businessAccepted": false,
+    "note": "The single live retry happened before rebuilding the stale runtime and is not treated as post-fix business evidence."
+  },
+  "claimBoundary": "No SOAP subjectivesv2 Trial business acceptance, diseasev3 Trial reachability, disease update/delete, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
+  "recommendedNextTask": "Run the exact subjectivesv2 checkpoint once against the rebuilt current runtime through the safe wrapper.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}

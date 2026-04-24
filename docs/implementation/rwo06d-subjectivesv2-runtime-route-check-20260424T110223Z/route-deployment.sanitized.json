@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T110223Z",
+  "generatedAt": "2026-04-24T11:10:30Z",
+  "workOrder": "RWO-06D-soap-next",
+  "activeHandoffBlockerId": "subjectivesv2-live-trial-transport-rejected-404-runtime-route-check",
+  "branch": "master",
+  "head": "1c6d6ffc6",
+  "runtimeTarget": {
+    "container": "opendolphin-server-modernized-dev",
+    "trialOnly": true,
+    "objectStorageReadinessClaimed": false,
+    "productionOrcaClaimed": false
+  },
+  "preRebuildAuthenticatedRouteProbe": {
+    "medicalModV2Status": 400,
+    "subjectivesModV2Status": 404,
+    "diseaseModV3Status": 404,
+    "classification": "runtime_war_missing_subjectives_and_disease_routes",
+    "rawBodiesStored": false
+  },
+  "rebuildAndRecreate": {
+    "buildCommand": "docker compose -f docker-compose.modernized.dev.yml -f docker-compose.override.dev.yml build server-modernized-dev",
+    "recreateCommand": "docker compose -f docker-compose.modernized.dev.yml -f docker-compose.override.dev.yml up -d server-modernized-dev",
+    "localRuntimeSecretsLoadedFromGitignoredFile": true,
+    "localRuntimeSecretsPrinted": false,
+    "result": "pass"
+  },
+  "postRebuildReadiness": {
+    "healthHttpStatus": 200,
+    "readinessHttpStatus": 200,
+    "rawBodiesStored": false
+  },
+  "postRebuildAuthenticatedRouteProbe": {
+    "medicalModV2Status": 400,
+    "subjectivesModV2Status": 400,
+    "diseaseModV3Status": 400,
+    "classification": "current_runtime_routes_deployed_validation_rejected_empty_payload",
+    "rawBodiesStored": false
+  },
+  "liveRetryUsedBeforeRebuild": {
+    "executed": true,
+    "endpoint": "/api/orca/official/chart-support/subjectives-mod-v2",
+    "orcaEndpoint": "/orca25/subjectivesv2",
+    "requestClass": "subjectivesv2",
+    "transportHttpStatus": 404,
+    "businessSuccessClassification": "transportRejected",
+    "businessAccepted": false,
+    "rawBodiesStored": false
+  },
+  "decision": {
+    "routeDeploymentBlockerResolved": true,
+    "additionalLiveRetryThisRun": "not_run_live_retry_budget_consumed_before_rebuild",
+    "nextSmallestSafeStep": "rerun the exact subjectivesv2 checkpoint once against the rebuilt current runtime through the safe wrapper"
+  },
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}
