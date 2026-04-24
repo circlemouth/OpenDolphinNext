@@ -1,0 +1,20 @@
+ea4b3d27d docs(release): record current-head static gate refresh
+2356e0df7 docs(release): refresh current-head reviewer packet evidence
+4eb8e140a Record subjectivesv2 502 no-live inconclusive
+c50d396c4 Clarify Trial retry fix loop policy
+b0a126757 Record subjectivesv2 post-request-number Trial retry
+5737b27b2 Fix subjectivesv2 request number contract
+d7ee7b250 Record subjectivesv2 post-fix live retry
+90c5a8115 Fix subjectivesv2 insurance field contract
+059aacf87 Fix subjectivesv2 request root and record 502 investigation
+27232957f Document subjectivesv2 502 retry investigation handoff
+ba94513f1 Allow bounded live Trial retries for workers
+7b3b97f4d Record subjectivesv2 runtime route refresh
+1c6d6ffc6 Add subjectivesv2 live checkpoint evidence
+acd9cbd42 Prepare diseasev3 no-live readiness identity
+42f8cff90 Prepare subjectivesv2 live-readiness identity
+4310b1537 feat(server): add soap disease official wrapper scaffolding
+c8e39e91c Add SOAP disease no-live ORCA wrappers
+1a8fafe5f Document SOAP disease wrapper prep
+88d9728aa Add RWO-06K radiology Trial evidence
+0bef0d80f test(web-client): add test-order medicalmodv2 trial evidence
