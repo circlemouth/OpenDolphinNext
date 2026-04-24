@@ -14,16 +14,25 @@ export const PHASE4_ALLOWED_CLASS_CODE = '01';
 export const PHASE4_FORBIDDEN_REQUEST_NUMBERS = ['02', '03', '04'];
 export const PHASE4_ENDPOINT_WORKFLOWS = {
   prescription: {
+    checkpointNamespace: 'rwo06d',
     workflowId: 'rwo06d-prescription-medicalmodv2-v1',
     endpointEvidenceLevel: 'L3',
     requiredEntityKinds: ['medOrder'],
     allowedMedicalClasses: ['212'],
   },
   'treatment-generic': {
+    checkpointNamespace: 'rwo06d',
     workflowId: 'rwo06d-treatment-generic-medicalmodv2-v1',
     endpointEvidenceLevel: 'L3',
     requiredEntityKinds: ['treatmentOrder'],
     allowedMedicalClasses: ['400'],
+  },
+  'instruction-charge': {
+    checkpointNamespace: 'rwo06f',
+    workflowId: 'rwo06f-instruction-charge-medicalmodv2-v1',
+    endpointEvidenceLevel: 'L3',
+    requiredEntityKinds: ['instractionChargeOrder'],
+    allowedMedicalClasses: ['130'],
   },
 };
 
@@ -259,9 +268,10 @@ export const validatePhase4Payload = ({ payload, payloadSha256, expectedPayloadS
 export const buildPhase4DuplicateLiveCheckpointKey = ({ workflow, payloadSha256 }) => {
   const workflowContract = getWorkflowContract(workflow);
   const workflowId = workflowContract?.workflowId ?? 'generic';
+  const checkpointNamespace = workflowContract?.checkpointNamespace ?? 'rwo06d';
   const hash = normalizeCode(payloadSha256) || 'no-payload-sha256';
   return [
-    'rwo06d',
+    checkpointNamespace,
     PHASE4_REQUEST_CLASS,
     workflowId,
     `target-${PHASE4_TARGET_PATIENT_ID}`,
@@ -275,7 +285,7 @@ export const validatePhase4EndpointWorkflow = ({ workflow, payloadSummary }) => 
   const workflowContract = getWorkflowContract(workflow);
   const blockers = [];
   if (!workflowContract) {
-    blockers.push('--workflow must be one of: prescription, treatment-generic');
+    blockers.push(`--workflow must be one of: ${Object.keys(PHASE4_ENDPOINT_WORKFLOWS).join(', ')}`);
     return {
       ok: false,
       blockers,

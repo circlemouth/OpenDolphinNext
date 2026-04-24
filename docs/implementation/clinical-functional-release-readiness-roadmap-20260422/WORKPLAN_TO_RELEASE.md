@@ -62,12 +62,14 @@ Do not commit approved local runtime secret files, ORCA credentials, S3/MinIO/ob
 8. RWO-06B: inventory currently unverified Trial reachability paths and define safe wrappers/success criteria.
 9. RWO-06C: run safe read-only Trial reachability probes in batches when wrappers and parsers exist.
 10. RWO-06D: run endpoint-specific Trial mutation reachability checks in batches when approval, wrappers, no-live validation, and readiness gates pass.
-11. RWO-07: Request_Number 02/03/04 only if business scope requires it and owner approves.
-12. RWO-08: safe fullflow after browser and live endpoint prerequisites.
-13. RWO-08B: safe fullflow reachability variants, batched only through an artifact-free harness.
-14. RWO-09: security, secrets, CI, package, deployment readiness without production ORCA execution or S3/MinIO/object-storage setup.
-15. RWO-10: record production ORCA as out-of-scope / not applicable for this Trial-only roadmap.
-16. RWO-11: final Trial-backed release candidate validation and owner sign-off.
+11. RWO-06E: maintain an exhaustive order-item matrix covering documents, `指導料`, tests, treatments, injections, charges, surgery, radiology, local-only rows, and accepted endpoint-specific identities.
+12. RWO-06F/RWO-06F2: verify `instractionChargeOrder` / `指導料` representative Trial reachability before broader charge/order families; v1 is safely tested but Trial-rejected, so continue only with a justified v2 candidate or blocker classification.
+13. RWO-07: Request_Number 02/03/04 only if business scope requires it and owner approves.
+14. RWO-08: safe fullflow after browser and live endpoint prerequisites.
+15. RWO-08B: safe fullflow reachability variants, batched only through an artifact-free harness.
+16. RWO-09: security, secrets, CI, package, deployment readiness without production ORCA execution or S3/MinIO/object-storage setup.
+17. RWO-10: record production ORCA as out-of-scope / not applicable for this Trial-only roadmap.
+18. RWO-11: final Trial-backed release candidate validation and owner sign-off.
 
 ## Current Safe Work Queue
 
@@ -79,7 +81,7 @@ When the active handoff is superseded or skipped, process this queue in order an
 4. Run unit/component tests and wrapper dry-runs that do not require unavailable runtime services or forbidden artifacts.
 5. For RWO-02 through RWO-05, run only artifact-safe no-live browser checks if an artifact-free harness exists; otherwise record `skipped_environment_unavailable_safe_browser_harness_missing` and continue.
 6. For RWO-06 through RWO-08B, run only Trial live/fullflow checks that have approved non-S3 runtime paths and safe evidence modes; if the only blocker is object-storage startup coupling, first process the active RWO-06A non-S3 runtime-profile handoff.
-7. For RWO-06B through RWO-06D, batch multiple reachability checks in one automation run when each check has independent preflight, wrapper, parser, business-success criteria, and sanitized evidence; record per-endpoint blockers and continue to independent safe checks.
+7. For RWO-06B through RWO-06F, batch multiple reachability checks in one automation run when each check has independent preflight, wrapper, parser, business-success criteria, and sanitized evidence; record per-endpoint blockers and continue to independent safe checks.
 8. Complete RWO-09 non-S3 security/secret handling, CI/static evidence, packaging, rollback, and non-claim updates that are possible without unavailable runtime services.
 9. Complete RWO-10 production ORCA non-claim docs-only marker.
 10. Complete RWO-11 final Trial-backed non-S3 summary as far as evidence allows, with any remaining runtime-dependent gates listed as skipped or pending rather than overclaimed.

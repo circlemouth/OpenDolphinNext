@@ -1,0 +1,85 @@
+{
+  "runId": "20260424T044007Z",
+  "workOrder": "RWO-06E",
+  "result": "RWO06E_ORDER_ITEM_TRIAL_REACHABILITY_MATRIX_READY",
+  "branch": "master",
+  "startHead": "4d186ce35",
+  "scope": "static exhaustive matrix over current app clinical document surface plus ORCA-sendable order entities and Claim007 class-code families",
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_static_matrix_only"
+  },
+  "acceptedRows": [
+    {
+      "entity": "medOrder",
+      "classCode": "212",
+      "sourceRunId": "20260424T031608Z",
+      "classification": "live_accepted_prescription_specific_payload"
+    },
+    {
+      "entity": "treatmentOrder",
+      "classCode": "400",
+      "sourceRunId": "20260424T031608Z",
+      "classification": "live_accepted_representative_treatment_payload"
+    }
+  ],
+  "highestPriorityGaps": [
+    {
+      "surface": "document_fee",
+      "label": "文書料",
+      "currentMapping": "otherOrder/LOCAL_OTHER",
+      "status": "not_applicable_fail_closed_until_business_mapping_exists"
+    },
+    {
+      "entity": "instractionChargeOrder",
+      "label": "指導料",
+      "classCodes": [
+        "130",
+        "132",
+        "133",
+        "140",
+        "141",
+        "142",
+        "143",
+        "148",
+        "149"
+      ],
+      "status": "rwo06f_class_130_v1_live_trial_business_rejected_remaining_variants_no_live_verified"
+    },
+    {
+      "entity": "baseChargeOrder",
+      "label": "基本料",
+      "classCodes": [
+        "110",
+        "114",
+        "120",
+        "124"
+      ],
+      "status": "no_live_verified"
+    },
+    {
+      "entity": "injectionOrder",
+      "label": "注射",
+      "status": "no_live_verified"
+    },
+    {
+      "entity": "surgeryOrder",
+      "label": "手術",
+      "status": "no_live_verified"
+    },
+    {
+      "entity": "testOrder",
+      "label": "検査",
+      "status": "no_live_verified"
+    },
+    {
+      "entity": "radiologyOrder",
+      "label": "画像診断",
+      "status": "no_live_verified"
+    }
+  ],
+  "claimBoundary": "Matrix plus RWO-06F update; all-order-item Trial success is not claimed. Accepted live evidence remains limited to medOrder/212 and treatmentOrder/400 endpoint-specific payload identities. RWO-06F added a safe instractionChargeOrder/130 v1 route, but live Trial classified it as businessRejected. Clinical documents and document fee otherOrder rows are not ORCA mutation evidence.",
+  "recommendedNextTask": "Investigate a sanitized v2 instractionChargeOrder class 130 candidate or classify the row as pending business/Trial data decision; keep document fee as fail-closed unless a business mapping is approved.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}

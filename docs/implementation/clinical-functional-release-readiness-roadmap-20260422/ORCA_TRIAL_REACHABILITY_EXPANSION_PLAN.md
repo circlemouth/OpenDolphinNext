@@ -47,8 +47,13 @@ This automation may run once per hour. Every reachability task must therefore be
 
 | Functional area | Current evidence | Missing Trial reachability | Planned level |
 |---|---|---|---|
+| Clinical documents / document fee | Document save/output has local/server/component/static evidence. `文書料` examples are currently `otherOrder` / `LOCAL_OTHER:*`. | Document save/output is not ORCA order mutation evidence. `文書料` billing requires an explicit mapping to a sendable charge class before Trial mutation. | Local/browser/fullflow for documents; L0 first for any future document-fee ORCA mapping. |
 | Prescription | No-live browser/local persistence and selected server/local contract evidence. One scoped `medicalmodv2` Trial acceptance exists but is not broad prescription coverage. | Prescription-specific ORCA Trial reachability through the current order-send path. | L0-L3 first; L4 only after safe fullflow is ready. |
+| Injection | Local/static entity support exists. | Representative injection class-family Trial reachability. | L0-L3 after payload contract and safe wrapper readiness. |
 | Treatment / generic orders | Representative treatment UI create/readback/update/delete and local contract evidence. One scoped `medicalmodv2` Trial acceptance exists but is not broad order-class coverage. | Representative non-drug treatment/generic order ORCA Trial reachability. | L0-L3 first; L4 only after safe fullflow is ready. |
+| Guidance / management fees (`指導料`) | UI/server entity exists as `instractionChargeOrder`; static tests include management-fee examples. | Representative `instractionChargeOrder` Trial reachability, starting with class `130`, then `132/133/140/141/142/143/148/149` if needed. | L0-L3 after payload contract and safe wrapper readiness. |
+| Base charge | UI/server entity exists as `baseChargeOrder`. | Representative `baseChargeOrder` Trial reachability for `110/114/120/124` as required by claim. | L0-L3 after payload contract and safe wrapper readiness. |
+| Tests / radiology / surgery | UI/server entities exist for `testOrder`, `radiologyOrder`, and `surgeryOrder`. | Representative Trial reachability by class family. | L0-L3 after payload contract and safe wrapper readiness. |
 | SOAP | No-live local subjectives/SOAP save evidence. | `subjectivesv2` or current authoritative SOAP ORCA endpoint reachability. | L0-L2/L3 after endpoint-specific safety approval and wrapper readiness. |
 | Disease CRUD | No-live local diagnoses/disease CRUD evidence and ORCA mirror read-only UI behavior. | `diseasev3` or current authoritative disease ORCA endpoint reachability for create/update/delete semantics. | L0-L2/L3 after endpoint-specific safety approval and wrapper readiness. |
 | Request_Number `02` / `03` / `04` | Not approved or verified. | Update/delete/cancel semantics if required by the business claim. | Separate RWO-07 approval and endpoint-specific success criteria. |
@@ -108,6 +113,37 @@ Exit criteria:
 - Each fullflow variant has sanitized L4 evidence or a sanitized blocker.
 - Fullflow evidence is not used to claim production ORCA or S3/object-storage readiness.
 
+### RWO-06E: Exhaustive Order Item Matrix
+
+Scope:
+
+- Expand reachability inventory from major workflows to the current app's clinical document surface plus all ORCA-sendable order entities and Claim007 class-code families.
+- Separate already accepted endpoint-specific payload identities from unverified class families.
+- Treat `文書料` as local-only `otherOrder` unless a business mapping to a sendable charge class is explicitly approved.
+
+Exit criteria:
+
+- A sanitized matrix exists and marks each surface as accepted, queued, fail-closed, blocked, or not applicable.
+- `文書`, `指導料`, tests, treatments, injections, charges, surgery, radiology, and local-only rows are all explicitly represented.
+
+### RWO-06F: Instruction Charge Trial Reachability
+
+Scope:
+
+- Define and verify the first `instractionChargeOrder` / `指導料` safe payload identity, starting with Claim007 class `130`.
+- Proceed to live Trial only after no-live contract tests, sanitizer/parser tests, wrapper dry-run, readiness 2xx, and duplicate-live checkpointing pass.
+
+Exit criteria:
+
+- `instractionChargeOrder/130` has sanitized L3 business acceptance evidence or a sanitized endpoint-specific blocker.
+- The matrix is updated without claiming all `指導料` variants or all order items.
+
+Checkpoint:
+
+- RUN_ID `20260424T044803Z` added the `instruction-charge` workflow, class `130` payload identity, no-live tests, and dry-run evidence.
+- The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
+- Do not repeat the v1 checkpoint. Continue with sanitized v2 candidate investigation or classify the row as pending business/Trial data decision.
+
 ## Claim Boundary
 
 This plan allows adding and batching reachability verification tasks. It does not by itself claim that prescription, treatment/generic orders, SOAP, disease CRUD, Request_Number `02` / `03` / `04`, or fullflow are verified through ORCA Trial.
@@ -123,6 +159,15 @@ RUN_ID `20260424T031608Z` completed the first endpoint-specific mutation batch f
 - Evidence: [../rwo06d-medicalmodv2-endpoint-wrapper-prep-20260424T031608Z/FINAL_REPORT.md](../rwo06d-medicalmodv2-endpoint-wrapper-prep-20260424T031608Z/FINAL_REPORT.md).
 
 Do not repeat these accepted checkpoint identities in hourly automation. They are L3 endpoint-specific Trial evidence only, not broad order-matrix, fullflow, production ORCA, or S3/object-storage readiness evidence.
+
+## RWO-06E Order Item Matrix Checkpoint
+
+RUN_ID `20260424T044007Z` created the exhaustive static matrix:
+
+- Evidence: [../rwo06e-order-item-reachability-matrix-20260424T044007Z/ORDER_ITEM_TRIAL_REACHABILITY_MATRIX.md](../rwo06e-order-item-reachability-matrix-20260424T044007Z/ORDER_ITEM_TRIAL_REACHABILITY_MATRIX.md).
+- Current accepted live rows remain `medOrder/212` and `treatmentOrder/400` only.
+- `instractionChargeOrder` / `指導料`, `baseChargeOrder`, `injectionOrder`, `surgeryOrder`, `testOrder`, and `radiologyOrder` remain queued for endpoint-specific safe payload work.
+- Clinical documents are not ORCA order mutation evidence; `文書料` currently maps to local-only `otherOrder` / `LOCAL_OTHER:*` and remains fail-closed unless a business mapping is approved.
 
 ## RWO-06B Inventory Checkpoint
 
