@@ -1,8 +1,8 @@
 {
-  "status": "completed",
+  "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-06D-soap-next",
-  "blockerId": "subjectivesv2-live-trial-post-request-number-fix-transport-rejected-502-investigation",
+  "sourceWorkOrder": "RWO-08B/RWO-06D/RWO-07/RWO-06F-through-06K",
+  "blockerId": "owner-expanded-fullflow-disease-request-number-order-v2-scope",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-24T20:02:06Z",
+  "lastUpdated": "2026-04-24T21:00:00Z",
   "latestRwo09Rwo11CurrentHeadStaticRefresh": {
     "runId": "20260424T190238Z",
     "workOrders": [
@@ -2747,5 +2747,81 @@
     "requiredNextAction": "Update prompts and roadmap docs so later workers do not consume attempts without a fix or changed precondition.",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
+  },
+  "latestOwnerExpandedScope20260424": {
+    "runId": "20260424T210000Z",
+    "result": "OWNER_EXPANDED_AUTOMATION_SCOPE_RECORDED",
+    "branch": "master",
+    "activePrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "allowedDiagnosticArtifacts": {
+      "fullflowAndBrowserHarnesses": true,
+      "allowedOnlyLocalUntracked": true,
+      "committedOrPackagedRawArtifactsAllowed": false,
+      "sanitizedExtractedEvidenceRequired": true
+    },
+    "requestedWork": [
+      "Run or prepare diagnostic fullflow under local-only artifact containment",
+      "Advance diseasev3 create/update/delete verification",
+      "Inventory and test all electronic-chart user operations including Request_Number 02/03/04 or equivalent semantics",
+      "Use web-researched official/public sources for rejected order-family v2 candidates"
+    ],
+    "subjectivesv2Clarification": "Current sanitized evidence shows repeated HTTP 502 transportRejected after repo-local fixes; exact wrong layer is not proven without unsafe raw body/Trial-side evidence. Do not rerun unchanged payload without a concrete fix or changed precondition.",
+    "credentialsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestOrderFamilyV2CandidateResearch": {
+    "runId": "20260424T210000Z",
+    "result": "ORDER_FAMILY_V2_CANDIDATE_RESEARCH_RECORDED",
+    "evidence": "docs/implementation/rwo06-order-v2-candidate-research-20260424T210000Z/CANDIDATE_RESEARCH.md",
+    "summary": "docs/implementation/rwo06-order-v2-candidate-research-20260424T210000Z/summary.sanitized.json",
+    "sourceMode": "public_web_research_official_or_public_sources",
+    "liveTrialOrcaExecuted": false,
+    "candidatePriority": [
+      {
+        "workflow": "testOrder",
+        "classCode": "600",
+        "candidateCode": "160000310",
+        "priority": 1,
+        "nextAction": "prepare_v2_no_live_payload"
+      },
+      {
+        "workflow": "radiologyOrder",
+        "classCode": "700",
+        "candidateCode": "002000099+170027910",
+        "priority": 2,
+        "nextAction": "prepare_v2_no_live_payload_with_body_part"
+      },
+      {
+        "workflow": "surgeryOrder",
+        "classCode": "500",
+        "candidateCode": "150003110",
+        "priority": 3,
+        "nextAction": "prepare_v2_no_live_payload_with_dependencies"
+      },
+      {
+        "workflow": "baseChargeOrder",
+        "classCode": "110",
+        "candidateCode": "111000110",
+        "priority": 4,
+        "nextAction": "confirm_trial_encounter_state_then_no_live"
+      },
+      {
+        "workflow": "injectionOrder",
+        "classCode": "310",
+        "candidateCode": "130000510",
+        "priority": 5,
+        "nextAction": "identify_paired_drug_material_then_no_live"
+      },
+      {
+        "workflow": "instractionChargeOrder",
+        "classCode": "130",
+        "candidateCode": "113001810",
+        "priority": 6,
+        "nextAction": "defer_until_disease_facility_monthly_context"
+      }
+    ],
+    "claimBoundary": "Candidate research only; no v2 payload no-live verification, no live Trial retry, no broad order-family acceptance, no production ORCA, no S3/object-storage, no final release readiness.",
+    "credentialsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
   }
 }

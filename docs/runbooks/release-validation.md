@@ -91,8 +91,10 @@ cd web-client && npm run ci
 - public route は `/api/orca/official/*` と `/api/orca/master/*` だけを意味する。production fail-close sentinel、MSW mock/test-only legacy route surface、e2e/QA fixture surface、blocked-route detector、docs/reference、server route inventory negative assertion、web.xml exposure negative assertion は public route ではない。
 - typecheck / test / build まで成功する。
 
-### Artifact-free browser smoke
-この automation の browser e2e / fullflow evidence policy では、既定の `playwright.config.ts` をそのまま使わない。既定 config は失敗時 trace / screenshot を保持し、既存 `tests/playwright/fixtures.ts` は HAR / screenshots / videos を生成するため、safe evidence には不適合である。
+### Browser / fullflow artifact policy
+この automation の browser e2e は、通常は artifact-free wrapper を使う。RWO-08 / RWO-08B fullflow については、owner approval recorded on 2026-04-24 により、既存 broad harness が screenshot / HAR / trace / video / raw network artifact を生成する場合でも診断目的で実行してよい。
+
+診断 artifact は release evidence ではない。`artifacts/diagnostic-fullflow/<RUN_ID>/` または既存の ignored Playwright output に local-only / untracked として残し、reviewer submission packet へ同梱しない。commit できるのは sanitized extracted summary、blocker classification、endpoint/request-class identity、status class、route coverage、hash、console/page-error summary のみとする。credential、Cookie、Authorization、JSESSIONID、CSRF、raw ORCA body、raw patient detail、raw insurance detail、credential-bearing URL は tracked evidence にコピーしない。
 
 RWO-02 以降の no-live browser smoke は、対象 spec を事前検査する wrapper から実行する。
 
@@ -127,7 +129,7 @@ cd web-client && QA_PATIENT_ID=<summary.phase3AttemptPatientId> node scripts/qa-
 - この profile では attachment storage / patient image storage / PHR export storage readiness は claim しない。保存系 route は fail closed、readiness は `attachment_storage_disabled` の sanitized reason を返す。RUN_ID `20260423T110051Z` 以降、storage-dependent features が disabled の場合は `attachmentStorage=DISABLED` 自体を overall readiness の失敗理由にしない。ただし patient image storage を有効化した状態で attachment storage が disabled の場合は `patient_images_storage_unavailable` で fail closed する。
 - `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` は Vite PID だけを成功条件にしない。`https://localhost:5173/` が連続して応答し、dev server process が生存していることを setup log に残す。
 - `runtime-ready-smoke` は current local smoke seed を前提に動作する。smoke seed 不一致で受付行が現れない場合は repo defect と決め打ちせず、`tests/runtime-ready-smoke.log` を保存して `test-data-blocker` または `environment-blocker` として切り分ける。
-- `runtime-ready-smoke` は sanitized JSON-only evidence に限定し、screenshot / HAR / trace / video / raw network dump / `error-context.md` を生成・保持しない。RUN_ID `20260423T200259Z` 以降の retained file は `runtime-ready-before-row-wait.json` と `runtime-ready-result.json` だけを正本とする。
+- `runtime-ready-smoke` は sanitized JSON-only evidence に限定し、screenshot / HAR / trace / video / raw network dump / `error-context.md` を生成・保持しない。RUN_ID `20260423T200259Z` 以降の retained file は `runtime-ready-before-row-wait.json` と `runtime-ready-result.json` だけを正本とする。診断 artifact 例外は RWO-08/RWO-08B fullflow harness に限る。
 - local smoke seed の既定キーは `encounterKey=1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001`、`scheduleKey=SMOKE-SCHEDULE-20251129-0001`、`DEV_SMOKE_PATIENT_ID=0000001`、Asia/Tokyo 当日 `09:00` の `scheduled_datetime` とする。`DEV_SMOKE_PATIENT_ID` を変更する場合は schedule / encounter projection が同じ患者を指すことを確認する。
 - `runtime-ready-smoke` は `/api/orca/queue` と `/api/orca/pusheventgetv2` を current public route とみなさない。blocked route detector として browser request が出た場合に failure にするもので、success route の証跡ではない。
 - `appointments/medical-information` の direct probe で `system01lstv2 Request_Number=06` 相当の応答可否を smoke 前に evidence 化する。
@@ -156,7 +158,7 @@ cd web-client && QA_PATIENT_ID=<summary.phase3AttemptPatientId> node scripts/qa-
 - `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` は `QA_MEDICAL_INFORMATION` 未指定時に `medicalInformation` を browser request body へ送らず、含まれた場合は script 自身が failure で停止する。指定時だけ current select option を送る。
 - WebORCA Trial で `Acceptance_Push` workaround が必要な環境では、client 側ではなく server runtime config `ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH=true` を明示する。`setup-modernized-env.sh` の dev 起動はこの flag を既定で有効化する。
 - artifact が `RUN_ID` 単位でまとまり、accept / fullflow / runtime-ready smoke の結果を同じ受入れ束へ添付できる。official `Voucher_Number` / `Sequential_Number` が不足する場合は fail-close のまま `official-visit-row-blocker` または `test-data-blocker` として summary / steps / network へ残す。
-- safe fullflow mode では send 到達の有無にかかわらず `request-xml/medicalmodv2.xml`、HAR、raw network dump、raw request/response body を reviewer packet 正本へ含めない。third party が再読する証跡は `summary.json`、`blocker-summary.json`、`handoff-state.json`、`selected-visit-row.json`、allowlisted completion/status fields、hash に限定する。
+- fullflow では send 到達の有無にかかわらず `request-xml/medicalmodv2.xml`、HAR、raw network dump、raw request/response body を reviewer packet 正本へ含めない。診断 harness がそれらを local-only / untracked に生成した場合でも、third party が再読する証跡は `summary.json`、`blocker-summary.json`、`handoff-state.json`、`selected-visit-row.json`、allowlisted completion/status fields、hash、diagnostic artifact manifest に限定する。
 - C7 dynamic evidence は target mutation request capture が存在する場合だけ verified とする。`targetMutationRequestCount=0` / `checkedRequests=0` の summary は accepted にしない。
 - MSW/local/static tests は live ORCA fullflow success と混ぜない。MSW mock/test-only legacy route surface、local smoke、static helper tests は live ORCA mutation / fullflow の代替証跡ではない。
 
@@ -217,7 +219,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - read-only preflight は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/weborca-readonly-preflight/`。
 - accept smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/acceptmodv2/`。
 - fullflow smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/fullflow/`。
-- 最低限 `git/git-head-current.txt`、`git/git-branch-current.txt`、`reports/final-report.md`、`qa/acceptmodv2/accept-summary.sanitized.json`、`qa/fullflow/summary.sanitized.json`、`qa/fullflow/steps.log`、`qa/fullflow/console.sanitized.json`、`qa/fullflow/page-errors.sanitized.json` を同一 RUN_ID へ揃える。legacy harness が `qa/fullflow/network/network.json`、`qa/fullflow/network/requests.json`、screenshot、HAR、trace、video、request XML、raw request/response body、raw network dump を生成または要求する場合、その実行は release evidence として使わず、safe fullflow harness blocker として記録する。
+- 最低限 `git/git-head-current.txt`、`git/git-branch-current.txt`、`reports/final-report.md`、`qa/acceptmodv2/accept-summary.sanitized.json`、`qa/fullflow/summary.sanitized.json`、`qa/fullflow/steps.log`、`qa/fullflow/console.sanitized.json`、`qa/fullflow/page-errors.sanitized.json` を同一 RUN_ID へ揃える。legacy harness が `qa/fullflow/network/network.json`、`qa/fullflow/network/requests.json`、screenshot、HAR、trace、video、request XML、raw request/response body、raw network dump を生成または要求する場合、その実行は owner-approved diagnostic fullflow として local-only / untracked に隔離し、release evidence には sanitized extracted summary と diagnostic artifact manifest だけを使う。
 - ORCA 接続確認を別途行った場合は `artifacts/orca-connectivity/<RUN_ID>/` を併記し、closeout report から相互参照できるようにする。
 - Worker G の smoke memo / diff / grep 結果は release 判定に使う artifact 配下へまとめ、cutover 記録と分離しない。
 

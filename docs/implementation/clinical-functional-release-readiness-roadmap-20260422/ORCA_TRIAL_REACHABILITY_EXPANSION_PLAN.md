@@ -6,17 +6,24 @@ RUN_ID: `20260424T025733Z`
 
 Owner request: add roadmap tasks to verify every currently unverified WebORCA / ORCA Trial reachability path for major chart workflows.
 
-This plan expands the existing Trial-backed, non-S3 roadmap. It does not claim that these paths are already verified, and it does not authorize production ORCA, S3/MinIO/object-storage setup, raw artifact capture, or broad release readiness claims.
+This plan expands the existing Trial-backed, non-S3 roadmap. It does not claim that these paths are already verified, and it does not authorize production ORCA, S3/MinIO/object-storage setup, committing/packaging raw diagnostic artifacts, or broad release readiness claims.
+
+Owner direction recorded on 2026-04-24 updates the scope:
+
+- Existing broad browser/fullflow harnesses may run even if they create screenshots, HAR, traces, videos, or raw network artifacts, provided those artifacts remain local-only, untracked, and excluded from reviewer packets.
+- `diseasev3` create/update/delete verification should proceed through endpoint-specific wrappers, parser/sanitizer checks, duplicate-live checkpoints, and sanitized business-success criteria.
+- All electronic-chart operations that a user can perform, including update/delete/cancel-like operations that map to Request_Number `02` / `03` / `04` or equivalent semantics, must be inventoried and tested where safe.
+- Trial-rejected `medicalmodv2` order-family v1 payloads should be followed by source-backed v2 candidate research using official/public web sources plus no-live contract checks before any live retry.
 
 ## Batch Automation Rule
 
 One automation run may execute multiple ORCA Trial reachability checks when all of the following are true:
 
-- Each check has its own endpoint/request-class scope, target, preflight, safe wrapper, expected sanitized business-success criteria, and evidence directory.
+- Each check has its own endpoint/request-class scope, target, preflight, wrapper, expected sanitized business-success criteria, and evidence directory.
 - Checks run sequentially, not as blind parallel live mutations.
 - A failure in one check is recorded as an endpoint-specific sanitized blocker and does not prevent the same run from continuing to independent safe checks.
 - Each live mutation check is preceded by focused no-live validation and a wrapper dry-run.
-- The run stops before any check that would require raw ORCA request/response bodies, raw patient or insurance details, credential capture, screenshots, HAR, traces, videos, raw network dumps, production ORCA, or S3/object-storage configuration.
+- The run stops before any check that would require committing/packaging raw ORCA request/response bodies, raw patient or insurance details, credential capture, diagnostic screenshot/HAR/trace/video/raw-network artifacts, production ORCA, or S3/object-storage configuration.
 - HTTP 200, wrapper exit 0, readiness 2xx, dry-run success, or parser generic zero result is not treated as business success by itself.
 
 ## Hourly Automation Rule
@@ -41,23 +48,23 @@ This automation may run once per hour. Every reachability task must therefore be
 | L1 | Local backend can reach the approved Trial runtime path. | Status-only health/readiness, sanitized connection classification, no raw bodies. |
 | L2 | Read-only Trial endpoint returns endpoint-specific accepted business evidence. | Sanitized allowlisted parsed fields, classifications, hashes, command metadata. |
 | L3 | Trial mutation endpoint returns endpoint-specific accepted business evidence. | Sanitized business summary with endpoint-specific completion evidence. |
-| L4 | Browser fullflow reaches the intended Trial endpoint through the web-client and server. | Safe fullflow summary only; no screenshots/HAR/traces/videos/raw network/raw bodies. |
+| L4 | Browser fullflow reaches the intended Trial endpoint through the web-client and server. | Sanitized fullflow summary, route/status classification, hashes, and diagnostic artifact manifest when local-only diagnostic artifacts are used. |
 
 ## Unverified Reachability Targets
 
 | Functional area | Current evidence | Missing Trial reachability | Planned level |
 |---|---|---|---|
 | Clinical documents / document fee | Document save/output has local/server/component/static evidence. `文書料` examples are currently `otherOrder` / `LOCAL_OTHER:*`. | Document save/output is not ORCA order mutation evidence. `文書料` billing requires an explicit mapping to a sendable charge class before Trial mutation. | Local/browser/fullflow for documents; L0 first for any future document-fee ORCA mapping. |
-| Prescription | No-live browser/local persistence and selected server/local contract evidence. One scoped `medicalmodv2` Trial acceptance exists but is not broad prescription coverage. | Prescription-specific ORCA Trial reachability through the current order-send path. | L0-L3 first; L4 only after safe fullflow is ready. |
+| Prescription | No-live browser/local persistence and selected server/local contract evidence. One scoped `medicalmodv2` Trial acceptance exists but is not broad prescription coverage. | Prescription-specific ORCA Trial reachability through the current order-send path. | L0-L3 first; L4 through artifact-free or diagnostic fullflow. |
 | Injection | Local/static entity support exists. | Representative injection class-family Trial reachability. | L0-L3 after payload contract and safe wrapper readiness. |
-| Treatment / generic orders | Representative treatment UI create/readback/update/delete and local contract evidence. One scoped `medicalmodv2` Trial acceptance exists but is not broad order-class coverage. | Representative non-drug treatment/generic order ORCA Trial reachability. | L0-L3 first; L4 only after safe fullflow is ready. |
+| Treatment / generic orders | Representative treatment UI create/readback/update/delete and local contract evidence. One scoped `medicalmodv2` Trial acceptance exists but is not broad order-class coverage. | Representative non-drug treatment/generic order ORCA Trial reachability. | L0-L3 first; L4 through artifact-free or diagnostic fullflow. |
 | Guidance / management fees (`指導料`) | UI/server entity exists as `instractionChargeOrder`; static tests include management-fee examples. | Representative `instractionChargeOrder` Trial reachability, starting with class `130`, then `132/133/140/141/142/143/148/149` if needed. | L0-L3 after payload contract and safe wrapper readiness. |
 | Base charge | UI/server entity exists as `baseChargeOrder`. | Representative `baseChargeOrder` Trial reachability for `110/114/120/124` as required by claim. | L0-L3 after payload contract and safe wrapper readiness. |
 | Tests / radiology / surgery | UI/server entities exist for `testOrder`, `radiologyOrder`, and `surgeryOrder`. | Representative Trial reachability by class family. | L0-L3 after payload contract and safe wrapper readiness. |
 | SOAP | No-live local subjectives/SOAP save evidence. | `subjectivesv2` or current authoritative SOAP ORCA endpoint reachability. | L0-L2/L3 after endpoint-specific safety approval and wrapper readiness. |
-| Disease CRUD | No-live local diagnoses/disease CRUD evidence and ORCA mirror read-only UI behavior. | `diseasev3` or current authoritative disease ORCA endpoint reachability for create/update/delete semantics. | L0-L2/L3 after endpoint-specific safety approval and wrapper readiness. |
-| Request_Number `02` / `03` / `04` | Not approved or verified. | Update/delete/cancel semantics if required by the business claim. | Separate RWO-07 approval and endpoint-specific success criteria. |
-| Browser fullflow | Explicitly `not_run`. | End-to-end web-client to server-modernized to ORCA Trial evidence without forbidden artifacts. | L4 only after safe fullflow harness exists. |
+| Disease CRUD | No-live local diagnoses/disease CRUD evidence and ORCA mirror read-only UI behavior. | `diseasev3` create/update/delete reachability and business success classification. | L0-L3 with endpoint-specific wrapper, parser, duplicate-live checkpoints, and sanitized evidence. |
+| Request_Number `02` / `03` / `04` | Previously not verified. | Every user-actionable electronic-chart operation that maps to update/delete/cancel-like semantics. | RWO-07 operation inventory plus endpoint-specific wrappers and success criteria. |
+| Browser fullflow | Explicitly `not_run`. | End-to-end web-client to server-modernized to ORCA Trial evidence. | L4 through artifact-free or owner-approved diagnostic fullflow mode. |
 
 ## New Work Orders
 
@@ -85,7 +92,7 @@ Scope:
 Exit criteria:
 
 - Each read-only endpoint has sanitized L2 evidence or a sanitized blocker.
-- No raw bodies, credentials, patient/insurance details, screenshots, HAR, traces, videos, or raw network artifacts are captured.
+- No raw bodies, credentials, patient/insurance details, or diagnostic artifacts are committed/packaged.
 
 ### RWO-06D: Endpoint-Specific Trial Mutation Reachability Batch
 
@@ -94,24 +101,38 @@ Scope:
 - Run endpoint-specific live Trial mutation checks only after RWO-06B/RWO-06C prerequisites, focused no-live validation, wrapper dry-run, status-only readiness 2xx, and endpoint-specific safety approval are present.
 - Multiple live checks may run in one automation task when each check remains independently scoped and fail-closed.
 - Prescription and treatment/generic order checks should prefer current `medicalmodv2` Request_Number `01` / class `01` coverage when the inventory proves that is the authoritative route.
-- `subjectivesv2`, `diseasev3`, and Request_Number `02` / `03` / `04` remain separate endpoint-specific live scopes; do not execute them until their wrapper, parser, success criteria, and approval record are present.
+- `subjectivesv2`, `diseasev3`, and Request_Number `02` / `03` / `04` remain separate endpoint-specific live scopes; execute them only after their wrapper, parser, success criteria, and duplicate-live checkpoint are present. Owner direction now explicitly asks `diseasev3` and user-actionable Request_Number `02` / `03` / `04` paths to be advanced.
 
 Exit criteria:
 
 - Each approved mutation check has sanitized L3 business acceptance evidence or an endpoint-specific sanitized blocker.
 - The roadmap claim boundary is updated after each accepted, rejected, blocked, skipped, or not-run check.
 
-### RWO-08B: Safe Fullflow Reachability Batch
+### RWO-08B: Fullflow Reachability Batch
 
 Scope:
 
-- After endpoint-level reachability is complete enough for the release claim, run safe fullflow checks without screenshots, HAR, traces, videos, raw network dumps, request XML, raw request bodies, or raw response bodies.
-- Multiple fullflow variants may run in one automation task only if the safe fullflow harness enforces artifact-free evidence for every variant.
+- After endpoint-level reachability is complete enough for the release claim, run fullflow checks through artifact-free mode or owner-approved diagnostic mode.
+- Multiple fullflow variants may run in one automation task when diagnostic artifacts remain local-only/untracked and committed evidence is limited to sanitized extracted summaries.
 
 Exit criteria:
 
-- Each fullflow variant has sanitized L4 evidence or a sanitized blocker.
+- Each fullflow variant has sanitized L4 evidence, diagnostic artifact manifest when applicable, or a sanitized blocker.
 - Fullflow evidence is not used to claim production ORCA or S3/object-storage readiness.
+
+### RWO-07: User-Actionable Operation / Request_Number Coverage
+
+Scope:
+
+- Inventory all electronic-chart operations users can perform for accepted and queued clinical surfaces: create, edit/update, delete/remove, cancel/undo, copy/reorder, finish/send, and billing/claim finalization where present.
+- Map each operation to ORCA endpoint, Request_Number or equivalent operation selector, payload identity, target policy, expected idempotency/duplicate-live checkpoint, and endpoint-specific business-success criteria.
+- Execute Request_Number `02` / `03` / `04` or equivalent paths only after no-live contract tests, parser/sanitizer tests, wrapper dry-run, readiness 2xx, and a duplicate-live checkpoint.
+
+Exit criteria:
+
+- Every user-actionable operation is `live_accepted`, `business_rejected`, `blocked`, `queued`, or `not_applicable` with a reason.
+- No operation is excluded merely because it is update/delete/cancel-like.
+- No broad operation-family claim is made from a single representative row.
 
 ### RWO-06E: Exhaustive Order Item Matrix
 
@@ -142,8 +163,8 @@ Checkpoint:
 
 - RUN_ID `20260424T044803Z` added the `instruction-charge` workflow, class `130` payload identity, no-live tests, and dry-run evidence.
 - The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
-- RUN_ID `20260424T050223Z` classified class `130` as pending business/Trial data decision because repo-local sanitized evidence does not justify a v2 candidate without raw ORCA bodies or a human billing decision.
-- Do not repeat the v1 checkpoint. Keep `instractionChargeOrder/130` blocked until a justified v2 business candidate exists.
+- RUN_ID `20260424T050223Z` classified class `130` as pending business/Trial data decision because repo-local sanitized evidence did not justify a v2 candidate.
+- Do not repeat the v1 checkpoint. Next automation should use web-researched official/public sources and local no-live contract checks to propose a justified v2 candidate before any live retry.
 
 ### RWO-06G: Base Charge Trial Reachability
 
@@ -156,7 +177,7 @@ Checkpoint:
 
 - RUN_ID `20260424T050223Z` added the `base-charge` workflow, payload `medicalmodv2_base_charge_trial_reachability_v1.json`, SHA-256 `d2db1ff2ad68174bcb236498786c87a8fffa0879917712c7ca639aa2732b9d93`, and a passing wrapper dry-run.
 - The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
-- Do not repeat the v1 checkpoint. Continue with the next independent order family, `injectionOrder/310`, unless a justified base-charge v2 candidate is established.
+- Do not repeat the v1 checkpoint. Use web-researched official/public sources and local no-live contract checks to propose a justified base-charge v2 candidate before any live retry.
 
 ### RWO-06H: Injection Trial Reachability
 
@@ -169,7 +190,7 @@ Checkpoint:
 
 - RUN_ID `20260424T052654Z` added the `injection` workflow, payload `medicalmodv2_injection_trial_reachability_v1.json`, SHA-256 `c01169729cb86d1c68211e4b01f6c38bf3dde0ac948100c53855ec91f1b9010e`, and a passing wrapper dry-run.
 - The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
-- Do not repeat the v1 checkpoint. Continue with the next independent order family, `surgeryOrder/500`, unless a justified injection v2 candidate is established.
+- Do not repeat the v1 checkpoint. Use web-researched official/public sources and local no-live contract checks to propose a justified injection v2 candidate before any live retry.
 
 ### RWO-06I: Surgery Trial Reachability
 
@@ -182,7 +203,7 @@ Checkpoint:
 
 - RUN_ID `20260424T055036Z` added the `surgery` workflow, payload `medicalmodv2_surgery_trial_reachability_v1.json`, SHA-256 `23441f818148820c2b1364c6a7424b1255995738cd05fa35e1328f41db96c000`, and a passing wrapper dry-run.
 - The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
-- Do not repeat the v1 checkpoint. Continue with the next independent order family, `testOrder/600`, unless a justified surgery v2 candidate is established.
+- Do not repeat the v1 checkpoint. Use web-researched official/public sources and local no-live contract checks to propose a justified surgery v2 candidate before any live retry.
 
 ### RWO-06J: Test Order Trial Reachability
 
@@ -195,7 +216,7 @@ Checkpoint:
 
 - RUN_ID `20260424T055036Z` added the `test-order` workflow, payload `medicalmodv2_test_order_trial_reachability_v1.json`, SHA-256 `b4fd3a422ac38f51b73a2fb2a56d07e2418339878f9451a6d73eb185bbd334d2`, and a passing wrapper dry-run.
 - The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
-- Do not repeat the v1 checkpoint. Continue with the next independent order family, `radiologyOrder/700`, unless a justified test-order v2 candidate is established.
+- Do not repeat the v1 checkpoint. Use web-researched official/public sources and local no-live contract checks to propose a justified test-order v2 candidate before any live retry.
 
 ### RWO-06K: Radiology Trial Reachability
 
@@ -208,7 +229,7 @@ Checkpoint:
 
 - RUN_ID `20260424T061549Z` added the `radiology` workflow, payload `medicalmodv2_radiology_trial_reachability_v1.json`, SHA-256 `d4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e`, and a passing wrapper dry-run.
 - The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
-- Do not repeat the v1 checkpoint. SOAP/subjectivesv2 and diseasev3 remain blocked until separate safe wrappers, business scope, and endpoint-specific success criteria are prepared.
+- Do not repeat the v1 checkpoint. Use web-researched official/public sources and local no-live contract checks to propose a justified radiology v2 candidate before any live retry.
 
 ## Claim Boundary
 
@@ -241,5 +262,5 @@ RUN_ID `20260424T030710Z` completed the first static inventory:
 
 - Prescription and representative treatment/generic order send paths map to the existing official `medicalmodv2` route, but endpoint-specific payload identities and duplicate-live checkpoints are still required before new RWO-06D live claims.
 - SOAP remains local-only through `/api/local/charts/subjectives`; RUN_ID `20260424T080121Z` prepared the no-live `subjectivesv2` live-readiness identity, but live SOAP Trial reachability is still unverified until a future exact-checkpoint prompt runs and parses a successful live result.
-- Disease CRUD remains local-only through `/api/local/diagnoses`; disease master candidate read is not a substitute for `diseasev3` CRUD reachability. RUN_ID `20260424T090051Z` prepared the no-live `diseasev3` create-only live-readiness identity, but live disease Trial reachability and update/delete readiness are still unverified.
-- Request_Number `02` / `03` / `04` remain RWO-07 only, and fullflow remains blocked behind artifact-free harness hardening.
+- Disease CRUD remains local-only through `/api/local/diagnoses`; disease master candidate read is not a substitute for `diseasev3` CRUD reachability. RUN_ID `20260424T090051Z` prepared the no-live `diseasev3` create-only live-readiness identity. Owner direction now asks automation to advance `diseasev3` create and then update/delete through endpoint-specific checkpoints.
+- Request_Number `02` / `03` / `04` are now mandatory RWO-07 coverage for all user-actionable electronic-chart operations where they apply. Fullflow may proceed through artifact-free or owner-approved diagnostic mode.

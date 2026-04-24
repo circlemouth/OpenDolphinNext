@@ -51,7 +51,7 @@ This standing approval applies only to:
 - WebORCA / ORCA Trial server verification
 - roadmap-scoped clinical verification work
 - acceptmodv2 / medicalmodv2 / diseasev3 / subjectivesv2 verification against ORCA Trial
-- browser e2e and fullflow when prerequisites are satisfied and forbidden artifacts are not captured
+- browser e2e and fullflow when prerequisites are satisfied, including owner-approved diagnostic artifact capture for fullflow/debug harnesses under the Diagnostic Artifact Exception below
 - autonomous repair of repo-local, testable, non-secret defects blocking the current Work Order
 
 This standing approval does not apply to:
@@ -61,11 +61,19 @@ This standing approval does not apply to:
 - S3 / MinIO / object-storage credentials or configuration
 - local dummy S3/MinIO or fake object-storage credentials
 - raw credential capture
-- raw ORCA request/response capture
-- HAR/trace/video/screenshot/raw network capture
+- committing or packaging raw ORCA request/response bodies, raw credentials, raw patient/insurance details, or credential-bearing URLs
+- production data capture
 - changing legacy client/ or server/
 - broad unrelated refactors
 - claiming production release readiness without production evidence
+
+Diagnostic Artifact Exception:
+- Owner approval recorded on 2026-04-24 permits the automation to run existing broad browser/fullflow harnesses that may create screenshots, HAR, traces, videos, or raw network artifacts, but only as local diagnostic artifacts.
+- Diagnostic artifacts may be written only under clearly named repo-local ignored output directories such as `artifacts/diagnostic-fullflow/<RUN_ID>/` or existing ignored Playwright output directories.
+- Diagnostic artifacts must not be committed, copied into reviewer submission packets, pasted into summaries, or treated as sanitized evidence.
+- Before committing any derived evidence, extract only sanitized summaries, classifications, counters, route names, HTTP status classes, endpoint identities, hashes, and blocker notes.
+- Diagnostic HAR/raw-network artifacts must be reviewed or post-processed so credentials, cookies, Authorization headers, CSRF/session values, raw ORCA bodies, raw patient details, raw insurance details, and credential-bearing URLs are not copied into tracked evidence.
+- If the worker cannot keep diagnostic artifacts local/untracked or cannot derive a sanitized summary without exposing secrets or patient/insurance detail, stop and record a blocker instead of committing the artifacts.
 
 Every run:
 1. Inspect current branch, HEAD, git status, and registered worktrees.
@@ -84,7 +92,7 @@ Every run:
 11. If other non-S3 credentials/config are absent due to the local environment, skip that task as `skipped_environment_unavailable_missing_runtime_secret_or_config`; do not ask for or print values.
 12. If S3/MinIO/object-storage credentials/config are required, skip the current task as `skipped_s3_required_out_of_scope` and continue with the next non-S3 Work Order.
 13. Continue within the same run after every completed task, skipped out-of-scope task, or skipped environment-unavailable task. Stop only when no safe unblocked task remains, the run time budget is exhausted, or a non-skippable safety stop condition is reached.
-14. If any tracked source/doc/evidence file or new repo evidence artifact is changed, run the relevant verification, then commit the current roadmap/handoff-scoped changes before reporting. Do not commit local runtime secret files, raw ORCA bodies, HAR/trace/video/screenshot/raw network artifacts, or unrelated user changes.
+14. If any tracked source/doc/evidence file or new repo evidence artifact is changed, run the relevant verification, then commit the current roadmap/handoff-scoped changes before reporting. Do not commit local runtime secret files, raw ORCA bodies, diagnostic HAR/trace/video/screenshot/raw network artifacts, or unrelated user changes.
 
 Current-run exhaustion policy:
 - Do all currently possible repo-local work in priority order during the same run.
@@ -92,8 +100,8 @@ Current-run exhaustion policy:
 - Environment-only blockers include Docker unavailable, local backend unavailable, browser runtime unavailable, missing local runtime secret/config that cannot be safely generated under the local-only policy, missing local test seed, unavailable safe browser harness, and unavailable non-S3 runtime path.
 - For each skipped environment task, write a sanitized skip record with task id, reason, evidence checked, credentialsCaptured=false, rawArtifactsCaptured=false, and recommended next independent task.
 - After a skip, immediately select the next safe non-skipped Work Order.
-- Prefer docs, static analysis, unit/component tests, guard scripts, wrapper dry-runs, sanitizer/parser contract tests, package metadata checks, claim-boundary updates, and risk/gate matrix updates that do not require production ORCA, S3/object storage, raw artifacts, browser screenshots/HAR/traces/videos, or unavailable secrets.
-- If browser e2e/fullflow is blocked only because the current harness would create forbidden artifacts, skip the unsafe execution, create or update the safe-harness hardening record, and continue to non-browser static/local work in the same run.
+- Prefer docs, static analysis, unit/component tests, guard scripts, wrapper dry-runs, sanitizer/parser contract tests, package metadata checks, claim-boundary updates, and risk/gate matrix updates that do not require production ORCA, S3/object storage, unavailable secrets, or committing raw diagnostic artifacts.
+- If browser e2e/fullflow is blocked only because the current harness would create screenshots/HAR/traces/videos/raw-network artifacts, run it only under the Diagnostic Artifact Exception; otherwise create or update the harness-hardening blocker and continue to independent work.
 - If live Trial ORCA is blocked only because backend startup unnecessarily requires object-storage configuration, prefer implementing or documenting an explicit object-storage-free dev/Trial runtime profile before skipping the endpoint again. This must not use local dummy S3/MinIO or fake credentials.
 - If a Work Order requires a human business decision outside standing Trial approval, record it as pending human decision and continue to independent work that does not depend on that decision.
 
@@ -118,27 +126,31 @@ Live ORCA Trial policy:
 - Do not treat HTTP 200, wrapper exit 0, dry-run, precheck, not_run, not_verified, or owner-waived evidence as business success.
 - Require endpoint-specific parsed business success criteria.
 - If business success cannot be established from sanitized allowlisted fields, mark the result INCONCLUSIVE or BLOCKED, not success.
-- Stop on unexpected target drift, parser ambiguity, credential redaction risk, raw artifact risk, or non-Trial endpoint detection.
+- Stop on unexpected target drift, parser ambiguity, credential redaction risk, diagnostic artifact containment failure, or non-Trial endpoint detection.
 
 Safe wrapper requirement:
 If a live ORCA Trial step is required but the exact safe wrapper/action is missing, first create or update a blocker-resolution handoff/Work Order that defines or implements a wrapper that:
 - uses only ORCA Trial
 - emits no raw ORCA request/response bodies
 - emits no raw patient or insurance detail
-- emits no HAR, trace, video, screenshot, request XML, raw network dump, or credential-bearing URL
+- emits no committed/package-bound HAR, trace, video, screenshot, request XML, raw network dump, or credential-bearing URL
 - records only allowlisted parsed business fields, classifications, hashes, command metadata, and redacted summaries
 - has a dry-run, parser, sanitizer, or local contract test before live execution
 - has a secret/raw-artifact scan before packaging
 
 Fullflow policy:
-Fullflow may run only after a safe fullflow mode exists that does not create screenshots, HAR, traces, videos, raw network dumps, request XML, raw request bodies, raw response bodies, or raw body-derived artifacts. If the current harness would create forbidden artifacts, stop and create or update the Work Order for safe fullflow harness hardening instead of running it.
+Fullflow may run through either:
+- an artifact-free safe fullflow mode; or
+- an owner-approved diagnostic fullflow mode under the Diagnostic Artifact Exception.
+
+Diagnostic fullflow output is not release evidence by itself. Release evidence must be a sanitized extracted summary with endpoint/request-class identity, status classification, business-success criteria, route coverage, blocker classification, and hashes. Reviewer packets must include only sanitized extracted summaries, never diagnostic screenshots, HAR, traces, videos, raw network dumps, request XML, raw request bodies, raw response bodies, or raw body-derived artifacts.
 
 Credential and artifact policy:
 - Do not run env, printenv, set, history, or set -x.
 - Do not print passwords, tokens, cookies, Authorization headers, JSESSIONID, CSRF values, sessions, credential-bearing URLs, raw ORCA bodies, raw patient details, or raw insurance details.
 - Do not store passwords or tokens except for approved local-only dev/Trial runtime values, which may be stored only in an approved gitignored local runtime file and must never be copied into evidence, logs, docs, samples, TOML, review packages, or committed files.
-- Do not capture HAR, traces, videos, screenshots, or raw network dumps.
-- Evidence must be sanitized JSON/MD summaries, command logs, hashes, status classifications, and allowlisted parsed fields only.
+- HAR, traces, videos, screenshots, and raw network dumps may be captured only under the Diagnostic Artifact Exception and must remain local/untracked and excluded from review packages.
+- Committed evidence must be sanitized JSON/MD summaries, command logs, hashes, status classifications, and allowlisted parsed fields only.
 
 Production policy:
 - Production ORCA execution is out of scope for this automation and should not be attempted.
@@ -149,7 +161,7 @@ Work progression:
 - If roadmap owner sign-off is missing, create or update RWO-01 materials and then proceed under standing Trial approval unless a contradiction exists.
 - Run browser e2e no-live gates before live ORCA gates where practical.
 - Run ORCA Trial live verification only after local/browser prerequisites are reasonably satisfied or the roadmap explicitly requires live verification to unblock.
-- Run fullflow only after prerequisite browser and Trial ORCA gates are satisfied and safe fullflow mode exists.
+- Run fullflow after prerequisite browser and Trial ORCA gates are satisfied when either artifact-free safe fullflow mode exists or diagnostic fullflow mode can run under the Diagnostic Artifact Exception.
 - Skip any production ORCA Work Order as out of scope; continue with Trial, browser, security, CI, packaging, rollback, and owner sign-off gates that do not require production ORCA execution.
 - Skip any S3/MinIO/object-storage-dependent Work Order as out of scope; continue with Trial, browser, security, CI, packaging, rollback, and owner sign-off gates that do not require S3/MinIO/object-storage configuration.
 - Implement or verify an explicit object-storage-free dev/Trial runtime profile when an active handoff requests it. In that profile, object-storage-dependent features must fail closed and must not be claimed ready.
@@ -168,14 +180,15 @@ Each run must open an inbox item with:
 - sanitized result and business-success classification
 - blockers
 - whether credentials were printed or captured; expected answer: no
-- whether raw artifacts were captured; expected answer: no
+- whether diagnostic artifacts were captured; if yes, state local-only/untracked and whether sanitized extracted evidence was committed
+- whether raw artifacts were committed or packaged; expected answer: no
 - recommended next action
 
 Stop conditions:
 - production ORCA would be required by the current task instead of being skippable as out-of-scope
 - S3/MinIO/object-storage configuration would be required by the current task instead of being skippable as out-of-scope
 - missing runtime secret/config that cannot be safely generated under the local-only policy, with no independent safe task remaining in this run
-- raw artifact capture would be needed to decide success
+- diagnostic artifact capture cannot be contained locally/untracked, or raw artifact content would need to be committed/packaged to decide success
 - target/scope ambiguity
 - unsafe repo state
 - repeated failing repair loop without new evidence

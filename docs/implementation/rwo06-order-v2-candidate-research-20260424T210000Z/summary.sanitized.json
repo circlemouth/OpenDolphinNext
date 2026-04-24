@@ -1,0 +1,73 @@
+{
+  "runId": "20260424T210000Z",
+  "workOrders": [
+    "RWO-06F",
+    "RWO-06G",
+    "RWO-06H",
+    "RWO-06I",
+    "RWO-06J",
+    "RWO-06K"
+  ],
+  "result": "ORDER_FAMILY_V2_CANDIDATE_RESEARCH_RECORDED",
+  "sources": [
+    "https://www.orca.med.or.jp/receipt/tec/api/medicalmod.html",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/comment842-830-bui-api.html",
+    "https://www.ssk.or.jp/seikyushiharai/tensuhyo/kihonmasta/",
+    "https://www.ssk.or.jp/seikyushiharai/tensuhyo/kihonmasta/r08kaiteijoho.html",
+    "https://jpfhir.jp/fhir/core/terminology/ig/CodeSystem-JP_ProcedureCodesMedical_CS"
+  ],
+  "candidatePriority": [
+    {
+      "workflow": "testOrder",
+      "classCode": "600",
+      "candidateCode": "160000310",
+      "candidateName": "urine qualitative/semiquantitative test",
+      "recommendedPriority": 1,
+      "liveReady": false
+    },
+    {
+      "workflow": "radiologyOrder",
+      "classCode": "700",
+      "candidateCode": "002000099+170027910",
+      "candidateName": "head body-part plus digital plain radiography",
+      "recommendedPriority": 2,
+      "liveReady": false
+    },
+    {
+      "workflow": "surgeryOrder",
+      "classCode": "500",
+      "candidateCode": "150003110",
+      "candidateName": "skin/subcutaneous tumor excision sample-aligned candidate",
+      "recommendedPriority": 3,
+      "liveReady": false
+    },
+    {
+      "workflow": "baseChargeOrder",
+      "classCode": "110",
+      "candidateCode": "111000110",
+      "candidateName": "first visit fee",
+      "recommendedPriority": 4,
+      "liveReady": false
+    },
+    {
+      "workflow": "injectionOrder",
+      "classCode": "310",
+      "candidateCode": "130000510",
+      "candidateName": "intradermal/subcutaneous/intramuscular injection fee",
+      "recommendedPriority": 5,
+      "liveReady": false
+    },
+    {
+      "workflow": "instractionChargeOrder",
+      "classCode": "130",
+      "candidateCode": "113001810",
+      "candidateName": "specific disease management fee for clinics",
+      "recommendedPriority": 6,
+      "liveReady": false
+    }
+  ],
+  "nextTask": "Prepare testOrder/600 v2 payload with no-live parser/sanitizer/wrapper dry-run before any live Trial retry.",
+  "credentialsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "liveTrialOrcaExecuted": false
+}

@@ -1,110 +1,97 @@
 # NEXT_WORKER_PROMPT
 
-status: completed
-created_at: 2026-04-24T14:37:30Z
-source_work_order: RWO-06D-soap-next
-blocker_id: subjectivesv2-live-trial-post-request-number-fix-transport-rejected-502-investigation
+status: active
+created_at: 2026-04-24T21:00:00Z
+source_work_order: RWO-08B/RWO-06D/RWO-07/RWO-06F-through-06K
+blocker_id: owner-expanded-fullflow-disease-request-number-order-v2-scope
 priority: high
 supersedes:
-- subjectivesv2-live-trial-post-request-number-fix-exact-retry-not-run
+- subjectivesv2-live-trial-post-request-number-fix-transport-rejected-502-investigation
 
 ## Context
 
-Completion update RUN_ID `20260424T144858Z`: this prompt was handled with no-live source, contract, focused test, and wrapper dry-run checks. No additional concrete repo-local `subjectivesv2` defect was established after the already-fixed `subjectivesmodreq` root, direct `Insurance_Combination_Number`, and body `Request_Number` removal. The repeated HTTP `502` is recorded as `inconclusive_transport_or_trial_side_limited_by_sanitized_evidence`; no future live retry is authorized by this completion.
+Owner direction recorded on 2026-04-24 expands automation scope:
 
-RUN_ID `20260424T142513Z` rebuilt/recreated the current non-S3 Trial runtime after the `subjectivesv2` request-number omission fix and executed the exact approved live wrapper scope.
+- Existing broad browser/fullflow harnesses may run even if they create screenshots, HAR, traces, videos, or raw network artifacts, but only as local-only untracked diagnostic artifacts.
+- Diagnostic artifacts are not release evidence and must not be committed, copied into reviewer packets, or pasted into summaries.
+- `diseasev3` create/update/delete verification should proceed through endpoint-specific wrappers, parser/sanitizer checks, duplicate-live checkpoints, and sanitized business-success criteria.
+- Electronic-chart operations that users can act on must be enumerated and tested, including Request_Number `02` / `03` / `04` or equivalent update/delete/cancel semantics.
+- `medicalmodv2` order families with Trial-rejected v1 payloads must use web-researched official/public sources plus no-live contract checks to propose justified v2 candidates before any live retry.
 
-- Report: `docs/implementation/rwo06d-subjectivesv2-post-request-number-live-retry-20260424T142513Z/FINAL_REPORT.md`
-- Summary: `docs/implementation/rwo06d-subjectivesv2-post-request-number-live-retry-20260424T142513Z/summary.sanitized.json`
-- Live wrapper attempts:
-  - attempt 1: HTTP `502`, `transportRejected`, `businessAccepted=false`
-  - attempt 2: HTTP `502`, `transportRejected`, `businessAccepted=false`
-  - attempt 3: HTTP `502`, `transportRejected`, `businessAccepted=false`
+Current repo state at creation:
 
-Correction recorded after RUN_ID `20260424T142513Z`: the owner intended "up to 3 live wrapper attempts" to mean up to 3 `try -> investigate -> fix -> no-live verify -> retry` cycles, not 3 repeated sends of the unchanged request. The 3 unchanged live sends in that run are classified as a process error and must not be repeated.
-
-Do not run another live `subjectivesv2` retry from this prompt. A future retry prompt may be created only after a concrete repo-local fix or documented changed precondition is found and verified no-live.
-
-Previously fixed repo-local defects remain fixed:
-
-- `subjectivesmodreq` root name.
-- `Insurance_Combination_Number` field location.
-- extra body `Request_Number` field; create now uses query `class=01` only.
-
-Current classification:
-
-- Runtime route deployment is present: authenticated empty JSON `POST /api/orca/official/chart-support/subjectives-mod-v2` returned HTTP `400` validation rejection before each live attempt.
-- Status-only health/readiness returned `200` / `200` before each live attempt.
-- Exact payload SHA-256 remained `9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308`.
-- No `subjectivesv2` Trial business acceptance exists.
+- Branch: `master`
+- Last known HEAD: `aa30a9b09`
+- Latest reviewer packet refresh: RUN_ID `20260424T200206Z`
+- Prior `subjectivesv2` status: HTTP `502` / `transportRejected`, no business success, no new live retry unless a concrete fix or changed precondition is found.
 
 ## Goal
 
-Investigate the repeated post-request-number-fix `subjectivesv2` HTTP `502` with no-live contract/runtime checks only. Identify a concrete repo-local defect if one exists, fix it, and run focused no-live verification. If no concrete repo-local defect can be established without raw ORCA artifacts, record the blocker as inconclusive/Trial-side or parser/sanitizer-limited and continue to the next independent safe Work Order.
+Advance the expanded release-readiness scope without overclaiming:
 
-## Retry Rule Correction
+1. Inventory fullflow/browser harnesses that can now run under the Diagnostic Artifact Exception.
+2. Run or prepare the next safe fullflow diagnostic step if local runtime prerequisites are available.
+3. Advance `diseasev3` from create-only no-live readiness toward live create verification, then prepare update/delete only after create has sanitized endpoint-specific evidence.
+4. Build the RWO-07 operation matrix for every electronic-chart user action that maps to create/update/delete/cancel/copy/send semantics and Request_Number `02` / `03` / `04` or equivalent selectors.
+5. Use web-researched official/public sources to propose v2 candidate payloads for rejected order families: `instractionChargeOrder/130`, `baseChargeOrder/110`, `injectionOrder/310`, `surgeryOrder/500`, `testOrder/600`, and `radiologyOrder/700`.
 
-- `3 attempts` means at most 3 fix-and-retry cycles, not 3 unchanged live sends.
-- A cycle is live failure -> no-live investigation -> concrete fix or changed precondition -> focused no-live verification -> next live retry.
-- Repeating the same live request after the same failure without a fix/changed precondition is forbidden.
-- Any future live retry handoff must name the fix or changed precondition that justifies the retry.
+## Required First Steps
 
-## Exact Identity Under Investigation
-
-- Workflow: `subjectivesv2`
-- ORCA endpoint: `/orca25/subjectivesv2`
-- Official server route: `/api/orca/official/chart-support/subjectives-mod-v2`
-- Target: `00001`
-- Operation: `create`
-- Request/class: query `class=01` only
-- Payload: `web-client/qa/payloads/phase4/subjectivesv2_phase4_dummy_native_intent_v1.json`
-- Payload SHA-256: `9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308`
-- Duplicate-live checkpoint key: `rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308`
+1. Inspect current branch, HEAD, status, and worktrees.
+2. Read `$CODEX_HOME/automations/orca/memory.md`, `HANDOFF_STATE.json`, this prompt, `WORKPLAN_TO_RELEASE.md`, `REMAINING_WORK_BREAKDOWN.md`, `RELEASE_GATE_MATRIX.md`, and `ORCA_TRIAL_REACHABILITY_EXPANSION_PLAN.md`.
+3. If uncommitted unrelated changes exist, do not overwrite them.
+4. If the previous worker already completed one of the tasks below, continue with the next independent task.
 
 ## Allowed Actions
 
-- Review current source, tests, sanitized summaries, and official ORCA `subjectivesv2` contract material.
-- Add or update no-live unit tests, parser/sanitizer contract tests, and XML-shape assertions.
-- Fix repo-local `server-modernized` / `web-client` wrapper defects if concrete evidence supports the fix.
-- Run focused no-live verification and wrapper dry-runs.
-- Update sanitized evidence, summary, handoff state, roadmap claim boundaries, and next prompt.
+- Run web research against official/public sources for order v2 candidates, and record only source URLs, code/name/class candidates, caveats, and sanitized reasoning.
+- Add docs/evidence for the v2 candidate research and update matrices.
+- Run no-live parser/sanitizer/wrapper dry-runs for candidate payloads.
+- Run live ORCA Trial checks only through existing reviewed wrappers or narrowly reviewed repo-local commands, with endpoint-specific success criteria and duplicate-live checkpoints.
+- Run diagnostic fullflow/browser harnesses that create screenshots/HAR/traces/videos/raw-network artifacts only if artifacts remain local-only, untracked, and excluded from committed evidence and reviewer packets.
+- Commit roadmap/handoff-scoped docs, sanitized evidence, and source/test fixes after verification.
 
 ## Forbidden Actions
 
-- Live `subjectivesv2` retry from this prompt.
-- Repeating the same unchanged live request after the same failure.
-- Live `diseasev3`.
-- Request_Number `02` / `03` / `04`.
-- Fullflow execution.
 - Production ORCA execution or production readiness claims.
-- S3/MinIO/object-storage setup, dummy S3, fake credentials, object-storage emulation, or storage readiness claims.
-- Printing, requesting, committing, or working around ORCA credentials, production credentials, external-service passwords/tokens, cookies, session IDs, Authorization headers, CSRF values, credential-bearing URLs, or raw ORCA bodies.
-- HAR, trace, video, screenshot, raw network dump, request XML, raw request/response body, raw network JSON, or body-derived artifacts.
-- Unsanitized container logs if they could contain request/response bodies, credentials, patient details, or insurance details.
+- S3/MinIO/object-storage setup, dummy storage, fake object-storage credentials, or storage readiness claims.
+- Printing, requesting, committing, or packaging ORCA credentials, production credentials, external-service secret values, cookies, session IDs, auth headers, anti-forgery values, credential-bearing URLs, raw ORCA bodies, raw patient details, or raw insurance details.
+- Committing or packaging screenshots, HAR, traces, videos, raw network dumps, request XML, raw request/response bodies, or raw body-derived artifacts.
+- Repeating a rejected v1 live mutation identity without a source-backed v2 candidate and focused no-live verification.
+- Repeating `subjectivesv2` live with the same payload unless a concrete repo-local fix or changed precondition is documented and verified no-live.
 - Changes under legacy `client/` or `server/`.
 
-## Required Evidence
+## Priority Order
 
-- Sanitized review of the 3 HTTP `502` attempts from RUN_ID `20260424T142513Z`.
-- No-live contract/runtime finding or explicit inconclusive classification.
-- Focused tests for any fix.
-- Wrapper dry-run evidence for the exact payload if a fix is made.
-- Secret/raw-artifact scan over new tracked evidence docs and wrapper outputs.
-- Claim boundary showing no SOAP business acceptance unless endpoint-specific parsed success criteria are met, and no diseasev3, fullflow, production ORCA, or S3/object-storage claim.
+1. Create a sanitized RWO-07 operation matrix for user-actionable chart operations and Request_Number `02` / `03` / `04` applicability.
+2. Prepare or run `diseasev3` create live verification if existing wrapper/readiness prerequisites are satisfied; otherwise write the exact blocker and next command.
+3. Inventory diagnostic fullflow harnesses and run the next safe diagnostic fullflow if runtime prerequisites are already available; otherwise record `skipped_environment_unavailable_*` and continue.
+4. Record web-researched v2 candidate findings for rejected order families and prepare no-live candidate payload work.
+5. Update `HANDOFF_STATE.json`, release gate matrix, roadmap docs, and final summary with claim boundaries.
+
+## Evidence Requirements
+
+- Sanitized Markdown/JSON evidence only.
+- Diagnostic artifact manifest may list local relative directories, artifact classes, counts, hashes, and excluded-from-commit status, but must not include raw content.
+- For live Trial steps: endpoint, target, request class/number, payload identity hash, duplicate-live checkpoint, parsed business-success classification, and credentialsCaptured/rawArtifactsCommitted flags.
+- For web research: source URL, source type, candidate code/name/class, confidence, and caveats.
 
 ## Completion Criteria
 
-This prompt is complete when one of the following is true:
+This prompt is complete when one of these is true:
 
-- A concrete repo-local defect is fixed and no-live verification passes, with a new handoff explicitly stating whether and how a future exact live retry is permitted.
-- No concrete repo-local defect can be established safely, and the blocker is recorded as inconclusive/Trial-side/parser-limited with no live retry authorization.
+- RWO-07 operation matrix plus at least one next executable endpoint-specific task is recorded.
+- `diseasev3` create reaches sanitized `live_accepted`, `business_rejected`, or blocked classification.
+- Diagnostic fullflow produces sanitized L4 evidence or a concrete environment/blocker record.
+- Rejected order-family v2 candidates are researched and queued with no-live verification tasks.
 
 In every completion path:
 
-- credentials printed/captured in the new run: `false`
-- raw artifacts captured: `false`
-- no production ORCA, S3/MinIO/object-storage, fullflow, live disease mutation, Request_Number `02` / `03` / `04`, broad SOAP/disease claim, or final release readiness claim
+- credentials printed/captured: `false`
+- raw artifacts committed/packaged: `false`
+- diagnostic artifacts, if captured, remain local-only/untracked and excluded from reviewer packets
+- no production ORCA, S3/MinIO/object-storage, broad all-order claim, broad SOAP/disease claim, or final release readiness claim
 
 ## Final Report Requirements
 
-Use `【ワーカー報告】` and include branch/HEAD, active prompt, current Work Order, next Work Order, files changed, commit id, tests/checks, live Trial endpoint/target/request class if reviewed, sanitized business-success classification, blockers, recommended next action, credentials captured, and raw artifacts captured.
+Use `【ワーカー報告】` and include branch/HEAD, active prompt, current Work Order, next Work Order, files changed, commit id, tests/checks, live Trial endpoint/target/request class if used, diagnostic artifact handling if used, sanitized business-success classification, blockers, recommended next action, credentials captured, and raw artifacts committed/packaged.
