@@ -8,7 +8,7 @@ RUN_ID: `20260422T134401Z`
 
 The roadmap documentation can be completed from repo-local evidence, but one expected input filename is missing: `docs/implementation/unified-clinical-wave1-batch1-wo3-20260421/CWP01_KARTE_ORDER_PERSISTENCE_REPORT.md`. The available equivalent CWP-01 evidence is `CWP01_INTEGRATION_GATE_REPORT.md`.
 
-Since the original roadmap package, artifact-free browser chart-open/local persistence/UI clickthrough evidence, RWO-09 non-S3 static/CI evidence, the object-storage-free dev/Trial runtime profile, RWO-06 no-live readiness/transport repair evidence, RUN_ID `20260423T112258Z` RWO-09 release/security gate refresh evidence, RUN_ID `20260423T150257Z` scoped `medicalmodv2` Trial business acceptance, RUN_ID `20260423T180102Z` reviewer submission packet contract hardening, RUN_ID `20260423T180102Z` current-head reviewer support package refresh, RUN_ID `20260423T190300Z` current sanitized reviewer submission packet creation/validation, RUN_ID `20260423T200259Z` canonical runtime-ready smoke safe evidence, RUN_ID `20260423T234155Z` owner next-work GO plus non-live static/contract/safe-browser refresh evidence, and RUN_ID `20260424T000139Z` current-head reviewer submission packet refresh have been added. Owner standing approval is present for the automation to continue Trial-backed non-S3 roadmap work. These improve Trial-backed release-readiness progress, but they do not close fullflow, rollback acceptance, or final release GO/NO-GO gates.
+Since the original roadmap package, artifact-free browser chart-open/local persistence/UI clickthrough evidence, RWO-09 non-S3 static/CI evidence, the object-storage-free dev/Trial runtime profile, RWO-06 no-live readiness/transport repair evidence, RUN_ID `20260423T112258Z` RWO-09 release/security gate refresh evidence, RUN_ID `20260423T150257Z` scoped `medicalmodv2` Trial business acceptance, RUN_ID `20260423T180102Z` reviewer submission packet contract hardening, RUN_ID `20260423T180102Z` current-head reviewer support package refresh, RUN_ID `20260423T190300Z` current sanitized reviewer submission packet creation/validation, RUN_ID `20260423T200259Z` canonical runtime-ready smoke safe evidence, RUN_ID `20260423T234155Z` owner next-work GO plus non-live static/contract/safe-browser refresh evidence, RUN_ID `20260424T000139Z` current-head reviewer submission packet refresh, and RUN_ID `20260424T010211Z` rollback/stop-policy evidence hardening have been added. Owner standing approval is present for the automation to continue Trial-backed non-S3 roadmap work. These improve Trial-backed release-readiness progress, but they do not close fullflow, actual rollback rehearsal/operator acceptance, or final release GO/NO-GO gates.
 
 ## Functional Conclusion
 
@@ -24,8 +24,8 @@ Since the original roadmap package, artifact-free browser chart-open/local persi
 1. Full UI click-through browser evidence remains partial for Clinical Wave 1 workflows, especially prescription and representative order editing.
 2. Fullflow is missing; scoped `medicalmodv2` acceptance is not a fullflow substitute.
 3. `diseasev3` and `subjectivesv2` live verification is missing; Request_Number `02` / `03` / `04` remains separately gated and forbidden for this automation without separate approval.
-4. Trial-scope runtime startup and `runtime-ready-smoke` now have current non-S3 evidence, but broader runtime/fullflow/rollback validation is still incomplete.
-5. Reviewer submission packet evidence now exists for accepted head `82cfff6db7f7045551eb0d0f9f109ad1afaace07`, but packet completion does not replace missing fullflow/rollback evidence.
+4. Trial-scope runtime startup and `runtime-ready-smoke` now have current non-S3 evidence, and rollback/stop-policy evidence requirements are sanitized, but broader runtime/fullflow and actual rollback rehearsal/operator acceptance are still incomplete.
+5. Reviewer submission packet evidence now exists for accepted head `82cfff6db7f7045551eb0d0f9f109ad1afaace07`, but packet completion and rollback policy hardening do not replace missing fullflow or actual rollback rehearsal evidence.
 6. Owner standing approval and next-work GO are present, but final release GO/NO-GO is not recorded.
 7. Expected CWP-01 filename is missing and should be accepted or corrected by owner review.
 
@@ -50,6 +50,7 @@ Since the original roadmap package, artifact-free browser chart-open/local persi
 - RUN_ID `20260423T200259Z`: RWO-09 repaired `runtime-ready-smoke.mjs` so it no longer writes screenshots, started the canonical `orca-trial-no-object-storage` runtime pair, and passed `runtime-ready-smoke` with JSON-only evidence and zero blocked-route hits.
 - RUN_ID `20260423T234155Z`: RWO-09/RWO-11 recorded owner GO for the next roadmap work and passed non-live web guard, typecheck, server guard scripts, review package/packet contract tests, and the 8-test artifact-free browser suite with zero retained forbidden artifacts.
 - RUN_ID `20260424T000139Z`: RWO-11 refreshed the current-head reviewer submission packet for accepted ref `master` frozen at `82cfff6db7f7045551eb0d0f9f109ad1afaace07`; packet create/validate, review-packet regression tests, doc links, focused forbidden-pattern scan, focused secret-pattern scan, and `git diff --check` passed.
+- RUN_ID `20260424T010211Z`: RWO-09/RWO-11 hardened cutover/release-validation rollback and fullflow evidence requirements to sanitized summaries only, keeping actual rollback rehearsal/operator acceptance and final release GO/NO-GO open.
 
 ## ORCA Connection Scope
 

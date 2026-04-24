@@ -217,7 +217,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - read-only preflight は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/weborca-readonly-preflight/`。
 - accept smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/acceptmodv2/`。
 - fullflow smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/fullflow/`。
-- 最低限 `git/git-head-current.txt`、`git/git-branch-current.txt`、`reports/final-report.md`、`qa/acceptmodv2/accept-summary.json`、`qa/fullflow/summary.json`、`qa/fullflow/steps.log`、`qa/fullflow/network/network.json`、`qa/fullflow/network/requests.json`、`qa/fullflow/console.json`、`qa/fullflow/page-errors.json` を同一 RUN_ID へ揃える。
+- 最低限 `git/git-head-current.txt`、`git/git-branch-current.txt`、`reports/final-report.md`、`qa/acceptmodv2/accept-summary.sanitized.json`、`qa/fullflow/summary.sanitized.json`、`qa/fullflow/steps.log`、`qa/fullflow/console.sanitized.json`、`qa/fullflow/page-errors.sanitized.json` を同一 RUN_ID へ揃える。legacy harness が `qa/fullflow/network/network.json`、`qa/fullflow/network/requests.json`、screenshot、HAR、trace、video、request XML、raw request/response body、raw network dump を生成または要求する場合、その実行は release evidence として使わず、safe fullflow harness blocker として記録する。
 - ORCA 接続確認を別途行った場合は `artifacts/orca-connectivity/<RUN_ID>/` を併記し、closeout report から相互参照できるようにする。
 - Worker G の smoke memo / diff / grep 結果は release 判定に使う artifact 配下へまとめ、cutover 記録と分離しない。
 

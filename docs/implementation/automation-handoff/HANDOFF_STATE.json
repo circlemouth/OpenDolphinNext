@@ -9,7 +9,47 @@
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-24T00:01:39Z",
+  "lastUpdated": "2026-04-24T01:02:11Z",
+  "latestRwo09Rwo11RollbackSafeEvidence": {
+    "runId": "20260424T010211Z",
+    "workOrders": [
+      "RWO-09",
+      "RWO-11"
+    ],
+    "result": "RWO09_RWO11_ROLLBACK_STOP_POLICY_SANITIZED_EVIDENCE_READY",
+    "branch": "master",
+    "startHead": "c7444d88becb04e616cdd1c2876f3e5cf773cc67",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "status": "completed"
+    },
+    "evidence": "docs/implementation/rwo09-rwo11-rollback-safe-evidence-20260424T010211Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-rwo11-rollback-safe-evidence-20260424T010211Z/summary.sanitized.json",
+    "updatedDocs": [
+      "docs/releases/orca-remediation-cutover.md",
+      "docs/runbooks/release-validation.md",
+      "docs/implementation/clinical-functional-release-readiness-roadmap-20260422/RELEASE_GATE_MATRIX.md",
+      "docs/implementation/clinical-functional-release-readiness-roadmap-20260422/RELEASE_READINESS_EXECUTIVE_SUMMARY.md",
+      "docs/implementation/clinical-functional-release-readiness-roadmap-20260422/DECISION_LOG.md",
+      "docs/implementation/clinical-functional-release-readiness-roadmap-20260422/FUNCTIONAL_CLAIMS_BOUNDARY.md",
+      "docs/implementation/clinical-functional-release-readiness-roadmap-20260422/RISK_REGISTER.md"
+    ],
+    "tests": {
+      "docLinks": "pass",
+      "jsonValidation": "pass",
+      "gitDiffCheck": "pass",
+      "focusedForbiddenPatternScan": "pass_no_unapproved_generation_or_retention_instructions",
+      "focusedSecretPatternScan": "pass_no_unapproved_secret_material"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_docs_only_rollback_policy"
+    },
+    "claimBoundary": "Rollback/stop-policy sanitized evidence requirements are ready; not actual rollback rehearsal, safe fullflow success, final release GO, production ORCA readiness, or S3/object-storage readiness.",
+    "recommendedNextTask": "Run an operator rollback rehearsal or record final owner GO/NO-GO when prerequisites are satisfied; keep fullflow separately gated by a safe harness.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "latestRwo11CurrentHeadReviewerPacket": {
     "runId": "20260424T000139Z",
     "workOrder": "RWO-11",
@@ -1188,7 +1228,8 @@
     "RUN_ID 20260423T190300Z created a current sanitized closeout subset and validated the canonical reviewer submission packet for accepted ref master frozen at 5a141e8e9256475904f14ba47ac5d459c4ea421e. This advanced the packet gate only; browser prescription/order UI coverage, safe fullflow, rollback acceptance, and final owner GO/NO-GO remain open. No credentials or raw artifacts were captured.",
     "RUN_ID 20260423T200259Z repaired runtime-ready-smoke safe evidence so it no longer writes screenshots, started the approved orca-trial-no-object-storage runtime pair, and reran runtime-ready smoke successfully with JSON-only retained evidence and zero blocked-route hits. No credentials or raw artifacts were captured.",
     "RUN_ID 20260423T115535Z recorded fresh explicit owner approval for exactly one post-repair WebORCA Trial medicalmodv2 live attempt through web-client/scripts/qa-phase4-safe-medicalmodv2.mjs using payload SHA-256 e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618 and target 00001/00001. The approval does not authorize production ORCA, S3/object-storage, fullflow, Phase3 rerun, Request_Number 02/03/04, diseasev3/subjectivesv2, raw artifacts, credentials, repeated mutation, or final release GO. The live action remains not_run in this approval-recording commit.",
-    "RUN_ID 20260423T234155Z recorded owner next-work GO for RWO-09/RWO-11 continuation and passed non-live web guard, typecheck, server guards, review package/packet contract tests, and the 8-test artifact-free browser suite. Final release GO, production ORCA, S3/object-storage, fullflow, and raw artifacts remain non-claims."
+    "RUN_ID 20260423T234155Z recorded owner next-work GO for RWO-09/RWO-11 continuation and passed non-live web guard, typecheck, server guards, review package/packet contract tests, and the 8-test artifact-free browser suite. Final release GO, production ORCA, S3/object-storage, fullflow, and raw artifacts remain non-claims.",
+    "RUN_ID 20260424T010211Z hardened rollback/stop-policy evidence requirements for RWO-09/RWO-11 so release-validation and cutover docs require sanitized summaries, blocker classifications, status logs, rollback target metadata, and no screenshots/HAR/trace/video/raw-network/raw ORCA artifacts. Actual rollback rehearsal/operator acceptance and final owner GO/NO-GO remain open."
   ],
   "latestRwo04SafeBrowserUiTreatment": {
     "runId": "20260423T220304Z",
