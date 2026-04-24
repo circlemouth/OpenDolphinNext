@@ -36,7 +36,13 @@ The active automation handoff was already `completed`, so this run continued the
 | Business accepted | `false` |
 | Completion evidence | information timestamp present only; no medical UID, invoice number, or data ID |
 
-This is not business success. No retry was performed.
+This is not business success. No retry was performed in this run because no concrete repo-local fix or changed Trial/business precondition had been established after the rejection.
+
+Important retry boundary for subsequent workers:
+
+- Forbidden: sending the same live request again with unchanged payload, runtime, and business preconditions.
+- Allowed under the standing retry policy: up to three `try -> investigate -> fix or changed precondition -> focused no-live verification -> sanitized preflight -> retry` cycles for the same approved endpoint/target/request-class/payload identity.
+- Required before any retry: document the concrete fix or changed precondition, rerun focused no-live verification, record sanitized preflight including runtime readiness and duplicate checkpoint decision, then execute at most one live retry for that cycle.
 
 ## Misuse Cases Checked
 
@@ -75,4 +81,4 @@ Raw artifacts committed or packaged: `false`
 
 ## Next Step
 
-Do not repeat this `testOrder/600` v2 live checkpoint without a source-backed v3 candidate or changed Trial/business precondition. Continue with no-live `diseasev3` HTTP `400` investigation, the next order-family v2 candidate, or diagnostic fullflow inventory under the local-only artifact policy.
+Do not repeat this `testOrder/600` v2 live checkpoint unchanged. Continue with no-live investigation of API result `80`; if that investigation produces a concrete repo-local fix or changed Trial/business precondition, a focused no-live verification and sanitized preflight may justify a retry under the standing fix-and-retry policy. Otherwise prepare a source-backed v3 candidate, continue no-live `diseasev3` HTTP `400` investigation, or inventory diagnostic fullflow under the local-only artifact policy.

@@ -2958,7 +2958,19 @@
       "focusedSecretRawArtifactTextScan": "pass_zero_hits"
     },
     "claimBoundary": "TestOrder/600 v2 reached one sanitized Trial attempt and was businessRejected. No testOrder Trial acceptance, all-test coverage, physiology/bacteria coverage, diseasev3 acceptance, subjectivesv2 acceptance, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
-    "recommendedNextTask": "Do not repeat this v2 checkpoint without a source-backed v3 candidate or changed Trial/business precondition; continue diseasev3 no-live investigation, next order-family v2 candidate work, or diagnostic fullflow inventory.",
+    "retryBoundary": {
+      "unchangedRepeatSendAllowed": false,
+      "fixAndRetryCyclesAllowed": true,
+      "maxFixAndRetryCyclesPerSubsequentWorker": 3,
+      "requiredBeforeRetry": [
+        "no_live_investigation",
+        "concrete_repo_local_fix_or_changed_trial_business_precondition",
+        "focused_no_live_verification",
+        "sanitized_preflight_with_runtime_readiness_duplicate_checkpoint_and_attempt_number"
+      ],
+      "note": "Do not interpret businessRejected as a blanket live retry ban; only unchanged repeat sends are forbidden."
+    },
+    "recommendedNextTask": "Do not repeat this v2 checkpoint unchanged; first investigate apiResult 80 no-live, then retry only after a concrete fix or changed Trial/business precondition plus focused no-live verification and sanitized preflight, otherwise prepare a source-backed v3 candidate or continue independent roadmap work.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
