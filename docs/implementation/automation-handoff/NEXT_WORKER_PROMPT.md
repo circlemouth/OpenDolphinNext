@@ -1,51 +1,48 @@
 # NEXT_WORKER_PROMPT
 
 status: active
-created_at: 2026-04-24T07:02:17Z
-source_work_order: RWO-06B-next2
-blocker_id: subjectivesv2-diseasev3-live-payload-identity-and-approval-not-created
+created_at: 2026-04-24T08:05:30Z
+source_work_order: RWO-06B-next3
+blocker_id: diseasev3-live-payload-identity-and-approval-not-created
 priority: high
 supersedes:
-- subjectivesv2-diseasev3-live-integration-official-wrapper-not-created
+- subjectivesv2-diseasev3-live-payload-identity-and-approval-not-created
 
 ## Context
 
-RUN_ID `20260424T070217Z` completed the no-live server official-wrapper scaffolding step:
+RUN_ID `20260424T080121Z` completed the first endpoint-specific SOAP/disease no-live live-readiness identity:
 
-- Report: `docs/implementation/rwo06b-soap-disease-server-wrapper-20260424T070217Z/FINAL_REPORT.md`
-- Summary: `docs/implementation/rwo06b-soap-disease-server-wrapper-20260424T070217Z/summary.sanitized.json`
-- Routes:
-  - `POST /api/orca/official/chart-support/subjectives-mod-v2`
-  - `POST /api/orca/official/chart-support/disease-mod-v3`
-- Fixed server endpoints:
-  - `OrcaEndpoint.SUBJECTIVES_MOD`
-  - `OrcaEndpoint.DISEASE_MOD_V3`
+- Report: `docs/implementation/rwo06b-subjectivesv2-live-readiness-20260424T080121Z/FINAL_REPORT.md`
+- Summary: `docs/implementation/rwo06b-subjectivesv2-live-readiness-20260424T080121Z/summary.sanitized.json`
+- Endpoint selected: `subjectivesv2`
+- Workflow ID: `rwo06b-subjectivesv2-live-readiness-v1`
+- Duplicate-live checkpoint key: `rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308`
 - Tests:
-  - focused server wrapper/resource/inventory tests passed
-  - no-live web SOAP/disease wrapper tests passed
-  - wrapper scripts passed `node --check`
+  - wrapper syntax checks passed
+  - no-live SOAP/disease safe-evidence tests passed
+  - `subjectivesv2` dry-run passed with stub classification `notVerified`
 
 Current classification:
 
-- `subjectivesv2` and `diseasev3` now have fixed server official-wrapper scaffolding.
-- The parser still classifies stub HTTP 200 + zero-equivalent `Api_Result` as `notVerified`, not business success, when completion evidence is absent.
-- Live SOAP/disease Trial mutation remains blocked.
+- `subjectivesv2` now has a no-live live-readiness identity and approval/business-scope record.
+- Live `subjectivesv2` Trial mutation remains blocked until a future prompt explicitly authorizes the exact duplicate-live checkpoint and runtime readiness is rechecked.
+- `diseasev3` still lacks its own no-live live-readiness identity and approval/business-scope record.
 
 ## Goal
 
-Define the next smallest safe step for exactly one endpoint-specific SOAP/disease live-readiness identity, without executing live SOAP or disease Trial mutations unless this prompt is later replaced by a prompt that explicitly authorizes one endpoint identity and duplicate-live checkpoint.
+Define the next smallest safe step for the `diseasev3` endpoint-specific no-live live-readiness identity, without executing live disease Trial mutations.
 
 1. Confirm branch, HEAD, status, registered worktrees, and no unsafe unrelated changes.
-2. Choose the safer first endpoint identity to prepare next (`subjectivesv2` or `diseasev3`) based on current product scope, current no-live payloads, and data-minimization risk.
-3. Create or update no-live payload identity metadata, duplicate-live checkpoint key, parser completion-evidence expectations, and explicit live approval/business-scope record for that one endpoint.
-4. If the payload identity cannot be justified without raw patient/insurance detail or business ambiguity, record the concrete blocker and the next smallest safe no-live step instead.
+2. Review the current `diseasev3` payload, fixed official server route, parser completion-evidence expectations, and disease 3-layer/product boundary.
+3. Create or update no-live `diseasev3` payload identity metadata, duplicate-live checkpoint key, parser completion-evidence expectations, and explicit live approval/business-scope record.
+4. If the `diseasev3` identity cannot be justified because create/update/delete semantics, diagnosis persistence, or business scope remain ambiguous, record a precise blocker and next smallest safe no-live step instead.
 5. Update roadmap docs, matrices, sanitized evidence, and handoff state.
 6. Commit roadmap/handoff-scoped tracked changes before reporting.
 
 ## Allowed Actions
 
-- Source review in `server-modernized/`, `api-contract/`, and `web-client/`.
-- Add no-live metadata, tests, parser fixtures, or wrapper dry-runs for one fixed `subjectivesv2` or `diseasev3` endpoint identity.
+- Source review in `server-modernized/`, `api-contract/`, `web-client/`, and docs.
+- Add no-live metadata, tests, parser fixtures, wrapper dry-runs, or sanitized evidence for `diseasev3`.
 - Add sanitized docs, command logs, summary JSON, and handoff updates.
 - Run no-live unit/contract tests, JSON validation, `node --check`, doc link checks, secret/raw-artifact scans, and `git diff --check`.
 
@@ -63,13 +60,13 @@ Define the next smallest safe step for exactly one endpoint-specific SOAP/diseas
 ## Required Evidence
 
 - Sanitized investigation summary with branch/HEAD.
-- No-live endpoint-identity metadata/tests or a sanitized blocker record.
+- No-live `diseasev3` endpoint-identity metadata/tests or a sanitized blocker record.
 - Secret/raw-artifact scan over new tracked evidence docs and wrapper outputs.
 - Updated claim boundary showing no SOAP/disease live Trial success claim.
 
 ## Completion Criteria
 
-This prompt is complete when one endpoint has an explicit no-live live-readiness identity and approval/business-scope record, or when a precise repo-local blocker is recorded with the next smallest safe implementation step.
+This prompt is complete when `diseasev3` has an explicit no-live live-readiness identity and approval/business-scope record, or when a precise repo-local blocker is recorded with the next smallest safe implementation step.
 
 In every completion path:
 

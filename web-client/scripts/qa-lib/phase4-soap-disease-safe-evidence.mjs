@@ -9,20 +9,26 @@ export const SOAP_DISEASE_FORBIDDEN_REQUEST_NUMBERS = ['02', '03', '04'];
 export const SOAP_DISEASE_ENDPOINTS = {
   subjectivesv2: {
     workflowId: 'rwo06b-subjectivesv2-no-live-v1',
+    liveReadinessWorkflowId: 'rwo06b-subjectivesv2-live-readiness-v1',
     requestClass: 'subjectivesv2',
     endpoint: '/orca25/subjectivesv2',
+    officialServerRoute: '/api/orca/official/chart-support/subjectives-mod-v2',
     localProductRoute: '/api/local/charts/subjectives',
     allowedOperation: 'create',
+    businessScope: 'outpatient SOAP subjective create, class=01, dummy target 00001 only',
     payloadRequiredFields: ['patientId', 'performDate', 'subjectivesCode', 'subjectivesDetailRecord'],
     fixtureResponseRoot: 'subjectivesmodres',
     completionEvidenceKeys: ['subjectivesCompletionMarkerPresent'],
   },
   diseasev3: {
     workflowId: 'rwo06b-diseasev3-create-no-live-v1',
+    liveReadinessWorkflowId: 'rwo06b-diseasev3-live-readiness-v1',
     requestClass: 'diseasev3',
     endpoint: '/orca22/diseasev3',
+    officialServerRoute: '/api/orca/official/chart-support/disease-mod-v3',
     localProductRoute: '/api/local/diagnoses',
     allowedOperation: 'create',
+    businessScope: 'outpatient disease create, class=01, Request_Number=01 only',
     payloadRequiredFields: ['patientId', 'performDate', 'diagnosisInformation', 'diseaseInformation'],
     fixtureResponseRoot: 'diseaseres',
     completionEvidenceKeys: ['diseaseMutationMarkerPresent'],
@@ -264,6 +270,21 @@ export const buildSoapDiseaseDuplicateCheckpointKey = ({ workflow, payloadSha256
   ].join(':');
 };
 
+export const buildSoapDiseaseLiveReadinessCheckpointKey = ({ workflow, payloadSha256 }) => {
+  const contract = endpointContract(workflow);
+  const hash = normalizeCode(payloadSha256) || 'no-payload-sha256';
+  return [
+    'rwo06b',
+    contract?.requestClass ?? 'unknown',
+    contract?.liveReadinessWorkflowId ?? 'unknown-live-readiness-workflow',
+    `target-${SOAP_DISEASE_TARGET_PATIENT_ID}`,
+    `operation-${contract?.allowedOperation ?? 'unknown'}`,
+    'request-01',
+    'class-01',
+    `payload-sha256-${hash}`,
+  ].join(':');
+};
+
 export const validateSoapDiseaseSafeCommand = ({
   argv = [],
   env = process.env,
@@ -320,6 +341,10 @@ export const validateSoapDiseaseSafeCommand = ({
 
   const contract = endpointContract(options.workflow);
   const checkpointKey = buildSoapDiseaseDuplicateCheckpointKey({ workflow: options.workflow, payloadSha256 });
+  const liveReadinessCheckpointKey = buildSoapDiseaseLiveReadinessCheckpointKey({
+    workflow: options.workflow,
+    payloadSha256,
+  });
   const ok = blockers.length === 0;
   const evidence = {
     schemaVersion: 1,
@@ -327,7 +352,9 @@ export const validateSoapDiseaseSafeCommand = ({
     commandContract: SOAP_DISEASE_WRAPPER_CONTRACT,
     workflow: normalizeCode(options.workflow),
     workflowId: contract?.workflowId ?? 'unknown',
+    liveReadinessWorkflowId: contract?.liveReadinessWorkflowId ?? 'unknown',
     endpoint: contract?.endpoint ?? 'unknown',
+    officialServerRoute: contract?.officialServerRoute ?? 'unknown',
     localProductRoute: contract?.localProductRoute ?? 'unknown',
     requestClass: contract?.requestClass ?? 'unknown',
     target: {
@@ -354,6 +381,24 @@ export const validateSoapDiseaseSafeCommand = ({
       key: checkpointKey,
       status: 'not_checked_no_live',
       liveMutationPermittedWhenReady: false,
+    },
+    liveReadinessIdentity: {
+      key: liveReadinessCheckpointKey,
+      status: 'prepared_no_live',
+      selectedEndpointJustification: normalizeCode(options.workflow) === 'subjectivesv2'
+        ? 'lower first-step product risk than diseasev3 because it avoids diagnosis-list create/update/delete ambiguity and uses a fixed dummy SOAP create payload'
+        : 'prepared only when a separate prompt selects diseasev3; disease update/delete remains unauthorized',
+      approvalRecordStatus: 'recorded_no_live_only',
+      businessScope: contract?.businessScope ?? 'unknown',
+      liveMutationPermittedByThisPrompt: false,
+      endpointSpecificParsedBusinessSuccessRequired: true,
+      successCriteria: {
+        transport2xxRequired: true,
+        apiResultZeroRequired: true,
+        completionEvidenceRequired: true,
+        http200AloneIsBusinessSuccess: false,
+        apiResultZeroAloneIsBusinessSuccess: false,
+      },
     },
     requestSemantics: {
       createOnly: true,

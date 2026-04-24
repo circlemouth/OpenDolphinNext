@@ -127,8 +127,11 @@
     },
     "subjectivesv2_phase4_dummy_native_intent_v1.json": {
       "bytes": 389,
+      "duplicateLiveCheckpointKey": "rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
       "repo_path": "web-client/qa/payloads/phase4/subjectivesv2_phase4_dummy_native_intent_v1.json",
-      "sha256": "9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308"
+      "sha256": "9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
+      "status": "rwo06b_subjectivesv2_live_readiness_identity_prepared_no_live_only",
+      "workflow": "subjectivesv2"
     }
   },
   "hashAlgorithm": "SHA-256 over exact UTF-8 file bytes",

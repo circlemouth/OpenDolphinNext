@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildSoapDiseaseDuplicateCheckpointKey,
+  buildSoapDiseaseLiveReadinessCheckpointKey,
   classifySoapDiseaseBusinessResult,
   parseSoapDiseaseSafeArgs,
   sanitizeSoapDiseaseResponse,
@@ -46,7 +47,11 @@ describe('phase4 SOAP/disease no-live safe evidence', () => {
 
     expect(result.ok).toBe(true);
     expect(result.evidence.endpoint).toBe('/orca25/subjectivesv2');
+    expect(result.evidence.officialServerRoute).toBe('/api/orca/official/chart-support/subjectives-mod-v2');
     expect(result.evidence.liveTrialAction).toBe('not_run_forbidden_by_contract');
+    expect(result.evidence.liveReadinessIdentity.status).toBe('prepared_no_live');
+    expect(result.evidence.liveReadinessIdentity.liveMutationPermittedByThisPrompt).toBe(false);
+    expect(result.evidence.liveReadinessIdentity.successCriteria.completionEvidenceRequired).toBe(true);
     expect(result.evidence.payload.summary.endpointMatched).toBe(true);
     expect(result.evidence.payload.summary.patientIdMatched).toBe(true);
     expect(result.evidence.response.responseClassification).toBe('notVerified');
@@ -98,6 +103,17 @@ describe('phase4 SOAP/disease no-live safe evidence', () => {
         payloadSha256: DISEASE_SHA256,
       }),
     ).toBe(`rwo06b:diseasev3:rwo06b-diseasev3-create-no-live-v1:target-00001:operation-create:payload-sha256-${DISEASE_SHA256}`);
+  });
+
+  it('builds endpoint-specific live-readiness checkpoint identity without allowing live mutation', () => {
+    expect(
+      buildSoapDiseaseLiveReadinessCheckpointKey({
+        workflow: 'subjectivesv2',
+        payloadSha256: SUBJECTIVES_SHA256,
+      }),
+    ).toBe(
+      `rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-${SUBJECTIVES_SHA256}`,
+    );
   });
 
   it('rejects live, fullflow, and raw artifact flags before any action', () => {
