@@ -31,6 +31,8 @@ const INJECTION_PAYLOAD = payloadPath('medicalmodv2_injection_trial_reachability
 const INJECTION_SHA256 = 'c01169729cb86d1c68211e4b01f6c38bf3dde0ac948100c53855ec91f1b9010e';
 const SURGERY_PAYLOAD = payloadPath('medicalmodv2_surgery_trial_reachability_v1.json');
 const SURGERY_SHA256 = '23441f818148820c2b1364c6a7424b1255995738cd05fa35e1328f41db96c000';
+const TEST_ORDER_PAYLOAD = payloadPath('medicalmodv2_test_order_trial_reachability_v1.json');
+const TEST_ORDER_SHA256 = 'b4fd3a422ac38f51b73a2fb2a56d07e2418339878f9451a6d73eb185bbd334d2';
 
 describe('phase4 medicalmodv2 safe evidence', () => {
   it('accepts only the fixed Phase 4 medicalmodv2 target and sanitized mode', () => {
@@ -265,6 +267,41 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(result.evidence.payload.summary.medicalInformation.medicalClasses).toEqual(['500']);
     expect(result.evidence.duplicateLiveCheckpoint.key).toBe(
       `rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-${SURGERY_SHA256}`,
+    );
+  });
+
+  it('accepts the representative test-order endpoint payload identity', () => {
+    const result = validatePhase4SafeCommand({
+      argv: [
+        '--dry-run',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--phase4-only',
+        '--workflow',
+        'test-order',
+        '--payload',
+        TEST_ORDER_PAYLOAD,
+        '--payload-sha256',
+        TEST_ORDER_SHA256,
+      ],
+      env: {},
+      cwd: '/repo/web-client',
+      now: new Date('2026-04-24T06:02:17Z'),
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.evidence.endpointWorkflow).toEqual(
+      expect.objectContaining({
+        workflow: 'test-order',
+        workflowId: 'rwo06j-test-order-medicalmodv2-v1',
+        requiredEntityKindsPresent: true,
+        allowedMedicalClassesOnly: true,
+      }),
+    );
+    expect(result.evidence.payload.summary.medicalInformation.entityKinds).toEqual(['testOrder']);
+    expect(result.evidence.payload.summary.medicalInformation.medicalClasses).toEqual(['600']);
+    expect(result.evidence.duplicateLiveCheckpoint.key).toBe(
+      `rwo06j:medicalmodv2:rwo06j-test-order-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-${TEST_ORDER_SHA256}`,
     );
   });
 

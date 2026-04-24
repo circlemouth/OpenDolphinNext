@@ -1,0 +1,14 @@
+RWO-06J focused forbidden artifact file scan
+RUN_ID: 20260424T055036Z
+Scope:
+- docs/implementation/rwo06j-test-order-medicalmodv2-20260424T055036Z
+- artifacts/orca-remediation/closeout/20260424T055036Z/qa/phase4-safe-medicalmodv2-test-order
+- artifacts/orca-remediation/closeout/20260424T055036Z/qa/phase4-safe-medicalmodv2-test-order-live
+
+Forbidden artifact classes checked:
+- HAR, trace, video, screenshot, raw-body, raw request/response XML, raw network dump
+
+Result: pass_zero_hits
+Matching files: 0
+Credentials captured: false
+Raw artifacts captured: false

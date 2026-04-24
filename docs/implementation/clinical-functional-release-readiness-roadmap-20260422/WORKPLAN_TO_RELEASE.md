@@ -67,12 +67,13 @@ Do not commit approved local runtime secret files, ORCA credentials, S3/MinIO/ob
 13. RWO-06G: run the no-live-prepared `baseChargeOrder` / `基本診療料` class `110` Trial classification through the same safe wrapper; v1 was Trial-rejected and must not be repeated without a justified v2 candidate.
 14. RWO-06H: investigate and verify `injectionOrder` / `注射` class `310` through a separate safe payload identity; v1 was safely tested but Trial-rejected and must not be repeated without a justified v2 candidate.
 15. RWO-06I: investigate and verify `surgeryOrder` / `手術` class `500` through a separate safe payload identity; v1 was safely tested but Trial-rejected and must not be repeated without a justified v2 candidate.
-16. RWO-07: Request_Number 02/03/04 only if business scope requires it and owner approves.
-17. RWO-08: safe fullflow after browser and live endpoint prerequisites.
-18. RWO-08B: safe fullflow reachability variants, batched only through an artifact-free harness.
-19. RWO-09: security, secrets, CI, package, deployment readiness without production ORCA execution or S3/MinIO/object-storage setup.
-20. RWO-10: record production ORCA as out-of-scope / not applicable for this Trial-only roadmap.
-21. RWO-11: final Trial-backed release candidate validation and owner sign-off.
+16. RWO-06J: investigate and verify `testOrder` / `検査` class `600` through a separate safe payload identity; v1 was safely tested but Trial-rejected and must not be repeated without a justified v2 candidate.
+17. RWO-07: Request_Number 02/03/04 only if business scope requires it and owner approves.
+18. RWO-08: safe fullflow after browser and live endpoint prerequisites.
+19. RWO-08B: safe fullflow reachability variants, batched only through an artifact-free harness.
+20. RWO-09: security, secrets, CI, package, deployment readiness without production ORCA execution or S3/MinIO/object-storage setup.
+21. RWO-10: record production ORCA as out-of-scope / not applicable for this Trial-only roadmap.
+22. RWO-11: final Trial-backed release candidate validation and owner sign-off.
 
 ## Current Safe Work Queue
 

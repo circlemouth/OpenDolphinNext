@@ -55,6 +55,13 @@ export const PHASE4_ENDPOINT_WORKFLOWS = {
     requiredEntityKinds: ['surgeryOrder'],
     allowedMedicalClasses: ['500'],
   },
+  'test-order': {
+    checkpointNamespace: 'rwo06j',
+    workflowId: 'rwo06j-test-order-medicalmodv2-v1',
+    endpointEvidenceLevel: 'L3',
+    requiredEntityKinds: ['testOrder'],
+    allowedMedicalClasses: ['600'],
+  },
 };
 
 const FORBIDDEN_FLAGS = new Set([
