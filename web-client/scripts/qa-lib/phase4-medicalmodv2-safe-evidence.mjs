@@ -34,6 +34,13 @@ export const PHASE4_ENDPOINT_WORKFLOWS = {
     requiredEntityKinds: ['instractionChargeOrder'],
     allowedMedicalClasses: ['130'],
   },
+  'base-charge': {
+    checkpointNamespace: 'rwo06g',
+    workflowId: 'rwo06g-base-charge-medicalmodv2-v1',
+    endpointEvidenceLevel: 'L3',
+    requiredEntityKinds: ['baseChargeOrder'],
+    allowedMedicalClasses: ['110'],
+  },
 };
 
 const FORBIDDEN_FLAGS = new Set([

@@ -1,15 +1,15 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-06F2",
-  "blockerId": "instruction-charge-class-130-v1-business-rejected",
+  "sourceWorkOrder": "RWO-06H",
+  "blockerId": "injection-class-310-no-live-wrapper-not-created",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-24T04:48:03Z",
+  "lastUpdated": "2026-04-24T05:11:50Z",
   "latestRwo06EOrderItemReachabilityMatrix": {
     "runId": "20260424T044007Z",
     "workOrder": "RWO-06E",
@@ -1504,6 +1504,77 @@
       "recommendedNextTask": "Investigate a sanitized v2 instractionChargeOrder class 130 candidate or classify the row as pending business/Trial data decision; then continue with the next independent non-S3 order family."
     },
     "claimBoundary": "Safe wrapper/payload route only; instractionChargeOrder/130 v1 was not accepted. Do not claim all instruction-charge variants, all order items, final release readiness, production ORCA readiness, or S3/object-storage readiness.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestRwo06F2InstructionChargeV2Investigation": {
+    "runId": "20260424T050223Z",
+    "workOrder": "RWO-06F2",
+    "result": "RWO06F2_INSTRUCTION_CHARGE_CLASS_130_PENDING_BUSINESS_OR_TRIAL_DATA_DECISION",
+    "branch": "master",
+    "startHead": "7728ffe305b53190c0ffc7f23c82ff25aab2e37b",
+    "evidence": "docs/implementation/rwo06f2-rwo06g-order-family-transition-20260424T050223Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06f2-rwo06g-order-family-transition-20260424T050223Z/summary.sanitized.json",
+    "priorV1DuplicateLiveCheckpointKey": "rwo06f:medicalmodv2:rwo06f-instruction-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-8b9ec7db74971f7c567945c75bee7ad1fa3cbbaba97c2f8a689c2a1f0c9af64e",
+    "v1Repeated": false,
+    "v2CandidateCreated": false,
+    "classification": "pending_business_or_trial_data_decision",
+    "reason": "Repo-local sanitized evidence does not justify a different Trial-valid class 130 item or encounter prerequisite without raw ORCA bodies or a human billing decision.",
+    "recommendedNextTask": "Continue with RWO-06G baseChargeOrder/110; keep instractionChargeOrder/130 blocked until a business/Trial data decision provides a v2 candidate.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "latestRwo06GBaseChargeMedicalmodv2": {
+    "runId": "20260424T050223Z",
+    "workOrder": "RWO-06G",
+    "result": "RWO06G_BASE_CHARGE_110_LIVE_TRIAL_BUSINESS_REJECTED",
+    "branch": "master",
+    "startHead": "7728ffe305b53190c0ffc7f23c82ff25aab2e37b",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "status": "active",
+      "blockerId": "injection-class-310-no-live-wrapper-not-created",
+      "sourceWorkOrder": "RWO-06H"
+    },
+    "evidence": "docs/implementation/rwo06f2-rwo06g-order-family-transition-20260424T050223Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06f2-rwo06g-order-family-transition-20260424T050223Z/summary.sanitized.json",
+    "dryRunSummary": "artifacts/orca-remediation/closeout/20260424T050223Z/qa/phase4-safe-medicalmodv2-base-charge/phase4-medicalmodv2-summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "base-charge",
+      "workflowId": "rwo06g-base-charge-medicalmodv2-v1",
+      "entity": "baseChargeOrder",
+      "claim007Class": "110",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v1.json",
+      "sha256": "d2db1ff2ad68174bcb236498786c87a8fffa0879917712c7ca639aa2732b9d93",
+      "duplicateLiveCheckpointKey": "rwo06g:medicalmodv2:rwo06g-base-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-d2db1ff2ad68174bcb236498786c87a8fffa0879917712c7ca639aa2732b9d93"
+    },
+    "tests": {
+      "phase4Medicalmodv2SafeEvidence": {
+        "result": "pass",
+        "tests": 14
+      },
+      "wrapperDryRun": "pass",
+      "jsonValidation": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "attemptCount": 1,
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "target": "00001",
+      "requestNumber": "01",
+      "classCode": "01",
+      "readiness": {
+        "healthHttpStatus": 200,
+        "readinessHttpStatus": 200,
+        "rawBodiesStored": false
+      },
+      "businessSuccessClassification": "businessRejected",
+      "businessAccepted": false,
+      "httpStatus": 200,
+      "apiResultCategory": "nonzero_business_rejection"
+    },
+    "claimBoundary": "baseChargeOrder/110 v1 was no-live verified and executed once, but live Trial classified it as businessRejected; no base-charge acceptance, all base-charge variants, all order items, final release readiness, production ORCA readiness, or S3/object-storage readiness is claimed.",
+    "recommendedNextTask": "Do not repeat the RWO-06G v1 checkpoint. Continue with RWO-06H injectionOrder/310 only through a separate payload identity and safe wrapper verification.",
     "credentialsCaptured": false,
     "rawArtifactsCaptured": false
   }

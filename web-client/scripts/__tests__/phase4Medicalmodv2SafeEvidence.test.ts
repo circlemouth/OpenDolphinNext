@@ -25,6 +25,8 @@ const TREATMENT_PAYLOAD = payloadPath('medicalmodv2_treatment_generic_trial_reac
 const TREATMENT_SHA256 = '89885a031fa98c95a5fc4758dbac55f4375167178edb12fc9a78e9817a16fe7c';
 const INSTRUCTION_CHARGE_PAYLOAD = payloadPath('medicalmodv2_instruction_charge_trial_reachability_v1.json');
 const INSTRUCTION_CHARGE_SHA256 = '8b9ec7db74971f7c567945c75bee7ad1fa3cbbaba97c2f8a689c2a1f0c9af64e';
+const BASE_CHARGE_PAYLOAD = payloadPath('medicalmodv2_base_charge_trial_reachability_v1.json');
+const BASE_CHARGE_SHA256 = 'd2db1ff2ad68174bcb236498786c87a8fffa0879917712c7ca639aa2732b9d93';
 
 describe('phase4 medicalmodv2 safe evidence', () => {
   it('accepts only the fixed Phase 4 medicalmodv2 target and sanitized mode', () => {
@@ -154,6 +156,41 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(result.evidence.payload.summary.medicalInformation.medicalClasses).toEqual(['130']);
     expect(result.evidence.duplicateLiveCheckpoint.key).toBe(
       `rwo06f:medicalmodv2:rwo06f-instruction-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-${INSTRUCTION_CHARGE_SHA256}`,
+    );
+  });
+
+  it('accepts the representative base-charge endpoint payload identity', () => {
+    const result = validatePhase4SafeCommand({
+      argv: [
+        '--dry-run',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--phase4-only',
+        '--workflow',
+        'base-charge',
+        '--payload',
+        BASE_CHARGE_PAYLOAD,
+        '--payload-sha256',
+        BASE_CHARGE_SHA256,
+      ],
+      env: {},
+      cwd: '/repo/web-client',
+      now: new Date('2026-04-24T05:02:23Z'),
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.evidence.endpointWorkflow).toEqual(
+      expect.objectContaining({
+        workflow: 'base-charge',
+        workflowId: 'rwo06g-base-charge-medicalmodv2-v1',
+        requiredEntityKindsPresent: true,
+        allowedMedicalClassesOnly: true,
+      }),
+    );
+    expect(result.evidence.payload.summary.medicalInformation.entityKinds).toEqual(['baseChargeOrder']);
+    expect(result.evidence.payload.summary.medicalInformation.medicalClasses).toEqual(['110']);
+    expect(result.evidence.duplicateLiveCheckpoint.key).toBe(
+      `rwo06g:medicalmodv2:rwo06g-base-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-${BASE_CHARGE_SHA256}`,
     );
   });
 

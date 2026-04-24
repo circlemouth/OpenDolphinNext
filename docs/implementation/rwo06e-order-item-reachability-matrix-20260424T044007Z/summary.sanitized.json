@@ -44,7 +44,7 @@
         "148",
         "149"
       ],
-      "status": "rwo06f_class_130_v1_live_trial_business_rejected_remaining_variants_no_live_verified"
+      "status": "rwo06f_class_130_v1_live_trial_business_rejected_rwo06f2_pending_business_or_trial_data_decision_remaining_variants_no_live_verified"
     },
     {
       "entity": "baseChargeOrder",
@@ -55,7 +55,7 @@
         "120",
         "124"
       ],
-      "status": "no_live_verified"
+      "status": "rwo06g_class_110_v1_live_trial_business_rejected_remaining_variants_no_live_verified"
     },
     {
       "entity": "injectionOrder",
@@ -78,8 +78,8 @@
       "status": "no_live_verified"
     }
   ],
-  "claimBoundary": "Matrix plus RWO-06F update; all-order-item Trial success is not claimed. Accepted live evidence remains limited to medOrder/212 and treatmentOrder/400 endpoint-specific payload identities. RWO-06F added a safe instractionChargeOrder/130 v1 route, but live Trial classified it as businessRejected. Clinical documents and document fee otherOrder rows are not ORCA mutation evidence.",
-  "recommendedNextTask": "Investigate a sanitized v2 instractionChargeOrder class 130 candidate or classify the row as pending business/Trial data decision; keep document fee as fail-closed unless a business mapping is approved.",
+  "claimBoundary": "Matrix plus RWO-06F/RWO-06F2/RWO-06G updates; all-order-item Trial success is not claimed. Accepted live evidence remains limited to medOrder/212 and treatmentOrder/400 endpoint-specific payload identities. RWO-06F added a safe instractionChargeOrder/130 v1 route, but live Trial classified it as businessRejected; RWO-06F2 keeps class 130 pending business/Trial data decision. RWO-06G added a safe baseChargeOrder/110 v1 route, but live Trial classified it as businessRejected. Clinical documents and document fee otherOrder rows are not ORCA mutation evidence.",
+  "recommendedNextTask": "Do not repeat RWO-06F or RWO-06G rejected v1 identities. Continue with injectionOrder/310 only through a separate safe payload identity; keep document fee fail-closed unless a business mapping is approved.",
   "credentialsCaptured": false,
   "rawArtifactsCaptured": false
 }

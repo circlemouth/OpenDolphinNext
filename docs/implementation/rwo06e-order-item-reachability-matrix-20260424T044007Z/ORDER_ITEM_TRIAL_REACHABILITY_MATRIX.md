@@ -46,8 +46,8 @@ The exhaustive unit for this roadmap is the current app's clinical surface plus 
 | `surgeryOrder` | 手術 | `500`, `501`, `502`, `510` | sendable | `no_live_verified` | Define surgery representative payload identities and endpoint-specific business-success criteria before Trial execution. |
 | `testOrder` / `laboTest` | 検査 | `600`, `601`, `602`, `603`, `610` | sendable | `no_live_verified` | Define specimen/lab test payload identities. Keep local-only instructions/memos out of ORCA evidence. |
 | `radiologyOrder` | 画像診断 | `700`, `701`, `702`, `703`, `704`, `731`, `732` | sendable | `no_live_verified` | Define radiology payload identities, including body-part handling only where allowed; no raw body evidence. |
-| `baseChargeOrder` | 基本料 | `110`, `114`, `120`, `124` | sendable | `no_live_verified` | Define base-charge payload identities and validate class-name canonicalization before Trial execution. |
-| `instractionChargeOrder` | 指導料 | `130`, `132`, `133`, `140`, `141`, `142`, `143`, `148`, `149` | sendable | RWO-06F created a safe `130` v1 payload identity and no-live route, but the single live Trial attempt was `businessRejected`; remaining class codes are `no_live_verified` | Do not repeat v1. Identify a sanitized v2 `130` candidate or classify as pending business/Trial data decision; then continue to remaining class families only with separate payload identities. |
+| `baseChargeOrder` | 基本料 | `110`, `114`, `120`, `124` | sendable | RWO-06G created a safe `110` v1 payload identity and no-live route, but the single live Trial attempt was `businessRejected`; remaining class codes are `no_live_verified` | Do not repeat v1. Identify a sanitized v2 `110` candidate or classify as pending business/Trial data decision; continue to injection only with a separate payload identity. |
+| `instractionChargeOrder` | 指導料 | `130`, `132`, `133`, `140`, `141`, `142`, `143`, `148`, `149` | sendable | RWO-06F created a safe `130` v1 payload identity and no-live route, but the single live Trial attempt was `businessRejected`; RWO-06F2 classified v2 as pending business/Trial data decision; remaining class codes are `no_live_verified` | Do not repeat v1. Keep class `130` blocked until a justified v2 candidate exists; then continue to remaining class families only with separate payload identities. |
 | `otherOrder` | その他 | none | local-only, not sendable | `not_applicable_fail_closed` | Keep local-only and fail closed for ORCA Trial claims. |
 | `physiologyOrder` | 生理検査 | `600` | import-only / blocked send carrier | `not_applicable_fail_closed` | Keep blocked until an official ORCA carrier and safe wrapper are explicitly approved. |
 | `bacteriaOrder` | 細菌検査 | `600` | local-only / blocked send carrier | `not_applicable_fail_closed` | Keep local-only and fail closed for ORCA Trial claims. |
@@ -55,9 +55,9 @@ The exhaustive unit for this roadmap is the current app's clinical surface plus 
 ## Priority Queue
 
 1. Confirm document surfaces remain local/browser/fullflow gates and not ORCA order claims; if `文書料` billing is required, first define a business mapping out of `otherOrder`.
-2. `instractionChargeOrder` representative `130` 指導料 / 医学管理等 v2 investigation after RWO-06F v1 `businessRejected`.
-3. `baseChargeOrder` representative `110` 基本診療料.
-4. `injectionOrder` representative `310` 注射.
+2. `injectionOrder` representative `310` 注射.
+3. `baseChargeOrder` representative `110` 基本診療料 only after a business/Trial data decision identifies a justified v2 candidate.
+4. `instractionChargeOrder` representative `130` 指導料 / 医学管理等 only after a business/Trial data decision identifies a justified v2 candidate.
 5. `surgeryOrder` representative `500` 手術.
 6. `testOrder` representative `600` 検査.
 7. `radiologyOrder` representative `700` 画像診断.

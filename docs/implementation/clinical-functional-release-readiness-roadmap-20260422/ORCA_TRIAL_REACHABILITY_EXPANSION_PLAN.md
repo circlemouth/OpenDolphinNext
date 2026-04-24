@@ -142,7 +142,21 @@ Checkpoint:
 
 - RUN_ID `20260424T044803Z` added the `instruction-charge` workflow, class `130` payload identity, no-live tests, and dry-run evidence.
 - The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
-- Do not repeat the v1 checkpoint. Continue with sanitized v2 candidate investigation or classify the row as pending business/Trial data decision.
+- RUN_ID `20260424T050223Z` classified class `130` as pending business/Trial data decision because repo-local sanitized evidence does not justify a v2 candidate without raw ORCA bodies or a human billing decision.
+- Do not repeat the v1 checkpoint. Keep `instractionChargeOrder/130` blocked until a justified v2 business candidate exists.
+
+### RWO-06G: Base Charge Trial Reachability
+
+Scope:
+
+- Verify the next independent order family: `baseChargeOrder` / `基本診療料` / Claim007 class `110`.
+- Proceed to live Trial only after no-live contract tests, sanitizer/parser tests, wrapper dry-run, readiness 2xx, and duplicate-live checkpointing pass.
+
+Checkpoint:
+
+- RUN_ID `20260424T050223Z` added the `base-charge` workflow, payload `medicalmodv2_base_charge_trial_reachability_v1.json`, SHA-256 `d2db1ff2ad68174bcb236498786c87a8fffa0879917712c7ca639aa2732b9d93`, and a passing wrapper dry-run.
+- The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
+- Do not repeat the v1 checkpoint. Continue with the next independent order family, `injectionOrder/310`, unless a justified base-charge v2 candidate is established.
 
 ## Claim Boundary
 

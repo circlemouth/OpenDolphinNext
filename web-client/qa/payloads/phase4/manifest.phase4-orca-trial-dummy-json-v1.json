@@ -80,6 +80,14 @@
       "status": "rwo06f_endpoint_specific_candidate_live_business_rejected_do_not_repeat",
       "workflow": "instruction-charge"
     },
+    "medicalmodv2_base_charge_trial_reachability_v1.json": {
+      "bytes": 707,
+      "duplicateLiveCheckpointKey": "rwo06g:medicalmodv2:rwo06g-base-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-d2db1ff2ad68174bcb236498786c87a8fffa0879917712c7ca639aa2732b9d93",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v1.json",
+      "sha256": "d2db1ff2ad68174bcb236498786c87a8fffa0879917712c7ca639aa2732b9d93",
+      "status": "rwo06g_endpoint_specific_candidate_live_business_rejected_do_not_repeat",
+      "workflow": "base-charge"
+    },
     "medicalmodv2_phase4_dummy_owner_aligned_v1.json": {
       "bytes": 639,
       "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_owner_aligned_v1.json",
@@ -100,6 +108,7 @@
     "diseasev3 and subjectivesv2 JSON files are native intent payloads for future safe wrappers; do not execute them with the current medicalmodv2 wrapper.",
     "RWO-06D prescription and treatment-generic payloads are endpoint-specific medicalmodv2 candidates; use --workflow plus the matching duplicateLiveCheckpointKey before any live mutation.",
     "RWO-06F instruction-charge is the endpoint-specific instractionChargeOrder class 130 candidate; use --workflow instruction-charge and do not treat one accepted class as all guidance-fee variants.",
+    "RWO-06G base-charge is the endpoint-specific baseChargeOrder class 110 candidate; the v1 live Trial attempt was businessRejected, so do not repeat it or treat it as base-charge acceptance.",
     "Do not store raw ORCA request/response, HAR, trace, screenshots, video, raw network, credentials, cookies, tokens, session IDs, or CSRF values."
   ],
   "lineEndings": "LF",
