@@ -1,0 +1,7 @@
+{
+  "runId": "20260424T040222Z",
+  "status": "historical_reference_not_rerun",
+  "sourceEvidenceRunId": "20260414T010624Z",
+  "claimBoundary": "Medical-information direct probe was not rerun for this packet-only closeout; this file preserves the packet subset contract without adding live evidence.",
+  "rawSensitiveFieldsExcluded": true
+}
