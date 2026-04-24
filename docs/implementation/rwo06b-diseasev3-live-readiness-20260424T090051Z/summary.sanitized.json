@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260424T090051Z",
+  "workOrder": "RWO-06B-next3",
+  "result": "RWO06B_DISEASEV3_LIVE_READINESS_IDENTITY_PREPARED_NO_LIVE",
+  "branch": "master",
+  "startHead": "42f8cff90",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "diseasev3-live-payload-identity-and-approval-not-created",
+    "completedByThisRun": true
+  },
+  "nextActiveHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "status": "active",
+    "blockerId": "subjectivesv2-live-trial-checkpoint-readiness-not-run"
+  },
+  "payloadIdentity": {
+    "workflow": "diseasev3",
+    "workflowId": "rwo06b-diseasev3-live-readiness-v1",
+    "endpoint": "/orca22/diseasev3",
+    "officialServerRoute": "/api/orca/official/chart-support/disease-mod-v3",
+    "target": "00001",
+    "operation": "create",
+    "requestNumber": "01",
+    "classCode": "01",
+    "payload": "web-client/qa/payloads/phase4/diseasev3_phase4_dummy_native_intent_v1.json",
+    "sha256": "da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+    "duplicateLiveCheckpointKey": "rwo06b:diseasev3:rwo06b-diseasev3-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df"
+  },
+  "businessSuccessCriteria": {
+    "transport2xxRequired": true,
+    "apiResultZeroRequired": true,
+    "completionEvidenceRequired": true,
+    "http200AloneIsBusinessSuccess": false,
+    "apiResultZeroAloneIsBusinessSuccess": false,
+    "updateDeleteAuthorized": false
+  },
+  "tests": {
+    "nodeCheck": "pass",
+    "phase4SoapDiseaseSafeEvidence": {
+      "result": "pass",
+      "tests": 9
+    },
+    "diseasev3WrapperDryRun": "pass_notVerified_no_live",
+    "secretRawArtifactScan": "pass_zero_hits",
+    "gitDiffCheck": "pass"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "endpoint": "/api/orca/official/chart-support/disease-mod-v3",
+    "target": "00001",
+    "requestClass": "diseasev3",
+    "businessSuccessClassification": "not_applicable_no_live_identity_only"
+  },
+  "claimBoundary": "No diseasev3 Trial reachability, SOAP subjectivesv2 Trial reachability, disease update/delete, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
+  "recommendedNextTask": "Run the explicitly scoped subjectivesv2 live Trial checkpoint only after readiness preflight confirms the exact identity and sanitized evidence mode.",
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false
+}

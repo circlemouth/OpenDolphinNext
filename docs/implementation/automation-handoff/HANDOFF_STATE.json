@@ -1,15 +1,65 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-06B-next3",
-  "blockerId": "diseasev3-live-payload-identity-and-approval-not-created",
+  "sourceWorkOrder": "RWO-06D-soap-next",
+  "blockerId": "subjectivesv2-live-trial-checkpoint-readiness-not-run",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-24T08:05:30Z",
+  "lastUpdated": "2026-04-24T09:05:30Z",
+  "latestRwo06BDiseasev3LiveReadinessIdentity": {
+    "runId": "20260424T090051Z",
+    "workOrder": "RWO-06B-next3",
+    "result": "RWO06B_DISEASEV3_LIVE_READINESS_IDENTITY_PREPARED_NO_LIVE",
+    "branch": "master",
+    "startHead": "42f8cff90",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "blockerId": "diseasev3-live-payload-identity-and-approval-not-created",
+      "completedByThisRun": true
+    },
+    "nextActiveHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "status": "active",
+      "blockerId": "subjectivesv2-live-trial-checkpoint-readiness-not-run"
+    },
+    "evidence": "docs/implementation/rwo06b-diseasev3-live-readiness-20260424T090051Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06b-diseasev3-live-readiness-20260424T090051Z/summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "diseasev3",
+      "workflowId": "rwo06b-diseasev3-live-readiness-v1",
+      "endpoint": "/orca22/diseasev3",
+      "officialServerRoute": "/api/orca/official/chart-support/disease-mod-v3",
+      "target": "00001",
+      "operation": "create",
+      "requestNumber": "01",
+      "classCode": "01",
+      "payload": "web-client/qa/payloads/phase4/diseasev3_phase4_dummy_native_intent_v1.json",
+      "sha256": "da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+      "duplicateLiveCheckpointKey": "rwo06b:diseasev3:rwo06b-diseasev3-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df"
+    },
+    "tests": {
+      "nodeCheck": "pass",
+      "phase4SoapDiseaseSafeEvidence": {
+        "result": "pass",
+        "tests": 9
+      },
+      "wrapperDryRun": "pass_diseasev3_notVerified_no_live",
+      "secretRawArtifactScan": "pass_zero_hits"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_identity_only"
+    },
+    "claimBoundary": "No diseasev3 Trial reachability, SOAP subjectivesv2 Trial reachability, disease update/delete, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
+    "recommendedNextTask": "Run the explicitly scoped subjectivesv2 live Trial checkpoint only after no-live preflight, duplicate checkpoint check, runtime readiness, and sanitized evidence mode are confirmed.",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
   "latestRwo06BSubjectivesv2LiveReadinessIdentity": {
     "runId": "20260424T080121Z",
     "workOrder": "RWO-06B-next2",

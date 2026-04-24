@@ -25,8 +25,11 @@
   "files": {
     "diseasev3_phase4_dummy_native_intent_v1.json": {
       "bytes": 715,
+      "duplicateLiveCheckpointKey": "rwo06b:diseasev3:rwo06b-diseasev3-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
       "repo_path": "web-client/qa/payloads/phase4/diseasev3_phase4_dummy_native_intent_v1.json",
-      "sha256": "da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df"
+      "sha256": "da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+      "status": "rwo06b_diseasev3_live_readiness_identity_prepared_no_live_only",
+      "workflow": "diseasev3"
     },
     "medicalmodv2_phase4_dummy_current_wrapper_v1.json": {
       "bytes": 694,

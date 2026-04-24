@@ -240,6 +240,6 @@ RUN_ID `20260424T044007Z` created the exhaustive static matrix:
 RUN_ID `20260424T030710Z` completed the first static inventory:
 
 - Prescription and representative treatment/generic order send paths map to the existing official `medicalmodv2` route, but endpoint-specific payload identities and duplicate-live checkpoints are still required before new RWO-06D live claims.
-- SOAP remains local-only through `/api/local/charts/subjectives`; `subjectivesv2` is blocked pending a safe wrapper/parser/success criteria and business-scope record.
-- Disease CRUD remains local-only through `/api/local/diagnoses`; disease master candidate read is not a substitute for `diseasev3` CRUD reachability.
+- SOAP remains local-only through `/api/local/charts/subjectives`; RUN_ID `20260424T080121Z` prepared the no-live `subjectivesv2` live-readiness identity, but live SOAP Trial reachability is still unverified until a future exact-checkpoint prompt runs and parses a successful live result.
+- Disease CRUD remains local-only through `/api/local/diagnoses`; disease master candidate read is not a substitute for `diseasev3` CRUD reachability. RUN_ID `20260424T090051Z` prepared the no-live `diseasev3` create-only live-readiness identity, but live disease Trial reachability and update/delete readiness are still unverified.
 - Request_Number `02` / `03` / `04` remain RWO-07 only, and fullflow remains blocked behind artifact-free harness hardening.

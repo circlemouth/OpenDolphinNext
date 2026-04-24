@@ -114,6 +114,14 @@ describe('phase4 SOAP/disease no-live safe evidence', () => {
     ).toBe(
       `rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-${SUBJECTIVES_SHA256}`,
     );
+    expect(
+      buildSoapDiseaseLiveReadinessCheckpointKey({
+        workflow: 'diseasev3',
+        payloadSha256: DISEASE_SHA256,
+      }),
+    ).toBe(
+      `rwo06b:diseasev3:rwo06b-diseasev3-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-${DISEASE_SHA256}`,
+    );
   });
 
   it('rejects live, fullflow, and raw artifact flags before any action', () => {
