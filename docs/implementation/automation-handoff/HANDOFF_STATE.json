@@ -30,7 +30,70 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T11:13:31Z",
+  "lastUpdated": "2026-04-25T12:35:00Z",
+  "latestRwo08BSelectorRuntimePreflight": {
+    "runId": "20260425T114330Z",
+    "workOrder": "RWO-08B",
+    "result": "RWO08B_SELECTOR_RUNTIME_PREFLIGHT_ACCEPTED_FULLFLOW_BLOCKED_CANONICAL_HANDOFF",
+    "branch": "master",
+    "startHead": "98e55f612",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "statusAfterRun": "completed_with_fullflow_blocker_recorded",
+      "nextPromptBlockerId": "fullflow-canonical-charts-handoff-timeout-after-accept"
+    },
+    "evidence": "docs/implementation/rwo08b-selector-runtime-preflight-20260425T114330Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-selector-runtime-preflight-20260425T114330Z/summary.sanitized.json",
+    "runtime": {
+      "profile": "orca-trial-no-object-storage",
+      "serverHealthHttpStatus": 200,
+      "serverReadinessHttpStatus": 200,
+      "reverseProxyHealthHttpStatus": "000",
+      "reverseProxyReadinessHttpStatus": "000",
+      "runtimeReadySmoke": "pass_json_only"
+    },
+    "readOnlyPreflight": {
+      "executed": true,
+      "candidateId": "00001",
+      "inputIdentityHash": "cda1fa5007dcafc86b6e46696c8624d3dd0f393f652ae5ce60a158fef1fb5140",
+      "selectorReadiness": "accepted",
+      "selectorOptionCounts": {
+        "department": 6,
+        "physician": 6,
+        "paymentMode": 3,
+        "visitKind": 4,
+        "medicalInformation": 9
+      },
+      "mutationRouteCalled": false,
+      "targetMutationRequestCount": 0,
+      "businessSuccessClassification": "readonly_selector_preflight_accepted_no_mutation"
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "result": "blocked",
+      "blockerClassification": "test-data-blocker",
+      "blockerReason": "canonical_charts_handoff_timeout_after_accept",
+      "orderSendReached": false,
+      "requestXmlCreated": false,
+      "businessSuccessClassification": "blocked_before_charts_handoff",
+      "businessAccepted": false
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "fullflow_via_web_client",
+      "target": "current_trial_direct_acceptance_selector_options",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "readonly_preflight_accepted_fullflow_blocked_before_order_send",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Exact read-only selector preflight now passes for Trial candidate 00001 with server-authoritative selector options. Diagnostic fullflow remains blocked before canonical Charts handoff after accept. No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Investigate canonical Charts handoff timeout after accepted direct candidate 00001 using no-live/browser diagnostics before any further diagnostic fullflow retry.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "latestRwo08BSelectorOptionsContract": {
     "runId": "20260425T111331Z",
     "workOrder": "RWO-08B",
