@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B/RWO-08/RWO-09/RWO-11",
-  "blockerId": "fullflow-charts-reaching-target-official-visit-identifiers-missing",
+  "blockerId": "fullflow-post-visit-date-repair-current-target-before-charts-handoff",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T07:30:23Z",
+  "lastUpdated": "2026-04-25T08:00:24Z",
   "latestRwo08BCurrentTargetPrecondition": {
     "runId": "20260425T073023Z",
     "workOrder": "RWO-08B",
@@ -3640,5 +3640,69 @@
       "reviewerPacketContractTests": "pass_7_tests",
       "webGuard": "pass"
     }
+  },
+  "latestRwo08BChartsVisitDateRepair": {
+    "runId": "20260425T080024Z",
+    "workOrder": "RWO-08B",
+    "result": "RWO08B_CHARTS_VISIT_DATE_REPAIR_NO_LIVE_TESTS_PASS_DIAGNOSTIC_TARGET_BLOCKED_BEFORE_CHARTS_HANDOFF",
+    "branch": "master",
+    "startHead": "9c2d886d5",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "statusAfterRun": "superseded_by_current_target_precondition_prompt",
+      "nextPromptBlockerId": "fullflow-post-visit-date-repair-current-target-before-charts-handoff"
+    },
+    "evidence": "docs/implementation/rwo08b-charts-visit-date-repair-20260425T080024Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-charts-visit-date-repair-20260425T080024Z/summary.sanitized.json",
+    "codeChange": {
+      "files": [
+        "web-client/src/features/charts/orcaQueueSelection.ts",
+        "web-client/src/features/charts/pages/ChartsPage.tsx",
+        "web-client/src/features/charts/__tests__/orcaQueueSelection.test.ts"
+      ],
+      "summary": "Charts appointment/visit refetch now uses handoff visitDate before falling back to page-load date, preserving server-fetched official visit rows as the only source of official identifiers."
+    },
+    "tests": {
+      "focusedOrcaQueueSelectionTests": "pass_10_tests",
+      "webGuard": "pass",
+      "typecheck": "pass",
+      "runtimeReadySmoke": "pass_json_only"
+    },
+    "readOnlyPreflight": {
+      "executed": true,
+      "mutationRouteCalled": false,
+      "result": "rejected_selector_option_missing_no_mutation",
+      "acceptedCandidateCount": 2,
+      "localSelectableCandidateCount": 2,
+      "artifactRoot": "artifacts/diagnostic-fullflow/20260425T080024Z/readonly-preflight"
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "rawArtifactsLocalOnly": true,
+      "rawArtifactsCommittedOrPackaged": false,
+      "classification": "blocked_before_charts_handoff",
+      "blockerClassification": "test-data-blocker",
+      "blockerReason": "fatal_before_send",
+      "medicalInformationGate": "pass",
+      "chartsHandoff": "error_before_charts_navigation",
+      "selectedVisitRowPresent": false,
+      "visitRowReadiness": "unknown",
+      "requestXmlCreated": false
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "endpoint": "fullflow_via_web_client",
+      "target": "trial_local_selectable_candidate_variant",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "blocked_before_charts_handoff",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Charts handoff visit-date refetch defect was repaired and focused no-live/runtime checks passed, but the post-fix diagnostic Trial target stopped before Charts handoff. No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Find or establish a current Trial diagnostic precondition that reaches Charts after the visit-date repair, then verify selected visit row official identifier readiness.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
   }
 }

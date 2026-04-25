@@ -81,6 +81,7 @@ import {
 } from '../encounterContext';
 import { buildCanonicalOrcaEncounterContext } from '../orcaEncounterContext';
 import {
+  resolveChartsAppointmentQueryDate,
   resolveClaimQueueEntryForEncounter,
   resolveOrcaQueueEntryForEncounter,
   resolveReceptionEntryForEncounter,
@@ -1795,12 +1796,16 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     },
   });
 
-  const appointmentQueryKey = ['charts-appointments', today, chartsMasterSourcePolicy];
+  const appointmentQueryDate = useMemo(
+    () => resolveChartsAppointmentQueryDate(encounterContext, today),
+    [encounterContext, today],
+  );
+  const appointmentQueryKey = ['charts-appointments', appointmentQueryDate, chartsMasterSourcePolicy];
   const appointmentQuery = useInfiniteQuery({
     queryKey: appointmentQueryKey,
     queryFn: ({ pageParam = 1, ...context }) =>
       fetchAppointmentOutpatients(
-        { date: today, page: pageParam, size: 50 },
+        { date: appointmentQueryDate, page: pageParam, size: 50 },
         context,
         { preferredSourceOverride, screen: 'charts' },
       ),
@@ -3107,9 +3112,9 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         isLoading: appointmentQuery.isLoading,
         isError: appointmentQuery.isError,
         error: appointmentQuery.error,
-        date: today,
+        date: appointmentQueryDate,
       }),
-    [appointmentQuery.error, appointmentQuery.isError, appointmentQuery.isLoading, patientEntries, today],
+    [appointmentQuery.error, appointmentQuery.isError, appointmentQuery.isLoading, appointmentQueryDate, patientEntries],
   );
   const switchLocked = lockState.locked || tabLock.isReadOnly;
   const switchLockedReason = lockState.reason ?? (tabLock.isReadOnly ? tabLock.readOnlyReason : undefined);

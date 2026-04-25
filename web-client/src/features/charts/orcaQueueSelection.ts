@@ -48,6 +48,14 @@ export const resolveOrcaQueueEntryForEncounter = (
   return patientMatches.length === 1 ? patientMatches[0] : undefined;
 };
 
+export const resolveChartsAppointmentQueryDate = (
+  encounterContext: OutpatientEncounterContext | null | undefined,
+  fallbackDate: string,
+): string => {
+  const visitDate = normalizeId(encounterContext?.visitDate);
+  return visitDate ?? fallbackDate;
+};
+
 const hasOfficialVisitIdentifiers = (entry: ReceptionEntry): boolean =>
   Boolean(
     normalizeId(entry.insuranceCombinationNumber) &&

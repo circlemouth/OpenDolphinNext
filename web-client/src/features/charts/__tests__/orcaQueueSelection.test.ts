@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { OutpatientEncounterContext } from '../encounterContext';
 import {
+  resolveChartsAppointmentQueryDate,
   resolveClaimQueueEntryForEncounter,
   resolveOrcaQueueEntryForEncounter,
   resolveReceptionEntryForEncounter,
@@ -72,6 +73,31 @@ describe('orcaQueueSelection', () => {
     );
 
     expect(resolved).toEqual({ patientId: 'P-200', status: 'delivered' });
+  });
+
+  it('Charts 受付一覧の取得日は handoff visitDate を優先する', () => {
+    expect(
+      resolveChartsAppointmentQueryDate(
+        {
+          patientId: 'P-250',
+          visitDate: '2026-04-24',
+          encounterKey: 'F001:E250',
+        },
+        '2026-04-25',
+      ),
+    ).toBe('2026-04-24');
+  });
+
+  it('Charts 受付一覧の取得日は handoff visitDate がない場合だけ当日へ戻す', () => {
+    expect(
+      resolveChartsAppointmentQueryDate(
+        {
+          patientId: 'P-251',
+          encounterKey: 'F001:E251',
+        },
+        '2026-04-25',
+      ),
+    ).toBe('2026-04-25');
   });
 
   it('reception entry は handoff key がずれても patientId/visitDate の一意な official visit row で補完する', () => {
