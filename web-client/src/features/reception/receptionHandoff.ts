@@ -104,27 +104,30 @@ const entryMatchesPendingHandoff = (entry: ReceptionEntry, pending: PendingRecep
   if (pending.receptionId) {
     return normalizeOptionalString(entry.receptionId) === pending.receptionId;
   }
-  if (!pending.appointmentId) {
-    return false;
-  }
-  if (normalizeOptionalString(entry.appointmentId) !== pending.appointmentId) {
-    return false;
+  if (pending.appointmentId) {
+    if (normalizeOptionalString(entry.appointmentId) !== pending.appointmentId) {
+      return false;
+    }
+  } else {
+    if (!pending.visitDate || !pending.departmentCode || !pending.physicianCode) {
+      return false;
+    }
   }
   if (pending.visitDate) {
     const entryVisitDate = normalizeVisitDate(entry.visitDate);
-    if (entryVisitDate && entryVisitDate !== pending.visitDate) {
+    if (!entryVisitDate || entryVisitDate !== pending.visitDate) {
       return false;
     }
   }
   if (pending.departmentCode) {
     const entryDepartmentCode = normalizeOptionalString(entry.departmentCode);
-    if (entryDepartmentCode && entryDepartmentCode !== pending.departmentCode) {
+    if (!entryDepartmentCode || entryDepartmentCode !== pending.departmentCode) {
       return false;
     }
   }
   if (pending.physicianCode) {
     const entryPhysicianCode = normalizeOptionalString(entry.physicianCode);
-    if (entryPhysicianCode && entryPhysicianCode !== pending.physicianCode) {
+    if (!entryPhysicianCode || entryPhysicianCode !== pending.physicianCode) {
       return false;
     }
   }

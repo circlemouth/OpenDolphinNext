@@ -1,8 +1,8 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-08B/RWO-08/RWO-09/RWO-11",
-  "blockerId": "selector-options-runtime-preflight-pending",
+  "sourceWorkOrder": "RWO-08B/RWO-08",
+  "blockerId": "fullflow-current-target-no-active-entry-after-accept",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T12:35:00Z",
+  "lastUpdated": "2026-04-25T13:20:00Z",
   "latestRwo08BSelectorRuntimePreflight": {
     "runId": "20260425T114330Z",
     "workOrder": "RWO-08B",
@@ -4069,6 +4069,67 @@
     },
     "claimBoundary": "Diagnostic fullflow now fails closed instead of injecting selector options. Current exact selector readiness remains blocked because department/physician options are absent from runtime selector state. No L4 success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
     "recommendedNextTask": "Add or identify an authoritative runtime source for direct-acceptance department/physician options, then rerun exact read-only preflight before any diagnostic fullflow retry.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo08BCanonicalHandoffInvestigation": {
+    "runId": "20260425T124401Z",
+    "workOrder": "RWO-08B",
+    "result": "RWO08B_CANONICAL_HANDOFF_FIX_VERIFIED_CURRENT_TARGET_BLOCKED_NO_ACTIVE_ENTRY",
+    "branch": "master",
+    "startHead": "5afe5936a",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "statusAfterRun": "completed_with_successor_blocker_recorded",
+      "completedBlockerId": "fullflow-canonical-charts-handoff-timeout-after-accept",
+      "nextPromptBlockerId": "fullflow-current-target-no-active-entry-after-accept"
+    },
+    "evidence": "docs/implementation/rwo08b-canonical-handoff-investigation-20260425T124401Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-canonical-handoff-investigation-20260425T124401Z/summary.sanitized.json",
+    "repoLocalFix": {
+      "pendingHandoffUniqueRefreshedEntryResolution": true,
+      "patientOnlyResolutionAllowed": false,
+      "ambiguousResolutionAllowed": false,
+      "clientCanonicalKeySynthesisAllowed": false
+    },
+    "runtime": {
+      "profile": "orca-trial-no-object-storage",
+      "serverHealthHttpStatus": 200,
+      "serverReadinessHttpStatus": 200,
+      "webHttpStatus": 200,
+      "runtimeReadySmoke": "pass_json_only"
+    },
+    "readOnlySelectorPreflight": {
+      "executed": true,
+      "candidateId": "00001",
+      "selectorReadiness": "accepted",
+      "targetMutationRequestCount": 0,
+      "businessSuccessClassification": "readonly_selector_preflight_accepted_no_mutation"
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "result": "blocked",
+      "blockerClassification": "test-data-blocker",
+      "blockerReason": "current_target_no_active_entry_after_accept",
+      "canonicalHandoffStatus": "error",
+      "orderSendReached": false,
+      "requestXmlCreated": false,
+      "businessSuccessClassification": "blocked_before_charts_handoff_current_target_no_active_entry",
+      "businessAccepted": false
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "fullflow_via_web_client",
+      "target": "current_trial_direct_acceptance_00001",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "readonly_preflight_accepted_fullflow_blocked_before_charts_handoff",
+      "businessAccepted": false
+    },
+    "claimBoundary": "No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Diagnose why current Trial candidate 00001 has no active entry/canonical handoff after accept, or select a changed current Trial precondition with exactly one active refreshed canonical entry.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": true,
     "diagnosticArtifactsLocalOnlyUntracked": true,

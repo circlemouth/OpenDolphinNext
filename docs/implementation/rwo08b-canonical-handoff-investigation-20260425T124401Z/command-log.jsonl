@@ -1,0 +1,8 @@
+{"runId":"20260425T124401Z","command":"git branch/status/worktree inspection","result":"pass","sanitized":true}
+{"runId":"20260425T124401Z","command":"npm run --prefix web-client test -- receptionHandoff","result":"pass_8_tests","sanitized":true}
+{"runId":"20260425T124401Z","command":"npm run --prefix web-client verify:web-guard","result":"pass","sanitized":true}
+{"runId":"20260425T124401Z","command":"npm run --prefix web-client typecheck","result":"pass","sanitized":true}
+{"runId":"20260425T124401Z","command":"status-only health/readiness/web checks","result":"200_200_200","sanitized":true}
+{"runId":"20260425T124401Z","command":"runtime-ready-smoke JSON-only","result":"pass","sanitized":true,"summarySha256":"not_retained_tracked_json_only_runtime_output_removed_after_sanitized_extraction"}
+{"runId":"20260425T124401Z","command":"qa-weborca-readonly-preflight exact candidate 00001","result":"pass","sanitized":true,"summarySha256":"not_retained_tracked_json_only_preflight_output_removed_after_sanitized_extraction"}
+{"runId":"20260425T124401Z","command":"one diagnostic qa-fullflow-weborca run under Diagnostic Artifact Exception","result":"blocked","sanitized":true,"blockerReason":"current_target_no_active_entry_after_accept","rawArtifactsCommittedOrPackaged":false}

@@ -68,6 +68,85 @@ describe('receptionHandoff', () => {
     expect(resolved).toBeNull();
   });
 
+  it('pending handoff は受付IDがなくても日付・診療科・医師で一意な refreshed entry を補完する', () => {
+    const pending = buildPendingAcceptHandoff(
+      {
+        patient: { patientId: 'P-001' },
+        acceptanceDate: '2026-04-13',
+      },
+      baseParams,
+    );
+
+    const resolved = resolvePendingAcceptHandoffFromEntries(
+      [
+        {
+          id: 'row-1',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S100',
+          encounterKey: 'F001:E100',
+          visitDate: '2026-04-13',
+          departmentCode: '01',
+          physicianCode: '10001',
+          status: '受付中',
+          source: 'visits',
+        },
+      ],
+      pending,
+    );
+
+    expect(resolved).toEqual({
+      source: 'refreshed-entry',
+      encounter: {
+        patientId: 'P-001',
+        appointmentId: undefined,
+        receptionId: undefined,
+        scheduleKey: 'F001:S100',
+        encounterKey: 'F001:E100',
+        visitDate: '2026-04-13',
+      },
+    });
+  });
+
+  it('pending handoff は日付・診療科・医師候補が複数ある場合 fail-close する', () => {
+    const pending = buildPendingAcceptHandoff(
+      {
+        patient: { patientId: 'P-001' },
+        acceptanceDate: '2026-04-13',
+      },
+      baseParams,
+    );
+
+    const resolved = resolvePendingAcceptHandoffFromEntries(
+      [
+        {
+          id: 'row-1',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S100',
+          encounterKey: 'F001:E100',
+          visitDate: '2026-04-13',
+          departmentCode: '01',
+          physicianCode: '10001',
+          status: '受付中',
+          source: 'visits',
+        },
+        {
+          id: 'row-2',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S101',
+          encounterKey: 'F001:E101',
+          visitDate: '2026-04-13',
+          departmentCode: '01',
+          physicianCode: '10001',
+          status: '診療中',
+          source: 'visits',
+        },
+      ],
+      pending,
+    );
+
+    expect(resolved).toBeNull();
+  });
+
   it('pending handoff は acceptanceId 一致の refreshed entry で補完する', () => {
     const pending = buildPendingAcceptHandoff(
       {

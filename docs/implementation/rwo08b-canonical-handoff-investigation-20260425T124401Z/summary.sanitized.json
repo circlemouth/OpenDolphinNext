@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260425T124401Z",
+  "workOrders": [
+    "RWO-08B",
+    "RWO-08"
+  ],
+  "result": "RWO08B_CANONICAL_HANDOFF_FIX_VERIFIED_CURRENT_TARGET_BLOCKED_NO_ACTIVE_ENTRY",
+  "branch": "master",
+  "startHead": "5afe5936a",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "statusAfterRun": "completed_with_successor_blocker_recorded",
+    "completedBlockerId": "fullflow-canonical-charts-handoff-timeout-after-accept",
+    "successorBlockerId": "fullflow-current-target-no-active-entry-after-accept"
+  },
+  "repoLocalFix": {
+    "changedFiles": [
+      "web-client/src/features/reception/receptionHandoff.ts",
+      "web-client/src/features/reception/__tests__/receptionHandoff.test.ts"
+    ],
+    "summary": "Pending accept handoff resolution now permits a refreshed server entry when patientId, visitDate, departmentCode, and physicianCode uniquely match, while preserving fail-closed behavior for missing or ambiguous matches.",
+    "securityPosture": "No client-provided canonical key is trusted or synthesized; Charts handoff still requires a server/refreshed entry with scheduleKey or encounterKey."
+  },
+  "runtime": {
+    "profile": "orca-trial-no-object-storage",
+    "objectStorageFree": true,
+    "s3ObjectStorageConfigured": false,
+    "serverHealthHttpStatus": 200,
+    "serverReadinessHttpStatus": 200,
+    "webHttpStatus": 200,
+    "runtimeReadySmoke": {
+      "result": "pass_json_only",
+      "summarySha256": "not_retained_tracked_json_only_runtime_output_removed_after_sanitized_extraction"
+    }
+  },
+  "readOnlySelectorPreflight": {
+    "executed": true,
+    "candidateId": "00001",
+    "result": "accepted_no_mutation",
+    "inputIdentityHash": "e4bb353de6621a58c97ffe9750f2456ae4da8ec2f14341a5c67efac4c9a8f8e2",
+    "selectorOptionCounts": {
+      "department": 6,
+      "physician": 6,
+      "paymentMode": 3,
+      "visitKind": 4,
+      "medicalInformation": 9
+    },
+    "targetMutationRequestCount": 0,
+    "summarySha256": "not_retained_tracked_json_only_preflight_output_removed_after_sanitized_extraction",
+    "businessSuccessClassification": "readonly_selector_preflight_accepted_no_mutation"
+  },
+  "diagnosticFullflow": {
+    "executed": true,
+    "diagnosticArtifactsRoot": "artifacts/diagnostic-fullflow/20260425T124401Z/fullflow",
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "result": "blocked",
+    "blockerClassification": "test-data-blocker",
+    "blockerReason": "current_target_no_active_entry_after_accept",
+    "rawHarnessBlockerReason": "fatal_before_send",
+    "canonicalHandoffStatus": "error",
+    "handoffButtonDisabled": true,
+    "handoffButtonTitleClassification": "no_active_entry",
+    "scheduleKeyPresent": false,
+    "encounterKeyPresent": false,
+    "orderSendReached": false,
+    "requestXmlCreated": false,
+    "pageErrorCount": 0,
+    "consoleMessageCount": 0,
+    "businessSuccessClassification": "blocked_before_charts_handoff_current_target_no_active_entry",
+    "businessAccepted": false
+  },
+  "tests": {
+    "receptionHandoffFocused": "pass_8_tests",
+    "webGuard": "pass",
+    "webTypecheck": "pass"
+  },
+  "misuseCasesChecked": [
+    "patientId-only pending handoff remains rejected",
+    "ambiguous refreshed entries remain rejected",
+    "server/refreshed canonical key is still required before Charts navigation",
+    "diagnostic raw artifacts remained local-only and untracked"
+  ],
+  "liveTrialOrca": {
+    "executed": false,
+    "endpoint": "fullflow_via_web_client",
+    "target": "current_trial_direct_acceptance_00001",
+    "requestClass": "acceptmodv2/fullflow-pre-send",
+    "businessSuccessClassification": "readonly_preflight_accepted_fullflow_blocked_before_charts_handoff",
+    "businessAccepted": false
+  },
+  "claimBoundary": "No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Diagnose why current Trial candidate 00001 has no active entry/canonical handoff after accept, or select a changed current Trial precondition that yields a unique active refreshed entry with canonical key.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": true,
+  "diagnosticArtifactsLocalOnlyUntracked": true,
+  "rawArtifactsCommittedOrPackaged": false
+}
