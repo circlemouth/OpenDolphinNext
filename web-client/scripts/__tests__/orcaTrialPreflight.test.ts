@@ -13,6 +13,7 @@ import {
   evaluatePreflightSummary,
   officialPatientEvidenceAccepted,
   isRejectedTrialCandidate,
+  normalizeCandidateExclusionSet,
   sanitizeOfficialPatientExistenceEvidence,
   summarizeAppointmentDependency,
   summarizeInsuranceReadiness,
@@ -1517,6 +1518,33 @@ describe('orca trial-native preflight gates', () => {
     ]);
 
     expect(selected?.patientId).toBe('00005');
+  });
+
+  it('skips duplicate-blocked candidates when an exclusion set is supplied', () => {
+    const selected = selectPreferredExactPreflightCandidate(
+      [
+        { patientId: '00001', acceptedForExactPreflightProposal: true },
+        { patientId: '00002', acceptedForExactPreflightProposal: true },
+        { patientId: '00005', acceptedForExactPreflightProposal: true },
+      ],
+      undefined,
+      { excludedPatientIds: normalizeCandidateExclusionSet('00001, 00005') },
+    );
+
+    expect(selected?.patientId).toBe('00002');
+  });
+
+  it('returns no candidate when every accepted exact-preflight row is excluded', () => {
+    const selected = selectPreferredExactPreflightCandidate(
+      [
+        { patientId: '00001', acceptedForExactPreflightProposal: true },
+        { patientId: '00005', acceptedForExactPreflightProposal: true },
+      ],
+      undefined,
+      { excludedPatientIds: normalizeCandidateExclusionSet(['00001', '00005']) },
+    );
+
+    expect(selected).toBeNull();
   });
 
   it('candidate discovery with zero accepted candidates is readiness-blocked without contradicting Trial registration', () => {

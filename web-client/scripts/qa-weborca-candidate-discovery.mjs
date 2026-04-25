@@ -13,6 +13,7 @@ import {
 import {
   buildCandidateReadinessDecision,
   buildCandidateDiscoveryGate,
+  normalizeCandidateExclusionSet,
   summarizeLocalSelectableDiagnostic,
   summarizeMedicalInformationReadiness,
   summarizeAppointmentDependency,
@@ -47,6 +48,9 @@ fs.mkdirSync(preflightArtifactRoot, { recursive: true });
 const facilityId = resolveQaFacilityId();
 const authUserId = resolveQaUserId();
 const authPasswordPlain = resolveQaPasswordPlain();
+const excludedPatientIds = normalizeCandidateExclusionSet(
+  process.env.QA_EXCLUDED_PATIENT_IDS ?? process.env.QA_EXCLUDED_CANDIDATES ?? '',
+);
 const departmentCode = process.env.QA_DEPARTMENT_CODE ?? '01';
 const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
 const paymentMode = process.env.QA_PAYMENT_MODE ?? 'insurance';
@@ -933,7 +937,9 @@ const buildPreflightSummary = ({ acceptedRow, summary, medicalInformationProbe }
         kind: 'proposal',
         patientId: acceptedRow.patientId,
         rowPath: path.relative(preflightArtifactRoot, rowsJsonPath),
-        selectionPolicy: 'prefer 00001/00005 only among rows with official+insurance+appointment+local+selector+medical-information readiness accepted',
+        selectionPolicy:
+          'prefer 00001/00005 only among rows with official+insurance+appointment+local+selector+medical-information readiness accepted unless excluded by QA_EXCLUDED_CANDIDATES/QA_EXCLUDED_PATIENT_IDS',
+        excludedPatientIds: [...excludedPatientIds].sort(),
         requiredNextStep: 'run qa-weborca-readonly-preflight.mjs for exact selected-candidate preflight with the same RUN_ID before Phase 3',
       }
     : null;
@@ -954,6 +960,7 @@ const buildPreflightSummary = ({ acceptedRow, summary, medicalInformationProbe }
       baseURL: redactUrl(baseURL),
       facilityId,
       sessionRole,
+      excludedPatientIds: [...excludedPatientIds].sort(),
       patientSearch: { patientId: '', selectable: false, selectableCount: 0, verdict: 'rejected' },
       selectors: {},
       medicalInformationProbe,
@@ -1206,14 +1213,16 @@ try {
     rows.push(await evaluateCandidate(context, medicalInformationProbe, patientId, candidateSource));
   }
 
-  const acceptedRow = selectPreferredExactPreflightCandidate(rows);
+  const acceptedRow = selectPreferredExactPreflightCandidate(rows, undefined, { excludedPatientIds });
   const acceptedCandidateCount = rows.filter((row) => row.acceptedForExactPreflightProposal === true).length;
   const selectedCandidate = acceptedRow
     ? {
         kind: 'proposal',
         patientId: acceptedRow.patientId,
         rowPath: path.relative(artifactRoot, rowsJsonPath),
-        selectionPolicy: 'prefer 00001/00005 only among rows with official+insurance+appointment+local+selector+medical-information readiness accepted',
+        selectionPolicy:
+          'prefer 00001/00005 only among rows with official+insurance+appointment+local+selector+medical-information readiness accepted unless excluded by QA_EXCLUDED_CANDIDATES/QA_EXCLUDED_PATIENT_IDS',
+        excludedPatientIds: [...excludedPatientIds].sort(),
         requiredNextStep: 'run qa-weborca-readonly-preflight.mjs for exact selected-candidate preflight with the same RUN_ID before Phase 3',
       }
     : null;
@@ -1234,6 +1243,7 @@ try {
     login: { sessionMeStatus: sessionMe.status },
     candidateSource,
     candidateCount: rows.length,
+    excludedPatientIds: [...excludedPatientIds].sort(),
     baseDate,
     requestedSelectorValues: {
       departmentCode,
@@ -1286,6 +1296,7 @@ try {
     flowMode: CANDIDATE_DISCOVERY_FLOW_MODE,
     baseURL: redactUrl(baseURL),
     facilityId,
+    excludedPatientIds: [...excludedPatientIds].sort(),
     acceptedForPhase3Attempt: false,
     selectedCandidate: null,
     candidateDiscoveryAloneAuthorizesPhase3: false,
@@ -1308,6 +1319,7 @@ try {
     discoverySummaryPath: path.relative(preflightArtifactRoot, summaryJsonPath),
     baseURL: redactUrl(baseURL),
     facilityId,
+    excludedPatientIds: [...excludedPatientIds].sort(),
     patientSearch: { patientId: '', selectable: false, selectableCount: 0, verdict: 'rejected' },
     selectors: {},
     acceptedForPhase3Attempt: false,

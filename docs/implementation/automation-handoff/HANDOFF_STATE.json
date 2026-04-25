@@ -1,9 +1,9 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-08B/RWO-08",
-  "blockerId": "fullflow-duplicate-acceptance-candidate-exhaustion-investigation",
-  "priority": "high",
+  "sourceWorkOrder": "RWO-09/RWO-11",
+  "blockerId": "rwo09-non-s3-static-refresh-next",
+  "priority": "normal",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T14:44:28Z",
+  "lastUpdated": "2026-04-25T15:29:31Z",
   "latestRwo08BCandidate00005DiagnosticFullflow": {
     "runId": "20260425T144428Z",
     "workOrder": "RWO-08B",
@@ -4309,6 +4309,64 @@
     },
     "claimBoundary": "Candidate 00001 is classified as duplicate-acceptance/no-active-entry blocker; candidate 00005 has exact read-only preflight acceptance and is queued as the next changed precondition. No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
     "recommendedNextTask": "Run at most one diagnostic fullflow for candidate 00005 only after confirming current runtime readiness and using sanitized fullflow evidence mode.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo08BDuplicateCandidateExhaustion": {
+    "runId": "20260425T152931Z",
+    "workOrder": "RWO-08B",
+    "result": "RWO08B_DUPLICATE_ACCEPTANCE_CANDIDATE_EXHAUSTION_GUARD_IMPLEMENTED",
+    "branch": "master",
+    "startHead": "53c6ad45e",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "statusAfterRun": "completed_with_rwo08b_blocker_classified_and_rwo09_static_refresh_queued",
+      "completedBlockerId": "fullflow-duplicate-acceptance-candidate-exhaustion-investigation",
+      "successorBlockerId": "rwo09-non-s3-static-refresh-next"
+    },
+    "evidence": "docs/implementation/rwo08b-duplicate-candidate-exhaustion-20260425T152931Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-duplicate-candidate-exhaustion-20260425T152931Z/summary.sanitized.json",
+    "repoLocalFix": {
+      "candidateExclusionGuard": true,
+      "envVars": [
+        "QA_EXCLUDED_CANDIDATES",
+        "QA_EXCLUDED_PATIENT_IDS"
+      ],
+      "focusedTests": "pass_120_tests"
+    },
+    "readOnlyCandidateDiscovery": {
+      "executed": true,
+      "excludedPatientIds": [
+        "00001",
+        "00005"
+      ],
+      "acceptedCandidateCountBeforeExclusion": 2,
+      "selectedCandidateAfterExclusion": null,
+      "nonExcludedCandidatePrimaryRejectionReason": "local_exact_match_missing",
+      "mutationRouteCalled": false,
+      "targetMutationRequestCount": 0,
+      "businessSuccessClassification": "readonly_candidate_discovery_no_mutation_no_fresh_candidate"
+    },
+    "runtime": {
+      "profile": "orca-trial-no-object-storage",
+      "objectStorageFree": true,
+      "webHttpStatus": 200,
+      "directServerHealthHttpStatus": "000",
+      "directServerReadinessHttpStatus": "000",
+      "s3ObjectStorageConfigured": false
+    },
+    "tests": {
+      "nodeSyntaxChecks": "pass",
+      "focusedWebTests": "pass_120_tests",
+      "webGuard": "pass",
+      "serverStaticGuardScripts": "pass",
+      "gitDiffCheck": "pass"
+    },
+    "claimBoundary": "RWO-08B fullflow remains blocked: candidates 00001 and 00005 are duplicate-acceptance/no-active-entry blockers, and read-only discovery excluding them found no fresh local-selectable Trial candidate. No diagnostic fullflow retry, L4 success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Proceed to RWO-09 non-S3 static/package/rollback readiness refresh while RWO-08B waits for a fresh read-only candidate or changed Trial/local-sync precondition.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": true,
     "diagnosticArtifactsLocalOnlyUntracked": true,

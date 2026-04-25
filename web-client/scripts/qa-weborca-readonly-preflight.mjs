@@ -21,6 +21,7 @@ import {
 } from './qa-lib/acceptmodv2-identity-gate.mjs';
 import {
   buildOfficialPatientReadinessAxes,
+  normalizeCandidateExclusionSet,
   officialPatientEvidenceAccepted,
   sanitizeOfficialPatientExistenceEvidence,
   selectPreferredExactPreflightCandidate,
@@ -52,6 +53,9 @@ const facilityId = resolveQaFacilityId();
 const authUserId = resolveQaUserId();
 const authPasswordPlain = resolveQaPasswordPlain();
 const requestedPatientId = process.env.QA_PATIENT_ID?.trim() ?? '';
+const excludedPatientIds = normalizeCandidateExclusionSet(
+  process.env.QA_EXCLUDED_PATIENT_IDS ?? process.env.QA_EXCLUDED_CANDIDATES ?? '',
+);
 const candidateId = requestedCandidateId || requestedPatientId || `${runId}:acceptmodv2`;
 const departmentCode = process.env.QA_DEPARTMENT_CODE ?? '01';
 const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
@@ -710,6 +714,7 @@ const chooseCandidate = async ({ context, candidateIds, officialPatientExistence
   const selectedCandidate = selectPreferredExactPreflightCandidate(
     candidates,
     (candidate) => candidate?.verdict === 'accepted' && (!requestedPatientId || candidate.patientId === requestedPatientId),
+    { excludedPatientIds },
   );
   const selectedPatientId = selectedCandidate?.patientId ?? '';
   return {
@@ -719,11 +724,12 @@ const chooseCandidate = async ({ context, candidateIds, officialPatientExistence
     rejectedCandidates: Object.values(candidates)
       .filter((candidate) => candidate.rejected || candidate.rejectReason)
       .map((candidate) => ({ patientId: candidate.patientId, reason: candidate.rejectReason })),
+    excludedPatientIds: [...excludedPatientIds].sort(),
     selectedPatientId: selectedPatientId || undefined,
     selectedSource: selectedPatientId ? candidates[selectedPatientId].source : undefined,
     selectionPolicy: requestedPatientId
-      ? 'QA_PATIENT_ID must be an accepted official Trial initial candidate'
-      : 'prefer 00001/00005 among accepted official+insurance+local Trial initial candidates, otherwise first accepted candidate',
+      ? 'QA_PATIENT_ID must be an accepted official Trial initial candidate and not excluded by QA_EXCLUDED_CANDIDATES/QA_EXCLUDED_PATIENT_IDS'
+      : 'prefer 00001/00005 among accepted official+insurance+local Trial initial candidates unless excluded, otherwise first accepted candidate',
     verdict: selectedPatientId ? 'accepted' : 'rejected',
     candidates,
   };

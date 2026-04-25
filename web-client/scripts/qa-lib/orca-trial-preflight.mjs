@@ -433,12 +433,23 @@ const classifyOfficialPatientGetDiagnostic = ({
 
 export const isRejectedTrialCandidate = (candidateId) => REJECTED_TRIAL_CANDIDATES.has(normalizeText(candidateId));
 
+export const normalizeCandidateExclusionSet = (value) => {
+  const entries = Array.isArray(value) ? value : normalizeText(value).split(/[,\s]+/);
+  return new Set(entries.map(normalizePatientId).filter(Boolean));
+};
+
 export const selectPreferredExactPreflightCandidate = (
   candidates,
   isAccepted = (candidate) => candidate?.acceptedForExactPreflightProposal === true,
+  { excludedPatientIds = new Set() } = {},
 ) => {
   const rows = Array.isArray(candidates) ? candidates : Object.values(candidates ?? {});
-  const acceptedRows = rows.filter((candidate) => candidate && isAccepted(candidate));
+  const excluded = excludedPatientIds instanceof Set ? excludedPatientIds : normalizeCandidateExclusionSet(excludedPatientIds);
+  const acceptedRows = rows.filter((candidate) => {
+    if (!candidate || !isAccepted(candidate)) return false;
+    const patientId = normalizePatientId(candidate.patientId ?? candidate.candidateId);
+    return !excluded.has(patientId);
+  });
   for (const preferredId of PREFERRED_EXACT_PREFLIGHT_CANDIDATE_IDS) {
     const match = acceptedRows.find(
       (candidate) => normalizePatientId(candidate.patientId ?? candidate.candidateId) === preferredId,
