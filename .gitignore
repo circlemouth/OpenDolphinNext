@@ -64,6 +64,16 @@ artifacts/reviewer-submission-packets/
 artifacts/review-bundles/
 artifacts/review-*.zip
 artifacts/review-*.zip.*
+# Local-only diagnostic fullflow/browser artifacts. Sanitized extracted summaries
+# may be committed under docs/implementation, but raw screenshots/HAR/traces/
+# videos/network dumps/request XML from diagnostic harnesses must remain ignored.
+artifacts/diagnostic-fullflow/
+artifacts/orca-remediation/closeout/*/qa/fullflow/
+artifacts/orca-remediation/closeout/*/qa/diagnostic-fullflow/
+artifacts/webclient/orca-e2e/
+artifacts/webclient/e2e/
+test-results/
+playwright-report/
 # RUN_ID-scoped local reviewer ZIP output under implementation packets.
 docs/implementation/**/review-package/
 docs/implementation/**/OpenDolphin_WebClient-review*.zip

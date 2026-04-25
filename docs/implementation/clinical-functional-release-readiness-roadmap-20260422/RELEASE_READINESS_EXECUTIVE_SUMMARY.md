@@ -16,11 +16,13 @@ RUN_ID `20260424T170205Z` refreshed focused non-live RWO-09/RWO-11 static and gu
 
 RUN_ID `20260424T210000Z` records the owner-expanded automation scope: existing broad browser/fullflow harnesses may run with local-only untracked diagnostic screenshots/HAR/traces/videos/raw-network artifacts, but committed and reviewer evidence remains sanitized-only; `diseasev3` live verification should proceed endpoint-by-endpoint; electronic-chart user-actionable operations must cover Request_Number `02` / `03` / `04` or equivalent update/delete/cancel semantics where applicable; and Trial-rejected order families now have source-backed v2 candidate research for the next no-live/live preparation cycle.
 
+RUN_ID `20260425T044635Z` inventoried the RWO-08B diagnostic fullflow harness and hardened `.gitignore` for local-only diagnostic raw outputs. The frontend answered HTTP `200`, but backend health/readiness were HTTP `000`, so no fullflow was executed and L4 fullflow remains unverified.
+
 ## Functional Conclusion
 
 - Prescription input: not release-complete; local/server/component/static evidence plus partial artifact-free browser local persistence evidence.
 - Generic order input: not release-complete; local/server/component/static evidence plus partial artifact-free browser local persistence evidence.
-- Electronic chart fullflow: `not_run`; diagnostic fullflow execution is now owner-authorized if artifacts stay local-only/untracked and release evidence is sanitized.
+- Electronic chart fullflow: `not_run`; diagnostic fullflow execution is now owner-authorized if artifacts stay local-only/untracked and release evidence is sanitized. RUN_ID `20260425T044635Z` hardened raw artifact containment but skipped execution because backend readiness was unavailable.
 - ORCA live: limited prior Trial `acceptmodv2` `00001` evidence, scoped Phase4 `medicalmodv2` Trial business acceptance in RUN_ID `20260423T150257Z`, and endpoint-specific prescription/treatment `medicalmodv2` L3 Trial business acceptance for target `00001` / Request_Number `01` / class `01` in RUN_ID `20260424T031608Z`.
 - Production ORCA readiness: out of scope for this Trial-only roadmap and not claimed.
 - S3/object-storage readiness: out of scope for this roadmap and not claimed.
