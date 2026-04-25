@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260425T052502Z",
+  "workOrders": [
+    "RWO-08B",
+    "RWO-09",
+    "RWO-11"
+  ],
+  "result": "RUNTIME_READY_SMOKE_PASS_DIAGNOSTIC_FULLFLOW_BLOCKED_MEDICAL_INFORMATION_OMISSION",
+  "branch": "master",
+  "startHead": "0054e00a9",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "completed"
+  },
+  "runtimeSmoke": {
+    "executed": true,
+    "result": "pass",
+    "artifactRoot": "artifacts/webclient/runtime-gate-ready/20260425T052502Z",
+    "artifactRootGitignored": true,
+    "jsonOnly": true,
+    "smokeRowResolved": true,
+    "chartsPatientSummaryRendered": true,
+    "startTransitionCompleted": true,
+    "blockedRouteHits": {
+      "blocked-legacy-orca-queue-hit": 0,
+      "blocked-legacy-orca-push-event-hit": 0,
+      "invalid-orca-taxonomy": 0,
+      "legacy-operations-readiness": 0
+    }
+  },
+  "diagnosticFullflow": {
+    "executed": true,
+    "result": "blocked",
+    "exitCode": 1,
+    "artifactRoot": "artifacts/diagnostic-fullflow/20260425T052502Z/fullflow",
+    "artifactRootGitignored": true,
+    "rawArtifactsLocalOnly": true,
+    "sanitizedExtractCommitted": true,
+    "blockerClassification": "repo-defect",
+    "blockerReason": "medical_information_omission_violation",
+    "fatalErrorClass": "canonical_charts_handoff_timeout_after_accept",
+    "medicalInformationGate": {
+      "enforced": true,
+      "ok": false,
+      "checkedRequests": 1
+    },
+    "chartsHandoff": {
+      "status": "error",
+      "scheduleKeyPresent": false,
+      "encounterKeyPresent": false
+    },
+    "visitRowReadiness": "unknown",
+    "orderResult": {
+      "status": "not-run"
+    },
+    "sendResult": {
+      "status": "error",
+      "validationOk": false,
+      "validationReason": "no_request_xml"
+    },
+    "businessSuccessClassification": "blocked_repo_defect",
+    "businessAccepted": false
+  },
+  "diagnosticArtifactManifest": {
+    "root": "artifacts/diagnostic-fullflow/20260425T052502Z/fullflow",
+    "gitignored": true,
+    "classes": {
+      "screenshots": 4,
+      "networkJson": 2,
+      "requestXml": 0,
+      "har": 0,
+      "logs": 3,
+      "json": 8,
+      "markdown": 1,
+      "total": 16
+    },
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "liveTrialOrca": {
+    "executed": true,
+    "endpoint": "fullflow_via_web_client",
+    "target": "<smoke-local-patient>",
+    "requestClass": "acceptmodv2/fullflow-pre-send",
+    "businessSuccessClassification": "blocked_repo_defect",
+    "businessAccepted": false,
+    "rawBodyStoredInEvidence": false
+  },
+  "skipRecord": {
+    "taskId": "RWO-08B-fullflow-L4",
+    "reason": "blocked_repo_defect_medical_information_omission_violation",
+    "evidenceChecked": [
+      "runtime_ready_smoke_pass",
+      "diagnostic_fullflow_exit_1",
+      "medical_information_gate_enforced_false_result",
+      "canonical_charts_handoff_timeout_after_accept",
+      "request_xml_not_created",
+      "diagnostic_artifacts_gitignored"
+    ],
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": true,
+    "rawArtifactsCommittedOrPackaged": false,
+    "recommendedNextIndependentTask": "Investigate accept/fullflow medical-information omission and canonical handoff timeout with no-live tests before retrying diagnostic fullflow."
+  },
+  "claimBoundary": "runtime-ready-smoke passed for the current non-S3 Trial-local runtime, but diagnostic fullflow is blocked before order/send by a repo-defect classification. No L4 fullflow success, Trial ORCA business success, Request_Number 02/03/04 acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Fix or classify the fullflow accept workflow medical-information omission/canonical handoff blocker with focused no-live tests, then rerun runtime smoke and one diagnostic fullflow.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": true,
+  "diagnosticArtifactsLocalOnlyUntracked": true,
+  "rawArtifactsCommittedOrPackaged": false,
+  "checks": {
+    "jsonValidation": "pass",
+    "gitDiffCheck": "pass",
+    "focusedSecretRawArtifactScan": "pass_zero_hits_new_evidence",
+    "reviewerPacketContractTests": "pass_7_tests",
+    "webGuard": "pass"
+  }
+}

@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T05:03:05Z",
+  "lastUpdated": "2026-04-25T05:25:02Z",
   "latestRwo08BFullflowInventory": {
     "runId": "20260425T044635Z",
     "workOrder": "RWO-08B",
@@ -3320,5 +3320,76 @@
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo08BRuntimeSmokeFullflowDiagnostic": {
+    "runId": "20260425T052502Z",
+    "workOrders": [
+      "RWO-08B",
+      "RWO-09",
+      "RWO-11"
+    ],
+    "result": "RUNTIME_READY_SMOKE_PASS_DIAGNOSTIC_FULLFLOW_BLOCKED_MEDICAL_INFORMATION_OMISSION",
+    "branch": "master",
+    "startHead": "0054e00a9",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "completed"
+    },
+    "evidence": "docs/implementation/rwo08b-runtime-smoke-fullflow-diagnostic-20260425T052502Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-runtime-smoke-fullflow-diagnostic-20260425T052502Z/summary.sanitized.json",
+    "runtimeSmoke": {
+      "executed": true,
+      "result": "pass",
+      "jsonOnly": true,
+      "smokeRowResolved": true,
+      "chartsPatientSummaryRendered": true,
+      "startTransitionCompleted": true,
+      "blockedRouteHits": {
+        "blocked-legacy-orca-queue-hit": 0,
+        "blocked-legacy-orca-push-event-hit": 0,
+        "invalid-orca-taxonomy": 0,
+        "legacy-operations-readiness": 0
+      }
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "result": "blocked",
+      "exitCode": 1,
+      "artifactRoot": "artifacts/diagnostic-fullflow/20260425T052502Z/fullflow",
+      "artifactRootGitignored": true,
+      "blockerClassification": "repo-defect",
+      "blockerReason": "medical_information_omission_violation",
+      "businessSuccessClassification": "blocked_repo_defect",
+      "businessAccepted": false
+    },
+    "diagnosticArtifactManifest": {
+      "screenshots": 4,
+      "networkJson": 2,
+      "requestXml": 0,
+      "har": 0,
+      "totalFiles": 16,
+      "rawArtifactsCommittedOrPackaged": false
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "endpoint": "fullflow_via_web_client",
+      "target": "<smoke-local-patient>",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "blocked_repo_defect",
+      "businessAccepted": false
+    },
+    "claimBoundary": "runtime-ready-smoke passed for the current non-S3 Trial-local runtime, but diagnostic fullflow is blocked before order/send by a repo-defect classification. No L4 fullflow success, Trial ORCA business success, Request_Number 02/03/04 acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Fix or classify the fullflow accept workflow medical-information omission/canonical handoff blocker with focused no-live tests, then rerun runtime smoke and one diagnostic fullflow.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false,
+    "checks": {
+      "jsonValidation": "pass",
+      "gitDiffCheck": "pass",
+      "focusedSecretRawArtifactScan": "pass_zero_hits_new_evidence",
+      "reviewerPacketContractTests": "pass_7_tests",
+      "webGuard": "pass"
+    }
   }
 }
