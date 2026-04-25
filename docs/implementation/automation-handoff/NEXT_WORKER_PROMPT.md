@@ -12,6 +12,8 @@ supersedes:
 
 RUN_ID `20260425T182930Z` classified the active rollback/owner-decision handoff.
 
+RUN_ID `20260425T191429Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, left this blocker pending, and advanced independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `7670a304a703a39a14c811dd03a9200c2487302f`.
+
 Sanitized evidence:
 
 - `docs/implementation/rwo11-rollback-owner-pending-20260425T182930Z/FINAL_REPORT.md`
@@ -27,6 +29,7 @@ Current result:
 - Checks passed in the classifier run: reviewer packet contract tests (7), `check-doc-links`, and `web-client verify:web-guard`.
 - Rollback rehearsal is classified as `pending_human_operator_decision`; repo-local dry-runs cannot prove release-candidate deployment stop, paired restore, restored-target smoke, or operator/owner acceptance.
 - No live Trial mutation, production ORCA, S3/MinIO/object-storage setup, diagnostic artifact capture, raw artifact packaging, actual rollback rehearsal, owner final GO, or final release readiness is claimed.
+- Latest independent non-live refresh evidence: `docs/implementation/rwo09-non-s3-static-refresh-20260425T191429Z/FINAL_REPORT.md` and `docs/implementation/rwo09-non-s3-static-refresh-20260425T191429Z/summary.sanitized.json`.
 
 ## Goal
 

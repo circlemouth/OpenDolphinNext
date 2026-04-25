@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260425T191429Z",
+  "workOrders": [
+    "RWO-09",
+    "RWO-11"
+  ],
+  "result": "RWO09_NON_S3_STATIC_REFRESH_PASS",
+  "branch": "master",
+  "head": "7670a304a703a39a14c811dd03a9200c2487302f",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
+    "statusAfterRun": "left_pending_and_advanced_independent_non_live_static_refresh"
+  },
+  "selectedAction": "non_s3_static_package_security_contract_refresh",
+  "rollbackOwnerDecision": {
+    "newOwnerOperatorInputFound": false,
+    "rollbackRehearsalExecuted": false,
+    "classification": "pending_human_operator_decision_carried_forward"
+  },
+  "checks": {
+    "reviewerSubmissionPacketContractTests": "pass_7_tests",
+    "serverDocLinks": "pass",
+    "webGuard": "pass",
+    "serverConfigContract": "pass",
+    "serverNoDirectRuntimeLookup": "pass",
+    "serverNoRuntimeDdl": "pass",
+    "serverPersistenceEntities": "pass",
+    "serverNoGeneratedArtifacts": "pass",
+    "reviewPackageContractTests": "pass_27_tests"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "endpoint": null,
+    "target": null,
+    "requestClass": null,
+    "businessSuccessClassification": "not_applicable_static_non_live_refresh",
+    "businessAccepted": false
+  },
+  "claimBoundary": "This run refreshes current-HEAD non-S3 static/package/security confidence only. It does not claim L4 fullflow success, Trial ORCA business success, production ORCA readiness, S3/object-storage readiness, attachment/PHR storage readiness, actual rollback rehearsal, final owner GO/NO-GO, or final release readiness.",
+  "recommendedNextTask": "Release owner/operator should perform rollback rehearsal with sanitized evidence or record final GO/NO-GO/PENDING; automation may continue only independent non-live roadmap work.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "diagnosticArtifactsLocalOnlyUntracked": false,
+  "rawArtifactsCommittedOrPackaged": false
+}

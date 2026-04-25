@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T18:29:30Z",
+  "lastUpdated": "2026-04-25T19:14:29Z",
   "latestRwo11RollbackOwnerPending": {
     "runId": "20260425T182930Z",
     "workOrder": "RWO-11/RWO-09",
@@ -4362,65 +4362,48 @@
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo09NonS3StaticRefresh": {
-    "runId": "20260425T161426Z",
+    "runId": "20260425T191429Z",
     "workOrder": "RWO-09/RWO-11",
     "result": "RWO09_NON_S3_STATIC_REFRESH_PASS",
     "branch": "master",
-    "head": "e35bd9dd1",
+    "head": "7670a304a703a39a14c811dd03a9200c2487302f",
     "activeHandoffPrompt": {
       "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
       "statusAtStart": "active",
-      "statusAfterRun": "completed_static_refresh_with_successor_prompt_recorded",
-      "completedBlockerId": "rwo09-non-s3-static-refresh-next",
-      "successorBlockerId": "current-head-reviewer-packet-or-owner-decision-pending"
+      "statusAfterRun": "left_pending_and_advanced_independent_non_live_static_refresh",
+      "carriedForwardBlockerId": "final-owner-go-or-operator-rollback-rehearsal-pending"
     },
-    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260425T161426Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260425T161426Z/summary.sanitized.json",
-    "rwo08bCarryForward": {
-      "duplicateBlockedCandidates": [
-        "00001",
-        "00005"
-      ],
-      "freshReadOnlyCandidateFound": false,
-      "fullflowRetryExecuted": false
-    },
-    "runtimeStatusOnly": {
-      "webHttpStatus": 200,
-      "directServerHealthHttpStatus": "000",
-      "directServerReadinessHttpStatus": "000"
-    },
-    "readOnlyCandidateDiscovery": {
-      "executed": true,
-      "excludedPatientIds": [
-        "00001",
-        "00005"
-      ],
-      "acceptedCandidateCountBeforeExclusion": 2,
-      "selectedCandidateAfterExclusion": null,
-      "mutationRouteCalled": false,
-      "targetMutationRequestCount": 0,
-      "businessSuccessClassification": "readonly_candidate_discovery_no_mutation_no_fresh_candidate",
-      "diagnosticArtifactsLocalOnlyUntracked": true
+    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260425T191429Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260425T191429Z/summary.sanitized.json",
+    "rollbackOwnerDecision": {
+      "newOwnerOperatorInputFound": false,
+      "rollbackRehearsalExecuted": false,
+      "classification": "pending_human_operator_decision_carried_forward"
     },
     "checks": {
-      "focusedOrcaTrialPreflightTests": "pass_81_tests",
-      "webGuard": "pass",
-      "nodeSyntaxChecks": "pass",
-      "webTypecheck": "pass",
       "reviewerSubmissionPacketContractTests": "pass_7_tests",
-      "reviewPackageContractTests": "pass_27_tests",
-      "serverStaticGuardScripts": "pass"
+      "serverDocLinks": "pass",
+      "webGuard": "pass",
+      "serverConfigContract": "pass",
+      "serverNoDirectRuntimeLookup": "pass",
+      "serverNoRuntimeDdl": "pass",
+      "serverPersistenceEntities": "pass",
+      "serverNoGeneratedArtifacts": "pass",
+      "reviewPackageContractTests": "pass_27_tests"
     },
     "liveTrialOrca": {
       "executed": false,
+      "endpoint": null,
+      "target": null,
+      "requestClass": null,
       "businessSuccessClassification": "not_applicable_static_non_live_refresh",
       "businessAccepted": false
     },
-    "claimBoundary": "This run refreshes non-S3 static/package contract confidence only. It does not claim L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness.",
-    "recommendedNextTask": "Run a current-head reviewer submission packet refresh only after matching sanitized closeout files exist, or record final owner GO/NO-GO and rollback rehearsal decisions separately.",
+    "claimBoundary": "This run refreshes current-HEAD non-S3 static/package/security confidence only. It does not claim L4 fullflow success, Trial ORCA business success, production ORCA readiness, S3/object-storage readiness, attachment/PHR storage readiness, actual rollback rehearsal, final owner GO/NO-GO, or final release readiness.",
+    "recommendedNextTask": "Release owner/operator should perform rollback rehearsal with sanitized evidence or record final GO/NO-GO/PENDING; automation may continue only independent non-live roadmap work.",
     "credentialsCaptured": false,
-    "diagnosticArtifactsCaptured": true,
-    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "diagnosticArtifactsCaptured": false,
+    "diagnosticArtifactsLocalOnlyUntracked": false,
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo08BDuplicateCandidateExhaustion": {
