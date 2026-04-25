@@ -1,0 +1,5 @@
+RUN_ID=20260425T001701Z
+scope=docs/implementation/rwo06k-radiology-v2-live-20260425T001701Z
+forbidden_artifact_file_scan=pass_zero_hits
+diagnosticArtifactsCaptured=false
+rawArtifactsCommittedOrPackaged=false
