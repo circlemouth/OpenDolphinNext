@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260425T174429Z",
+  "result": "not_run",
+  "responseClassification": "notRun",
+  "blockerClassification": "safe_fullflow_prerequisites_not_complete",
+  "reason": "safe_fullflow_gate_remains_separately_gated_and_not_executed_in_this_packet_refresh",
+  "acceptedHead": "b103e49ee06d1c1043c066a097f7c62408c32263",
+  "carriedForwardScopedTrialEvidence": "docs/implementation/rwo06-medicalmodv2-api14-context-repair-20260423T150257Z/summary.sanitized.json",
+  "rwo08bCarryForward": {
+    "latestEvidence": "docs/implementation/rwo09-non-s3-static-refresh-20260425T161426Z/summary.sanitized.json",
+    "businessSuccessClassification": "blocked_no_fresh_candidate_precondition"
+  },
+  "claimBoundary": "No fullflow was executed for this packet closeout; the packet preserves fullflow as not_run.",
+  "rawSensitiveFieldsExcluded": true
+}
