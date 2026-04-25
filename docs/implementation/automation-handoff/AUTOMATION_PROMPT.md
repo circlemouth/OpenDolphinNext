@@ -94,6 +94,14 @@ Every run:
 13. Continue within the same run after every completed task, skipped out-of-scope task, or skipped environment-unavailable task. Stop only when no safe unblocked task remains, the run time budget is exhausted, or a non-skippable safety stop condition is reached.
 14. If any tracked source/doc/evidence file or new repo evidence artifact is changed, run the relevant verification, then commit the current roadmap/handoff-scoped changes before reporting. Do not commit local runtime secret files, raw ORCA bodies, diagnostic HAR/trace/video/screenshot/raw network artifacts, or unrelated user changes.
 
+Parallel subagent policy:
+- The main worker may use subagents in the same run only when tasks are independent, bounded, and have disjoint worktrees/write scopes.
+- Good parallel subagent tasks include docs/matrix updates, official/public source research, no-live payload preparation, parser/sanitizer tests, static guards, package metadata checks, and sanitized evidence drafting.
+- Each subagent prompt must require a dedicated git worktree, explicit file ownership, no legacy `client/` or `server/` changes, no raw artifacts, no credential handling, no production ORCA, no S3/MinIO/object-storage setup, and no live ORCA Trial mutation.
+- The main worker must keep ownership of live Trial decisions, security decisions, claim boundaries, final evidence review, integration, verification, commit, and final reporting.
+- Live ORCA Trial execution must remain sequential and main-worker controlled: one endpoint, one target, one request class, one payload identity, one sanitized preflight/attempt at a time. Do not run parallel live mutations.
+- If subagents are used, report their scopes, worktrees, files changed, verification, integrated outputs, discarded outputs, and blockers. Do not commit a subagent output until the main worker has reviewed it for safety, claim boundaries, and raw-artifact/secret exclusion.
+
 Current-run exhaustion policy:
 - Do all currently possible repo-local work in priority order during the same run.
 - Treat environment-only blockers as skip records, not terminal blockers, when the next Work Order has independent safe work available.
@@ -175,6 +183,7 @@ Each run must open an inbox item with:
 - current Work Order and next Work Order
 - actions taken
 - files changed
+- subagents used, their scopes/worktrees, and integrated or discarded outputs
 - tests/checks/live Trial ORCA steps run
 - Trial ORCA endpoint/target/request class, if used
 - sanitized result and business-success classification

@@ -24,6 +24,16 @@ Priority order:
 
 If a handoff prompt is active, the next worker must treat it as the next task unless it conflicts with global safety rules. If a conflict exists, the stricter rule wins and the conflict must be reported.
 
+## Parallel Subagent Rule
+
+The main automation worker may use subagents inside one run when independent roadmap tasks can safely progress in parallel. This is allowed only for bounded, non-overlapping work such as docs updates, source-backed research, no-live payload preparation, parser/sanitizer tests, static guards, package metadata checks, and sanitized evidence drafting.
+
+The main worker remains responsible for orchestration, safety decisions, final evidence review, integration, verification, and the final commit. Subagents must be assigned explicit ownership of their worktree, files, task scope, forbidden actions, expected evidence, and stop conditions. Each subagent must use its own dedicated git worktree and must not operate on another worker's containers or worktree.
+
+Parallel subagents must not execute live ORCA Trial mutations, production ORCA actions, S3/MinIO/object-storage setup, credential handling, raw artifact capture, reviewer packet packaging, broad refactors, or changes under legacy `client/` or `server/`. Live Trial work remains sequential and main-worker controlled: one endpoint, one target, one request class, one payload identity, one sanitized preflight/attempt at a time.
+
+When subagents are used, the final report and handoff state must record the subagent scopes, worktrees, changed files, integrated evidence, checks run by each worker, and any discarded or unmerged outputs. If a subagent blocks, the main worker records a sanitized blocker and continues only with independent safe work.
+
 ## Commit Rule
 
 Every worker that changes tracked or newly generated repo evidence files must commit those changes before reporting completion. The commit must include only reviewed, relevant roadmap/handoff/source changes, must not include local runtime secret files or forbidden raw artifacts, and must be created after the relevant tests/checks pass or after a documented sanitized skip record is written.

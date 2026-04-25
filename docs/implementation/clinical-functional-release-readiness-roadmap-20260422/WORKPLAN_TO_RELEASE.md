@@ -48,6 +48,10 @@ Environment-only blockers include Docker unavailable, local backend unavailable,
 
 When a Work Order is skipped, the same run should continue with docs, static guards, unit/component tests, parser/sanitizer tests, safe wrapper dry-runs, package metadata checks, claim-boundary updates, release gate updates, risk register updates, and final summaries that do not depend on the skipped runtime.
 
+When independent tasks can progress in parallel, the main automation worker may delegate bounded subagent work in the same run. Delegated tasks must have disjoint write scopes and dedicated git worktrees. Suitable scopes are source-backed research, docs/matrix refreshes, no-live payload preparation, parser/sanitizer tests, static guards, package metadata checks, and sanitized evidence drafts. The main worker remains responsible for safety review, claim boundaries, integration, verification, and the final commit.
+
+Parallel delegation does not change live Trial safety. Live ORCA Trial mutations must not be run by subagents or in parallel. The main worker must run live Trial actions sequentially, one endpoint/target/request-class/payload identity at a time, after reviewing any subagent-prepared no-live evidence and preflight materials.
+
 Only stop the run when no independent safe task remains, the run time budget is exhausted, the repo state is unsafe, raw artifact contents would have to be committed/packaged to decide success, or the next action requires a non-skippable human decision outside standing Trial approval.
 
 ## Commit Requirement
@@ -113,3 +117,15 @@ The sequence avoids using live ORCA to discover basic browser or local persisten
 | Production ORCA out-of-scope marker | RWO-10 | Records that production ORCA execution/readiness is not part of this Trial-only roadmap. |
 
 No background or asynchronous work is claimed by this roadmap.
+
+## Parallel Work Model
+
+One automation run may advance multiple roadmap areas when the work is independent and safe to split. The recommended model is:
+
+1. The main worker selects the highest-priority blocking path and keeps the critical path local.
+2. The main worker may assign sidecar tasks to subagents only when those tasks do not block the next local step.
+3. Each subagent uses a dedicated worktree and owns a clearly listed file/module scope.
+4. Subagents produce sanitized evidence or patches only; the main worker reviews and integrates them.
+5. The final commit is made from the main worktree after all integrated changes pass relevant checks.
+
+This model is intended to increase same-run throughput for independent no-live and documentation work. It is not permission to parallelize live Trial mutations, share runtime secrets, operate on another worktree's containers, widen the roadmap scope, or relax claim boundaries.

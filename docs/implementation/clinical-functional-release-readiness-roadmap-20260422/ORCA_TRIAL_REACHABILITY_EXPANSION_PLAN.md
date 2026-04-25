@@ -26,6 +26,10 @@ One automation run may execute multiple ORCA Trial reachability checks when all 
 - The run stops before any check that would require committing/packaging raw ORCA request/response bodies, raw patient or insurance details, credential capture, diagnostic screenshot/HAR/trace/video/raw-network artifacts, production ORCA, or S3/object-storage configuration.
 - HTTP 200, wrapper exit 0, readiness 2xx, dry-run success, or parser generic zero result is not treated as business success by itself.
 
+Parallel subagents may prepare independent no-live parts of a batch, such as source research, candidate payload construction, parser/sanitizer contract tests, dry-run evidence, matrix updates, and blocker summaries. Each subagent must work in a dedicated worktree with a disjoint write scope. The main worker must review the outputs before integration and must run or authorize any live Trial checkpoint itself.
+
+Live ORCA Trial mutations are never parallel batch work. They remain sequential, main-worker controlled actions with one endpoint, target, request class, payload identity, duplicate checkpoint, sanitized preflight, and sanitized result at a time.
+
 ## Hourly Automation Rule
 
 This automation may run once per hour. Every reachability task must therefore be resumable and idempotent:
