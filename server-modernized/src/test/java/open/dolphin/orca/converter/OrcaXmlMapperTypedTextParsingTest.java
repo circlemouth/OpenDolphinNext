@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
+import open.dolphin.rest.dto.orca.OrcaReceptionSelectorOptionsResponse;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListResponse;
 import org.junit.jupiter.api.Test;
@@ -135,5 +136,62 @@ class OrcaXmlMapperTypedTextParsingTest {
         assertEquals("外来", response.getItems().get(0).getName());
         assertEquals("02", response.getItems().get(1).getCode());
         assertEquals("再診", response.getItems().get(1).getName());
+    }
+
+    @Test
+    void parsesDepartmentOptionsFromSystemManagementResponse() {
+        String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <xmlio2>
+                  <departmentres>
+                    <Api_Result type="string">00</Api_Result>
+                    <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                    <Department_Information type="array">
+                      <Department_Information_child type="record">
+                        <Code type="string">01</Code>
+                        <WholeName type="string">内科</WholeName>
+                      </Department_Information_child>
+                    </Department_Information>
+                  </departmentres>
+                </xmlio2>
+                """;
+
+        OrcaXmlMapper mapper = new OrcaXmlMapper();
+        OrcaReceptionSelectorOptionsResponse response = mapper.toDepartmentOptionList(xml);
+
+        assertEquals("00", response.getApiResult());
+        assertEquals(1, response.getDepartments().size());
+        assertEquals("01", response.getDepartments().get(0).getCode());
+        assertEquals("内科", response.getDepartments().get(0).getName());
+        assertEquals(0, response.getPhysicians().size());
+    }
+
+    @Test
+    void parsesPhysicianOptionsFromSystemManagementResponse() {
+        String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <xmlio2>
+                  <physicianres>
+                    <Api_Result type="string">00</Api_Result>
+                    <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                    <Physician_Information type="array">
+                      <Physician_Information_child type="record">
+                        <Code type="string">10001</Code>
+                        <WholeName type="string">日本　一</WholeName>
+                        <Department_Code1 type="string">01</Department_Code1>
+                      </Physician_Information_child>
+                    </Physician_Information>
+                  </physicianres>
+                </xmlio2>
+                """;
+
+        OrcaXmlMapper mapper = new OrcaXmlMapper();
+        OrcaReceptionSelectorOptionsResponse response = mapper.toPhysicianOptionList(xml);
+
+        assertEquals("00", response.getApiResult());
+        assertEquals(0, response.getDepartments().size());
+        assertEquals(1, response.getPhysicians().size());
+        assertEquals("10001", response.getPhysicians().get(0).getCode());
+        assertEquals("日本　一", response.getPhysicians().get(0).getName());
     }
 }

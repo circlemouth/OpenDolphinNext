@@ -25,6 +25,8 @@ import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse.AppointmentSlot;
 import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
 import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse.MedicalInformationOption;
+import open.dolphin.rest.dto.orca.OrcaReceptionSelectorOptionsResponse;
+import open.dolphin.rest.dto.orca.OrcaReceptionSelectorOptionsResponse.SelectorOption;
 import open.dolphin.rest.dto.orca.PatientAppointmentListResponse;
 import open.dolphin.rest.dto.orca.PatientAppointmentListResponse.PatientAppointment;
 import open.dolphin.rest.dto.orca.PatientBatchResponse;
@@ -208,6 +210,22 @@ public class OrcaXmlMapper {
         populateCommon(body, response);
         response.setRequestNumber(textValue(body, "Request_Number"));
         collectMedicalInformationOptions(body, response.getItems(), new LinkedHashSet<>());
+        return response;
+    }
+
+    public OrcaReceptionSelectorOptionsResponse toDepartmentOptionList(String xml) {
+        JsonNode body = read(xml).path("departmentres");
+        OrcaReceptionSelectorOptionsResponse response = new OrcaReceptionSelectorOptionsResponse();
+        populateCommon(body, response);
+        collectSelectorOptions(body.path("Department_Information"), response.getDepartments(), new LinkedHashSet<>());
+        return response;
+    }
+
+    public OrcaReceptionSelectorOptionsResponse toPhysicianOptionList(String xml) {
+        JsonNode body = read(xml).path("physicianres");
+        OrcaReceptionSelectorOptionsResponse response = new OrcaReceptionSelectorOptionsResponse();
+        populateCommon(body, response);
+        collectSelectorOptions(body.path("Physician_Information"), response.getPhysicians(), new LinkedHashSet<>());
         return response;
     }
 
@@ -409,6 +427,40 @@ public class OrcaXmlMapper {
         Iterator<JsonNode> children = node.elements();
         while (children.hasNext()) {
             collectMedicalInformationOptions(children.next(), target, seenCodes);
+        }
+    }
+
+    private void collectSelectorOptions(
+            JsonNode node,
+            java.util.List<SelectorOption> target,
+            Set<String> seenCodes) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return;
+        }
+        if (node.isArray()) {
+            for (JsonNode child : node) {
+                collectSelectorOptions(child, target, seenCodes);
+            }
+            return;
+        }
+        if (!node.isObject()) {
+            return;
+        }
+        String code = firstNonBlankText(textValue(node, "Code"), textValue(node, "code"));
+        String name = firstNonBlankText(
+                textValue(node, "WholeName"),
+                textValue(node, "Name1"),
+                textValue(node, "Name"),
+                textValue(node, "name"));
+        if (code != null && !code.isBlank() && seenCodes.add(code)) {
+            SelectorOption option = new SelectorOption();
+            option.setCode(code);
+            option.setName(name != null && !name.isBlank() ? name : code);
+            target.add(option);
+        }
+        Iterator<JsonNode> children = node.elements();
+        while (children.hasNext()) {
+            collectSelectorOptions(children.next(), target, seenCodes);
         }
     }
 

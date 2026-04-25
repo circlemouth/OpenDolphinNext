@@ -85,6 +85,15 @@ class OrcaLiveGatewaySupportTest {
     }
 
     @Test
+    void buildSystemManagementOptionsPayloadUsesRequestedAllowlistedClass() {
+        String xml = support.buildSystemManagementOptionsPayload("02");
+
+        assertTrue(xml.contains("query=class=02"));
+        assertTrue(xml.contains("<system01lstv2req type=\"record\">"));
+        assertTrue(xml.contains("<Request_Number type=\"string\">02</Request_Number>"));
+    }
+
+    @Test
     void buildInsuranceCombinationPayloadUsesOfficialPatientlst6Shape() {
         InsuranceCombinationRequest request = new InsuranceCombinationRequest();
         request.setPatientId("000019");

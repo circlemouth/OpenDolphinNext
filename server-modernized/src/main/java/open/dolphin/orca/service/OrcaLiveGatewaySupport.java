@@ -344,10 +344,18 @@ final class OrcaLiveGatewaySupport {
     }
 
     String buildMedicalInformationOptionsPayload() {
+        return buildSystemManagementOptionsPayload("06");
+    }
+
+    String buildSystemManagementOptionsPayload(String requestNumber) {
+        String normalized = requireText(requestNumber, "requestNumber").trim();
+        if (!normalized.matches("0[1-7]")) {
+            throw new OrcaGatewayException("Unsupported system management request number");
+        }
         StringBuilder builder = new StringBuilder();
-        builder.append(buildOrcaMeta(OrcaEndpoint.SYSTEM_MANAGEMENT_LIST, "06"));
+        builder.append(buildOrcaMeta(OrcaEndpoint.SYSTEM_MANAGEMENT_LIST, normalized));
         builder.append("<data><system01lstv2req type=\"record\">");
-        builder.append("<Request_Number type=\"string\">06</Request_Number>");
+        builder.append("<Request_Number type=\"string\">").append(normalized).append("</Request_Number>");
         builder.append("</system01lstv2req></data>");
         return builder.toString();
     }

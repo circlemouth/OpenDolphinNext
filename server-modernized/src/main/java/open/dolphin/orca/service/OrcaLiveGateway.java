@@ -11,6 +11,7 @@ import open.dolphin.rest.dto.orca.InsuranceCombinationResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListRequest;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse;
 import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
+import open.dolphin.rest.dto.orca.OrcaReceptionSelectorOptionsResponse;
 import open.dolphin.rest.dto.orca.PatientAppointmentListRequest;
 import open.dolphin.rest.dto.orca.PatientAppointmentListResponse;
 import open.dolphin.rest.dto.orca.PatientBatchRequest;
@@ -45,6 +46,8 @@ public interface OrcaLiveGateway {
     PatientSearchResponse searchPatients(String facilityId, PatientNameSearchRequest request);
 
     OrcaMedicalInformationListResponse getMedicalInformationOptions(String facilityId);
+
+    OrcaReceptionSelectorOptionsResponse getReceptionSelectorOptions(String facilityId);
 
     InsuranceCombinationResponse getInsuranceCombinations(String facilityId, InsuranceCombinationRequest request);
 

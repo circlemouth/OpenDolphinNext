@@ -53,6 +53,10 @@ let mockClaimSendCache: Record<
   }
 > = {};
 let mockMedicalInformationOptions = [{ code: '01', name: '外来' }];
+let mockReceptionSelectorOptions = {
+  departments: [] as Array<{ code: string; name: string }>,
+  physicians: [] as Array<{ code: string; name: string }>,
+};
 let mockSearchParams = new URLSearchParams();
 let mockLocationState: Record<string, unknown> | undefined;
 let mockSessionRole = 'staff';
@@ -322,6 +326,17 @@ vi.mock('@tanstack/react-query', () => ({
         refetch: vi.fn(),
       };
     }
+    if (key === 'orca-reception-selector-options') {
+      return {
+        data: mockReceptionSelectorOptions,
+        dataUpdatedAt: 0,
+        isError: false,
+        error: null,
+        isFetching: false,
+        isLoading: false,
+        refetch: vi.fn(),
+      };
+    }
     return {
       data: undefined,
       dataUpdatedAt: 0,
@@ -475,6 +490,7 @@ beforeEach(() => {
   mockMutationPending = false;
   mockClaimSendCache = {};
   mockMedicalInformationOptions = [{ code: '01', name: '外来' }];
+  mockReceptionSelectorOptions = { departments: [], physicians: [] };
   mockSearchParams = new URLSearchParams();
   mockLocationState = undefined;
   mockSessionRole = 'staff';
@@ -1016,6 +1032,71 @@ describe('ReceptionPage accept UX', () => {
     expect(physicianSelect.options).toHaveLength(1);
     expect(registerButton).toBeDisabled();
     expect(mockMutationCalls).toHaveLength(1);
+  });
+
+  it('uses server-authoritative selector options for direct patient-search acceptance', async () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-selector-display-only',
+        patientId: 'P-SEL',
+        appointmentId: 'A-SEL',
+        name: '選択肢患者',
+        appointmentTime: '10:45',
+        department: '01 内科',
+        physician: '10001 担当医A',
+        status: '予約',
+        insurance: '保険',
+        source: 'reservations',
+      },
+    ];
+    mockReceptionSelectorOptions = {
+      departments: [{ code: '01', name: '内科' }],
+      physicians: [{ code: '10001', name: '日本 一' }],
+    };
+    mockMutationQueue.push(
+      {
+        patients: [
+          {
+            patientId: 'P-SEL',
+            name: '選択肢患者',
+            insurance: '保険',
+          },
+        ],
+        recordsReturned: 1,
+        runId: 'RUN-SEARCH-SELECTOR',
+      },
+      {
+        runId: 'RUN-VISIT-SELECTOR',
+        traceId: 'TRACE-VISIT-SELECTOR',
+        apiResult: '00',
+        apiResultMessage: 'OK',
+        acceptanceId: 'R-SEL',
+        acceptanceDate: '2026-01-29',
+        acceptanceTime: '11:05:00',
+        patient: { patientId: 'P-SEL', name: '選択肢患者' },
+      },
+    );
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    await user.click(within(patientSearch).getByRole('button', { name: '検索' }));
+    const resultPanel = within(workflowModal).getByRole('region', { name: '患者検索結果モーダル' });
+    await user.click(within(resultPanel).getAllByRole('listitem')[0]);
+
+    const acceptPanel = getAcceptRegisterPanel(workflowModal);
+    await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
+    await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
+    await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
+
+    expect(mockMutationCalls.at(-1)).toMatchObject({
+      requestNumber: '01',
+      patientId: 'P-SEL',
+      departmentCode: '01',
+      physicianCode: '10001',
+    });
   });
 
   it('accept success 後は patient search 側の canonical handoff で charts を開ける', async () => {

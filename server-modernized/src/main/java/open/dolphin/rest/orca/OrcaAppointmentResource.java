@@ -28,6 +28,7 @@ import open.dolphin.rest.dto.orca.BillingSimulationResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListRequest;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse;
 import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
+import open.dolphin.rest.dto.orca.OrcaReceptionSelectorOptionsResponse;
 import open.dolphin.rest.dto.orca.PatientAppointmentListRequest;
 import open.dolphin.rest.dto.orca.PatientAppointmentListResponse;
 import open.dolphin.session.framework.SessionOperation;
@@ -44,6 +45,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
     private static final String OPERATION_BILLING_ESTIMATE = "billing_estimate";
     private static final String OPERATION_APPOINTMENT_MUTATION = "appointment_mutation";
     private static final String OPERATION_MEDICAL_INFORMATION_OPTIONS = "medical_information_options";
+    private static final String OPERATION_RECEPTION_SELECTOR_OPTIONS = "reception_selector_options";
     private static final ZoneId TOKYO_ZONE = ZoneId.of("Asia/Tokyo");
     private static final DateTimeFormatter ORCA_TIME_FORMAT = DateTimeFormatter.ofPattern("HHmm").withZone(TOKYO_ZONE);
 
@@ -133,6 +135,30 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.medical_information.error", ex.getMessage());
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw ex;
+        }
+    }
+
+    @GET
+    @Path("/appointments/selector-options")
+    @Produces(MediaType.APPLICATION_JSON)
+    public OrcaReceptionSelectorOptionsResponse receptionSelectorOptions(@Context HttpServletRequest request) {
+        String facilityId = requireFacilityId(request);
+        Map<String, Object> details = newAuditDetails(request);
+        details.put("operation", OPERATION_RECEPTION_SELECTOR_OPTIONS);
+        try {
+            OrcaReceptionSelectorOptionsResponse response = wrapperService.getReceptionSelectorOptions(facilityId);
+            applyResponseAuditDetails(response, details);
+            applyResponseMetadata(response, details);
+            details.put("departmentCount", response.getDepartments().size());
+            details.put("physicianCount", response.getPhysicians().size());
+            markSuccessDetails(details);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
+            return response;
+        } catch (RuntimeException ex) {
+            markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
+                    "orca.reception_selector_options.error", ex.getMessage());
             recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }

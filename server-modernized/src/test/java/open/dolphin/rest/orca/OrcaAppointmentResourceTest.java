@@ -17,6 +17,10 @@ import open.dolphin.orca.converter.OrcaXmlMapper;
 import open.dolphin.orca.service.DefaultOrcaLiveGateway;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.transport.StubOrcaTransport;
+import open.dolphin.orca.transport.OrcaEndpoint;
+import open.dolphin.orca.transport.OrcaTransport;
+import open.dolphin.orca.transport.OrcaTransportRequest;
+import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.rest.dto.orca.AppointmentMutationRequest;
 import open.dolphin.rest.dto.orca.AppointmentMutationResponse;
@@ -26,6 +30,7 @@ import open.dolphin.rest.dto.orca.BillingSimulationResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListRequest;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse;
 import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
+import open.dolphin.rest.dto.orca.OrcaReceptionSelectorOptionsResponse;
 import open.dolphin.rest.dto.orca.PatientAppointmentListRequest;
 import open.dolphin.rest.dto.orca.PatientAppointmentListResponse;
 import open.dolphin.rest.dto.orca.PatientSummary;
@@ -153,6 +158,25 @@ class OrcaAppointmentResourceTest {
         assertEquals(2, response.getItems().size());
         assertEquals("01", response.getItems().get(0).getCode());
         assertEquals("診察", response.getItems().get(0).getName());
+        assertGeneratedRunId(response.getRunId());
+    }
+
+    @Test
+    void receptionSelectorOptionsReturnsServerAuthoritativeSystemManagementOptions() {
+        OrcaAppointmentResource resource = new OrcaAppointmentResource();
+        resource.setWrapperService(new DefaultOrcaLiveGateway(new SelectorOptionsTransport(), new OrcaXmlMapper()));
+
+        OrcaReceptionSelectorOptionsResponse response = resource.receptionSelectorOptions(
+                createRequest("F001:doctor01", "/api/orca/official/appointments/selector-options", Map.of()));
+
+        assertEquals("00", response.getApiResult());
+        assertEquals(1, response.getDepartments().size());
+        assertEquals("01", response.getDepartments().get(0).getCode());
+        assertEquals("内科", response.getDepartments().get(0).getName());
+        assertEquals(1, response.getPhysicians().size());
+        assertEquals("10001", response.getPhysicians().get(0).getCode());
+        assertEquals("日本　一", response.getPhysicians().get(0).getName());
+        assertEquals(2, response.getRecordsReturned());
         assertGeneratedRunId(response.getRunId());
     }
 
@@ -319,6 +343,43 @@ class OrcaAppointmentResourceTest {
             this.payload = payload;
             this.outcome = overrideOutcome;
             return null;
+        }
+    }
+
+    private static final class SelectorOptionsTransport implements OrcaTransport {
+        @Override
+        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
+            String body = request.getBody();
+            if (body != null && body.contains("<Request_Number type=\"string\">01</Request_Number>")) {
+                return OrcaTransportResult.fallback("""
+                        <xmlio2>
+                          <departmentres>
+                            <Api_Result type="string">00</Api_Result>
+                            <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                            <Department_Information type="array">
+                              <Department_Information_child type="record">
+                                <Code type="string">01</Code>
+                                <WholeName type="string">内科</WholeName>
+                              </Department_Information_child>
+                            </Department_Information>
+                          </departmentres>
+                        </xmlio2>
+                        """, "application/xml");
+            }
+            return OrcaTransportResult.fallback("""
+                    <xmlio2>
+                      <physicianres>
+                        <Api_Result type="string">00</Api_Result>
+                        <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                        <Physician_Information type="array">
+                          <Physician_Information_child type="record">
+                            <Code type="string">10001</Code>
+                            <WholeName type="string">日本　一</WholeName>
+                          </Physician_Information_child>
+                        </Physician_Information>
+                      </physicianres>
+                    </xmlio2>
+                    """, "application/xml");
         }
     }
 }

@@ -90,6 +90,16 @@ export type MedicalInformationOption = {
   name: string;
 };
 
+export type ReceptionSelectorOption = {
+  code: string;
+  name: string;
+};
+
+export type ReceptionSelectorOptions = {
+  departments: ReceptionSelectorOption[];
+  physicians: ReceptionSelectorOption[];
+};
+
 export type Acceptmodv2ReadOnlyDiagnosticReadiness = {
   verdict: 'accepted' | 'rejected' | 'not_verified';
   apiResult: string;
@@ -623,6 +633,40 @@ export async function fetchMedicalInformationOptions(): Promise<MedicalInformati
       code: item.code,
       name: item.name || item.code,
     }));
+}
+
+const normalizeSelectorOptions = (items: unknown): ReceptionSelectorOption[] => {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => {
+      const record = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+      const code = normalizeOptionalString(record.code);
+      const name = normalizeOptionalString(record.name);
+      return {
+        code: code ?? '',
+        name: name ?? code ?? '',
+      };
+    })
+    .filter((item) => item.code.length > 0)
+    .map((item) => ({
+      code: item.code,
+      name: item.name || item.code,
+    }));
+};
+
+export async function fetchReceptionSelectorOptions(): Promise<ReceptionSelectorOptions> {
+  const response = await httpFetch('/api/orca/official/appointments/selector-options', {
+    method: 'GET',
+    notifySessionExpired: false,
+  });
+  const body = (await response.json().catch(() => ({}))) as {
+    departments?: unknown;
+    physicians?: unknown;
+  };
+  return {
+    departments: normalizeSelectorOptions(body.departments),
+    physicians: normalizeSelectorOptions(body.physicians),
+  };
 }
 
 export async function fetchClaimFlags(

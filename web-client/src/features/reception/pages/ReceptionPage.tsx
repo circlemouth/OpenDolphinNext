@@ -17,9 +17,11 @@ import {
   fetchAppointmentOutpatients,
   fetchClaimFlags,
   fetchMedicalInformationOptions,
+  fetchReceptionSelectorOptions,
   isClaimOutpatientEnabled,
   mutateVisit,
   type MedicalInformationOption,
+  type ReceptionSelectorOptions,
   type AppointmentPayload,
   type ReceptionEntry,
   type ReceptionStatus,
@@ -1704,9 +1706,19 @@ export function ReceptionPage({
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
   }, [acceptWorkflowModalOpen]);
+  const selectorOptionsQuery = useQuery<ReceptionSelectorOptions>({
+    queryKey: ['orca-reception-selector-options'],
+    queryFn: fetchReceptionSelectorOptions,
+    staleTime: 300_000,
+  });
   const departmentLabelMap = useMemo(() => {
     const raw = appointmentQuery.data?.raw as Record<string, unknown> | undefined;
     const map = new Map<string, string>();
+    (selectorOptionsQuery.data?.departments ?? []).forEach((option) => {
+      const code = normalizeCanonicalCode(option.code);
+      if (!code) return;
+      map.set(code, resolveEntryDisplayLabel(code, option.name));
+    });
     if (!raw) return map;
     const collect = (items?: unknown) => {
       if (!Array.isArray(items)) return;
@@ -1731,10 +1743,15 @@ export function ReceptionPage({
     collect(rawRecord.reservations);
     collect(rawRecord.visits);
     return map;
-  }, [appointmentQuery.data?.raw]);
+  }, [appointmentQuery.data?.raw, selectorOptionsQuery.data?.departments]);
   const physicianNameMap = useMemo(() => {
     const raw = appointmentQuery.data?.raw as Record<string, unknown> | undefined;
     const map: PhysicianNameMap = {};
+    (selectorOptionsQuery.data?.physicians ?? []).forEach((option) => {
+      const code = normalizeCanonicalCode(option.code);
+      if (!code) return;
+      map[code] = resolveEntryDisplayLabel(code, option.name);
+    });
     if (!raw) return map;
     const collect = (items?: unknown) => {
       if (!Array.isArray(items)) return;
@@ -1759,7 +1776,7 @@ export function ReceptionPage({
     collect(rawRecord.reservations);
     collect(rawRecord.visits);
     return map;
-  }, [appointmentQuery.data?.raw]);
+  }, [appointmentQuery.data?.raw, selectorOptionsQuery.data?.physicians]);
   const uniqueDepartments = useMemo(
     () => Array.from(new Set(visibleAppointmentEntries.map((entry) => entry.department).filter(Boolean))) as string[],
     [visibleAppointmentEntries],
@@ -2320,6 +2337,12 @@ export function ReceptionPage({
       const mappedLabel = physicianNameMap[code]?.trim();
       options.set(code, mappedLabel && mappedLabel !== code ? mappedLabel : resolveEntryDisplayLabel(code, entry?.physician));
     };
+    (selectorOptionsQuery.data?.physicians ?? []).forEach((option) => {
+      const code = normalizeCanonicalCode(option.code);
+      if (!code || options.has(code)) return;
+      const mappedLabel = physicianNameMap[code]?.trim();
+      options.set(code, mappedLabel && mappedLabel !== code ? mappedLabel : resolveEntryDisplayLabel(code, option.name));
+    });
     visibleAppointmentEntries.forEach((entry) => registerEntry(entry));
     registerEntry(selected);
     const selectedCode = normalizeCanonicalCode(acceptPhysicianSelection);
@@ -2340,7 +2363,7 @@ export function ReceptionPage({
         code,
         label,
       }));
-  }, [acceptPhysicianSelection, displayedEntries, physicianNameMap, selectedEntryKey, visibleAppointmentEntries]);
+  }, [acceptPhysicianSelection, displayedEntries, physicianNameMap, selectedEntryKey, selectorOptionsQuery.data?.physicians, visibleAppointmentEntries]);
 
   const selectedEntry = useMemo(() => {
     if (!selectedEntryKey) return undefined;
