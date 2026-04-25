@@ -235,6 +235,26 @@ describe('evaluateMedicalInformationGate', () => {
     expect(result.violatedKeys).toEqual(['patientId']);
   });
 
+  it('fullflow 診断では expectedPatientId を指定して runtime-smoke 対象患者を検証できる', () => {
+    const result = evaluateMedicalInformationGate({
+      medicalInformation: '',
+      expectedPatientId: '00999',
+      expectedCandidateId: '00999',
+      requestRecords: [
+        {
+          url: 'https://localhost/api/orca/official/visits/mutation',
+          postData: '{"requestNumber":"01","patientId":"00999","acceptancePush":"1"}',
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.requestNumber01ValueVerified).toBe(true);
+    expect(result.targetPatientId00001Verified).toBe(true);
+    expect(result.targetCandidateOnly00001).toBe(true);
+    expect(result.medicalInformationFieldPresent).toBe(false);
+  });
+
   it('candidate が 00001 以外なら failure にする', () => {
     const result = evaluateMedicalInformationGate({
       medicalInformation: '',

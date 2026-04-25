@@ -1,97 +1,86 @@
 # NEXT_WORKER_PROMPT
 
-status: completed
-created_at: 2026-04-24T21:00:00Z
-source_work_order: RWO-08B/RWO-06D/RWO-07/RWO-06F-through-06K
-blocker_id: owner-expanded-fullflow-disease-request-number-order-v2-scope
+status: active
+created_at: 2026-04-25T06:12:00Z
+source_work_order: RWO-08B/RWO-08/RWO-09/RWO-11
+blocker_id: fullflow-accepted-encounter-official-visit-identifiers-missing
 priority: high
 supersedes:
-- subjectivesv2-live-trial-post-request-number-fix-transport-rejected-502-investigation
+- owner-expanded-fullflow-disease-request-number-order-v2-scope
 
 ## Context
 
-Owner direction recorded on 2026-04-24 expands automation scope:
+RUN_ID `20260425T055659Z` repaired the diagnostic fullflow harness gate:
 
-- Existing broad browser/fullflow harnesses may run even if they create screenshots, HAR, traces, videos, or raw network artifacts, but only as local-only untracked diagnostic artifacts.
-- Diagnostic artifacts are not release evidence and must not be committed, copied into reviewer packets, or pasted into summaries.
-- `diseasev3` create/update/delete verification should proceed through endpoint-specific wrappers, parser/sanitizer checks, duplicate-live checkpoints, and sanitized business-success criteria.
-- Electronic-chart operations that users can act on must be enumerated and tested, including Request_Number `02` / `03` / `04` or equivalent update/delete/cancel semantics.
-- `medicalmodv2` order families with Trial-rejected v1 payloads must use web-researched official/public sources plus no-live contract checks to propose justified v2 candidates before any live retry.
+- `web-client/scripts/qa-fullflow-weborca.mjs` now evaluates the acceptmodv2 identity gate against the current `QA_PATIENT_ID` instead of a fixed Phase 3 target.
+- The harness no longer classifies every identity-gate failure as `medical_information_omission_violation`.
+- `web-client/scripts/__tests__/medicalInformationGate.test.ts` covers the non-default fullflow diagnostic target case.
+- Focused test passed: `npm run --prefix web-client test -- scripts/__tests__/medicalInformationGate.test.ts` (27 tests).
+- `npm run --prefix web-client verify:web-guard` passed.
+- `RUN_ID=20260425T055659Z node web-client/scripts/runtime-ready-smoke.mjs` passed.
 
-Current repo state at creation:
+Diagnostic fullflow was run under the Diagnostic Artifact Exception. Raw diagnostic output is local-only and gitignored under:
 
-- Branch: `master`
-- Last known HEAD: `aa30a9b09`
-- Latest reviewer packet refresh: RUN_ID `20260424T200206Z`
-- Prior `subjectivesv2` status: HTTP `502` / `transportRejected`, no business success, no new live retry unless a concrete fix or changed precondition is found.
+- `artifacts/diagnostic-fullflow/20260425T055659Z/fullflow`
+- a second redacted target-specific subdirectory under `artifacts/diagnostic-fullflow/20260425T055659Z/`
+
+Do not commit or package those diagnostic artifacts.
+
+Sanitized evidence:
+
+- `docs/implementation/rwo08b-fullflow-gate-repair-20260425T055659Z/FINAL_REPORT.md`
+- `docs/implementation/rwo08b-fullflow-gate-repair-20260425T055659Z/summary.sanitized.json`
+
+Current blocker:
+
+- Smoke-local patient diagnostic fullflow: medical-information gate passed, but accept did not produce a canonical Charts handoff; classified as `blocked_test_data`.
+- ORCA-searchable Trial dummy target diagnostic fullflow: Charts handoff became ready with a canonical encounter key, but no selected visit row was present, Charts send stayed disabled with `missing_encounter_context`, and the blocker is `official-visit-row-blocker` / `visit_row_official_identifiers_missing`.
+- No `medicalmodv2` request XML was created. No L4 fullflow success is claimed.
 
 ## Goal
 
-Advance the expanded release-readiness scope without overclaiming:
-
-1. Inventory fullflow/browser harnesses that can now run under the Diagnostic Artifact Exception.
-2. Run or prepare the next safe fullflow diagnostic step if local runtime prerequisites are available.
-3. Advance `diseasev3` from create-only no-live readiness toward live create verification, then prepare update/delete only after create has sanitized endpoint-specific evidence.
-4. Build the RWO-07 operation matrix for every electronic-chart user action that maps to create/update/delete/cancel/copy/send semantics and Request_Number `02` / `03` / `04` or equivalent selectors.
-5. Use web-researched official/public sources to propose v2 candidate payloads for rejected order families: `instractionChargeOrder/130`, `baseChargeOrder/110`, `injectionOrder/310`, `surgeryOrder/500`, `testOrder/600`, and `radiologyOrder/700`.
+Fix or precisely classify why the accepted encounter that reaches Charts with a canonical encounter key does not hydrate official visit identifiers into Charts send context.
 
 ## Required First Steps
 
 1. Inspect current branch, HEAD, status, and worktrees.
-2. Read `$CODEX_HOME/automations/orca/memory.md`, `HANDOFF_STATE.json`, this prompt, `WORKPLAN_TO_RELEASE.md`, `REMAINING_WORK_BREAKDOWN.md`, `RELEASE_GATE_MATRIX.md`, and `ORCA_TRIAL_REACHABILITY_EXPANSION_PLAN.md`.
-3. If uncommitted unrelated changes exist, do not overwrite them.
-4. If the previous worker already completed one of the tasks below, continue with the next independent task.
+2. Read `$CODEX_HOME/automations/orca/memory.md`, `HANDOFF_STATE.json`, this prompt, `WORKPLAN_TO_RELEASE.md`, `REMAINING_WORK_BREAKDOWN.md`, `RELEASE_GATE_MATRIX.md`, and the RWO-08B sanitized evidence above.
+3. Do not read, paste, commit, or package raw diagnostic artifact contents except as local-only debugging input. Any committed evidence must be sanitized summaries only.
+4. If unrelated uncommitted changes exist, do not overwrite them.
 
 ## Allowed Actions
 
-- Run web research against official/public sources for order v2 candidates, and record only source URLs, code/name/class candidates, caveats, and sanitized reasoning.
-- Add docs/evidence for the v2 candidate research and update matrices.
-- Run no-live parser/sanitizer/wrapper dry-runs for candidate payloads.
-- Run live ORCA Trial checks only through existing reviewed wrappers or narrowly reviewed repo-local commands, with endpoint-specific success criteria and duplicate-live checkpoints.
-- Run diagnostic fullflow/browser harnesses that create screenshots/HAR/traces/videos/raw-network artifacts only if artifacts remain local-only, untracked, and excluded from committed evidence and reviewer packets.
-- Commit roadmap/handoff-scoped docs, sanitized evidence, and source/test fixes after verification.
+- Add focused no-live unit/component tests around Reception-to-Charts handoff, accepted encounter hydration, selected visit row resolution, and `ChartsActionBar` send-context readiness.
+- Fix repo-local defects in `web-client/` or `server-modernized/` that prevent accepted encounter identifiers from being carried into Charts, as long as the fix preserves server-side authority and fail-closed behavior.
+- Rerun `runtime-ready-smoke` and one diagnostic fullflow after a concrete fix or changed test-data precondition.
+- Keep diagnostic screenshots/network JSON/request XML/HAR/traces/videos local-only under gitignored output directories.
+- Commit only reviewed source changes, focused tests, sanitized evidence, handoff state, and gate matrix updates.
 
 ## Forbidden Actions
 
 - Production ORCA execution or production readiness claims.
 - S3/MinIO/object-storage setup, dummy storage, fake object-storage credentials, or storage readiness claims.
-- Printing, requesting, committing, or packaging ORCA credentials, production credentials, external-service secret values, cookies, session IDs, auth headers, anti-forgery values, credential-bearing URLs, raw ORCA bodies, raw patient details, or raw insurance details.
-- Committing or packaging screenshots, HAR, traces, videos, raw network dumps, request XML, raw request/response bodies, or raw body-derived artifacts.
-- Repeating a rejected v1 live mutation identity without a source-backed v2 candidate and focused no-live verification.
-- Repeating `subjectivesv2` live with the same payload unless a concrete repo-local fix or changed precondition is documented and verified no-live.
-- Changes under legacy `client/` or `server/`.
-
-## Priority Order
-
-1. Create a sanitized RWO-07 operation matrix for user-actionable chart operations and Request_Number `02` / `03` / `04` applicability.
-2. Prepare or run `diseasev3` create live verification if existing wrapper/readiness prerequisites are satisfied; otherwise write the exact blocker and next command.
-3. Inventory diagnostic fullflow harnesses and run the next safe diagnostic fullflow if runtime prerequisites are already available; otherwise record `skipped_environment_unavailable_*` and continue.
-4. Record web-researched v2 candidate findings for rejected order families and prepare no-live candidate payload work.
-5. Update `HANDOFF_STATE.json`, release gate matrix, roadmap docs, and final summary with claim boundaries.
+- Printing, requesting, committing, or packaging credentials, cookies, session IDs, auth headers, anti-forgery values, credential-bearing URLs, raw ORCA bodies, raw patient details, raw insurance details, screenshots, HAR, traces, videos, raw network dumps, request XML, or raw request/response bodies.
+- Repeating live diagnostic fullflow without a concrete fix or changed precondition.
+- Broad refactors or changes under legacy `client/` or `server/`.
 
 ## Evidence Requirements
 
-- Sanitized Markdown/JSON evidence only.
-- Diagnostic artifact manifest may list local relative directories, artifact classes, counts, hashes, and excluded-from-commit status, but must not include raw content.
-- For live Trial steps: endpoint, target, request class/number, payload identity hash, duplicate-live checkpoint, parsed business-success classification, and credentialsCaptured/rawArtifactsCommitted flags.
-- For web research: source URL, source type, candidate code/name/class, confidence, and caveats.
+- Sanitized Markdown/JSON only.
+- For any rerun: endpoint/request-class identity, target classification, medical-information gate result, Charts handoff status, selected visit row status, official identifier readiness, request XML created/not-created, business-success classification, and blocker/result.
+- Diagnostic artifact manifest may include local relative directories, artifact classes, counts, and gitignored status only.
+- credentialsCaptured must remain `false`; rawArtifactsCommittedOrPackaged must remain `false`.
 
 ## Completion Criteria
 
 This prompt is complete when one of these is true:
 
-- RWO-07 operation matrix plus at least one next executable endpoint-specific task is recorded.
-- `diseasev3` create reaches sanitized `live_accepted`, `business_rejected`, or blocked classification.
-- Diagnostic fullflow produces sanitized L4 evidence or a concrete environment/blocker record.
-- Rejected order-family v2 candidates are researched and queued with no-live verification tasks.
+- A repo-local fix lands, focused no-live tests pass, `runtime-ready-smoke` passes, and one diagnostic fullflow reaches either sanitized L4 success or a later endpoint-specific blocker.
+- The official-visit-identifier hydration blocker is proven to be a test-data/environment precondition, with sanitized evidence and a next executable target/precondition.
+- A non-skippable safety blocker is recorded with sanitized evidence and the next independent safe Work Order is selected.
 
-In every completion path:
-
-- credentials printed/captured: `false`
-- raw artifacts committed/packaged: `false`
-- diagnostic artifacts, if captured, remain local-only/untracked and excluded from reviewer packets
-- no production ORCA, S3/MinIO/object-storage, broad all-order claim, broad SOAP/disease claim, or final release readiness claim
+In every completion path, update `HANDOFF_STATE.json`, `RELEASE_GATE_MATRIX.md`, and write a final sanitized evidence directory.
 
 ## Final Report Requirements
 
-Use `【ワーカー報告】` and include branch/HEAD, active prompt, current Work Order, next Work Order, files changed, commit id, tests/checks, live Trial endpoint/target/request class if used, diagnostic artifact handling if used, sanitized business-success classification, blockers, recommended next action, credentials captured, and raw artifacts committed/packaged.
+Use `【ワーカー報告】` and include branch/HEAD, active prompt, current Work Order, next Work Order, files changed, commit id, tests/checks, diagnostic artifact handling, live Trial endpoint/target/request class if used, sanitized business-success classification, blockers, recommended next action, credentials captured, and raw artifacts committed/packaged.

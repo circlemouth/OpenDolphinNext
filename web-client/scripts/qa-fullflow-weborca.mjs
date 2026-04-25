@@ -393,6 +393,43 @@ const buildBlockerSummary = (summary) => ({
   evidencePaths: summary.evidencePaths,
 });
 
+const evaluateFullflowMedicalInformationGate = () =>
+  evaluateMedicalInformationGate({
+    requestRecords,
+    medicalInformation,
+    expectedPatientId: patientId,
+    expectedCandidateId: patientId,
+  });
+
+const classifyMedicalInformationGateFailure = (gate) => {
+  if (gate?.ok !== false) {
+    return undefined;
+  }
+  const violatedKeys = Array.isArray(gate.violatedKeys) ? gate.violatedKeys : [];
+  const medicalInformationViolation = violatedKeys.some((key) =>
+    /medicalInformation|Medical_Information/i.test(String(key)),
+  );
+  if (medicalInformationViolation) {
+    return 'medical_information_omission_violation';
+  }
+  if (violatedKeys.includes('patientId')) {
+    return 'target_patient_identity_violation';
+  }
+  if (violatedKeys.includes('candidateId')) {
+    return 'target_candidate_identity_violation';
+  }
+  if (violatedKeys.includes('requestNumber')) {
+    return 'request_number_identity_violation';
+  }
+  if (violatedKeys.includes('targetMutationRequest')) {
+    return 'target_mutation_request_missing_or_duplicate';
+  }
+  if (violatedKeys.includes('rawBodyDecisionRequired')) {
+    return 'raw_body_decision_required';
+  }
+  return 'acceptmodv2_identity_gate_violation';
+};
+
 const persistArtifacts = (summary) => {
   lastSummary = summary;
   fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2));
@@ -1013,10 +1050,7 @@ const run = async () => {
     visitKind,
     medicalInformation: medicalInformation || undefined,
     medicalInformationProbe,
-    medicalInformationGate: evaluateMedicalInformationGate({
-      requestRecords,
-      medicalInformation,
-    }),
+    medicalInformationGate: evaluateFullflowMedicalInformationGate(),
     selection: {
       department: departmentSelection,
       physician: physicianSelection,
@@ -1098,7 +1132,7 @@ const run = async () => {
   };
   if (summary.medicalInformationGate.ok === false) {
     summary.blockerClassification = 'repo-defect';
-    summary.blockerReason = 'medical_information_omission_violation';
+    summary.blockerReason = classifyMedicalInformationGateFailure(summary.medicalInformationGate);
   }
 
   persistArtifacts(summary);
@@ -1139,10 +1173,7 @@ run().catch(async (error) => {
       visitKind,
       medicalInformation: medicalInformation || undefined,
       medicalInformationProbe: undefined,
-      medicalInformationGate: evaluateMedicalInformationGate({
-        requestRecords,
-        medicalInformation,
-      }),
+      medicalInformationGate: evaluateFullflowMedicalInformationGate(),
       receptionRowStatus: 'unknown',
       chartsHandoff: { status: 'error' },
       visitRowReadiness: 'unknown',
@@ -1179,7 +1210,7 @@ run().catch(async (error) => {
     };
   if (summary.medicalInformationGate?.ok === false) {
     summary.blockerClassification = 'repo-defect';
-    summary.blockerReason = 'medical_information_omission_violation';
+    summary.blockerReason = classifyMedicalInformationGateFailure(summary.medicalInformationGate);
   }
   persistArtifacts(summary);
   fs.writeFileSync(summaryMdPath, buildSummaryMarkdown(summary));

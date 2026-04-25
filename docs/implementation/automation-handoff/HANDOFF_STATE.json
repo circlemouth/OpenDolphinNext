@@ -1,8 +1,8 @@
 {
-  "status": "completed",
+  "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-08B/RWO-06D/RWO-07/RWO-06F-through-06K",
-  "blockerId": "owner-expanded-fullflow-disease-request-number-order-v2-scope",
+  "sourceWorkOrder": "RWO-08B/RWO-08/RWO-09/RWO-11",
+  "blockerId": "fullflow-accepted-encounter-official-visit-identifiers-missing",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,75 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T05:25:02Z",
+  "lastUpdated": "2026-04-25T06:12:00Z",
+  "latestRwo08BFullflowGateRepair": {
+    "runId": "20260425T055659Z",
+    "workOrder": "RWO-08B",
+    "result": "FULLFLOW_GATE_REPAIR_RUNTIME_SMOKE_PASS_DIAGNOSTIC_FULLFLOW_BLOCKED_OFFICIAL_VISIT_IDENTIFIERS",
+    "branch": "master",
+    "startHead": "d1e900bae",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "completed"
+    },
+    "evidence": "docs/implementation/rwo08b-fullflow-gate-repair-20260425T055659Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-fullflow-gate-repair-20260425T055659Z/summary.sanitized.json",
+    "codeChange": {
+      "files": [
+        "web-client/scripts/qa-fullflow-weborca.mjs",
+        "web-client/scripts/__tests__/medicalInformationGate.test.ts"
+      ],
+      "summary": "Diagnostic fullflow acceptmodv2 gate now validates the current QA_PATIENT_ID and preserves non-medical-information blocker classifications."
+    },
+    "runtimeSmoke": {
+      "executed": true,
+      "result": "pass",
+      "artifactRoot": "artifacts/webclient/runtime-gate-ready/20260425T055659Z",
+      "jsonOnly": true
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "rawArtifactsLocalOnly": true,
+      "rawArtifactsCommittedOrPackaged": false,
+      "attempts": [
+        {
+          "label": "smoke-local-patient",
+          "exitCode": 1,
+          "medicalInformationGate": "pass",
+          "classification": "blocked_test_data",
+          "blockerReason": "canonical_charts_handoff_timeout_after_accept"
+        },
+        {
+          "label": "orca-searchable-trial-patient",
+          "exitCode": 0,
+          "medicalInformationGate": "pass",
+          "classification": "blocked_official_visit_row_identifiers",
+          "blockerReason": "visit_row_official_identifiers_missing",
+          "requestXmlCreated": false
+        }
+      ]
+    },
+    "tests": {
+      "focusedMedicalInformationGateTests": "pass_27_tests",
+      "webGuard": "pass",
+      "runtimeReadySmoke": "pass",
+      "diagnosticFullflow": "blocked_official_visit_row_identifiers"
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "endpoint": "fullflow_via_web_client",
+      "target": "trial_dummy_patient_identity",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "blocked_official_visit_row_identifiers",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Diagnostic fullflow gate classification repaired and runtime smoke passed only; no L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Investigate/fix accepted-encounter official visit identifier hydration into Charts send context, then rerun runtime smoke and one diagnostic fullflow.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "latestRwo08BFullflowInventory": {
     "runId": "20260425T044635Z",
     "workOrder": "RWO-08B",
