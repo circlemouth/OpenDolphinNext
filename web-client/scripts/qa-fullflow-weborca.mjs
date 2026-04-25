@@ -185,6 +185,154 @@ const safeInnerText = async (locator, timeout = 5000) => {
   }
 };
 
+const normalizeSummaryString = (value) => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+};
+
+const readFirstString = (value, keys) => {
+  if (!value || typeof value !== 'object') return undefined;
+  for (const key of keys) {
+    const direct = normalizeSummaryString(value[key]);
+    if (direct) return direct;
+  }
+  return undefined;
+};
+
+const hasNestedScalarForKeys = (value, keys, depth = 0) => {
+  if (depth > 6 || value == null) return false;
+  if (Array.isArray(value)) return value.some((entry) => hasNestedScalarForKeys(entry, keys, depth + 1));
+  if (typeof value !== 'object') return false;
+  return Object.entries(value).some(([key, entry]) => {
+    if (keys.has(key) && normalizeSummaryString(String(entry ?? ''))) return true;
+    return typeof entry === 'object' && entry != null && hasNestedScalarForKeys(entry, keys, depth + 1);
+  });
+};
+
+const summarizeAcceptMutationResponse = async (response) => {
+  if (!response) {
+    return {
+      observed: false,
+      httpStatusClass: 'not_observed',
+      businessSuccessClassification: 'not_observed',
+    };
+  }
+  let raw = null;
+  try {
+    raw = await response.json();
+  } catch {
+    raw = null;
+  }
+  const httpStatus = response.status();
+  const httpStatusClass = httpStatus >= 500 ? '5xx' : httpStatus >= 400 ? '4xx' : httpStatus >= 300 ? '3xx' : '2xx';
+  const apiResult = readFirstString(raw, ['apiResult', 'Api_Result', 'result', 'Result']);
+  const businessStatus = readFirstString(raw, ['businessStatus']);
+  const businessReason = readFirstString(raw, ['businessReason']);
+  const evidenceKeys = new Set([
+    'acceptanceId',
+    'Acceptance_Id',
+    'acceptance_id',
+    'receptionId',
+    'voucherNumber',
+    'Voucher_Number',
+    'visitNumber',
+    'Visit_Number',
+    'sequentialNumber',
+    'Sequential_Number',
+    'acceptanceInfo',
+    'Acceptance_Info',
+    'acceptance_info',
+  ]);
+  const patientEvidenceKeys = new Set(['patient', 'Patient', 'patientInformation', 'Patient_Information', 'patient_information']);
+  const acceptanceEvidencePresent =
+    raw && typeof raw === 'object'
+      ? Boolean(raw.hasRegistrationEvidence) || hasNestedScalarForKeys(raw, evidenceKeys)
+      : false;
+  const patientEvidencePresent = raw && typeof raw === 'object' ? hasNestedScalarForKeys(raw, patientEvidenceKeys) : false;
+  const scheduleKeyPresent = Boolean(readFirstString(raw, ['scheduleKey', 'Schedule_Key', 'schedule_key']));
+  const encounterKeyPresent = Boolean(readFirstString(raw, ['encounterKey', 'Encounter_Key', 'encounter_key']));
+  const acceptanceIdPresent = Boolean(readFirstString(raw, ['acceptanceId', 'Acceptance_Id', 'acceptance_id']));
+  const visitNumberPresent = Boolean(readFirstString(raw, ['visitNumber', 'Visit_Number', 'visit_number']));
+  const businessSuccessClassification =
+    businessStatus === 'businessAccepted' || businessStatus === 'businessAcceptedWithWarnings'
+      ? 'business_accepted'
+      : businessStatus === 'notVerified'
+        ? 'not_verified'
+        : businessStatus === 'businessRejected'
+          ? 'business_rejected'
+          : businessStatus === 'diagnosticNoExistingAcceptance'
+            ? 'diagnostic_no_existing_acceptance'
+            : apiResult === '16'
+              ? 'business_rejected_duplicate_acceptance'
+              : apiResult === '21'
+                ? 'business_rejected_insurance_mismatch'
+                : apiResult === '10'
+                  ? 'business_rejected_patient_not_found'
+                  : apiResult === '60'
+                    ? 'diagnostic_no_existing_acceptance'
+            : apiResult
+              ? 'api_result_observed_unclassified'
+              : 'no_parsed_business_result';
+
+  return {
+    observed: true,
+    httpStatus,
+    httpStatusClass,
+    apiResult,
+    businessStatus,
+    businessReason,
+    businessSuccessClassification,
+    acceptanceEvidencePresent,
+    patientEvidencePresent,
+    canonicalKeyPresence: {
+      acceptanceId: acceptanceIdPresent,
+      visitNumber: visitNumberPresent,
+      scheduleKey: scheduleKeyPresent,
+      encounterKey: encounterKeyPresent,
+    },
+    rawSensitiveFieldsExcluded: true,
+  };
+};
+
+const readReceptionEntryDiagnostics = async (page, targetPatientId) =>
+  page
+    .evaluate((patientId) => {
+      const rows = Array.from(document.querySelectorAll('[data-test-id="reception-entry-row"], [data-test-id="reception-entry-card"]'))
+        .filter((node) => node instanceof HTMLElement)
+        .map((node) => ({
+          patientId: node.dataset.patientId ?? '',
+          status: node.dataset.receptionStatus ?? '',
+          scheduleKeyPresent: Boolean(node.dataset.scheduleKey),
+          encounterKeyPresent: Boolean(node.dataset.encounterKey),
+          receptionIdPresent: Boolean(node.dataset.receptionId),
+          appointmentIdPresent: Boolean(node.dataset.appointmentId),
+        }));
+      const matching = rows.filter((row) => row.patientId === patientId);
+      const active = matching.filter((row) => row.status !== '予約');
+      const keyed = active.filter((row) => row.scheduleKeyPresent || row.encounterKeyPresent);
+      return {
+        totalRenderedRows: rows.length,
+        matchingRows: matching.length,
+        activeRows: active.length,
+        keyedActiveRows: keyed.length,
+        statuses: Array.from(new Set(matching.map((row) => row.status).filter(Boolean))).sort(),
+        anyReceptionIdPresent: active.some((row) => row.receptionIdPresent),
+        anyAppointmentIdPresent: active.some((row) => row.appointmentIdPresent),
+        anyScheduleKeyPresent: active.some((row) => row.scheduleKeyPresent),
+        anyEncounterKeyPresent: active.some((row) => row.encounterKeyPresent),
+        rawSensitiveFieldsExcluded: true,
+      };
+    }, targetPatientId)
+    .catch(() => ({
+      totalRenderedRows: 0,
+      matchingRows: 0,
+      activeRows: 0,
+      keyedActiveRows: 0,
+      statuses: [],
+      rawSensitiveFieldsExcluded: true,
+    }));
+
 const collectResponse = async (response) => {
   const url = response.url();
   if (!isTarget(url)) return;
@@ -359,6 +507,8 @@ const buildBlockerSummary = (summary) => ({
   blockerClassification: summary.blockerClassification,
   blockerReason: summary.blockerReason,
   medicalInformationProbe: summary.medicalInformationProbe,
+  acceptMutation: summary.acceptResult?.acceptMutation,
+  receptionEntryDiagnostics: summary.receptionEntryDiagnostics,
   chartsHandoff: summary.chartsHandoff,
   visitRowReadiness: summary.visitRowReadiness,
   sendResult: {
@@ -442,6 +592,8 @@ const buildSummaryMarkdown = (summary) =>
   `- Medical Information Probe: ${summary.medicalInformationProbe?.status ?? '—'}\n` +
   `- Medical Information Gate: ${summary.medicalInformationGate?.ok === false ? 'failed' : summary.medicalInformationGate?.enforced ? 'passed' : 'skipped'}\n` +
   `- Medical Information Checked Requests: ${summary.medicalInformationGate?.checkedRequests ?? 0}\n` +
+  `- Accept Mutation: ${summary.acceptResult?.acceptMutation?.businessSuccessClassification ?? 'unknown'}\n` +
+  `- Reception Active Entries: ${summary.receptionEntryDiagnostics?.activeRows ?? 'unknown'} / keyed ${summary.receptionEntryDiagnostics?.keyedActiveRows ?? 'unknown'}\n` +
   `- Charts Handoff: ${summary.chartsHandoff?.status ?? 'unknown'}\n` +
   `- Visit Row Readiness: ${summary.visitRowReadiness ?? 'unknown'}\n` +
   `- Order Result: ${summary.orderResult?.status ?? 'unknown'}\n` +
@@ -673,8 +825,10 @@ const run = async () => {
 
   await workflowModal.locator('[data-test-id="reception-accept-register"]').click();
   logStep('clicked reception send');
-  await acceptResponsePromise;
+  const acceptResponse = await acceptResponsePromise;
   logStep('accept response observed');
+  const acceptMutationSummary = await summarizeAcceptMutationResponse(acceptResponse);
+  logStep(`accept response classification=${JSON.stringify(acceptMutationSummary)}`);
   await page.waitForTimeout(2000);
 
   const afterShot = await writeScreenshot(page, '02-reception-after-accept');
@@ -704,6 +858,8 @@ const run = async () => {
 
   await writeScreenshot(page, '03-reception-list');
   logStep(`reception row status=${receptionRowStatus}`);
+  const receptionEntryDiagnostics = await readReceptionEntryDiagnostics(page, patientId);
+  logStep(`reception active diagnostics=${JSON.stringify(receptionEntryDiagnostics)}`);
 
   const patientSearchOpenChartsButton = workflowModal.locator('[data-test-id="reception-patient-search-open-charts"]').first();
   let chartsHandoff = {
@@ -729,6 +885,8 @@ const run = async () => {
     lastHandoffState = {
       status: 'ready',
       source: 'patient-search-open-charts',
+      acceptMutation: acceptMutationSummary,
+      receptionEntryDiagnostics,
       ...chartsHandoff,
     };
     logStep(
@@ -752,6 +910,8 @@ const run = async () => {
       source: 'patient-search-open-charts',
       error: String(error),
       buttonState,
+      acceptMutation: acceptMutationSummary,
+      receptionEntryDiagnostics,
     };
     logStep(`charts handoff error=${String(error)} state=${JSON.stringify(buttonState)}`);
     throw new Error(`canonical charts handoff did not become available after accept: ${String(error)}`);
@@ -1123,8 +1283,10 @@ const run = async () => {
       apiResultText,
       durationText,
       xhrDebugText,
+      acceptMutation: acceptMutationSummary,
     },
     receptionRowStatus,
+    receptionEntryDiagnostics,
     chartsHandoff,
     visitRowReadiness,
     charts: {
@@ -1235,6 +1397,10 @@ run().catch(async (error) => {
       medicalInformationProbe: undefined,
       medicalInformationGate: evaluateFullflowMedicalInformationGate(),
       receptionRowStatus: 'unknown',
+      acceptResult: {
+        acceptMutation: lastHandoffState?.acceptMutation,
+      },
+      receptionEntryDiagnostics: lastHandoffState?.receptionEntryDiagnostics,
       chartsHandoff: { status: 'error' },
       visitRowReadiness: 'unknown',
       orderResult: { status: 'not-run' },

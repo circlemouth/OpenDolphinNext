@@ -1,0 +1,7 @@
+{"runId":"20260425T135857Z","command":"node --check web-client/scripts/qa-fullflow-weborca.mjs","result":"pass","sanitized":true}
+{"runId":"20260425T135857Z","command":"npm run --prefix web-client test -- receptionHandoff acceptmodv2","result":"pass_81_tests","sanitized":true}
+{"runId":"20260425T135857Z","command":"OPENDOLPHIN_RUNTIME_PROFILE=orca-trial-no-object-storage WEB_CLIENT_MODE=npm ./setup-modernized-env.sh","result":"pass_runtime_started_non_s3_profile","sanitized":true}
+{"runId":"20260425T135857Z","command":"RUN_ID=20260425T135857Z node scripts/runtime-ready-smoke.mjs","result":"pass_json_only","sanitized":true}
+{"runId":"20260425T135857Z","command":"RUN_ID=20260425T135857Z QA_PATIENT_ID=00001 node scripts/qa-weborca-readonly-preflight.mjs","result":"pass_no_mutation","sanitized":true}
+{"runId":"20260425T135857Z","command":"RUN_ID=20260425T135857Z QA_PATIENT_ID=00001 QA_ARTIFACT_DIR=artifacts/diagnostic-fullflow/20260425T135857Z/fullflow node scripts/qa-fullflow-weborca.mjs","result":"blocked_duplicate_acceptance_no_active_entry","sanitized":true}
+{"runId":"20260425T135857Z","command":"RUN_ID=20260425T135857Z QA_PATIENT_ID=00005 node scripts/qa-weborca-readonly-preflight.mjs","result":"pass_no_mutation_next_precondition_selected","sanitized":true}

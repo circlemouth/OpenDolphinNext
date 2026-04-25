@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B/RWO-08",
-  "blockerId": "fullflow-current-target-no-active-entry-after-accept",
+  "blockerId": "fullflow-next-candidate-00005-diagnostic-fullflow-pending",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T13:20:00Z",
+  "lastUpdated": "2026-04-25T14:37:25Z",
   "latestRwo08BSelectorRuntimePreflight": {
     "runId": "20260425T114330Z",
     "workOrder": "RWO-08B",
@@ -4130,6 +4130,100 @@
     },
     "claimBoundary": "No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
     "recommendedNextTask": "Diagnose why current Trial candidate 00001 has no active entry/canonical handoff after accept, or select a changed current Trial precondition with exactly one active refreshed canonical entry.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo08BCurrentTargetDuplicateAcceptance": {
+    "runId": "20260425T135857Z",
+    "workOrder": "RWO-08B",
+    "result": "RWO08B_CURRENT_TARGET_DUPLICATE_ACCEPTANCE_BLOCKER_CLASSIFIED_NEXT_PREFLIGHT_SELECTED",
+    "branch": "master",
+    "startHead": "4d6eef362",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "statusAfterRun": "completed_with_successor_precondition_recorded",
+      "completedBlockerId": "fullflow-current-target-no-active-entry-after-accept",
+      "nextPromptBlockerId": "fullflow-next-candidate-00005-diagnostic-fullflow-pending"
+    },
+    "evidence": "docs/implementation/rwo08b-current-target-duplicate-acceptance-20260425T135857Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-current-target-duplicate-acceptance-20260425T135857Z/summary.sanitized.json",
+    "repoLocalFix": {
+      "diagnosticFullflowSanitizedAcceptMutationSummary": true,
+      "diagnosticFullflowReceptionActiveEntryCounters": true,
+      "rawResponseBodyCommitted": false,
+      "clientCanonicalKeySynthesisAllowed": false
+    },
+    "runtime": {
+      "profile": "orca-trial-no-object-storage",
+      "objectStorageFree": true,
+      "runtimeReadySmoke": "pass_json_only",
+      "webHttpStatus": 200
+    },
+    "currentTargetDiagnosticFullflow": {
+      "executed": true,
+      "candidateId": "00001",
+      "result": "blocked",
+      "blockerClassification": "test-data-blocker",
+      "blockerReason": "duplicate_acceptance_no_active_entry_after_accept",
+      "acceptMutation": {
+        "httpStatus": 200,
+        "httpStatusClass": "2xx",
+        "apiResult": "16",
+        "businessSuccessClassification": "business_rejected_duplicate_acceptance",
+        "acceptanceEvidencePresent": false,
+        "canonicalKeyPresence": {
+          "acceptanceId": false,
+          "visitNumber": false,
+          "scheduleKey": false,
+          "encounterKey": false
+        }
+      },
+      "receptionEntryDiagnostics": {
+        "matchingRows": 1,
+        "activeRows": 0,
+        "keyedActiveRows": 0,
+        "statusClass": "reservation_only"
+      },
+      "orderSendReached": false,
+      "requestXmlCreated": false,
+      "businessAccepted": false
+    },
+    "nextReadOnlyPreflight": {
+      "executed": true,
+      "candidateId": "00005",
+      "result": "accepted_no_mutation",
+      "inputIdentityHash": "72afa991f8d538ad8c02b8c2e3212537ad1134cd47a5f6cf025fadf323672e75",
+      "selectorOptionCounts": {
+        "department": 6,
+        "physician": 6,
+        "paymentMode": 3,
+        "visitKind": 4,
+        "medicalInformation": 9
+      },
+      "targetMutationRequestCount": 0,
+      "businessSuccessClassification": "readonly_selector_preflight_accepted_no_mutation"
+    },
+    "tests": {
+      "qaFullflowSyntax": "pass",
+      "receptionHandoffAndAcceptmodv2Focused": "pass_81_tests",
+      "runtimeReadySmoke": "pass_json_only",
+      "readonlyPreflight00001": "pass_no_mutation",
+      "readonlyPreflight00005": "pass_no_mutation"
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "endpoint": "fullflow_via_web_client",
+      "target": "current_trial_direct_acceptance_00001",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "blocked_before_charts_handoff_duplicate_acceptance",
+      "businessAccepted": false,
+      "orderSendExecuted": false
+    },
+    "claimBoundary": "Candidate 00001 is classified as duplicate-acceptance/no-active-entry blocker; candidate 00005 has exact read-only preflight acceptance and is queued as the next changed precondition. No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Run at most one diagnostic fullflow for candidate 00005 only after confirming current runtime readiness and using sanitized fullflow evidence mode.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": true,
     "diagnosticArtifactsLocalOnlyUntracked": true,

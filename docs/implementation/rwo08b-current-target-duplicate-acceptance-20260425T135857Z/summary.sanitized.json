@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260425T135857Z",
+  "workOrders": [
+    "RWO-08B",
+    "RWO-08"
+  ],
+  "result": "RWO08B_CURRENT_TARGET_DUPLICATE_ACCEPTANCE_BLOCKER_CLASSIFIED_NEXT_PREFLIGHT_SELECTED",
+  "branch": "master",
+  "startHead": "4d6eef362",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "statusAfterRun": "completed_with_successor_precondition_recorded",
+    "completedBlockerId": "fullflow-current-target-no-active-entry-after-accept",
+    "successorBlockerId": "fullflow-next-candidate-00005-diagnostic-fullflow-pending"
+  },
+  "repoLocalFix": {
+    "changedFiles": [
+      "web-client/scripts/qa-fullflow-weborca.mjs"
+    ],
+    "summary": "Diagnostic fullflow now records sanitized accept mutation classification and reception active-entry counts in summary/blocker evidence.",
+    "securityPosture": "Only HTTP status class, API result classification, evidence-presence booleans, canonical-key-presence booleans, and row counters are committed. Raw response bodies, request bodies, screenshots, HAR, traces, patient names, insurance details, cookies, sessions, and credentials remain excluded from tracked evidence."
+  },
+  "runtime": {
+    "profile": "orca-trial-no-object-storage",
+    "objectStorageFree": true,
+    "setupCompleted": true,
+    "runtimeReadySmoke": "pass_json_only",
+    "webHttpStatus": 200,
+    "s3ObjectStorageConfigured": false
+  },
+  "readOnlySelectorPreflight": {
+    "candidateId": "00001",
+    "executed": true,
+    "result": "accepted_no_mutation",
+    "targetMutationRequestCount": 0,
+    "businessSuccessClassification": "readonly_selector_preflight_accepted_no_mutation"
+  },
+  "diagnosticFullflow": {
+    "executed": true,
+    "diagnosticArtifactsRoot": "artifacts/diagnostic-fullflow/20260425T135857Z/fullflow",
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "candidateId": "00001",
+    "result": "blocked",
+    "blockerClassification": "test-data-blocker",
+    "blockerReason": "duplicate_acceptance_no_active_entry_after_accept",
+    "acceptMutation": {
+      "observed": true,
+      "httpStatus": 200,
+      "httpStatusClass": "2xx",
+      "apiResult": "16",
+      "businessSuccessClassification": "business_rejected_duplicate_acceptance",
+      "acceptanceEvidencePresent": false,
+      "patientEvidencePresent": true,
+      "canonicalKeyPresence": {
+        "acceptanceId": false,
+        "visitNumber": false,
+        "scheduleKey": false,
+        "encounterKey": false
+      },
+      "rawSensitiveFieldsExcluded": true
+    },
+    "receptionEntryDiagnostics": {
+      "totalRenderedRows": 3,
+      "matchingRows": 1,
+      "activeRows": 0,
+      "keyedActiveRows": 0,
+      "statuses": [
+        "reservation_only"
+      ],
+      "anyReceptionIdPresent": false,
+      "anyAppointmentIdPresent": false,
+      "anyScheduleKeyPresent": false,
+      "anyEncounterKeyPresent": false,
+      "rawSensitiveFieldsExcluded": true
+    },
+    "canonicalHandoffStatus": "error",
+    "handoffButtonDisabled": true,
+    "handoffButtonTitleClassification": "no_active_entry",
+    "scheduleKeyPresent": false,
+    "encounterKeyPresent": false,
+    "orderSendReached": false,
+    "requestXmlCreated": false,
+    "pageErrorCount": 0,
+    "consoleMessageCount": 0,
+    "businessSuccessClassification": "blocked_before_charts_handoff_duplicate_acceptance",
+    "businessAccepted": false
+  },
+  "nextReadOnlyPreflight": {
+    "candidateId": "00005",
+    "executed": true,
+    "result": "accepted_no_mutation",
+    "inputIdentityHash": "72afa991f8d538ad8c02b8c2e3212537ad1134cd47a5f6cf025fadf323672e75",
+    "selectorOptionCounts": {
+      "department": 6,
+      "physician": 6,
+      "paymentMode": 3,
+      "visitKind": 4,
+      "medicalInformation": 9
+    },
+    "officialPatient": {
+      "httpStatus": 200,
+      "apiResult": "00",
+      "exactIdMatched": true,
+      "rawSensitiveFieldsExcluded": true
+    },
+    "insurance": {
+      "httpStatus": 200,
+      "classification": "accepted",
+      "effectiveCount": 1
+    },
+    "localSelectable": {
+      "status": "accepted",
+      "exactMatchCount": 1
+    },
+    "appointmentDependency": {
+      "flowMode": "direct_acceptance",
+      "accepted": true,
+      "classification": "direct_acceptance_no_appointment_required"
+    },
+    "targetMutationRequestCount": 0,
+    "businessSuccessClassification": "readonly_selector_preflight_accepted_no_mutation"
+  },
+  "tests": {
+    "qaFullflowSyntax": "pass",
+    "receptionHandoffAndAcceptmodv2Focused": "pass_81_tests",
+    "runtimeReadySmoke": "pass_json_only",
+    "readonlyPreflight00001": "pass_no_mutation",
+    "readonlyPreflight00005": "pass_no_mutation"
+  },
+  "misuseCasesChecked": [
+    "HTTP 200 is not treated as acceptmodv2 business success",
+    "apiResult 16 duplicate acceptance is classified as blocker rather than success",
+    "client-provided or synthesized canonical keys are not used",
+    "no active refreshed entry means Charts handoff remains fail-closed",
+    "diagnostic artifacts remain local-only and untracked"
+  ],
+  "liveTrialOrca": {
+    "executed": true,
+    "endpoint": "fullflow_via_web_client",
+    "target": "current_trial_direct_acceptance_00001",
+    "requestClass": "acceptmodv2/fullflow-pre-send",
+    "businessSuccessClassification": "blocked_before_charts_handoff_duplicate_acceptance",
+    "businessAccepted": false,
+    "orderSendExecuted": false
+  },
+  "claimBoundary": "The current candidate 00001 is classified as a duplicate-acceptance/no-active-entry precondition blocker. Candidate 00005 has exact read-only preflight acceptance with no mutation and is queued as the next changed precondition. No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Run at most one diagnostic fullflow for candidate 00005 only after confirming current runtime readiness and using the sanitized fullflow evidence mode.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": true,
+  "diagnosticArtifactsLocalOnlyUntracked": true,
+  "rawArtifactsCommittedOrPackaged": false
+}
