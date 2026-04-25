@@ -1,60 +1,53 @@
 # NEXT_WORKER_PROMPT
 
 status: active
-created_at: 2026-04-25T06:12:00Z
-updated_at: 2026-04-25T06:30:24Z
+created_at: 2026-04-25T07:00:27Z
 source_work_order: RWO-08B/RWO-08/RWO-09/RWO-11
-blocker_id: fullflow-accepted-encounter-official-visit-identifiers-missing
+blocker_id: fullflow-current-target-canonical-charts-handoff-missing
 priority: high
 supersedes:
-- owner-expanded-fullflow-disease-request-number-order-v2-scope
+- fullflow-accepted-encounter-official-visit-identifiers-missing
 
 ## Context
 
-RUN_ID `20260425T055659Z` repaired the diagnostic fullflow harness gate:
+RUN_ID `20260425T070027Z` continued the RWO-08B visit-row hydration handoff.
 
-- `web-client/scripts/qa-fullflow-weborca.mjs` now evaluates the acceptmodv2 identity gate against the current `QA_PATIENT_ID` instead of a fixed Phase 3 target.
-- The harness no longer classifies every identity-gate failure as `medical_information_omission_violation`.
-- `web-client/scripts/__tests__/medicalInformationGate.test.ts` covers the non-default fullflow diagnostic target case.
-- Focused test passed: `npm run --prefix web-client test -- scripts/__tests__/medicalInformationGate.test.ts` (27 tests).
+Repo-local fix now exists and is verified:
+
+- `web-client/src/features/charts/orcaQueueSelection.ts` adds `resolveReceptionEntryForEncounter`.
+- `web-client/src/features/charts/pages/ChartsPage.tsx` uses that resolver for selected Reception entry resolution.
+- `web-client/src/features/charts/__tests__/orcaQueueSelection.test.ts` covers exact-key preference, unique official row fallback, incomplete official identifiers, and ambiguous official rows.
+- Focused resolver tests passed: `npm run --prefix web-client test -- src/features/charts/__tests__/orcaQueueSelection.test.ts` (8 tests).
 - `npm run --prefix web-client verify:web-guard` passed.
-- `RUN_ID=20260425T055659Z node web-client/scripts/runtime-ready-smoke.mjs` passed.
+- `npm run --prefix web-client typecheck` passed.
+- `RUN_ID=20260425T070027Z node web-client/scripts/runtime-ready-smoke.mjs` passed.
 
-Diagnostic fullflow was run under the Diagnostic Artifact Exception. Raw diagnostic output is local-only and gitignored under:
+Diagnostic fullflow was rerun under the Diagnostic Artifact Exception with the current Trial native default target class. Raw diagnostic output is local-only and gitignored under:
 
-- `artifacts/diagnostic-fullflow/20260425T055659Z/fullflow`
-- a second redacted target-specific subdirectory under `artifacts/diagnostic-fullflow/20260425T055659Z/`
+- `artifacts/diagnostic-fullflow/20260425T070027Z/fullflow-patient-00001`
+- `artifacts/webclient/runtime-gate-ready/20260425T070027Z`
 
 Do not commit or package those diagnostic artifacts.
 
 Sanitized evidence:
 
-- `docs/implementation/rwo08b-fullflow-gate-repair-20260425T055659Z/FINAL_REPORT.md`
-- `docs/implementation/rwo08b-fullflow-gate-repair-20260425T055659Z/summary.sanitized.json`
+- `docs/implementation/rwo08b-visit-row-hydration-20260425T070027Z/FINAL_REPORT.md`
+- `docs/implementation/rwo08b-visit-row-hydration-20260425T070027Z/summary.sanitized.json`
+- `docs/implementation/rwo08b-visit-row-hydration-20260425T070027Z/command-log.jsonl`
 
-Current blocker:
+Current result:
 
-- Smoke-local patient diagnostic fullflow: medical-information gate passed, but accept did not produce a canonical Charts handoff; classified as `blocked_test_data`.
-- ORCA-searchable Trial dummy target diagnostic fullflow: Charts handoff became ready with a canonical encounter key, but no selected visit row was present, Charts send stayed disabled with `missing_encounter_context`, and the blocker is `official-visit-row-blocker` / `visit_row_official_identifiers_missing`.
-- No `medicalmodv2` request XML was created. No L4 fullflow success is claimed.
-
-RUN_ID `20260425T063024Z` landed a repo-local fix for the likely Charts-side hydration defect:
-
-- `web-client/src/features/charts/orcaQueueSelection.ts` now exports `resolveReceptionEntryForEncounter`.
-- `web-client/src/features/charts/pages/ChartsPage.tsx` uses that resolver for selected Reception entry resolution.
-- If an exact handoff key match is projection-only but a single server-fetched official visit row for the same patient/date has complete `Insurance_Combination_Number`, `Voucher_Number`, and `Sequential_Number`, Charts uses the official row.
-- Missing official identifiers and multiple official rows still fail closed; no client synthesis from canonical keys is allowed.
-- Focused resolver tests passed (8 tests), `npm run --prefix web-client typecheck` passed, `npm run --prefix web-client verify:web-guard` passed, and `RUN_ID=20260425T063024Z node web-client/scripts/runtime-ready-smoke.mjs` passed.
-- A diagnostic fullflow was run with the default Trial-native target under the Diagnostic Artifact Exception, but it stopped before canonical Charts handoff as `test-data-blocker` / `fatal_before_send`. It did not verify the repaired hydration path live, no request XML was created, and no L4 success is claimed.
-
-Sanitized evidence:
-
-- `docs/implementation/rwo08b-visit-row-hydration-20260425T063024Z/FINAL_REPORT.md`
-- `docs/implementation/rwo08b-visit-row-hydration-20260425T063024Z/summary.sanitized.json`
+- The Charts hydration resolver defect is repaired and covered by no-live tests.
+- The current live diagnostic target did not reach Charts after accept.
+- Medical-information gate passed.
+- Charts handoff stayed unavailable because the patient-search open-charts button remained disabled with no active entry after accept.
+- No selected visit row was available.
+- No `medicalmodv2` request XML was created.
+- No L4 fullflow success is claimed.
 
 ## Goal
 
-Verify or precisely classify whether the RUN_ID `20260425T063024Z` selected-entry fix resolves the accepted-encounter official visit identifier hydration blocker when diagnostic fullflow uses a target/precondition that reaches Charts after accept.
+Find or establish a current WebORCA Trial diagnostic precondition that creates a canonical Charts handoff after accept, then rerun one diagnostic fullflow to verify whether the repaired selected-entry resolver hydrates official visit identifiers and either reaches sanitized L4 success or a later endpoint-specific blocker.
 
 ## Required First Steps
 
@@ -65,9 +58,9 @@ Verify or precisely classify whether the RUN_ID `20260425T063024Z` selected-entr
 
 ## Allowed Actions
 
-- Add focused no-live unit/component tests around Reception-to-Charts handoff, accepted encounter hydration, selected visit row resolution, and `ChartsActionBar` send-context readiness.
-- Fix repo-local defects in `web-client/` or `server-modernized/` that prevent accepted encounter identifiers from being carried into Charts, as long as the fix preserves server-side authority and fail-closed behavior.
-- Rerun `runtime-ready-smoke` and one diagnostic fullflow after a concrete fix or changed test-data precondition. The next diagnostic fullflow should use the same class of target that reaches Charts after accept; do not use a target known to stop before canonical Charts handoff unless the purpose is to record a test-data skip.
+- Add focused no-live tests around Reception accepted handoff resolution if the current blocker proves to be repo-local and testable.
+- Run read-only candidate/preflight wrappers if needed to identify a current Trial target/precondition that can safely reach canonical Charts handoff.
+- Rerun at most one diagnostic fullflow after a concrete changed precondition or repo-local fix.
 - Keep diagnostic screenshots/network JSON/request XML/HAR/traces/videos local-only under gitignored output directories.
 - Commit only reviewed source changes, focused tests, sanitized evidence, handoff state, and gate matrix updates.
 
@@ -84,14 +77,14 @@ Verify or precisely classify whether the RUN_ID `20260425T063024Z` selected-entr
 - Sanitized Markdown/JSON only.
 - For any rerun: endpoint/request-class identity, target classification, medical-information gate result, Charts handoff status, selected visit row status, official identifier readiness, request XML created/not-created, business-success classification, and blocker/result.
 - Diagnostic artifact manifest may include local relative directories, artifact classes, counts, and gitignored status only.
-- credentialsCaptured must remain `false`; rawArtifactsCommittedOrPackaged must remain `false`.
+- `credentialsCaptured` must remain `false`; `rawArtifactsCommittedOrPackaged` must remain `false`.
 
 ## Completion Criteria
 
 This prompt is complete when one of these is true:
 
-- A repo-local fix lands, focused no-live tests pass, `runtime-ready-smoke` passes, and one diagnostic fullflow reaches either sanitized L4 success or a later endpoint-specific blocker.
-- The official-visit-identifier hydration blocker is proven to be a test-data/environment precondition, with sanitized evidence and a next executable target/precondition.
+- A current Trial diagnostic precondition is found, one diagnostic fullflow reaches Charts, and selected visit row hydration reaches sanitized L4 success or a later endpoint-specific blocker.
+- The current-target handoff blocker is proven to be a test-data/environment precondition, with sanitized evidence and a next executable target/precondition.
 - A non-skippable safety blocker is recorded with sanitized evidence and the next independent safe Work Order is selected.
 
 In every completion path, update `HANDOFF_STATE.json`, `RELEASE_GATE_MATRIX.md`, and write a final sanitized evidence directory.
