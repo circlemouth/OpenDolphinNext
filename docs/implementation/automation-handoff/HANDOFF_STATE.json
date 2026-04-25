@@ -30,7 +30,68 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T08:00:24Z",
+  "lastUpdated": "2026-04-25T08:30:23Z",
+  "latestRwo08BPostVisitDateFixRevalidation": {
+    "runId": "20260425T083023Z",
+    "workOrder": "RWO-08B",
+    "result": "RWO08B_CHARTS_VISIT_DATE_REFETCH_FIX_NO_LIVE_PASS_DIAGNOSTIC_BLOCKED_BEFORE_CHARTS_HANDOFF",
+    "branch": "master",
+    "startHead": "9c2d886d5",
+    "resultHead": "576f56f40",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "statusAfterRun": "remains_active_current_target_precondition_prompt"
+    },
+    "evidence": "docs/implementation/rwo08b-charts-query-date-fix-20260425T083023Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-charts-query-date-fix-20260425T083023Z/summary.sanitized.json",
+    "codeChange": {
+      "commit": "576f56f40",
+      "files": [
+        "web-client/src/features/charts/orcaQueueSelection.ts",
+        "web-client/src/features/charts/pages/ChartsPage.tsx",
+        "web-client/src/features/charts/__tests__/orcaQueueSelection.test.ts"
+      ],
+      "summary": "Charts appointment/visit list refetch uses handoff visitDate when present while keeping official identifiers server-fetched and fail-closed."
+    },
+    "tests": {
+      "focusedOrcaQueueSelectionTests": "pass_10_tests",
+      "webGuard": "pass",
+      "typecheck": "pass",
+      "runtimeReadySmoke": "pass_json_only",
+      "diagnosticFullflow": "blocked_before_charts_handoff"
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "artifactRoot": "artifacts/diagnostic-fullflow/20260425T083023Z/fullflow-post-query-date-fix",
+      "rawArtifactsLocalOnly": true,
+      "rawArtifactsCommittedOrPackaged": false,
+      "endpoint": "fullflow_via_web_client",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "medicalInformationGate": "pass",
+      "chartsHandoff": "error",
+      "selectedVisitRowPresent": false,
+      "visitRowReadiness": "unknown",
+      "requestXmlCreated": false,
+      "businessSuccessClassification": "blocked_before_charts_handoff",
+      "blockerClassification": "test-data-blocker",
+      "blockerReason": "fatal_before_send"
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "endpoint": "fullflow_via_web_client",
+      "target": "prior_trial_local_selectable_candidate_variant",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "blocked_before_charts_handoff",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Charts visitDate refetch fix remains verified, but the current diagnostic target stopped before canonical Charts handoff. No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Find or establish a current Trial diagnostic precondition that reaches Charts after the visitDate refetch fix, then rerun one diagnostic fullflow to classify selected visit row and official identifier readiness.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "latestRwo08BCurrentTargetPrecondition": {
     "runId": "20260425T073023Z",
     "workOrder": "RWO-08B",

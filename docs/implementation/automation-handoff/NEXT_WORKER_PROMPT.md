@@ -17,6 +17,9 @@ Sanitized evidence:
 - `docs/implementation/rwo08b-charts-visit-date-repair-20260425T080024Z/FINAL_REPORT.md`
 - `docs/implementation/rwo08b-charts-visit-date-repair-20260425T080024Z/summary.sanitized.json`
 - `docs/implementation/rwo08b-charts-visit-date-repair-20260425T080024Z/command-log.jsonl`
+- `docs/implementation/rwo08b-charts-query-date-fix-20260425T083023Z/FINAL_REPORT.md`
+- `docs/implementation/rwo08b-charts-query-date-fix-20260425T083023Z/summary.sanitized.json`
+- `docs/implementation/rwo08b-charts-query-date-fix-20260425T083023Z/command-log.jsonl`
 
 Current result:
 
@@ -31,11 +34,13 @@ Current result:
 - No selected visit row readiness could be re-evaluated in that post-fix run.
 - No `medicalmodv2` request XML was created.
 - No L4 fullflow success is claimed.
+- RUN_ID `20260425T083023Z` revalidated the same committed fix (`576f56f40`) with focused no-live tests, web guard, typecheck, JSON-only runtime smoke, and one diagnostic fullflow using the prior local-only selected candidate. The medical-information gate passed, but the target again stopped before canonical Charts handoff as `test-data-blocker` / `fatal_before_send`; no request XML was created.
 
 Raw diagnostic output is local-only and gitignored under:
 
 - `artifacts/diagnostic-fullflow/20260425T080024Z/readonly-preflight`
 - `artifacts/diagnostic-fullflow/20260425T080024Z/fullflow-post-date-fix`
+- `artifacts/diagnostic-fullflow/20260425T083023Z/fullflow-post-query-date-fix`
 
 Do not commit, package, paste, or summarize raw diagnostic contents beyond sanitized allowlisted fields.
 

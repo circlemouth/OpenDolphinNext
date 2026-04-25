@@ -1,0 +1,9 @@
+{"runId":"20260425T083023Z","command":"date -u +%Y%m%dT%H%M%SZ && git branch --show-current && git rev-parse --short HEAD && git status --short && git worktree list --porcelain","result":"pass","sanitized":true}
+{"runId":"20260425T083023Z","command":"read automation memory and active handoff/roadmap docs","result":"pass","sanitized":true}
+{"runId":"20260425T083023Z","command":"npm test --prefix web-client -- --run src/features/charts/__tests__/orcaQueueSelection.test.ts","result":"pass_10_tests","sanitized":true}
+{"runId":"20260425T083023Z","command":"npm run --prefix web-client verify:web-guard","result":"pass","sanitized":true}
+{"runId":"20260425T083023Z","command":"npm run --prefix web-client typecheck","result":"pass","sanitized":true}
+{"runId":"20260425T083023Z","command":"OPENDOLPHIN_RUNTIME_PROFILE=orca-trial-no-object-storage WEB_CLIENT_MODE=npm ./setup-modernized-env.sh","result":"pass_runtime_started","sanitized":true}
+{"runId":"20260425T083023Z","command":"RUN_ID=20260425T083023Z node web-client/scripts/runtime-ready-smoke.mjs","result":"pass_json_only","sanitized":true}
+{"runId":"20260425T083023Z","command":"RUN_ID=20260425T083023Z QA_ARTIFACT_DIR=artifacts/diagnostic-fullflow/20260425T083023Z/fullflow-post-query-date-fix QA_PATIENT_ID=<from prior local-only diagnostic summary> node web-client/scripts/qa-fullflow-weborca.mjs","result":"blocked_before_charts_handoff","sanitized":true}
+{"runId":"20260425T083023Z","command":"diagnostic artifact gitignore check","result":"pass_gitignored_total_files_14","sanitized":true}

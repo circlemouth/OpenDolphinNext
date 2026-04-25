@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260425T083023Z",
+  "workOrders": [
+    "RWO-08B"
+  ],
+  "result": "RWO08B_CHARTS_VISIT_DATE_REFETCH_FIX_NO_LIVE_PASS_DIAGNOSTIC_BLOCKED_BEFORE_CHARTS_HANDOFF",
+  "branch": "master",
+  "startHead": "9c2d886d5",
+  "resultHead": "576f56f40",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "statusAfterRun": "superseded_by_current_target_precondition_prompt"
+  },
+  "codeChange": {
+    "commit": "576f56f40",
+    "files": [
+      "web-client/src/features/charts/orcaQueueSelection.ts",
+      "web-client/src/features/charts/pages/ChartsPage.tsx",
+      "web-client/src/features/charts/__tests__/orcaQueueSelection.test.ts"
+    ],
+    "summary": "Charts appointment/visit list refetch now uses the canonical handoff visitDate when present instead of always querying the browser-local current date. Official visit identifiers are still accepted only from server-fetched visit rows and remain fail-closed when missing or ambiguous."
+  },
+  "noLiveVerification": {
+    "focusedTests": "pass_10_tests",
+    "webGuard": "pass",
+    "typecheck": "pass",
+    "runtimeReadySmoke": "pass_json_only"
+  },
+  "runtimeStartup": {
+    "profile": "orca-trial-no-object-storage",
+    "objectStorageReadinessClaimed": false,
+    "status": "started",
+    "storageDependentFeatures": "fail_closed_non_claim"
+  },
+  "diagnosticFullflow": {
+    "executed": true,
+    "artifactRoot": "artifacts/diagnostic-fullflow/20260425T083023Z/fullflow-post-query-date-fix",
+    "artifactRootGitignored": true,
+    "targetClassification": "prior_trial_local_selectable_candidate_variant",
+    "endpoint": "fullflow_via_web_client",
+    "requestClass": "acceptmodv2/fullflow-pre-send",
+    "medicalInformationGate": "pass",
+    "receptionRowStatus": "unknown",
+    "chartsHandoff": "error",
+    "selectedVisitRowPresent": false,
+    "visitRowReadiness": "unknown",
+    "orderResult": "not-run",
+    "sendResult": "error",
+    "requestXmlCreated": false,
+    "businessSuccessClassification": "blocked_before_charts_handoff",
+    "blockerClassification": "test-data-blocker",
+    "blockerReason": "fatal_before_send",
+    "l4FullflowAccepted": false,
+    "rawArtifactsLocalOnly": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "diagnosticArtifactManifest": {
+    "roots": [
+      "artifacts/diagnostic-fullflow/20260425T083023Z/fullflow-post-query-date-fix"
+    ],
+    "gitignored": true,
+    "totalFiles": 14,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "liveTrialOrca": {
+    "executed": true,
+    "endpoint": "fullflow_via_web_client",
+    "target": "prior_trial_local_selectable_candidate_variant",
+    "requestClass": "acceptmodv2/fullflow-pre-send",
+    "businessSuccessClassification": "blocked_before_charts_handoff",
+    "businessAccepted": false,
+    "rawBodyStoredInEvidence": false
+  },
+  "misuseCasesChecked": [
+    {
+      "case": "Using client-provided official visit identifiers",
+      "control": "Rejected; the fix changes only the server fetch date. Insurance_Combination_Number, Voucher_Number, and Sequential_Number still come only from server-fetched visit rows."
+    },
+    {
+      "case": "Treating handoff visitDate as authorization or business success",
+      "control": "Rejected; visitDate is only a query scope hint and diagnostic fullflow did not create request XML or reach L4 success."
+    },
+    {
+      "case": "Repeating a failed live diagnostic without a concrete fix",
+      "control": "Avoided; the single post-fix diagnostic run followed the committed query-date fix and focused no-live verification."
+    },
+    {
+      "case": "Committing raw diagnostic browser/network artifacts",
+      "control": "Rejected; diagnostic artifacts remain local-only under gitignored artifacts/diagnostic-fullflow."
+    }
+  ],
+  "claimBoundary": "Charts now refetches appointment/visit rows for the handoff visitDate, but the post-fix diagnostic target stopped before canonical Charts handoff. No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Find or establish a current Trial diagnostic precondition that reaches Charts after the visitDate refetch fix, then rerun one diagnostic fullflow to classify selected visit row and official identifier readiness.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": true,
+  "diagnosticArtifactsLocalOnlyUntracked": true,
+  "rawArtifactsCommittedOrPackaged": false
+}
