@@ -9,6 +9,11 @@ import {
   resolveQaUserId,
 } from './qa-lib/session-auth.mjs';
 import { evaluateMedicalInformationGate } from './qa-lib/medical-information-gate.mjs';
+import {
+  SELECTOR_OPTION_MISSING_BLOCKER,
+  resolveSelectableOption,
+  summarizeSelectorGate,
+} from './qa-lib/acceptmodv2-identity-gate.mjs';
 
 const now = new Date();
 const runId = process.env.RUN_ID ?? now.toISOString().replace(/[-:]/g, '').replace(/\..+/, 'Z');
@@ -286,40 +291,20 @@ const setTextInputValue = async (locator, value) => {
   }
 };
 
-const ensureOption = async (selectLocator, desiredValue) => {
-  if (!desiredValue) return false;
-  try {
-    await selectLocator.evaluate((select, value) => {
-      const options = Array.from(select.options || []);
-      if (options.some((option) => option.value === value)) return;
-      const option = document.createElement('option');
-      option.value = value;
-      option.text = value;
-      select.appendChild(option);
-    }, desiredValue);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const selectOptionFallback = async (selectLocator, desiredValue) => {
+const selectOptionWithGate = async (selectLocator, field, desiredValue) => {
   const options = await selectLocator.locator('option').evaluateAll((nodes) =>
     nodes.map((node) => node.value ?? ''),
   );
-  let resolved = options.includes(desiredValue)
-    ? desiredValue
-    : options.find((value) => value && value !== '') ?? '';
-  if (desiredValue && !options.includes(desiredValue)) {
-    const injected = await ensureOption(selectLocator, desiredValue);
-    if (injected) {
-      resolved = desiredValue;
-    }
+  const gate = resolveSelectableOption({
+    field,
+    desiredValue,
+    options,
+    allowLocalOptionInjection: false,
+  });
+  if (gate.ok && gate.resolved) {
+    await selectLocator.selectOption(gate.resolved);
   }
-  if (resolved) {
-    await selectLocator.selectOption(resolved);
-  }
-  return { desired: desiredValue, resolved, options };
+  return gate;
 };
 
 const setObservabilityMeta = async (page) => {
@@ -585,27 +570,100 @@ const run = async () => {
   const acceptForm = workflowModal.locator('[data-test-id="reception-accept-detail-modal"]');
   await acceptForm.waitFor({ timeout: 20000 });
   logStep('accept detail ready');
-  const departmentSelection = await selectOptionFallback(
+  const departmentSelection = await selectOptionWithGate(
     acceptForm.locator('#reception-accept-department'),
+    'departmentCode',
     departmentCode,
   );
   logStep(`department selected=${departmentSelection.resolved}`);
-  await acceptForm.locator('#reception-accept-payment-mode').selectOption(paymentMode);
-  const physicianSelection = await selectOptionFallback(
+  const paymentModeSelection = await selectOptionWithGate(
+    acceptForm.locator('#reception-accept-payment-mode'),
+    'paymentMode',
+    paymentMode,
+  );
+  logStep(`payment mode selected=${paymentModeSelection.resolved}`);
+  const physicianSelection = await selectOptionWithGate(
     acceptForm.locator('#reception-accept-physician'),
+    'physicianCode',
     physicianCode,
   );
   logStep(`physician selected=${physicianSelection.resolved}`);
-  const visitKindSelection = await selectOptionFallback(
+  const visitKindSelection = await selectOptionWithGate(
     acceptForm.locator('#reception-accept-visit-kind'),
+    'visitKind',
     visitKind,
   );
   logStep(`visit kind selected=${visitKindSelection.resolved}`);
-  const medicalInformationSelection = await selectOptionFallback(
+  const medicalInformationSelection = await selectOptionWithGate(
     acceptForm.locator('#reception-accept-medical-information'),
+    'medicalInformation',
     medicalInformation,
   );
   logStep(`medical information selected=${medicalInformationSelection.resolved || 'unselected'}`);
+  const selectorGate = summarizeSelectorGate({
+    department: departmentSelection,
+    paymentMode: paymentModeSelection,
+    physician: physicianSelection,
+    visitKind: visitKindSelection,
+    medicalInformation: medicalInformationSelection,
+  });
+  if (!selectorGate.ok) {
+    lastSummary = {
+      runId,
+      traceId,
+      executedAt: new Date().toISOString(),
+      baseURL,
+      facilityId,
+      sessionRole,
+      patientId,
+      departmentCode,
+      physicianCode,
+      paymentMode,
+      visitKind,
+      medicalInformation: medicalInformation || undefined,
+      medicalInformationProbe,
+      medicalInformationGate: evaluateFullflowMedicalInformationGate(),
+      selection: {
+        department: departmentSelection,
+        paymentMode: paymentModeSelection,
+        physician: physicianSelection,
+        visitKind: visitKindSelection,
+        medicalInformation: medicalInformationSelection,
+        selectorGate,
+        patientSearchInputMethod,
+      },
+      acceptResult: {},
+      receptionRowStatus: 'not-run-selector-option-missing',
+      chartsHandoff: { status: 'not-run' },
+      visitRowReadiness: 'not-run',
+      orderResult: { status: 'not-run' },
+      sendResult: {
+        status: 'not-run',
+        validation: { ok: false, reason: 'selector_option_missing' },
+      },
+      billingResult: { status: 'not-run' },
+      harPath: recordHar ? harPath : undefined,
+      consoleMessages,
+      pageErrors,
+      blockerReason: `selector_missing:${selectorGate.missingFields.join(',') || 'unknown'}`,
+      blockerClassification: SELECTOR_OPTION_MISSING_BLOCKER,
+      evidencePaths: {
+        summaryJson: 'summary.json',
+        summaryMd: 'summary.md',
+        blockerSummary: 'blocker-summary.json',
+        handoffState: 'handoff-state.json',
+        selectedVisitRow: 'selected-visit-row.json',
+        stepsLog: 'steps.log',
+        network: 'network/network.json',
+        requests: 'network/requests.json',
+        console: 'console.json',
+        pageErrors: 'page-errors.json',
+        screenshots: 'screenshots',
+        har: recordHar ? 'har/network.har' : undefined,
+      },
+    };
+    throw new Error(lastSummary.blockerReason);
+  }
 
   const beforeShot = await writeScreenshot(page, '01-reception-before-accept');
 
@@ -1053,9 +1111,11 @@ const run = async () => {
     medicalInformationGate: evaluateFullflowMedicalInformationGate(),
     selection: {
       department: departmentSelection,
+      paymentMode: paymentModeSelection,
       physician: physicianSelection,
       visitKind: visitKindSelection,
       medicalInformation: medicalInformationSelection,
+      selectorGate,
       patientSearchInputMethod,
     },
     acceptResult: {
@@ -1130,7 +1190,7 @@ const run = async () => {
       har: recordHar ? 'har/network.har' : undefined,
     },
   };
-  if (summary.medicalInformationGate.ok === false) {
+  if (summary.blockerClassification !== SELECTOR_OPTION_MISSING_BLOCKER && summary.medicalInformationGate.ok === false) {
     summary.blockerClassification = 'repo-defect';
     summary.blockerReason = classifyMedicalInformationGateFailure(summary.medicalInformationGate);
   }
@@ -1208,7 +1268,7 @@ run().catch(async (error) => {
         screenshots: 'screenshots',
       },
     };
-  if (summary.medicalInformationGate?.ok === false) {
+  if (summary.blockerClassification !== SELECTOR_OPTION_MISSING_BLOCKER && summary.medicalInformationGate?.ok === false) {
     summary.blockerClassification = 'repo-defect';
     summary.blockerReason = classifyMedicalInformationGateFailure(summary.medicalInformationGate);
   }

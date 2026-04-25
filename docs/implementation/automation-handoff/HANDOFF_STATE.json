@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B/RWO-08/RWO-09/RWO-11",
-  "blockerId": "fullflow-current-selector-precondition-missing",
+  "blockerId": "fullflow-authoritative-selector-source-missing",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T09:00:22Z",
+  "lastUpdated": "2026-04-25T10:13:08Z",
   "latestRwo08BCurrentSelectorPrecondition": {
     "runId": "20260425T090022Z",
     "workOrder": "RWO-08B",
@@ -3825,6 +3825,80 @@
     },
     "claimBoundary": "Charts handoff visit-date refetch defect was repaired and focused no-live/runtime checks passed, but the post-fix diagnostic Trial target stopped before Charts handoff. No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
     "recommendedNextTask": "Find or establish a current Trial diagnostic precondition that reaches Charts after the visit-date repair, then verify selected visit row official identifier readiness.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo08BSelectorGateFailClosed": {
+    "runId": "20260425T101308Z",
+    "workOrder": "RWO-08B",
+    "result": "RWO08B_SELECTOR_GATE_FAIL_CLOSED_REPAIRED_PREFLIGHT_STILL_BLOCKED",
+    "branch": "master",
+    "startHead": "3cf3b235f",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "statusAfterRun": "superseded_by_authoritative_selector_source_prompt",
+      "nextPromptBlockerId": "fullflow-authoritative-selector-source-missing"
+    },
+    "evidence": "docs/implementation/rwo08b-selector-gate-failclosed-20260425T101308Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-selector-gate-failclosed-20260425T101308Z/summary.sanitized.json",
+    "codeChange": {
+      "files": [
+        "web-client/scripts/qa-fullflow-weborca.mjs"
+      ],
+      "summary": "Diagnostic fullflow now fails closed on missing selector options and no longer injects DOM options."
+    },
+    "candidateDiscovery": {
+      "executed": true,
+      "acceptedCandidateCount": 0,
+      "mutationRouteCalled": false,
+      "targetMutationRequestCount": 0,
+      "result": "no_current_selector_ready_candidate"
+    },
+    "readOnlyPreflight": {
+      "executed": true,
+      "selectedPatientId": "00001",
+      "result": "rejected_selector_option_missing_no_mutation",
+      "officialPatientApiResult": "00",
+      "insuranceApiResult": "000",
+      "localSelectable": "accepted",
+      "selectorMissing": [
+        "department",
+        "physician"
+      ],
+      "mutationRouteCalled": false,
+      "targetMutationRequestCount": 0
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "rawArtifactsLocalOnly": true,
+      "rawArtifactsCommittedOrPackaged": false,
+      "endpoint": "fullflow_via_web_client",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "blockerClassification": "selector_option_missing",
+      "blockerReason": "selector_missing:departmentCode,physicianCode",
+      "targetMutationRequestCount": 0,
+      "requestXmlCreated": false,
+      "businessSuccessClassification": "blocked_selector_option_missing_before_mutation",
+      "businessAccepted": false
+    },
+    "tests": {
+      "nodeCheckFullflow": "pass",
+      "acceptmodv2IdentityGate": "pass_39_tests",
+      "webGuardViaNpmPretest": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "fullflow_via_web_client",
+      "target": "current_trial_00001_direct_acceptance_selector_gate",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "not_run_selector_precondition_blocked",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Diagnostic fullflow now fails closed instead of injecting selector options. Current exact selector readiness remains blocked because department/physician options are absent from runtime selector state. No L4 success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Add or identify an authoritative runtime source for direct-acceptance department/physician options, then rerun exact read-only preflight before any diagnostic fullflow retry.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": true,
     "diagnosticArtifactsLocalOnlyUntracked": true,

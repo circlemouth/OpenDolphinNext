@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260425T101308Z",
+  "workOrders": [
+    "RWO-08B"
+  ],
+  "result": "RWO08B_SELECTOR_GATE_FAIL_CLOSED_REPAIRED_PREFLIGHT_STILL_BLOCKED",
+  "branch": "master",
+  "startHead": "3cf3b235f",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "statusAfterRun": "superseded_by_authoritative_selector_source_prompt"
+  },
+  "codeChange": {
+    "files": [
+      "web-client/scripts/qa-fullflow-weborca.mjs"
+    ],
+    "summary": "Diagnostic fullflow selector handling now reuses the fail-closed acceptmodv2 selector gate and no longer injects missing select options."
+  },
+  "candidateDiscovery": {
+    "executed": true,
+    "artifactRoot": "artifacts/diagnostic-fullflow/20260425T101308Z/candidate-discovery",
+    "artifactRootGitignored": true,
+    "candidateCount": 11,
+    "acceptedCandidateCount": 0,
+    "mutationPolicy": {
+      "prohibited": true,
+      "blockedRequestCount": 0
+    },
+    "result": "no_current_selector_ready_candidate"
+  },
+  "readOnlyPreflight": {
+    "executed": true,
+    "artifactRoot": "artifacts/diagnostic-fullflow/20260425T101308Z/readonly-preflight-postfix-00001",
+    "artifactRootGitignored": true,
+    "selectedPatientId": "00001",
+    "verdict": "rejected",
+    "acceptedForPhase3Attempt": false,
+    "blockerClassification": "selector_option_missing",
+    "blockerReason": "selector_missing",
+    "officialPatient": {
+      "apiResult": "00",
+      "exactIdMatched": true
+    },
+    "insuranceReadiness": {
+      "verdict": "accepted",
+      "apiResult": "000"
+    },
+    "localSelectableReadiness": {
+      "verdict": "accepted"
+    },
+    "selectorReadiness": {
+      "verdict": "rejected",
+      "reason": "selector_exact_match_missing",
+      "failedSelectors": [
+        "department",
+        "physician"
+      ],
+      "selectorOptionCounts": {
+        "department": 1,
+        "physician": 1,
+        "paymentMode": 3,
+        "visitKind": 4,
+        "medicalInformation": 9
+      },
+      "selectorTargetMatches": {
+        "department": false,
+        "physician": false,
+        "paymentMode": true,
+        "visitKind": true,
+        "medicalInformation": true
+      }
+    },
+    "medicalInformationReadiness": {
+      "verdict": "rejected",
+      "failedSubdimensions": [
+        "department_ready",
+        "physician_ready"
+      ]
+    },
+    "mutationPolicy": {
+      "prohibited": true,
+      "blockedRequestCount": 0,
+      "targetMutationRequestCount": 0
+    },
+    "rawSensitiveFieldsExcluded": true
+  },
+  "diagnosticFullflow": {
+    "executed": true,
+    "artifactRoot": "artifacts/diagnostic-fullflow/20260425T101308Z/fullflow-selector-gate-postfix-v2",
+    "artifactRootGitignored": true,
+    "endpoint": "fullflow_via_web_client",
+    "target": "current_trial_00001_direct_acceptance_selector_gate",
+    "requestClass": "acceptmodv2/fullflow-pre-send",
+    "businessSuccessClassification": "blocked_selector_option_missing_before_mutation",
+    "businessAccepted": false,
+    "blockerClassification": "selector_option_missing",
+    "blockerReason": "selector_missing:departmentCode,physicianCode",
+    "selectorGate": {
+      "ok": false,
+      "mutationAllowed": false,
+      "missingFields": [
+        "departmentCode",
+        "physicianCode"
+      ],
+      "acceptedLiveEvidence": false
+    },
+    "targetMutationRequestCount": 0,
+    "requestXmlCreated": false,
+    "chartsHandoff": "not_run",
+    "selectedVisitRowPresent": false
+  },
+  "diagnosticArtifactManifest": {
+    "roots": [
+      "artifacts/diagnostic-fullflow/20260425T101308Z/candidate-discovery",
+      "artifacts/diagnostic-fullflow/20260425T101308Z/readonly-preflight-postfix-00001",
+      "artifacts/diagnostic-fullflow/20260425T101308Z/fullflow-selector-gate-postfix-v2"
+    ],
+    "gitignored": true,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "tests": {
+    "nodeCheckFullflow": "pass",
+    "acceptmodv2IdentityGate": "pass_39_tests",
+    "webGuardViaNpmPretest": "pass"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "endpoint": "fullflow_via_web_client",
+    "target": "current_trial_00001_direct_acceptance_selector_gate",
+    "requestClass": "acceptmodv2/fullflow-pre-send",
+    "businessSuccessClassification": "not_run_selector_precondition_blocked",
+    "businessAccepted": false
+  },
+  "claimBoundary": "The diagnostic fullflow harness now fails closed instead of injecting selector options. Current exact selector readiness remains blocked because department/physician options are absent from the runtime selector state. No L4 success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Add or identify an authoritative runtime source for direct-acceptance department/physician options, then rerun exact read-only preflight before any diagnostic fullflow retry.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": true,
+  "diagnosticArtifactsLocalOnlyUntracked": true,
+  "rawArtifactsCommittedOrPackaged": false
+}
