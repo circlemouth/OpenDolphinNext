@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T04:46:35Z",
+  "lastUpdated": "2026-04-25T05:03:05Z",
   "latestRwo08BFullflowInventory": {
     "runId": "20260425T044635Z",
     "workOrder": "RWO-08B",
@@ -3266,6 +3266,57 @@
     },
     "claimBoundary": "surgeryOrder/500 v2 reached ORCA Trial once and was businessRejected. No surgeryOrder/500 Trial business acceptance, all-surgery coverage, broad all-order readiness, Request_Number 02/03/04, fullflow, production ORCA readiness, S3/object-storage readiness, or final release readiness is claimed.",
     "recommendedNextTask": "Do not repeat the unchanged surgery v2 identity; investigate apiResult 80 no-live for rejected order-family candidates or prepare remaining source-backed candidates.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo08BRuntimeFullflowPreflight": {
+    "runId": "20260425T050305Z",
+    "workOrders": [
+      "RWO-08B",
+      "RWO-09",
+      "RWO-11"
+    ],
+    "result": "RUNTIME_READY_HTTP_200_BUT_RUNTIME_SMOKE_BLOCKED_CHARTS_PATIENT_SUMMARY",
+    "branch": "master",
+    "startHead": "1cf797834",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "completed"
+    },
+    "evidence": "docs/implementation/rwo08b-runtime-fullflow-preflight-20260425T050305Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-runtime-fullflow-preflight-20260425T050305Z/summary.sanitized.json",
+    "runtimeProbe": {
+      "frontendHttps5173": 200,
+      "backendHttpHealth9080": 200,
+      "backendHttpReadiness9080": 200,
+      "backendHttpsHealth8443": 0,
+      "backendHttpsReadiness8443": 0
+    },
+    "runtimeSmoke": {
+      "executed": true,
+      "result": "blocked",
+      "classification": "blocked_runtime_smoke_charts_patient_summary",
+      "smokeRowResolved": true
+    },
+    "fullflow": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_not_run"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_not_run"
+    },
+    "tests": {
+      "phase4SafeEvidenceTests": "pass_32_tests",
+      "webGuard": "pass",
+      "serverGuardScripts": "pass",
+      "reviewerPacketContractTests": "pass_7_tests",
+      "gitDiffCheck": "pass",
+      "forbiddenArtifactScan": "pass_zero_hits_current_run"
+    },
+    "claimBoundary": "No runtime-ready-smoke pass, L4 fullflow success, Trial ORCA business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Investigate the runtime-ready-smoke Charts patient-summary blocker with JSON-only evidence, rerun runtime smoke, then run diagnostic fullflow only after the precondition passes.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
