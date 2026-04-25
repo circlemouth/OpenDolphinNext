@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-24T21:45:39Z",
+  "lastUpdated": "2026-04-25T02:04:45Z",
   "latestRwo09Rwo11CurrentHeadStaticRefresh": {
     "runId": "20260424T190238Z",
     "workOrders": [
@@ -3117,6 +3117,58 @@
     },
     "claimBoundary": "Surgery v2 endpoint-specific payload is prepared and no-live verified only. No surgery Trial acceptance, all-surgery coverage, diseasev3 acceptance, subjectivesv2 acceptance, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, broad clinical release readiness, or final release GO is claimed.",
     "recommendedNextTask": "Run sanitized runtime readiness and duplicate-checkpoint preflight for surgery v2, then execute at most one live Trial checkpoint only if current runtime prerequisites remain satisfied; otherwise continue no-live investigation for rejected test/radiology result 80 or prepare remaining source-backed candidates.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06ISurgeryV2Live": {
+    "runId": "20260425T020245Z",
+    "workOrder": "RWO-06I",
+    "result": "SURGERY_V2_LIVE_BUSINESS_REJECTED",
+    "branch": "master",
+    "startHead": "7e06e733993ef05dc6eb180e6f6c4d952d1b4b5b",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "completed"
+    },
+    "evidence": "docs/implementation/rwo06i-surgery-v2-live-20260425T020245Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06i-surgery-v2-live-20260425T020245Z/summary.sanitized.json",
+    "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+    "orcaEndpoint": "/api21/medicalmodv2",
+    "requestClass": "medicalmodv2",
+    "workflow": "surgery",
+    "entity": "surgeryOrder",
+    "target": "00001",
+    "requestNumber": "01",
+    "classCode": "01",
+    "claim007Class": "500",
+    "candidateCode": "150003110",
+    "payloadSha256": "f7fbb890b62b7211b47c2672e85f0e70acbcdee18c9cbe9d7ea24c7942bbaa0e",
+    "duplicateLiveCheckpoint": "rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-f7fbb890b62b7211b47c2672e85f0e70acbcdee18c9cbe9d7ea24c7942bbaa0e",
+    "runtimeReadiness": {
+      "healthHttpStatus": 200,
+      "readinessHttpStatus": 200,
+      "ok": true
+    },
+    "tests": {
+      "phase4Medicalmodv2SafeEvidence": {
+        "result": "pass",
+        "tests": 20
+      },
+      "wrapperDryRun": "pass_surgery_v2_notVerified_no_live",
+      "wrapperLive": "businessRejected_surgery_v2_executed_once",
+      "forbiddenArtifactScan": "pass_zero_hits",
+      "focusedSecretRawArtifactScan": "pass_zero_hits"
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "httpStatus": 200,
+      "apiResult": "80",
+      "businessSuccessClassification": "businessRejected",
+      "businessAccepted": false
+    },
+    "claimBoundary": "surgeryOrder/500 v2 reached ORCA Trial once and was businessRejected. No surgeryOrder/500 Trial business acceptance, all-surgery coverage, broad all-order readiness, Request_Number 02/03/04, fullflow, production ORCA readiness, S3/object-storage readiness, or final release readiness is claimed.",
+    "recommendedNextTask": "Do not repeat the unchanged surgery v2 identity; investigate apiResult 80 no-live for rejected order-family candidates or prepare remaining source-backed candidates.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
