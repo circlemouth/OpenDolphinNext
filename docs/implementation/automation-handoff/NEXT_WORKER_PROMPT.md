@@ -16,15 +16,18 @@ RUN_ID `20260425T191429Z` found no new owner/operator rollback rehearsal evidenc
 
 RUN_ID `20260425T204432Z` again found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, did not reclassify the existing rollback blocker, and refreshed the independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `86c2d18b9d56dbfdd15937de5845f04f81402c53`.
 
+RUN_ID `20260425T215740Z` was an external research-only worker result later intaken at HEAD `ed3999aa5`: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md`. It is source-backed no-live research only, not live acceptance evidence. It may be used by future automation to prepare independent non-live order-family candidate/contract work if rollback/final owner input remains absent.
+
 Sanitized evidence:
 
 - `docs/implementation/rwo11-rollback-owner-pending-20260425T182930Z/FINAL_REPORT.md`
 - `docs/implementation/rwo11-rollback-owner-pending-20260425T182930Z/summary.sanitized.json`
 - `artifacts/orca-remediation/closeout/20260425T182930Z/`
+- `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md`
 
 Current result:
 
-- Current branch/head: `master` / `0d80e19555ab1f45f138e0d2f641e02f6a42ce1a`
+- Current branch/head: `master` / `ed3999aa5`
 - Accepted reviewer packet source freeze: `master` / `b103e49ee06d1c1043c066a097f7c62408c32263`
 - Reviewer packet: `artifacts/reviewer-submission-packets/submission-packet-20260425T174429Z.zip`
 - Packet sha256: `415b1fb493632176b44d5d38cc02c8f95c6783de392e491082803542d201529a`
@@ -32,6 +35,7 @@ Current result:
 - Rollback rehearsal is classified as `pending_human_operator_decision`; repo-local dry-runs cannot prove release-candidate deployment stop, paired restore, restored-target smoke, or operator/owner acceptance.
 - No live Trial mutation, production ORCA, S3/MinIO/object-storage setup, diagnostic artifact capture, raw artifact packaging, actual rollback rehearsal, owner final GO, or final release readiness is claimed.
 - Latest independent non-live refresh evidence: `docs/implementation/rwo09-non-s3-static-refresh-20260425T204432Z/FINAL_REPORT.md` and `docs/implementation/rwo09-non-s3-static-refresh-20260425T204432Z/summary.sanitized.json`.
+- Latest order-family research evidence: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md`. Recommended no-live priority is `injectionOrder/310` `130000510`, then `baseChargeOrder/110` `111000110`, then `instractionChargeOrder/130` `113001810`; `radiologyOrder/700`, `surgeryOrder/500`, and `testOrder/600` require changed identities or changed preconditions before any live retry.
 
 ## Goal
 
@@ -50,6 +54,7 @@ Advance only if new safe evidence exists: record an actual operator rollback reh
 - Update RWO-11 claim-boundary docs, matrices, and sanitized evidence.
 - Record final GO/NO-GO/PENDING only if explicit owner decision evidence is supplied.
 - Continue to independent non-live static/package/security checks if rollback/final GO is blocked.
+- Continue to independent non-live order-family candidate preparation using `order-family-v2-candidate-research-20260425T215740Z.md` if rollback/final GO is blocked. This is limited to payload identity drafting, parser/sanitizer tests, wrapper dry-runs, duplicate checkpoint checks, and claim-boundary updates; it is not approval to run live Trial.
 
 ## Forbidden Actions
 
@@ -57,6 +62,7 @@ Advance only if new safe evidence exists: record an actual operator rollback reh
 - S3/MinIO/object-storage setup, dummy storage, fake object-storage credentials, or storage readiness claims.
 - Printing, requesting, committing, or packaging credentials, cookies, session IDs, auth headers, anti-forgery values, credential-bearing URLs, raw ORCA bodies, raw patient details, raw insurance details, screenshots, HAR, traces, videos, raw network dumps, request XML, or raw request/response bodies.
 - Running live Trial mutation as a substitute for rollback/owner-decision readiness.
+- Running live Trial mutation from the order-family research without a later endpoint-specific no-live verification record, sanitized preflight, duplicate-live checkpoint, and applicable approval scope.
 - Repeating diagnostic fullflow for candidates `00001` or `00005` unchanged.
 - Broad refactors or changes under legacy `client/` or `server/`.
 

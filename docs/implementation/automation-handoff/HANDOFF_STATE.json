@@ -30,7 +30,41 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T20:44:32Z",
+  "lastUpdated": "2026-04-25T22:21:00Z",
+  "latestOrderFamilyV2CandidateResearch": {
+    "runId": "20260425T215740Z",
+    "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K",
+    "result": "ORDER_FAMILY_V2_CANDIDATE_RESEARCH_INTAKEN_NO_LIVE",
+    "branch": "master",
+    "head": "ed3999aa5",
+    "evidence": "docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md",
+    "scope": "source-backed no-live candidate research for instractionChargeOrder/130, baseChargeOrder/110, injectionOrder/310, surgeryOrder/500, testOrder/600, and radiologyOrder/700",
+    "recommendedNoLivePriority": [
+      "injectionOrder/310 candidate 130000510: no-live-prepared and not live-rejected; verify medication/material master and wrapper contract before live",
+      "baseChargeOrder/110 candidate 111000110: no-live-prepared; stop live unless first-visit Trial encounter state is proven without raw patient/insurance detail",
+      "instractionChargeOrder/130 candidate 113001810: no-live-prepared; stop live unless disease/facility/monthly billing context is proven",
+      "radiologyOrder/700 changed identity 002000099+170027910+820181000: prepare no-live only; existing v2 is businessRejected",
+      "surgeryOrder/500 changed official-sample-style identity or fallback 150001010: prepare no-live only; existing bare v2 is businessRejected",
+      "testOrder/600 changed identity around 160000310 or fallback 160008010: investigate Api_Result=80 no-live before retry; unchanged v2 is forbidden"
+    ],
+    "requiredBeforeLive": [
+      "candidate payload identity and sha",
+      "Request_Number=01/classCode=01 contract check",
+      "family-specific no-live precondition check",
+      "wrapper dry-run and parser/sanitizer tests",
+      "duplicate-live checkpoint",
+      "secret/raw-artifact scan",
+      "sanitized preflight"
+    ],
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_research_only",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Research is not live acceptance evidence, production ORCA readiness, S3/object-storage readiness, fullflow/L4 success, or release GO. It may only guide future no-live order-family candidate preparation.",
+    "credentialsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "latestRwo11RollbackOwnerPending": {
     "runId": "20260425T182930Z",
     "workOrder": "RWO-11/RWO-09",
