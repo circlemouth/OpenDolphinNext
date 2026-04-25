@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B/RWO-08/RWO-09/RWO-11",
-  "blockerId": "fullflow-accepted-encounter-official-visit-identifiers-missing",
+  "blockerId": "fullflow-charts-reaching-target-official-visit-identifiers-missing",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,68 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T07:00:27Z",
+  "lastUpdated": "2026-04-25T07:30:23Z",
+  "latestRwo08BCurrentTargetPrecondition": {
+    "runId": "20260425T073023Z",
+    "workOrder": "RWO-08B",
+    "result": "RWO08B_CURRENT_TRIAL_PRECONDITION_FOUND_CHARTS_HANDOFF_READY_BLOCKED_OFFICIAL_VISIT_IDENTIFIERS",
+    "branch": "master",
+    "startHead": "329751c57",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "statusAfterRun": "completed_with_later_endpoint_blocker",
+      "nextPromptBlockerId": "fullflow-charts-reaching-target-official-visit-identifiers-missing"
+    },
+    "evidence": "docs/implementation/rwo08b-current-target-precondition-20260425T073023Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-current-target-precondition-20260425T073023Z/summary.sanitized.json",
+    "readOnlyPreflight": {
+      "executed": true,
+      "mutationRouteCalled": false,
+      "result": "rejected_selector_option_missing_no_mutation",
+      "acceptedCandidateCount": 2,
+      "localAcceptedCandidateCount": 2,
+      "artifactRoot": "artifacts/diagnostic-fullflow/20260425T073023Z/readonly-preflight"
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "rawArtifactsLocalOnly": true,
+      "rawArtifactsCommittedOrPackaged": false,
+      "targetClassification": "trial_local_selectable_candidate_variant",
+      "endpoint": "fullflow_via_web_client",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "medicalInformationGate": "pass",
+      "chartsHandoff": "ready",
+      "canonicalKey": {
+        "hasEncounterKey": true,
+        "hasScheduleKey": false
+      },
+      "selectedVisitRowPresent": false,
+      "visitRowReadiness": "missing_official_visit_identifiers",
+      "requestXmlCreated": false,
+      "businessSuccessClassification": "blocked_official_visit_identifiers",
+      "blockerClassification": "official-visit-row-blocker",
+      "blockerReason": "visit_row_official_identifiers_missing"
+    },
+    "tests": {
+      "readOnlyPreflight": "rejected_selector_option_missing_no_mutation",
+      "diagnosticFullflow": "blocked_official_visit_identifiers"
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "endpoint": "fullflow_via_web_client",
+      "target": "trial_local_selectable_candidate_variant",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "blocked_official_visit_identifiers",
+      "businessAccepted": false
+    },
+    "claimBoundary": "A current Trial diagnostic precondition reaches Charts with a canonical handoff, but L4 fullflow remains blocked before order send because official visit identifiers are missing. No Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Investigate why the Charts-reaching diagnostic target still lacks server-fetched official visit identifiers in the selected Charts context; add focused no-live tests or a repo-local fix before any further live retry.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "latestRwo08BVisitRowHydrationFollowup": {
     "runId": "20260425T070027Z",
     "workOrder": "RWO-08B",
