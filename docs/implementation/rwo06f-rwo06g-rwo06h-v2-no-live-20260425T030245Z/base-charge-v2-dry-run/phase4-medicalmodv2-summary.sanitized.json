@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-25T03:05:45.063Z",
+  "commandContract": "phase4-safe-medicalmodv2-sanitized-only",
+  "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+  "requestClass": "medicalmodv2",
+  "target": {
+    "candidateId": "00001",
+    "patientId": "00001",
+    "candidateOnly00001": true
+  },
+  "verdict": "dry_run_passed_no_live_orca",
+  "dryRun": true,
+  "mock": false,
+  "liveTrialAction": "not_run",
+  "phase3": "not_run",
+  "fullflow": "not_run",
+  "browserNetworkArtifactMode": "disabled",
+  "sanitizedEvidenceOnly": true,
+  "rawSensitiveFieldsExcluded": true,
+  "payload": {
+    "sha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+    "bytes": 707,
+    "pathRecorded": false,
+    "rawPayloadStored": false,
+    "summary": {
+      "patientIdMatched": true,
+      "candidateIdMatched": true,
+      "departmentCodeMatched": true,
+      "physicianCodeMatched": true,
+      "requestNumber": "01",
+      "classCode": "01",
+      "requiredFieldsPresent": {
+        "visitDate": true,
+        "departmentCode": true,
+        "physicianCode": true,
+        "insuranceCombinationNumber": true,
+        "voucherNumber": true,
+        "sequentialNumber": true
+      },
+      "medicalInformation": {
+        "groupCount": 1,
+        "medicationCount": 1,
+        "entityKinds": [
+          "baseChargeOrder"
+        ],
+        "medicalClasses": [
+          "110"
+        ],
+        "unsupportedPhysiologyOrderPresent": false
+      },
+      "rawPayloadStored": false,
+      "rawPatientOrInsuranceDetailStored": false
+    }
+  },
+  "endpointWorkflow": {
+    "ok": true,
+    "blockers": [],
+    "workflow": "base-charge",
+    "workflowId": "rwo06g-base-charge-medicalmodv2-v1",
+    "endpointEvidenceLevel": "L3",
+    "requiredEntityKinds": [
+      "baseChargeOrder"
+    ],
+    "allowedMedicalClasses": [
+      "110"
+    ],
+    "requiredEntityKindsPresent": true,
+    "allowedMedicalClassesOnly": true
+  },
+  "duplicateLiveCheckpoint": {
+    "key": "rwo06g:medicalmodv2:rwo06g-base-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+    "status": "not_checked_no_live",
+    "liveMutationPermittedWhenReady": true
+  },
+  "requestSemantics": {
+    "requestNumber01Only": true,
+    "requestNumber02To04Forbidden": true,
+    "classCode01Only": true,
+    "http200AloneIsNotBusinessSuccess": true,
+    "apiResultZeroAloneIsNotBusinessSuccess": true,
+    "completionEvidenceRequired": true
+  },
+  "guard": {
+    "ok": true,
+    "blockers": []
+  },
+  "runId": "20260425T030245Z",
+  "traceId": "trace-20260425T030245Z",
+  "evidencePath": "docs/implementation/rwo06f-rwo06g-rwo06h-v2-no-live-20260425T030245Z/base-charge-v2-dry-run/phase4-medicalmodv2-summary.sanitized.json",
+  "generatedArtifacts": [
+    "phase4-medicalmodv2-summary.sanitized.json",
+    "phase4-medicalmodv2-summary.sanitized.md"
+  ],
+  "credentialsCaptured": false,
+  "rawArtifactsCaptured": false,
+  "response": {
+    "httpStatus": 0,
+    "apiResult": "",
+    "apiOk": false,
+    "ok": false,
+    "apiResultMessageCategory": "none",
+    "warningCount": 0,
+    "responseClassification": "notObserved",
+    "businessAccepted": false,
+    "completionEvidence": {
+      "informationTimestampPresent": false,
+      "medicalUidPresent": false,
+      "invoiceNumberPresent": false,
+      "dataIdPresent": false
+    },
+    "rawResponseBodyStored": false,
+    "rawApiResultMessageStored": false,
+    "rawPatientOrInsuranceDetailStored": false
+  }
+}

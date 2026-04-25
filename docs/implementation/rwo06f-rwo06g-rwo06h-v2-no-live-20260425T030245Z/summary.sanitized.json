@@ -1,0 +1,67 @@
+{
+  "runId": "20260425T030245Z",
+  "workOrders": [
+    "RWO-06F",
+    "RWO-06G",
+    "RWO-06H"
+  ],
+  "result": "INSTRUCTION_BASE_INJECTION_V2_NO_LIVE_PREPARED",
+  "branch": "master",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "status": "completed"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_no_live_preparation_only"
+  },
+  "payloads": [
+    {
+      "workflow": "instruction-charge",
+      "entity": "instractionChargeOrder",
+      "claim007Class": "130",
+      "candidateCode": "113001810",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_instruction_charge_trial_reachability_v2.json",
+      "sha256": "043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858",
+      "duplicateLiveCheckpoint": "rwo06f:medicalmodv2:rwo06f-instruction-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858",
+      "noLiveDryRun": "pass",
+      "liveTrialStatus": "not_run",
+      "livePrecondition": "blocked_until_trial_disease_facility_monthly_billing_context_established"
+    },
+    {
+      "workflow": "base-charge",
+      "entity": "baseChargeOrder",
+      "claim007Class": "110",
+      "candidateCode": "111000110",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v2.json",
+      "sha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+      "duplicateLiveCheckpoint": "rwo06g:medicalmodv2:rwo06g-base-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+      "noLiveDryRun": "pass",
+      "liveTrialStatus": "not_run",
+      "livePrecondition": "requires_trial_encounter_state_allowing_first_visit_billing"
+    },
+    {
+      "workflow": "injection",
+      "entity": "injectionOrder",
+      "claim007Class": "310",
+      "candidateCode": "130000510",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v2.json",
+      "sha256": "1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300",
+      "duplicateLiveCheckpoint": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300",
+      "noLiveDryRun": "pass",
+      "liveTrialStatus": "not_run",
+      "livePrecondition": "requires_runtime_readiness_duplicate_checkpoint_and_endpoint_specific_success_criteria"
+    }
+  ],
+  "tests": {
+    "phase4Medicalmodv2SafeEvidence": "pass",
+    "wrapperDryRuns": "pass_instruction_base_injection_v2_no_live",
+    "forbiddenArtifactScan": "pass_zero_hits",
+    "focusedSecretRawArtifactScan": "pass_zero_hits"
+  },
+  "claimBoundary": "No instruction-charge/base-charge/injection Trial business acceptance, all-order readiness, Request_Number 02/03/04, fullflow, production ORCA readiness, S3/object-storage readiness, or final release readiness is claimed.",
+  "recommendedNextTask": "Run one v2 live preflight at a time, starting only after endpoint-specific Trial/business preconditions are satisfied.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false
+}

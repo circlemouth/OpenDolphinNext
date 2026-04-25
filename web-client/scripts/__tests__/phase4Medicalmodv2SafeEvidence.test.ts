@@ -25,10 +25,16 @@ const TREATMENT_PAYLOAD = payloadPath('medicalmodv2_treatment_generic_trial_reac
 const TREATMENT_SHA256 = '89885a031fa98c95a5fc4758dbac55f4375167178edb12fc9a78e9817a16fe7c';
 const INSTRUCTION_CHARGE_PAYLOAD = payloadPath('medicalmodv2_instruction_charge_trial_reachability_v1.json');
 const INSTRUCTION_CHARGE_SHA256 = '8b9ec7db74971f7c567945c75bee7ad1fa3cbbaba97c2f8a689c2a1f0c9af64e';
+const INSTRUCTION_CHARGE_V2_PAYLOAD = payloadPath('medicalmodv2_instruction_charge_trial_reachability_v2.json');
+const INSTRUCTION_CHARGE_V2_SHA256 = '043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858';
 const BASE_CHARGE_PAYLOAD = payloadPath('medicalmodv2_base_charge_trial_reachability_v1.json');
 const BASE_CHARGE_SHA256 = 'd2db1ff2ad68174bcb236498786c87a8fffa0879917712c7ca639aa2732b9d93';
+const BASE_CHARGE_V2_PAYLOAD = payloadPath('medicalmodv2_base_charge_trial_reachability_v2.json');
+const BASE_CHARGE_V2_SHA256 = '4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a';
 const INJECTION_PAYLOAD = payloadPath('medicalmodv2_injection_trial_reachability_v1.json');
 const INJECTION_SHA256 = 'c01169729cb86d1c68211e4b01f6c38bf3dde0ac948100c53855ec91f1b9010e';
+const INJECTION_V2_PAYLOAD = payloadPath('medicalmodv2_injection_trial_reachability_v2.json');
+const INJECTION_V2_SHA256 = '1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300';
 const SURGERY_PAYLOAD = payloadPath('medicalmodv2_surgery_trial_reachability_v1.json');
 const SURGERY_SHA256 = '23441f818148820c2b1364c6a7424b1255995738cd05fa35e1328f41db96c000';
 const SURGERY_V2_PAYLOAD = payloadPath('medicalmodv2_surgery_trial_reachability_v2.json');
@@ -204,6 +210,73 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(result.evidence.duplicateLiveCheckpoint.key).toBe(
       `rwo06g:medicalmodv2:rwo06g-base-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-${BASE_CHARGE_SHA256}`,
     );
+  });
+
+  it('accepts source-backed instruction-charge/base-charge/injection v2 endpoint payload identities', () => {
+    const cases = [
+      {
+        workflow: 'instruction-charge',
+        payload: INSTRUCTION_CHARGE_V2_PAYLOAD,
+        sha256: INSTRUCTION_CHARGE_V2_SHA256,
+        entityKinds: ['instractionChargeOrder'],
+        medicalClasses: ['130'],
+        checkpointNamespace: 'rwo06f',
+        workflowId: 'rwo06f-instruction-charge-medicalmodv2-v1',
+      },
+      {
+        workflow: 'base-charge',
+        payload: BASE_CHARGE_V2_PAYLOAD,
+        sha256: BASE_CHARGE_V2_SHA256,
+        entityKinds: ['baseChargeOrder'],
+        medicalClasses: ['110'],
+        checkpointNamespace: 'rwo06g',
+        workflowId: 'rwo06g-base-charge-medicalmodv2-v1',
+      },
+      {
+        workflow: 'injection',
+        payload: INJECTION_V2_PAYLOAD,
+        sha256: INJECTION_V2_SHA256,
+        entityKinds: ['injectionOrder'],
+        medicalClasses: ['310'],
+        checkpointNamespace: 'rwo06h',
+        workflowId: 'rwo06h-injection-medicalmodv2-v1',
+      },
+    ];
+
+    for (const item of cases) {
+      const result = validatePhase4SafeCommand({
+        argv: [
+          '--dry-run',
+          '--sanitized-evidence-only',
+          '--disable-browser-artifacts',
+          '--phase4-only',
+          '--workflow',
+          item.workflow,
+          '--payload',
+          item.payload,
+          '--payload-sha256',
+          item.sha256,
+        ],
+        env: {},
+        cwd: '/repo/web-client',
+        now: new Date('2026-04-25T03:02:45Z'),
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.evidence.endpointWorkflow).toEqual(
+        expect.objectContaining({
+          workflow: item.workflow,
+          workflowId: item.workflowId,
+          requiredEntityKindsPresent: true,
+          allowedMedicalClassesOnly: true,
+        }),
+      );
+      expect(result.evidence.payload.summary.medicalInformation.entityKinds).toEqual(item.entityKinds);
+      expect(result.evidence.payload.summary.medicalInformation.medicalClasses).toEqual(item.medicalClasses);
+      expect(result.evidence.duplicateLiveCheckpoint.key).toBe(
+        `${item.checkpointNamespace}:medicalmodv2:${item.workflowId}:target-00001:request-01:class-01:payload-sha256-${item.sha256}`,
+      );
+    }
   });
 
   it('accepts the representative injection endpoint payload identity', () => {
