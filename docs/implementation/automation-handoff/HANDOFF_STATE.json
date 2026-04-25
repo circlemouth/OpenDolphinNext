@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B/RWO-08/RWO-09/RWO-11",
-  "blockerId": "fullflow-post-visit-date-repair-current-target-before-charts-handoff",
+  "blockerId": "fullflow-current-selector-precondition-missing",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,71 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T08:30:23Z",
+  "lastUpdated": "2026-04-25T09:00:22Z",
+  "latestRwo08BCurrentSelectorPrecondition": {
+    "runId": "20260425T090022Z",
+    "workOrder": "RWO-08B",
+    "result": "RWO08B_CURRENT_TRIAL_SELECTOR_PREFLIGHT_BLOCKED_NO_MUTATION",
+    "branch": "master",
+    "startHead": "576f56f40",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "statusAfterRun": "superseded_by_current_selector_precondition_prompt",
+      "nextPromptBlockerId": "fullflow-current-selector-precondition-missing"
+    },
+    "evidence": "docs/implementation/rwo08b-current-selector-precondition-20260425T090022Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-current-selector-precondition-20260425T090022Z/summary.sanitized.json",
+    "readOnlyPreflights": {
+      "executed": true,
+      "mutationRouteCalled": false,
+      "targetMutationRequestCount": 0,
+      "defaultPreferredCandidate": {
+        "result": "rejected_selector_option_missing_no_mutation",
+        "selectedPatientId": "00001",
+        "officialPatientApiResult": "00",
+        "insuranceApiResult": "000",
+        "localSelectable": "accepted",
+        "appointmentDependency": "direct_acceptance_no_appointment_required",
+        "selectorMissing": [
+          "department",
+          "physician"
+        ]
+      },
+      "exactLocalSelectable00005": {
+        "result": "rejected_selector_option_missing_no_mutation",
+        "selectedPatientId": "00005",
+        "officialPatientApiResult": "00",
+        "insuranceApiResult": "000",
+        "localSelectable": "accepted",
+        "appointmentDependency": "direct_acceptance_no_appointment_required",
+        "selectorMissing": [
+          "department",
+          "physician"
+        ]
+      }
+    },
+    "diagnosticFullflow": {
+      "executed": false,
+      "reason": "read_only_selector_precondition_not_satisfied",
+      "businessSuccessClassification": "not_run_selector_precondition_blocked",
+      "businessAccepted": false
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "fullflow_via_web_client",
+      "target": "current_trial_local_selectable_candidates",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "not_run_selector_precondition_blocked",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Current local-selectable Trial candidates exist, but exact read-only selector readiness is blocked because current runtime department/physician options do not contain the requested identity. No diagnostic fullflow retry, L4 success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Establish a runtime-selectable department/physician identity without selector injection, then rerun exact read-only preflight before any diagnostic fullflow retry.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "latestRwo08BPostVisitDateFixRevalidation": {
     "runId": "20260425T083023Z",
     "workOrder": "RWO-08B",

@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260425T090022Z",
+  "workOrders": [
+    "RWO-08B"
+  ],
+  "result": "RWO08B_CURRENT_TRIAL_SELECTOR_PREFLIGHT_BLOCKED_NO_MUTATION",
+  "branch": "master",
+  "startHead": "576f56f40",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "statusAfterRun": "superseded_by_current_selector_precondition_prompt"
+  },
+  "readOnlyPreflights": [
+    {
+      "label": "default-preferred-candidate",
+      "artifactRoot": "artifacts/diagnostic-fullflow/20260425T090022Z/readonly-preflight",
+      "artifactRootGitignored": true,
+      "verdict": "rejected",
+      "acceptedForPhase3Attempt": false,
+      "phase3AttemptPatientId": null,
+      "blockerClassification": "selector_option_missing",
+      "blockerReason": "selector_missing",
+      "selectedPatientId": "00001",
+      "officialPatient": {
+        "apiResult": "00",
+        "exactIdMatched": true
+      },
+      "insuranceReadiness": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "effectiveCount": 2
+      },
+      "localSelectableReadiness": {
+        "verdict": "accepted",
+        "recordsReturned": 1,
+        "exactMatchCount": 1,
+        "localCandidateCount": 1
+      },
+      "selectorReadiness": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "reason": "selector_exact_match_missing",
+        "failedSelectors": [
+          "department",
+          "physician"
+        ]
+      },
+      "medicalInformationReadiness": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "reason": "medical_information_not_ready",
+        "failedSubdimensions": [
+          "department_ready",
+          "physician_ready"
+        ]
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "accepted": true
+      },
+      "mutationPolicy": {
+        "prohibited": true,
+        "blockedRequestCount": 0,
+        "targetMutationRequestCount": 0
+      },
+      "rawSensitiveFieldsExcluded": true
+    },
+    {
+      "label": "exact-local-selectable-00005",
+      "artifactRoot": "artifacts/diagnostic-fullflow/20260425T090022Z/readonly-preflight-00005",
+      "artifactRootGitignored": true,
+      "verdict": "rejected",
+      "acceptedForPhase3Attempt": false,
+      "phase3AttemptPatientId": null,
+      "blockerClassification": "selector_option_missing",
+      "blockerReason": "selector_missing",
+      "selectedPatientId": "00005",
+      "officialPatient": {
+        "apiResult": "00",
+        "exactIdMatched": true
+      },
+      "insuranceReadiness": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "effectiveCount": 1
+      },
+      "localSelectableReadiness": {
+        "verdict": "accepted",
+        "recordsReturned": 1,
+        "exactMatchCount": 1,
+        "localCandidateCount": 1
+      },
+      "selectorReadiness": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "reason": "selector_exact_match_missing",
+        "failedSelectors": [
+          "department",
+          "physician"
+        ]
+      },
+      "medicalInformationReadiness": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "reason": "medical_information_not_ready",
+        "failedSubdimensions": [
+          "department_ready",
+          "physician_ready"
+        ]
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "accepted": true
+      },
+      "mutationPolicy": {
+        "prohibited": true,
+        "blockedRequestCount": 0,
+        "targetMutationRequestCount": 0
+      },
+      "rawSensitiveFieldsExcluded": true
+    }
+  ],
+  "diagnosticFullflow": {
+    "executed": false,
+    "reason": "read_only_selector_precondition_not_satisfied",
+    "endpoint": "fullflow_via_web_client",
+    "requestClass": "acceptmodv2/fullflow-pre-send",
+    "businessSuccessClassification": "not_run_selector_precondition_blocked",
+    "businessAccepted": false
+  },
+  "diagnosticArtifactManifest": {
+    "roots": [
+      "artifacts/diagnostic-fullflow/20260425T090022Z/readonly-preflight",
+      "artifacts/diagnostic-fullflow/20260425T090022Z/readonly-preflight-00005"
+    ],
+    "gitignored": true,
+    "classes": {
+      "total": 16,
+      "requestXml": 0,
+      "harTraceVideo": 0
+    },
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "endpoint": "fullflow_via_web_client",
+    "target": "current_trial_local_selectable_candidates",
+    "requestClass": "acceptmodv2/fullflow-pre-send",
+    "businessSuccessClassification": "not_run_selector_precondition_blocked",
+    "businessAccepted": false
+  },
+  "claimBoundary": "Current local-selectable Trial candidates exist, but exact read-only selector readiness is blocked because current runtime department/physician options do not contain the requested identity. No diagnostic fullflow retry, L4 success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Establish a runtime-selectable department/physician identity without selector injection, then rerun exact read-only preflight before any diagnostic fullflow retry.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": true,
+  "diagnosticArtifactsLocalOnlyUntracked": true,
+  "rawArtifactsCommittedOrPackaged": false
+}
