@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T19:14:29Z",
+  "lastUpdated": "2026-04-25T20:44:32Z",
   "latestRwo11RollbackOwnerPending": {
     "runId": "20260425T182930Z",
     "workOrder": "RWO-11/RWO-09",
@@ -4362,19 +4362,19 @@
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo09NonS3StaticRefresh": {
-    "runId": "20260425T191429Z",
+    "runId": "20260425T204432Z",
     "workOrder": "RWO-09/RWO-11",
     "result": "RWO09_NON_S3_STATIC_REFRESH_PASS",
     "branch": "master",
-    "head": "7670a304a703a39a14c811dd03a9200c2487302f",
+    "head": "86c2d18b9d56dbfdd15937de5845f04f81402c53",
     "activeHandoffPrompt": {
       "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
       "statusAtStart": "active",
       "statusAfterRun": "left_pending_and_advanced_independent_non_live_static_refresh",
       "carriedForwardBlockerId": "final-owner-go-or-operator-rollback-rehearsal-pending"
     },
-    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260425T191429Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260425T191429Z/summary.sanitized.json",
+    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260425T204432Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260425T204432Z/summary.sanitized.json",
     "rollbackOwnerDecision": {
       "newOwnerOperatorInputFound": false,
       "rollbackRehearsalExecuted": false,
@@ -4389,7 +4389,8 @@
       "serverNoRuntimeDdl": "pass",
       "serverPersistenceEntities": "pass",
       "serverNoGeneratedArtifacts": "pass",
-      "reviewPackageContractTests": "pass_27_tests"
+      "reviewPackageContractTests": "pass_27_tests",
+      "gitDiffCheck": "pass"
     },
     "liveTrialOrca": {
       "executed": false,
