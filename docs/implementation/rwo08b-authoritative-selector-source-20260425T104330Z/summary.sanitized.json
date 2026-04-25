@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260425T104330Z",
+  "workOrders": [
+    "RWO-08B"
+  ],
+  "result": "RWO08B_AUTHORITATIVE_SELECTOR_SOURCE_NOT_AVAILABLE_NO_MUTATION",
+  "branch": "master",
+  "startHead": "3cf3b235f",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "statusAfterRun": "superseded_by_selector_master_contract_prompt"
+  },
+  "selectorSourceInvestigation": {
+    "uiDepartmentOptionsSource": "server_returned_appointment_or_visit_rows_only",
+    "uiPhysicianOptionsSource": "server_returned_appointment_or_visit_rows_only",
+    "directPatientSearchSource": "not_available",
+    "medicalInformationSource": "system01lstv2_request_number_06",
+    "departmentPhysicianMasterSourceImplemented": false,
+    "authoritativeSourceAvailableForDirectAcceptance": false,
+    "failClosedBehavior": "selector_option_missing_before_mutation"
+  },
+  "runtime": {
+    "backendStatus": "unavailable",
+    "healthHttpStatus": "000",
+    "anonymousReadinessHttpStatus": "000",
+    "readOnlyPreflightExecuted": false,
+    "readOnlyPreflightSkipReason": "skipped_environment_unavailable_backend"
+  },
+  "tests": {
+    "nodeCheckFullflow": "pass",
+    "acceptmodv2IdentityGateAndReceptionPage": "pass_87_tests",
+    "acceptmodv2Api": "pass_18_tests",
+    "webGuardViaNpmPretest": "pass"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "endpoint": "fullflow_via_web_client",
+    "target": "current_trial_direct_acceptance_selector_source",
+    "requestClass": "acceptmodv2/fullflow-pre-send",
+    "businessSuccessClassification": "not_run_selector_source_missing",
+    "businessAccepted": false
+  },
+  "claimBoundary": "The current repo has no implemented server-authoritative department/physician master source for direct patient-search acceptance. Existing appointment/visit row-derived selector sources remain valid, and missing direct-acceptance options fail closed before mutation. No L4 success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Define and implement a safe server-authoritative department/physician selector options contract before any diagnostic fullflow retry.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "diagnosticArtifactsLocalOnlyUntracked": false,
+  "rawArtifactsCommittedOrPackaged": false
+}

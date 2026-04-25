@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B/RWO-08/RWO-09/RWO-11",
-  "blockerId": "fullflow-authoritative-selector-source-missing",
+  "blockerId": "fullflow-selector-master-contract-missing",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,56 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T10:13:08Z",
+  "lastUpdated": "2026-04-25T10:43:30Z",
+  "latestRwo08BAuthoritativeSelectorSource": {
+    "runId": "20260425T104330Z",
+    "workOrder": "RWO-08B",
+    "result": "RWO08B_AUTHORITATIVE_SELECTOR_SOURCE_NOT_AVAILABLE_NO_MUTATION",
+    "branch": "master",
+    "startHead": "3cf3b235f",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "statusAfterRun": "superseded_by_selector_master_contract_prompt",
+      "nextPromptBlockerId": "fullflow-selector-master-contract-missing"
+    },
+    "evidence": "docs/implementation/rwo08b-authoritative-selector-source-20260425T104330Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-authoritative-selector-source-20260425T104330Z/summary.sanitized.json",
+    "selectorSourceInvestigation": {
+      "uiDepartmentOptionsSource": "server_returned_appointment_or_visit_rows_only",
+      "uiPhysicianOptionsSource": "server_returned_appointment_or_visit_rows_only",
+      "directPatientSearchSource": "not_available",
+      "medicalInformationSource": "system01lstv2_request_number_06",
+      "departmentPhysicianMasterSourceImplemented": false,
+      "authoritativeSourceAvailableForDirectAcceptance": false,
+      "failClosedBehavior": "selector_option_missing_before_mutation"
+    },
+    "runtime": {
+      "backendStatus": "unavailable",
+      "readOnlyPreflightExecuted": false,
+      "readOnlyPreflightSkipReason": "skipped_environment_unavailable_backend"
+    },
+    "tests": {
+      "nodeCheckFullflow": "pass",
+      "acceptmodv2IdentityGateAndReceptionPage": "pass_87_tests",
+      "acceptmodv2Api": "pass_18_tests",
+      "webGuardViaNpmPretest": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "fullflow_via_web_client",
+      "target": "current_trial_direct_acceptance_selector_source",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "not_run_selector_source_missing",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Current repo lacks a server-authoritative department/physician master source for direct patient-search acceptance. Existing appointment/visit row-derived selector sources remain valid, and missing direct-acceptance options fail closed before mutation. No L4 success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Define and implement a safe server-authoritative department/physician selector options contract before any diagnostic fullflow retry.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "diagnosticArtifactsLocalOnlyUntracked": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "latestRwo08BCurrentSelectorPrecondition": {
     "runId": "20260425T090022Z",
     "workOrder": "RWO-08B",
