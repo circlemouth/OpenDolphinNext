@@ -204,6 +204,7 @@ Checkpoint:
 - RUN_ID `20260424T055036Z` added the `surgery` workflow, payload `medicalmodv2_surgery_trial_reachability_v1.json`, SHA-256 `23441f818148820c2b1364c6a7424b1255995738cd05fa35e1328f41db96c000`, and a passing wrapper dry-run.
 - The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
 - Do not repeat the v1 checkpoint. Use web-researched official/public sources and local no-live contract checks to propose a justified surgery v2 candidate before any live retry.
+- RUN_ID `20260425T010143Z` added source-backed v2 payload `medicalmodv2_surgery_trial_reachability_v2.json`, SHA-256 `f7fbb890b62b7211b47c2672e85f0e70acbcdee18c9cbe9d7ea24c7942bbaa0e`, using surgery code `150003110`. The safe wrapper dry-run and focused contract test passed with no live ORCA execution.
 
 ### RWO-06J: Test Order Trial Reachability
 

@@ -1,0 +1,41 @@
+{
+  "runId": "20260425T010143Z",
+  "workOrder": "RWO-06I",
+  "result": "SURGERY_V2_NO_LIVE_PREPARED",
+  "branch": "master",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "completed"
+  },
+  "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+  "orcaEndpoint": "/api21/medicalmodv2",
+  "requestClass": "medicalmodv2",
+  "workflow": "surgery",
+  "entity": "surgeryOrder",
+  "target": "00001",
+  "requestNumber": "01",
+  "classCode": "01",
+  "claim007Class": "500",
+  "candidateCode": "150003110",
+  "payloadSha256": "f7fbb890b62b7211b47c2672e85f0e70acbcdee18c9cbe9d7ea24c7942bbaa0e",
+  "duplicateLiveCheckpoint": "rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-f7fbb890b62b7211b47c2672e85f0e70acbcdee18c9cbe9d7ea24c7942bbaa0e",
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_no_live_preparation_only",
+    "businessAccepted": false
+  },
+  "checks": {
+    "phase4Medicalmodv2SafeEvidence": {
+      "result": "pass",
+      "tests": 20
+    },
+    "wrapperDryRun": "pass_surgery_v2_notVerified_no_live",
+    "forbiddenArtifactScan": "pass_zero_hits",
+    "focusedSecretRawArtifactScan": "pass_zero_hits"
+  },
+  "claimBoundary": "No surgeryOrder/500 Trial business acceptance, all-surgery coverage, broad all-order readiness, diseasev3 acceptance, subjectivesv2 acceptance, Request_Number 02/03/04, fullflow readiness, production ORCA readiness, S3/object-storage readiness, final release GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Run sanitized readiness and at most one live Trial checkpoint for surgery v2 if prerequisites are available; otherwise continue independent no-live investigation for rejected order-family candidates.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false
+}
