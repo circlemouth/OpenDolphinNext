@@ -30,7 +30,66 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T06:12:00Z",
+  "lastUpdated": "2026-04-25T06:30:24Z",
+  "latestRwo08BVisitRowHydrationRepair": {
+    "runId": "20260425T063024Z",
+    "workOrder": "RWO-08B",
+    "result": "RWO08B_VISIT_ROW_SELECTION_REPAIR_NO_LIVE_TESTS_PASS_RUNTIME_SMOKE_PASS_DIAGNOSTIC_BLOCKED_BEFORE_CHARTS_HANDOFF",
+    "branch": "master",
+    "startHead": "1b856eae7",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active"
+    },
+    "evidence": "docs/implementation/rwo08b-visit-row-hydration-20260425T063024Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-visit-row-hydration-20260425T063024Z/summary.sanitized.json",
+    "codeChange": {
+      "files": [
+        "web-client/src/features/charts/orcaQueueSelection.ts",
+        "web-client/src/features/charts/pages/ChartsPage.tsx",
+        "web-client/src/features/charts/__tests__/orcaQueueSelection.test.ts"
+      ],
+      "summary": "Charts selected-entry resolution now prefers a single server-fetched official visit row with complete official identifiers over a projection-only exact handoff match and fails closed for missing or ambiguous official rows."
+    },
+    "runtimeSmoke": {
+      "executed": true,
+      "result": "pass",
+      "artifactRoot": "artifacts/webclient/runtime-gate-ready/20260425T063024Z",
+      "jsonOnly": true
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "rawArtifactsLocalOnly": true,
+      "rawArtifactsCommittedOrPackaged": false,
+      "classification": "blocked_before_charts_handoff",
+      "blockerClassification": "test-data-blocker",
+      "blockerReason": "fatal_before_send",
+      "chartsHandoff": "error_before_charts_navigation",
+      "selectedVisitRowPresent": false,
+      "requestXmlCreated": false
+    },
+    "tests": {
+      "focusedOrcaQueueSelectionTests": "pass_8_tests",
+      "webGuard": "pass",
+      "typecheck": "pass",
+      "runtimeReadySmoke": "pass",
+      "diagnosticFullflow": "blocked_before_charts_handoff"
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "endpoint": "fullflow_via_web_client",
+      "target": "trial_native_default_candidate",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "blocked_before_charts_handoff",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Charts selected-entry hydration path was repaired and focused no-live/typecheck/runtime smoke passed, but diagnostic fullflow did not reach Charts handoff. No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Rerun diagnostic fullflow with the same class of target that reaches Charts after accept, then verify selected visit row and official identifier readiness.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "latestRwo08BFullflowGateRepair": {
     "runId": "20260425T055659Z",
     "workOrder": "RWO-08B",

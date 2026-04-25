@@ -80,7 +80,11 @@ import {
   type OutpatientEncounterContext,
 } from '../encounterContext';
 import { buildCanonicalOrcaEncounterContext } from '../orcaEncounterContext';
-import { resolveClaimQueueEntryForEncounter, resolveOrcaQueueEntryForEncounter } from '../orcaQueueSelection';
+import {
+  resolveClaimQueueEntryForEncounter,
+  resolveOrcaQueueEntryForEncounter,
+  resolveReceptionEntryForEncounter,
+} from '../orcaQueueSelection';
 import {
   buildChartsApprovalStorageKey,
   clearChartsApprovalRecord,
@@ -2151,16 +2155,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
 
   const selectedEntry = useMemo(() => {
     if (!hasEncounterHandoffKey) return undefined;
-    const byEncounterKey = encounterContext.encounterKey
-      ? patientEntries.find((entry) => (entry.encounterKey ?? '').trim() === encounterContext.encounterKey)
-      : undefined;
-    if (byEncounterKey) return byEncounterKey;
-    const byScheduleKey = encounterContext.scheduleKey
-      ? patientEntries.find((entry) => (entry.scheduleKey ?? '').trim() === encounterContext.scheduleKey)
-      : undefined;
-    if (byScheduleKey) return byScheduleKey;
-    return undefined;
-  }, [encounterContext.encounterKey, encounterContext.scheduleKey, hasEncounterHandoffKey, patientEntries]);
+    return resolveReceptionEntryForEncounter(patientEntries, encounterContext);
+  }, [encounterContext, hasEncounterHandoffKey, patientEntries]);
 
   const selectedEntryPatientId = selectedEntry
     ? (() => {

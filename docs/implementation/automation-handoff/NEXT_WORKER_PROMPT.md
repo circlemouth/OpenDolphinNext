@@ -2,6 +2,7 @@
 
 status: active
 created_at: 2026-04-25T06:12:00Z
+updated_at: 2026-04-25T06:30:24Z
 source_work_order: RWO-08B/RWO-08/RWO-09/RWO-11
 blocker_id: fullflow-accepted-encounter-official-visit-identifiers-missing
 priority: high
@@ -37,9 +38,23 @@ Current blocker:
 - ORCA-searchable Trial dummy target diagnostic fullflow: Charts handoff became ready with a canonical encounter key, but no selected visit row was present, Charts send stayed disabled with `missing_encounter_context`, and the blocker is `official-visit-row-blocker` / `visit_row_official_identifiers_missing`.
 - No `medicalmodv2` request XML was created. No L4 fullflow success is claimed.
 
+RUN_ID `20260425T063024Z` landed a repo-local fix for the likely Charts-side hydration defect:
+
+- `web-client/src/features/charts/orcaQueueSelection.ts` now exports `resolveReceptionEntryForEncounter`.
+- `web-client/src/features/charts/pages/ChartsPage.tsx` uses that resolver for selected Reception entry resolution.
+- If an exact handoff key match is projection-only but a single server-fetched official visit row for the same patient/date has complete `Insurance_Combination_Number`, `Voucher_Number`, and `Sequential_Number`, Charts uses the official row.
+- Missing official identifiers and multiple official rows still fail closed; no client synthesis from canonical keys is allowed.
+- Focused resolver tests passed (8 tests), `npm run --prefix web-client typecheck` passed, `npm run --prefix web-client verify:web-guard` passed, and `RUN_ID=20260425T063024Z node web-client/scripts/runtime-ready-smoke.mjs` passed.
+- A diagnostic fullflow was run with the default Trial-native target under the Diagnostic Artifact Exception, but it stopped before canonical Charts handoff as `test-data-blocker` / `fatal_before_send`. It did not verify the repaired hydration path live, no request XML was created, and no L4 success is claimed.
+
+Sanitized evidence:
+
+- `docs/implementation/rwo08b-visit-row-hydration-20260425T063024Z/FINAL_REPORT.md`
+- `docs/implementation/rwo08b-visit-row-hydration-20260425T063024Z/summary.sanitized.json`
+
 ## Goal
 
-Fix or precisely classify why the accepted encounter that reaches Charts with a canonical encounter key does not hydrate official visit identifiers into Charts send context.
+Verify or precisely classify whether the RUN_ID `20260425T063024Z` selected-entry fix resolves the accepted-encounter official visit identifier hydration blocker when diagnostic fullflow uses a target/precondition that reaches Charts after accept.
 
 ## Required First Steps
 
@@ -52,7 +67,7 @@ Fix or precisely classify why the accepted encounter that reaches Charts with a 
 
 - Add focused no-live unit/component tests around Reception-to-Charts handoff, accepted encounter hydration, selected visit row resolution, and `ChartsActionBar` send-context readiness.
 - Fix repo-local defects in `web-client/` or `server-modernized/` that prevent accepted encounter identifiers from being carried into Charts, as long as the fix preserves server-side authority and fail-closed behavior.
-- Rerun `runtime-ready-smoke` and one diagnostic fullflow after a concrete fix or changed test-data precondition.
+- Rerun `runtime-ready-smoke` and one diagnostic fullflow after a concrete fix or changed test-data precondition. The next diagnostic fullflow should use the same class of target that reaches Charts after accept; do not use a target known to stop before canonical Charts handoff unless the purpose is to record a test-data skip.
 - Keep diagnostic screenshots/network JSON/request XML/HAR/traces/videos local-only under gitignored output directories.
 - Commit only reviewed source changes, focused tests, sanitized evidence, handoff state, and gate matrix updates.
 
