@@ -16,6 +16,8 @@
 - [OpenDolphin dynamic-trial static remediation package 2026-04-18](opendolphin-dynamic-trial-static-remediation-package-20260418/README.md)
 - [OpenDolphin postfix static remediation docset 2026-04-18](opendolphin-postfix-static-remediation-20260418/README.md)
 - [OpenDolphin static fix package 2026-04-18](opendolphin-static-fix-package-20260418/README.md)
+- [Clinical functional release readiness roadmap 2026-04-22](clinical-functional-release-readiness-roadmap-20260422/README.md)
+- [ORCA order-family v2 candidate research 2026-04-25](clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md)
 - [ORCA order alignment](orca-order-alignment/README.md)
 - [OpenDolphin WebClient follow-up release gate package 2026-04-17](opendolphin-webclient-followup-release-gate-package-20260417/README.md)
 - [OpenDolphin WebClient remaining follow-up package 2026-04-17](opendolphin-webclient-remaining-followup-package-20260417/README.md)

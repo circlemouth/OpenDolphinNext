@@ -31,6 +31,8 @@
 - [implementation/opendolphin-postfix-static-remediation-20260418/README.md](implementation/opendolphin-postfix-static-remediation-20260418/README.md)
 - [implementation/opendolphin-webclient-followup-release-gate-package-20260417/](implementation/opendolphin-webclient-followup-release-gate-package-20260417/)
 - [implementation/opendolphin-webclient-remaining-followup-package-20260417/](implementation/opendolphin-webclient-remaining-followup-package-20260417/)
+- [implementation/clinical-functional-release-readiness-roadmap-20260422/README.md](implementation/clinical-functional-release-readiness-roadmap-20260422/README.md)
+- [implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md](implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md)
 - [implementation/orca-order-alignment/README.md](implementation/orca-order-alignment/README.md)
 - [implementation/orca-order-alignment/orca_order_alignment_authoritative_spec_packet_20260407.md](implementation/orca-order-alignment/orca_order_alignment_authoritative_spec_packet_20260407.md)
 - [implementation/orca-order-alignment/orca_order_alignment_authoritative_tables_20260407.json](implementation/orca-order-alignment/orca_order_alignment_authoritative_tables_20260407.json)
