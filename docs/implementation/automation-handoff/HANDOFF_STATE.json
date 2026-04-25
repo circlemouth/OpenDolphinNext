@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B/RWO-08",
-  "blockerId": "fullflow-next-candidate-00005-diagnostic-fullflow-pending",
+  "blockerId": "fullflow-duplicate-acceptance-candidate-exhaustion-investigation",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,92 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T14:37:25Z",
+  "lastUpdated": "2026-04-25T14:44:28Z",
+  "latestRwo08BCandidate00005DiagnosticFullflow": {
+    "runId": "20260425T144428Z",
+    "workOrder": "RWO-08B",
+    "result": "RWO08B_CANDIDATE_00005_DIAGNOSTIC_FULLFLOW_BLOCKED_DUPLICATE_ACCEPTANCE",
+    "branch": "master",
+    "startHead": "4ef2cb913",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "statusAfterRun": "completed_with_successor_blocker_recorded",
+      "completedBlockerId": "fullflow-next-candidate-00005-diagnostic-fullflow-pending",
+      "successorBlockerId": "fullflow-duplicate-acceptance-candidate-exhaustion-investigation"
+    },
+    "evidence": "docs/implementation/rwo08b-candidate-00005-diagnostic-fullflow-20260425T144428Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-candidate-00005-diagnostic-fullflow-20260425T144428Z/summary.sanitized.json",
+    "runtime": {
+      "profile": "orca-trial-no-object-storage",
+      "objectStorageFree": true,
+      "webHttpStatus": 200,
+      "directServerHealthHttpStatus": "000",
+      "directServerReadinessHttpStatus": "000",
+      "runtimeReadySmoke": "pass_json_only",
+      "s3ObjectStorageConfigured": false
+    },
+    "readOnlyPreflight": {
+      "executed": true,
+      "candidateId": "00005",
+      "inputIdentityHash": "4222ff5f4bd0cc227d11e6481a82eae271bc62dc8cea0af5144baeecd0185fce",
+      "selectorReadiness": "accepted",
+      "medicalInformationReadiness": "accepted",
+      "mutationRouteCalled": false,
+      "targetMutationRequestCount": 0,
+      "businessSuccessClassification": "readonly_selector_preflight_accepted_no_mutation"
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "candidateId": "00005",
+      "result": "blocked",
+      "blockerClassification": "test-data-blocker",
+      "blockerReason": "fatal_before_send",
+      "acceptMutation": {
+        "observed": true,
+        "httpStatus": 200,
+        "httpStatusClass": "2xx",
+        "apiResult": "16",
+        "businessSuccessClassification": "business_rejected_duplicate_acceptance",
+        "acceptanceEvidencePresent": false,
+        "canonicalKeyPresence": {
+          "acceptanceId": false,
+          "visitNumber": false,
+          "scheduleKey": false,
+          "encounterKey": false
+        }
+      },
+      "receptionEntryDiagnostics": {
+        "totalRenderedRows": 3,
+        "matchingRows": 1,
+        "activeRows": 0,
+        "keyedActiveRows": 0,
+        "statuses": [
+          "reservation_only"
+        ]
+      },
+      "canonicalHandoffStatus": "error",
+      "orderSendReached": false,
+      "requestXmlCreated": false,
+      "businessSuccessClassification": "blocked_before_charts_handoff_duplicate_acceptance",
+      "businessAccepted": false
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "endpoint": "fullflow_via_web_client",
+      "target": "current_trial_direct_acceptance_00005",
+      "requestClass": "acceptmodv2/fullflow-pre-send",
+      "businessSuccessClassification": "blocked_before_charts_handoff_duplicate_acceptance",
+      "businessAccepted": false,
+      "orderSendExecuted": false
+    },
+    "claimBoundary": "Candidate 00005 read-only selector preflight passed with no mutation, but the single diagnostic fullflow attempt was blocked before Charts handoff because acceptmodv2 returned apiResult 16 duplicate acceptance with no canonical acceptance keys and zero active/keyed active rows. No L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Investigate no-live candidate freshness and duplicate-acceptance preconditions before any further diagnostic fullflow retry; do not repeat candidates 00001 or 00005 unchanged.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "latestRwo08BSelectorRuntimePreflight": {
     "runId": "20260425T114330Z",
     "workOrder": "RWO-08B",
