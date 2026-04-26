@@ -1,0 +1,214 @@
+{
+  "approvedTrialScopeCandidate": {
+    "candidateId": "00001",
+    "departmentCode": "01",
+    "environment": "Live ORCA Trial only",
+    "noGo": [
+      "Request_Number=02",
+      "Request_Number=03",
+      "Request_Number=04",
+      "diseasev3 Request_Number=01",
+      "medicalmodv2 class=02/03/04",
+      "subjectivesv2 class=02",
+      "acceptmodv2 mutation",
+      "Phase3 retry",
+      "fullflow",
+      "patients/candidates 00002-00011"
+    ],
+    "patientId": "00001",
+    "physicianCode": "10001",
+    "productionOrca": "NO-GO"
+  },
+  "classification": "phase4_orca_trial_dummy_payload_json_package",
+  "createdAtJst": "2026-04-22T00:00:00+09:00",
+  "encoding": "UTF-8",
+  "files": {
+    "diseasev3_phase4_dummy_native_intent_v1.json": {
+      "bytes": 715,
+      "duplicateLiveCheckpointKey": "rwo06b:diseasev3:rwo06b-diseasev3-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+      "repo_path": "web-client/qa/payloads/phase4/diseasev3_phase4_dummy_native_intent_v1.json",
+      "sha256": "da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+      "status": "rwo06b_diseasev3_live_readiness_identity_prepared_no_live_only",
+      "workflow": "diseasev3"
+    },
+    "medicalmodv2_phase4_dummy_current_wrapper_v1.json": {
+      "bytes": 694,
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_current_wrapper_v1.json",
+      "sha256": "e0f34fa28177155bf19cc0476863bf540f8b1ff4d844ddf189b88ab327645618",
+      "status": "deprecated_stale_trial_context"
+    },
+    "medicalmodv2_phase4_dummy_phase3_context_v1.json": {
+      "bytes": 695,
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_phase3_context_v1.json",
+      "sha256": "c2dc84307c9f8ae83f2361525a6c127938cb1ef308c4ef125ebaaa0408809627",
+      "status": "active_medicalmodv2_candidate"
+    },
+    "medicalmodv2_prescription_trial_reachability_v1.json": {
+      "bytes": 724,
+      "duplicateLiveCheckpointKey": "rwo06d:medicalmodv2:rwo06d-prescription-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-1f3c6f968e8017149e4e059617f2fadadcef87508c5de6dca3d0c3a05cc4a087",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_prescription_trial_reachability_v1.json",
+      "sha256": "1f3c6f968e8017149e4e059617f2fadadcef87508c5de6dca3d0c3a05cc4a087",
+      "status": "superseded_by_v2_after_live_business_rejected_api_result_80",
+      "workflow": "prescription"
+    },
+    "medicalmodv2_prescription_trial_reachability_v2.json": {
+      "bytes": 750,
+      "duplicateLiveCheckpointKey": "rwo06d:medicalmodv2:rwo06d-prescription-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-9146d2ba3cbc5f037ba90c9620a50a36f5c1696de0d4cd36dc2b6fc6d5f876b7",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_prescription_trial_reachability_v2.json",
+      "sha256": "9146d2ba3cbc5f037ba90c9620a50a36f5c1696de0d4cd36dc2b6fc6d5f876b7",
+      "status": "active_rwo06d_endpoint_specific_candidate",
+      "workflow": "prescription"
+    },
+    "medicalmodv2_treatment_generic_trial_reachability_v1.json": {
+      "bytes": 801,
+      "duplicateLiveCheckpointKey": "rwo06d:medicalmodv2:rwo06d-treatment-generic-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-7a0e0ddcf8ef795001417ca258bd17a25a75982c929b3c9e0320a5937c651a62",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_treatment_generic_trial_reachability_v1.json",
+      "sha256": "7a0e0ddcf8ef795001417ca258bd17a25a75982c929b3c9e0320a5937c651a62",
+      "status": "superseded_by_v2_to_avoid_same_day_collision_after_prescription_probe",
+      "workflow": "treatment-generic"
+    },
+    "medicalmodv2_treatment_generic_trial_reachability_v2.json": {
+      "bytes": 821,
+      "duplicateLiveCheckpointKey": "rwo06d:medicalmodv2:rwo06d-treatment-generic-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-89885a031fa98c95a5fc4758dbac55f4375167178edb12fc9a78e9817a16fe7c",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_treatment_generic_trial_reachability_v2.json",
+      "sha256": "89885a031fa98c95a5fc4758dbac55f4375167178edb12fc9a78e9817a16fe7c",
+      "status": "active_rwo06d_endpoint_specific_candidate",
+      "workflow": "treatment-generic"
+    },
+    "medicalmodv2_instruction_charge_trial_reachability_v1.json": {
+      "bytes": 728,
+      "duplicateLiveCheckpointKey": "rwo06f:medicalmodv2:rwo06f-instruction-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-8b9ec7db74971f7c567945c75bee7ad1fa3cbbaba97c2f8a689c2a1f0c9af64e",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_instruction_charge_trial_reachability_v1.json",
+      "sha256": "8b9ec7db74971f7c567945c75bee7ad1fa3cbbaba97c2f8a689c2a1f0c9af64e",
+      "status": "rwo06f_endpoint_specific_candidate_live_business_rejected_do_not_repeat",
+      "workflow": "instruction-charge"
+    },
+    "medicalmodv2_instruction_charge_trial_reachability_v2.json": {
+      "bytes": 728,
+      "candidateSourceRunId": "20260425T030245Z",
+      "candidateSourceUrl": "https://orcamanual.orca.med.or.jp/gairai/chapter/2-6-2/",
+      "duplicateLiveCheckpointKey": "rwo06f:medicalmodv2:rwo06f-instruction-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_instruction_charge_trial_reachability_v2.json",
+      "sha256": "043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858",
+      "status": "rwo06f_v2_endpoint_specific_candidate_no_live_prepared_not_live_executed",
+      "workflow": "instruction-charge"
+    },
+    "medicalmodv2_base_charge_trial_reachability_v1.json": {
+      "bytes": 707,
+      "duplicateLiveCheckpointKey": "rwo06g:medicalmodv2:rwo06g-base-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-d2db1ff2ad68174bcb236498786c87a8fffa0879917712c7ca639aa2732b9d93",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v1.json",
+      "sha256": "d2db1ff2ad68174bcb236498786c87a8fffa0879917712c7ca639aa2732b9d93",
+      "status": "rwo06g_endpoint_specific_candidate_live_business_rejected_do_not_repeat",
+      "workflow": "base-charge"
+    },
+    "medicalmodv2_base_charge_trial_reachability_v2.json": {
+      "bytes": 707,
+      "candidateSourceRunId": "20260425T030245Z",
+      "candidateSourceUrl": "https://orcamanual.orca.med.or.jp/gairai/chapter/2-6-1/",
+      "duplicateLiveCheckpointKey": "rwo06g:medicalmodv2:rwo06g-base-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v2.json",
+      "sha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+      "status": "rwo06g_v2_endpoint_specific_candidate_no_live_prepared_not_live_executed",
+      "workflow": "base-charge"
+    },
+    "medicalmodv2_injection_trial_reachability_v1.json": {
+      "bytes": 818,
+      "duplicateLiveCheckpointKey": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-c01169729cb86d1c68211e4b01f6c38bf3dde0ac948100c53855ec91f1b9010e",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v1.json",
+      "sha256": "c01169729cb86d1c68211e4b01f6c38bf3dde0ac948100c53855ec91f1b9010e",
+      "status": "active_rwo06h_endpoint_specific_candidate",
+      "workflow": "injection"
+    },
+    "medicalmodv2_injection_trial_reachability_v2.json": {
+      "bytes": 1022,
+      "candidateSourceRunId": "20260425T030245Z",
+      "candidateSourceUrl": "https://orcamanual.orca.med.or.jp/gairai/chapter/2-6-5/",
+      "duplicateLiveCheckpointKey": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v2.json",
+      "sha256": "1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300",
+      "status": "rwo06h_v2_endpoint_specific_candidate_no_live_prepared_not_live_executed",
+      "workflow": "injection"
+    },
+    "medicalmodv2_surgery_trial_reachability_v1.json": {
+      "bytes": 812,
+      "duplicateLiveCheckpointKey": "rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-23441f818148820c2b1364c6a7424b1255995738cd05fa35e1328f41db96c000",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_surgery_trial_reachability_v1.json",
+      "sha256": "23441f818148820c2b1364c6a7424b1255995738cd05fa35e1328f41db96c000",
+      "status": "rwo06i_endpoint_specific_candidate_live_business_rejected_do_not_repeat",
+      "workflow": "surgery"
+    },
+    "medicalmodv2_test_order_trial_reachability_v1.json": {
+      "bytes": 817,
+      "duplicateLiveCheckpointKey": "rwo06j:medicalmodv2:rwo06j-test-order-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-b4fd3a422ac38f51b73a2fb2a56d07e2418339878f9451a6d73eb185bbd334d2",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_test_order_trial_reachability_v1.json",
+      "sha256": "b4fd3a422ac38f51b73a2fb2a56d07e2418339878f9451a6d73eb185bbd334d2",
+      "status": "rwo06j_endpoint_specific_candidate_live_business_rejected_do_not_repeat",
+      "workflow": "test-order"
+    },
+    "medicalmodv2_test_order_trial_reachability_v2.json": {
+      "bytes": 690,
+      "candidateSourceRunId": "20260424T210000Z",
+      "candidateSourceUrl": "https://www.orca.med.or.jp/receipt/tec/api/medicalmod.html",
+      "duplicateLiveCheckpointKey": "rwo06j:medicalmodv2:rwo06j-test-order-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-35f787437641e3aa16981465f62277ad9d080de0d93b8c105d5a63f43a3df9d9",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_test_order_trial_reachability_v2.json",
+      "sha256": "35f787437641e3aa16981465f62277ad9d080de0d93b8c105d5a63f43a3df9d9",
+      "status": "rwo06j_v2_endpoint_specific_candidate_no_live_prepared_not_live_executed",
+      "workflow": "test-order"
+    },
+    "medicalmodv2_radiology_trial_reachability_v1.json": {
+      "bytes": 897,
+      "duplicateLiveCheckpointKey": "rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-d4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v1.json",
+      "sha256": "d4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e",
+      "status": "active_rwo06k_endpoint_specific_candidate",
+      "workflow": "radiology"
+    },
+    "medicalmodv2_radiology_trial_reachability_v2.json": {
+      "bytes": 972,
+      "candidateSourceRunId": "20260424T210000Z",
+      "candidateSourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/comment842-830-bui-api.html",
+      "duplicateLiveCheckpointKey": "rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-ba41ca8d029b362d197361def1653a334ea27032935a6979298548465df4d436",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v2.json",
+      "sha256": "ba41ca8d029b362d197361def1653a334ea27032935a6979298548465df4d436",
+      "status": "rwo06k_v2_endpoint_specific_candidate_no_live_prepared_not_live_executed",
+      "workflow": "radiology"
+    },
+    "medicalmodv2_phase4_dummy_owner_aligned_v1.json": {
+      "bytes": 639,
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_owner_aligned_v1.json",
+      "sha256": "2044f175382bbf013ad928cb7ba7431d5a5a0d5bc7c1f26d6448b06c747d9de5"
+    },
+    "subjectivesv2_phase4_dummy_native_intent_v1.json": {
+      "bytes": 389,
+      "duplicateLiveCheckpointKey": "rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
+      "repo_path": "web-client/qa/payloads/phase4/subjectivesv2_phase4_dummy_native_intent_v1.json",
+      "sha256": "9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
+      "status": "rwo06b_subjectivesv2_live_readiness_identity_prepared_no_live_only",
+      "workflow": "subjectivesv2"
+    }
+  },
+  "hashAlgorithm": "SHA-256 over exact UTF-8 file bytes",
+  "important": [
+    "Prior XML payload hashes do not match these JSON payload files.",
+    "Use the new JSON sha256 values below for wrapper --payload-sha256.",
+    "medicalmodv2_phase4_dummy_phase3_context_v1.json is the active medicalmodv2 executable candidate after apiResult=14 investigation.",
+    "medicalmodv2_phase4_dummy_current_wrapper_v1.json is retained as historical evidence and is blocked by the current wrapper because its Trial department/physician context is stale.",
+    "diseasev3 and subjectivesv2 JSON files are native intent payloads for future safe wrappers; do not execute them with the current medicalmodv2 wrapper.",
+    "RWO-06D prescription and treatment-generic payloads are endpoint-specific medicalmodv2 candidates; use --workflow plus the matching duplicateLiveCheckpointKey before any live mutation.",
+    "RWO-06F instruction-charge is the endpoint-specific instractionChargeOrder class 130 candidate; use --workflow instruction-charge and do not treat one accepted class as all guidance-fee variants.",
+    "RWO-06F instruction-charge v2 is a source-backed no-live candidate using code 113001810; do not execute it live until Trial disease/facility/monthly-billing preconditions, wrapper dry-run, runtime readiness, duplicate checkpoint, and endpoint-specific success criteria are recorded for the current run.",
+    "RWO-06G base-charge is the endpoint-specific baseChargeOrder class 110 candidate; the v1 live Trial attempt was businessRejected, so do not repeat it or treat it as base-charge acceptance.",
+    "RWO-06G base-charge v2 is a source-backed no-live candidate using code 111000110; do not execute it live until encounter-state preconditions, wrapper dry-run, runtime readiness, duplicate checkpoint, and endpoint-specific success criteria are recorded for the current run.",
+    "RWO-06H injection is the endpoint-specific injectionOrder class 310 candidate; use --workflow injection and do not treat one injection class as all injection variants.",
+    "RWO-06H injection v2 is a source-backed no-live candidate using procedure code 130000510 plus paired drug/material rows; do not execute it live until wrapper dry-run, runtime readiness, duplicate checkpoint, and endpoint-specific success criteria are recorded for the current run.",
+    "RWO-06I surgery is the endpoint-specific surgeryOrder class 500 candidate; the v1 live Trial attempt was businessRejected, so do not repeat it or treat it as surgery acceptance.",
+    "RWO-06J test-order is the endpoint-specific testOrder class 600 candidate; the v1 live Trial attempt was businessRejected, so do not repeat it or treat it as test-order acceptance.",
+    "RWO-06J test-order v2 is a source-backed no-live candidate using code 160000310; do not execute it live until wrapper dry-run, runtime readiness, duplicate checkpoint, and endpoint-specific success criteria are recorded for the current run.",
+    "RWO-06K radiology is the endpoint-specific radiologyOrder class 700 candidate; use --workflow radiology and do not treat one radiology class as all radiology variants.",
+    "RWO-06K radiology v2 is a source-backed no-live candidate using body-part code 002000099 and imaging fee code 170027910; do not execute it live until wrapper dry-run, runtime readiness, duplicate checkpoint, and endpoint-specific success criteria are recorded for the current run.",
+    "Do not store raw ORCA request/response, HAR, trace, screenshots, video, raw network, credentials, cookies, tokens, session IDs, or CSRF values."
+  ],
+  "lineEndings": "LF",
+  "ownerApprovalRequired": true,
+  "trailingNewline": true
+}

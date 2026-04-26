@@ -1,0 +1,13 @@
+{
+  "classCode": "01",
+  "departmentCode": "11",
+  "endpoint": "/orca25/subjectivesv2",
+  "healthInsuranceInformation": {
+    "insuranceCombinationNumber": ""
+  },
+  "inOut": "O",
+  "patientId": "00001",
+  "performDate": "2026-04",
+  "subjectivesCode": "【ダミー】Phase4 Trial 接続確認用。実在患者情報なし。2026-04-22 14:24 JST。",
+  "subjectivesDetailRecord": "07"
+}
