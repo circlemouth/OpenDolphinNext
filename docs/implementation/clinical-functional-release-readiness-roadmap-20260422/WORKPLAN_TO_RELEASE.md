@@ -48,6 +48,12 @@ Environment-only blockers include Docker unavailable, local backend unavailable,
 
 When a Work Order is skipped, the same run should continue with docs, static guards, unit/component tests, parser/sanitizer tests, safe wrapper dry-runs, package metadata checks, claim-boundary updates, release gate updates, risk register updates, and final summaries that do not depend on the skipped runtime.
 
+Hourly workers must use the executable queue in `docs/implementation/automation-handoff/HANDOFF_STATE.json` before falling back to this prose queue. The queue separates work into `critical_path`, `parallel_no_live`, and `human_pending` lanes. A human-pending blocker such as rollback rehearsal or owner GO/NO-GO should be checked only for new explicit input; if none exists, the worker carries it forward without reclassification and continues to the next executable non-human item.
+
+The queue may contain several safe no-live tasks. Workers should process more than one item per run when possible, especially docs, parser/sanitizer tests, wrapper dry-runs, read-only preflight plans, static guards, and matrix updates. Live Trial mutation is the exception: it remains one endpoint, one target, one request class, one payload identity, and one sanitized attempt at a time.
+
+Before any live Trial mutation, the corresponding endpoint packet must be complete. A complete packet includes payload SHA, endpoint/request class, target identity, duplicate-live checkpoint, no-live wrapper result, parser/sanitizer result, runtime readiness, endpoint-specific business-success criteria, stop conditions, and explicit sanitized evidence boundaries.
+
 When independent tasks can progress in parallel, the main automation worker may delegate bounded subagent work in the same run. Delegated tasks must have disjoint write scopes and dedicated git worktrees. Suitable scopes are source-backed research, docs/matrix refreshes, no-live payload preparation, parser/sanitizer tests, static guards, package metadata checks, and sanitized evidence drafts. The main worker remains responsible for safety review, claim boundaries, integration, verification, and the final commit.
 
 Parallel delegation does not change live Trial safety. Live ORCA Trial mutations must not be run by subagents or in parallel. The main worker must run live Trial actions sequentially, one endpoint/target/request-class/payload identity at a time, after reviewing any subagent-prepared no-live evidence and preflight materials.

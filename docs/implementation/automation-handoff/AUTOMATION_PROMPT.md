@@ -12,6 +12,7 @@ Primary entrypoints:
 - docs/implementation/automation-handoff/README.md
 - docs/implementation/automation-handoff/HANDOFF_STATE.json
 - docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md
+- docs/implementation/automation-handoff/AUTOMATION_THROUGHPUT_POLICY.md
 - docs/implementation/clinical-functional-release-readiness-roadmap-20260422/WORKPLAN_TO_RELEASE.md
 - docs/implementation/clinical-functional-release-readiness-roadmap-20260422/REMAINING_WORK_BREAKDOWN.md
 - docs/implementation/clinical-functional-release-readiness-roadmap-20260422/RELEASE_GATE_MATRIX.md
@@ -84,15 +85,26 @@ Every run:
    b. newest docs/implementation/*/NEXT_WORKER_PROMPT.md
    c. roadmap Work Orders
 5. If an active handoff prompt exists, treat it as the highest-priority task.
-6. If no active handoff exists, select the next unblocked Work Order from the roadmap.
-7. Execute the next safe step autonomously.
-8. If a repo-local error blocks progress and is fixable, fix it, run relevant verification, and document the result.
-9. If the next required step is ORCA Trial live verification, proceed under standing approval only if ORCA Trial credentials/config are already available through the approved runtime path.
-10. If only approved local-only dev/Trial runtime secret/config values are missing, generate and store them according to the Local-only dev/Trial runtime secret/config policy, then continue toward local runtime startup.
-11. If other non-S3 credentials/config are absent due to the local environment, skip that task as `skipped_environment_unavailable_missing_runtime_secret_or_config`; do not ask for or print values.
-12. If S3/MinIO/object-storage credentials/config are required, skip the current task as `skipped_s3_required_out_of_scope` and continue with the next non-S3 Work Order.
-13. Continue within the same run after every completed task, skipped out-of-scope task, or skipped environment-unavailable task. Stop only when no safe unblocked task remains, the run time budget is exhausted, or a non-skippable safety stop condition is reached.
-14. If any tracked source/doc/evidence file or new repo evidence artifact is changed, run the relevant verification, then commit the current roadmap/handoff-scoped changes before reporting. Do not commit local runtime secret files, raw ORCA bodies, diagnostic HAR/trace/video/screenshot/raw network artifacts, or unrelated user changes.
+6. Read `HANDOFF_STATE.json.nextExecutableQueue` and `AUTOMATION_THROUGHPUT_POLICY.md`.
+7. If the active handoff is a human-pending blocker and no new explicit owner/operator input exists, carry it forward without reclassification and immediately select the first safe executable queue item.
+8. If no active handoff exists or the active handoff has no executable repo-local action, select the next unblocked item from `nextExecutableQueue`, then from the roadmap.
+9. Execute the next safe step autonomously.
+10. If a repo-local error blocks progress and is fixable, fix it, run relevant verification, and document the result.
+11. If the next required step is ORCA Trial live verification, proceed under standing approval only if ORCA Trial credentials/config are already available through the approved runtime path and the endpoint packet is complete.
+12. If only approved local-only dev/Trial runtime secret/config values are missing, generate and store them according to the Local-only dev/Trial runtime secret/config policy, then continue toward local runtime startup.
+13. If other non-S3 credentials/config are absent due to the local environment, skip that task as `skipped_environment_unavailable_missing_runtime_secret_or_config`; do not ask for or print values.
+14. If S3/MinIO/object-storage credentials/config are required, skip the current task as `skipped_s3_required_out_of_scope` and continue with the next non-S3 Work Order.
+15. Continue within the same run after every completed task, skipped out-of-scope task, or skipped environment-unavailable task. Stop only when no safe unblocked task remains, the run time budget is exhausted, or a non-skippable safety stop condition is reached.
+16. If any tracked source/doc/evidence file or new repo evidence artifact is changed, run the relevant verification, then commit the current roadmap/handoff-scoped changes before reporting. Do not commit local runtime secret files, raw ORCA bodies, diagnostic HAR/trace/video/screenshot/raw network artifacts, or unrelated user changes.
+
+Executable queue policy:
+- `HANDOFF_STATE.json.nextExecutableQueue` is the machine-readable queue for hourly throughput.
+- Process queue items from top to bottom, selecting the first currently safe item.
+- After completing or skipping an item, continue to the next independent safe item within the same run.
+- `critical_path` items run before `parallel_no_live` items when both are available.
+- `human_pending` items are checked only for new explicit input; if none exists, carry them forward as `carried_forward_without_reclassification` and continue.
+- Live Trial mutation remains sequential and main-worker controlled. No-live/read-only/docs/static items may be batched when scopes are independent and evidence paths do not overlap.
+- Before any live Trial mutation, require a complete endpoint packet with endpoint/request class, target, payload SHA, duplicate-live checkpoint, no-live wrapper result, parser/sanitizer result, runtime readiness, endpoint-specific success criteria, stop conditions, and sanitized evidence policy.
 
 Parallel subagent policy:
 - The main worker may use subagents in the same run only when tasks are independent, bounded, and have disjoint worktrees/write scopes.

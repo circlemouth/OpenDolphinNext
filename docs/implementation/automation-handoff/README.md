@@ -9,6 +9,7 @@ This directory defines the repo-local handoff contract used by recurring Codex a
 | `NEXT_WORKER_PROMPT.md` | Highest-priority active task for the next automation run. |
 | `AUTOMATION_PROMPT.md` | Full prompt to register in the hourly Codex automation. |
 | `HANDOFF_STATE.json` | Machine-readable current handoff status. |
+| `AUTOMATION_THROUGHPUT_POLICY.md` | Rules for executable queues, stale human blockers, and same-run batching. |
 | `templates/NEXT_WORKER_PROMPT_TEMPLATE.md` | Template for future blocker handoffs. |
 | `history/` | Completed or superseded handoff prompts may be archived here. |
 
@@ -23,6 +24,20 @@ Priority order:
 3. Current roadmap / Work Order docs
 
 If a handoff prompt is active, the next worker must treat it as the next task unless it conflicts with global safety rules. If a conflict exists, the stricter rule wins and the conflict must be reported.
+
+## Executable Queue Rule
+
+Hourly workers must read `HANDOFF_STATE.json.nextExecutableQueue` after checking the active prompt. The queue is the machine-readable source for the next safe task. It is allowed, and preferred, to complete or skip multiple queue items in one run when each item is independent and stays inside the Trial-only, non-S3, sanitized-evidence scope.
+
+Queue items are grouped into lanes:
+
+- `critical_path`: directly unblocks the next endpoint or release gate.
+- `parallel_no_live`: can progress without live mutation, secrets, or raw artifacts.
+- `human_pending`: needs owner/operator or business input and cannot be completed by automation alone.
+
+For `human_pending` items, workers should check only for new explicit input. If none exists, record or carry forward `carried_forward_without_reclassification` and continue to the next non-human queue item. Do not re-record the same blocker classification every hour.
+
+Before live Trial mutation, the corresponding endpoint packet must be complete: payload SHA, endpoint/request class, target, duplicate checkpoint, no-live wrapper result, parser/sanitizer result, runtime readiness, business-success criteria, stop conditions, and sanitized evidence policy. If any part is missing, the worker must complete or skip that no-live/read-only preflight instead of running live.
 
 ## Parallel Subagent Rule
 

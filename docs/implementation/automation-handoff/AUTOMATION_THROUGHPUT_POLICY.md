@@ -1,0 +1,108 @@
+# Automation Throughput Policy
+
+RUN_ID: `20260426T145500Z`
+
+This policy reduces hourly automation stalls while preserving the Trial-only, non-S3, sanitized-evidence safety boundary.
+
+## Problem
+
+The hourly `orca` automation can spend too much time re-reading the same human-pending blocker, especially when rollback rehearsal or final owner GO/NO-GO is still absent. That is safe, but it slows progress on independent no-live work that could unblock later Trial checks.
+
+## Task Lanes
+
+Automation work is split into three lanes:
+
+| Lane | Meaning | Examples | Hourly behavior |
+|---|---|---|---|
+| `critical_path` | Work that directly unblocks the next endpoint or release gate. | runtime readiness, read-only ORCA Trial preflight, duplicate-live checkpoint, parser/sanitizer contract. | Run first when safe and prerequisites are available. |
+| `parallel_no_live` | Work that can progress without live mutation or secrets. | docs/matrix refresh, wrapper dry-run, static guards, no-live payload prep, rejected-result investigation. | Run in the same automation run after the critical path or after a skip. |
+| `human_pending` | Work that cannot be completed by automation alone. | actual rollback rehearsal, final owner GO/NO-GO, billing mapping decision. | Check only for new explicit input; otherwise carry forward without reclassification and continue. |
+
+## Machine-Readable Queue
+
+`HANDOFF_STATE.json` should include `nextExecutableQueue`. Each item is an executable or skippable unit:
+
+```json
+{
+  "taskId": "RWO-06H_READONLY_MASTER_VALIDITY",
+  "lane": "critical_path",
+  "status": "queued",
+  "workOrder": "RWO-06H",
+  "summary": "Run sanitized read-only medicationgetv2/masterlastupdatev3 checks for injectionOrder/310 v2.",
+  "requiresRuntime": true,
+  "requiresLiveTrialMutation": false,
+  "requiresHumanDecision": false,
+  "requiresS3ObjectStorage": false,
+  "safeToBatchWithNoLiveTasks": true,
+  "skipCondition": "runtime unavailable or safe read-only wrapper missing",
+  "successCriteria": "sanitized read-only master-validity evidence exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false",
+  "nextOnSuccess": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
+  "nextOnSkip": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN"
+}
+```
+
+Workers must process the queue from top to bottom, selecting the first item that is safe and currently executable. After a completed or skipped item, the worker should continue to the next safe independent item until the run budget or a real stop condition is reached.
+
+## Stale Human Blockers
+
+For `human_pending` items, do not repeat the same long-form classification every hour. The worker should:
+
+1. Check whether a new explicit owner/operator evidence file, state entry, or prompt text exists.
+2. If no new input exists, record `carried_forward_without_reclassification`.
+3. Continue immediately to the next non-human queue item.
+
+This does not weaken the blocker. It only prevents hourly runs from spending most of the budget proving the same absence again.
+
+## Endpoint Packets
+
+Before a live Trial mutation, the queue item should point to a complete endpoint packet. The packet must include:
+
+- endpoint and request class;
+- target identity and payload SHA-256;
+- exact duplicate-live checkpoint key;
+- no-live wrapper dry-run result;
+- parser/sanitizer contract result;
+- runtime readiness result;
+- endpoint-specific business-success criteria;
+- stop conditions;
+- claim boundary;
+- `credentialsCaptured=false`;
+- `rawArtifactsCommittedOrPackaged=false`.
+
+If the packet is incomplete, the worker must complete or skip the missing no-live/read-only preflight instead of running live.
+
+## Same-Run Batching
+
+Live Trial mutation remains sequential and main-worker controlled. No-live work may be batched in one run when each item has an independent scope and writes separate evidence paths.
+
+Good same-run batches:
+
+- RWO-06H read-only master-validity preflight plus RWO-06G no-live first-visit plan.
+- RWO-06F disease/monthly precondition plan plus RWO-07 operation matrix update.
+- RWO-09 static/package refresh plus RWO-10 production-ORCA non-claim docs.
+
+Forbidden batches:
+
+- two live Trial mutations;
+- live mutation plus unresolved target ambiguity;
+- any S3/MinIO/object-storage setup;
+- any task requiring raw ORCA body, raw patient/insurance detail, credentials, or committed diagnostic artifacts.
+
+## Status Values
+
+Queue item status should use:
+
+- `queued`
+- `in_progress`
+- `completed`
+- `skipped_environment_unavailable`
+- `skipped_s3_required_out_of_scope`
+- `blocked_human_decision`
+- `blocked_safety_stop`
+- `superseded`
+
+No-live progress should be recorded with specific result labels such as `preflight_plan_ready`, `readonly_validated`, `runtime_preflight_blocked`, `live_ready_pending_single_attempt`, `business_accepted`, or `business_rejected_no_retry_without_changed_precondition`.
+
+## Current Priority
+
+The current first executable item is `RWO-06H_READONLY_MASTER_VALIDITY`: run sanitized runtime readiness plus read-only `medicationgetv2` / `masterlastupdatev3` checks for `injectionOrder/310` v2, then only if that passes proceed to duplicate-live checkpoint preflight. Do not run the live mutation until those preconditions are recorded.

@@ -24,6 +24,8 @@ RUN_ID `20260426T124656Z` intook a sanitized external ChatGPT ORCA-spec report a
 
 RUN_ID `20260426T132941Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input and advanced independent no-live RWO-06H work. It added a sanitized injection v2 master-validity preflight plan requiring read-only `medicationgetv2` / `masterlastupdatev3` checks for the procedure, medication, material, and comment rows before any live Trial attempt; no runtime master lookup and no live Trial request was executed.
 
+RUN_ID `20260426T145500Z` updated the automation handoff document set with an executable-queue throughput policy. `HANDOFF_STATE.json.nextExecutableQueue` is now the machine-readable next-task list. If this human-pending rollback/owner blocker has no new explicit input, workers should carry it forward without reclassification and immediately continue to the first safe non-human queue item.
+
 Sanitized evidence:
 
 - `docs/implementation/rwo11-rollback-owner-pending-20260425T182930Z/FINAL_REPORT.md`
@@ -35,10 +37,11 @@ Sanitized evidence:
 - `docs/implementation/rwo06h-injection-v2-contract-preflight-20260426T112213Z/summary.sanitized.json`
 - `docs/implementation/rwo06h-injection-master-validity-preflight-20260426T132941Z/FINAL_REPORT.md`
 - `docs/implementation/rwo06h-injection-master-validity-preflight-20260426T132941Z/summary.sanitized.json`
+- `docs/implementation/automation-handoff/AUTOMATION_THROUGHPUT_POLICY.md`
 
 Current result:
 
-- Current branch/head: `master` / `ed3999aa5`
+- Current branch/head: `master` / `f89c264f3`
 - Accepted reviewer packet source freeze: `master` / `b103e49ee06d1c1043c066a097f7c62408c32263`
 - Reviewer packet: `artifacts/reviewer-submission-packets/submission-packet-20260425T174429Z.zip`
 - Packet sha256: `415b1fb493632176b44d5d38cc02c8f95c6783de392e491082803542d201529a`
@@ -49,6 +52,7 @@ Current result:
 - Latest order-family research evidence: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md`. Recommended no-live priority is `injectionOrder/310` `130000510`, then `baseChargeOrder/110` `111000110`, then `instractionChargeOrder/130` `113001810`; `radiologyOrder/700`, `surgeryOrder/500`, and `testOrder/600` require changed identities or changed preconditions before any live retry.
 - Latest remaining ORCA-spec intake: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/orca-trial-remaining-spec-intake-20260426T124656Z.md`. It adds `medicationgetv2` / `masterlastupdatev3` read-only master-validity guidance for injection, `acceptmodv2` `Request_Number=00` first-visit inquiry guidance for base-charge, wrapper/no-live stop conditions for `subjectivesv2` and `diseasev3`, and RWO-07 operation mapping.
 - Latest injection master-validity no-live preflight plan: `docs/implementation/rwo06h-injection-master-validity-preflight-20260426T132941Z/FINAL_REPORT.md`. It requires read-only `medicationgetv2` for the injection medication row and `masterlastupdatev3` for procedure/material/comment rows before any live attempt. Runtime master lookup remains not run.
+- Latest throughput policy: `docs/implementation/automation-handoff/AUTOMATION_THROUGHPUT_POLICY.md`. `HANDOFF_STATE.json.nextExecutableQueue` currently starts with `RWO-06H_READONLY_MASTER_VALIDITY`, then `RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT`, `RWO-06G_NO_LIVE_FIRST_VISIT_PLAN`, `RWO-07_OPERATION_MATRIX_HARDENING`, and the human-pending rollback/owner decision carry-forward item.
 
 ## Goal
 
@@ -59,7 +63,7 @@ Advance only if new safe evidence exists: record an actual operator rollback reh
 1. Inspect current branch, HEAD, status, and worktrees.
 2. Read `$CODEX_HOME/automations/orca/memory.md`, `HANDOFF_STATE.json`, this prompt, roadmap docs, and RUN_ID `20260425T182930Z` sanitized evidence.
 3. Confirm no unrelated uncommitted changes would be overwritten.
-4. Check whether new owner/operator input or a new release-candidate rollback environment exists. If absent, continue to independent non-live work rather than re-recording the same blocker.
+4. Check whether new owner/operator input or a new release-candidate rollback environment exists. If absent, carry this blocker forward without reclassification and process `HANDOFF_STATE.json.nextExecutableQueue` from the first safe non-human item.
 
 ## Allowed Actions
 
@@ -68,6 +72,7 @@ Advance only if new safe evidence exists: record an actual operator rollback reh
 - Record final GO/NO-GO/PENDING only if explicit owner decision evidence is supplied.
 - Continue to independent non-live static/package/security checks if rollback/final GO is blocked.
 - Continue to independent non-live order-family candidate preparation using `order-family-v2-candidate-research-20260425T215740Z.md` if rollback/final GO is blocked. This is limited to payload identity drafting, parser/sanitizer tests, wrapper dry-runs, duplicate checkpoint checks, and claim-boundary updates; it is not approval to run live Trial.
+- Process `HANDOFF_STATE.json.nextExecutableQueue` and complete or skip multiple independent no-live/read-only items in the same run when safe.
 
 ## Forbidden Actions
 

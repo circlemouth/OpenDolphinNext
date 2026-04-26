@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-26T13:29:41Z",
+  "lastUpdated": "2026-04-26T14:55:00Z",
   "latestRemainingOrcaSpecIntake": {
     "runId": "20260426T124656Z",
     "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K/RWO-07",
@@ -4615,5 +4615,115 @@
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
-  }
+  },
+  "throughputPolicy": {
+    "runId": "20260426T145500Z",
+    "document": "docs/implementation/automation-handoff/AUTOMATION_THROUGHPUT_POLICY.md",
+    "lanes": [
+      "critical_path",
+      "parallel_no_live",
+      "human_pending"
+    ],
+    "staleHumanBlockerHandling": "check_for_new_explicit_input_then_carried_forward_without_reclassification",
+    "sameRunBatchingAllowedForNoLive": true,
+    "liveTrialMutationParallelism": "forbidden_one_endpoint_target_request_class_payload_identity_at_a_time",
+    "endpointPacketRequiredBeforeLive": true,
+    "rawArtifactsAllowedInCommittedEvidence": false,
+    "credentialsCaptureAllowed": false
+  },
+  "nextExecutableQueue": [
+    {
+      "taskId": "RWO-06H_READONLY_MASTER_VALIDITY",
+      "lane": "critical_path",
+      "status": "queued",
+      "workOrder": "RWO-06H",
+      "summary": "Run sanitized runtime readiness plus read-only medicationgetv2/masterlastupdatev3 checks for injectionOrder/310 v2.",
+      "activePromptDependency": "if no new rollback/owner input exists, carry human blocker forward without reclassification first",
+      "requiresRuntime": true,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "requestClass": "medicalmodv2",
+      "target": "00001",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v2.json",
+      "payloadSha256": "1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300",
+      "readOnlyChecks": [
+        "medicationgetv2:medication:620000012",
+        "masterlastupdatev3:procedure:130000510",
+        "masterlastupdatev3:material:700000031",
+        "masterlastupdatev3:comment:0085001"
+      ],
+      "skipCondition": "runtime unavailable, missing safe read-only wrapper, target drift, parser ambiguity, credential/raw-artifact risk",
+      "successCriteria": "sanitized read-only master-validity evidence exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false",
+      "nextOnSuccess": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
+      "nextOnSkip": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN"
+    },
+    {
+      "taskId": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
+      "lane": "critical_path",
+      "status": "queued_after_RWO-06H_READONLY_MASTER_VALIDITY",
+      "workOrder": "RWO-06H",
+      "summary": "Check duplicate-live checkpoint and assemble endpoint packet for one possible injectionOrder/310 live attempt.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "duplicateLiveCheckpoint": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300",
+      "skipCondition": "read-only master validity not yet validated or accepted checkpoint already exists",
+      "successCriteria": "endpoint packet complete and live_ready_pending_single_attempt recorded without executing live mutation",
+      "nextOnSuccess": "RWO-06H_SINGLE_LIVE_ATTEMPT_PENDING_WORKER_DECISION",
+      "nextOnSkip": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN"
+    },
+    {
+      "taskId": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN",
+      "lane": "parallel_no_live",
+      "status": "queued",
+      "workOrder": "RWO-06G",
+      "summary": "Prepare acceptmodv2 Request_Number=00 read-only first-visit compatibility plan for baseChargeOrder/110.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "skipCondition": "current RWO-06H critical path consumes run budget or safe wrapper contract is missing",
+      "successCriteria": "sanitized no-live first-visit compatibility preflight plan recorded; no live mutation executed",
+      "nextOnSuccess": "RWO-06G_READONLY_FIRST_VISIT_CHECK",
+      "nextOnSkip": "RWO-07_OPERATION_MATRIX_HARDENING"
+    },
+    {
+      "taskId": "RWO-07_OPERATION_MATRIX_HARDENING",
+      "lane": "parallel_no_live",
+      "status": "queued",
+      "workOrder": "RWO-07",
+      "summary": "Harden operation matrix and wrapper prerequisites for Request_Number 02/03/04 or equivalent update/delete/cancel paths.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "skipCondition": "higher-priority no-live item consumes run budget",
+      "successCriteria": "sanitized matrix/precondition update committed with no live mutation and no raw artifacts",
+      "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+    },
+    {
+      "taskId": "RWO-11_ROLLBACK_OWNER_DECISION",
+      "lane": "human_pending",
+      "status": "blocked_human_decision",
+      "workOrder": "RWO-11/RWO-09",
+      "summary": "Actual operator rollback rehearsal or final owner GO/NO-GO/PENDING remains required for final release-readiness claim.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": true,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": false,
+      "skipCondition": "no new explicit owner/operator evidence or release-candidate rollback environment input",
+      "successCriteria": "explicit sanitized rollback rehearsal evidence or final owner GO/NO-GO/PENDING is recorded",
+      "carryForwardWhenNoNewInput": "carried_forward_without_reclassification",
+      "nextOnSkip": "RWO-06H_READONLY_MASTER_VALIDITY"
+    }
+  ]
 }
