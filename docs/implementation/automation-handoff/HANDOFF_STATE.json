@@ -4661,6 +4661,36 @@
   },
   "nextExecutableQueue": [
     {
+      "taskId": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
+      "lane": "critical_path",
+      "status": "queued",
+      "workOrder": "RWO-06H",
+      "summary": "Discover additional source-backed injectable medication candidates, then validate them with sanitized medicationgetv2 Request_Number=02 read-only checks.",
+      "activePromptDependency": "if no new rollback/owner input exists, carry human blocker forward without reclassification first",
+      "requiresRuntime": true,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/summary.sanitized.json",
+      "priorRejectedCandidates": [
+        "620000012",
+        "620076111",
+        "620007539"
+      ],
+      "candidateSelectionRule": "Use official/public source-backed injectable medication candidates only; do not retry 620000012, 620076111, or 620007539 unchanged as accepted evidence.",
+      "readOnlyChecks": [
+        "source_backed_candidate_list_without_raw_patient_or_insurance_detail",
+        "medicationgetv2:Request_Number=02:each_new_injectable_candidate",
+        "sanitized_masterFound_true_required_before_any_endpoint_packet",
+        "no_live_mutation"
+      ],
+      "skipCondition": "no additional source-backed injectable candidate can be identified, runtime unavailable, safe read-only wrapper missing, parser ambiguity, credential/raw-artifact risk, or all checked new candidates return masterFound=false",
+      "successCriteria": "at least one new source-backed injectable candidate has sanitized medicationgetv2 Request_Number=02 masterFound=true evidence with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false; no live mutation executed",
+      "nextOnSuccess": "RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+    },
+    {
       "taskId": "RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF",
       "lane": "critical_path",
       "status": "skipped_environment_unavailable",
