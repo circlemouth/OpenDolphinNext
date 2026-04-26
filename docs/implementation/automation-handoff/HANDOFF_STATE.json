@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-26T20:02:10Z",
+  "lastUpdated": "2026-04-26T21:01:42Z",
   "latestRemainingOrcaSpecIntake": {
     "runId": "20260426T124656Z",
     "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K/RWO-07",
@@ -4933,19 +4933,19 @@
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo09NonS3StaticRefresh": {
-    "runId": "20260426T200210Z",
+    "runId": "20260426T210142Z",
     "workOrder": "RWO-09/RWO-11",
     "result": "RWO09_NON_S3_STATIC_REFRESH_PASS",
     "branch": "master",
-    "head": "1ee2778ff39dfba640ac174a8fb0a0dc4d7311ae",
+    "head": "3980669ce40d6c64e3315f15eb1665ac8e1412e7",
     "activeHandoffPrompt": {
       "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
       "statusAtStart": "active",
       "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
       "statusAfterRun": "left_pending_and_advanced_independent_non_live_static_refresh"
     },
-    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260426T200210Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260426T200210Z/summary.sanitized.json",
+    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260426T210142Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260426T210142Z/summary.sanitized.json",
     "checks": {
       "webGuard": "pass",
       "serverDocLinks": "pass",
