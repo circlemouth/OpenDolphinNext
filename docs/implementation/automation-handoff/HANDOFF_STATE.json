@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-26T15:01:37Z",
+  "lastUpdated": "2026-04-26T17:02:41Z",
   "latestRemainingOrcaSpecIntake": {
     "runId": "20260426T124656Z",
     "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K/RWO-07",
@@ -4933,19 +4933,19 @@
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo09NonS3StaticRefresh": {
-    "runId": "20260426T160138Z",
+    "runId": "20260426T170241Z",
     "workOrder": "RWO-09/RWO-11",
     "result": "RWO09_NON_S3_STATIC_REFRESH_PASS",
     "branch": "master",
-    "head": "8fb30080dcf420a4ea06d0d0d648ce4a96477336",
+    "head": "9a35c5c0ff312bf9fc78c7dd252ac9a936d36203",
     "activeHandoffPrompt": {
       "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
       "statusAtStart": "active",
       "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
       "statusAfterRun": "left_pending_and_advanced_independent_non_live_static_refresh"
     },
-    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260426T160138Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260426T160138Z/summary.sanitized.json",
+    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260426T170241Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260426T170241Z/summary.sanitized.json",
     "checks": {
       "webGuard": "pass",
       "serverDocLinks": "pass",
@@ -4966,8 +4966,8 @@
       "businessSuccessClassification": "not_applicable_static_non_live_refresh",
       "businessAccepted": false
     },
-    "claimBoundary": "Current HEAD non-S3 static/package/security confidence only; no L4 fullflow success, Trial ORCA business success in this run, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, final owner GO/NO-GO, or final release readiness is claimed.",
-    "recommendedNextTask": "Release owner/operator should perform rollback rehearsal with sanitized evidence or record final GO/NO-GO/PENDING; automation may continue independent non-live roadmap work.",
+    "claimBoundary": "Current HEAD non-S3 static/package/security confidence only; no L4 fullflow success, Trial ORCA business success in this run, injection or base-charge Trial acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, final owner GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Release owner/operator should perform rollback rehearsal with sanitized evidence or record final GO/NO-GO/PENDING; automation may continue independent non-live endpoint contract/precondition work.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
