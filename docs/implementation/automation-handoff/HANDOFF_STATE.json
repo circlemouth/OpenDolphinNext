@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-26T14:02:06Z",
+  "lastUpdated": "2026-04-26T15:01:37Z",
   "latestRemainingOrcaSpecIntake": {
     "runId": "20260426T124656Z",
     "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K/RWO-07",
@@ -4705,7 +4705,7 @@
     {
       "taskId": "RWO-06G_READONLY_FIRST_VISIT_CHECK",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06G",
       "summary": "Run sanitized acceptmodv2 Request_Number=00 read-only first-visit compatibility check for baseChargeOrder/110 v2.",
       "requiresRuntime": true,
@@ -4722,12 +4722,15 @@
       "skipCondition": "runtime unavailable, safe read-only wrapper missing, target drift, parser ambiguity, credential/raw-artifact risk, or first-visit state cannot be classified without raw patient/insurance detail",
       "successCriteria": "sanitized Request_Number=00 first-visit compatibility evidence exists with mutationSuccess=false, credentialsCaptured=false, and rawArtifactsCommittedOrPackaged=false",
       "nextOnSuccess": "RWO-06G_DUPLICATE_CHECKPOINT_PREFLIGHT",
-      "nextOnSkip": "RWO-07_OPERATION_MATRIX_HARDENING"
+      "nextOnSkip": "RWO-07_OPERATION_MATRIX_HARDENING",
+      "result": "readonly_first_visit_not_validated_stop_before_live",
+      "completedRunId": "20260426T150137Z",
+      "evidence": "docs/implementation/rwo06g-base-charge-first-visit-readonly-20260426T150137Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-07_OPERATION_MATRIX_HARDENING",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-07",
       "summary": "Harden operation matrix and wrapper prerequisites for Request_Number 02/03/04 or equivalent update/delete/cancel paths.",
       "requiresRuntime": false,
@@ -4738,7 +4741,10 @@
       "skipCondition": "higher-priority no-live item consumes run budget",
       "successCriteria": "sanitized matrix/precondition update committed with no live mutation and no raw artifacts",
       "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH",
-      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "result": "operation_matrix_hardened_no_live",
+      "completedRunId": "20260426T150137Z",
+      "evidence": "docs/implementation/rwo07-operation-matrix-hardening-20260426T150137Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-11_ROLLBACK_OWNER_DECISION",
@@ -4844,6 +4850,86 @@
     },
     "recommendedNextTask": "Execute sanitized acceptmodv2 Request_Number=00 read-only first-visit compatibility check.",
     "credentialsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06GFirstVisitReadonly": {
+    "runId": "20260426T150137Z",
+    "workOrder": "RWO-06G",
+    "taskId": "RWO-06G_READONLY_FIRST_VISIT_CHECK",
+    "result": "RWO06G_READONLY_FIRST_VISIT_NOT_VALIDATED_STOP_BEFORE_LIVE",
+    "branch": "master",
+    "head": "77f2d5f7ac13c2eb116c3365909d795321fbf1b6",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
+      "statusAfterRun": "left_pending_because_no_new_owner_or_operator_input"
+    },
+    "evidence": "docs/implementation/rwo06g-base-charge-first-visit-readonly-20260426T150137Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06g-base-charge-first-visit-readonly-20260426T150137Z/summary.sanitized.json",
+    "readOnlyEvidence": "artifacts/orca-remediation/closeout/20260426T150137Z/qa/phase4-base-charge-first-visit-readonly/base-charge-first-visit-readonly-summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "base-charge",
+      "entity": "baseChargeOrder",
+      "claim007Class": "110",
+      "candidateCode": "111000110",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v2.json",
+      "sha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+      "target": "00001",
+      "requestNumber": "01",
+      "classCode": "01"
+    },
+    "readOnlyResult": {
+      "endpoint": "/api/orca11/acceptmodv2",
+      "requestClass": "acceptmodv2_readonly_request_00",
+      "httpStatusClass": "2xx",
+      "apiResultClass": "nonzero_numeric",
+      "classification": "not_verified_or_not_first_visit_compatible",
+      "firstVisitCompatible": false,
+      "mutationSuccess": false,
+      "acceptanceEvidencePresent": false,
+      "patientInfoPresent": true
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "/api/orca11/acceptmodv2",
+      "target": "00001",
+      "requestClass": "acceptmodv2_readonly_request_00",
+      "businessSuccessClassification": "not_applicable_or_readonly_first_visit_not_validated",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Read-only Request_Number=00 first-visit compatibility attempt only; base-charge live mutation remains stopped because first-visit compatibility was not validated. Not Trial business acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+    "recommendedNextTask": "Proceed to RWO-07_OPERATION_MATRIX_HARDENING or prepare changed base-charge first-visit evidence before any live baseChargeOrder/110 attempt.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo07OperationMatrixHardening": {
+    "runId": "20260426T150137Z",
+    "workOrder": "RWO-07",
+    "taskId": "RWO-07_OPERATION_MATRIX_HARDENING",
+    "result": "RWO07_OPERATION_MATRIX_HARDENED_NO_LIVE",
+    "branch": "master",
+    "head": "77f2d5f7ac13c2eb116c3365909d795321fbf1b6",
+    "evidence": "docs/implementation/rwo07-operation-matrix-hardening-20260426T150137Z/OPERATION_MATRIX_HARDENING.md",
+    "summary": "docs/implementation/rwo07-operation-matrix-hardening-20260426T150137Z/summary.sanitized.json",
+    "hardenedOperationSelectors": [
+      "acceptmodv2_request_00_readonly_precondition_only",
+      "acceptmodv2_request_01_create_accept_mutation",
+      "acceptmodv2_request_02_cancel_delete_contract_missing",
+      "acceptmodv2_request_03_update_change_contract_missing",
+      "acceptmodv2_request_04_claim_send_info_contract_missing",
+      "medicalmodv2_baseChargeOrder_110_blocked_until_first_visit_compatibility_validated"
+    ],
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_operation_matrix_hardening",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Operation matrix hardening only; no Request_Number 02/03/04 Trial success, base-charge Trial acceptance, acceptmodv2 mutation success, fullflow success, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Run RWO-09 static/package/security refresh or prepare a changed no-live endpoint contract; do not run baseChargeOrder/110 live without changed first-visit evidence.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   }
 }

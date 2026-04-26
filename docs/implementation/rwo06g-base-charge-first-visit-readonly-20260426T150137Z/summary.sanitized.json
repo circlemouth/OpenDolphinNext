@@ -1,0 +1,57 @@
+{
+  "runId": "20260426T150137Z",
+  "workOrder": "RWO-06G",
+  "result": "RWO06G_READONLY_FIRST_VISIT_NOT_VALIDATED_STOP_BEFORE_LIVE",
+  "branch": "master",
+  "head": "77f2d5f7ac13c2eb116c3365909d795321fbf1b6",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
+    "statusAfterRun": "left_pending_because_no_new_owner_or_operator_input"
+  },
+  "taskId": "RWO-06G_READONLY_FIRST_VISIT_CHECK",
+  "endpoint": "/api/orca11/acceptmodv2",
+  "requestClass": "acceptmodv2_readonly_request_00",
+  "target": "00001",
+  "payloadIdentity": {
+    "workflow": "base-charge",
+    "entity": "baseChargeOrder",
+    "claim007Class": "110",
+    "candidateCode": "111000110",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v2.json",
+    "sha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+    "requestNumber": "01",
+    "classCode": "01"
+  },
+  "readOnlyResult": {
+    "httpStatusClass": "2xx",
+    "apiResultClass": "nonzero_numeric",
+    "classification": "not_verified_or_not_first_visit_compatible",
+    "firstVisitCompatible": false,
+    "mutationSuccess": false,
+    "acceptanceEvidencePresent": false,
+    "patientInfoPresent": true,
+    "evidenceHash": "716f13a2df7c228d549fa71ba3a6ed37c1274b8c34142923eac9992fb035cf5e"
+  },
+  "checks": {
+    "nodeCheck": "pass",
+    "phase4BaseChargeFirstVisitEvidenceTest": "pass_6_tests",
+    "webGuardPretest": "pass",
+    "wrapperDryRun": "pass_no_readonly_orca",
+    "wrapperReadonly": "expected_stop_before_live_first_visit_not_validated"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "endpoint": "/api/orca11/acceptmodv2",
+    "target": "00001",
+    "requestClass": "acceptmodv2_readonly_request_00",
+    "businessSuccessClassification": "not_applicable_or_readonly_first_visit_not_validated",
+    "businessAccepted": false
+  },
+  "claimBoundary": "Read-only Request_Number=00 first-visit compatibility attempt only; base-charge live mutation remains stopped because first-visit compatibility was not validated. Not Trial business acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+  "recommendedNextTask": "Proceed to RWO-07_OPERATION_MATRIX_HARDENING, or prepare changed base-charge first-visit evidence/candidate before any live baseChargeOrder/110 attempt.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false
+}
