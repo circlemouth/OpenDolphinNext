@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-26T22:32:15Z",
+  "lastUpdated": "2026-04-26T23:14:11Z",
   "latestRemainingOrcaSpecIntake": {
     "runId": "20260426T124656Z",
     "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K/RWO-07",
@@ -4663,7 +4663,7 @@
     {
       "taskId": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "skipped_environment_unavailable",
       "workOrder": "RWO-06H",
       "summary": "Discover additional source-backed injectable medication candidates, then validate them with sanitized medicationgetv2 Request_Number=02 read-only checks.",
       "activePromptDependency": "if no new rollback/owner input exists, carry human blocker forward without reclassification first",
@@ -4688,7 +4688,20 @@
       "skipCondition": "no additional source-backed injectable candidate can be identified, runtime unavailable, safe read-only wrapper missing, parser ambiguity, credential/raw-artifact risk, or all checked new candidates return masterFound=false",
       "successCriteria": "at least one new source-backed injectable candidate has sanitized medicationgetv2 Request_Number=02 masterFound=true evidence with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false; no live mutation executed",
       "nextOnSuccess": "RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF",
-      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "result": "skipped_all_checked_source_backed_candidates_returned_masterFound_false_stop_before_live",
+      "completedRunId": "20260426T231411Z",
+      "evidence": "docs/implementation/rwo06h-injectable-candidate-discovery-20260426T231411Z/summary.sanitized.json",
+      "candidatesChecked": [
+        "620006203",
+        "620004173",
+        "620002589",
+        "621958501",
+        "620006734",
+        "620767312",
+        "620738012",
+        "621429304"
+      ]
     },
     {
       "taskId": "RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF",
@@ -5148,5 +5161,66 @@
       "serverFacilityIdGrep": "pass_0_hits",
       "gitDiffCheck": "pass"
     }
+  },
+  "latestRwo06HInjectableCandidateDiscovery": {
+    "runId": "20260426T231411Z",
+    "workOrder": "RWO-06H",
+    "taskId": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
+    "result": "RWO06H_INJECTABLE_CANDIDATE_DISCOVERY_STOPPED_BEFORE_LIVE",
+    "branch": "master",
+    "headAtStart": "55aaaa60c920d80a952331838c2a7fd75abc8b96",
+    "evidence": "docs/implementation/rwo06h-injectable-candidate-discovery-20260426T231411Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06h-injectable-candidate-discovery-20260426T231411Z/summary.sanitized.json",
+    "candidateReadOnlyResults": [
+      {
+        "medicationCode": "620006203",
+        "requestNumber": "02",
+        "sanitizedResult": "2xx/other_present/masterFound=false"
+      },
+      {
+        "medicationCode": "620004173",
+        "requestNumber": "02",
+        "sanitizedResult": "2xx/other_present/masterFound=false"
+      },
+      {
+        "medicationCode": "620002589",
+        "requestNumber": "02",
+        "sanitizedResult": "2xx/other_present/masterFound=false"
+      },
+      {
+        "medicationCode": "621958501",
+        "requestNumber": "02",
+        "sanitizedResult": "2xx/other_present/masterFound=false"
+      },
+      {
+        "medicationCode": "620006734",
+        "requestNumber": "02",
+        "sanitizedResult": "2xx/other_present/masterFound=false"
+      },
+      {
+        "medicationCode": "620767312",
+        "requestNumber": "02",
+        "sanitizedResult": "2xx/other_present/masterFound=false"
+      },
+      {
+        "medicationCode": "620738012",
+        "requestNumber": "02",
+        "sanitizedResult": "2xx/other_present/masterFound=false"
+      },
+      {
+        "medicationCode": "621429304",
+        "requestNumber": "02",
+        "sanitizedResult": "2xx/other_present/masterFound=false"
+      }
+    ],
+    "liveTrialMutationExecuted": false,
+    "businessSuccessClassification": "not_applicable_or_readonly_master_validity_not_validated",
+    "claimBoundary": "Source-backed injectable candidate discovery and read-only medicationgetv2 checks only; no injection Trial business acceptance, live mutation, production ORCA, S3/object-storage, fullflow, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Run RWO-09_STATIC_PACKAGE_REFRESH or another independent no-live/static gate; do not execute injectionOrder/310 live until row-level medicationgetv2 Request_Number=02 proof exists.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
   }
 }
