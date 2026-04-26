@@ -47,6 +47,8 @@ const RADIOLOGY_PAYLOAD = payloadPath('medicalmodv2_radiology_trial_reachability
 const RADIOLOGY_SHA256 = 'd4dede12f9c7a43ab3c20bf972ef35a44ef0a33411e91a22429e85e985004f9e';
 const RADIOLOGY_V2_PAYLOAD = payloadPath('medicalmodv2_radiology_trial_reachability_v2.json');
 const RADIOLOGY_V2_SHA256 = 'ba41ca8d029b362d197361def1653a334ea27032935a6979298548465df4d436';
+const RADIOLOGY_V3_PAYLOAD = payloadPath('medicalmodv2_radiology_trial_reachability_v3.json');
+const RADIOLOGY_V3_SHA256 = '144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a';
 
 describe('phase4 medicalmodv2 safe evidence', () => {
   it('accepts only the fixed Phase 4 medicalmodv2 target and sanitized mode', () => {
@@ -564,6 +566,42 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(result.evidence.payload.summary.medicalInformation.medicalClasses).toEqual(['700']);
     expect(result.evidence.duplicateLiveCheckpoint.key).toBe(
       `rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-${RADIOLOGY_V2_SHA256}`,
+    );
+  });
+
+  it('accepts the changed radiology v3 endpoint payload identity with body-part comment', () => {
+    const result = validatePhase4SafeCommand({
+      argv: [
+        '--dry-run',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--phase4-only',
+        '--workflow',
+        'radiology',
+        '--payload',
+        RADIOLOGY_V3_PAYLOAD,
+        '--payload-sha256',
+        RADIOLOGY_V3_SHA256,
+      ],
+      env: {},
+      cwd: '/repo/web-client',
+      now: new Date('2026-04-26T23:32:44Z'),
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.evidence.endpointWorkflow).toEqual(
+      expect.objectContaining({
+        workflow: 'radiology',
+        workflowId: 'rwo06k-radiology-medicalmodv2-v1',
+        requiredEntityKindsPresent: true,
+        allowedMedicalClassesOnly: true,
+      }),
+    );
+    expect(result.evidence.payload.summary.medicalInformation.entityKinds).toEqual(['radiologyOrder']);
+    expect(result.evidence.payload.summary.medicalInformation.medicalClasses).toEqual(['700']);
+    expect(result.evidence.payload.summary.medicalInformation.medicationCount).toBe(3);
+    expect(result.evidence.duplicateLiveCheckpoint.key).toBe(
+      `rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-${RADIOLOGY_V3_SHA256}`,
     );
   });
 

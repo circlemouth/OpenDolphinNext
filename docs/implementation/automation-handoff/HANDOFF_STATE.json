@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-26T23:14:11Z",
+  "lastUpdated": "2026-04-26T23:32:44Z",
   "latestRemainingOrcaSpecIntake": {
     "runId": "20260426T124656Z",
     "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K/RWO-07",
@@ -4490,19 +4490,19 @@
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo09NonS3StaticRefresh": {
-    "runId": "20260426T210142Z",
+    "runId": "20260426T233244Z",
     "workOrder": "RWO-09/RWO-11",
     "result": "RWO09_NON_S3_STATIC_REFRESH_PASS",
     "branch": "master",
-    "head": "3980669ce40d6c64e3315f15eb1665ac8e1412e7",
+    "head": "3f3a42e72ac0a3c7fc29d9526ccb7250e76f5a11",
     "activeHandoffPrompt": {
       "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
       "statusAtStart": "active",
       "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
       "statusAfterRun": "left_pending_and_advanced_independent_non_live_static_refresh"
     },
-    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260426T210142Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260426T210142Z/summary.sanitized.json",
+    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260426T233244Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260426T233244Z/summary.sanitized.json",
     "checks": {
       "webGuard": "pass",
       "serverDocLinks": "pass",
@@ -4525,11 +4525,55 @@
       "businessSuccessClassification": "not_applicable_static_non_live_refresh",
       "businessAccepted": false
     },
-    "claimBoundary": "Current HEAD non-S3 static/package/security confidence only; no L4 fullflow success, Trial ORCA business success in this run, injection or base-charge Trial acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, final owner GO/NO-GO, or final release readiness is claimed.",
+    "claimBoundary": "Current HEAD non-S3 static/package/security confidence only; no L4 fullflow success, Trial ORCA business success in this run, injection or base-charge Trial acceptance, Request_Number 02/03/04 Trial success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, final owner GO/NO-GO, or final release readiness is claimed.",
     "recommendedNextTask": "Release owner/operator should perform rollback rehearsal with sanitized evidence or record final GO/NO-GO/PENDING; automation may continue independent non-live endpoint contract/precondition work.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06KRadiologyV3NoLive": {
+    "runId": "20260426T233244Z",
+    "workOrder": "RWO-06K",
+    "result": "RWO06K_RADIOLOGY_V3_NO_LIVE_PREFLIGHT_READY",
+    "branch": "master",
+    "headAtSelection": "3f3a42e72ac0a3c7fc29d9526ccb7250e76f5a11",
+    "evidence": "docs/implementation/rwo06k-radiology-v3-no-live-20260426T233244Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06k-radiology-v3-no-live-20260426T233244Z/summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "radiology",
+      "entity": "radiologyOrder",
+      "claim007Class": "700",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v3.json",
+      "sha256": "144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a",
+      "target": "00001",
+      "requestNumber": "01",
+      "classCode": "01",
+      "candidateCodes": [
+        "002000099",
+        "170027910",
+        "820181000"
+      ]
+    },
+    "checks": {
+      "wrapperDryRun": "pass_no_live",
+      "phase4Medicalmodv2SafeEvidence": "pass_25_tests_with_web_guard_pretest",
+      "syntaxChecks": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "target": "00001",
+      "requestClass": "medicalmodv2",
+      "businessSuccessClassification": "not_applicable_no_live_preflight_only",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Changed radiologyOrder/700 v3 no-live preflight only; no radiology Trial business acceptance, all-radiology coverage, body-part billing success, Request_Number 02/03/04 success, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Before any radiology v3 live Trial attempt, record runtime readiness, duplicate checkpoint decision, endpoint-specific success criteria, stop conditions, and a sanitized preflight packet; do not repeat prior v1/v2 radiology identities unchanged.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
   },
   "latestRwo08BDuplicateCandidateExhaustion": {
     "runId": "20260425T152931Z",
