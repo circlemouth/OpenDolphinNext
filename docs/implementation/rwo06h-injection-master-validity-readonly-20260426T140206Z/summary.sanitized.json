@@ -1,0 +1,94 @@
+{
+  "runId": "20260426T140206Z",
+  "workOrders": [
+    "RWO-06H",
+    "RWO-06G"
+  ],
+  "branch": "master",
+  "startHead": "08b86278782aa10ddf9d40eb722d522aff5334af",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
+    "statusAfterRun": "left_pending_because_no_new_owner_or_operator_input"
+  },
+  "rwo06h": {
+    "taskId": "RWO-06H_READONLY_MASTER_VALIDITY",
+    "result": "readonly_master_validity_not_validated_stop_before_live",
+    "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+    "requestClass": "medicalmodv2",
+    "target": "00001",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v2.json",
+    "payloadSha256": "1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300",
+    "dryRunEvidence": {
+      "path": "docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/dry-run/master-validity-readonly-summary.sanitized.json",
+      "sha256": "d146d0ff4178bd8686a8b18a25f4207ccba5c3b15b4167c615b2ebb142f64729"
+    },
+    "readOnlyEvidence": {
+      "path": "docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/read-only/master-validity-readonly-summary.sanitized.json",
+      "sha256": "f80a529a41ceb8b3c4a27ad1566153e1e84e4cf38b81b4c8f677e6728c56b00b",
+      "action": "executed_readonly_once",
+      "liveTrialMutation": "not_run",
+      "readonlyChecks": [
+        {
+          "role": "medication",
+          "endpoint": "medicationgetv2",
+          "code": "620000012",
+          "httpStatusClass": "2xx",
+          "apiResultClass": "other_present",
+          "masterFound": false
+        },
+        {
+          "role": "procedure",
+          "endpoint": "masterlastupdatev3",
+          "code": "130000510",
+          "httpStatusClass": "2xx",
+          "apiResultClass": "success_zero",
+          "masterFound": true
+        },
+        {
+          "role": "material",
+          "endpoint": "masterlastupdatev3",
+          "code": "700000031",
+          "httpStatusClass": "2xx",
+          "apiResultClass": "success_zero",
+          "masterFound": true
+        },
+        {
+          "role": "comment",
+          "endpoint": "masterlastupdatev3",
+          "code": "0085001",
+          "httpStatusClass": "2xx",
+          "apiResultClass": "success_zero",
+          "masterFound": true
+        }
+      ]
+    },
+    "businessSuccessClassification": "not_applicable_or_readonly_master_validity_not_validated",
+    "recommendedNextTask": "Do not execute injectionOrder/310 live Trial mutation until medication row validity has changed evidence or a changed candidate identity."
+  },
+  "rwo06g": {
+    "taskId": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN",
+    "result": "preflight_plan_ready",
+    "evidence": "docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/base-charge-first-visit-plan.sanitized.json",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v2.json",
+    "payloadSha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+    "liveTrialMutation": "not_run",
+    "recommendedNextTask": "Run the RWO-06G acceptmodv2 Request_Number=00 read-only first-visit compatibility check before any baseChargeOrder/110 live Trial attempt."
+  },
+  "checks": {
+    "nodeCheckReadonlyWrapper": "pass",
+    "phase4MasterValidityEvidence": "pass_6_tests",
+    "phase4Medicalmodv2SafeEvidence": "pass_24_tests",
+    "webGuardPretest": "pass",
+    "webGuard": "pass",
+    "docLinks": "pass",
+    "focusedSensitivePatternScan": "pass_expected_code_test_fixture_hits_only"
+  },
+  "claimBoundary": "RWO-06H read-only master-validity evidence stops before live because the medication row was not validated. RWO-06G has a no-live first-visit compatibility plan only. No injection/base-charge Trial business acceptance, live mutation, production ORCA readiness, S3/object-storage readiness, fullflow success, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-26T14:55:00Z",
+  "lastUpdated": "2026-04-26T14:02:06Z",
   "latestRemainingOrcaSpecIntake": {
     "runId": "20260426T124656Z",
     "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K/RWO-07",
@@ -4635,7 +4635,7 @@
     {
       "taskId": "RWO-06H_READONLY_MASTER_VALIDITY",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06H",
       "summary": "Run sanitized runtime readiness plus read-only medicationgetv2/masterlastupdatev3 checks for injectionOrder/310 v2.",
       "activePromptDependency": "if no new rollback/owner input exists, carry human blocker forward without reclassification first",
@@ -4658,12 +4658,15 @@
       "skipCondition": "runtime unavailable, missing safe read-only wrapper, target drift, parser ambiguity, credential/raw-artifact risk",
       "successCriteria": "sanitized read-only master-validity evidence exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false",
       "nextOnSuccess": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
-      "nextOnSkip": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN"
+      "nextOnSkip": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN",
+      "result": "readonly_master_validity_not_validated_stop_before_live",
+      "completedRunId": "20260426T140206Z",
+      "evidence": "docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
       "lane": "critical_path",
-      "status": "queued_after_RWO-06H_READONLY_MASTER_VALIDITY",
+      "status": "skipped_environment_unavailable",
       "workOrder": "RWO-06H",
       "summary": "Check duplicate-live checkpoint and assemble endpoint packet for one possible injectionOrder/310 live attempt.",
       "requiresRuntime": false,
@@ -4675,12 +4678,15 @@
       "skipCondition": "read-only master validity not yet validated or accepted checkpoint already exists",
       "successCriteria": "endpoint packet complete and live_ready_pending_single_attempt recorded without executing live mutation",
       "nextOnSuccess": "RWO-06H_SINGLE_LIVE_ATTEMPT_PENDING_WORKER_DECISION",
-      "nextOnSkip": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN"
+      "nextOnSkip": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN",
+      "result": "skipped_precondition_not_met_readonly_master_validity_not_validated",
+      "completedRunId": "20260426T140206Z",
+      "evidence": "docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06G",
       "summary": "Prepare acceptmodv2 Request_Number=00 read-only first-visit compatibility plan for baseChargeOrder/110.",
       "requiresRuntime": false,
@@ -4691,6 +4697,31 @@
       "skipCondition": "current RWO-06H critical path consumes run budget or safe wrapper contract is missing",
       "successCriteria": "sanitized no-live first-visit compatibility preflight plan recorded; no live mutation executed",
       "nextOnSuccess": "RWO-06G_READONLY_FIRST_VISIT_CHECK",
+      "nextOnSkip": "RWO-07_OPERATION_MATRIX_HARDENING",
+      "result": "preflight_plan_ready",
+      "completedRunId": "20260426T140206Z",
+      "evidence": "docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/base-charge-first-visit-plan.sanitized.json"
+    },
+    {
+      "taskId": "RWO-06G_READONLY_FIRST_VISIT_CHECK",
+      "lane": "critical_path",
+      "status": "queued",
+      "workOrder": "RWO-06G",
+      "summary": "Run sanitized acceptmodv2 Request_Number=00 read-only first-visit compatibility check for baseChargeOrder/110 v2.",
+      "requiresRuntime": true,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "endpoint": "/api/orca/official/visits/mutation",
+      "requestClass": "acceptmodv2_readonly_request_00",
+      "target": "00001",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v2.json",
+      "payloadSha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+      "prerequisiteEvidence": "docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/base-charge-first-visit-plan.sanitized.json",
+      "skipCondition": "runtime unavailable, safe read-only wrapper missing, target drift, parser ambiguity, credential/raw-artifact risk, or first-visit state cannot be classified without raw patient/insurance detail",
+      "successCriteria": "sanitized Request_Number=00 first-visit compatibility evidence exists with mutationSuccess=false, credentialsCaptured=false, and rawArtifactsCommittedOrPackaged=false",
+      "nextOnSuccess": "RWO-06G_DUPLICATE_CHECKPOINT_PREFLIGHT",
       "nextOnSkip": "RWO-07_OPERATION_MATRIX_HARDENING"
     },
     {
@@ -4725,5 +4756,94 @@
       "carryForwardWhenNoNewInput": "carried_forward_without_reclassification",
       "nextOnSkip": "RWO-06H_READONLY_MASTER_VALIDITY"
     }
-  ]
+  ],
+  "latestRwo06HInjectionMasterValidityReadonly": {
+    "runId": "20260426T140206Z",
+    "workOrder": "RWO-06H",
+    "result": "RWO06H_READONLY_MASTER_VALIDITY_NOT_VALIDATED_STOP_BEFORE_LIVE",
+    "branch": "master",
+    "startHead": "08b86278782aa10ddf9d40eb722d522aff5334af",
+    "evidence": "docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/summary.sanitized.json",
+    "readOnlyEvidence": "docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/read-only/master-validity-readonly-summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "injection",
+      "entity": "injectionOrder",
+      "claim007Class": "310",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v2.json",
+      "sha256": "1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300",
+      "target": "00001",
+      "requestNumber": "01",
+      "classCode": "01"
+    },
+    "readOnlyChecks": [
+      {
+        "role": "medication",
+        "endpoint": "medicationgetv2",
+        "code": "620000012",
+        "httpStatusClass": "2xx",
+        "apiResultClass": "other_present",
+        "masterFound": false
+      },
+      {
+        "role": "procedure",
+        "endpoint": "masterlastupdatev3",
+        "code": "130000510",
+        "httpStatusClass": "2xx",
+        "apiResultClass": "success_zero",
+        "masterFound": true
+      },
+      {
+        "role": "material",
+        "endpoint": "masterlastupdatev3",
+        "code": "700000031",
+        "httpStatusClass": "2xx",
+        "apiResultClass": "success_zero",
+        "masterFound": true
+      },
+      {
+        "role": "comment",
+        "endpoint": "masterlastupdatev3",
+        "code": "0085001",
+        "httpStatusClass": "2xx",
+        "apiResultClass": "success_zero",
+        "masterFound": true
+      }
+    ],
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "target": "00001",
+      "requestClass": "medicalmodv2",
+      "businessSuccessClassification": "not_applicable_or_readonly_master_validity_not_validated",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Read-only master-validity attempt only; injection live mutation remains stopped because medication row was not validated. Not Trial business acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+    "recommendedNextTask": "Run RWO-06G acceptmodv2 Request_Number=00 read-only first-visit compatibility check before any baseChargeOrder/110 live Trial attempt.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06GFirstVisitPlan": {
+    "runId": "20260426T140206Z",
+    "workOrder": "RWO-06G",
+    "result": "RWO06G_NO_LIVE_FIRST_VISIT_PLAN_READY",
+    "evidence": "docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/base-charge-first-visit-plan.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "base-charge",
+      "entity": "baseChargeOrder",
+      "claim007Class": "110",
+      "candidateCode": "111000110",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v2.json",
+      "sha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_plan_only",
+      "businessAccepted": false
+    },
+    "recommendedNextTask": "Execute sanitized acceptmodv2 Request_Number=00 read-only first-visit compatibility check.",
+    "credentialsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  }
 }
