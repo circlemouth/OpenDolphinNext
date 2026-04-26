@@ -32,6 +32,8 @@ RUN_ID `20260426T170241Z` found no new owner/operator rollback rehearsal evidenc
 
 RUN_ID `20260426T180208Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, left this blocker pending, and refreshed independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `6d3e319b915d3a0976e13015bda046028dc6d66c`. No live Trial mutation, diagnostic artifact capture, production ORCA, or S3/object-storage setup was executed.
 
+RUN_ID `20260426T190239Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, left this blocker pending, and refreshed independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `faa53ec28e893dff6606030d7d99a2399c6f63a2`. No live Trial mutation, diagnostic artifact capture, production ORCA, or S3/object-storage setup was executed.
+
 Sanitized evidence:
 
 - `docs/implementation/rwo11-rollback-owner-pending-20260425T182930Z/FINAL_REPORT.md`
@@ -57,17 +59,19 @@ Sanitized evidence:
 - `docs/implementation/rwo09-non-s3-static-refresh-20260426T170241Z/summary.sanitized.json`
 - `docs/implementation/rwo09-non-s3-static-refresh-20260426T180208Z/FINAL_REPORT.md`
 - `docs/implementation/rwo09-non-s3-static-refresh-20260426T180208Z/summary.sanitized.json`
+- `docs/implementation/rwo09-non-s3-static-refresh-20260426T190239Z/FINAL_REPORT.md`
+- `docs/implementation/rwo09-non-s3-static-refresh-20260426T190239Z/summary.sanitized.json`
 
 Current result:
 
-- Current branch/head: `master` / `6d3e319b9`
+- Current branch/head: `master` / `faa53ec28`
 - Accepted reviewer packet source freeze: `master` / `b103e49ee06d1c1043c066a097f7c62408c32263`
 - Reviewer packet: `artifacts/reviewer-submission-packets/submission-packet-20260425T174429Z.zip`
 - Packet sha256: `415b1fb493632176b44d5d38cc02c8f95c6783de392e491082803542d201529a`
 - Checks passed in the classifier run: reviewer packet contract tests (7), `check-doc-links`, and `web-client verify:web-guard`.
 - Rollback rehearsal is classified as `pending_human_operator_decision`; repo-local dry-runs cannot prove release-candidate deployment stop, paired restore, restored-target smoke, or operator/owner acceptance.
 - No live Trial mutation, production ORCA, S3/MinIO/object-storage setup, diagnostic artifact capture, raw artifact packaging, actual rollback rehearsal, owner final GO, or final release readiness is claimed.
-- Latest independent non-live refresh evidence: `docs/implementation/rwo09-non-s3-static-refresh-20260426T180208Z/FINAL_REPORT.md` and `docs/implementation/rwo09-non-s3-static-refresh-20260426T180208Z/summary.sanitized.json`.
+- Latest independent non-live refresh evidence: `docs/implementation/rwo09-non-s3-static-refresh-20260426T190239Z/FINAL_REPORT.md` and `docs/implementation/rwo09-non-s3-static-refresh-20260426T190239Z/summary.sanitized.json`.
 - Latest order-family research evidence: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md`. Recommended no-live priority is `injectionOrder/310` `130000510`, then `baseChargeOrder/110` `111000110`, then `instractionChargeOrder/130` `113001810`; `radiologyOrder/700`, `surgeryOrder/500`, and `testOrder/600` require changed identities or changed preconditions before any live retry.
 - Latest remaining ORCA-spec intake: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/orca-trial-remaining-spec-intake-20260426T124656Z.md`. It adds `medicationgetv2` / `masterlastupdatev3` read-only master-validity guidance for injection, `acceptmodv2` `Request_Number=00` first-visit inquiry guidance for base-charge, wrapper/no-live stop conditions for `subjectivesv2` and `diseasev3`, and RWO-07 operation mapping.
 - Latest injection master-validity read-only attempt: `docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/FINAL_REPORT.md`. `masterlastupdatev3` returned sanitized `2xx` / `success_zero` for procedure/material/comment, but `medicationgetv2` for medication `620000012` returned sanitized `2xx` / `other_present` and `masterFound=false`; injection live remains stopped until changed evidence or a changed candidate identity exists.
