@@ -8,6 +8,12 @@ priority: normal
 supersedes:
 - rollback-rehearsal-or-final-owner-go-pending
 
+## Automation Scope Override
+
+Owner direction recorded after RUN_ID `20260426T233244Z`: `RWO-11/RWO-09` rollback rehearsal, final owner GO/NO-GO/PENDING decision capture, release-candidate deployment stop, paired restore, restored-target smoke, and operator acceptance are not handled by this automation. Treat them as external owner/operator release-management gates only.
+
+Do not select, execute, reclassify, or block on `RWO-11/RWO-09`. The automation worker is responsible for other roadmap-scoped work: ORCA official specification research, no-live endpoint packets, payload identities, parser/sanitizer tests, wrapper dry-runs, read-only probes, static/package/security checks, browser-safe checks, sanitized evidence, and claim-boundary updates.
+
 ## Context
 
 RUN_ID `20260425T182930Z` classified the active rollback/owner-decision handoff.
@@ -113,38 +119,37 @@ Current result:
 
 ## Goal
 
-Advance only if new safe evidence exists: record an actual operator rollback rehearsal with sanitized evidence, or record final owner GO/NO-GO/PENDING if supplied. If neither exists, do not repeat the same classification; select the next independent non-live roadmap task that is safe under the Trial-only, non-S3 scope.
+Ignore `RWO-11/RWO-09` as automation work and select the next independent non-live/read-only/static roadmap task that is safe under the Trial-only, non-S3 scope. If ORCA endpoint semantics are unclear, actively perform ORCA official web research first and record sanitized no-live research evidence before choosing or refining the task.
 
 ## Required First Steps
 
 1. Inspect current branch, HEAD, status, and worktrees.
 2. Read `$CODEX_HOME/automations/orca/memory.md`, `HANDOFF_STATE.json`, this prompt, roadmap docs, and RUN_ID `20260425T182930Z` sanitized evidence.
 3. Confirm no unrelated uncommitted changes would be overwritten.
-4. Check whether new owner/operator input or a new release-candidate rollback environment exists. If absent, carry this blocker forward without reclassification and process `HANDOFF_STATE.json.nextExecutableQueue` from the first safe non-human item.
+4. Do not check for rollback/owner input as an automation task. Mark `RWO-11/RWO-09` as external owner/operator release-management context and process `HANDOFF_STATE.json.nextExecutableQueue` or roadmap items from the first safe non-RWO-11/RWO-09 item.
 
 ## Allowed Actions
 
-- Record a real operator rollback rehearsal only if the environment/action has already been safely performed or is available without production ORCA, S3/object-storage, credentials, raw artifacts, or out-of-scope operations.
-- Update RWO-11 claim-boundary docs, matrices, and sanitized evidence.
-- Record final GO/NO-GO/PENDING only if explicit owner decision evidence is supplied.
-- Continue to independent non-live static/package/security checks if rollback/final GO is blocked.
-- Continue to independent non-live order-family candidate preparation using `order-family-v2-candidate-research-20260425T215740Z.md` if rollback/final GO is blocked. This is limited to payload identity drafting, parser/sanitizer tests, wrapper dry-runs, duplicate checkpoint checks, and claim-boundary updates; it is not approval to run live Trial.
+- Continue to independent non-live static/package/security checks without considering rollback/final GO as automation work.
+- Continue to independent non-live order-family candidate preparation using `order-family-v2-candidate-research-20260425T215740Z.md`. This is limited to payload identity drafting, parser/sanitizer tests, wrapper dry-runs, duplicate checkpoint checks, and claim-boundary updates; it is not approval to run live Trial.
+- Continue to ORCA official specification research when endpoint semantics, request numbers, class codes, row ordering, master lookup behavior, or business success criteria are unclear. Prefer `orca.med.or.jp` official API pages and record sanitized no-live research evidence only.
 - Process `HANDOFF_STATE.json.nextExecutableQueue` and complete or skip multiple independent no-live/read-only items in the same run when safe.
 
 ## Forbidden Actions
 
 - Production ORCA execution or production readiness claims.
+- Selecting, executing, reclassifying, or blocking on `RWO-11/RWO-09` rollback rehearsal, owner GO/NO-GO/PENDING, release-candidate stop/restore/smoke, or operator acceptance.
 - S3/MinIO/object-storage setup, dummy storage, fake object-storage credentials, or storage readiness claims.
 - Printing, requesting, committing, or packaging credentials, cookies, session IDs, auth headers, anti-forgery values, credential-bearing URLs, raw ORCA bodies, raw patient details, raw insurance details, screenshots, HAR, traces, videos, raw network dumps, request XML, or raw request/response bodies.
 - Running live Trial mutation as a substitute for rollback/owner-decision readiness.
-- Running live Trial mutation from the order-family research without a later endpoint-specific no-live verification record, sanitized preflight, duplicate-live checkpoint, and applicable approval scope.
+- Running live Trial mutation from order-family research or ORCA official specification research without a later endpoint-specific no-live verification record, sanitized preflight, duplicate-live checkpoint, and applicable approval scope.
 - Repeating diagnostic fullflow for candidates `00001` or `00005` unchanged.
 - Broad refactors or changes under legacy `client/` or `server/`.
 
 ## Evidence Requirements
 
 - Sanitized Markdown/JSON only.
-- Record branch/HEAD, rollback command/check scope or skip reason, current accepted reviewer packet identity, and claim boundaries.
+- Record branch/HEAD, current accepted reviewer packet identity when relevant, ORCA official source URLs checked when research is performed, and claim boundaries.
 - `credentialsCaptured=false`.
 - `rawArtifactsCommittedOrPackaged=false`.
 

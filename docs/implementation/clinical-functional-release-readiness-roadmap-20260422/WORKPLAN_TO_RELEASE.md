@@ -8,6 +8,24 @@ This roadmap assumes WebORCA / ORCA Trial as the only ORCA connection target. Pr
 
 Trial evidence must not be used to claim production ORCA readiness. If production ORCA readiness is requested later, it requires a separate owner-approved production plan outside this roadmap.
 
+## Automation Responsibility Boundary
+
+`RWO-11/RWO-09` rollback rehearsal, final owner GO/NO-GO/PENDING, release-candidate deployment stop, paired restore, restored-target smoke, and operator acceptance are external owner/operator release-management gates. They remain claim-boundary context, but they are not work assigned to this automation.
+
+Automation workers must not select, execute, reclassify, or block on `RWO-11/RWO-09`. When these gates appear in a queue, prompt, matrix, or summary, workers should preserve the non-claim boundary and immediately proceed to the next safe task outside `RWO-11/RWO-09`.
+
+## ORCA Official Specification Research
+
+If an ORCA task is blocked by unclear endpoint semantics, request numbers, class codes, row ordering, master lookup behavior, sample payload shape, or endpoint-specific business success criteria, the automation should actively perform web research before selecting the next executable task or preparing live evidence.
+
+Research must prefer ORCA official sources first:
+
+- [ORCA API overview](https://www.orca.med.or.jp/receipt/tec/api/overview.html)
+- ORCA endpoint specification pages under `https://www.orca.med.or.jp/receipt/users/tec/api/`
+- official endpoint pages discovered from the API overview, including pages such as `medicalmod.html`, `medicationgetv2.html`, and `diseasemod2.html`
+
+Public/non-official sources may be used only as secondary leads. Endpoint semantics must be confirmed against ORCA official documentation or recorded as unconfirmed. Committed research evidence must be sanitized and limited to source URL, checked date, endpoint/request-class identity, request number/class/code mapping, derived no-live next action, and claim boundary. Official-source research is no-live evidence only; it can justify payload drafting, parser/sanitizer tests, wrapper dry-runs, read-only probes, or queue reordering, but it does not authorize live Trial mutation by itself.
+
 ## medicalmodv2 Iterative Retry Scope
 
 Owner direction recorded by RUN_ID `20260423T122650Z`: RWO-06 `medicalmodv2` fix-and-retry cycles may be repeated as many times as needed. The `orca` automation should proceed as autonomously as possible without waiting for additional user permission until `medicalmodv2` is accepted or a non-skippable safety stop condition is reached. A later worker does not need fresh owner approval for each additional `medicalmodv2` retry when the retry follows a repo-local investigation/fix/focused no-live verification cycle, uses the approved safe wrapper/evidence mode, and stays within the Trial-only non-S3 scope.
@@ -48,9 +66,9 @@ Environment-only blockers include Docker unavailable, local backend unavailable,
 
 When a Work Order is skipped, the same run should continue with docs, static guards, unit/component tests, parser/sanitizer tests, safe wrapper dry-runs, package metadata checks, claim-boundary updates, release gate updates, risk register updates, and final summaries that do not depend on the skipped runtime.
 
-Hourly workers must use the executable queue in `docs/implementation/automation-handoff/HANDOFF_STATE.json` before falling back to this prose queue. The queue separates work into `critical_path`, `parallel_no_live`, and `human_pending` lanes. A human-pending blocker such as rollback rehearsal or owner GO/NO-GO should be checked only for new explicit input; if none exists, the worker carries it forward without reclassification and continues to the next executable non-human item.
+Hourly workers must use the executable queue in `docs/implementation/automation-handoff/HANDOFF_STATE.json` before falling back to this prose queue. The queue separates work into `critical_path`, `parallel_no_live`, and `human_pending` lanes. `RWO-11/RWO-09` rollback rehearsal and owner GO/NO-GO are outside automation scope and must not be selected or rechecked by automation; preserve them as external claim-boundary gates and continue to the next executable non-human, non-RWO-11/RWO-09 item.
 
-The queue may contain several safe no-live tasks. Workers should process more than one item per run when possible, especially docs, parser/sanitizer tests, wrapper dry-runs, read-only preflight plans, static guards, and matrix updates. Live Trial mutation is the exception: it remains one endpoint, one target, one request class, one payload identity, and one sanitized attempt at a time.
+The queue may contain several safe no-live tasks. Workers should process more than one item per run when possible, especially official ORCA specification research, docs, parser/sanitizer tests, wrapper dry-runs, read-only preflight plans, static guards, and matrix updates. Live Trial mutation is the exception: it remains one endpoint, one target, one request class, one payload identity, and one sanitized attempt at a time.
 
 Before any live Trial mutation, the corresponding endpoint packet must be complete. A complete packet includes payload SHA, endpoint/request class, target identity, duplicate-live checkpoint, no-live wrapper result, parser/sanitizer result, runtime readiness, endpoint-specific business-success criteria, stop conditions, and explicit sanitized evidence boundaries.
 
@@ -90,7 +108,7 @@ Do not commit approved local runtime secret files, ORCA credentials, S3/MinIO/ob
 20. RWO-08B: fullflow reachability variants, batched through artifact-free or diagnostic mode with only sanitized extracted evidence committed.
 20. RWO-09: security, secrets, CI, package, deployment readiness without production ORCA execution or S3/MinIO/object-storage setup.
 21. RWO-10: record production ORCA as out-of-scope / not applicable for this Trial-only roadmap.
-22. RWO-11: final Trial-backed release candidate validation and owner sign-off.
+22. RWO-11: final Trial-backed release candidate validation and owner sign-off. This is an external owner/operator release-management gate and is not assigned to this automation.
 
 ## Current Safe Work Queue
 
@@ -102,10 +120,10 @@ When the active handoff is superseded or skipped, process this queue in order an
 4. Run unit/component tests and wrapper dry-runs that do not require unavailable runtime services or committing raw diagnostic artifacts.
 5. For RWO-02 through RWO-05, run only artifact-safe no-live browser checks if an artifact-free harness exists; otherwise record `skipped_environment_unavailable_safe_browser_harness_missing` and continue.
 6. For RWO-06 through RWO-08B, run only Trial live/fullflow checks that have approved non-S3 runtime paths and safe evidence modes; if the only blocker is object-storage startup coupling, first process the active RWO-06A non-S3 runtime-profile handoff.
-7. For RWO-06B through RWO-06F, batch multiple reachability checks in one automation run when each check has independent preflight, wrapper, parser, business-success criteria, and sanitized evidence; record per-endpoint blockers and continue to independent safe checks. RUN_ID `20260425T030245Z` prepared no-live v2 candidates for `instractionChargeOrder/130`, `baseChargeOrder/110`, and `injectionOrder/310`; RUN_ID `20260425T215740Z` added source-backed no-live candidate research for these and the rejected surgery/test/radiology families. No live Trial should run from the research alone; live progression still requires endpoint-specific Trial/business preconditions, no-live wrapper checks, runtime readiness, sanitized preflight, and duplicate-checkpoint preflight.
+7. For RWO-06B through RWO-06F and later endpoint families, batch multiple reachability checks in one automation run when each check has independent preflight, wrapper, parser, business-success criteria, and sanitized evidence. If endpoint semantics are unclear, first perform official ORCA specification research and record sanitized no-live findings. RUN_ID `20260425T030245Z` prepared no-live v2 candidates for `instractionChargeOrder/130`, `baseChargeOrder/110`, and `injectionOrder/310`; RUN_ID `20260425T215740Z` added source-backed no-live candidate research for these and the rejected surgery/test/radiology families. No live Trial should run from research alone; live progression still requires endpoint-specific Trial/business preconditions, no-live wrapper checks, runtime readiness, sanitized preflight, and duplicate-checkpoint preflight.
 8. Complete RWO-09 non-S3 security/secret handling, CI/static evidence, packaging, rollback, and non-claim updates that are possible without unavailable runtime services.
 9. Complete RWO-10 production ORCA non-claim docs-only marker.
-10. Complete RWO-11 final Trial-backed non-S3 summary as far as evidence allows, with any remaining runtime-dependent gates listed as skipped or pending rather than overclaimed.
+10. Do not execute or reclassify RWO-11 rollback/owner decision work. Keep it as an external owner/operator gate and continue only with non-RWO-11 automation tasks.
 
 ## Why This Sequence Is Safe
 
@@ -119,7 +137,7 @@ The sequence avoids using live ORCA to discover basic browser or local persisten
 | Browser tests | RWO-02, RWO-03, RWO-04, RWO-05 | No live ORCA; sanitized evidence only. |
 | Non-S3 runtime blocker resolution | RWO-06A | Repo-local implementation/docs/tests for an object-storage-free dev/Trial profile; no dummy S3/MinIO and no storage readiness claim. |
 | Live ORCA requiring explicit owner approval | RWO-06, RWO-06B, RWO-06C, RWO-06D, RWO-07, RWO-08, RWO-08B | Trial credentials/config required through approved channel; diagnostic fullflow artifacts may be captured only local-only/untracked and never committed/packaged; skip if S3/MinIO/object-storage config is required. RWO-06 `medicalmodv2` has standing iterative retry approval after repo-local fix and focused no-live verification. RWO-06B through RWO-06D may batch multiple reachability checks per automation run when every check remains independently scoped and sanitized. Repeated unchanged live sends after a failure are forbidden; retry approval is for fix-and-retry cycles only. |
-| Release-readiness without production ORCA or S3 execution | RWO-09, RWO-11 | Includes CI, non-S3 deployment config, rollback, owner sign-off, and explicit production-ORCA/S3 non-claims. |
+| Release-readiness without production ORCA or S3 execution | RWO-09 | Includes CI, non-S3 deployment config, package/security checks, and explicit production-ORCA/S3 non-claims. RWO-11 owner/rollback gates are external and not automation-owned. |
 | Production ORCA out-of-scope marker | RWO-10 | Records that production ORCA execution/readiness is not part of this Trial-only roadmap. |
 
 No background or asynchronous work is claimed by this roadmap.

@@ -1,8 +1,8 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-11/RWO-09",
-  "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
+  "sourceWorkOrder": "automation-scope-policy",
+  "blockerId": "rwo11-rwo09-external-owner-operator-gate-not-automation-work",
   "priority": "normal",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,43 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-26T23:32:44Z",
+  "lastUpdated": "2026-04-26T23:48:19Z",
+  "automationResponsibilityBoundary": {
+    "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_not_automation_work",
+    "automationMustNot": [
+      "select_rwo11_rwo09_as_work",
+      "execute_rollback_rehearsal",
+      "capture_final_owner_go_no_go_pending",
+      "reclassify_rollback_owner_blocker_hourly",
+      "block_on_owner_operator_release_management_decision"
+    ],
+    "automationShouldContinueWith": [
+      "orca_official_specification_research",
+      "no_live_endpoint_packets",
+      "payload_identity_drafting",
+      "parser_sanitizer_tests",
+      "wrapper_dry_runs",
+      "read_only_probes",
+      "static_package_security_checks",
+      "sanitized_evidence_and_claim_boundary_updates"
+    ],
+    "recordedByUserDirection": "2026-04-27"
+  },
+  "orcaOfficialSpecificationResearchPolicy": {
+    "requiredWhen": [
+      "endpoint_semantics_unclear",
+      "request_number_or_class_code_unclear",
+      "row_ordering_or_sample_payload_unclear",
+      "master_lookup_behavior_unclear",
+      "business_success_criteria_unclear"
+    ],
+    "preferredSources": [
+      "https://www.orca.med.or.jp/receipt/tec/api/overview.html",
+      "https://www.orca.med.or.jp/receipt/users/tec/api/"
+    ],
+    "resultUse": "sanitized_no_live_evidence_only_for_task_selection_payload_drafting_parser_tests_wrapper_dry_runs_readonly_probes_or_queue_reordering",
+    "liveAuthorization": false
+  },
   "latestRemainingOrcaSpecIntake": {
     "runId": "20260426T124656Z",
     "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K/RWO-07",
@@ -4498,8 +4534,8 @@
     "activeHandoffPrompt": {
       "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
       "statusAtStart": "active",
-      "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
-      "statusAfterRun": "left_pending_and_advanced_independent_non_live_static_refresh"
+      "blockerId": "rwo11-rwo09-external-owner-operator-gate-not-automation-work",
+      "statusAfterRun": "rwo11_rwo09_marked_external_and_advanced_independent_non_live_static_refresh"
     },
     "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260426T233244Z/FINAL_REPORT.md",
     "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260426T233244Z/summary.sanitized.json",
@@ -4526,7 +4562,7 @@
       "businessAccepted": false
     },
     "claimBoundary": "Current HEAD non-S3 static/package/security confidence only; no L4 fullflow success, Trial ORCA business success in this run, injection or base-charge Trial acceptance, Request_Number 02/03/04 Trial success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, final owner GO/NO-GO, or final release readiness is claimed.",
-    "recommendedNextTask": "Release owner/operator should perform rollback rehearsal with sanitized evidence or record final GO/NO-GO/PENDING; automation may continue independent non-live endpoint contract/precondition work.",
+    "recommendedNextTask": "Automation should ignore RWO-11/RWO-09 release-management gates and continue independent non-live endpoint contract/precondition work, using ORCA official specification research when endpoint semantics are unclear.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
@@ -4627,7 +4663,7 @@
       "gitDiffCheck": "pass"
     },
     "claimBoundary": "RWO-08B fullflow remains blocked: candidates 00001 and 00005 are duplicate-acceptance/no-active-entry blockers, and read-only discovery excluding them found no fresh local-selectable Trial candidate. No diagnostic fullflow retry, L4 success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO, or final release readiness is claimed.",
-    "recommendedNextTask": "Proceed to RWO-09 non-S3 static/package/rollback readiness refresh while RWO-08B waits for a fresh read-only candidate or changed Trial/local-sync precondition.",
+    "recommendedNextTask": "Proceed to non-RWO-11 independent no-live/static work while RWO-08B waits for a fresh read-only candidate or changed Trial/local-sync precondition.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": true,
     "diagnosticArtifactsLocalOnlyUntracked": true,
@@ -4710,7 +4746,7 @@
       "status": "skipped_environment_unavailable",
       "workOrder": "RWO-06H",
       "summary": "Discover additional source-backed injectable medication candidates, then validate them with sanitized medicationgetv2 Request_Number=02 read-only checks.",
-      "activePromptDependency": "if no new rollback/owner input exists, carry human blocker forward without reclassification first",
+      "activePromptDependency": "RWO-11/RWO-09 rollback/owner gates are external to automation; skip them and continue",
       "requiresRuntime": true,
       "requiresLiveTrialMutation": false,
       "requiresHumanDecision": false,
@@ -4753,7 +4789,7 @@
       "status": "skipped_environment_unavailable",
       "workOrder": "RWO-06H",
       "summary": "Select an injectable candidate identity and prove the medication row with medicationgetv2 Request_Number=02 before any injectionOrder/310 live path.",
-      "activePromptDependency": "if no new rollback/owner input exists, carry human blocker forward without reclassification first",
+      "activePromptDependency": "RWO-11/RWO-09 rollback/owner gates are external to automation; skip them and continue",
       "requiresRuntime": true,
       "requiresLiveTrialMutation": false,
       "requiresHumanDecision": false,
@@ -4850,7 +4886,7 @@
       "status": "completed",
       "workOrder": "RWO-06H",
       "summary": "Run sanitized runtime readiness plus read-only medicationgetv2/masterlastupdatev3 checks for injectionOrder/310 v2.",
-      "activePromptDependency": "if no new rollback/owner input exists, carry human blocker forward without reclassification first",
+      "activePromptDependency": "RWO-11/RWO-09 rollback/owner gates are external to automation; skip them and continue",
       "requiresRuntime": true,
       "requiresLiveTrialMutation": false,
       "requiresHumanDecision": false,
@@ -4961,17 +4997,17 @@
     {
       "taskId": "RWO-11_ROLLBACK_OWNER_DECISION",
       "lane": "human_pending",
-      "status": "blocked_human_decision",
+      "status": "superseded",
       "workOrder": "RWO-11/RWO-09",
-      "summary": "Actual operator rollback rehearsal or final owner GO/NO-GO/PENDING remains required for final release-readiness claim.",
+      "summary": "External owner/operator release-management gate; not automation work.",
       "requiresRuntime": false,
       "requiresLiveTrialMutation": false,
       "requiresHumanDecision": true,
       "requiresS3ObjectStorage": false,
       "safeToBatchWithNoLiveTasks": false,
-      "skipCondition": "no new explicit owner/operator evidence or release-candidate rollback environment input",
-      "successCriteria": "explicit sanitized rollback rehearsal evidence or final owner GO/NO-GO/PENDING is recorded",
-      "carryForwardWhenNoNewInput": "carried_forward_without_reclassification",
+      "skipCondition": "always skip for automation unless explicitly reassigned by a later user instruction",
+      "successCriteria": "not_applicable_external_release_management_gate",
+      "carryForwardWhenNoNewInput": "external_not_automation_work",
       "nextOnSkip": "RWO-06H_READONLY_MASTER_VALIDITY"
     }
   ],

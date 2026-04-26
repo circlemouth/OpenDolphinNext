@@ -4,6 +4,12 @@ RUN_ID: `20260426T145500Z`
 
 This policy reduces hourly automation stalls while preserving the Trial-only, non-S3, sanitized-evidence safety boundary.
 
+## Automation Responsibility Boundary
+
+`RWO-11/RWO-09` rollback rehearsal, final owner GO/NO-GO/PENDING, release-candidate deployment stop, paired restore, restored-target smoke, and operator acceptance are external owner/operator release-management gates. They are not tasks for this automation.
+
+Hourly automation must not select, execute, reclassify, or block on those gates. If they appear in a handoff prompt, queue item, gate matrix, or roadmap note, preserve them only as claim-boundary/non-automation context and immediately continue to the next safe task outside `RWO-11/RWO-09`.
+
 ## Problem
 
 The hourly `orca` automation can spend too much time re-reading the same human-pending blocker, especially when rollback rehearsal or final owner GO/NO-GO is still absent. That is safe, but it slows progress on independent no-live work that could unblock later Trial checks.
@@ -16,7 +22,7 @@ Automation work is split into three lanes:
 |---|---|---|---|
 | `critical_path` | Work that directly unblocks the next endpoint or release gate. | runtime readiness, read-only ORCA Trial preflight, duplicate-live checkpoint, parser/sanitizer contract. | Run first when safe and prerequisites are available. |
 | `parallel_no_live` | Work that can progress without live mutation or secrets. | docs/matrix refresh, wrapper dry-run, static guards, no-live payload prep, rejected-result investigation. | Run in the same automation run after the critical path or after a skip. |
-| `human_pending` | Work that cannot be completed by automation alone. | actual rollback rehearsal, final owner GO/NO-GO, billing mapping decision. | Check only for new explicit input; otherwise carry forward without reclassification and continue. |
+| `human_pending` | Work that cannot be completed by automation alone. | billing mapping decision, business context confirmation. `RWO-11/RWO-09` rollback/owner gates are external and must not be selected. | Check only when the item is inside automation scope and new explicit input exists; otherwise carry forward or mark external, then continue. |
 
 ## Machine-Readable Queue
 
@@ -45,13 +51,25 @@ Workers must process the queue from top to bottom, selecting the first item that
 
 ## Stale Human Blockers
 
-For `human_pending` items, do not repeat the same long-form classification every hour. The worker should:
+For `human_pending` items, do not repeat the same long-form classification every hour. `RWO-11/RWO-09` rollback/owner decision items are special: the worker should mark them as external to automation and continue without checking for input. For other in-scope human-pending items, the worker should:
 
 1. Check whether a new explicit owner/operator evidence file, state entry, or prompt text exists.
 2. If no new input exists, record `carried_forward_without_reclassification`.
 3. Continue immediately to the next non-human queue item.
 
 This does not weaken the blocker. It only prevents hourly runs from spending most of the budget proving the same absence again.
+
+## Official ORCA Specification Research
+
+When a queue item is blocked by unclear ORCA API semantics, request numbers, class codes, row ordering, master lookup behavior, or endpoint-specific business success criteria, the next safe automation action should be no-live specification research before task selection or live preparation.
+
+Research must prefer ORCA official sources first:
+
+- `https://www.orca.med.or.jp/receipt/tec/api/overview.html`
+- endpoint pages under `https://www.orca.med.or.jp/receipt/users/tec/api/`
+- official endpoint pages discovered from the API overview, such as `medicalmod.html`, `medicationgetv2.html`, or `diseasemod2.html`
+
+Public/non-official sources may be used only as secondary leads and must be confirmed against official ORCA documentation before they influence endpoint semantics. Record sanitized research evidence only: checked URL, checked date, endpoint/request class, relevant request number/class/code mapping, derived no-live next action, and claim boundary. Research may justify payload drafting, parser/sanitizer tests, wrapper dry-runs, read-only probes, or queue reordering, but it is not live Trial acceptance evidence and does not authorize live mutation by itself.
 
 ## Endpoint Packets
 
@@ -79,6 +97,7 @@ Good same-run batches:
 
 - RWO-06H read-only master-validity preflight plus RWO-06G no-live first-visit plan.
 - RWO-06F disease/monthly precondition plan plus RWO-07 operation matrix update.
+- RWO-06K official-spec research plus no-live payload/contract refinement.
 - RWO-09 static/package refresh plus RWO-10 production-ORCA non-claim docs.
 
 Forbidden batches:
@@ -105,4 +124,4 @@ No-live progress should be recorded with specific result labels such as `preflig
 
 ## Current Priority
 
-The current first executable item is `RWO-06H_READONLY_MASTER_VALIDITY`: run sanitized runtime readiness plus read-only `medicationgetv2` / `masterlastupdatev3` checks for `injectionOrder/310` v2, then only if that passes proceed to duplicate-live checkpoint preflight. Do not run the live mutation until those preconditions are recorded.
+Do not treat `RWO-11/RWO-09` rollback/owner decision as the current executable item. The current executable item should be the first safe non-RWO-11/RWO-09 queue or roadmap task. If that task depends on unclear ORCA semantics, perform official ORCA specification research first, then proceed with no-live wrapper/parser/payload work. Do not run a live mutation until endpoint packet preconditions are recorded.

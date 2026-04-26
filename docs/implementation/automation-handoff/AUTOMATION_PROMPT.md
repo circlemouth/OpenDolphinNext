@@ -21,11 +21,24 @@ Primary entrypoints:
 Standing owner approval:
 The owner grants standing approval for this automation to proceed through the roadmap toward Trial-backed release readiness, including live verification against the ORCA Trial server when the current Work Order or active handoff prompt requires it.
 
+Automation responsibility boundary:
+- This automation does not own or execute `RWO-11/RWO-09` rollback rehearsal, final owner GO/NO-GO/PENDING decision capture, release-candidate deployment stop, paired restore, restored-target smoke, or operator acceptance work.
+- Treat rollback rehearsal and final owner decision as external owner/operator release-management gates, not as automation tasks. Do not select them, do not block on them, do not repeatedly reclassify them, and do not spend hourly automation time checking for their input unless a later explicit user instruction reassigns them to automation.
+- If roadmap or handoff documents mention `RWO-11/RWO-09`, preserve the claim boundary as an external non-automation gate and immediately continue to the next safe non-RWO-11/RWO-09 task.
+- The automation worker is responsible for all other safe roadmap-scoped work that can progress without production ORCA, S3/object-storage setup, raw artifacts, credentials, or human release-management decisions.
+
 ORCA connection scope:
 - The only ORCA connection target for this automation is WebORCA / ORCA Trial.
 - Production ORCA execution is not part of this automation or roadmap.
 - Do not create, select, or block on a Work Order whose required next action is production ORCA connectivity, production ORCA credentials, or production ORCA functional execution.
 - If a document still refers to production ORCA readiness, treat it as an out-of-scope claim boundary, not as a task to execute.
+
+ORCA official specification research policy:
+- If the next roadmap task is blocked or ambiguous because ORCA API semantics, request numbers, class codes, row ordering, master lookup behavior, business success criteria, or sample payload structure are unclear, perform web research before selecting a live or mutation-adjacent task.
+- Prefer ORCA official sources first, especially `https://www.orca.med.or.jp/receipt/tec/api/overview.html` and endpoint pages under `https://www.orca.med.or.jp/receipt/users/tec/api/`, such as `medicalmod.html`, `medicationgetv2.html`, `diseasemod2.html`, and endpoint-specific pages discovered from the official API overview.
+- Public/non-official sources may be used only as secondary leads. Do not rely on them for endpoint semantics unless the finding is confirmed against ORCA official documentation or recorded as unconfirmed.
+- Record only sanitized research evidence: source URL, retrieved/checked date, endpoint/request-class identity, relevant request number/class/code mapping, derived no-live next action, and claim boundary. Do not copy raw patient/insurance data, credentials, raw ORCA bodies, or credential-bearing URLs.
+- Treat official-source research as no-live evidence only. It may justify payload drafting, parser/sanitizer tests, wrapper dry-runs, read-only probes, or queue reordering, but it never authorizes live Trial mutation by itself.
 
 S3 / object storage scope:
 - Tasks that require S3, MinIO, object-storage credentials, attachment-storage S3 configuration, or PHR export S3 configuration are out of scope for this automation.
@@ -79,30 +92,32 @@ Diagnostic Artifact Exception:
 Every run:
 1. Inspect current branch, HEAD, git status, and registered worktrees.
 2. Do not revert or overwrite unrelated user/worker changes.
-3. Check for active handoff prompts before selecting roadmap work.
+3. Check for active handoff prompts before selecting roadmap work, but skip any handoff whose only required action is `RWO-11/RWO-09` rollback/owner decision because it is outside this automation's responsibility boundary.
 4. Handoff priority order:
    a. docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md
    b. newest docs/implementation/*/NEXT_WORKER_PROMPT.md
    c. roadmap Work Orders
-5. If an active handoff prompt exists, treat it as the highest-priority task.
+5. If an active handoff prompt exists and is not excluded by the responsibility boundary, treat it as the highest-priority task.
 6. Read `HANDOFF_STATE.json.nextExecutableQueue` and `AUTOMATION_THROUGHPUT_POLICY.md`.
-7. If the active handoff is a human-pending blocker and no new explicit owner/operator input exists, carry it forward without reclassification and immediately select the first safe executable queue item.
+7. If the active handoff is a human-pending blocker outside automation scope, mark it as external/out-of-scope for automation without reclassification and immediately select the first safe executable queue item.
 8. If no active handoff exists or the active handoff has no executable repo-local action, select the next unblocked item from `nextExecutableQueue`, then from the roadmap.
-9. Execute the next safe step autonomously.
-10. If a repo-local error blocks progress and is fixable, fix it, run relevant verification, and document the result.
-11. If the next required step is ORCA Trial live verification, proceed under standing approval only if ORCA Trial credentials/config are already available through the approved runtime path and the endpoint packet is complete.
-12. If only approved local-only dev/Trial runtime secret/config values are missing, generate and store them according to the Local-only dev/Trial runtime secret/config policy, then continue toward local runtime startup.
-13. If other non-S3 credentials/config are absent due to the local environment, skip that task as `skipped_environment_unavailable_missing_runtime_secret_or_config`; do not ask for or print values.
-14. If S3/MinIO/object-storage credentials/config are required, skip the current task as `skipped_s3_required_out_of_scope` and continue with the next non-S3 Work Order.
-15. Continue within the same run after every completed task, skipped out-of-scope task, or skipped environment-unavailable task. Stop only when no safe unblocked task remains, the run time budget is exhausted, or a non-skippable safety stop condition is reached.
-16. If any tracked source/doc/evidence file or new repo evidence artifact is changed, run the relevant verification, then commit the current roadmap/handoff-scoped changes before reporting. Do not commit local runtime secret files, raw ORCA bodies, diagnostic HAR/trace/video/screenshot/raw network artifacts, or unrelated user changes.
+9. If ORCA endpoint semantics or success criteria for the candidate task are unclear, first perform ORCA official specification research under the research policy above, record sanitized no-live evidence, and use that evidence to select or refine the next safe task.
+10. Execute the next safe step autonomously.
+11. If a repo-local error blocks progress and is fixable, fix it, run relevant verification, and document the result.
+12. If the next required step is ORCA Trial live verification, proceed under standing approval only if ORCA Trial credentials/config are already available through the approved runtime path and the endpoint packet is complete.
+13. If only approved local-only dev/Trial runtime secret/config values are missing, generate and store them according to the Local-only dev/Trial runtime secret/config policy, then continue toward local runtime startup.
+14. If other non-S3 credentials/config are absent due to the local environment, skip that task as `skipped_environment_unavailable_missing_runtime_secret_or_config`; do not ask for or print values.
+15. If S3/MinIO/object-storage credentials/config are required, skip the current task as `skipped_s3_required_out_of_scope` and continue with the next non-S3 Work Order.
+16. Continue within the same run after every completed task, skipped out-of-scope task, or skipped environment-unavailable task. Stop only when no safe unblocked task remains, the run time budget is exhausted, or a non-skippable safety stop condition is reached.
+17. If any tracked source/doc/evidence file or new repo evidence artifact is changed, run the relevant verification, then commit the current roadmap/handoff-scoped changes before reporting. Do not commit local runtime secret files, raw ORCA bodies, diagnostic HAR/trace/video/screenshot/raw network artifacts, or unrelated user changes.
 
 Executable queue policy:
 - `HANDOFF_STATE.json.nextExecutableQueue` is the machine-readable queue for hourly throughput.
 - Process queue items from top to bottom, selecting the first currently safe item.
 - After completing or skipping an item, continue to the next independent safe item within the same run.
 - `critical_path` items run before `parallel_no_live` items when both are available.
-- `human_pending` items are checked only for new explicit input; if none exists, carry them forward as `carried_forward_without_reclassification` and continue.
+- `human_pending` items for `RWO-11/RWO-09` rollback/owner decision are outside automation scope and must be skipped as external release-management gates; continue to the next non-human, non-RWO-11/RWO-09 item.
+- Other `human_pending` items are checked only when they are within automation scope and new explicit input exists; otherwise carry them forward as `carried_forward_without_reclassification` and continue.
 - Live Trial mutation remains sequential and main-worker controlled. No-live/read-only/docs/static items may be batched when scopes are independent and evidence paths do not overlap.
 - Before any live Trial mutation, require a complete endpoint packet with endpoint/request class, target, payload SHA, duplicate-live checkpoint, no-live wrapper result, parser/sanitizer result, runtime readiness, endpoint-specific success criteria, stop conditions, and sanitized evidence policy.
 
@@ -121,9 +136,10 @@ Current-run exhaustion policy:
 - For each skipped environment task, write a sanitized skip record with task id, reason, evidence checked, credentialsCaptured=false, rawArtifactsCaptured=false, and recommended next independent task.
 - After a skip, immediately select the next safe non-skipped Work Order.
 - Prefer docs, static analysis, unit/component tests, guard scripts, wrapper dry-runs, sanitizer/parser contract tests, package metadata checks, claim-boundary updates, and risk/gate matrix updates that do not require production ORCA, S3/object storage, unavailable secrets, or committing raw diagnostic artifacts.
+- Prefer ORCA official specification research when endpoint semantics are unknown; use it to choose the next no-live wrapper/parser/payload task instead of guessing or repeating a rejected Trial request.
 - If browser e2e/fullflow is blocked only because the current harness would create screenshots/HAR/traces/videos/raw-network artifacts, run it only under the Diagnostic Artifact Exception; otherwise create or update the harness-hardening blocker and continue to independent work.
 - If live Trial ORCA is blocked only because backend startup unnecessarily requires object-storage configuration, prefer implementing or documenting an explicit object-storage-free dev/Trial runtime profile before skipping the endpoint again. This must not use local dummy S3/MinIO or fake credentials.
-- If a Work Order requires a human business decision outside standing Trial approval, record it as pending human decision and continue to independent work that does not depend on that decision.
+- If a Work Order requires a human business decision outside standing Trial approval, record it as outside automation scope or pending human decision, then continue to independent work that does not depend on that decision. For `RWO-11/RWO-09` rollback/owner decision specifically, do not select it as automation work.
 
 Handoff prompt rules:
 - Follow the handoff prompt's scope, allowed actions, forbidden actions, evidence requirements, completion criteria, and stop conditions.
@@ -136,6 +152,7 @@ Live ORCA Trial policy:
 - ORCA Trial live verification is permitted when required by the current Work Order or active handoff prompt.
 - Use only existing repo scripts, documented wrappers, or narrowly reviewed repo-local commands.
 - If a required safe wrapper/action is missing, do not repeat a blocked path. First define, implement, or document a safe sanitized wrapper/action with local tests.
+- If endpoint semantics are unclear, do not proceed to live. First verify the semantics against ORCA official documentation and record a sanitized no-live research/preflight artifact.
 - Prefer one endpoint, one target, and one request class at a time.
 - For every future roadmap/handoff-scoped live Trial retry task, the owner grants standing approval for up to three fix-and-retry cycles by each subsequent worker, as long as each cycle keeps the same exact approved endpoint/target/request class/payload identity for that task and uses the safe wrapper/evidence mode.
 - A fix-and-retry cycle is: one live attempt, then if it fails, no-live investigation, a concrete changed precondition or repo-local fix, focused no-live verification, sanitized preflight, and only then the next live retry.
@@ -186,7 +203,7 @@ Work progression:
 - Skip any S3/MinIO/object-storage-dependent Work Order as out of scope; continue with Trial, browser, security, CI, packaging, rollback, and owner sign-off gates that do not require S3/MinIO/object-storage configuration.
 - Implement or verify an explicit object-storage-free dev/Trial runtime profile when an active handoff requests it. In that profile, object-storage-dependent features must fail closed and must not be claimed ready.
 - Skip any environment-unavailable Work Order that cannot proceed in the current runtime, then continue with the next independent safe Work Order in the same run.
-- Create or update docs, matrices, risk registers, command logs, sanitized summaries, review packages, and sidecars after each completed Work Order.
+- Create or update docs, matrices, risk registers, command logs, sanitized summaries, review packages, and sidecars after each completed Work Order, excluding external release-management gates owned by `RWO-11/RWO-09`.
 - Do not overclaim. Keep allowed/prohibited claims updated.
 
 Each run must open an inbox item with:
@@ -213,5 +230,5 @@ Stop conditions:
 - target/scope ambiguity
 - unsafe repo state
 - repeated failing repair loop without new evidence
-- current Work Order requires a human business decision outside standing Trial approval and no independent safe task remains
+- current Work Order requires a human business decision outside standing Trial approval and no independent safe task remains, except that `RWO-11/RWO-09` rollback/owner decision must be treated as outside automation scope rather than a selected automation Work Order
 ```

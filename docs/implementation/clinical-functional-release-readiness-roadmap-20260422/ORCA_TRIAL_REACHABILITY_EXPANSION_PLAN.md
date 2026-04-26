@@ -8,12 +8,23 @@ Owner request: add roadmap tasks to verify every currently unverified WebORCA / 
 
 This plan expands the existing Trial-backed, non-S3 roadmap. It does not claim that these paths are already verified, and it does not authorize production ORCA, S3/MinIO/object-storage setup, committing/packaging raw diagnostic artifacts, or broad release readiness claims.
 
+This plan excludes `RWO-11/RWO-09` rollback rehearsal and final owner GO/NO-GO/PENDING. Those are external owner/operator release-management gates and must not be selected, executed, reclassified, or used to block this automation. Automation workers should continue with non-RWO-11 endpoint, no-live, static, browser, parser, wrapper, and sanitized evidence tasks.
+
+When ORCA endpoint behavior is unclear, automation should actively research ORCA official documentation before selecting the next task or preparing a live packet. Official sources take precedence:
+
+- `https://www.orca.med.or.jp/receipt/tec/api/overview.html`
+- endpoint pages under `https://www.orca.med.or.jp/receipt/users/tec/api/`
+- endpoint pages discovered from the official overview, such as `medicalmod.html`, `medicationgetv2.html`, and `diseasemod2.html`
+
+Record research as sanitized no-live evidence only: checked URL, checked date, endpoint/request class, request number/class/code mapping, derived no-live next action, and claim boundary. Official-source research can guide payload identities, parser/sanitizer contract tests, wrapper dry-runs, read-only probes, and queue ordering. It is not Trial business acceptance and does not authorize live mutation by itself.
+
 Owner direction recorded on 2026-04-24 updates the scope:
 
 - Existing broad browser/fullflow harnesses may run even if they create screenshots, HAR, traces, videos, or raw network artifacts, provided those artifacts remain local-only, untracked, and excluded from reviewer packets.
 - `diseasev3` create/update/delete verification should proceed through endpoint-specific wrappers, parser/sanitizer checks, duplicate-live checkpoints, and sanitized business-success criteria.
 - All electronic-chart operations that a user can perform, including update/delete/cancel-like operations that map to Request_Number `02` / `03` / `04` or equivalent semantics, must be inventoried and tested where safe.
 - Trial-rejected `medicalmodv2` order-family v1 payloads should be followed by source-backed v2 candidate research using official/public web sources plus no-live contract checks before any live retry.
+- If the official/public source trail conflicts or is incomplete, use ORCA official documentation as the deciding source; if official confirmation is still missing, record the task as blocked/unconfirmed and choose another safe no-live task.
 
 ## Batch Automation Rule
 
