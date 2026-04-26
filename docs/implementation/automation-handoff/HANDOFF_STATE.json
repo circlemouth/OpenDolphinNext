@@ -30,7 +30,64 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-25T22:21:00Z",
+  "lastUpdated": "2026-04-26T11:22:13Z",
+  "latestRwo06HInjectionV2ContractPreflight": {
+    "runId": "20260426T112213Z",
+    "workOrder": "RWO-06H",
+    "result": "RWO06H_INJECTION_V2_NO_LIVE_CONTRACT_PREFLIGHT_PASS",
+    "branch": "master",
+    "head": "6b315ac4f3a4e760eb7d027da042f0069b3bab92",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
+      "statusAfterRun": "left_pending_because_no_new_owner_or_operator_input"
+    },
+    "evidence": "docs/implementation/rwo06h-injection-v2-contract-preflight-20260426T112213Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06h-injection-v2-contract-preflight-20260426T112213Z/summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "injection",
+      "entity": "injectionOrder",
+      "claim007Class": "310",
+      "candidateCode": "130000510",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v2.json",
+      "sha256": "1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300",
+      "requestNumber": "01",
+      "classCode": "01",
+      "duplicateLiveCheckpoint": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300"
+    },
+    "noLiveContractPreflight": {
+      "result": "pass",
+      "roles": [
+        "procedure",
+        "main",
+        "material",
+        "comment"
+      ],
+      "requestNumber01Only": true,
+      "classCode01Only": true,
+      "requestNumber02To04Forbidden": true,
+      "masterRuntimeLookupExecuted": false
+    },
+    "checks": {
+      "phase4Medicalmodv2SafeEvidence": "pass_23_tests",
+      "wrapperDryRun": "pass_no_live",
+      "webGuardPretest": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "target": "00001",
+      "requestClass": "medicalmodv2",
+      "businessSuccessClassification": "not_applicable_no_live_contract_preflight_only",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Injection v2 payload contract and safe wrapper dry-run passed no-live checks, but this is not Trial business acceptance, broad injection coverage, all-order readiness, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+    "recommendedNextTask": "Run sanitized runtime readiness plus duplicate-live checkpoint preflight for injectionOrder/310 v2 before any single live Trial attempt; do not repeat rejected v1.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "latestOrderFamilyV2CandidateResearch": {
     "runId": "20260425T215740Z",
     "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K",

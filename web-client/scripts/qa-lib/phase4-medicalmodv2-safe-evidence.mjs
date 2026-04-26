@@ -262,6 +262,79 @@ export const summarizePayload = (payload) => {
   };
 };
 
+const codeLooksLike = (code, pattern) => pattern.test(normalizeCode(code));
+
+export const summarizeInjectionOrderNoLiveContract = (payload) => {
+  const summary = summarizePayload(payload);
+  const groups = Array.isArray(payload?.medicalInformation) ? payload.medicalInformation : [];
+  const injectionGroups = groups.filter(
+    (entry) => normalizeCode(entry?.entity) === 'injectionOrder' && normalizeCode(entry?.medicalClass) === '310',
+  );
+  const medications = injectionGroups.flatMap((entry) => (Array.isArray(entry?.medications) ? entry.medications : []));
+  const roles = medications.map((row) => normalizeCode(row?.rowRole));
+  const codeByRole = Object.fromEntries(
+    medications
+      .map((row) => [normalizeCode(row?.rowRole), normalizeCode(row?.code)])
+      .filter(([role, code]) => role && code),
+  );
+  const blockers = [];
+
+  if (summary.requestNumber !== PHASE4_ALLOWED_REQUEST_NUMBER) {
+    blockers.push(`requestNumber must be ${PHASE4_ALLOWED_REQUEST_NUMBER}`);
+  }
+  if (summary.classCode !== PHASE4_ALLOWED_CLASS_CODE) {
+    blockers.push(`classCode must be ${PHASE4_ALLOWED_CLASS_CODE}`);
+  }
+  if (injectionGroups.length !== 1) {
+    blockers.push('exactly one injectionOrder class 310 group is required');
+  }
+  if (roles.join(',') !== 'procedure,main,material,comment') {
+    blockers.push('injection rows must be ordered procedure, main, material, comment');
+  }
+  if (!codeLooksLike(codeByRole.procedure, /^130\d+$/)) {
+    blockers.push('procedure row must use a class-310 injection procedure code shape');
+  }
+  if (!codeLooksLike(codeByRole.main, /^62\d+$/)) {
+    blockers.push('main row must use a medication code shape');
+  }
+  if (!codeLooksLike(codeByRole.material, /^7\d+$/)) {
+    blockers.push('material row must use a material code shape');
+  }
+  if (!codeLooksLike(codeByRole.comment, /^(00|8)\d+$/)) {
+    blockers.push('comment row must use a comment code shape');
+  }
+  const numberedClinicalRows = medications.filter((row) => row?.rowRole !== 'comment');
+  if (numberedClinicalRows.some((row) => !normalizeCode(row?.number))) {
+    blockers.push('procedure, main, and material rows require medication numbers');
+  }
+  const commentRows = medications.filter((row) => row?.rowRole === 'comment');
+  if (commentRows.some((row) => normalizeCode(row?.number))) {
+    blockers.push('comment rows must not carry medication numbers');
+  }
+
+  return {
+    ok: blockers.length === 0,
+    blockers,
+    rowCount: medications.length,
+    roles,
+    codeShape: {
+      procedureInjectionFee: codeLooksLike(codeByRole.procedure, /^130\d+$/),
+      medication: codeLooksLike(codeByRole.main, /^62\d+$/),
+      material: codeLooksLike(codeByRole.material, /^7\d+$/),
+      comment: codeLooksLike(codeByRole.comment, /^(00|8)\d+$/),
+    },
+    requestSemantics: {
+      requestNumber01Only: summary.requestNumber === PHASE4_ALLOWED_REQUEST_NUMBER,
+      classCode01Only: summary.classCode === PHASE4_ALLOWED_CLASS_CODE,
+      requestNumber02To04Forbidden: true,
+    },
+    rawPayloadStored: false,
+    rawPatientOrInsuranceDetailStored: false,
+    masterRuntimeLookupExecuted: false,
+    liveTrialAction: 'not_run',
+  };
+};
+
 export const validatePhase4Payload = ({ payload, payloadSha256, expectedPayloadSha256 = '' }) => {
   const summary = summarizePayload(payload);
   const blockers = [];

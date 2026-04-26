@@ -198,6 +198,7 @@ Checkpoint:
 - The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
 - Do not repeat the v1 checkpoint. Use web-researched official/public sources and local no-live contract checks to propose a justified injection v2 candidate before any live retry.
 - RUN_ID `20260425T030245Z` added source-backed v2 payload `medicalmodv2_injection_trial_reachability_v2.json`, SHA-256 `1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300`, using procedure code `130000510` plus paired drug/material/comment rows. The safe wrapper dry-run and focused contract test passed with no live ORCA execution.
+- RUN_ID `20260426T112213Z` added a focused no-live injection v2 contract preflight for the same payload identity. It verifies the explicit row-role order `procedure`, `main`, `material`, `comment`, code-shape classes, Request_Number `01`, classCode `01`, and Request_Number `02` / `03` / `04` exclusion, then reruns the safe wrapper dry-run with sanitized evidence only. No Trial live request or runtime master lookup was executed; live progression still requires runtime readiness, duplicate-live checkpoint preflight, and endpoint-specific sanitized business-success criteria.
 
 ### RWO-06I: Surgery Trial Reachability
 

@@ -12,6 +12,7 @@ import {
   classifyPhase4BusinessResult,
   parsePhase4SafeArgs,
   sanitizePhase4Response,
+  summarizeInjectionOrderNoLiveContract,
   summarizeRuntimeReadiness,
   validatePhase4Payload,
   validatePhase4SafeCommand,
@@ -277,6 +278,40 @@ describe('phase4 medicalmodv2 safe evidence', () => {
         `${item.checkpointNamespace}:medicalmodv2:${item.workflowId}:target-00001:request-01:class-01:payload-sha256-${item.sha256}`,
       );
     }
+  });
+
+  it('classifies the injection v2 payload row roles and code shapes before live ORCA', () => {
+    const payload = JSON.parse(fs.readFileSync(INJECTION_V2_PAYLOAD, 'utf8'));
+    const result = summarizeInjectionOrderNoLiveContract(payload);
+
+    expect(result.ok).toBe(true);
+    expect(result.blockers).toEqual([]);
+    expect(result.rowCount).toBe(4);
+    expect(result.roles).toEqual(['procedure', 'main', 'material', 'comment']);
+    expect(result.codeShape).toEqual({
+      procedureInjectionFee: true,
+      medication: true,
+      material: true,
+      comment: true,
+    });
+    expect(result.requestSemantics).toEqual({
+      requestNumber01Only: true,
+      classCode01Only: true,
+      requestNumber02To04Forbidden: true,
+    });
+    expect(result.masterRuntimeLookupExecuted).toBe(false);
+    expect(result.liveTrialAction).toBe('not_run');
+    expect(result.rawPayloadStored).toBe(false);
+    expect(result.rawPatientOrInsuranceDetailStored).toBe(false);
+  });
+
+  it('rejects injection payloads without an explicit procedure row before live ORCA', () => {
+    const payload = JSON.parse(fs.readFileSync(INJECTION_PAYLOAD, 'utf8'));
+    const result = summarizeInjectionOrderNoLiveContract(payload);
+
+    expect(result.ok).toBe(false);
+    expect(result.blockers).toContain('injection rows must be ordered procedure, main, material, comment');
+    expect(result.blockers).toContain('procedure row must use a class-310 injection procedure code shape');
   });
 
   it('accepts the representative injection endpoint payload identity', () => {
