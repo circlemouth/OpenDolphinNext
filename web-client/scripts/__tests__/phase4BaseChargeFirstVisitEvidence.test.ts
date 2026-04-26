@@ -75,7 +75,7 @@ describe('phase4 base-charge first-visit read-only evidence', () => {
     expect(xml).not.toContain('Request_Number>01');
   });
 
-  it('classifies apiResult=60 as first-visit-compatible read-only precondition only', () => {
+  it('does not promote apiResult=60 no-existing-acceptance diagnostics to first-visit compatibility', () => {
     const result = sanitizeAcceptmodReadonlyResult({
       httpStatus: 200,
       xml: '<data><acceptres><Api_Result>60</Api_Result><Request_Number>00</Request_Number></acceptres></data>',
@@ -83,9 +83,31 @@ describe('phase4 base-charge first-visit read-only evidence', () => {
 
     expect(result.httpStatusClass).toBe('2xx');
     expect(result.apiResultClass).toBe('no_existing_acceptance');
-    expect(result.classification).toBe('first_visit_compatible_no_existing_acceptance');
-    expect(result.firstVisitCompatible).toBe(true);
+    expect(result.classification).toBe('no_active_acceptance_not_first_visit_compatible');
+    expect(result.firstVisitCompatible).toBe(false);
     expect(result.mutationSuccess).toBe(false);
+  });
+
+  it('requires active acceptance plus consultation-fee first-visit fields for compatibility', () => {
+    const activeWithoutFee = sanitizeAcceptmodReadonlyResult({
+      httpStatus: 200,
+      xml:
+        '<data><acceptres><Api_Result>00</Api_Result><Request_Number>00</Request_Number>' +
+        '<Acceptance_Id>A-1</Acceptance_Id></acceptres></data>',
+    });
+    expect(activeWithoutFee.classification).toBe('active_acceptance_missing_consultation_fee_first_visit_fields');
+    expect(activeWithoutFee.firstVisitCompatible).toBe(false);
+
+    const activeWithFee = sanitizeAcceptmodReadonlyResult({
+      httpStatus: 200,
+      xml:
+        '<data><acceptres><Api_Result>00</Api_Result><Request_Number>00</Request_Number>' +
+        '<Acceptance_Id>A-1</Acceptance_Id><Medical_Info><Medication_Code>111000110</Medication_Code></Medical_Info></acceptres></data>',
+    });
+    expect(activeWithFee.classification).toBe('active_acceptance_first_visit_consultation_fee_compatible');
+    expect(activeWithFee.firstVisitCompatible).toBe(true);
+    expect(activeWithFee.mutationSuccess).toBe(false);
+    expect(JSON.stringify(activeWithFee)).not.toContain('A-1');
   });
 
   it('does not promote existing acceptance or HTTP 200 to compatibility', () => {
@@ -96,7 +118,7 @@ describe('phase4 base-charge first-visit read-only evidence', () => {
         '<Acceptance_Id>A-1</Acceptance_Id></acceptres></data>',
     });
 
-    expect(result.classification).toBe('existing_acceptance_not_first_visit_compatible');
+    expect(result.classification).toBe('active_acceptance_missing_consultation_fee_first_visit_fields');
     expect(result.firstVisitCompatible).toBe(false);
     expect(result.mutationSuccess).toBe(false);
   });
@@ -128,7 +150,9 @@ describe('phase4 base-charge first-visit read-only evidence', () => {
       },
       readonlyResult: sanitizeAcceptmodReadonlyResult({
         httpStatus: 200,
-        xml: '<data><acceptres><Api_Result>60</Api_Result><Request_Number>00</Request_Number></acceptres></data>',
+        xml:
+          '<data><acceptres><Api_Result>00</Api_Result><Request_Number>00</Request_Number>' +
+          '<Acceptance_Info><Medication_Code>111000110</Medication_Code></Acceptance_Info></acceptres></data>',
       }),
     });
 

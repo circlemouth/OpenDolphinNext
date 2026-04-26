@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-26T21:21:01Z",
+  "lastUpdated": "2026-04-26T22:32:15Z",
   "latestRemainingOrcaSpecIntake": {
     "runId": "20260426T124656Z",
     "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K/RWO-07",
@@ -4490,34 +4490,31 @@
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo09NonS3StaticRefresh": {
-    "runId": "20260425T204432Z",
+    "runId": "20260426T210142Z",
     "workOrder": "RWO-09/RWO-11",
     "result": "RWO09_NON_S3_STATIC_REFRESH_PASS",
     "branch": "master",
-    "head": "86c2d18b9d56dbfdd15937de5845f04f81402c53",
+    "head": "3980669ce40d6c64e3315f15eb1665ac8e1412e7",
     "activeHandoffPrompt": {
       "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
       "statusAtStart": "active",
-      "statusAfterRun": "left_pending_and_advanced_independent_non_live_static_refresh",
-      "carriedForwardBlockerId": "final-owner-go-or-operator-rollback-rehearsal-pending"
+      "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
+      "statusAfterRun": "left_pending_and_advanced_independent_non_live_static_refresh"
     },
-    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260425T204432Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260425T204432Z/summary.sanitized.json",
-    "rollbackOwnerDecision": {
-      "newOwnerOperatorInputFound": false,
-      "rollbackRehearsalExecuted": false,
-      "classification": "pending_human_operator_decision_carried_forward"
-    },
+    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260426T210142Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260426T210142Z/summary.sanitized.json",
     "checks": {
-      "reviewerSubmissionPacketContractTests": "pass_7_tests",
-      "serverDocLinks": "pass",
       "webGuard": "pass",
+      "serverDocLinks": "pass",
+      "reviewerSubmissionPacketContractTests": "pass_7_tests",
+      "reviewPackageContractTests": "pass_25_tests",
       "serverConfigContract": "pass",
       "serverNoDirectRuntimeLookup": "pass",
       "serverNoRuntimeDdl": "pass",
       "serverPersistenceEntities": "pass",
       "serverNoGeneratedArtifacts": "pass",
-      "reviewPackageContractTests": "pass_27_tests",
+      "serverRuntimeLookupGrep": "pass_only_server_configuration_resolver_configprovider_lookup",
+      "serverFacilityIdGrep": "pass_0_hits",
       "gitDiffCheck": "pass"
     },
     "liveTrialOrca": {
@@ -4528,11 +4525,10 @@
       "businessSuccessClassification": "not_applicable_static_non_live_refresh",
       "businessAccepted": false
     },
-    "claimBoundary": "This run refreshes current-HEAD non-S3 static/package/security confidence only. It does not claim L4 fullflow success, Trial ORCA business success, production ORCA readiness, S3/object-storage readiness, attachment/PHR storage readiness, actual rollback rehearsal, final owner GO/NO-GO, or final release readiness.",
-    "recommendedNextTask": "Release owner/operator should perform rollback rehearsal with sanitized evidence or record final GO/NO-GO/PENDING; automation may continue only independent non-live roadmap work.",
+    "claimBoundary": "Current HEAD non-S3 static/package/security confidence only; no L4 fullflow success, Trial ORCA business success in this run, injection or base-charge Trial acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, final owner GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Release owner/operator should perform rollback rehearsal with sanitized evidence or record final GO/NO-GO/PENDING; automation may continue independent non-live endpoint contract/precondition work.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
-    "diagnosticArtifactsLocalOnlyUntracked": false,
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo08BDuplicateCandidateExhaustion": {
@@ -4667,7 +4663,7 @@
     {
       "taskId": "RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "skipped_environment_unavailable",
       "workOrder": "RWO-06H",
       "summary": "Select an injectable candidate identity and prove the medication row with medicationgetv2 Request_Number=02 before any injectionOrder/310 live path.",
       "activePromptDependency": "if no new rollback/owner input exists, carry human blocker forward without reclassification first",
@@ -4689,12 +4685,19 @@
       "skipCondition": "runtime unavailable, no injectable candidate selected, missing safe read-only wrapper, target drift, parser ambiguity, credential/raw-artifact risk, or row-level proof cannot be produced",
       "successCriteria": "sanitized row-level injectable medication proof exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false; no live mutation executed",
       "nextOnSuccess": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
-      "nextOnSkip": "RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR"
+      "nextOnSkip": "RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR",
+      "result": "skipped_row_level_proof_not_produced_for_checked_candidates_stop_before_live",
+      "completedRunId": "20260426T223215Z",
+      "evidence": "docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/summary.sanitized.json",
+      "candidatesChecked": [
+        "620076111",
+        "620007539"
+      ]
     },
     {
       "taskId": "RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06G",
       "summary": "Repair or tighten acceptmodv2 Request_Number=00 parser/preflight so base-charge live work requires active acceptance plus consultation-fee/first-visit-compatible fields.",
       "requiresRuntime": false,
@@ -4713,12 +4716,15 @@
       "skipCondition": "parser contract already rejects insufficient RN00 evidence or focused test target unavailable",
       "successCriteria": "sanitized parser/preflight evidence proves insufficient RN00 responses fail closed; no live mutation executed",
       "nextOnSuccess": "RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT",
-      "nextOnSkip": "RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT"
+      "nextOnSkip": "RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT",
+      "result": "parser_preflight_hardened_no_live",
+      "completedRunId": "20260426T223215Z",
+      "evidence": "docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "skipped_environment_unavailable",
       "workOrder": "RWO-08B",
       "summary": "Prepare no-live preflight for a fresh L4 fullflow target with unique active acceptance, no duplicate, and server-derived official identifiers before send.",
       "requiresRuntime": false,
@@ -4746,7 +4752,10 @@
       "skipCondition": "no fresh target or no server-derived official identifiers can be proven without live mutation/raw artifacts",
       "successCriteria": "sanitized no-live preflight evidence exists and any future diagnostic fullflow remains stopped until all preconditions pass",
       "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH",
-      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "result": "skipped_no_fresh_target_or_server_derived_official_identifiers",
+      "completedRunId": "20260426T223215Z",
+      "evidence": "docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-06H_READONLY_MASTER_VALIDITY",
@@ -5048,21 +5057,54 @@
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   },
-  "latestRwo09NonS3StaticRefresh": {
-    "runId": "20260426T210142Z",
-    "workOrder": "RWO-09/RWO-11",
-    "result": "RWO09_NON_S3_STATIC_REFRESH_PASS",
+  "latestRwo06HInjectableRowProofAndRwo06GParserPreflight": {
+    "runId": "20260426T223215Z",
+    "workOrder": "RWO-06H/RWO-06G/RWO-08B",
+    "result": "RWO06H_ROW_PROOF_BLOCKED_RWO06G_PARSER_HARDENED_RWO08B_PREFLIGHT_SKIPPED",
     "branch": "master",
-    "head": "3980669ce40d6c64e3315f15eb1665ac8e1412e7",
-    "activeHandoffPrompt": {
-      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-      "statusAtStart": "active",
-      "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
-      "statusAfterRun": "left_pending_and_advanced_independent_non_live_static_refresh"
+    "headAtStart": "d29be3180997f2f61a1277a9a3c35f6f7274a803",
+    "evidence": "docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/summary.sanitized.json",
+    "rwo06h": {
+      "taskId": "RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF",
+      "result": "readonly_injectable_row_proof_not_validated_stop_before_live",
+      "candidatesChecked": [
+        {
+          "medicationCode": "620076111",
+          "requestNumber": "02",
+          "sanitizedResult": "2xx/other_present/masterFound=false"
+        },
+        {
+          "medicationCode": "620007539",
+          "requestNumber": "02",
+          "sanitizedResult": "2xx/other_present/masterFound=false"
+        }
+      ],
+      "liveTrialMutationExecuted": false,
+      "businessSuccessClassification": "not_applicable_or_readonly_master_validity_not_validated"
     },
-    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260426T210142Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260426T210142Z/summary.sanitized.json",
+    "rwo06g": {
+      "taskId": "RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR",
+      "result": "parser_preflight_hardened_no_live",
+      "parserRequirement": "active acceptance plus consultation-fee/first-visit-compatible fields required; apiResult=60 and HTTP 2xx alone fail closed",
+      "liveTrialMutationExecuted": false,
+      "businessSuccessClassification": "not_applicable_no_live_parser_preflight_only"
+    },
+    "rwo08b": {
+      "taskId": "RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT",
+      "result": "skipped_environment_unavailable_no_fresh_target_or_server_derived_official_identifiers",
+      "diagnosticFullflowExecuted": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false,
+    "recommendedNextTask": "Run RWO-09_STATIC_PACKAGE_REFRESH or another independent no-live/static gate; do not execute injection/baseCharge/fullflow without changed preconditions and sanitized endpoint-specific preflight.",
     "checks": {
+      "phase4MasterValidityEvidence": "pass_7_tests",
+      "phase4BaseChargeFirstVisitEvidence": "pass_7_tests",
+      "focusedVitest": "pass_14_tests_with_web_guard_pretest",
       "webGuard": "pass",
       "serverDocLinks": "pass",
       "reviewerSubmissionPacketContractTests": "pass_7_tests",
@@ -5075,19 +5117,6 @@
       "serverRuntimeLookupGrep": "pass_only_server_configuration_resolver_configprovider_lookup",
       "serverFacilityIdGrep": "pass_0_hits",
       "gitDiffCheck": "pass"
-    },
-    "liveTrialOrca": {
-      "executed": false,
-      "endpoint": null,
-      "target": null,
-      "requestClass": null,
-      "businessSuccessClassification": "not_applicable_static_non_live_refresh",
-      "businessAccepted": false
-    },
-    "claimBoundary": "Current HEAD non-S3 static/package/security confidence only; no L4 fullflow success, Trial ORCA business success in this run, injection or base-charge Trial acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, final owner GO/NO-GO, or final release readiness is claimed.",
-    "recommendedNextTask": "Release owner/operator should perform rollback rehearsal with sanitized evidence or record final GO/NO-GO/PENDING; automation may continue independent non-live endpoint contract/precondition work.",
-    "credentialsCaptured": false,
-    "diagnosticArtifactsCaptured": false,
-    "rawArtifactsCommittedOrPackaged": false
+    }
   }
 }

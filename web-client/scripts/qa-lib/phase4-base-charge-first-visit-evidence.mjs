@@ -236,24 +236,31 @@ const classifyApiResult = (apiResult) => {
 };
 
 export const sanitizeAcceptmodReadonlyResult = ({ httpStatus, xml }) => {
+  const xmlText = String(xml ?? '');
   const apiResult = tagText(xml, 'Api_Result');
   const apiResultClass = classifyApiResult(apiResult);
   const acceptanceIdPresent = Boolean(tagText(xml, 'Acceptance_Id'));
-  const acceptanceInfoPresent = /<Acceptance_Info(?:\s[^>]*)?>/i.test(String(xml ?? ''));
-  const patientInfoPresent = /<Patient_Information(?:\s[^>]*)?>/i.test(String(xml ?? ''));
+  const acceptanceInfoPresent = /<Acceptance_Info(?:\s[^>]*)?>/i.test(xmlText);
+  const patientInfoPresent = /<Patient_Information(?:\s[^>]*)?>/i.test(xmlText);
+  const activeAcceptanceEvidencePresent = acceptanceIdPresent || acceptanceInfoPresent;
+  const firstVisitConsultationFeeEvidencePresent =
+    /<(?:First_Visit|FirstVisit|Initial_Consultation|InitialConsultation)(?:\s[^>]*)?>/i.test(xmlText) ||
+    /<(?:Medication_Code|Tensu_Code|Medical_Code|Code)(?:\s[^>]*)?>\s*(?:111000110|110000110)\s*<\/(?:Medication_Code|Tensu_Code|Medical_Code|Code)>/i.test(xmlText);
   const requestNumber = tagText(xml, 'Request_Number') || ACCEPTMOD_READONLY_REQUEST_NUMBER;
   const observedRequest00 = requestNumber === ACCEPTMOD_READONLY_REQUEST_NUMBER;
   const httpStatusClass = classifyHttpStatus(httpStatus);
   const firstVisitCompatible =
     httpStatusClass === '2xx' &&
     observedRequest00 &&
-    apiResultClass === 'no_existing_acceptance' &&
-    !acceptanceIdPresent &&
-    !acceptanceInfoPresent;
+    apiResultClass === 'success_zero' &&
+    activeAcceptanceEvidencePresent &&
+    firstVisitConsultationFeeEvidencePresent;
   const classification = firstVisitCompatible
-    ? 'first_visit_compatible_no_existing_acceptance'
+    ? 'active_acceptance_first_visit_consultation_fee_compatible'
     : apiResultClass === 'success_zero' && (acceptanceIdPresent || acceptanceInfoPresent)
-      ? 'existing_acceptance_not_first_visit_compatible'
+      ? 'active_acceptance_missing_consultation_fee_first_visit_fields'
+      : apiResultClass === 'no_existing_acceptance'
+        ? 'no_active_acceptance_not_first_visit_compatible'
       : apiResultClass === 'patient_not_found'
         ? 'patient_not_found'
         : apiResultClass === 'duplicate_or_already_accepted'
@@ -271,7 +278,9 @@ export const sanitizeAcceptmodReadonlyResult = ({ httpStatus, xml }) => {
     classification,
     firstVisitCompatible,
     mutationSuccess: false,
-    acceptanceEvidencePresent: acceptanceIdPresent || acceptanceInfoPresent,
+    acceptanceEvidencePresent: activeAcceptanceEvidencePresent,
+    activeAcceptanceEvidencePresent,
+    consultationFeeFirstVisitEvidencePresent: firstVisitConsultationFeeEvidencePresent,
     patientInfoPresent,
     rawOrcaBodyStored: false,
     rawPatientOrInsuranceDetailStored: false,

@@ -41,6 +41,52 @@ describe('phase4 injection master validity readonly evidence', () => {
     expect(guard.credentialsCaptured).toBe(false);
   });
 
+  it('requires a changed injectable medication candidate for read-only row proof', () => {
+    const rejectedOldCode = validateMasterValidityCommand({
+      argv: [
+        '--execute-readonly',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--payload',
+        payloadPath,
+        '--payload-sha256',
+        payloadSha256,
+        '--medication-code',
+        '620000012',
+      ],
+      env: {},
+      cwd: process.cwd(),
+    });
+
+    expect(rejectedOldCode.ok).toBe(false);
+    expect(rejectedOldCode.blockers).toContain('620000012 must not be retried unchanged as injectable medication evidence');
+
+    const acceptedChangedCode = validateMasterValidityCommand({
+      argv: [
+        '--execute-readonly',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--payload',
+        payloadPath,
+        '--payload-sha256',
+        payloadSha256,
+        '--medication-code',
+        '620076111',
+      ],
+      env: {},
+      cwd: process.cwd(),
+    });
+
+    expect(acceptedChangedCode.ok).toBe(true);
+    expect(acceptedChangedCode.payloadEvidence?.plan.candidateCodes.medication).toBe('620076111');
+    expect(acceptedChangedCode.payloadEvidence?.plan.selectedReadonlyCandidate).toEqual(expect.objectContaining({
+      requestNumber: '02',
+      code: '620076111',
+      payloadMedicationCodeOverridden: true,
+    }));
+    expect(acceptedChangedCode.payloadEvidence?.plan.readOnlyChecksRequiredBeforeLive[0].code).toBe('620076111');
+  });
+
   it('rejects raw artifact flags and ambiguous execution mode before any network use', () => {
     const guard = validateMasterValidityCommand({
       argv: [

@@ -17,7 +17,7 @@ export const MASTER_VALIDITY_READONLY_CHECKS = [
   { role: 'comment', endpoint: 'masterlastupdatev3' },
 ];
 
-const VALUE_FLAGS = new Set(['--payload', '--payload-sha256', '--artifact-dir', '--base-date']);
+const VALUE_FLAGS = new Set(['--payload', '--payload-sha256', '--artifact-dir', '--base-date', '--medication-code']);
 const BOOLEAN_FLAGS = new Set([
   '--dry-run',
   '--execute-readonly',
@@ -78,6 +78,7 @@ export const parseMasterValidityArgs = (argv) => {
       if (arg === '--payload-sha256') options.payloadSha256 = value;
       if (arg === '--artifact-dir') options.artifactDir = value;
       if (arg === '--base-date') options.baseDate = value;
+      if (arg === '--medication-code') options.medicationCode = value;
       continue;
     }
     if (BOOLEAN_FLAGS.has(arg)) {
@@ -95,6 +96,37 @@ export const parseMasterValidityArgs = (argv) => {
 const normalizeBaseDate = (value) => {
   const digits = normalize(value).replace(/[^0-9]/g, '');
   return digits.length === 8 ? digits : '';
+};
+
+const normalizeMedicationCode = (value) => normalize(value).replace(/[^0-9]/g, '');
+
+const applyReadonlyCandidateOverride = ({ plan, medicationCode }) => {
+  if (!plan || typeof plan !== 'object') return plan;
+  const normalizedMedicationCode = normalizeMedicationCode(medicationCode);
+  if (!normalizedMedicationCode) return plan;
+  const readOnlyChecksRequiredBeforeLive = Array.isArray(plan.readOnlyChecksRequiredBeforeLive)
+    ? plan.readOnlyChecksRequiredBeforeLive.map((entry) =>
+        entry?.role === 'medication' ? { ...entry, code: normalizedMedicationCode } : entry,
+      )
+    : plan.readOnlyChecksRequiredBeforeLive;
+  return {
+    ...plan,
+    candidateCodes: {
+      ...(plan.candidateCodes ?? {}),
+      medication: normalizedMedicationCode,
+    },
+    readOnlyChecksRequiredBeforeLive,
+    selectedReadonlyCandidate: {
+      role: 'medication',
+      endpoint: 'medicationgetv2',
+      requestNumber: '02',
+      code: normalizedMedicationCode,
+      source: 'command_line_readonly_candidate_override',
+      payloadMedicationCodeOverridden: plan.candidateCodes?.medication
+        ? plan.candidateCodes.medication !== normalizedMedicationCode
+        : false,
+    },
+  };
 };
 
 export const resolveTrialReadonlyConfig = (env = process.env) => {
@@ -141,6 +173,16 @@ export const validateMasterValidityCommand = ({ argv, env = process.env, cwd = p
   }
   const baseDate = normalizeBaseDate(options.baseDate ?? '2026-04-22');
   if (!baseDate) blockers.push('--base-date must resolve to YYYYMMDD');
+  const medicationCode = normalizeMedicationCode(options.medicationCode);
+  if (options.medicationCode && !/^\d{9}$/.test(medicationCode)) {
+    blockers.push('--medication-code must be a 9 digit ORCA medication code');
+  }
+  if (!options.dryRun && !medicationCode) {
+    blockers.push('--medication-code is required for readonly injectable row proof');
+  }
+  if (!options.dryRun && medicationCode === '620000012') {
+    blockers.push('620000012 must not be retried unchanged as injectable medication evidence');
+  }
 
   let payloadEvidence = null;
   try {
@@ -149,7 +191,8 @@ export const validateMasterValidityCommand = ({ argv, env = process.env, cwd = p
     if (options.payloadSha256 && loaded.sha256 !== options.payloadSha256) {
       blockers.push('payload sha256 mismatch');
     }
-    const plan = summarizeInjectionMasterValidityNoLivePlan(loaded.payload);
+    const rawPlan = summarizeInjectionMasterValidityNoLivePlan(loaded.payload);
+    const plan = applyReadonlyCandidateOverride({ plan: rawPlan, medicationCode });
     if (!plan.ok) blockers.push(...plan.blockers);
     payloadEvidence = {
       sha256: loaded.sha256,
