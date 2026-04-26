@@ -70,6 +70,8 @@ RUN_ID: `20260422T134401Z`
 | `docs/implementation/unified-phase4-execution-wo8-20260422/PHASE4_BUSINESS_SUCCESS_ASSESSMENT.sanitized.md` | WO-8 business success not assessed because no live action. |
 | `docs/implementation/unified-phase4-execution-wo8-20260422/final-summary.sanitized.md` | WO-8 sanitized summary. |
 | `docs/implementation/unified-phase4-execution-wo8-20260422/final-summary.sanitized.json` | WO-8 machine-readable summary. |
+| `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md` | Existing source-backed no-live order-family candidate research. |
+| `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/orca-trial-remaining-spec-intake-20260426T124656Z.md` | Sanitized intake of remaining ORCA Trial spec findings, operation mappings, no-live priorities, and live stop conditions. |
 | `docs/runbooks/release-validation.md` | Release validation gate source. |
 | `docs/managerdocs/README.md` | Manager docs index. |
 | `docs/managerdocs/01_current_state_and_decision_rules.md` | Current state and decision rules. |
@@ -82,4 +84,3 @@ RUN_ID: `20260422T134401Z`
 | Expected path | Status | Conservative handling |
 |---|---|---|
 | `docs/implementation/unified-clinical-wave1-batch1-wo3-20260421/CWP01_KARTE_ORDER_PERSISTENCE_REPORT.md` | missing/not_found | Do not infer content under this filename. Use `CWP01_INTEGRATION_GATE_REPORT.md` only as the available CWP-01 equivalent evidence source. Final verdict uses the missing-input variant. |
-

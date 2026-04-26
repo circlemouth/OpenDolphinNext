@@ -40,6 +40,7 @@ This roadmap does not claim attachment storage, PHR export storage, S3 persisten
 - [REMAINING_WORK_BREAKDOWN.md](REMAINING_WORK_BREAKDOWN.md)
 - [WORKPLAN_TO_RELEASE.md](WORKPLAN_TO_RELEASE.md)
 - [order-family-v2-candidate-research-20260425T215740Z.md](order-family-v2-candidate-research-20260425T215740Z.md)
+- [orca-trial-remaining-spec-intake-20260426T124656Z.md](orca-trial-remaining-spec-intake-20260426T124656Z.md)
 - [FEATURE_STATUS_LEDGER.md](FEATURE_STATUS_LEDGER.md)
 - [EVIDENCE_SOURCE_MAP.md](EVIDENCE_SOURCE_MAP.md)
 - [DECISION_LOG.md](DECISION_LOG.md)

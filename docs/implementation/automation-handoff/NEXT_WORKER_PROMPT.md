@@ -20,12 +20,15 @@ RUN_ID `20260425T215740Z` was an external research-only worker result later inta
 
 RUN_ID `20260426T112213Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input and advanced independent no-live RWO-06H work. It added focused injection v2 row-role/code-shape contract coverage plus a safe wrapper dry-run for `injectionOrder/310` payload SHA `1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300`; no live Trial request was executed.
 
+RUN_ID `20260426T124656Z` intook a sanitized external ChatGPT ORCA-spec report as automation evidence: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/orca-trial-remaining-spec-intake-20260426T124656Z.md`. It records no-live priority, operation mappings, official URL pointers, and live stop conditions. It is documentation-only evidence and does not authorize live Trial execution by itself.
+
 Sanitized evidence:
 
 - `docs/implementation/rwo11-rollback-owner-pending-20260425T182930Z/FINAL_REPORT.md`
 - `docs/implementation/rwo11-rollback-owner-pending-20260425T182930Z/summary.sanitized.json`
 - `artifacts/orca-remediation/closeout/20260425T182930Z/`
 - `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md`
+- `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/orca-trial-remaining-spec-intake-20260426T124656Z.md`
 - `docs/implementation/rwo06h-injection-v2-contract-preflight-20260426T112213Z/FINAL_REPORT.md`
 - `docs/implementation/rwo06h-injection-v2-contract-preflight-20260426T112213Z/summary.sanitized.json`
 
@@ -40,6 +43,7 @@ Current result:
 - No live Trial mutation, production ORCA, S3/MinIO/object-storage setup, diagnostic artifact capture, raw artifact packaging, actual rollback rehearsal, owner final GO, or final release readiness is claimed.
 - Latest independent non-live refresh evidence: `docs/implementation/rwo09-non-s3-static-refresh-20260425T204432Z/FINAL_REPORT.md` and `docs/implementation/rwo09-non-s3-static-refresh-20260425T204432Z/summary.sanitized.json`.
 - Latest order-family research evidence: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md`. Recommended no-live priority is `injectionOrder/310` `130000510`, then `baseChargeOrder/110` `111000110`, then `instractionChargeOrder/130` `113001810`; `radiologyOrder/700`, `surgeryOrder/500`, and `testOrder/600` require changed identities or changed preconditions before any live retry.
+- Latest remaining ORCA-spec intake: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/orca-trial-remaining-spec-intake-20260426T124656Z.md`. It adds `medicationgetv2` / `masterlastupdatev3` read-only master-validity guidance for injection, `acceptmodv2` `Request_Number=00` first-visit inquiry guidance for base-charge, wrapper/no-live stop conditions for `subjectivesv2` and `diseasev3`, and RWO-07 operation mapping.
 
 ## Goal
 

@@ -31,6 +31,45 @@
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
   "lastUpdated": "2026-04-26T11:22:13Z",
+  "latestRemainingOrcaSpecIntake": {
+    "runId": "20260426T124656Z",
+    "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K/RWO-07",
+    "result": "ORCA_TRIAL_REMAINING_SPEC_INTAKE_RECORDED_NO_LIVE",
+    "branch": "codex/automation-evidence-intake-20260426",
+    "head": "ba180009b03655f2ca3bfeb12af7fea8672456d1",
+    "evidence": "docs/implementation/clinical-functional-release-readiness-roadmap-20260422/orca-trial-remaining-spec-intake-20260426T124656Z.md",
+    "source": "sanitized ChatGPT handoff report supplied to automation",
+    "scope": "remaining ORCA Trial specification findings, official URL pointers, no-live priority, operation mappings, and live stop conditions",
+    "recommendedNoLivePriority": [
+      "RWO-06H injectionOrder/310: add medicationgetv2/masterlastupdatev3 read-only master-validity checks before any live Trial attempt",
+      "RWO-06G baseChargeOrder/110: use acceptmodv2 Request_Number=00 read-only inquiry to prove first-visit-compatible encounter state",
+      "RWO-06F instractionChargeOrder/130: prove disease/facility/monthly/department/insurance preconditions without raw patient or insurance detail",
+      "RWO-06K radiologyOrder/700: prepare changed no-live identity 002000099+170027910+820181000",
+      "RWO-06I surgeryOrder/500: prepare official-sample-style adjunct rows or separately justified fallback identity no-live first",
+      "RWO-06J testOrder/600: investigate specimen/judgment-fee/duplicate/autocalc preconditions no-live before changed retry",
+      "subjectivesv2/diseasev3/RWO-07/fullflow: wrapper and no-live preflight before live or integrated attempts"
+    ],
+    "liveStopConditions": [
+      "do_not_repeat_rejected_surgery_test_radiology_v2_identities",
+      "stop_on_subjectivesv2_http502_until_wrapper_or_input_contract_fixed",
+      "stop_on_diseasev3_http400_until_wrapper_or_input_contract_fixed",
+      "acceptmodv2_api_result_16_duplicate_is_not_success",
+      "local_other_document_fee_mapping_requires_human_billing_decision"
+    ],
+    "nextActions": [
+      "Use the intake evidence when selecting independent non-live order-family work while rollback/final owner decision remains pending.",
+      "Before any live Trial attempt, create endpoint-specific no-live wrapper evidence, duplicate-live checkpoint, sanitized preflight, and family-specific precondition proof.",
+      "Keep production ORCA, S3/object-storage, credentials, raw ORCA bodies, patient/insurance details, and diagnostic raw artifacts out of scope."
+    ],
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_intake_only",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Sanitized intake only; not live acceptance evidence, production ORCA readiness, S3/object-storage readiness, fullflow success, human billing decision, or release GO.",
+    "credentialsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "latestRwo06HInjectionV2ContractPreflight": {
     "runId": "20260426T112213Z",
     "workOrder": "RWO-06H",
