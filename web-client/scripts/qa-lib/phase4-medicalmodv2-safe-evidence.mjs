@@ -335,6 +335,93 @@ export const summarizeInjectionOrderNoLiveContract = (payload) => {
   };
 };
 
+export const summarizeInjectionMasterValidityNoLivePlan = (payload) => {
+  const contract = summarizeInjectionOrderNoLiveContract(payload);
+  const groups = Array.isArray(payload?.medicalInformation) ? payload.medicalInformation : [];
+  const injectionGroup = groups.find(
+    (entry) => normalizeCode(entry?.entity) === 'injectionOrder' && normalizeCode(entry?.medicalClass) === '310',
+  );
+  const rows = Array.isArray(injectionGroup?.medications) ? injectionGroup.medications : [];
+  const codeByRole = Object.fromEntries(
+    rows
+      .map((row) => [normalizeCode(row?.rowRole), normalizeCode(row?.code)])
+      .filter(([role, code]) => role && code),
+  );
+  const blockers = [...contract.blockers];
+
+  if (!codeByRole.procedure) blockers.push('procedure code must be present for master-validity preflight');
+  if (!codeByRole.main) blockers.push('main medication code must be present for medicationgetv2 preflight');
+  if (!codeByRole.material) blockers.push('material code must be present for master-validity preflight');
+  if (!codeByRole.comment) blockers.push('comment code must be present for master-validity preflight');
+
+  return {
+    ok: blockers.length === 0,
+    blockers,
+    candidateCodes: {
+      procedure: codeByRole.procedure || null,
+      medication: codeByRole.main || null,
+      material: codeByRole.material || null,
+      comment: codeByRole.comment || null,
+    },
+    readOnlyChecksRequiredBeforeLive: [
+      {
+        role: 'medication',
+        endpoint: 'medicationgetv2',
+        code: codeByRole.main || null,
+        expectedSanitizedEvidence: [
+          'httpStatusClass',
+          'apiResultClass',
+          'masterFoundBoolean',
+          'effectiveDateClass',
+          'evidenceHash',
+        ],
+      },
+      {
+        role: 'procedure',
+        endpoint: 'masterlastupdatev3',
+        code: codeByRole.procedure || null,
+        expectedSanitizedEvidence: [
+          'httpStatusClass',
+          'apiResultClass',
+          'masterFoundBoolean',
+          'lastUpdateDateClass',
+          'evidenceHash',
+        ],
+      },
+      {
+        role: 'material',
+        endpoint: 'masterlastupdatev3',
+        code: codeByRole.material || null,
+        expectedSanitizedEvidence: [
+          'httpStatusClass',
+          'apiResultClass',
+          'masterFoundBoolean',
+          'lastUpdateDateClass',
+          'evidenceHash',
+        ],
+      },
+      {
+        role: 'comment',
+        endpoint: 'masterlastupdatev3',
+        code: codeByRole.comment || null,
+        expectedSanitizedEvidence: [
+          'httpStatusClass',
+          'apiResultClass',
+          'masterFoundBoolean',
+          'lastUpdateDateClass',
+          'evidenceHash',
+        ],
+      },
+    ],
+    stopBeforeLiveIfAnyMasterUnverified: true,
+    runtimeMasterLookupExecuted: false,
+    liveTrialAction: 'not_run',
+    rawPayloadStored: false,
+    rawOrcaBodyStored: false,
+    rawPatientOrInsuranceDetailStored: false,
+  };
+};
+
 export const validatePhase4Payload = ({ payload, payloadSha256, expectedPayloadSha256 = '' }) => {
   const summary = summarizePayload(payload);
   const blockers = [];

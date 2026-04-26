@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-26T11:22:13Z",
+  "lastUpdated": "2026-04-26T13:29:41Z",
   "latestRemainingOrcaSpecIntake": {
     "runId": "20260426T124656Z",
     "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K/RWO-07",
@@ -128,36 +128,57 @@
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestOrderFamilyV2CandidateResearch": {
-    "runId": "20260425T215740Z",
-    "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K",
-    "result": "ORDER_FAMILY_V2_CANDIDATE_RESEARCH_INTAKEN_NO_LIVE",
-    "branch": "master",
-    "head": "ed3999aa5",
-    "evidence": "docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md",
-    "scope": "source-backed no-live candidate research for instractionChargeOrder/130, baseChargeOrder/110, injectionOrder/310, surgeryOrder/500, testOrder/600, and radiologyOrder/700",
-    "recommendedNoLivePriority": [
-      "injectionOrder/310 candidate 130000510: no-live-prepared and not live-rejected; verify medication/material master and wrapper contract before live",
-      "baseChargeOrder/110 candidate 111000110: no-live-prepared; stop live unless first-visit Trial encounter state is proven without raw patient/insurance detail",
-      "instractionChargeOrder/130 candidate 113001810: no-live-prepared; stop live unless disease/facility/monthly billing context is proven",
-      "radiologyOrder/700 changed identity 002000099+170027910+820181000: prepare no-live only; existing v2 is businessRejected",
-      "surgeryOrder/500 changed official-sample-style identity or fallback 150001010: prepare no-live only; existing bare v2 is businessRejected",
-      "testOrder/600 changed identity around 160000310 or fallback 160008010: investigate Api_Result=80 no-live before retry; unchanged v2 is forbidden"
+    "runId": "20260424T210000Z",
+    "result": "ORDER_FAMILY_V2_CANDIDATE_RESEARCH_RECORDED",
+    "evidence": "docs/implementation/rwo06-order-v2-candidate-research-20260424T210000Z/CANDIDATE_RESEARCH.md",
+    "summary": "docs/implementation/rwo06-order-v2-candidate-research-20260424T210000Z/summary.sanitized.json",
+    "sourceMode": "public_web_research_official_or_public_sources",
+    "liveTrialOrcaExecuted": false,
+    "candidatePriority": [
+      {
+        "workflow": "testOrder",
+        "classCode": "600",
+        "candidateCode": "160000310",
+        "priority": 1,
+        "nextAction": "prepare_v2_no_live_payload"
+      },
+      {
+        "workflow": "radiologyOrder",
+        "classCode": "700",
+        "candidateCode": "002000099+170027910",
+        "priority": 2,
+        "nextAction": "prepare_v2_no_live_payload_with_body_part"
+      },
+      {
+        "workflow": "surgeryOrder",
+        "classCode": "500",
+        "candidateCode": "150003110",
+        "priority": 3,
+        "nextAction": "prepare_v2_no_live_payload_with_dependencies"
+      },
+      {
+        "workflow": "baseChargeOrder",
+        "classCode": "110",
+        "candidateCode": "111000110",
+        "priority": 4,
+        "nextAction": "confirm_trial_encounter_state_then_no_live"
+      },
+      {
+        "workflow": "injectionOrder",
+        "classCode": "310",
+        "candidateCode": "130000510",
+        "priority": 5,
+        "nextAction": "identify_paired_drug_material_then_no_live"
+      },
+      {
+        "workflow": "instractionChargeOrder",
+        "classCode": "130",
+        "candidateCode": "113001810",
+        "priority": 6,
+        "nextAction": "defer_until_disease_facility_monthly_context"
+      }
     ],
-    "requiredBeforeLive": [
-      "candidate payload identity and sha",
-      "Request_Number=01/classCode=01 contract check",
-      "family-specific no-live precondition check",
-      "wrapper dry-run and parser/sanitizer tests",
-      "duplicate-live checkpoint",
-      "secret/raw-artifact scan",
-      "sanitized preflight"
-    ],
-    "liveTrialOrca": {
-      "executed": false,
-      "businessSuccessClassification": "not_applicable_research_only",
-      "businessAccepted": false
-    },
-    "claimBoundary": "Research is not live acceptance evidence, production ORCA readiness, S3/object-storage readiness, fullflow/L4 success, or release GO. It may only guide future no-live order-family candidate preparation.",
+    "claimBoundary": "Candidate research only; no v2 payload no-live verification, no live Trial retry, no broad order-family acceptance, no production ORCA, no S3/object-storage, no final release readiness.",
     "credentialsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   },
@@ -3672,61 +3693,6 @@
     "credentialsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   },
-  "latestOrderFamilyV2CandidateResearch": {
-    "runId": "20260424T210000Z",
-    "result": "ORDER_FAMILY_V2_CANDIDATE_RESEARCH_RECORDED",
-    "evidence": "docs/implementation/rwo06-order-v2-candidate-research-20260424T210000Z/CANDIDATE_RESEARCH.md",
-    "summary": "docs/implementation/rwo06-order-v2-candidate-research-20260424T210000Z/summary.sanitized.json",
-    "sourceMode": "public_web_research_official_or_public_sources",
-    "liveTrialOrcaExecuted": false,
-    "candidatePriority": [
-      {
-        "workflow": "testOrder",
-        "classCode": "600",
-        "candidateCode": "160000310",
-        "priority": 1,
-        "nextAction": "prepare_v2_no_live_payload"
-      },
-      {
-        "workflow": "radiologyOrder",
-        "classCode": "700",
-        "candidateCode": "002000099+170027910",
-        "priority": 2,
-        "nextAction": "prepare_v2_no_live_payload_with_body_part"
-      },
-      {
-        "workflow": "surgeryOrder",
-        "classCode": "500",
-        "candidateCode": "150003110",
-        "priority": 3,
-        "nextAction": "prepare_v2_no_live_payload_with_dependencies"
-      },
-      {
-        "workflow": "baseChargeOrder",
-        "classCode": "110",
-        "candidateCode": "111000110",
-        "priority": 4,
-        "nextAction": "confirm_trial_encounter_state_then_no_live"
-      },
-      {
-        "workflow": "injectionOrder",
-        "classCode": "310",
-        "candidateCode": "130000510",
-        "priority": 5,
-        "nextAction": "identify_paired_drug_material_then_no_live"
-      },
-      {
-        "workflow": "instractionChargeOrder",
-        "classCode": "130",
-        "candidateCode": "113001810",
-        "priority": 6,
-        "nextAction": "defer_until_disease_facility_monthly_context"
-      }
-    ],
-    "claimBoundary": "Candidate research only; no v2 payload no-live verification, no live Trial retry, no broad order-family acceptance, no production ORCA, no S3/object-storage, no final release readiness.",
-    "credentialsCaptured": false,
-    "rawArtifactsCommittedOrPackaged": false
-  },
   "latestRwo07OperationMatrix": {
     "runId": "20260424T214539Z",
     "workOrder": "RWO-07",
@@ -4593,6 +4559,61 @@
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": true,
     "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06HInjectionMasterValidityPreflight": {
+    "runId": "20260426T132941Z",
+    "workOrder": "RWO-06H",
+    "result": "RWO06H_INJECTION_MASTER_VALIDITY_NO_LIVE_PREFLIGHT_PLAN_PASS",
+    "branch": "master",
+    "head": "ba39aac645b3ec6fc3503143cb893d0bd2f47254",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "blockerId": "final-owner-go-or-operator-rollback-rehearsal-pending",
+      "statusAfterRun": "left_pending_because_no_new_owner_or_operator_input"
+    },
+    "evidence": "docs/implementation/rwo06h-injection-master-validity-preflight-20260426T132941Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06h-injection-master-validity-preflight-20260426T132941Z/summary.sanitized.json",
+    "masterValidityPlan": "docs/implementation/rwo06h-injection-master-validity-preflight-20260426T132941Z/master-validity-preflight-plan.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "injection",
+      "entity": "injectionOrder",
+      "claim007Class": "310",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v2.json",
+      "sha256": "1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300",
+      "requestNumber": "01",
+      "classCode": "01",
+      "duplicateLiveCheckpoint": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300"
+    },
+    "noLiveMasterValidityPlan": {
+      "result": "pass",
+      "readOnlyChecksRequiredBeforeLive": [
+        "medicationgetv2:medication",
+        "masterlastupdatev3:procedure",
+        "masterlastupdatev3:material",
+        "masterlastupdatev3:comment"
+      ],
+      "runtimeMasterLookupExecuted": false,
+      "liveTrialAction": "not_run",
+      "stopBeforeLiveIfAnyMasterUnverified": true
+    },
+    "checks": {
+      "phase4Medicalmodv2SafeEvidence": "pass_24_tests",
+      "wrapperDryRun": "pass_no_live"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "target": "00001",
+      "requestClass": "medicalmodv2",
+      "businessSuccessClassification": "not_applicable_no_live_master_validity_plan_only",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Injection v2 master-validity read-only preflight plan and wrapper dry-run passed no-live checks, but no medicationgetv2/masterlastupdatev3 runtime lookup or live Trial mutation was executed; this is not Trial business acceptance, broad injection coverage, all-order readiness, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+    "recommendedNextTask": "Run sanitized runtime readiness plus read-only medicationgetv2/masterlastupdatev3 master-validity checks and duplicate-live checkpoint preflight for injectionOrder/310 v2 before any single live Trial attempt.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   }
 }

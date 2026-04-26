@@ -12,6 +12,7 @@ import {
   classifyPhase4BusinessResult,
   parsePhase4SafeArgs,
   sanitizePhase4Response,
+  summarizeInjectionMasterValidityNoLivePlan,
   summarizeInjectionOrderNoLiveContract,
   summarizeRuntimeReadiness,
   validatePhase4Payload,
@@ -302,6 +303,48 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(result.masterRuntimeLookupExecuted).toBe(false);
     expect(result.liveTrialAction).toBe('not_run');
     expect(result.rawPayloadStored).toBe(false);
+    expect(result.rawPatientOrInsuranceDetailStored).toBe(false);
+  });
+
+  it('builds the injection v2 master-validity read-only preflight plan without live ORCA', () => {
+    const payload = JSON.parse(fs.readFileSync(INJECTION_V2_PAYLOAD, 'utf8'));
+    const result = summarizeInjectionMasterValidityNoLivePlan(payload);
+
+    expect(result.ok).toBe(true);
+    expect(result.blockers).toEqual([]);
+    expect(result.candidateCodes).toEqual({
+      procedure: '130000510',
+      medication: '620000012',
+      material: '700000031',
+      comment: '0085001',
+    });
+    expect(result.readOnlyChecksRequiredBeforeLive).toEqual([
+      expect.objectContaining({
+        role: 'medication',
+        endpoint: 'medicationgetv2',
+        code: '620000012',
+      }),
+      expect.objectContaining({
+        role: 'procedure',
+        endpoint: 'masterlastupdatev3',
+        code: '130000510',
+      }),
+      expect.objectContaining({
+        role: 'material',
+        endpoint: 'masterlastupdatev3',
+        code: '700000031',
+      }),
+      expect.objectContaining({
+        role: 'comment',
+        endpoint: 'masterlastupdatev3',
+        code: '0085001',
+      }),
+    ]);
+    expect(result.stopBeforeLiveIfAnyMasterUnverified).toBe(true);
+    expect(result.runtimeMasterLookupExecuted).toBe(false);
+    expect(result.liveTrialAction).toBe('not_run');
+    expect(result.rawPayloadStored).toBe(false);
+    expect(result.rawOrcaBodyStored).toBe(false);
     expect(result.rawPatientOrInsuranceDetailStored).toBe(false);
   });
 

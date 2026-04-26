@@ -1,0 +1,66 @@
+{
+  "ok": true,
+  "blockers": [],
+  "candidateCodes": {
+    "procedure": "130000510",
+    "medication": "620000012",
+    "material": "700000031",
+    "comment": "0085001"
+  },
+  "readOnlyChecksRequiredBeforeLive": [
+    {
+      "role": "medication",
+      "endpoint": "medicationgetv2",
+      "code": "620000012",
+      "expectedSanitizedEvidence": [
+        "httpStatusClass",
+        "apiResultClass",
+        "masterFoundBoolean",
+        "effectiveDateClass",
+        "evidenceHash"
+      ]
+    },
+    {
+      "role": "procedure",
+      "endpoint": "masterlastupdatev3",
+      "code": "130000510",
+      "expectedSanitizedEvidence": [
+        "httpStatusClass",
+        "apiResultClass",
+        "masterFoundBoolean",
+        "lastUpdateDateClass",
+        "evidenceHash"
+      ]
+    },
+    {
+      "role": "material",
+      "endpoint": "masterlastupdatev3",
+      "code": "700000031",
+      "expectedSanitizedEvidence": [
+        "httpStatusClass",
+        "apiResultClass",
+        "masterFoundBoolean",
+        "lastUpdateDateClass",
+        "evidenceHash"
+      ]
+    },
+    {
+      "role": "comment",
+      "endpoint": "masterlastupdatev3",
+      "code": "0085001",
+      "expectedSanitizedEvidence": [
+        "httpStatusClass",
+        "apiResultClass",
+        "masterFoundBoolean",
+        "lastUpdateDateClass",
+        "evidenceHash"
+      ]
+    }
+  ],
+  "stopBeforeLiveIfAnyMasterUnverified": true,
+  "runtimeMasterLookupExecuted": false,
+  "liveTrialAction": "not_run",
+  "rawPayloadStored": false,
+  "rawOrcaBodyStored": false,
+  "rawPatientOrInsuranceDetailStored": false
+}
