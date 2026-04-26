@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-26T21:01:42Z",
+  "lastUpdated": "2026-04-26T21:21:01Z",
   "latestRemainingOrcaSpecIntake": {
     "runId": "20260426T124656Z",
     "workOrder": "RWO-06F/RWO-06G/RWO-06H/RWO-06I/RWO-06J/RWO-06K/RWO-07",
@@ -68,6 +68,38 @@
     },
     "claimBoundary": "Sanitized intake only; not live acceptance evidence, production ORCA readiness, S3/object-storage readiness, fullflow success, human billing decision, or release GO.",
     "credentialsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestOrcaSpecResearchIntake": {
+    "runId": "20260426T212101Z",
+    "workOrder": "RWO-06H/RWO-06G/RWO-08B",
+    "result": "ORCA_SPEC_RESEARCH_INTAKE_RECORDED_NO_LIVE",
+    "branch": "master",
+    "evidence": "docs/implementation/orca-spec-research-intake-20260426T212101Z/README.md",
+    "summary": "docs/implementation/orca-spec-research-intake-20260426T212101Z/summary.sanitized.json",
+    "source": "user-supplied sanitized ORCA Trial Specification Research Report",
+    "scope": "sanitized secondary research for no-live/read-only automation priority and stop-before-live claim boundaries",
+    "recommendedNoLivePriority": [
+      "RWO-06H injectionOrder/310: use medicationgetv2 Request_Number=02 for injectable candidate row-level proof; do not retry oral-tablet code 620000012 unchanged; do not treat masterlastupdatev3 as row-level proof",
+      "RWO-06G baseChargeOrder/110: repair/tighten acceptmodv2 Request_Number=00 parser/preflight so active acceptance plus consultation-fee/first-visit-compatible fields are required",
+      "RWO-08B L4 fullflow: require fresh target, unique active acceptance, no duplicate, and server-derived Insurance_Combination_Number/Voucher_Number/Sequential_Number before send"
+    ],
+    "liveStopConditions": [
+      "do_not_retry_620000012_as_injectable_unchanged",
+      "do_not_treat_masterlastupdatev3_as_specific_row_level_proof",
+      "do_not_treat_http_2xx_generic_zero_or_patient_info_presence_as_business_success",
+      "do_not_run_base_charge_live_without_unique_active_acceptance_and_consultation_fee_first_visit_fields",
+      "do_not_synthesize_official_fullflow_identifiers",
+      "do_not_repeat_fullflow_candidates_00001_or_00005_unchanged"
+    ],
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_intake_only",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Sanitized secondary research only; not live Trial acceptance, production ORCA readiness, S3/object-storage readiness, patient/insurance/billing success, rollback, fullflow success, or release GO.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo06HInjectionV2ContractPreflight": {
@@ -4632,6 +4664,90 @@
     "credentialsCaptureAllowed": false
   },
   "nextExecutableQueue": [
+    {
+      "taskId": "RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF",
+      "lane": "critical_path",
+      "status": "queued",
+      "workOrder": "RWO-06H",
+      "summary": "Select an injectable candidate identity and prove the medication row with medicationgetv2 Request_Number=02 before any injectionOrder/310 live path.",
+      "activePromptDependency": "if no new rollback/owner input exists, carry human blocker forward without reclassification first",
+      "requiresRuntime": true,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "requestClass": "medicalmodv2",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v2.json",
+      "sourceEvidence": "docs/implementation/orca-spec-research-intake-20260426T212101Z/summary.sanitized.json",
+      "candidateIdentityRule": "620000012 is treated as oral-tablet evidence and must not be retried unchanged as injection; 620076111/620007539 are candidate identities only until row-level proof exists",
+      "readOnlyChecks": [
+        "medicationgetv2:Request_Number=02:injectable_candidate",
+        "row_specific_proof_required_for_procedure_material_comment_or_fail_closed",
+        "masterlastupdatev3_must_not_be_counted_as_specific_row_level_proof"
+      ],
+      "skipCondition": "runtime unavailable, no injectable candidate selected, missing safe read-only wrapper, target drift, parser ambiguity, credential/raw-artifact risk, or row-level proof cannot be produced",
+      "successCriteria": "sanitized row-level injectable medication proof exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false; no live mutation executed",
+      "nextOnSuccess": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
+      "nextOnSkip": "RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR"
+    },
+    {
+      "taskId": "RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR",
+      "lane": "parallel_no_live",
+      "status": "queued",
+      "workOrder": "RWO-06G",
+      "summary": "Repair or tighten acceptmodv2 Request_Number=00 parser/preflight so base-charge live work requires active acceptance plus consultation-fee/first-visit-compatible fields.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/orca-spec-research-intake-20260426T212101Z/summary.sanitized.json",
+      "stopBeforeLive": [
+        "patient_info_only",
+        "accounting_completed_only",
+        "revisit_only",
+        "same_day_revisit_condition",
+        "missing_consultation_fee_first_visit_fields"
+      ],
+      "skipCondition": "parser contract already rejects insufficient RN00 evidence or focused test target unavailable",
+      "successCriteria": "sanitized parser/preflight evidence proves insufficient RN00 responses fail closed; no live mutation executed",
+      "nextOnSuccess": "RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT",
+      "nextOnSkip": "RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT"
+    },
+    {
+      "taskId": "RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT",
+      "lane": "parallel_no_live",
+      "status": "queued",
+      "workOrder": "RWO-08B",
+      "summary": "Prepare no-live preflight for a fresh L4 fullflow target with unique active acceptance, no duplicate, and server-derived official identifiers before send.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/orca-spec-research-intake-20260426T212101Z/summary.sanitized.json",
+      "requiredPreconditions": [
+        "fresh_target",
+        "unique_active_acceptance",
+        "no_duplicate_acceptance",
+        "not_accounting_completed_only",
+        "server_derived_Insurance_Combination_Number",
+        "server_derived_Voucher_Number",
+        "server_derived_Sequential_Number"
+      ],
+      "forbiddenSuccessSignals": [
+        "acceptmodv2_api_result_16_duplicate",
+        "http_2xx_only",
+        "generic_zero_like_only",
+        "patient_info_presence_only",
+        "synthesized_official_identifiers"
+      ],
+      "skipCondition": "no fresh target or no server-derived official identifiers can be proven without live mutation/raw artifacts",
+      "successCriteria": "sanitized no-live preflight evidence exists and any future diagnostic fullflow remains stopped until all preconditions pass",
+      "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+    },
     {
       "taskId": "RWO-06H_READONLY_MASTER_VALIDITY",
       "lane": "critical_path",

@@ -38,6 +38,8 @@ RUN_ID `20260426T200210Z` found no new owner/operator rollback rehearsal evidenc
 
 RUN_ID `20260426T210142Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, left this blocker pending, and refreshed independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `3980669ce40d6c64e3315f15eb1665ac8e1412e7`. No live Trial mutation, diagnostic artifact capture, production ORCA, or S3/object-storage setup was executed.
 
+RUN_ID `20260426T212101Z` intook the user-supplied ORCA Trial Specification Research Report as sanitized secondary research: `docs/implementation/orca-spec-research-intake-20260426T212101Z/README.md`. It is not live acceptance evidence and does not authorize live execution. It updates no-live priorities: `RWO-06H` must prove an injectable medication row with `medicationgetv2 Request_Number=02` and must not retry oral-tablet code `620000012`; `RWO-06G` must repair/tighten `acceptmodv2 Request_Number=00` parsing so active acceptance plus consultation-fee/first-visit-compatible fields are required; `RWO-08B` must use a fresh target with unique active acceptance, no duplicate, and server-derived official identifiers before any diagnostic fullflow retry.
+
 Sanitized evidence:
 
 - `docs/implementation/rwo11-rollback-owner-pending-20260425T182930Z/FINAL_REPORT.md`
@@ -69,6 +71,8 @@ Sanitized evidence:
 - `docs/implementation/rwo09-non-s3-static-refresh-20260426T200210Z/summary.sanitized.json`
 - `docs/implementation/rwo09-non-s3-static-refresh-20260426T210142Z/FINAL_REPORT.md`
 - `docs/implementation/rwo09-non-s3-static-refresh-20260426T210142Z/summary.sanitized.json`
+- `docs/implementation/orca-spec-research-intake-20260426T212101Z/README.md`
+- `docs/implementation/orca-spec-research-intake-20260426T212101Z/summary.sanitized.json`
 
 Current result:
 
@@ -84,8 +88,9 @@ Current result:
 - Latest remaining ORCA-spec intake: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/orca-trial-remaining-spec-intake-20260426T124656Z.md`. It adds `medicationgetv2` / `masterlastupdatev3` read-only master-validity guidance for injection, `acceptmodv2` `Request_Number=00` first-visit inquiry guidance for base-charge, wrapper/no-live stop conditions for `subjectivesv2` and `diseasev3`, and RWO-07 operation mapping.
 - Latest injection master-validity read-only attempt: `docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/FINAL_REPORT.md`. `masterlastupdatev3` returned sanitized `2xx` / `success_zero` for procedure/material/comment, but `medicationgetv2` for medication `620000012` returned sanitized `2xx` / `other_present` and `masterFound=false`; injection live remains stopped until changed evidence or a changed candidate identity exists.
 - Latest base-charge first-visit read-only attempt: `docs/implementation/rwo06g-base-charge-first-visit-readonly-20260426T150137Z/FINAL_REPORT.md`. The read-only `acceptmodv2` `Request_Number=00` check returned sanitized `2xx` / `nonzero_numeric` / `not_verified_or_not_first_visit_compatible`; baseChargeOrder/110 live remains stopped until changed first-visit evidence or a changed candidate/precondition exists.
+- Latest ORCA spec research intake: `docs/implementation/orca-spec-research-intake-20260426T212101Z/README.md`. Treat it as no-live/read-only guidance only. Next priority is injection row-level proof for an injectable candidate using `medicationgetv2 Request_Number=02`; `masterlastupdatev3` is not row-level proof, `620000012` must not be retried unchanged as injection, base-charge RN00 evidence must include active acceptance plus consultation-fee/first-visit-compatible fields, and RWO-08B fullflow must not repeat `00001`/`00005` unchanged or synthesize official identifiers.
 - Latest RWO-07 operation matrix hardening: `docs/implementation/rwo07-operation-matrix-hardening-20260426T150137Z/OPERATION_MATRIX_HARDENING.md`. `Request_Number=00` is inquiry-only, `01` is create, and `02` / `03` / `04` remain queued for endpoint-specific no-live contracts before any live action.
-- Latest throughput policy: `docs/implementation/automation-handoff/AUTOMATION_THROUGHPUT_POLICY.md`. `HANDOFF_STATE.json.nextExecutableQueue` records `RWO-06H_READONLY_MASTER_VALIDITY` as completed with a stop-before-live result, `RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT` as skipped because master validity was not validated, `RWO-06G_READONLY_FIRST_VISIT_CHECK` as completed with a stop-before-live result, and `RWO-07_OPERATION_MATRIX_HARDENING` as completed. The next safe work is independent RWO-09/RWO-11 refresh or a changed no-live endpoint contract; do not run baseChargeOrder/110 live without changed first-visit evidence and a complete endpoint packet.
+- Latest throughput policy: `docs/implementation/automation-handoff/AUTOMATION_THROUGHPUT_POLICY.md`. `HANDOFF_STATE.json.nextExecutableQueue` now starts with no-live/read-only follow-up items from the 20260426T212101Z intake: `RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF`, `RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR`, and `RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT`. Existing completed items remain historical evidence. Do not run injection, baseChargeOrder/110, or diagnostic fullflow live from this intake alone.
 
 ## Goal
 

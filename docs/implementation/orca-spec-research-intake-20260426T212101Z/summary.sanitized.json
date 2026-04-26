@@ -1,0 +1,64 @@
+{
+  "runId": "20260426T212101Z",
+  "result": "ORCA_SPEC_RESEARCH_INTAKE_RECORDED_NO_LIVE",
+  "source": "user_supplied_sanitized_orca_trial_specification_research_report",
+  "classification": "sanitized_secondary_research_not_live_acceptance_evidence",
+  "scope": [
+    "automation_handoff_guidance",
+    "roadmap_no_live_priority",
+    "stop_before_live_boundaries"
+  ],
+  "sourceReferences": [
+    "https://www.orca.med.or.jp/receipt/users/tec/api/overview.html",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+    "https://orcamanual.orca.med.or.jp/gairai/chapter/2-6-5/",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/medicationgetv2.html",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/master_last_update.html",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/acceptmod.html",
+    "https://orcamanual.orca.med.or.jp/gairai/chapter/2-6-1/",
+    "https://medley.life/medicines/prescription/4490011F1048/",
+    "https://www.orca.med.or.jp/receipt/users/tec/claim.html",
+    "https://medley.life/medicines/prescription/1144400A2197/",
+    "https://www.qlife.jp/meds/rx40569.html"
+  ],
+  "recommendedNoLivePriority": [
+    {
+      "taskId": "RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF",
+      "workOrder": "RWO-06H",
+      "summary": "Use medicationgetv2 Request_Number=02 for injectable candidate row-level proof; do not reuse 620000012 unchanged or treat masterlastupdatev3 as row proof.",
+      "requiresLiveTrialMutation": false
+    },
+    {
+      "taskId": "RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR",
+      "workOrder": "RWO-06G",
+      "summary": "Require active acceptance plus consultation-fee/first-visit-compatible fields from acceptmodv2 Request_Number=00 before base-charge live work.",
+      "requiresLiveTrialMutation": false
+    },
+    {
+      "taskId": "RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT",
+      "workOrder": "RWO-08B",
+      "summary": "Require fresh target, unique active acceptance, no duplicate, and server-derived official identifiers before diagnostic fullflow retry.",
+      "requiresLiveTrialMutation": false
+    }
+  ],
+  "liveStopConditions": [
+    "do_not_retry_620000012_as_injectable_unchanged",
+    "do_not_treat_masterlastupdatev3_as_specific_row_level_proof",
+    "do_not_treat_http_2xx_generic_zero_or_patient_info_presence_as_business_success",
+    "do_not_run_base_charge_live_without_unique_active_acceptance_and_consultation_fee_first_visit_fields",
+    "do_not_synthesize_official_fullflow_identifiers",
+    "do_not_repeat_fullflow_candidates_00001_or_00005_unchanged"
+  ],
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_intake_only",
+    "businessAccepted": false
+  },
+  "claimBoundary": "Sanitized secondary research only; not live Trial acceptance, production ORCA readiness, S3/object-storage readiness, patient/insurance/billing success, rollback, fullflow success, or release GO.",
+  "credentialsCaptured": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "diagnosticRawArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "legacyClientServerChanged": false
+}

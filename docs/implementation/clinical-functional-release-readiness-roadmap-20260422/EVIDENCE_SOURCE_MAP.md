@@ -72,6 +72,7 @@ RUN_ID: `20260422T134401Z`
 | `docs/implementation/unified-phase4-execution-wo8-20260422/final-summary.sanitized.json` | WO-8 machine-readable summary. |
 | `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md` | Existing source-backed no-live order-family candidate research. |
 | `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/orca-trial-remaining-spec-intake-20260426T124656Z.md` | Sanitized intake of remaining ORCA Trial spec findings, operation mappings, no-live priorities, and live stop conditions. |
+| `docs/implementation/orca-spec-research-intake-20260426T212101Z/README.md` | Sanitized secondary ORCA Trial specification research intake; updates no-live priority for injection row-level proof, base-charge RN00 preflight repair, and L4 fullflow official-identifier preconditions. |
 | `docs/runbooks/release-validation.md` | Release validation gate source. |
 | `docs/managerdocs/README.md` | Manager docs index. |
 | `docs/managerdocs/01_current_state_and_decision_rules.md` | Current state and decision rules. |
