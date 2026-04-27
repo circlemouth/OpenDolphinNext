@@ -6,9 +6,9 @@ This policy reduces hourly automation stalls while preserving the Trial-only, no
 
 ## Automation Responsibility Boundary
 
-Owner direction recorded on 2026-04-27T05:18:55Z reassigns `RWO-11/RWO-09` rollback rehearsal preparation, safe sanitized rehearsal execution, operator-acceptance evidence capture, and explicit final owner GO/NO-GO/PENDING decision recording to this automation.
+Current automation prompt boundary recorded by RUN_ID `20260427T104612Z` treats `RWO-11/RWO-09` rollback rehearsal, release-candidate deployment stop, paired restore, restored-target smoke, operator acceptance, and final owner GO/NO-GO/PENDING decision capture as external owner/operator release-management gates.
 
-Hourly automation may select `RWO-11/RWO-09` when the next action can be completed in the Trial-backed, non-S3, non-production scope with sanitized evidence only. It must stop or skip with evidence if the next step would require production infrastructure, production ORCA, S3/object-storage, credential/raw-artifact exposure, target ambiguity, or an owner decision that has not been explicitly supplied.
+Hourly automation must not select, execute, repeatedly reclassify, or block on those `RWO-11/RWO-09` gates unless a later explicit user instruction reassigns them to automation. Preserve the non-claim boundary and continue to the next safe non-RWO-11/RWO-09 task.
 
 ## Problem
 
@@ -22,7 +22,7 @@ Automation work is split into three lanes:
 |---|---|---|---|
 | `critical_path` | Work that directly unblocks the next endpoint or release gate. | runtime readiness, read-only ORCA Trial preflight, duplicate-live checkpoint, parser/sanitizer contract. | Run first when safe and prerequisites are available. |
 | `parallel_no_live` | Work that can progress without live mutation or secrets. | docs/matrix refresh, wrapper dry-run, static guards, no-live payload prep, rejected-result investigation. | Run in the same automation run after the critical path or after a skip. |
-| `human_pending` | Work that cannot be completed by automation alone. | billing mapping decision, business context confirmation, final owner decision when explicit owner text is absent. | Check only when the item is inside automation scope and new explicit input exists; otherwise carry forward or mark pending, then continue. `RWO-11/RWO-09` rollback preparation and safe sanitized rehearsal are now inside automation scope. |
+| `human_pending` | Work that cannot be completed by automation alone. | billing mapping decision, business context confirmation, final owner decision when explicit owner text is absent. | Check only when the item is inside automation scope and new explicit input exists; otherwise carry forward or mark pending, then continue. `RWO-11/RWO-09` rollback/owner decision gates are outside automation scope under the current prompt boundary. |
 
 ## Machine-Readable Queue
 
@@ -51,11 +51,11 @@ Workers must process the queue from top to bottom, selecting the first item that
 
 ## Stale Human Blockers
 
-For `human_pending` items, do not repeat the same long-form classification every hour. After the 2026-04-27T05:18:55Z owner reassignment, `RWO-11/RWO-09` rollback preparation and safe sanitized rehearsal items are not external to automation. Final owner GO/NO-GO/PENDING still requires explicit owner evidence and must not be inferred from silence. Workers should:
+For `human_pending` items, do not repeat the same long-form classification every hour. `RWO-11/RWO-09` rollback rehearsal, operator acceptance, and final owner GO/NO-GO/PENDING are external release-management gates under the current automation prompt boundary. Workers should:
 
 1. Check whether a new explicit owner/operator evidence file, state entry, or prompt text exists.
-2. If no new input exists, record `carried_forward_without_reclassification`.
-3. Continue immediately to the next non-human queue item.
+2. If the item is `RWO-11/RWO-09`, preserve it as external/out-of-scope for automation without reclassification.
+3. Continue immediately to the next non-human, non-RWO-11/RWO-09 queue item.
 
 This does not weaken the blocker. It only prevents hourly runs from spending most of the budget proving the same absence again.
 
@@ -124,4 +124,4 @@ No-live progress should be recorded with specific result labels such as `preflig
 
 ## Current Priority
 
-Treat `RWO-11/RWO-09` as executable when a safe sanitized rollback-preparation, rehearsal, operator-acceptance evidence, or explicit owner-decision recording step is available. If the required step cannot run without production infrastructure, production ORCA, S3/object-storage, raw artifacts, credentials, or ambiguous targets, record the blocker and continue to the next independent safe queue item. If a selected task depends on unclear ORCA semantics, perform official ORCA specification research first, then proceed with no-live wrapper/parser/payload work. Do not run a live mutation until endpoint packet preconditions are recorded.
+Do not select `RWO-11/RWO-09` rollback/owner-decision work in hourly automation. Treat it as an external release-management gate and continue to independent safe tasks such as official ORCA specification research, no-live endpoint packets, parser/sanitizer tests, wrapper dry-runs, read-only probes, static/package/security checks, and claim-boundary updates. Do not run a live mutation until endpoint packet preconditions are recorded.

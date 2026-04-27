@@ -22,10 +22,10 @@ Standing owner approval:
 The owner grants standing approval for this automation to proceed through the roadmap toward Trial-backed release readiness, including live verification against the ORCA Trial server when the current Work Order or active handoff prompt requires it.
 
 Automation responsibility boundary:
-- Owner direction recorded on 2026-04-27T05:18:55Z explicitly reassigns `RWO-11/RWO-09` rollback rehearsal preparation, sanitized rehearsal execution when a safe local/non-production target exists, operator-acceptance evidence capture, and final GO/NO-GO/PENDING decision recording to this automation.
-- The automation may select and advance `RWO-11/RWO-09` only inside the Trial-backed, non-S3, non-production scope. It must use existing documented scripts/runbooks or first create a sanitized no-raw-artifact wrapper/checklist, and it must stop rather than improvise if production infrastructure, production ORCA, S3/object-storage, raw artifacts, credentials, or target ambiguity would be required.
-- Final owner decision capture is permitted only when explicit owner text/evidence is present in the prompt or repo-local sanitized evidence. The automation may record the decision, but must not invent or infer a GO/NO-GO/PENDING decision from silence.
-- The automation worker remains responsible for all safe roadmap-scoped work that can progress without production ORCA, S3/object-storage setup, raw artifacts, credential exposure, or unapproved production release actions.
+- This automation does not own or execute `RWO-11/RWO-09` rollback rehearsal, final owner GO/NO-GO/PENDING decision capture, release-candidate deployment stop, paired restore, restored-target smoke, or operator acceptance work.
+- Treat rollback rehearsal and final owner decision as external owner/operator release-management gates, not as automation tasks. Do not select them, do not block on them, do not repeatedly reclassify them, and do not spend hourly automation time checking for their input unless a later explicit user instruction reassigns them to automation.
+- If roadmap or handoff documents mention `RWO-11/RWO-09`, preserve the claim boundary as an external non-automation gate and immediately continue to the next safe non-RWO-11/RWO-09 task.
+- The automation worker is responsible for all other safe roadmap-scoped work that can progress without production ORCA, S3/object-storage setup, raw artifacts, credentials, or human release-management decisions.
 
 ORCA connection scope:
 - The only ORCA connection target for this automation is WebORCA / ORCA Trial.
@@ -92,14 +92,14 @@ Diagnostic Artifact Exception:
 Every run:
 1. Inspect current branch, HEAD, git status, and registered worktrees.
 2. Do not revert or overwrite unrelated user/worker changes.
-3. Check for active handoff prompts before selecting roadmap work. After owner direction recorded on 2026-04-27T05:18:55Z, do not skip `RWO-11/RWO-09` solely because it is rollback/owner-decision work; instead, select it when the next action can be performed with sanitized evidence inside the Trial-backed, non-S3, non-production scope.
+3. Check for active handoff prompts before selecting roadmap work, but skip any handoff whose only required action is `RWO-11/RWO-09` rollback/owner decision because it is outside this automation's responsibility boundary.
 4. Handoff priority order:
    a. docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md
    b. newest docs/implementation/*/NEXT_WORKER_PROMPT.md
    c. roadmap Work Orders
 5. If an active handoff prompt exists and is not excluded by the responsibility boundary, treat it as the highest-priority task.
 6. Read `HANDOFF_STATE.json.nextExecutableQueue` and `AUTOMATION_THROUGHPUT_POLICY.md`.
-7. If the active handoff is a human-pending blocker outside automation scope, mark it as external/out-of-scope for automation without reclassification and immediately select the first safe executable queue item. `RWO-11/RWO-09` is no longer outside automation scope after the 2026-04-27T05:18:55Z owner reassignment, but final decision text still requires explicit owner evidence.
+7. If the active handoff is a human-pending blocker outside automation scope, mark it as external/out-of-scope for automation without reclassification and immediately select the first safe executable queue item.
 8. If no active handoff exists or the active handoff has no executable repo-local action, select the next unblocked item from `nextExecutableQueue`, then from the roadmap.
 9. If ORCA endpoint semantics or success criteria for the candidate task are unclear, first perform ORCA official specification research under the research policy above, record sanitized no-live evidence, and use that evidence to select or refine the next safe task.
 10. Execute the next safe step autonomously.
@@ -116,7 +116,7 @@ Executable queue policy:
 - Process queue items from top to bottom, selecting the first currently safe item.
 - After completing or skipping an item, continue to the next independent safe item within the same run.
 - `critical_path` items run before `parallel_no_live` items when both are available.
-- `RWO-11/RWO-09` rollback/owner-decision items are automation-selectable after the 2026-04-27T05:18:55Z owner reassignment. Process them when the required action is sanitized preparation, safe non-production rehearsal, operator-acceptance evidence capture, or recording explicit owner decision evidence. Skip only if the next action would require production infrastructure, production ORCA, S3/object-storage, raw artifacts, credentials, target ambiguity, or an owner decision that has not been explicitly supplied.
+- `human_pending` items for `RWO-11/RWO-09` rollback/owner decision are outside automation scope and must be skipped as external release-management gates; continue to the next non-human, non-RWO-11/RWO-09 item.
 - Other `human_pending` items are checked only when they are within automation scope and new explicit input exists; otherwise carry them forward as `carried_forward_without_reclassification` and continue.
 - Live Trial mutation remains sequential and main-worker controlled. No-live/read-only/docs/static items may be batched when scopes are independent and evidence paths do not overlap.
 - Before any live Trial mutation, require a complete endpoint packet with endpoint/request class, target, payload SHA, duplicate-live checkpoint, no-live wrapper result, parser/sanitizer result, runtime readiness, endpoint-specific success criteria, stop conditions, and sanitized evidence policy.
@@ -139,7 +139,7 @@ Current-run exhaustion policy:
 - Prefer ORCA official specification research when endpoint semantics are unknown; use it to choose the next no-live wrapper/parser/payload task instead of guessing or repeating a rejected Trial request.
 - If browser e2e/fullflow is blocked only because the current harness would create screenshots/HAR/traces/videos/raw-network artifacts, run it only under the Diagnostic Artifact Exception; otherwise create or update the harness-hardening blocker and continue to independent work.
 - If live Trial ORCA is blocked only because backend startup unnecessarily requires object-storage configuration, prefer implementing or documenting an explicit object-storage-free dev/Trial runtime profile before skipping the endpoint again. This must not use local dummy S3/MinIO or fake credentials.
-- If a Work Order requires a human business decision outside standing Trial approval, record it as pending human decision, then continue to independent work that does not depend on that decision. For `RWO-11/RWO-09`, the automation may record an explicit owner GO/NO-GO/PENDING decision when the owner supplies it, but must not synthesize that decision.
+- If a Work Order requires a human business decision outside standing Trial approval, record it as outside automation scope or pending human decision, then continue to independent work that does not depend on that decision. For `RWO-11/RWO-09` rollback/owner decision specifically, do not select it as automation work.
 
 Handoff prompt rules:
 - Follow the handoff prompt's scope, allowed actions, forbidden actions, evidence requirements, completion criteria, and stop conditions.
@@ -199,11 +199,11 @@ Work progression:
 - Run browser e2e no-live gates before live ORCA gates where practical.
 - Run ORCA Trial live verification only after local/browser prerequisites are reasonably satisfied or the roadmap explicitly requires live verification to unblock.
 - Run fullflow after prerequisite browser and Trial ORCA gates are satisfied when either artifact-free safe fullflow mode exists or diagnostic fullflow mode can run under the Diagnostic Artifact Exception.
-- Skip any production ORCA Work Order as out of scope; continue with Trial, browser, security, CI, packaging, rollback, and owner sign-off gates that do not require production ORCA execution.
-- Skip any S3/MinIO/object-storage-dependent Work Order as out of scope; continue with Trial, browser, security, CI, packaging, rollback, and owner sign-off gates that do not require S3/MinIO/object-storage configuration.
+- Skip any production ORCA Work Order as out of scope; continue with Trial, browser, security, CI, packaging, and non-release-management gates that do not require production ORCA execution.
+- Skip any S3/MinIO/object-storage-dependent Work Order as out of scope; continue with Trial, browser, security, CI, packaging, and non-release-management gates that do not require S3/MinIO/object-storage configuration.
 - Implement or verify an explicit object-storage-free dev/Trial runtime profile when an active handoff requests it. In that profile, object-storage-dependent features must fail closed and must not be claimed ready.
 - Skip any environment-unavailable Work Order that cannot proceed in the current runtime, then continue with the next independent safe Work Order in the same run.
-- Create or update docs, matrices, risk registers, command logs, sanitized summaries, review packages, and sidecars after each completed Work Order, including `RWO-11/RWO-09` rollback/owner-decision work when it is performed under the 2026-04-27T05:18:55Z owner reassignment.
+- Create or update docs, matrices, risk registers, command logs, sanitized summaries, review packages, and sidecars after each completed Work Order, excluding external release-management gates owned by `RWO-11/RWO-09`.
 - Do not overclaim. Keep allowed/prohibited claims updated.
 
 Each run must open an inbox item with:
@@ -230,5 +230,5 @@ Stop conditions:
 - target/scope ambiguity
 - unsafe repo state
 - repeated failing repair loop without new evidence
-- current Work Order requires a human business decision outside standing Trial approval and no independent safe task remains. For `RWO-11/RWO-09`, stop only if explicit owner decision evidence is absent and no safe rollback preparation/rehearsal/evidence task remains.
+- current Work Order requires a human business decision outside standing Trial approval and no independent safe task remains, except that `RWO-11/RWO-09` rollback/owner decision must be treated as outside automation scope rather than a selected automation Work Order
 ```
