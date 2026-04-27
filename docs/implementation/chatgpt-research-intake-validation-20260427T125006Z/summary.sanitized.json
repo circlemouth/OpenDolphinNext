@@ -62,6 +62,56 @@
       "taskId": "RWO-06I_SURGERY_ROW_RULE_SPEC_RESEARCH",
       "classification": "requires_official_spec_research",
       "summary": "Research surgery row/adjunct semantics and changed row identity before any surgery retry."
+    },
+    {
+      "taskId": "RWO-06F_OWNER_BUSINESS_CONTEXT",
+      "classification": "requires_owner_or_operator_business_context",
+      "summary": "Record owner/operator decision needs for class 130 facility, disease-class, and monthly billing context without treating it as automation-executable."
+    },
+    {
+      "taskId": "RWO-06G_BASE_CHARGE_ROW_ORDER_CONTRACT",
+      "classification": "repo_local_no_live",
+      "summary": "Add or verify a no-live contract that consultation fee rows for baseChargeOrder/110 are first row of first set and not duplicated."
+    },
+    {
+      "taskId": "RWO-06I_SURGERY_MASTER_ADJUNCT_PREFLIGHT",
+      "classification": "requires_readonly_trial_runtime",
+      "summary": "Prove Trial-date surgery row master validity and adjunct/comment rationale through sanitized read-only evidence before any retry."
+    },
+    {
+      "taskId": "SOAP_SUBJECTIVESV2_ROUTE_CONTRACT",
+      "classification": "repo_local_no_live",
+      "summary": "Fix subjectivesv2 404/502 classification by locking endpoint, method, serializer, parser, and sanitizer contracts without live mutation."
+    },
+    {
+      "taskId": "DISEASEV3_ENDPOINT_SEMANTICS_CONTRACT",
+      "classification": "requires_official_spec_research",
+      "summary": "Define diseasev3 Request_Number and success/warning semantics before any live disease mutation."
+    },
+    {
+      "taskId": "DISEASEV3_READONLY_BASELINE",
+      "classification": "requires_readonly_trial_runtime",
+      "summary": "Create sanitized diseasegetv2 before-state evidence for future diseasev3 reasoning without mutation."
+    },
+    {
+      "taskId": "ACCEPTMODV2_RN02_03_04_TARGET_INVENTORY",
+      "classification": "requires_readonly_trial_runtime",
+      "summary": "Build sanitized acceptlstv2/RN00 inventory for server-derived Acceptance_Id, time, department, physician, and insurance scope."
+    },
+    {
+      "taskId": "ACCEPTMODV2_RN02_03_04_STOP_GATE",
+      "classification": "repo_local_no_live",
+      "summary": "Ensure wrappers stop when server-derived acceptance target or scope fields are missing before RN02/RN03/RN04 mutation."
+    },
+    {
+      "taskId": "PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK",
+      "classification": "repo_local_no_live",
+      "summary": "Lock accepted testOrder/600 and radiologyOrder/700 references as regression anchors and avoid unnecessary live repeats."
+    },
+    {
+      "taskId": "GLOBAL_NO_RAW_EVIDENCE_POLICY_ENFORCEMENT",
+      "classification": "repo_local_no_live",
+      "summary": "Continue scans and package guards that keep raw ORCA bodies, patient/insurance details, credentials, HAR, traces, screenshots, and videos out of evidence."
     }
   ],
   "activeNextTask": "RWO-08B_LOCAL_EXACT_MATCH_DIAGNOSTIC",
