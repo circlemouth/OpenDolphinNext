@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T190231Z",
+  "result": "ACCEPTMODV2_TARGET_INVENTORY_READONLY_TRIAL_SKIPPED_DOCKER_UNAVAILABLE",
+  "branch": "master",
+  "headAtSelection": "c6203e34dedcbb2af35422b35611a6792d588894",
+  "workOrder": "ACCEPTMODV2",
+  "taskId": "ACCEPTMODV2_TARGET_INVENTORY_READONLY_TRIAL",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "acceptmodv2-rn020304-target-inventory-readonly-trial-runtime-docker-unavailable",
+    "statusAfterRun": "blocked_environment_unavailable_docker_daemon"
+  },
+  "sourceEvidence": [
+    "docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T180231Z/summary.sanitized.json",
+    "docs/implementation/acceptmodv2-target-inventory-readonly-route-20260427T170708Z/summary.sanitized.json",
+    "docs/implementation/acceptmodv2-target-inventory-wrapper-20260427T160229Z/summary.sanitized.json",
+    "docs/implementation/acceptmodv2-rn020304-stop-gate-20260427T150350Z/summary.sanitized.json"
+  ],
+  "route": {
+    "endpoint": "/api/orca/official/visits/acceptance-list",
+    "method": "POST",
+    "orcaEndpoint": "/api01rv2/acceptlstv2",
+    "requestClasses": [
+      "01",
+      "02",
+      "03"
+    ],
+    "serializer": "acceptlstreq_xml2_server_sanitized_readonly",
+    "parser": "acceptlstres_allowlisted_presence_flags_and_hashes_only",
+    "sanitizer": "drop_patient_names_insurance_numbers_and_raw_orca_body"
+  },
+  "runtimeReadiness": {
+    "attempted": true,
+    "check": "docker_info_status_only",
+    "status": "skipped_environment_unavailable",
+    "sanitizedReason": "docker_daemon_unavailable",
+    "dockerDaemonReachable": false,
+    "approvedNonS3RuntimeStarted": false,
+    "orchestratorOutputCaptured": "status_class_only",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false
+  },
+  "readOnlyTrialOrca": {
+    "executed": false,
+    "mutation": false,
+    "businessSuccessClassification": "skipped_environment_unavailable_docker_daemon",
+    "targetReadyRowClassification": "not_observed",
+    "targetReadyRowsProven": false
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessAccepted": false,
+    "businessSuccessClassification": "not_applicable_readonly_inventory_only"
+  },
+  "sameRunContinuation": {
+    "queueChecked": true,
+    "rwo11Rwo09Boundary": "external_owner_operator_release_management_gate_preserved",
+    "nextSafeIndependentTask": "none_currently_queued_after_global_no_raw_evidence_policy_enforcement",
+    "currentQueueStatus": "all listed non-human non-S3 safe queue items are completed, carried forward, or blocked by runtime/changed-precondition requirements"
+  },
+  "misuseCasesChecked": [
+    "Runtime unavailability did not trigger fallback to production ORCA, S3/object storage, or unsafe direct ORCA calls.",
+    "No client-provided Acceptance_Id, Patient_ID, owner, facility, role, digest, URI, or object key was accepted as target authority.",
+    "No read-only inventory result was overclaimed from Docker status, route readiness, dry-run evidence, or HTTP-wrapper readiness from prior runs."
+  ],
+  "checks": {
+    "dockerDaemon": "unavailable_status_only",
+    "jsonParse": "pass",
+    "focusedWrapperTest": "pass: npm run test:ci -- scripts/__tests__/phase4Acceptmodv2TargetInventoryEvidence.test.ts",
+    "forbiddenRawArtifactExtensions": "pass_none_found",
+    "credentialAndRawBodyPatternScan": "pass_policy_terms_only_no_values"
+  },
+  "claimBoundary": "WebORCA Trial read-only acceptlstv2 target inventory did not execute because Docker daemon was unavailable. Runtime-safe route/wrapper evidence from prior runs remains valid, but no target-ready row proof, RN02/RN03/RN04 live readiness, acceptmodv2 mutation success, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "When Docker is available, start the approved non-S3 WebORCA Trial runtime and run sanitized read-only acceptlstv2 inventory through --execute-readonly before any RN02/RN03/RN04 live preflight.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}
