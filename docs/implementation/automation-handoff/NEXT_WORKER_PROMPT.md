@@ -2,9 +2,9 @@
 
 status: active
 created_at: 2026-04-27T17:07:08Z
-updated_at: 2026-04-27T17:07:08Z
+updated_at: 2026-04-27T18:02:31Z
 source_work_order: ACCEPTMODV2
-blocker_id: acceptmodv2-rn020304-target-inventory-readonly-trial-runtime
+blocker_id: acceptmodv2-rn020304-target-inventory-readonly-trial-runtime-docker-unavailable
 priority: medium
 supersedes:
 - acceptmodv2-rn020304-target-inventory-runtime-readonly-route
@@ -25,14 +25,23 @@ The route is server-authenticated and facility-scoped. The request DTO accepts o
 
 RWO-11/RWO-09 rollback rehearsal, release-candidate stop, paired restore, restored-target smoke, operator acceptance, and final owner GO/NO-GO/PENDING capture remain external release-management gates and are not performed by this automation.
 
+RUN_ID `20260427T180231Z` added the runtime-safe read-only wrapper mode and focused tests:
+
+- Evidence: `docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T180231Z/summary.sanitized.json`
+- Report: `docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T180231Z/FINAL_REPORT.md`
+- Wrapper mode: `--execute-readonly`
+- Focused test: `npm run test:ci -- scripts/__tests__/phase4Acceptmodv2TargetInventoryEvidence.test.ts`
+- Runtime result: skipped as `skipped_environment_unavailable` because Docker daemon was unavailable.
+
 ## Goal
 
-Run, or safely skip with evidence, sanitized read-only WebORCA Trial target inventory through `/api/orca/official/visits/acceptance-list` so future RN02/RN03/RN04 work can prove whether server-derived `Acceptance_Id`, patient/date/time, department, physician, and insurance-combination preconditions exist without raw patient/insurance detail and without live mutation.
+Run sanitized read-only WebORCA Trial target inventory through `/api/orca/official/visits/acceptance-list` once the approved non-S3 runtime is available, so future RN02/RN03/RN04 work can prove whether server-derived `Acceptance_Id`, patient/date/time, department, physician, and insurance-combination preconditions exist without raw patient/insurance detail and without live mutation.
 
 ## Required First Steps
 
 1. Inspect current branch, HEAD, status, and registered worktrees.
 2. Read `$CODEX_HOME/automations/orca/memory.md`, `HANDOFF_STATE.json`, this prompt, and:
+   - `docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T180231Z/summary.sanitized.json`
    - `docs/implementation/acceptmodv2-target-inventory-readonly-route-20260427T170708Z/summary.sanitized.json`
    - `docs/implementation/acceptmodv2-target-inventory-wrapper-20260427T160229Z/summary.sanitized.json`
    - `docs/implementation/acceptmodv2-rn020304-stop-gate-20260427T150350Z/summary.sanitized.json`
@@ -41,8 +50,9 @@ Run, or safely skip with evidence, sanitized read-only WebORCA Trial target inve
 
 ## Allowed Actions
 
-- Start or use the approved repo-local non-S3 WebORCA Trial runtime when credentials/config are already available through approved local runtime files.
-- Run sanitized read-only `acceptlstv2` inventory through the new route.
+- Start or use the approved repo-local non-S3 WebORCA Trial runtime when Docker and credentials/config are already available through approved local runtime files.
+- Run sanitized read-only `acceptlstv2` inventory through the wrapper:
+  `RUN_ID=<run_id> node web-client/scripts/qa-phase4-acceptmodv2-target-inventory.mjs --execute-readonly --sanitized-evidence-only --disable-browser-artifacts --class 01 --acceptance-date <YYYY-MM-DD>`
 - Record only endpoint identity, class/date scope, transport status class, API result class, row counts, target-ready counts, row hashes, and presence flags.
 - If runtime/config is unavailable, write a sanitized skip record and continue to the next safe non-S3, non-production, non-RWO-11/RWO-09 work item.
 - Handoff state and roadmap evidence updates.
@@ -66,7 +76,7 @@ Run, or safely skip with evidence, sanitized read-only WebORCA Trial target inve
 This prompt is complete when one of the following exists:
 
 - a sanitized read-only Trial inventory summary proving at least one target-ready row or explicitly proving no target-ready row; or
-- a sanitized blocker/skip record explaining why runtime-safe read-only inventory cannot proceed in the current environment and pointing to the next safe queue item.
+- a fresh sanitized blocker/skip record explaining why runtime-safe read-only inventory cannot proceed in the current environment and pointing to the next safe queue item.
 
 ## Same-Run Continuation Requirement
 

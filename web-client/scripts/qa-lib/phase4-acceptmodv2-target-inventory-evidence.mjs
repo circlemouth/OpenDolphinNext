@@ -9,17 +9,18 @@ const VALUE_FLAGS = new Set([
   '--acceptance-date',
   '--artifact-dir',
   '--class',
+  '--department-code',
   '--source-summary',
 ]);
 const BOOLEAN_FLAGS = new Set([
   '--dry-run',
+  '--execute-readonly',
   '--sanitized-evidence-only',
   '--disable-browser-artifacts',
 ]);
 const FORBIDDEN_FLAGS = new Set([
   '--execute-live',
   '--execute-mutation',
-  '--execute-readonly',
   '--record-har',
   '--har',
   '--trace',
@@ -54,6 +55,7 @@ const sha256 = (value) => crypto.createHash('sha256').update(String(value ?? '')
 export const parseAcceptmodTargetInventoryArgs = (argv) => {
   const options = {
     dryRun: false,
+    executeReadonly: false,
     sanitizedEvidenceOnly: false,
     disableBrowserArtifacts: false,
     classCode: '01',
@@ -75,11 +77,13 @@ export const parseAcceptmodTargetInventoryArgs = (argv) => {
       if (arg === '--acceptance-date') options.acceptanceDate = value;
       if (arg === '--artifact-dir') options.artifactDir = value;
       if (arg === '--class') options.classCode = value;
+      if (arg === '--department-code') options.departmentCode = value;
       if (arg === '--source-summary') options.sourceSummary = value;
       continue;
     }
     if (BOOLEAN_FLAGS.has(arg)) {
       if (arg === '--dry-run') options.dryRun = true;
+      if (arg === '--execute-readonly') options.executeReadonly = true;
       if (arg === '--sanitized-evidence-only') options.sanitizedEvidenceOnly = true;
       if (arg === '--disable-browser-artifacts') options.disableBrowserArtifacts = true;
       continue;
@@ -98,10 +102,15 @@ export const validateAcceptmodTargetInventoryCommand = ({ argv, env = process.en
   }
   if (!options.sanitizedEvidenceOnly) blockers.push('--sanitized-evidence-only is required');
   if (!options.disableBrowserArtifacts) blockers.push('--disable-browser-artifacts is required');
-  if (!options.dryRun) blockers.push('--dry-run is required; read-only acceptlstv2 execution is not implemented by this wrapper');
+  if (options.dryRun === options.executeReadonly) {
+    blockers.push('exactly one of --dry-run or --execute-readonly is required');
+  }
   if (!ALLOWED_CLASSES.has(options.classCode)) blockers.push('--class must be one of 01, 02, or 03');
   if (options.acceptanceDate && !/^\d{4}-\d{2}-\d{2}$/.test(normalize(options.acceptanceDate))) {
     blockers.push('--acceptance-date must use YYYY-MM-DD');
+  }
+  if (options.departmentCode && !/^\d{1,2}$/.test(normalize(options.departmentCode))) {
+    blockers.push('--department-code must use one or two digits');
   }
 
   return {
@@ -111,7 +120,7 @@ export const validateAcceptmodTargetInventoryCommand = ({ argv, env = process.en
     contract: ACCEPTMOD_TARGET_INVENTORY_CONTRACT,
     endpoint: ACCEPTMOD_TARGET_INVENTORY_ENDPOINT,
     orcaEndpoint: ACCEPTMOD_TARGET_INVENTORY_ORCA_ENDPOINT,
-    readOnlyTrialOrcaExecuted: false,
+    readOnlyTrialOrcaExecuted: options.executeReadonly && blockers.length === 0,
     liveTrialMutationExecuted: false,
     rawPayloadStored: false,
     rawOrcaBodyStored: false,
@@ -202,8 +211,63 @@ export const sanitizeAcceptlstInventoryResponse = (source = {}) => {
   };
 };
 
-export const buildAcceptmodTargetInventoryDryRunSummary = ({ runId, commandGate, sourceSummary }) => {
-  const inventory = sourceSummary ? sanitizeAcceptlstInventoryResponse(sourceSummary) : null;
+const bool = (value) => value === true;
+
+export const sanitizeAcceptanceInventoryRouteResponse = ({ httpStatus = 0, responseJson = {} } = {}) => {
+  const rows = Array.isArray(responseJson?.rows) ? responseJson.rows : [];
+  const sanitizedRows = rows.map((row) => ({
+    rowHash: /^[a-f0-9]{64}$/i.test(normalize(row?.rowHash)) ? normalize(row.rowHash).toLowerCase() : '',
+    hasAcceptanceId: bool(row?.hasAcceptanceId),
+    hasPatientId: bool(row?.hasPatientId),
+    hasAcceptanceDate: bool(row?.hasAcceptanceDate),
+    hasAcceptanceTime: bool(row?.hasAcceptanceTime),
+    hasDepartmentCode: bool(row?.hasDepartmentCode),
+    hasPhysicianCode: bool(row?.hasPhysicianCode),
+    hasMedicalInformation: bool(row?.hasMedicalInformation),
+    hasInsuranceCombinationNumber: bool(row?.hasInsuranceCombinationNumber),
+    rawSensitiveFieldsExcluded: row?.rawSensitiveFieldsExcluded !== false,
+  }));
+  const targetReadyRows = sanitizedRows.filter((row) =>
+    row.rowHash &&
+    row.hasAcceptanceId &&
+    row.hasPatientId &&
+    row.hasAcceptanceDate &&
+    row.hasAcceptanceTime &&
+    row.hasDepartmentCode &&
+    row.hasPhysicianCode &&
+    row.hasInsuranceCombinationNumber &&
+    row.rawSensitiveFieldsExcluded);
+  const apiResult = readFirst(responseJson, ['apiResult', 'Api_Result']);
+  const status = Number(httpStatus || responseJson?.httpStatus || responseJson?.status || 0) || 0;
+  const transportStatusClass = status ? `${Math.floor(status / 100)}xx` : 'not_observed';
+  return {
+    apiResultClass: apiResult ? (zeroLike(apiResult) ? 'zero' : 'nonzero') : 'not_observed',
+    transportStatusClass,
+    sourceRowCount: Number(responseJson?.sourceRowCount ?? rows.length) || 0,
+    sanitizedRowCount: sanitizedRows.length,
+    targetReadyRowCount: targetReadyRows.length,
+    targetReady: targetReadyRows.length > 0,
+    rows: sanitizedRows,
+    rawSensitiveFieldsExcluded: responseJson?.rawSensitiveFieldsExcluded !== false,
+    clientProvidedIdentifiersTrusted: false,
+    serverDerivedAuthorityRequired: responseJson?.serverDerivedAuthorityRequired !== false,
+  };
+};
+
+export const buildAcceptmodTargetInventorySummary = ({
+  runId,
+  commandGate,
+  sourceSummary,
+  runtimeReadiness,
+  inventory,
+} = {}) => {
+  const sanitizedInventory = inventory ?? (sourceSummary ? sanitizeAcceptlstInventoryResponse(sourceSummary) : null);
+  const runtimeBlocked = Array.isArray(runtimeReadiness?.blockers) && runtimeReadiness.blockers.length > 0;
+  const readOnlyRequested = commandGate.options.executeReadonly && commandGate.ok;
+  const readOnlyExecuted = readOnlyRequested && !runtimeBlocked;
+  const readOnlyClassification = readOnlyExecuted
+    ? (sanitizedInventory?.targetReady ? 'readonly_inventory_target_ready' : 'readonly_inventory_no_target_ready')
+    : (readOnlyRequested ? 'skipped_environment_unavailable' : 'not_applicable_no_live_contract_only');
   return {
     schemaVersion: 1,
     runId,
@@ -224,6 +288,7 @@ export const buildAcceptmodTargetInventoryDryRunSummary = ({ runId, commandGate,
     noLivePacket: {
       classCode: commandGate.options.classCode,
       acceptanceDate: commandGate.options.acceptanceDate || '',
+      departmentCode: commandGate.options.departmentCode || '',
       requiredServerDerivedFields: [
         'Acceptance_Id',
         'Patient_ID',
@@ -238,11 +303,16 @@ export const buildAcceptmodTargetInventoryDryRunSummary = ({ runId, commandGate,
       http2xxAloneIsNotSuccess: true,
       apiResultZeroAloneIsNotSuccess: true,
     },
-    inventory,
+    runtimeReadiness: runtimeReadiness ?? {
+      checked: false,
+      statusOnly: 'not_checked',
+      blockers: commandGate.ok ? [] : commandGate.blockers,
+    },
+    inventory: sanitizedInventory,
     readOnlyTrialOrca: {
-      executed: false,
+      executed: readOnlyExecuted,
       mutation: false,
-      businessSuccessClassification: 'not_applicable_no_live_contract_only',
+      businessSuccessClassification: readOnlyClassification,
     },
     liveTrialOrca: {
       executed: false,
@@ -255,6 +325,10 @@ export const buildAcceptmodTargetInventoryDryRunSummary = ({ runId, commandGate,
     rawOrcaBodiesCaptured: false,
     patientInsuranceDetailsCaptured: false,
     claimBoundary:
-      'No-live acceptlstv2 target inventory wrapper/sanitizer contract only; not server-derived target proof, RN02/RN03/RN04 live readiness, acceptmodv2 mutation success, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.',
+      readOnlyExecuted
+        ? 'Read-only acceptlstv2 target inventory captured sanitized presence flags and row hashes only; not RN02/RN03/RN04 live readiness, acceptmodv2 mutation success, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.'
+        : 'No-live acceptlstv2 target inventory wrapper/sanitizer contract only; not server-derived target proof, RN02/RN03/RN04 live readiness, acceptmodv2 mutation success, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.',
   };
 };
+
+export const buildAcceptmodTargetInventoryDryRunSummary = (args) => buildAcceptmodTargetInventorySummary(args);

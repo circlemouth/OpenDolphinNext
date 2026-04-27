@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "ACCEPTMODV2",
-  "blockerId": "acceptmodv2-rn020304-target-inventory-readonly-trial-runtime",
+  "blockerId": "acceptmodv2-rn020304-target-inventory-readonly-trial-runtime-docker-unavailable",
   "priority": "medium",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T17:07:08Z",
+  "lastUpdated": "2026-04-27T18:02:31Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5018,7 +5018,7 @@
     {
       "taskId": "ACCEPTMODV2_TARGET_INVENTORY_READONLY_TRIAL",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "skipped_environment_unavailable",
       "workOrder": "ACCEPTMODV2",
       "summary": "Run sanitized read-only acceptlstv2 inventory for server-derived Acceptance_Id, date/time, department, physician, and insurance scope.",
       "requiresRuntime": true,
@@ -5037,7 +5037,11 @@
       "skipCondition": "runtime unavailable, approved local Trial config unavailable, parser ambiguity, credential/raw-artifact risk, or non-Trial endpoint detection",
       "successCriteria": "sanitized read-only inventory summary exists with credentialsCaptured=false, rawArtifactsCommittedOrPackaged=false, liveTrialOrca.executed=false, and target-ready row classification recorded",
       "nextOnSuccess": "ACCEPTMODV2_RN02_DUPLICATE_CHECKPOINT_PREFLIGHT",
-      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "result": "skipped_environment_unavailable_docker_daemon_wrapper_ready",
+      "completedRunId": "20260427T180231Z",
+      "evidence": "docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T180231Z/summary.sanitized.json",
+      "correctedNextAction": "When Docker is available, rerun the approved non-S3 runtime path and execute sanitized read-only acceptlstv2 inventory with --execute-readonly before any RN02/RN03/RN04 live preflight."
     },
     {
       "taskId": "RWO-06F_READONLY_PRECONDITION_PROBES",
