@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T00:39:00Z",
+  "lastUpdated": "2026-04-27T01:03:13Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_not_automation_work",
     "automationMustNot": [
@@ -4561,19 +4561,19 @@
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo09NonS3StaticRefresh": {
-    "runId": "20260426T233244Z",
+    "runId": "20260427T010313Z",
     "workOrder": "RWO-09/RWO-11",
     "result": "RWO09_NON_S3_STATIC_REFRESH_PASS",
     "branch": "master",
-    "head": "3f3a42e72ac0a3c7fc29d9526ccb7250e76f5a11",
+    "head": "0842d0d4db78f2cab4442116526e397389f42b34",
     "activeHandoffPrompt": {
       "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
       "statusAtStart": "active",
       "blockerId": "rwo11-rwo09-external-owner-operator-gate-not-automation-work",
-      "statusAfterRun": "rwo11_rwo09_marked_external_and_advanced_independent_non_live_static_refresh"
+      "statusAfterRun": "left_external_and_advanced_independent_non_live_static_refresh"
     },
-    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260426T233244Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260426T233244Z/summary.sanitized.json",
+    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260427T010313Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260427T010313Z/summary.sanitized.json",
     "checks": {
       "webGuard": "pass",
       "serverDocLinks": "pass",
@@ -4596,8 +4596,8 @@
       "businessSuccessClassification": "not_applicable_static_non_live_refresh",
       "businessAccepted": false
     },
-    "claimBoundary": "Current HEAD non-S3 static/package/security confidence only; no L4 fullflow success, Trial ORCA business success in this run, injection or base-charge Trial acceptance, Request_Number 02/03/04 Trial success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, final owner GO/NO-GO, or final release readiness is claimed.",
-    "recommendedNextTask": "Automation should ignore RWO-11/RWO-09 release-management gates and continue independent non-live endpoint contract/precondition work, using ORCA official specification research when endpoint semantics are unclear.",
+    "claimBoundary": "Current HEAD non-S3 static/package/security confidence only; no L4 fullflow success, Trial ORCA business success in this run, test-order or radiology Trial acceptance, injection or base-charge Trial acceptance, Request_Number 02/03/04 Trial success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, final owner GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Automation should ignore RWO-11/RWO-09 release-management gates and continue independent non-live endpoint contract/precondition work; before any test-order v3 or radiology v3 live Trial attempt, record runtime readiness, duplicate checkpoint decision, endpoint-specific success criteria, stop conditions, and a sanitized preflight packet.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
