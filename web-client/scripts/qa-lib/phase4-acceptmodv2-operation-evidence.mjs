@@ -151,6 +151,58 @@ export const requiredPreconditionsForRequestNumber = (requestNumber) => {
   return [];
 };
 
+export const deriveAcceptmodOperationPreconditionStatus = ({ requestNumber, preconditionSummary } = {}) => {
+  const normalizedRequestNumber = normalize(requestNumber);
+  const summary = preconditionSummary && typeof preconditionSummary === 'object' ? preconditionSummary : null;
+  const readOnlyResult = summary?.readOnlyResult && typeof summary.readOnlyResult === 'object' ? summary.readOnlyResult : {};
+  const explicit = summary?.acceptmodOperationPreconditions && typeof summary.acceptmodOperationPreconditions === 'object'
+    ? summary.acceptmodOperationPreconditions
+    : {};
+  const activeAcceptanceRow = explicit.activeAcceptanceRow === true || readOnlyResult.activeAcceptanceEvidencePresent === true;
+  const target = summary?.target && typeof summary.target === 'object' ? summary.target : {};
+  const hasSanitizedTargetDate = Boolean(normalize(target.acceptanceDate));
+  const parserSanitizerContract = summary?.credentialsCaptured === false && summary?.rawArtifactsCommittedOrPackaged === false;
+  const duplicateLiveCheckpoint = explicit.duplicateLiveCheckpoint === true;
+
+  const preconditions = {
+    activeAcceptanceRow,
+    serverDerivedAcceptanceId: explicit.serverDerivedAcceptanceId === true,
+    matchingPatientId: explicit.matchingPatientId === true || normalize(target.patientId) === '00001',
+    acceptanceDate: explicit.acceptanceDate === true || hasSanitizedTargetDate,
+    departmentPhysicianScope: explicit.departmentPhysicianScope === true,
+    serverAuthoritativeUpdateFields: explicit.serverAuthoritativeUpdateFields === true,
+    serverStateInsuranceCombinationWhenNeeded: explicit.serverStateInsuranceCombinationWhenNeeded === true,
+    serverDerivedAcceptanceIdentifiers:
+      explicit.serverDerivedAcceptanceIdentifiers === true || explicit.serverDerivedAcceptanceId === true,
+    explicitClaimSendInfoPolicy: explicit.explicitClaimSendInfoPolicy === true,
+    rollbackDuplicatePolicy: explicit.rollbackDuplicatePolicy === true,
+    duplicateLiveCheckpoint,
+    parserSanitizerContract,
+  };
+
+  const required = requiredPreconditionsForRequestNumber(normalizedRequestNumber);
+  const missing = required.filter((name) => {
+    if (name === 'server_state_insurance_combination_when_needed') {
+      return preconditions.serverStateInsuranceCombinationWhenNeeded !== true;
+    }
+    return preconditions[name.replace(/_([a-z])/g, (_, char) => char.toUpperCase())] !== true;
+  });
+
+  return {
+    sourcePresent: Boolean(summary),
+    sourceRunId: summary?.runId || '',
+    sourceTaskId: summary?.taskId || '',
+    status: missing.length === 0 ? 'preconditions_satisfied_no_live' : 'preconditions_missing_stop_before_live',
+    liveReady: missing.length === 0,
+    required,
+    missing,
+    derived: preconditions,
+    sourceEvidenceHash: readOnlyResult.evidenceHash || '',
+    clientProvidedIdentifiersTrusted: false,
+    serverDerivedAuthorityRequired: true,
+  };
+};
+
 const preconditionsSatisfied = (requestNumber, preconditions = {}) => {
   if (requestNumber === '02') {
     return Boolean(
@@ -262,8 +314,12 @@ export const classifyAcceptmodOperationResponse = ({
   };
 };
 
-export const buildAcceptmodOperationDryRunSummary = ({ runId, requestNumber, commandGate }) => {
+export const buildAcceptmodOperationDryRunSummary = ({ runId, requestNumber, commandGate, preconditionSummary }) => {
   const normalizedRequestNumber = normalize(requestNumber);
+  const preconditionPreflight = deriveAcceptmodOperationPreconditionStatus({
+    requestNumber: normalizedRequestNumber,
+    preconditionSummary,
+  });
   return {
     schemaVersion: 1,
     runId,
@@ -286,6 +342,7 @@ export const buildAcceptmodOperationDryRunSummary = ({ runId, requestNumber, com
       http2xxAloneIsNotSuccess: true,
       apiResultZeroAloneIsNotSuccess: true,
     },
+    preconditionPreflight,
     liveTrialOrca: {
       executed: false,
       businessSuccessClassification: 'not_applicable_no_live_contract_only',

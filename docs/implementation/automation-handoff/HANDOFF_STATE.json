@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T11:17:50Z",
+  "lastUpdated": "2026-04-27T11:46:12Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5574,6 +5574,26 @@
       "result": "current_head_non_s3_static_package_security_refresh_pass",
       "completedRunId": "20260427T101613Z",
       "evidence": "docs/implementation/rwo09-static-refresh-after-rwo06i-changed-row-research-20260427T101613Z/summary.sanitized.json"
+    },
+    {
+      "taskId": "RWO-07_ACCEPTMODV2_RN02_PRECONDITION_PREFLIGHT",
+      "lane": "parallel_no_live",
+      "status": "completed",
+      "workOrder": "RWO-07",
+      "summary": "Consume sanitized acceptmodv2 RN00 precondition evidence in the RN02 operation wrapper and stop before live when server-derived acceptance prerequisites are missing.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06g-base-charge-first-visit-readonly-20260426T150137Z/summary.sanitized.json",
+      "skipCondition": "focused wrapper contract unavailable or source precondition evidence cannot be consumed without raw artifacts",
+      "successCriteria": "sanitized RN02 no-live precondition preflight records liveReady=false or complete server-derived prerequisites; no live mutation executed",
+      "nextOnSuccess": "next_unblocked_roadmap_item",
+      "nextOnSkip": "next_unblocked_roadmap_item",
+      "result": "preconditions_missing_stop_before_live",
+      "completedRunId": "20260427T114612Z",
+      "evidence": "docs/implementation/rwo07-rn02-precondition-preflight-20260427T114612Z/summary.sanitized.json"
     }
   ],
   "latestRwo06HInjectionMasterValidityReadonly": {
@@ -6142,37 +6162,6 @@
     "productionOrcaAttempted": false,
     "s3ObjectStorageUsed": false
   },
-  "latestRwo09CurrentHeadStaticRefresh": {
-    "runId": "20260427T074616Z",
-    "workOrder": "RWO-09",
-    "result": "RWO09_CURRENT_HEAD_NON_S3_STATIC_PACKAGE_SECURITY_REFRESH_PASS",
-    "branch": "master",
-    "evidence": "docs/implementation/rwo09-current-head-static-refresh-20260427T074616Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-current-head-static-refresh-20260427T074616Z/summary.sanitized.json",
-    "precedingEvidence": "docs/implementation/rwo06f-readonly-precondition-probes-20260427T074616Z/summary.sanitized.json",
-    "checks": {
-      "jsonValidity": "pass",
-      "docLinks": "pass",
-      "webGuard": "pass",
-      "eslintFocused": "pass",
-      "focusedVitest": "pass_36_tests",
-      "reviewerSubmissionPacketContractTests": "pass_7_tests",
-      "reviewPackageContractTests": "pass_25_tests",
-      "gitDiffCheck": "pass"
-    },
-    "liveTrialOrca": {
-      "executed": false,
-      "businessSuccessClassification": "not_applicable_static_refresh_only",
-      "businessAccepted": false
-    },
-    "claimBoundary": "Current-head non-S3 static/package/security refresh only; not instruction-charge Trial business acceptance, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
-    "recommendedNextTask": "Continue independent no-live roadmap work; do not execute instractionChargeOrder/130 live until all listed preconditions have sanitized server-derived proof.",
-    "credentialsCaptured": false,
-    "diagnosticArtifactsCaptured": false,
-    "rawArtifactsCommittedOrPackaged": false,
-    "productionOrcaAttempted": false,
-    "s3ObjectStorageUsed": false
-  },
   "latestRwo06HFreshLockFreeTargetPreflight": {
     "runId": "20260427T091616Z",
     "workOrder": "RWO-06H",
@@ -6602,5 +6591,58 @@
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo07Acceptmodv2Rn02PreconditionPreflight": {
+    "runId": "20260427T114612Z",
+    "workOrder": "RWO-07",
+    "taskId": "RWO-07_ACCEPTMODV2_RN02_PRECONDITION_PREFLIGHT",
+    "result": "RWO07_ACCEPTMODV2_RN02_PRECONDITION_PREFLIGHT_BLOCKED_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "2ce190922d5e01983209346bae29d04bba6bc305",
+    "evidence": "docs/implementation/rwo07-rn02-precondition-preflight-20260427T114612Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo07-rn02-precondition-preflight-20260427T114612Z/summary.sanitized.json",
+    "wrapper": "web-client/scripts/qa-phase4-acceptmodv2-operation.mjs",
+    "contractModule": "web-client/scripts/qa-lib/phase4-acceptmodv2-operation-evidence.mjs",
+    "endpoint": "/orca11/acceptmodv2",
+    "requestNumber": "02",
+    "sourcePreconditionEvidence": "docs/implementation/rwo06g-base-charge-first-visit-readonly-20260426T150137Z/summary.sanitized.json",
+    "preconditionPreflight": {
+      "status": "preconditions_missing_stop_before_live",
+      "liveReady": false,
+      "missing": [
+        "active_acceptance_row",
+        "server_derived_acceptance_id",
+        "matching_patient_id",
+        "acceptance_date",
+        "department_physician_scope",
+        "duplicate_live_checkpoint"
+      ]
+    },
+    "checks": {
+      "nodeCheck": "pass",
+      "focusedVitest": "pass_12_tests_with_web_guard_pretest",
+      "wrapperDryRun": "pass_no_live_precondition_preflight_blocked",
+      "handoffAndSummaryJsonParse": "pass",
+      "serverDocLinks": "pass",
+      "webClientLint": "pass_with_existing_warnings",
+      "webClientTypecheck": "pass",
+      "webClientBuild": "pass_with_existing_chunk_size_warning",
+      "gitDiffCheck": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "/orca11/acceptmodv2",
+      "target": null,
+      "requestClass": "acceptmodv2_request_02_no_live_precondition_preflight",
+      "businessSuccessClassification": "not_applicable_no_live_precondition_blocked",
+      "businessAccepted": false
+    },
+    "claimBoundary": "RWO-07 RN02 no-live precondition preflight only; no RN02 Trial mutation success, acceptmodv2 operation success, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Continue independent no-live/static work; do not run RN02 live until current active acceptance, server-derived Acceptance_Id, matching scope, duplicate checkpoint, runtime readiness, and endpoint-specific completion criteria are all recorded as sanitized evidence.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
   }
 }

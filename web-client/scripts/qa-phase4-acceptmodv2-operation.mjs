@@ -13,10 +13,24 @@ const artifactDir =
   gate.options.artifactDir ||
   path.join('artifacts', 'orca-remediation', 'closeout', runId, 'qa', 'phase4-acceptmodv2-operation');
 
+const loadPreconditionSummary = () => {
+  if (!gate.options.preconditionSummary) return undefined;
+  try {
+    return JSON.parse(fs.readFileSync(path.resolve(process.cwd(), gate.options.preconditionSummary), 'utf8'));
+  } catch {
+    return {
+      taskId: 'precondition_summary_load_failed',
+      credentialsCaptured: false,
+      rawArtifactsCommittedOrPackaged: false,
+    };
+  }
+};
+
 const summary = buildAcceptmodOperationDryRunSummary({
   runId,
   requestNumber: gate.options.requestNumber,
   commandGate: gate,
+  preconditionSummary: loadPreconditionSummary(),
 });
 
 fs.mkdirSync(artifactDir, { recursive: true });

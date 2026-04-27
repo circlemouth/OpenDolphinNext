@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildAcceptmodOperationDryRunSummary,
   classifyAcceptmodOperationResponse,
+  deriveAcceptmodOperationPreconditionStatus,
   validateAcceptmodOperationCommand,
 } from '../qa-lib/phase4-acceptmodv2-operation-evidence.mjs';
 
@@ -219,6 +220,53 @@ describe('phase4 acceptmodv2 operation no-live evidence', () => {
     expect(summary.noLivePacket.clientProvidedIdentifiersTrusted).toBe(false);
     expect(summary.rawArtifactsCommittedOrPackaged).toBe(false);
     expect(summary.claimBoundary).toContain('No-live acceptmodv2 Request_Number 02');
+  });
+
+  it('fails closed when RN02 precondition evidence lacks server-derived acceptance id', () => {
+    const status = deriveAcceptmodOperationPreconditionStatus({
+      requestNumber: '02',
+      preconditionSummary: {
+        runId: '20260426T150137Z',
+        taskId: 'RWO-06G_READONLY_FIRST_VISIT_CHECK',
+        target: { patientId: '00001', acceptanceDate: '20260427' },
+        readOnlyResult: {
+          activeAcceptanceEvidencePresent: false,
+          evidenceHash: 'hash-only',
+        },
+        credentialsCaptured: false,
+        rawArtifactsCommittedOrPackaged: false,
+      },
+    });
+
+    expect(status.liveReady).toBe(false);
+    expect(status.status).toBe('preconditions_missing_stop_before_live');
+    expect(status.missing).toContain('active_acceptance_row');
+    expect(status.missing).toContain('server_derived_acceptance_id');
+    expect(status.derived.parserSanitizerContract).toBe(true);
+    expect(status.clientProvidedIdentifiersTrusted).toBe(false);
+  });
+
+  it('records precondition preflight in dry-run summaries without making live claims', () => {
+    const gate = validateAcceptmodOperationCommand({ argv: requiredArgs, env: {} });
+    const summary = buildAcceptmodOperationDryRunSummary({
+      runId: '20260427T114612Z',
+      requestNumber: '02',
+      commandGate: gate,
+      preconditionSummary: {
+        target: { patientId: '00001', acceptanceDate: '20260427' },
+        readOnlyResult: {
+          activeAcceptanceEvidencePresent: true,
+          evidenceHash: 'sanitized-hash',
+        },
+        credentialsCaptured: false,
+        rawArtifactsCommittedOrPackaged: false,
+      },
+    });
+
+    expect(summary.preconditionPreflight.sourcePresent).toBe(true);
+    expect(summary.preconditionPreflight.liveReady).toBe(false);
+    expect(summary.preconditionPreflight.missing).toContain('server_derived_acceptance_id');
+    expect(summary.liveTrialOrca.executed).toBe(false);
   });
 
   it('builds RN03/RN04 summaries with request-specific claim boundaries', () => {
