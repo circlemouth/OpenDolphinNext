@@ -59,3 +59,9 @@ Execute `RWO-06G_BASE_CHARGE_RN00_FIRST_VISIT_GATE` if runtime/read-only prerequ
 ## Completion Criteria
 
 This prompt is complete when sanitized RN00 first-visit compatibility gate evidence exists, or when a sanitized skip/blocker record explains why RWO-06G cannot proceed and points to the next safe no-live/read-only queue item.
+
+## Same-Run Continuation Requirement
+
+Completing or skipping this prompt is not, by itself, a valid reason to end the automation run. After recording the RWO-06G evidence or sanitized skip/blocker, the worker must continue within the same run to the next safe item in `HANDOFF_STATE.json.nextExecutableQueue` unless one of the global stop conditions is explicitly met and recorded.
+
+If RWO-06G is blocked only by environment/runtime/target prerequisites, record a sanitized skip or blocker with `credentialsCaptured=false`, `rawArtifactsCommittedOrPackaged=false`, and `liveTrialOrca.executed=false`, then immediately select the next independent no-live/read-only task. Do not hand off to "next worker" merely because this prompt's local completion criteria were satisfied.
