@@ -1,0 +1,6 @@
+{"runId":"20260427T030312Z","id":"official-source-research","command":"official ORCA documentation lookup for acceptmodv2 Request_Number 02/03/04 semantics","result":"pass_sanitized_sources_recorded","credentialsCaptured":false,"rawArtifactsCaptured":false}
+{"runId":"20260427T030312Z","id":"summary-json-parse","command":"node -e \"JSON.parse(require('fs').readFileSync('docs/implementation/rwo07-acceptmodv2-rn020304-no-live-packet-20260427T030312Z/summary.sanitized.json','utf8'))\"","result":"pass","credentialsCaptured":false,"rawArtifactsCaptured":false}
+{"runId":"20260427T030312Z","id":"handoff-state-json-parse","command":"node -e \"JSON.parse(require('fs').readFileSync('docs/implementation/automation-handoff/HANDOFF_STATE.json','utf8'))\"","result":"pass","credentialsCaptured":false,"rawArtifactsCaptured":false}
+{"runId":"20260427T030312Z","id":"doc-links","command":"bash server-modernized/tools/ci/check-doc-links.sh","result":"pass","credentialsCaptured":false,"rawArtifactsCaptured":false}
+{"runId":"20260427T030312Z","id":"web-guard","command":"npm --prefix web-client run verify:web-guard","result":"pass","credentialsCaptured":false,"rawArtifactsCaptured":false}
+{"runId":"20260427T030312Z","id":"diff-check","command":"git diff --check","result":"pass","credentialsCaptured":false,"rawArtifactsCaptured":false}
