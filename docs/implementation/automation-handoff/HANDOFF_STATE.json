@@ -1,5 +1,5 @@
 {
-  "status": "active",
+  "status": "completed",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06I",
   "blockerId": "rwo06i-changed-row-identity-research-needed",
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T09:46:13Z",
+  "lastUpdated": "2026-04-27T10:24:00Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "automation_reassigned_by_owner_20260427T051855Z",
     "automationMustNot": [
@@ -5361,7 +5361,7 @@
     {
       "taskId": "RWO-06I_CHANGED_ROW_IDENTITY_RESEARCH_NO_LIVE",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06I",
       "summary": "Research or draft a changed source-backed surgeryOrder/500 row identity after v3 adjunct rows failed sanitized read-only proof.",
       "requiresRuntime": false,
@@ -5372,8 +5372,19 @@
       "sourceEvidence": "docs/implementation/rwo06i-surgery-v3-adjunct-master-proof-20260427T094613Z/summary.sanitized.json",
       "skipCondition": "no official/source-backed row identity can be identified without raw patient/insurance detail, credentials, live mutation, or production/S3 scope",
       "successCriteria": "sanitized no-live research or payload-drafting evidence exists; no live mutation executed; no row is treated as ready until read-only proof succeeds",
-      "nextOnSuccess": "RWO-06I_SURGERY_CHANGED_IDENTITY_MASTER_PROOF_PREFLIGHT",
-      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD"
+      "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO06I_CHANGED_ROW_RESEARCH",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO06I_CHANGED_ROW_RESEARCH",
+      "result": "stop_no_new_source_backed_identity_no_live",
+      "completedRunId": "20260427T101613Z",
+      "evidence": "docs/implementation/rwo06i-changed-row-identity-research-20260427T101613Z/summary.sanitized.json",
+      "rowIdentityDecision": {
+        "newSourceBackedIdentityDrafted": false,
+        "liveReadyNow": false,
+        "stopCondition": "no_new_official_source_backed_surgery_row_identity_established_without_readonly_row_proof",
+        "unchangedV2RepeatAllowed": false,
+        "unchangedV3RepeatAllowed": false,
+        "futureLiveAllowedWithoutNewEvidence": false
+      }
     },
     {
       "taskId": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN",
@@ -5475,6 +5486,26 @@
       "result": "current_head_non_s3_static_package_security_refresh_pass",
       "completedRunId": "20260427T053312Z",
       "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260427T053312Z/summary.sanitized.json"
+    },
+    {
+      "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO06I_CHANGED_ROW_RESEARCH",
+      "lane": "parallel_no_live",
+      "status": "completed",
+      "workOrder": "RWO-09",
+      "summary": "Refresh current-head non-S3 static/package/security checks after RWO-06I changed row identity no-live research.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06i-changed-row-identity-research-20260427T101613Z/summary.sanitized.json",
+      "skipCondition": "repo state unsafe or focused static/package/security checks unavailable",
+      "successCriteria": "current-head non-S3 static/package/security evidence exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false",
+      "nextOnSuccess": "next_unblocked_roadmap_item",
+      "nextOnSkip": "next_unblocked_roadmap_item",
+      "result": "current_head_non_s3_static_package_security_refresh_pass",
+      "completedRunId": "20260427T101613Z",
+      "evidence": "docs/implementation/rwo09-static-refresh-after-rwo06i-changed-row-research-20260427T101613Z/summary.sanitized.json"
     }
   ],
   "latestRwo06HInjectionMasterValidityReadonly": {
@@ -6444,6 +6475,62 @@
     },
     "claimBoundary": "Current-head non-S3 static/package/security refresh only after RWO-06I wrapper/evidence changes; no release readiness or storage/production claims.",
     "recommendedNextTask": "RWO-06I changed row identity research/no-live path, or another independent non-S3 roadmap item.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06IChangedRowIdentityResearch": {
+    "runId": "20260427T101613Z",
+    "workOrder": "RWO-06I",
+    "result": "RWO06I_CHANGED_ROW_IDENTITY_RESEARCH_STOP_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "7257c765907ce5c0ecd660e5daa05bb7f94642c6",
+    "evidence": "docs/implementation/rwo06i-changed-row-identity-research-20260427T101613Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo06i-changed-row-identity-research-20260427T101613Z/summary.sanitized.json",
+    "sourceEvidence": "docs/implementation/rwo06i-surgery-v3-adjunct-master-proof-20260427T094613Z/summary.sanitized.json",
+    "rowIdentityDecision": {
+      "newSourceBackedIdentityDrafted": false,
+      "liveReadyNow": false,
+      "stopCondition": "no_new_official_source_backed_surgery_row_identity_established_without_readonly_row_proof",
+      "unchangedV2RepeatAllowed": false,
+      "unchangedV3RepeatAllowed": false,
+      "futureLiveAllowedWithoutNewEvidence": false
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_research_only",
+      "businessAccepted": false
+    },
+    "claimBoundary": "RWO-06I changed row identity research only; no new surgery identity, Trial business acceptance, retry readiness, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Run current-head non-S3 static/package/security refresh after this no-live research evidence, then continue independent safe roadmap work.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo09StaticRefreshAfterRwo06IChangedRowResearch": {
+    "runId": "20260427T101613Z",
+    "workOrder": "RWO-09",
+    "result": "RWO09_STATIC_REFRESH_AFTER_RWO06I_CHANGED_ROW_RESEARCH_PASS",
+    "branch": "master",
+    "headAtSelection": "7257c765907ce5c0ecd660e5daa05bb7f94642c6",
+    "evidence": "docs/implementation/rwo09-static-refresh-after-rwo06i-changed-row-research-20260427T101613Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo09-static-refresh-after-rwo06i-changed-row-research-20260427T101613Z/summary.sanitized.json",
+    "sourceEvidence": "docs/implementation/rwo06i-changed-row-identity-research-20260427T101613Z/summary.sanitized.json",
+    "checks": {
+      "jsonValidity": "pass",
+      "webGuard": "pass",
+      "focusedMasterValidityTests": "pass_12_tests_with_web_guard_pretest",
+      "focusedPhase4EvidenceTests": "pass_38_tests_with_web_guard_pretest",
+      "reviewerSubmissionPacketContractTests": "pass_7_tests",
+      "reviewPackageContractTests": "pass_27_tests"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_static_refresh",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Current-head non-S3 static/package/security refresh only after RWO-06I changed row identity no-live research; no surgery Trial business acceptance, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Select the next independent non-S3 roadmap item; RWO-06I surgery remains stopped until a source-backed row identity and sanitized row proof exist.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
