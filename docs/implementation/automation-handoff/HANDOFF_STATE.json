@@ -1,8 +1,8 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-06H",
-  "blockerId": "rwo06h-injectable-row-proof-needs-changed-candidate",
+  "sourceWorkOrder": "RWO-06F",
+  "blockerId": "rwo06f-instruction-charge-preconditions-no-live-needed",
   "priority": "normal",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T05:50:15Z",
+  "lastUpdated": "2026-04-27T06:46:12Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "automation_reassigned_by_owner_20260427T051855Z",
     "automationMustNot": [
@@ -5744,6 +5744,92 @@
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false,
     "liveTrialMutationExecuted": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
+  "latestRwo06HRepairedCandidateRerun": {
+    "runId": "20260427T064612Z",
+    "workOrder": "RWO-06H",
+    "result": "RWO06H_REPAIRED_WRAPPER_CANDIDATE_RERUN_STOPPED_BEFORE_LIVE",
+    "branch": "master",
+    "headAtSelection": "593f578f36ff5bfd402ed0fb8e9ebc334ac0f496",
+    "evidence": "docs/implementation/rwo06h-repaired-candidate-rerun-20260427T064612Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06h-repaired-candidate-rerun-20260427T064612Z/summary.sanitized.json",
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "mutation": false,
+      "endpoint": "medicationgetv2",
+      "requestNumber": "02",
+      "candidateCount": 10,
+      "candidateMasterFoundCount": 0,
+      "sanitizedResult": "2xx/official_error/official_error_no_row_proof/masterFound=false"
+    },
+    "candidateCodesRerun": [
+      "620076111",
+      "620007539",
+      "620006203",
+      "620004173",
+      "620002589",
+      "621958501",
+      "620006734",
+      "620767312",
+      "620738012",
+      "621429304"
+    ],
+    "notReusedAsSuccessEvidence": [
+      "620000012",
+      "620076111",
+      "620007539",
+      "620006203",
+      "620004173",
+      "620002589",
+      "621958501",
+      "620006734",
+      "620767312",
+      "620738012",
+      "621429304"
+    ],
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_or_readonly_master_validity_not_validated",
+      "businessAccepted": false
+    },
+    "claimBoundary": "RWO-06H repaired-wrapper read-only candidate rerun only; no injection Trial business acceptance, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Run current-head non-S3 static/package/security refresh after the RWO-06H evidence update; do not run injectionOrder/310 live until a new changed candidate/precondition produces row-level medicationgetv2 Request_Number=02 proof.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "liveTrialMutationExecuted": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
+  "latestRwo09CurrentHeadStaticRefresh": {
+    "runId": "20260427T064612Z",
+    "workOrder": "RWO-09",
+    "result": "RWO09_CURRENT_HEAD_NON_S3_STATIC_PACKAGE_SECURITY_REFRESH_PASS",
+    "branch": "master",
+    "headAtSelection": "593f578f36ff5bfd402ed0fb8e9ebc334ac0f496",
+    "evidence": "docs/implementation/rwo09-current-head-static-refresh-20260427T064612Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-current-head-static-refresh-20260427T064612Z/summary.sanitized.json",
+    "precedingEvidence": "docs/implementation/rwo06h-repaired-candidate-rerun-20260427T064612Z/summary.sanitized.json",
+    "checks": {
+      "jsonValidity": "pass",
+      "docLinks": "pass",
+      "webGuard": "pass",
+      "reviewerSubmissionPacketContractTests": "pass_7_tests",
+      "reviewPackageContractTests": "pass_25_tests",
+      "gitDiffCheck": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_static_refresh_only",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Current-head non-S3 static/package/security refresh only; not injection Trial business acceptance, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+    "recommendedNextTask": "Continue with RWO-06F instruction-charge no-live precondition work or another independent no-live roadmap item.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
     "productionOrcaAttempted": false,
     "s3ObjectStorageUsed": false
   }

@@ -1,0 +1,34 @@
+{
+  "runId": "20260427T064612Z",
+  "result": "RWO09_CURRENT_HEAD_NON_S3_STATIC_PACKAGE_SECURITY_REFRESH_PASS",
+  "branch": "master",
+  "startHead": "593f578f36ff5bfd402ed0fb8e9ebc334ac0f496",
+  "workOrder": "RWO-09",
+  "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD",
+  "trigger": "Current-head refresh after RWO-06H repaired-wrapper candidate rerun evidence update.",
+  "rwo06hPrecedingEvidence": "docs/implementation/rwo06h-repaired-candidate-rerun-20260427T064612Z/summary.sanitized.json",
+  "checks": {
+    "handoffStateJson": "pass",
+    "rwo06hSummaryJson": "pass",
+    "sampleReadonlyEvidenceJson": "pass",
+    "docLinks": "pass",
+    "webGuard": "pass",
+    "reviewerSubmissionPacketContractTests": "pass_7_tests",
+    "reviewPackageContractTests": "pass_25_tests",
+    "gitDiffCheck": "pass"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_static_refresh_only",
+    "businessAccepted": false
+  },
+  "claimBoundary": "Current-head non-S3 static/package/security refresh only. Does not claim injection Trial business acceptance, fullflow success, production ORCA readiness, S3/object-storage readiness, actual rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+  "recommendedNextTask": "Continue with the next independent no-live roadmap item or await a new changed RWO-06H injectable candidate/precondition; do not run injectionOrder/310 live without row-level medicationgetv2 proof.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}
