@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T135043Z",
+  "workOrders": [
+    "RWO-09"
+  ],
+  "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO08B_LOCAL_DIAGNOSTIC",
+  "result": "CURRENT_HEAD_NON_S3_STATIC_PACKAGE_SECURITY_REFRESH_PASS",
+  "branch": "master",
+  "headAtSelection": "69cc2a3e58f331f3bfbdc405680d878df294cb90",
+  "sourceEvidence": "docs/implementation/rwo08b-local-exact-match-diagnostic-20260427T135043Z/summary.sanitized.json",
+  "changedFilesReviewed": [
+    "web-client/scripts/qa-lib/orca-trial-preflight.mjs",
+    "web-client/scripts/__tests__/orcaTrialPreflight.test.ts",
+    "docs/implementation/rwo08b-local-exact-match-diagnostic-20260427T135043Z/summary.sanitized.json",
+    "docs/implementation/rwo08b-local-exact-match-diagnostic-20260427T135043Z/FINAL_REPORT.md",
+    "docs/implementation/automation-handoff/HANDOFF_STATE.json",
+    "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md"
+  ],
+  "checks": {
+    "webGuard": "pass",
+    "focusedWebTest": "pass_82_tests",
+    "nodeSyntaxChecks": "pass",
+    "gitDiffCheck": "pass",
+    "jsonParse": "pass",
+    "sanitizedEvidenceReview": "pass_no_raw_patient_or_insurance_detail"
+  },
+  "runtimeUsed": false,
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_static_refresh_only",
+    "businessAccepted": false
+  },
+  "claimBoundary": "Current-head non-S3 static/package/security refresh only after RWO-08B local diagnostic. No fresh fullflow target, exact selected-candidate preflight acceptance, Phase 3/Phase 4 mutation, L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Continue to RWO-06G_BASE_CHARGE_RN00_FIRST_VISIT_GATE if runtime/read-only prerequisites are available, otherwise continue to the next independent no-live queue item.",
+  "credentialsCaptured": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

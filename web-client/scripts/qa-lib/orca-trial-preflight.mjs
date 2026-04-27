@@ -1035,6 +1035,97 @@ const sanitizeLocalSelectableReason = ({ status, reason, exactMatchCount, exactM
   return status === 'not_verified' ? 'unknown' : 'local_selectable_not_ready';
 };
 
+export const classifyLocalExactMatchTaxonomy = ({
+  status,
+  reason,
+  localCandidateCount,
+  selectableCount,
+  recordsReturned,
+  exactMatchCount,
+  exactResultCount,
+  selectable,
+}) => {
+  const normalizedStatus = normalizeText(status);
+  const normalizedReason = normalizeText(reason);
+  const candidateCount = safeCount(localCandidateCount ?? selectableCount ?? recordsReturned);
+  const exactCount = safeCount(exactMatchCount ?? exactResultCount);
+  if (normalizedStatus === 'accepted' || (selectable === true && exactCount === 1)) {
+    return {
+      primary: 'local_exact_match_single',
+      localAbsent: false,
+      prefixOnlyNonExact: false,
+      idFormatMismatchPossible: false,
+      facilityScopeMismatchPossible: false,
+      syncPreconditionUnknown: false,
+      uiRenderMismatchPossible: false,
+    };
+  }
+  if (normalizedReason === 'local_search_failed') {
+    return {
+      primary: 'local_search_failed',
+      localAbsent: false,
+      prefixOnlyNonExact: false,
+      idFormatMismatchPossible: false,
+      facilityScopeMismatchPossible: true,
+      syncPreconditionUnknown: true,
+      uiRenderMismatchPossible: false,
+    };
+  }
+  if (exactCount > 1 || normalizedReason === 'local_exact_match_ambiguous') {
+    return {
+      primary: 'local_exact_match_ambiguous',
+      localAbsent: false,
+      prefixOnlyNonExact: false,
+      idFormatMismatchPossible: true,
+      facilityScopeMismatchPossible: false,
+      syncPreconditionUnknown: false,
+      uiRenderMismatchPossible: false,
+    };
+  }
+  if (candidateCount === 0 && exactCount === 0) {
+    return {
+      primary: 'local_absent',
+      localAbsent: true,
+      prefixOnlyNonExact: false,
+      idFormatMismatchPossible: false,
+      facilityScopeMismatchPossible: true,
+      syncPreconditionUnknown: true,
+      uiRenderMismatchPossible: false,
+    };
+  }
+  if (candidateCount > 0 && exactCount === 0) {
+    return {
+      primary: 'local_prefix_only_nonexact',
+      localAbsent: false,
+      prefixOnlyNonExact: true,
+      idFormatMismatchPossible: true,
+      facilityScopeMismatchPossible: false,
+      syncPreconditionUnknown: false,
+      uiRenderMismatchPossible: false,
+    };
+  }
+  if (exactCount === 1 && selectable === false) {
+    return {
+      primary: 'ui_render_mismatch_possible',
+      localAbsent: false,
+      prefixOnlyNonExact: false,
+      idFormatMismatchPossible: false,
+      facilityScopeMismatchPossible: false,
+      syncPreconditionUnknown: false,
+      uiRenderMismatchPossible: true,
+    };
+  }
+  return {
+    primary: 'sync_precondition_unknown',
+    localAbsent: false,
+    prefixOnlyNonExact: false,
+    idFormatMismatchPossible: false,
+    facilityScopeMismatchPossible: true,
+    syncPreconditionUnknown: true,
+    uiRenderMismatchPossible: false,
+  };
+};
+
 export const summarizeLocalSelectableDiagnostic = ({
   patientId,
   normalizedTargetPatientId,
@@ -1059,6 +1150,16 @@ export const summarizeLocalSelectableDiagnostic = ({
     exactMatch: exactMatch ?? exactCount > 0,
     selectable,
   });
+  const localExactMatchTaxonomy = classifyLocalExactMatchTaxonomy({
+    status,
+    reason: sanitizedReason,
+    localCandidateCount,
+    selectableCount,
+    recordsReturned,
+    exactMatchCount: exactCount,
+    exactResultCount,
+    selectable,
+  });
   return {
     status,
     verdict: status,
@@ -1070,6 +1171,8 @@ export const summarizeLocalSelectableDiagnostic = ({
     exactMatchCount: exactCount,
     exactNormalizedPatientIdMatchCount: exactCount,
     exactMatch: exactCount === 1,
+    localExactMatchTaxonomy: localExactMatchTaxonomy.primary,
+    localExactMatchDiagnostic: localExactMatchTaxonomy,
     rawSensitiveFieldsExcluded: true,
   };
 };

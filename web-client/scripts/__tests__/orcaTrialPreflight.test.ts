@@ -8,6 +8,7 @@ import {
   buildOfficialPatientReadinessAxes,
   buildReadinessRejectionReasons,
   collectCandidateRejectionReasons,
+  classifyLocalExactMatchTaxonomy,
   classifyReadinessFailureDiagnostic,
   classifyAcceptmodReadOnlyDiagnostic,
   evaluatePreflightSummary,
@@ -1348,9 +1349,16 @@ describe('orca trial-native preflight gates', () => {
     expect(local).toMatchObject({
       status: 'rejected',
       reason: 'local_exact_match_missing',
+      localExactMatchTaxonomy: 'local_absent',
       normalizedTargetPatientId: '00002',
       localCandidateCount: 0,
       exactNormalizedPatientIdMatchCount: 0,
+      localExactMatchDiagnostic: {
+        primary: 'local_absent',
+        localAbsent: true,
+        facilityScopeMismatchPossible: true,
+        syncPreconditionUnknown: true,
+      },
       rawSensitiveFieldsExcluded: true,
     });
     expect(selector).toMatchObject({
@@ -1367,6 +1375,62 @@ describe('orca trial-native preflight gates', () => {
       appointmentDependency: { flowMode: 'direct_acceptance', required: false, accepted: true },
       secretScanClean: true,
     })).toBe('selector_missing');
+  });
+
+  it('splits local exact-match missing into sanitized local taxonomy categories', () => {
+    expect(
+      classifyLocalExactMatchTaxonomy({
+        status: 'rejected',
+        reason: 'local_exact_match_missing',
+        localCandidateCount: 0,
+        exactMatchCount: 0,
+      }),
+    ).toMatchObject({
+      primary: 'local_absent',
+      localAbsent: true,
+      facilityScopeMismatchPossible: true,
+      syncPreconditionUnknown: true,
+      prefixOnlyNonExact: false,
+      uiRenderMismatchPossible: false,
+    });
+
+    expect(
+      summarizeLocalSelectableDiagnostic({
+        patientId: '00002',
+        recordsReturned: 2,
+        exactMatchCount: 0,
+        verdict: 'rejected',
+        reason: 'local_exact_match_missing',
+      }),
+    ).toMatchObject({
+      reason: 'local_exact_match_missing',
+      localCandidateCount: 2,
+      exactNormalizedPatientIdMatchCount: 0,
+      localExactMatchTaxonomy: 'local_prefix_only_nonexact',
+      localExactMatchDiagnostic: {
+        primary: 'local_prefix_only_nonexact',
+        prefixOnlyNonExact: true,
+        idFormatMismatchPossible: true,
+        localAbsent: false,
+      },
+    });
+
+    expect(
+      summarizeLocalSelectableDiagnostic({
+        patientId: '00002',
+        recordsReturned: 1,
+        exactMatchCount: 1,
+        selectable: false,
+        verdict: 'rejected',
+        reason: 'local_exact_match_not_selectable',
+      }),
+    ).toMatchObject({
+      localExactMatchTaxonomy: 'ui_render_mismatch_possible',
+      localExactMatchDiagnostic: {
+        primary: 'ui_render_mismatch_possible',
+        uiRenderMismatchPossible: true,
+      },
+    });
   });
 
   it('splits medical_information_not_ready into sanitized subdimensions', () => {

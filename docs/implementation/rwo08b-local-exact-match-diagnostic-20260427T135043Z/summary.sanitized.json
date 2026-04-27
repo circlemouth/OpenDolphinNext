@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T135043Z",
+  "workOrders": [
+    "RWO-08B"
+  ],
+  "taskId": "RWO-08B_LOCAL_EXACT_MATCH_DIAGNOSTIC",
+  "result": "RWO08B_LOCAL_SYNC_PRECONDITION_BLOCKER",
+  "branch": "master",
+  "headAtSelection": "69cc2a3e58f331f3bfbdc405680d878df294cb90",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "rwo08b-local-exact-match-diagnostic-needed"
+  },
+  "sourceEvidence": [
+    "docs/implementation/chatgpt-research-intake-validation-20260427T125006Z/summary.sanitized.json",
+    "docs/implementation/rwo08b-readonly-candidate-refresh-20260427T121615Z/summary.sanitized.json",
+    "docs/implementation/rwo08b-duplicate-candidate-exhaustion-20260425T152931Z/summary.sanitized.json"
+  ],
+  "diagnosticMode": {
+    "repoLocalStaticReview": true,
+    "runtimeUsed": false,
+    "liveTrialOrcaExecuted": false,
+    "localImportOrSyncExecuted": false,
+    "phase3Executed": false,
+    "phase4Executed": false,
+    "fullflowExecuted": false
+  },
+  "localSearchContract": {
+    "route": "/api/local/patients/search",
+    "method": "POST",
+    "serverFacilityScope": "request actor facility",
+    "serverSearchType": "patient-id",
+    "serverQueryShape": "facility-scoped patientId prefix search",
+    "qaExactMatchRequirement": "exact normalized candidate patientId count must be one",
+    "syncBusinessKey": "facilityId + patientId",
+    "zeroPaddingTransformObserved": false,
+    "rawSensitiveFieldsExcluded": true
+  },
+  "taxonomy": {
+    "local_absent": "local search returned zero sanitized local candidates and zero exact matches",
+    "local_prefix_only_nonexact": "local search returned sanitized candidates but none exactly matched the target candidate id",
+    "local_id_format_mismatch_possible": "prefix-only or ambiguous local rows suggest a possible local-vs-official patient id format mismatch",
+    "facility_scope_mismatch_possible": "official exact evidence exists but actor-facility-scoped local search has no exact row",
+    "sync_precondition_unknown": "official exact evidence exists but local import/sync precondition or history is not proven",
+    "ui_render_mismatch_possible": "local exact API evidence could exist but UI result selectability/rendering rejects the row"
+  },
+  "candidateDiagnostics": [
+    {
+      "patientId": "00002",
+      "priorPrimaryRejectionReason": "local_exact_match_missing",
+      "officialPatient": "accepted",
+      "insurance": "accepted",
+      "appointmentHttpStatus": 200,
+      "localCandidateCount": 0,
+      "exactMatchCount": 0,
+      "taxonomy": "local_absent",
+      "facilityScopeMismatchPossible": true,
+      "syncPreconditionUnknown": true
+    },
+    {
+      "patientId": "00003",
+      "priorPrimaryRejectionReason": "local_exact_match_missing",
+      "officialPatient": "accepted",
+      "insurance": "accepted",
+      "appointmentHttpStatus": 200,
+      "localCandidateCount": 0,
+      "exactMatchCount": 0,
+      "taxonomy": "local_absent",
+      "facilityScopeMismatchPossible": true,
+      "syncPreconditionUnknown": true
+    },
+    {
+      "patientId": "00004",
+      "priorPrimaryRejectionReason": "local_exact_match_missing",
+      "officialPatient": "accepted",
+      "insurance": "accepted",
+      "appointmentHttpStatus": 200,
+      "localCandidateCount": 0,
+      "exactMatchCount": 0,
+      "taxonomy": "local_absent",
+      "facilityScopeMismatchPossible": true,
+      "syncPreconditionUnknown": true
+    },
+    {
+      "patientId": "00006",
+      "priorPrimaryRejectionReason": "local_exact_match_missing",
+      "officialPatient": "accepted",
+      "insurance": "accepted",
+      "appointmentHttpStatus": 200,
+      "localCandidateCount": 0,
+      "exactMatchCount": 0,
+      "taxonomy": "local_absent",
+      "facilityScopeMismatchPossible": true,
+      "syncPreconditionUnknown": true
+    },
+    {
+      "patientId": "00007",
+      "priorPrimaryRejectionReason": "local_exact_match_missing",
+      "officialPatient": "accepted",
+      "insurance": "accepted",
+      "appointmentHttpStatus": 200,
+      "localCandidateCount": 0,
+      "exactMatchCount": 0,
+      "taxonomy": "local_absent",
+      "facilityScopeMismatchPossible": true,
+      "syncPreconditionUnknown": true
+    },
+    {
+      "patientId": "00008",
+      "priorPrimaryRejectionReason": "local_exact_match_missing",
+      "officialPatient": "accepted",
+      "insurance": "accepted",
+      "appointmentHttpStatus": 200,
+      "localCandidateCount": 0,
+      "exactMatchCount": 0,
+      "taxonomy": "local_absent",
+      "facilityScopeMismatchPossible": true,
+      "syncPreconditionUnknown": true
+    },
+    {
+      "patientId": "00009",
+      "priorPrimaryRejectionReason": "local_exact_match_missing",
+      "officialPatient": "accepted",
+      "insurance": "accepted",
+      "appointmentHttpStatus": 200,
+      "localCandidateCount": 0,
+      "exactMatchCount": 0,
+      "taxonomy": "local_absent",
+      "facilityScopeMismatchPossible": true,
+      "syncPreconditionUnknown": true
+    },
+    {
+      "patientId": "00010",
+      "priorPrimaryRejectionReason": "local_exact_match_missing",
+      "officialPatient": "accepted",
+      "insurance": "accepted",
+      "appointmentHttpStatus": 200,
+      "localCandidateCount": 0,
+      "exactMatchCount": 0,
+      "taxonomy": "local_absent",
+      "facilityScopeMismatchPossible": true,
+      "syncPreconditionUnknown": true
+    },
+    {
+      "patientId": "00011",
+      "priorPrimaryRejectionReason": "local_exact_match_missing",
+      "officialPatient": "accepted",
+      "insurance": "accepted",
+      "appointmentHttpStatus": 200,
+      "localCandidateCount": 0,
+      "exactMatchCount": 0,
+      "taxonomy": "local_absent",
+      "facilityScopeMismatchPossible": true,
+      "syncPreconditionUnknown": true
+    }
+  ],
+  "candidateSetSummary": {
+    "candidateIdsCheckedFromPriorEvidence": [
+      "00002",
+      "00003",
+      "00004",
+      "00006",
+      "00007",
+      "00008",
+      "00009",
+      "00010",
+      "00011"
+    ],
+    "allNonExcludedCandidatesTaxonomy": "local_absent",
+    "freshExactLocalTargetFound": false,
+    "exactSelectedCandidatePreflight": "not_run",
+    "mutationRouteBlockedRequestCount": 0
+  },
+  "misuseCases": [
+    {
+      "case": "Treating official ORCA Trial patient existence as local sync/selectability readiness.",
+      "control": "Diagnostic records official accepted separately from facility-scoped local_absent state.",
+      "result": "mitigated"
+    },
+    {
+      "case": "Running local import/sync to manufacture a fresh target during diagnostic work.",
+      "control": "Diagnostic was static/no-live and localImportOrSyncExecuted=false.",
+      "result": "mitigated"
+    },
+    {
+      "case": "Using local prefix search rows or UI text as exact patient identity.",
+      "control": "QA taxonomy keeps prefix-only and UI-render mismatch distinct from exactMatchCount=1.",
+      "result": "mitigated"
+    }
+  ],
+  "checks": {
+    "focusedWebTest": "pass",
+    "nodeSyntaxChecks": "pass",
+    "sanitizedEvidenceReview": "pass_no_raw_patient_or_insurance_detail"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_no_live_diagnostic_only",
+    "businessAccepted": false
+  },
+  "claimBoundary": "RWO-08B local exact-match diagnostic only. This is not a fresh fullflow target, exact selected-candidate preflight acceptance, Phase 3/Phase 4 mutation, L4 fullflow success, Trial order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+  "recommendedNextTask": "Run current-head static/package/security refresh after the RWO-08B local exact-match taxonomy and evidence update, then continue to the next safe no-live/read-only queue item.",
+  "credentialsCaptured": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}
