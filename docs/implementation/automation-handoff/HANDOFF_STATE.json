@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06H",
-  "blockerId": "rwo06h-single-live-attempt-pending-worker-decision",
+  "blockerId": "rwo06h-injection-v3-business-rejected-no-live-investigation-needed",
   "priority": "normal",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T08:46:16Z",
+  "lastUpdated": "2026-04-27T08:53:44Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "automation_reassigned_by_owner_20260427T051855Z",
     "automationMustNot": [
@@ -5209,7 +5209,7 @@
     {
       "taskId": "RWO-06H_SINGLE_LIVE_ATTEMPT_PENDING_WORKER_DECISION",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06H",
       "summary": "Execute one main-worker-controlled WebORCA / ORCA Trial live decision for injectionOrder/310 v3 if immediate pre-send checks remain valid.",
       "requiresRuntime": true,
@@ -5226,6 +5226,34 @@
       "prerequisiteEvidence": "docs/implementation/rwo06h-injection-v3-live-preflight-20260427T084616Z/summary.sanitized.json",
       "skipCondition": "runtime unavailable, accepted checkpoint appears, target drift, parser ambiguity, credential/raw-artifact risk, non-Trial endpoint detection, or safe wrapper guard rejection",
       "successCriteria": "one sanitized live Trial decision recorded as business accepted, business rejected, inconclusive, skipped, or blocked; no raw artifacts or credentials captured",
+      "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "result": "business_rejected_no_retry_without_changed_precondition",
+      "completedRunId": "20260427T084616Z",
+      "evidence": "docs/implementation/rwo06h-injection-v3-live-decision-20260427T084616Z/summary.sanitized.json",
+      "liveTrialOrca": {
+        "executed": true,
+        "attempt": 1,
+        "httpStatus": 200,
+        "apiResult": "90",
+        "responseClassification": "businessRejected",
+        "businessAccepted": false
+      }
+    },
+    {
+      "taskId": "RWO-06H_INJECTION_V3_REJECTION_NO_LIVE_INVESTIGATION",
+      "lane": "parallel_no_live",
+      "status": "queued",
+      "workOrder": "RWO-06H",
+      "summary": "Investigate the sanitized RWO-06H injection v3 Api_Result 90 rejection without another live send.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06h-injection-v3-live-decision-20260427T084616Z/summary.sanitized.json",
+      "skipCondition": "official endpoint semantics or local payload/precondition evidence cannot be investigated without raw ORCA bodies, raw patient/insurance detail, credentials, S3/object storage, or live mutation",
+      "successCriteria": "sanitized no-live investigation records a concrete changed precondition/payload identity or classifies the row as blocked without repeating the live send",
       "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
     },
@@ -6085,6 +6113,44 @@
     },
     "claimBoundary": "RWO-06H injectionOrder/310 v3 duplicate-checkpoint/runtime-readiness preflight only; live-ready for one future main-worker-controlled decision but not Trial business acceptance, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
     "recommendedNextTask": "Execute at most one RWO-06H injection v3 live Trial attempt through the safe medicalmodv2 wrapper after immediate duplicate-checkpoint and runtime-readiness rechecks.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06HInjectionV3LiveDecision": {
+    "runId": "20260427T084616Z",
+    "workOrder": "RWO-06H",
+    "result": "RWO06H_INJECTION_V3_LIVE_TRIAL_BUSINESS_REJECTED_NO_RETRY_WITHOUT_CHANGED_PRECONDITION",
+    "branch": "master",
+    "headAtSelection": "3717551ec6e675a450ea4f5dfaa27bf105ef9fb7",
+    "evidence": "docs/implementation/rwo06h-injection-v3-live-decision-20260427T084616Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06h-injection-v3-live-decision-20260427T084616Z/summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "injection",
+      "entity": "injectionOrder",
+      "claim007Class": "310",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v3.json",
+      "sha256": "6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d",
+      "duplicateLiveCheckpoint": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d"
+    },
+    "preSendEvidence": {
+      "duplicateLiveCheckpointBeforeAttempt": "not_found",
+      "runtimeReadiness": "pass_200_200"
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "attempt": 1,
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "target": "00001",
+      "requestClass": "medicalmodv2",
+      "httpStatus": 200,
+      "apiResult": "90",
+      "responseClassification": "businessRejected",
+      "businessSuccessClassification": "live_trial_business_rejected",
+      "businessAccepted": false
+    },
+    "claimBoundary": "RWO-06H injectionOrder/310 v3 executed one scoped WebORCA / ORCA Trial live attempt and was businessRejected; no injection Trial acceptance, all-injection coverage, all-order readiness, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Do not repeat this exact RWO-06H v3 live send. Continue with no-live investigation or the next independent non-S3 roadmap item unless a concrete changed precondition is established.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
