@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06F",
-  "blockerId": "rwo06f-instruction-charge-preconditions-no-live-needed",
+  "blockerId": "rwo06f-readonly-precondition-probes-needed",
   "priority": "normal",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T06:46:12Z",
+  "lastUpdated": "2026-04-27T07:16:11Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "automation_reassigned_by_owner_20260427T051855Z",
     "automationMustNot": [
@@ -4943,6 +4943,30 @@
   },
   "nextExecutableQueue": [
     {
+      "taskId": "RWO-06F_READONLY_PRECONDITION_PROBES",
+      "lane": "critical_path",
+      "status": "queued",
+      "workOrder": "RWO-06F",
+      "summary": "Create or run sanitized read-only precondition probes for instractionChargeOrder/130 disease, facility, monthly, department, and insurance context.",
+      "requiresRuntime": true,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06f-instruction-charge-preconditions-20260427T071611Z/summary.sanitized.json",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_instruction_charge_trial_reachability_v2.json",
+      "payloadSha256": "043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858",
+      "allowedReadOnlyChecks": [
+        "diseasegetv2_or_diseasev3_sanitized_summary",
+        "medicalgetv2_monthly_readonly",
+        "system01dailyv2_or_system01lstv2_sanitized_facility_summary"
+      ],
+      "skipCondition": "runtime unavailable, safe sanitized read-only wrapper missing, target drift, parser ambiguity, credential/raw-artifact risk, or preconditions cannot be proven without raw patient/insurance/disease detail",
+      "successCriteria": "sanitized server-derived precondition evidence exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false; no live mutation executed",
+      "nextOnSuccess": "RWO-06F_DUPLICATE_CHECKPOINT_PREFLIGHT",
+      "nextOnSkip": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE"
+    },
+    {
       "taskId": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
       "lane": "critical_path",
       "status": "queued",
@@ -5804,14 +5828,13 @@
     "s3ObjectStorageUsed": false
   },
   "latestRwo09CurrentHeadStaticRefresh": {
-    "runId": "20260427T064612Z",
+    "runId": "20260427T071611Z",
     "workOrder": "RWO-09",
     "result": "RWO09_CURRENT_HEAD_NON_S3_STATIC_PACKAGE_SECURITY_REFRESH_PASS",
     "branch": "master",
-    "headAtSelection": "593f578f36ff5bfd402ed0fb8e9ebc334ac0f496",
-    "evidence": "docs/implementation/rwo09-current-head-static-refresh-20260427T064612Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-current-head-static-refresh-20260427T064612Z/summary.sanitized.json",
-    "precedingEvidence": "docs/implementation/rwo06h-repaired-candidate-rerun-20260427T064612Z/summary.sanitized.json",
+    "evidence": "docs/implementation/rwo09-current-head-static-refresh-20260427T071611Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-current-head-static-refresh-20260427T071611Z/summary.sanitized.json",
+    "precedingEvidence": "docs/implementation/rwo06f-instruction-charge-preconditions-20260427T071611Z/summary.sanitized.json",
     "checks": {
       "jsonValidity": "pass",
       "docLinks": "pass",
@@ -5825,8 +5848,46 @@
       "businessSuccessClassification": "not_applicable_static_refresh_only",
       "businessAccepted": false
     },
-    "claimBoundary": "Current-head non-S3 static/package/security refresh only; not injection Trial business acceptance, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
-    "recommendedNextTask": "Continue with RWO-06F instruction-charge no-live precondition work or another independent no-live roadmap item.",
+    "claimBoundary": "Current-head non-S3 static/package/security refresh only; not instruction-charge Trial business acceptance, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+    "recommendedNextTask": "Continue independent no-live roadmap work; do not execute instractionChargeOrder/130 live until all listed preconditions have sanitized server-derived proof.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
+  "latestRwo06FInstructionChargePreconditions": {
+    "runId": "20260427T071611Z",
+    "workOrder": "RWO-06F",
+    "result": "RWO06F_INSTRUCTION_CHARGE_PRECONDITIONS_BLOCKED_NO_LIVE",
+    "branch": "master",
+    "evidence": "docs/implementation/rwo06f-instruction-charge-preconditions-20260427T071611Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06f-instruction-charge-preconditions-20260427T071611Z/summary.sanitized.json",
+    "dryRunEvidence": "docs/implementation/rwo06f-instruction-charge-preconditions-20260427T071611Z/instruction-charge-v2-dry-run/phase4-medicalmodv2-summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "instruction-charge",
+      "entity": "instractionChargeOrder",
+      "claim007Class": "130",
+      "candidateCode": "113001810",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_instruction_charge_trial_reachability_v2.json",
+      "sha256": "043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858",
+      "target": "00001",
+      "requestNumber": "01",
+      "classCode": "01"
+    },
+    "preconditionsRequiredBeforeLive": [
+      "diseaseContext",
+      "facilityContext",
+      "monthlyDuplicateContext",
+      "departmentInsuranceContext"
+    ],
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_precondition_blocker",
+      "businessAccepted": false
+    },
+    "claimBoundary": "RWO-06F instruction-charge no-live precondition packet only; no Trial business acceptance, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Create or run sanitized read-only precondition wrappers/probes for disease/facility/monthly/department/insurance context before any instractionChargeOrder/130 live attempt.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false,

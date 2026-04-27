@@ -1,0 +1,89 @@
+{
+  "runId": "20260427T071611Z",
+  "workOrder": "RWO-06F",
+  "result": "RWO06F_INSTRUCTION_CHARGE_PRECONDITIONS_BLOCKED_NO_LIVE",
+  "branch": "master",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusBeforeRun": "active",
+    "blockerId": "rwo06f-instruction-charge-preconditions-no-live-needed"
+  },
+  "officialSourceResearch": {
+    "checkedDate": "2026-04-27",
+    "sources": [
+      {
+        "url": "https://www.orca.med.or.jp/receipt/users/tec/api/overview.html",
+        "usedFor": "medicalmodv2, medicalgetv2, and diseasev3 endpoint/request-class identity"
+      },
+      {
+        "url": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+        "usedFor": "medicalmodv2 Medical_Information and Disease_Information context boundary"
+      },
+      {
+        "url": "https://www.orca.med.or.jp/receipt/users/tec/api/diseasemod2.html",
+        "usedFor": "disease class evidence requirement for specific management-fee context"
+      },
+      {
+        "url": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalinfo.html",
+        "usedFor": "monthly medical information, department, and insurance read-only precondition boundary"
+      },
+      {
+        "url": "https://www.orca.med.or.jp/receipt/tec/api/system_daily.data/api01rv2_system01dailyv2.pdf",
+        "usedFor": "facility/system setting classification boundary"
+      }
+    ],
+    "liveAuthorizationFromResearch": false
+  },
+  "payloadIdentity": {
+    "workflow": "instruction-charge",
+    "entity": "instractionChargeOrder",
+    "claim007Class": "130",
+    "candidateCode": "113001810",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_instruction_charge_trial_reachability_v2.json",
+    "sha256": "043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858",
+    "target": "00001",
+    "requestNumber": "01",
+    "classCode": "01",
+    "duplicateLiveCheckpoint": "rwo06f:medicalmodv2:rwo06f-instruction-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858"
+  },
+  "preconditionPlan": {
+    "status": "blocked_until_sanitized_preconditions_proven",
+    "candidateCodeShapeAccepted": true,
+    "stopBeforeLiveUntilAllPreconditionsProven": true,
+    "requiredPreconditions": [
+      "diseaseContext",
+      "facilityContext",
+      "monthlyDuplicateContext",
+      "departmentInsuranceContext"
+    ],
+    "allowedReadOnlyChecksBeforeLive": [
+      "diseasegetv2_or_diseasev3_sanitized_summary",
+      "medicalgetv2_monthly_readonly",
+      "system01dailyv2_or_system01lstv2_sanitized_facility_summary"
+    ],
+    "forbiddenEvidence": [
+      "rawDiseaseNameOrPatientDetail",
+      "rawMedicalRows",
+      "rawInsuranceDetail",
+      "clientProvidedInsuranceAuthority",
+      "rawOrcaRequestOrResponseBody"
+    ]
+  },
+  "noLiveEvidence": {
+    "wrapperDryRun": "pass_no_live",
+    "dryRunSummary": "docs/implementation/rwo06f-instruction-charge-preconditions-20260427T071611Z/instruction-charge-v2-dry-run/phase4-medicalmodv2-summary.sanitized.json",
+    "focusedTests": "pass_28_tests"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_no_live_precondition_blocker",
+    "businessAccepted": false
+  },
+  "claimBoundary": "RWO-06F instruction-charge precondition packet only; no Trial business acceptance, all guidance-fee coverage, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Run current-head non-S3 static/package/security refresh, then continue independent no-live roadmap work. Do not execute instractionChargeOrder/130 live until all preconditions are proven with sanitized server-derived evidence.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

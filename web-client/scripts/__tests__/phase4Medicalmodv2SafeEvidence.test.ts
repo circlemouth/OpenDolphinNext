@@ -15,6 +15,7 @@ import {
   summarizeInjectionMasterValidityNoLivePlan,
   summarizeInjectionOrderNoLiveContract,
   summarizeRuntimeReadiness,
+  summarizeInstructionChargePreconditionNoLivePlan,
   validatePhase4Payload,
   validatePhase4SafeCommand,
 } from '../qa-lib/phase4-medicalmodv2-safe-evidence.mjs';
@@ -308,6 +309,50 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(result.liveTrialAction).toBe('not_run');
     expect(result.rawPayloadStored).toBe(false);
     expect(result.rawPatientOrInsuranceDetailStored).toBe(false);
+  });
+
+  it('builds the instruction-charge v2 precondition plan without live ORCA', () => {
+    const payload = JSON.parse(fs.readFileSync(INSTRUCTION_CHARGE_V2_PAYLOAD, 'utf8'));
+    const result = summarizeInstructionChargePreconditionNoLivePlan(payload);
+
+    expect(result.ok).toBe(true);
+    expect(result.blockers).toEqual([]);
+    expect(result.candidateCodes).toEqual(['113001810']);
+    expect(result.preconditionsRequiredBeforeLive.map((item) => item.name)).toEqual([
+      'diseaseContext',
+      'facilityContext',
+      'monthlyDuplicateContext',
+      'departmentInsuranceContext',
+    ]);
+    expect(result.readOnlyChecksAllowedBeforeLive).toEqual([
+      expect.objectContaining({ endpoint: 'diseasegetv2_or_diseasev3_sanitized_summary' }),
+      expect.objectContaining({ endpoint: 'medicalgetv2' }),
+      expect.objectContaining({ endpoint: 'system01dailyv2_or_system01lstv2' }),
+    ]);
+    expect(result.requestSemantics).toEqual({
+      requestNumber01Only: true,
+      classCode01Only: true,
+      requestNumber02To04Forbidden: true,
+    });
+    expect(result.stopBeforeLiveUntilAllPreconditionsProven).toBe(true);
+    expect(result.runtimeReadOnlyProbeExecuted).toBe(false);
+    expect(result.liveTrialAction).toBe('not_run');
+    expect(result.rawPayloadStored).toBe(false);
+    expect(result.rawOrcaBodyStored).toBe(false);
+    expect(result.rawPatientOrInsuranceDetailStored).toBe(false);
+  });
+
+  it('rejects instruction-charge payloads with mismatched class-130 code shape before live ORCA', () => {
+    const payload = JSON.parse(fs.readFileSync(INSTRUCTION_CHARGE_V2_PAYLOAD, 'utf8'));
+    payload.medicalInformation[0].medications[0].code = '112007410';
+
+    const result = summarizeInstructionChargePreconditionNoLivePlan(payload);
+
+    expect(result.ok).toBe(false);
+    expect(result.blockers).toContain(
+      'instruction-charge row must use a class-130 guidance/management fee code shape',
+    );
+    expect(result.liveTrialAction).toBe('not_run');
   });
 
   it('builds the injection v2 master-validity read-only preflight plan without live ORCA', () => {

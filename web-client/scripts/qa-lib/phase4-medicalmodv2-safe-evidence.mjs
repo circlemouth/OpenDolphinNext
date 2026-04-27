@@ -422,6 +422,97 @@ export const summarizeInjectionMasterValidityNoLivePlan = (payload) => {
   };
 };
 
+export const summarizeInstructionChargePreconditionNoLivePlan = (payload) => {
+  const summary = summarizePayload(payload);
+  const groups = Array.isArray(payload?.medicalInformation) ? payload.medicalInformation : [];
+  const instructionGroups = groups.filter(
+    (entry) => normalizeCode(entry?.entity) === 'instractionChargeOrder' && normalizeCode(entry?.medicalClass) === '130',
+  );
+  const medications = instructionGroups.flatMap((entry) => (Array.isArray(entry?.medications) ? entry.medications : []));
+  const candidateCodes = medications.map((row) => normalizeCode(row?.code)).filter(Boolean);
+  const blockers = [];
+
+  if (summary.requestNumber !== PHASE4_ALLOWED_REQUEST_NUMBER) {
+    blockers.push(`requestNumber must be ${PHASE4_ALLOWED_REQUEST_NUMBER}`);
+  }
+  if (summary.classCode !== PHASE4_ALLOWED_CLASS_CODE) {
+    blockers.push(`classCode must be ${PHASE4_ALLOWED_CLASS_CODE}`);
+  }
+  if (instructionGroups.length !== 1) {
+    blockers.push('exactly one instractionChargeOrder class 130 group is required');
+  }
+  if (candidateCodes.length !== 1 || !codeLooksLike(candidateCodes[0], /^113\d+$/)) {
+    blockers.push('instruction-charge row must use a class-130 guidance/management fee code shape');
+  }
+  if (medications.some((row) => !normalizeCode(row?.number))) {
+    blockers.push('instruction-charge row requires a medication number');
+  }
+
+  return {
+    ok: blockers.length === 0,
+    blockers,
+    candidateCodes,
+    preconditionsRequiredBeforeLive: [
+      {
+        name: 'diseaseContext',
+        requiredEvidence: [
+          'sanitizedDiseasePresence',
+          'specificManagementFeeDiseaseClassOrEquivalent',
+          'noRawDiseaseNameOrPatientDetail',
+        ],
+      },
+      {
+        name: 'facilityContext',
+        requiredEvidence: [
+          'facilityTypeCompatibleWithCandidate',
+          'sanitizedFacilityClassificationOnly',
+        ],
+      },
+      {
+        name: 'monthlyDuplicateContext',
+        requiredEvidence: [
+          'medicalgetv2MonthlyReadOnlyCheck',
+          'sameMonthDuplicateStatus',
+          'noRawMedicalRowsOrInsuranceDetail',
+        ],
+      },
+      {
+        name: 'departmentInsuranceContext',
+        requiredEvidence: [
+          'departmentCodeServerDerived',
+          'insuranceCombinationReadiness',
+          'noClientProvidedInsuranceAuthority',
+        ],
+      },
+    ],
+    stopBeforeLiveUntilAllPreconditionsProven: true,
+    readOnlyChecksAllowedBeforeLive: [
+      {
+        endpoint: 'diseasegetv2_or_diseasev3_sanitized_summary',
+        purpose: 'prove target has compatible disease context without raw disease or patient detail',
+      },
+      {
+        endpoint: 'medicalgetv2',
+        purpose: 'prove monthly duplicate/department/insurance context without raw medical or insurance rows',
+      },
+      {
+        endpoint: 'system01dailyv2_or_system01lstv2',
+        purpose: 'prove facility/system classification only when safe sanitized wrapper exists',
+      },
+    ],
+    requestSemantics: {
+      requestNumber01Only: summary.requestNumber === PHASE4_ALLOWED_REQUEST_NUMBER,
+      classCode01Only: summary.classCode === PHASE4_ALLOWED_CLASS_CODE,
+      requestNumber02To04Forbidden: true,
+    },
+    runtimeReadOnlyProbeExecuted: false,
+    liveTrialAction: 'not_run',
+    rawPayloadStored: false,
+    rawOrcaBodyStored: false,
+    rawPatientOrInsuranceDetailStored: false,
+  };
+};
+
 export const validatePhase4Payload = ({ payload, payloadSha256, expectedPayloadSha256 = '' }) => {
   const summary = summarizePayload(payload);
   const blockers = [];
