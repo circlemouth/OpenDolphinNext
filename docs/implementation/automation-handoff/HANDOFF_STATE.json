@@ -1,8 +1,8 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-06F",
-  "blockerId": "rwo06f-readonly-precondition-probes-needed",
+  "sourceWorkOrder": "RWO-06H",
+  "blockerId": "rwo06h-injectable-candidate-discovery-no-live-needed",
   "priority": "normal",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T07:16:11Z",
+  "lastUpdated": "2026-04-27T07:46:16Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "automation_reassigned_by_owner_20260427T051855Z",
     "automationMustNot": [
@@ -4945,7 +4945,7 @@
     {
       "taskId": "RWO-06F_READONLY_PRECONDITION_PROBES",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06F",
       "summary": "Create or run sanitized read-only precondition probes for instractionChargeOrder/130 disease, facility, monthly, department, and insurance context.",
       "requiresRuntime": true,
@@ -4964,7 +4964,47 @@
       "skipCondition": "runtime unavailable, safe sanitized read-only wrapper missing, target drift, parser ambiguity, credential/raw-artifact risk, or preconditions cannot be proven without raw patient/insurance/disease detail",
       "successCriteria": "sanitized server-derived precondition evidence exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false; no live mutation executed",
       "nextOnSuccess": "RWO-06F_DUPLICATE_CHECKPOINT_PREFLIGHT",
-      "nextOnSkip": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE"
+      "nextOnSkip": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
+      "result": "readonly_precondition_probes_completed_stop_before_live",
+      "completedRunId": "20260427T074616Z",
+      "evidence": "docs/implementation/rwo06f-readonly-precondition-probes-20260427T074616Z/summary.sanitized.json",
+      "readOnlyTrialOrca": {
+        "executed": true,
+        "mutation": false,
+        "endpoints": [
+          "diseasegetv2:class01",
+          "medicalgetv2:class03",
+          "system01dailyv2:request01",
+          "system01lstv2:request04"
+        ],
+        "preconditionStatus": {
+          "diseaseContext": "not_proven",
+          "monthlyDuplicateContext": "not_proven",
+          "departmentInsuranceContext": "not_proven",
+          "facilityContext": "facility_summary_observed_sanitized"
+        }
+      },
+      "correctedNextAction": "Do not run instractionChargeOrder/130 live; continue current-head static refresh after source/evidence changes, then independent no-live roadmap work."
+    },
+    {
+      "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_AFTER_RWO06F_READONLY_PROBES",
+      "lane": "parallel_no_live",
+      "status": "completed",
+      "workOrder": "RWO-09",
+      "summary": "Refresh current-head non-S3 static/package/security checks after the RWO-06F read-only precondition wrapper and evidence update.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06f-readonly-precondition-probes-20260427T074616Z/summary.sanitized.json",
+      "skipCondition": "repo state unsafe or focused static/package/security checks unavailable",
+      "successCriteria": "current-head non-S3 static/package/security evidence exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false",
+      "nextOnSuccess": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
+      "nextOnSkip": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
+      "result": "current_head_non_s3_static_package_security_refresh_pass",
+      "completedRunId": "20260427T074616Z",
+      "evidence": "docs/implementation/rwo09-current-head-static-refresh-20260427T074616Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
@@ -5828,17 +5868,19 @@
     "s3ObjectStorageUsed": false
   },
   "latestRwo09CurrentHeadStaticRefresh": {
-    "runId": "20260427T071611Z",
+    "runId": "20260427T074616Z",
     "workOrder": "RWO-09",
     "result": "RWO09_CURRENT_HEAD_NON_S3_STATIC_PACKAGE_SECURITY_REFRESH_PASS",
     "branch": "master",
-    "evidence": "docs/implementation/rwo09-current-head-static-refresh-20260427T071611Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-current-head-static-refresh-20260427T071611Z/summary.sanitized.json",
-    "precedingEvidence": "docs/implementation/rwo06f-instruction-charge-preconditions-20260427T071611Z/summary.sanitized.json",
+    "evidence": "docs/implementation/rwo09-current-head-static-refresh-20260427T074616Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-current-head-static-refresh-20260427T074616Z/summary.sanitized.json",
+    "precedingEvidence": "docs/implementation/rwo06f-readonly-precondition-probes-20260427T074616Z/summary.sanitized.json",
     "checks": {
       "jsonValidity": "pass",
       "docLinks": "pass",
       "webGuard": "pass",
+      "eslintFocused": "pass",
+      "focusedVitest": "pass_36_tests",
       "reviewerSubmissionPacketContractTests": "pass_7_tests",
       "reviewPackageContractTests": "pass_25_tests",
       "gitDiffCheck": "pass"
@@ -5888,6 +5930,44 @@
     },
     "claimBoundary": "RWO-06F instruction-charge no-live precondition packet only; no Trial business acceptance, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
     "recommendedNextTask": "Create or run sanitized read-only precondition wrappers/probes for disease/facility/monthly/department/insurance context before any instractionChargeOrder/130 live attempt.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
+  "latestRwo06FReadonlyPreconditionProbes": {
+    "runId": "20260427T074616Z",
+    "workOrder": "RWO-06F",
+    "result": "RWO06F_READONLY_PRECONDITION_PROBES_COMPLETED_STOP_BEFORE_LIVE",
+    "branch": "master",
+    "headAtSelection": "55de737879524b108e882245604aa182bdc0411a",
+    "evidence": "docs/implementation/rwo06f-readonly-precondition-probes-20260427T074616Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06f-readonly-precondition-probes-20260427T074616Z/summary.sanitized.json",
+    "wrapper": "web-client/scripts/qa-phase4-instruction-charge-preconditions.mjs",
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "mutation": false,
+      "endpoints": [
+        "diseasegetv2:class01",
+        "medicalgetv2:class03",
+        "system01dailyv2:request01",
+        "system01lstv2:request04"
+      ],
+      "preconditionStatus": {
+        "diseaseContext": "not_proven",
+        "monthlyDuplicateContext": "not_proven",
+        "departmentInsuranceContext": "not_proven",
+        "facilityContext": "facility_summary_observed_sanitized"
+      }
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_or_readonly_preconditions_not_proven",
+      "businessAccepted": false
+    },
+    "claimBoundary": "RWO-06F read-only precondition probes only; no instruction-charge Trial business acceptance, Request_Number 02/03/04, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Run current-head non-S3 static/package/security refresh after the RWO-06F wrapper/evidence update, then continue independent no-live roadmap work. Do not run instractionChargeOrder/130 live until all preconditions are proven with sanitized server-derived evidence.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false,

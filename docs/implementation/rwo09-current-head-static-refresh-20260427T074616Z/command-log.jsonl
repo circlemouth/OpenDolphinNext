@@ -1,0 +1,8 @@
+{"runId":"20260427T074616Z","id":"json-validity","command":"jq empty <handoff-state> <rwo06f-summary> <rwo06f-readonly-wrapper-summary>","exit_code":0,"sanitized":true,"result":"pass"}
+{"runId":"20260427T074616Z","id":"doc-links","command":"bash server-modernized/tools/ci/check-doc-links.sh","exit_code":0,"sanitized":true,"result":"pass"}
+{"runId":"20260427T074616Z","id":"web-guard","command":"npm --prefix web-client run verify:web-guard","exit_code":0,"sanitized":true,"result":"pass"}
+{"runId":"20260427T074616Z","id":"focused-eslint","command":"cd web-client && npm exec eslint -- <changed-rwo06f-wrapper-and-test-files>","exit_code":0,"sanitized":true,"result":"pass"}
+{"runId":"20260427T074616Z","id":"focused-vitest","command":"npm --prefix web-client test -- --run <rwo06f-wrapper-test> <phase4-medicalmodv2-safe-evidence-test>","exit_code":0,"sanitized":true,"result":"pass_36_tests"}
+{"runId":"20260427T074616Z","id":"reviewer-submission-packet-tests","command":"node --test tests/review-packet/reviewer-submission-packet.test.mjs","exit_code":0,"sanitized":true,"result":"pass_7_tests"}
+{"runId":"20260427T074616Z","id":"review-package-tests","command":"node --test tests/review-package/create-review-package.test.mjs","exit_code":0,"sanitized":true,"result":"pass_25_tests"}
+{"runId":"20260427T074616Z","id":"git-diff-check","command":"git diff --check","exit_code":0,"sanitized":true,"result":"pass"}
