@@ -58,6 +58,8 @@ RUN_ID `20260427T000309Z` advanced independent no-live `RWO-06K` manifest/packet
 
 RUN_ID `20260427T043310Z` advanced independent no-live `RWO-07` work. It extended the existing artifact-safe `acceptmodv2` operation wrapper/parser contract to Request_Number `03` and `04`; dry-runs for both request numbers and focused contract tests passed. No live Trial mutation was executed.
 
+RUN_ID `20260427T050314Z` found `RWO-11/RWO-09` still external to automation scope and advanced independent non-live `RWO-09` work. It refreshed current-head non-S3 static/package/security checks at HEAD `6d98d0fd5ee513120baf916c2248ced68fd83a00`; web guard, doc links, reviewer packet contract tests, review package contract tests, server config/runtime/persistence/generated-artifact guards, runtime lookup/facility greps, and `git diff --check` passed. No live Trial mutation, diagnostic artifact capture, production ORCA, or S3/object-storage setup was executed.
+
 Sanitized evidence:
 
 - `docs/implementation/rwo11-rollback-owner-pending-20260425T182930Z/FINAL_REPORT.md`
@@ -103,10 +105,12 @@ Sanitized evidence:
 - `docs/implementation/rwo06k-radiology-v3-manifest-packet-20260427T000309Z/summary.sanitized.json`
 - `docs/implementation/rwo07-acceptmodv2-rn03-rn04-wrapper-contract-20260427T043310Z/FINAL_REPORT.md`
 - `docs/implementation/rwo07-acceptmodv2-rn03-rn04-wrapper-contract-20260427T043310Z/summary.sanitized.json`
+- `docs/implementation/rwo09-non-s3-static-refresh-20260427T050314Z/FINAL_REPORT.md`
+- `docs/implementation/rwo09-non-s3-static-refresh-20260427T050314Z/summary.sanitized.json`
 
 Current result:
 
-- Current branch/head: `master` / `7c325c01`
+- Current branch/head: `master` / `6d98d0fd`
 - Accepted reviewer packet source freeze: `master` / `b103e49ee06d1c1043c066a097f7c62408c32263`
 - Reviewer packet: `artifacts/reviewer-submission-packets/submission-packet-20260425T174429Z.zip`
 - Packet sha256: `415b1fb493632176b44d5d38cc02c8f95c6783de392e491082803542d201529a`
@@ -124,6 +128,7 @@ Current result:
 - Latest RWO-06K radiology v3 manifest packet refresh: `docs/implementation/rwo06k-radiology-v3-manifest-packet-20260427T000309Z/FINAL_REPORT.md`. The v3 identity is now recorded in the phase4 payload manifest and revalidated no-live; this still does not authorize live Trial mutation.
 - Latest RWO-06H/RWO-06G/RWO-08B queue result: `docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/FINAL_REPORT.md`. `620076111` and `620007539` did not produce row-level injectable medication proof; injection live remains stopped. `acceptmodv2 Request_Number=00` parser/preflight is hardened; base-charge live remains stopped until active acceptance plus consultation-fee/first-visit fields are proven. RWO-08B remains blocked until a fresh target and server-derived official identifiers are proven without raw artifacts.
 - Latest RWO-07 operation wrapper hardening: `docs/implementation/rwo07-acceptmodv2-rn03-rn04-wrapper-contract-20260427T043310Z/FINAL_REPORT.md`. `Request_Number=02`, `03`, and `04` now have no-live wrapper/parser contracts; live remains stopped until request-specific active acceptance, server-derived identifiers/fields, duplicate checkpoint, runtime readiness, and sanitized preflight evidence exist.
+- Latest independent non-live refresh evidence: `docs/implementation/rwo09-non-s3-static-refresh-20260427T050314Z/FINAL_REPORT.md` and `docs/implementation/rwo09-non-s3-static-refresh-20260427T050314Z/summary.sanitized.json`.
 - Latest throughput policy: `docs/implementation/automation-handoff/AUTOMATION_THROUGHPUT_POLICY.md`. `HANDOFF_STATE.json.nextExecutableQueue` has processed the 20260426T212101Z follow-up items through RUN_ID `20260426T231411Z`: `RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF` is skipped/stopped before live because row proof was not produced, `RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR` is completed, `RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT` is skipped until a fresh target/server-derived identifier precondition exists, and `RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE` is skipped/stopped before live because all checked source-backed candidates returned `masterFound=false`. The next independent safe item is `RWO-09_STATIC_PACKAGE_REFRESH` or another roadmap no-live/static gate. Do not run injection, baseChargeOrder/110, or diagnostic fullflow live from this intake alone.
 
 ## Goal
