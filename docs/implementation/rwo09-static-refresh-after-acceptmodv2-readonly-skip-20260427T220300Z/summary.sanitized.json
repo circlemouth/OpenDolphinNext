@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T220300Z",
+  "workOrders": [
+    "RWO-09"
+  ],
+  "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_AFTER_ACCEPTMODV2_READONLY_SKIP",
+  "result": "CURRENT_HEAD_NON_S3_STATIC_PACKAGE_SECURITY_REFRESH_PASS",
+  "branch": "master",
+  "headAtSelection": "a11e674946781c902b734a8e035b6c2707c19d50",
+  "sourceEvidence": "docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T220300Z/summary.sanitized.json",
+  "checks": {
+    "webGuard": "pass",
+    "orcaTrialPreflightFocusedWebTest": "pass_82_tests",
+    "nodeSyntaxChecks": "pass",
+    "gitDiffCheck": "pass",
+    "jsonParse": "pass"
+  },
+  "runtimeUsed": false,
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_static_refresh_only",
+    "businessAccepted": false
+  },
+  "claimBoundary": "Current-head non-S3 static/package/security refresh only after the ACCEPTMODV2 read-only runtime skip. No read-only target inventory, RN02/RN03/RN04 mutation, fullflow success, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Rerun ACCEPTMODV2 read-only target inventory when Docker and the approved non-S3 Trial runtime are available; otherwise continue only independent no-live/static queue work.",
+  "credentialsCaptured": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}
