@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T19:02:31Z",
+  "lastUpdated": "2026-04-27T20:01:29Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5039,8 +5039,8 @@
       "nextOnSuccess": "ACCEPTMODV2_RN02_DUPLICATE_CHECKPOINT_PREFLIGHT",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
       "result": "skipped_environment_unavailable_docker_daemon_wrapper_ready",
-      "completedRunId": "20260427T180231Z",
-      "evidence": "docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T180231Z/summary.sanitized.json",
+      "completedRunId": "20260427T200129Z",
+      "evidence": "docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T200129Z/summary.sanitized.json",
       "correctedNextAction": "When Docker is available, rerun the approved non-S3 runtime path and execute sanitized read-only acceptlstv2 inventory with --execute-readonly before any RN02/RN03/RN04 live preflight."
     },
     {
@@ -7595,13 +7595,13 @@
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestAcceptmodv2TargetInventoryReadonlyTrialSkip": {
-    "runId": "20260427T190231Z",
+    "runId": "20260427T200129Z",
     "workOrder": "ACCEPTMODV2",
     "result": "ACCEPTMODV2_TARGET_INVENTORY_READONLY_TRIAL_SKIPPED_DOCKER_UNAVAILABLE",
     "branch": "master",
-    "headAtSelection": "c6203e34dedcbb2af35422b35611a6792d588894",
-    "evidence": "docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T190231Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T190231Z/summary.sanitized.json",
+    "headAtSelection": "d673ce4e98babb98ba6cded4a0a62a44f88292b3",
+    "evidence": "docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T200129Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T200129Z/summary.sanitized.json",
     "route": {
       "endpoint": "/api/orca/official/visits/acceptance-list",
       "method": "POST",
