@@ -71,9 +71,18 @@ RUN_ID `20260427T222122Z` completed the approved non-S3 runtime path:
 - Same-run continuation: `docs/implementation/rwo09-static-refresh-after-acceptmodv2-readonly-result-20260427T222122Z/summary.sanitized.json`
 - No RN02/RN03/RN04 live mutation, production ORCA, S3/object storage, raw artifact capture, or credential capture was performed.
 
+RUN_ID `20260427T224743Z` executed the owner-directed RN01 create-then-inventory procedure:
+
+- Evidence: `docs/implementation/acceptmodv2-create-and-inventory-20260427T224743Z/summary.sanitized.json`
+- Report: `docs/implementation/acceptmodv2-create-and-inventory-20260427T224743Z/FINAL_REPORT.md`
+- RN01 live Trial creation: accepted for approved candidate `00001` / patient `00001` using the already approved Phase3 wrapper and payload identity.
+- Post-create read-only inventory for `2026-04-28`: class `01` and `03` returned one sanitized row each, class `02` returned no rows.
+- Target readiness: still `0` target-ready rows because the sanitized row lacks `Acceptance_Date` and `Insurance_Combination_Number` presence flags.
+- No RN02/RN03/RN04 live mutation, production ORCA, S3/object storage, raw artifact capture, credential capture, raw ORCA body capture, or patient/insurance detail capture was performed.
+
 ## Goal
 
-This prompt is complete. Sanitized read-only WebORCA Trial target inventory through `/api/orca/official/visits/acceptance-list` found no target-ready rows for `2026-04-28` classes `01`, `02`, and `03`. Future RN02/RN03/RN04 work remains stopped until a changed Trial target/date/precondition produces server-derived `Acceptance_Id`, patient/date/time, department, physician, and insurance-combination preconditions without raw patient/insurance detail and without live mutation.
+This prompt is complete. Sanitized read-only WebORCA Trial target inventory through `/api/orca/official/visits/acceptance-list` found no target-ready rows for `2026-04-28` classes `01`, `02`, and `03`. The owner-directed RN01 create-then-inventory follow-up proved that an accepted RN01 creates a sanitized class `01`/`03` row, but it still does not expose all RN02/RN03/RN04 target-ready preconditions. Future RN02/RN03/RN04 work remains stopped until a changed Trial target/date/precondition or no-live parser/server evidence produces server-derived `Acceptance_Id`, patient/date/time, department, physician, and insurance-combination preconditions without raw patient/insurance detail and without live mutation.
 
 ## Required First Steps
 

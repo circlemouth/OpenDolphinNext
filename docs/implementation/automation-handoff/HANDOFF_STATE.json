@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T22:21:22Z",
+  "lastUpdated": "2026-04-27T22:47:43Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5041,7 +5041,10 @@
       "result": "readonly_inventory_completed_no_target_ready",
       "completedRunId": "20260427T222122Z",
       "evidence": "docs/implementation/acceptmodv2-target-inventory-readonly-trial-20260427T222122Z/summary.sanitized.json",
-      "correctedNextAction": "Do not run acceptmodv2 RN02/RN03/RN04 live from this inventory; rerun read-only inventory only after a changed Trial target/date/precondition is established."
+      "correctedNextAction": "Do not run acceptmodv2 RN02/RN03/RN04 live from the post-create inventory; investigate missing Acceptance_Date and Insurance_Combination_Number with no-live tests or official/read-only evidence first.",
+      "userDirectedFollowupRunId": "20260427T224743Z",
+      "userDirectedFollowupResult": "rn01_created_inventory_partial_no_target_ready",
+      "userDirectedFollowupEvidence": "docs/implementation/acceptmodv2-create-and-inventory-20260427T224743Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-06F_READONLY_PRECONDITION_PROBES",
@@ -7696,5 +7699,32 @@
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
+  },
+  "lastRunId": "20260427T224743Z",
+  "lastResult": {
+    "taskId": "ACCEPTMODV2_USER_DIRECTED_CREATE_THEN_TARGET_INVENTORY",
+    "workOrder": "ACCEPTMODV2",
+    "result": "acceptmodv2_rn01_created_but_rn020304_target_not_ready",
+    "evidence": "docs/implementation/acceptmodv2-create-and-inventory-20260427T224743Z/summary.sanitized.json",
+    "liveTrialOrca": {
+      "executed": true,
+      "endpoint": "/api/orca/official/visits/acceptance",
+      "requestClass": "acceptmodv2_request_number_01",
+      "businessAccepted": true,
+      "businessSuccessClassification": "businessAcceptedWithWarnings"
+    },
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "endpoint": "/api/orca/official/visits/acceptance-list",
+      "orcaEndpoint": "/api01rv2/acceptlstv2",
+      "acceptanceDate": "2026-04-28",
+      "targetReadyRowCount": 0,
+      "classification": "readonly_inventory_no_target_ready"
+    },
+    "blocker": "post-create inventory row lacks Acceptance_Date and Insurance_Combination_Number presence flags, so RN02/RN03/RN04 live mutation remains stopped",
+    "credentialsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "rawOrcaBodiesCaptured": false,
+    "patientInsuranceDetailsCaptured": false
   }
 }
