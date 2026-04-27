@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T040311Z",
+  "workOrder": "RWO-07",
+  "taskId": "RWO-07_ACCEPTMODV2_RN02_WRAPPER_CONTRACT",
+  "result": "RWO07_ACCEPTMODV2_RN02_WRAPPER_CONTRACT_READY_NO_LIVE",
+  "branch": "master",
+  "headAtSelection": "b84255225340ff2ef2b5edcc24733c6261212d22",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "rwo11-rwo09-external-owner-operator-gate-not-automation-work",
+    "statusAfterRun": "left_external_and_advanced_independent_no_live_rwo07_rn02_wrapper_contract"
+  },
+  "wrapper": {
+    "script": "web-client/scripts/qa-phase4-acceptmodv2-operation.mjs",
+    "contractModule": "web-client/scripts/qa-lib/phase4-acceptmodv2-operation-evidence.mjs",
+    "contract": "phase4-acceptmodv2-operation-sanitized-no-live",
+    "endpoint": "/orca11/acceptmodv2",
+    "requestNumber": "02",
+    "operation": "reception_delete_or_cancel",
+    "dryRunOnly": true,
+    "liveTrialMutationExecuted": false
+  },
+  "noLivePacket": {
+    "requiredPreconditions": [
+      "active_acceptance_row",
+      "server_derived_acceptance_id",
+      "matching_patient_id",
+      "acceptance_date",
+      "department_physician_scope",
+      "duplicate_live_checkpoint",
+      "parser_sanitizer_contract"
+    ],
+    "serverDerivedAuthorityRequired": true,
+    "clientProvidedIdentifiersTrusted": false,
+    "endpointSpecificCompletionEvidenceRequired": true,
+    "http2xxAloneIsNotSuccess": true,
+    "apiResultZeroAloneIsNotSuccess": true,
+    "rn03Rn04Implemented": false
+  },
+  "checks": {
+    "wrapperDryRun": "pass_no_live",
+    "focusedVitest": "pass_22_tests",
+    "summaryJsonParse": "pass",
+    "handoffStateJsonParse": "pass",
+    "webGuard": "pass",
+    "serverDocLinks": "pass",
+    "gitDiffCheck": "pass"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "endpoint": "/orca11/acceptmodv2",
+    "target": null,
+    "requestClass": "acceptmodv2_request_02_no_live_contract",
+    "businessSuccessClassification": "not_applicable_no_live_contract_only",
+    "businessAccepted": false
+  },
+  "claimBoundary": "No-live acceptmodv2 Request_Number 02 wrapper/parser contract only. It does not claim RN02/RN03/RN04 Trial mutation success, acceptmodv2 operation success, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+  "recommendedNextTask": "Prove a current active acceptance row with server-derived Acceptance_Id and duplicate-live checkpoint before any RN02 live Trial attempt; prepare separate no-live wrapper revisions for RN03/RN04.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "diagnosticArtifactsLocalOnlyUntracked": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}
