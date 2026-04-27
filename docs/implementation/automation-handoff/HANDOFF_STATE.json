@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T11:46:12Z",
+  "lastUpdated": "2026-04-27T12:16:15Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5594,6 +5594,46 @@
       "result": "preconditions_missing_stop_before_live",
       "completedRunId": "20260427T114612Z",
       "evidence": "docs/implementation/rwo07-rn02-precondition-preflight-20260427T114612Z/summary.sanitized.json"
+    },
+    {
+      "taskId": "RWO-08B_READONLY_CANDIDATE_REFRESH_EXCLUDING_DUPLICATE_BLOCKED",
+      "lane": "critical_path",
+      "status": "completed",
+      "workOrder": "RWO-08B",
+      "summary": "Rerun read-only candidate discovery excluding duplicate-blocked candidates 00001 and 00005, then stop before fullflow when no fresh local-selectable target is available.",
+      "requiresRuntime": true,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo08b-duplicate-candidate-exhaustion-20260425T152931Z/summary.sanitized.json",
+      "skipCondition": "runtime unavailable, diagnostic artifact containment unavailable, mutation route attempt, credential/raw-artifact risk, or no fresh/local-selectable non-duplicate candidate",
+      "successCriteria": "sanitized read-only candidate refresh evidence exists with no selected duplicate-blocked candidate, no live mutation, credentialsCaptured=false, and rawArtifactsCommittedOrPackaged=false",
+      "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO08B_CANDIDATE_REFRESH",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO08B_CANDIDATE_REFRESH",
+      "result": "blocked_no_fresh_target_after_duplicate_exclusion",
+      "completedRunId": "20260427T121615Z",
+      "evidence": "docs/implementation/rwo08b-readonly-candidate-refresh-20260427T121615Z/summary.sanitized.json"
+    },
+    {
+      "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO08B_CANDIDATE_REFRESH",
+      "lane": "parallel_no_live",
+      "status": "completed",
+      "workOrder": "RWO-09",
+      "summary": "Refresh current-head non-S3 static/package/security checks after RWO-08B read-only candidate refresh evidence.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo08b-readonly-candidate-refresh-20260427T121615Z/summary.sanitized.json",
+      "skipCondition": "repo state unsafe or focused static/package/security checks unavailable",
+      "successCriteria": "current-head non-S3 static/package/security evidence exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false",
+      "nextOnSuccess": "next_unblocked_roadmap_item",
+      "nextOnSkip": "next_unblocked_roadmap_item",
+      "result": "current_head_non_s3_static_package_security_refresh_pass",
+      "completedRunId": "20260427T121615Z",
+      "evidence": "docs/implementation/rwo09-static-refresh-after-rwo08b-candidate-refresh-20260427T121615Z/summary.sanitized.json"
     }
   ],
   "latestRwo06HInjectionMasterValidityReadonly": {
@@ -6639,6 +6679,89 @@
     },
     "claimBoundary": "RWO-07 RN02 no-live precondition preflight only; no RN02 Trial mutation success, acceptmodv2 operation success, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
     "recommendedNextTask": "Continue independent no-live/static work; do not run RN02 live until current active acceptance, server-derived Acceptance_Id, matching scope, duplicate checkpoint, runtime readiness, and endpoint-specific completion criteria are all recorded as sanitized evidence.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
+  "latestRwo08BReadonlyCandidateRefresh": {
+    "runId": "20260427T121615Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_READONLY_CANDIDATE_REFRESH_EXCLUDING_DUPLICATE_BLOCKED",
+    "result": "RWO08B_READONLY_CANDIDATE_REFRESH_BLOCKED_NO_FRESH_TARGET",
+    "branch": "master",
+    "headAtSelection": "24db3b1ea284ffe6e4263b351c37da85282f583c",
+    "evidence": "docs/implementation/rwo08b-readonly-candidate-refresh-20260427T121615Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo08b-readonly-candidate-refresh-20260427T121615Z/summary.sanitized.json",
+    "sourceEvidence": [
+      "docs/implementation/rwo08b-duplicate-candidate-exhaustion-20260425T152931Z/summary.sanitized.json",
+      "docs/implementation/rwo07-rn02-precondition-preflight-20260427T114612Z/summary.sanitized.json"
+    ],
+    "readOnlyCandidateDiscovery": {
+      "executed": true,
+      "candidateCount": 11,
+      "acceptedCandidateCountBeforeExclusion": 2,
+      "excludedPatientIds": [
+        "00001",
+        "00005"
+      ],
+      "selectedCandidateAfterExclusion": null,
+      "candidateDiscoveryAloneAuthorizesPhase3": false,
+      "exactSelectedCandidatePreflightRan": false,
+      "blockerClassification": "test-data-or-harness-readiness-blocker",
+      "blockerReason": "phase3_mutation_ready_readonly_evidence_missing",
+      "blockedMutationRequestCount": 0
+    },
+    "diagnosticArtifacts": {
+      "captured": true,
+      "localOnlyUntracked": true,
+      "root": "artifacts/diagnostic-fullflow/20260427T121615Z/",
+      "committedOrPackaged": false
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "fullflow_via_web_client",
+      "target": "candidate_discovery_excluding_duplicate_blocked_00001_00005",
+      "requestClass": "read-only candidate discovery / fullflow-pre-send precondition",
+      "businessSuccessClassification": "not_run_no_fresh_candidate_precondition",
+      "businessAccepted": false
+    },
+    "claimBoundary": "RWO-08B read-only candidate refresh only; no fresh fullflow target, exact selected-candidate preflight acceptance, fullflow success, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Run current-head non-S3 static/package/security refresh after this evidence update; RWO-08B remains blocked until a new fresh/local-selectable candidate or changed local-sync precondition is available.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
+  "latestRwo09StaticRefreshAfterRwo08BCandidateRefresh": {
+    "runId": "20260427T121615Z",
+    "workOrder": "RWO-09",
+    "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO08B_CANDIDATE_REFRESH",
+    "result": "RWO09_STATIC_REFRESH_AFTER_RWO08B_CANDIDATE_REFRESH_PASS",
+    "branch": "master",
+    "headAtSelection": "24db3b1ea284ffe6e4263b351c37da85282f583c",
+    "evidence": "docs/implementation/rwo09-static-refresh-after-rwo08b-candidate-refresh-20260427T121615Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-static-refresh-after-rwo08b-candidate-refresh-20260427T121615Z/summary.sanitized.json",
+    "sourceEvidence": "docs/implementation/rwo08b-readonly-candidate-refresh-20260427T121615Z/summary.sanitized.json",
+    "checks": {
+      "jsonValidity": "pass",
+      "serverDocLinks": "pass",
+      "webGuard": "pass",
+      "focusedCandidatePreflightTests": "pass_120_tests_with_web_guard_pretest",
+      "reviewerSubmissionPacketContractTests": "pass_7_tests",
+      "reviewPackageContractTests": "pass_27_tests",
+      "gitDiffCheck": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_static_refresh",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Current-head non-S3 static/package/security refresh only after RWO-08B read-only candidate refresh; no fullflow success, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Continue independent non-S3 roadmap work; RWO-08B remains blocked until a new fresh/local-selectable candidate or changed local-sync precondition is available.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false,
