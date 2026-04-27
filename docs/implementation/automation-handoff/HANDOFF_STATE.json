@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T22:47:43Z",
+  "lastUpdated": "2026-04-27T23:07:48Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -7726,5 +7726,38 @@
     "rawArtifactsCommittedOrPackaged": false,
     "rawOrcaBodiesCaptured": false,
     "patientInsuranceDetailsCaptured": false
+  },
+  "orcaTrialBlockerResolutionPolicy": {
+    "recordedByUserDirection": "2026-04-27T23:07:48Z",
+    "runId": "20260427T230748Z",
+    "summary": "When a current roadmap/handoff blocker can be removed by safe WebORCA Trial operation, automation should perform that ORCA-side operation instead of asking the owner to do it manually.",
+    "allowedOperations": [
+      "trial_only_acceptance_creation",
+      "trial_only_target_update_or_delete_when_endpoint_packet_complete",
+      "trial_only_auxiliary_operation_needed_for_current_blocker",
+      "post_operation_readonly_probe_or_duplicate_checkpoint"
+    ],
+    "requiredConditions": [
+      "weborca_trial_only",
+      "current_roadmap_or_handoff_scope",
+      "smallest_action_needed_for_current_blocker",
+      "safe_wrapper_or_narrowly_reviewed_repo_local_command",
+      "complete_endpoint_packet_or_owner_directed_approved_identity",
+      "runtime_readiness_recorded",
+      "duplicate_or_target_drift_checkpoint_recorded",
+      "sanitized_evidence_only",
+      "rerun_relevant_readonly_or_probe_evidence_after_operation"
+    ],
+    "stillForbidden": [
+      "production_orca",
+      "s3_or_object_storage_setup",
+      "raw_orca_bodies",
+      "raw_patient_or_insurance_detail",
+      "credential_capture_or_printing",
+      "committed_diagnostic_artifacts",
+      "blind_retries_without_changed_precondition",
+      "unrelated_live_mutation_sequence",
+      "rwo11_rwo09_external_release_management_gates"
+    ]
   }
 }

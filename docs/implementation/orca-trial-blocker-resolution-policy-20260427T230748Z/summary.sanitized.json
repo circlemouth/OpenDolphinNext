@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T230748Z",
+  "taskId": "ORCA_TRIAL_BLOCKER_RESOLUTION_POLICY_UPDATE",
+  "workOrder": "AUTOMATION_HANDOFF",
+  "result": "policy_updated",
+  "ownerInstruction": "If a future blocker can be resolved by the automation performing ORCA operations, the automation should do so.",
+  "policy": {
+    "allowed": "safe WebORCA Trial blocker-resolution operations inside current roadmap/handoff scope",
+    "examples": [
+      "Trial-only acceptance creation",
+      "Trial-only target update/delete when endpoint packet is complete",
+      "Trial-only auxiliary operation needed for current blocker"
+    ],
+    "requiredConditions": [
+      "WebORCA Trial only",
+      "safe wrapper or narrowly reviewed repo-local command",
+      "complete endpoint packet or owner-directed approved identity",
+      "runtime readiness",
+      "duplicate/target-drift checkpoint",
+      "sanitized evidence only",
+      "post-operation read-only/probe verification"
+    ],
+    "forbidden": [
+      "production ORCA",
+      "S3/object-storage setup",
+      "raw ORCA bodies",
+      "raw patient/insurance detail",
+      "credential capture",
+      "diagnostic artifact commit",
+      "blind retry",
+      "unrelated live mutation sequence",
+      "RWO-11/RWO-09 external release-management gates"
+    ]
+  },
+  "filesUpdated": [
+    "docs/implementation/automation-handoff/AUTOMATION_PROMPT.md",
+    "docs/implementation/automation-handoff/AUTOMATION_THROUGHPUT_POLICY.md",
+    "docs/implementation/automation-handoff/README.md",
+    "docs/implementation/automation-handoff/HANDOFF_STATE.json"
+  ],
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false,
+  "claimBoundary": "Policy update only; no ORCA live operation, production readiness, S3 readiness, rollback rehearsal, owner final GO/NO-GO, or release readiness is claimed."
+}

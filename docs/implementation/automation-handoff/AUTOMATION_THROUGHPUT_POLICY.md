@@ -89,6 +89,23 @@ Before a live Trial mutation, the queue item should point to a complete endpoint
 
 If the packet is incomplete, the worker must complete or skip the missing no-live/read-only preflight instead of running live.
 
+## ORCA Trial Blocker Resolution
+
+If a blocker can be removed by an ORCA Trial operation that is inside the current roadmap/handoff scope, the automation should perform that operation rather than carry the blocker forward or ask the owner to do the ORCA-side work manually.
+
+Allowed blocker-resolution operations include Trial-only prerequisite setup or cleanup such as creating an acceptance row, updating a Trial target row, deleting a Trial target row, or running an auxiliary ORCA Trial operation. These operations are allowed only when all of the following are true:
+
+- the target is WebORCA / ORCA Trial, never production ORCA;
+- the operation is the smallest action needed to resolve the current blocker;
+- a reviewed safe wrapper or narrowly reviewed repo-local command exists;
+- the endpoint packet or owner-directed approved identity is complete;
+- runtime readiness and duplicate/target-drift checkpoints are recorded;
+- sanitized evidence mode is used, with no raw ORCA bodies, raw patient/insurance detail, credentials, HAR, trace, video, screenshot, raw network dump, or credential-bearing URL committed or packaged;
+- S3/MinIO/object-storage setup is not required;
+- the operation does not perform `RWO-11/RWO-09` rollback rehearsal, release-candidate stop, paired restore, restored-target smoke, operator acceptance, or final owner GO/NO-GO/PENDING capture.
+
+After a blocker-resolution operation, workers must rerun the relevant read-only probe, parser/sanitizer check, or duplicate checkpoint before any dependent live mutation. A successful prerequisite operation is evidence for that blocker only; it is not business success for a later endpoint and does not authorize unrelated live mutation.
+
 ## Same-Run Batching
 
 Live Trial mutation remains sequential and main-worker controlled. No-live work may be batched in one run when each item has an independent scope and writes separate evidence paths.

@@ -65,6 +65,7 @@ This standing approval applies only to:
 - WebORCA / ORCA Trial server verification
 - roadmap-scoped clinical verification work
 - acceptmodv2 / medicalmodv2 / diseasev3 / subjectivesv2 verification against ORCA Trial
+- ORCA Trial blocker-resolution operations when the blocker can be removed by creating, updating, deleting, or otherwise preparing Trial-only precondition data through an approved safe wrapper and endpoint packet
 - browser e2e and fullflow when prerequisites are satisfied, including owner-approved diagnostic artifact capture for fullflow/debug harnesses under the Diagnostic Artifact Exception below
 - autonomous repair of repo-local, testable, non-secret defects blocking the current Work Order
 
@@ -105,6 +106,7 @@ Every run:
 10. Execute the next safe step autonomously.
 11. If a repo-local error blocks progress and is fixable, fix it, run relevant verification, and document the result.
 12. If the next required step is ORCA Trial live verification, proceed under standing approval only if ORCA Trial credentials/config are already available through the approved runtime path and the endpoint packet is complete.
+12a. If the current blocker can be removed by an ORCA Trial operation that the automation can safely perform, perform it instead of carrying the blocker forward. This includes Trial-only prerequisite setup such as creating an acceptance row, updating or deleting a Trial target row, or running an auxiliary Trial operation, but only when the operation is within the current roadmap/handoff scope, uses a reviewed safe wrapper, has a complete endpoint packet or documented owner-directed identity, uses sanitized evidence mode, and does not require production ORCA, S3/object storage, raw artifacts, raw patient/insurance details, credentials, or a human release-management decision.
 13. If only approved local-only dev/Trial runtime secret/config values are missing, generate and store them according to the Local-only dev/Trial runtime secret/config policy, then continue toward local runtime startup.
 14. If other non-S3 credentials/config are absent due to the local environment, skip that task as `skipped_environment_unavailable_missing_runtime_secret_or_config`; do not ask for or print values.
 15. If S3/MinIO/object-storage credentials/config are required, skip the current task as `skipped_s3_required_out_of_scope` and continue with the next non-S3 Work Order.
@@ -150,13 +152,16 @@ Handoff prompt rules:
 
 Live ORCA Trial policy:
 - ORCA Trial live verification is permitted when required by the current Work Order or active handoff prompt.
+- ORCA Trial blocker-resolution operations are also permitted when they are the smallest safe action that can remove a current roadmap/handoff blocker, including Trial-only prerequisite data setup or cleanup. The worker should not ask the owner to manually operate ORCA when the same blocker can be safely cleared by automation under this policy.
 - Use only existing repo scripts, documented wrappers, or narrowly reviewed repo-local commands.
 - If a required safe wrapper/action is missing, do not repeat a blocked path. First define, implement, or document a safe sanitized wrapper/action with local tests.
 - If endpoint semantics are unclear, do not proceed to live. First verify the semantics against ORCA official documentation and record a sanitized no-live research/preflight artifact.
 - Prefer one endpoint, one target, and one request class at a time.
+- Before any blocker-resolution live operation, record a sanitized preflight containing the blocker id, endpoint/request class, Trial target, operation type, payload hash or approved identity, duplicate/target-drift checkpoint, why this operation is expected to remove the blocker, stop conditions, and the sanitized evidence policy.
 - For every future roadmap/handoff-scoped live Trial retry task, the owner grants standing approval for up to three fix-and-retry cycles by each subsequent worker, as long as each cycle keeps the same exact approved endpoint/target/request class/payload identity for that task and uses the safe wrapper/evidence mode.
 - A fix-and-retry cycle is: one live attempt, then if it fails, no-live investigation, a concrete changed precondition or repo-local fix, focused no-live verification, sanitized preflight, and only then the next live retry.
 - Multiple live attempts are not blind retries and are not repeated sends of the same unchanged request. After any live failure, do not consume another live attempt until a documented fix or changed precondition exists. If no concrete fix or changed precondition can be established safely, record the blocker and continue to independent safe work instead of retrying.
+- Trial precondition setup is a changed precondition only for the exact scoped blocker it targets; it does not authorize unrelated live mutations or a broad sequence of operations. After it runs, rerun the relevant read-only/probe evidence before proceeding to any dependent mutation.
 - Before every live retry, record sanitized preflight evidence for current runtime readiness, route/target scope, duplicate checkpoint decision, exact payload hash/identity, attempt/cycle number, and the concrete fix or changed precondition that justifies the retry; after each attempt, record sanitized classification and stop if business acceptance, target drift, parser ambiguity, credential/raw-artifact risk, or any safety stop condition is reached.
 - A fourth live attempt for the same worker/task requires a new explicit owner approval or a new handoff prompt with a new approved identity/scope.
 - Record sanitized business evidence only.

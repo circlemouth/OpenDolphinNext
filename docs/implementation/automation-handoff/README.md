@@ -39,6 +39,8 @@ For `human_pending` items, workers should check only for new explicit input. If 
 
 Before live Trial mutation, the corresponding endpoint packet must be complete: payload SHA, endpoint/request class, target, duplicate checkpoint, no-live wrapper result, parser/sanitizer result, runtime readiness, business-success criteria, stop conditions, and sanitized evidence policy. If any part is missing, the worker must complete or skip that no-live/read-only preflight instead of running live.
 
+If the active blocker can be removed by an ORCA Trial operation that is inside the current scope, the worker should perform that operation through an approved safe wrapper instead of asking the owner to operate ORCA manually. This includes Trial-only prerequisite setup or cleanup such as acceptance creation, update/delete target preparation, or auxiliary Trial operations, provided production ORCA, S3/object storage, raw artifacts, raw patient/insurance detail, credentials, and external release-management gates remain out of scope. After such an operation, rerun the relevant read-only/probe evidence before any dependent live mutation.
+
 ## Parallel Subagent Rule
 
 The main automation worker may use subagents inside one run when independent roadmap tasks can safely progress in parallel. This is allowed only for bounded, non-overlapping work such as docs updates, source-backed research, no-live payload preparation, parser/sanitizer tests, static guards, package metadata checks, and sanitized evidence drafting.
