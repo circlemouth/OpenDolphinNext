@@ -5481,5 +5481,59 @@
     "rawArtifactsCommittedOrPackaged": false,
     "productionOrcaAttempted": false,
     "s3ObjectStorageUsed": false
+  },
+  "latestRwo09NonS3StaticRefresh": {
+    "runId": "20260427T023313Z",
+    "workOrders": [
+      "RWO-09",
+      "RWO-11"
+    ],
+    "result": "RWO09_NON_S3_STATIC_REFRESH_PASS",
+    "branch": "master",
+    "head": "55c48a814a32106be7240c44461051f075194014",
+    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260427T023313Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260427T023313Z/summary.sanitized.json",
+    "activeHandoffPrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAtStart": "active",
+      "blockerId": "rwo11-rwo09-external-owner-operator-gate-not-automation-work",
+      "statusAfterRun": "left_external_and_advanced_independent_non_live_static_refresh"
+    },
+    "priorQueueContext": {
+      "rwo06jTestOrderV3": "scoped_live_trial_business_accepted_do_not_repeat_duplicate_checkpoint",
+      "rwo06kRadiologyV3": "scoped_live_trial_business_accepted_do_not_repeat_duplicate_checkpoint",
+      "rwo06hInjection": "stopped_before_live_until_row_level_injectable_proof_exists",
+      "rwo06gBaseCharge": "stopped_before_live_until_active_acceptance_and_first_visit_fields_are_proven",
+      "rwo08bFullflow": "stopped_until_fresh_target_and_server_derived_official_identifiers_exist"
+    },
+    "checks": {
+      "webGuard": "pass",
+      "serverDocLinks": "pass",
+      "reviewerSubmissionPacketContractTests": "pass_7_tests",
+      "reviewPackageContractTests": "pass_25_tests",
+      "serverConfigContract": "pass",
+      "serverNoDirectRuntimeLookup": "pass",
+      "serverNoRuntimeDdl": "pass",
+      "serverPersistenceEntities": "pass",
+      "serverNoGeneratedArtifacts": "pass",
+      "serverRuntimeLookupGrep": "pass_only_server_configuration_resolver_configprovider_lookup",
+      "serverFacilityIdGrep": "pass_0_hits",
+      "gitDiffCheck": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": null,
+      "target": null,
+      "requestClass": null,
+      "businessSuccessClassification": "not_applicable_static_non_live_refresh",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Current HEAD passed focused non-live RWO-09/RWO-11 static/package/security refresh only; no L4 fullflow success, Trial ORCA business success in this run, all-test coverage, all-radiology coverage, injection or base-charge Trial acceptance, Request_Number 02/03/04 Trial success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Continue independent non-live endpoint contract/precondition work; safe next candidates include RWO-06H injectable row-proof discovery, RWO-06G base-charge first-visit readiness, RWO-08B fresh-target/server-derived-identifier preflight, or RWO-07 Request_Number 02/03/04 no-live operation packets.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
   }
 }
