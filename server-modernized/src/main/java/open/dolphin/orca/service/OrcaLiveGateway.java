@@ -2,6 +2,8 @@ package open.dolphin.orca.service;
 
 import open.dolphin.rest.dto.orca.AppointmentMutationRequest;
 import open.dolphin.rest.dto.orca.AppointmentMutationResponse;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
 import open.dolphin.rest.dto.orca.BillingSimulationRequest;
 import open.dolphin.rest.dto.orca.BillingSimulationResponse;
 import open.dolphin.rest.dto.orca.FormerNameHistoryRequest;
@@ -36,6 +38,8 @@ public interface OrcaLiveGateway {
     PatientAppointmentListResponse getPatientAppointments(String facilityId, PatientAppointmentListRequest request);
 
     BillingSimulationResponse simulateBilling(String facilityId, BillingSimulationRequest request);
+
+    AcceptanceInventoryResponse getAcceptanceInventory(String facilityId, AcceptanceInventoryRequest request);
 
     VisitPatientListResponse getVisitList(String facilityId, VisitPatientListRequest request);
 

@@ -1,54 +1,50 @@
 # NEXT_WORKER_PROMPT
 
 status: active
-created_at: 2026-04-27T16:02:29Z
-updated_at: 2026-04-27T16:02:29Z
+created_at: 2026-04-27T17:07:08Z
+updated_at: 2026-04-27T17:07:08Z
 source_work_order: ACCEPTMODV2
-blocker_id: acceptmodv2-rn020304-target-inventory-runtime-readonly-route
+blocker_id: acceptmodv2-rn020304-target-inventory-readonly-trial-runtime
 priority: medium
 supersedes:
-- soap-subjectivesv2-route-contract
+- acceptmodv2-rn020304-target-inventory-runtime-readonly-route
 
 ## Context
 
-RUN_ID `20260427T160229Z` completed a no-live `ACCEPTMODV2_RN02_03_04_TARGET_INVENTORY` wrapper/sanitizer contract:
+RUN_ID `20260427T170708Z` completed the previous route/action blocker:
 
-- Evidence: `docs/implementation/acceptmodv2-target-inventory-wrapper-20260427T160229Z/summary.sanitized.json`
-- Report: `docs/implementation/acceptmodv2-target-inventory-wrapper-20260427T160229Z/FINAL_REPORT.md`
-- Contract: `phase4-acceptmodv2-target-inventory-sanitized-no-live`
-- Script: `web-client/scripts/qa-phase4-acceptmodv2-target-inventory.mjs`
-- Library: `web-client/scripts/qa-lib/phase4-acceptmodv2-target-inventory-evidence.mjs`
-- Test: `web-client/scripts/__tests__/phase4Acceptmodv2TargetInventoryEvidence.test.ts`
+- Evidence: `docs/implementation/acceptmodv2-target-inventory-readonly-route-20260427T170708Z/summary.sanitized.json`
+- Report: `docs/implementation/acceptmodv2-target-inventory-readonly-route-20260427T170708Z/FINAL_REPORT.md`
+- Public route: `/api/orca/official/visits/acceptance-list`
+- ORCA endpoint: `/api01rv2/acceptlstv2`
+- Request classes: `01`, `02`, `03`
+- Serializer: `acceptlstreq_xml2_server_sanitized_readonly`
+- Parser/sanitizer: allowlisted presence flags and row hashes only
 
-The wrapper intentionally does not execute read-only Trial traffic yet. It locks endpoint/method/serializer/parser/sanitizer behavior for future `acceptlstv2` inventory evidence, rejects live/read-only/raw-artifact flags, and records only presence flags and hashes.
+The route is server-authenticated and facility-scoped. The request DTO accepts only `acceptanceDate`, `classCode`, and optional `departmentCode`. It does not accept client-provided `Acceptance_Id`, `Patient_ID`, facility, owner, role, object key, URI, or digest as target authority.
 
-Official ORCA source evidence checked by RUN_ID `20260427T160229Z`:
-
-- `https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html`
-- `https://www.orca.med.or.jp/receipt/users/tec/api/overview.html`
-
-RWO-11/RWO-09 rollback rehearsal, release-candidate stop, paired restore, restored-target smoke, operator acceptance, and final owner GO/NO-GO/PENDING capture are external release-management gates and are not performed by this automation.
+RWO-11/RWO-09 rollback rehearsal, release-candidate stop, paired restore, restored-target smoke, operator acceptance, and final owner GO/NO-GO/PENDING capture remain external release-management gates and are not performed by this automation.
 
 ## Goal
 
-Implement or expose a reviewed runtime-safe read-only `acceptlstv2` target inventory route/action so a future automation run can prove server-derived `Acceptance_Id`, patient/date/time, department, physician, and insurance-combination preconditions without raw patient/insurance detail and without live mutation.
+Run, or safely skip with evidence, sanitized read-only WebORCA Trial target inventory through `/api/orca/official/visits/acceptance-list` so future RN02/RN03/RN04 work can prove whether server-derived `Acceptance_Id`, patient/date/time, department, physician, and insurance-combination preconditions exist without raw patient/insurance detail and without live mutation.
 
 ## Required First Steps
 
 1. Inspect current branch, HEAD, status, and registered worktrees.
 2. Read `$CODEX_HOME/automations/orca/memory.md`, `HANDOFF_STATE.json`, this prompt, and:
+   - `docs/implementation/acceptmodv2-target-inventory-readonly-route-20260427T170708Z/summary.sanitized.json`
    - `docs/implementation/acceptmodv2-target-inventory-wrapper-20260427T160229Z/summary.sanitized.json`
    - `docs/implementation/acceptmodv2-rn020304-stop-gate-20260427T150350Z/summary.sanitized.json`
-   - `docs/implementation/rwo07-acceptmodv2-rn020304-no-live-packet-20260427T030312Z/summary.sanitized.json`
 3. Preserve the RWO-11/RWO-09 boundary as external release-management gates.
-4. Prefer this task unless a higher-priority non-human, non-RWO-11/RWO-09 safe item is newly inserted.
+4. Verify runtime readiness only through the approved non-S3 WebORCA Trial path.
 
 ## Allowed Actions
 
-- Repo-local implementation of a server-authenticated, facility-scoped, read-only `acceptlstv2` route/action.
-- DTO/parser/sanitizer updates that expose only allowlisted fields needed for target inventory.
-- No-live wrapper/parser/sanitizer tests and dry-runs.
-- Sanitized read-only Trial verification only if the route/action is complete, runtime is available through the approved non-S3 WebORCA Trial path, and evidence excludes raw ORCA bodies, credentials, patient names, insurance numbers, cookies, sessions, and credential-bearing URLs.
+- Start or use the approved repo-local non-S3 WebORCA Trial runtime when credentials/config are already available through approved local runtime files.
+- Run sanitized read-only `acceptlstv2` inventory through the new route.
+- Record only endpoint identity, class/date scope, transport status class, API result class, row counts, target-ready counts, row hashes, and presence flags.
+- If runtime/config is unavailable, write a sanitized skip record and continue to the next safe non-S3, non-production, non-RWO-11/RWO-09 work item.
 - Handoff state and roadmap evidence updates.
 
 ## Forbidden Actions
@@ -60,7 +56,7 @@ Implement or expose a reviewed runtime-safe read-only `acceptlstv2` target inven
 ## Evidence Requirements
 
 - Sanitized Markdown/JSON only.
-- Record endpoint/request class, route/method/serializer/parser/sanitizer contract, no-live test result, and read-only runtime result if executed.
+- Record endpoint/request class, route/method/serializer/parser/sanitizer contract, runtime readiness result, read-only inventory result or skip reason.
 - `credentialsCaptured=false`.
 - `rawArtifactsCommittedOrPackaged=false`.
 - `liveTrialOrca.executed=false`.
@@ -69,9 +65,8 @@ Implement or expose a reviewed runtime-safe read-only `acceptlstv2` target inven
 
 This prompt is complete when one of the following exists:
 
-- a reviewed runtime-safe read-only `acceptlstv2` target inventory route/action with focused tests and sanitized no-live evidence; or
-- a sanitized read-only Trial inventory summary proving or blocking server-derived target preconditions; or
-- a sanitized blocker explaining why runtime-safe read-only inventory cannot proceed and pointing to the next safe queue item.
+- a sanitized read-only Trial inventory summary proving at least one target-ready row or explicitly proving no target-ready row; or
+- a sanitized blocker/skip record explaining why runtime-safe read-only inventory cannot proceed in the current environment and pointing to the next safe queue item.
 
 ## Same-Run Continuation Requirement
 

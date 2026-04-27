@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.time.LocalDate;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
 import open.dolphin.rest.dto.orca.InsuranceCombinationRequest;
 import open.dolphin.rest.dto.orca.PatientAppointmentListRequest;
 import open.dolphin.rest.dto.orca.PatientNameSearchRequest;
@@ -73,6 +74,33 @@ class OrcaLiveGatewaySupportTest {
 
         assertTrue(xml.contains("<visitptlstreq type=\"record\">"));
         assertTrue(xml.contains("<Department_Code type=\"string\">11</Department_Code>"));
+    }
+
+    @Test
+    void buildAcceptanceInventoryPayloadUsesAcceptlstv2ReadonlyShape() {
+        AcceptanceInventoryRequest request = new AcceptanceInventoryRequest();
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 27));
+        request.setClassCode("1");
+        request.setDepartmentCode("11");
+
+        String xml = support.buildAcceptanceInventoryPayload(request);
+
+        assertTrue(xml.contains("path=/api01rv2/acceptlstv2"));
+        assertTrue(xml.contains("query=class=01"));
+        assertTrue(xml.contains("<acceptlstreq type=\"record\">"));
+        assertTrue(xml.contains("<Acceptance_Date type=\"string\">2026-04-27</Acceptance_Date>"));
+        assertTrue(xml.contains("<Department_Code type=\"string\">11</Department_Code>"));
+        assertFalse(xml.contains("<Patient_ID"));
+        assertFalse(xml.contains("<Acceptance_Id"));
+    }
+
+    @Test
+    void buildAcceptanceInventoryPayloadRejectsUnsupportedClass() {
+        AcceptanceInventoryRequest request = new AcceptanceInventoryRequest();
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 27));
+        request.setClassCode("04");
+
+        assertThrows(RuntimeException.class, () -> support.buildAcceptanceInventoryPayload(request));
     }
 
     @Test

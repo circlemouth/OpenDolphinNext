@@ -30,6 +30,8 @@ import open.dolphin.orca.service.DefaultOrcaLiveGateway;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.transport.StubOrcaTransport;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
 import open.dolphin.rest.dto.orca.PatientSummary;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
@@ -275,6 +277,72 @@ class OrcaVisitResourceTest {
         WebApplicationException ex = assertThrows(WebApplicationException.class,
                 () -> resource.visitList(createRequest(null, Map.of()), request));
         assertRestError(ex, Response.Status.UNAUTHORIZED.getStatusCode(), "facility_missing");
+    }
+
+    @Test
+    void acceptanceInventoryReturnsSanitizedReadonlyRows() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        AcceptanceInventoryResponse stub = new AcceptanceInventoryResponse();
+        stub.setApiResult("00");
+        stub.setApiResultMessage("OK");
+        stub.setTargetReady(true);
+        stub.setTargetReadyRowCount(1);
+        AcceptanceInventoryResponse.AcceptanceInventoryRow row =
+                new AcceptanceInventoryResponse.AcceptanceInventoryRow();
+        row.setRowHash("a".repeat(64));
+        row.setHasAcceptanceId(true);
+        row.setHasPatientId(true);
+        row.setHasAcceptanceDate(true);
+        row.setHasAcceptanceTime(true);
+        row.setHasDepartmentCode(true);
+        row.setHasPhysicianCode(true);
+        row.setHasInsuranceCombinationNumber(true);
+        stub.getRows().add(row);
+        when(wrapperService.getAcceptanceInventory(anyString(), any(AcceptanceInventoryRequest.class))).thenReturn(stub);
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+
+        AcceptanceInventoryRequest request = new AcceptanceInventoryRequest();
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 27));
+        request.setClassCode("active");
+
+        AcceptanceInventoryResponse response =
+                resource.acceptanceInventory(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals("00", response.getApiResult());
+        assertTrue(response.isTargetReady());
+        assertTrue(response.isRawSensitiveFieldsExcluded());
+        assertEquals(1, response.getRows().size());
+        assertEquals("01", request.getClassCode());
+        verify(wrapperService).getAcceptanceInventory("F001", request);
+    }
+
+    @Test
+    void acceptanceInventoryRejectsMissingRemoteUser() {
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(createService());
+
+        AcceptanceInventoryRequest request = new AcceptanceInventoryRequest();
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 27));
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.acceptanceInventory(null, request));
+        assertRestError(ex, Response.Status.UNAUTHORIZED.getStatusCode(), "remote_user_missing");
+    }
+
+    @Test
+    void acceptanceInventoryRejectsUnsupportedClass() {
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(createService());
+
+        AcceptanceInventoryRequest request = new AcceptanceInventoryRequest();
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 27));
+        request.setClassCode("04");
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.acceptanceInventory(createRequest("F001:doctor01", Map.of()), request));
+        assertRestError(ex, Response.Status.BAD_REQUEST.getStatusCode(), "orca.acceptance.inventory.invalid");
     }
 
     @Test

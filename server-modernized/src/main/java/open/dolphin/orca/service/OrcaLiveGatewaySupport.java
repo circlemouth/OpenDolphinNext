@@ -6,6 +6,7 @@ import java.util.List;
 import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransportResult;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
 import open.dolphin.rest.dto.orca.AppointmentMutationRequest;
 import open.dolphin.rest.dto.orca.BillingSimulationRequest;
 import open.dolphin.rest.dto.orca.FormerNameHistoryRequest;
@@ -187,6 +188,36 @@ final class OrcaLiveGatewaySupport {
         builder.append("</visitptlstreq>");
         builder.append("</data>");
         return builder.toString();
+    }
+
+    String buildAcceptanceInventoryPayload(AcceptanceInventoryRequest request) {
+        if (request == null || request.getAcceptanceDate() == null) {
+            throw new OrcaGatewayException("acceptanceDate is required");
+        }
+        String classCode = normalizeAcceptanceInventoryClass(request.getClassCode());
+        StringBuilder builder = new StringBuilder();
+        builder.append(buildOrcaMeta(OrcaEndpoint.ACCEPTANCE_LIST, classCode));
+        builder.append("<data>");
+        builder.append("<acceptlstreq type=\"record\">");
+        builder.append("<Acceptance_Date type=\"string\">")
+                .append(request.getAcceptanceDate())
+                .append("</Acceptance_Date>");
+        if (request.getDepartmentCode() != null && !request.getDepartmentCode().isBlank()) {
+            builder.append("<Department_Code type=\"string\">")
+                    .append(request.getDepartmentCode().trim())
+                    .append("</Department_Code>");
+        }
+        builder.append("</acceptlstreq>");
+        builder.append("</data>");
+        return builder.toString();
+    }
+
+    String normalizeAcceptanceInventoryClass(String value) {
+        String normalized = value == null || value.isBlank() ? "01" : padTwoDigits(requireText(value, "classCode"));
+        if (!"01".equals(normalized) && !"02".equals(normalized) && !"03".equals(normalized)) {
+            throw new OrcaGatewayException("classCode must be one of 01, 02, or 03");
+        }
+        return normalized;
     }
 
     DateRange resolveVisitRange(VisitPatientListRequest request) {

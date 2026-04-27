@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "ACCEPTMODV2",
-  "blockerId": "acceptmodv2-rn020304-target-inventory-runtime-readonly-route",
+  "blockerId": "acceptmodv2-rn020304-target-inventory-readonly-trial-runtime",
   "priority": "medium",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T16:02:29Z",
+  "lastUpdated": "2026-04-27T17:07:08Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5016,6 +5016,30 @@
   },
   "nextExecutableQueue": [
     {
+      "taskId": "ACCEPTMODV2_TARGET_INVENTORY_READONLY_TRIAL",
+      "lane": "critical_path",
+      "status": "queued",
+      "workOrder": "ACCEPTMODV2",
+      "summary": "Run sanitized read-only acceptlstv2 inventory for server-derived Acceptance_Id, date/time, department, physician, and insurance scope.",
+      "requiresRuntime": true,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": false,
+      "sourceEvidence": "docs/implementation/acceptmodv2-target-inventory-readonly-route-20260427T170708Z/summary.sanitized.json",
+      "route": "/api/orca/official/visits/acceptance-list",
+      "orcaEndpoint": "/api01rv2/acceptlstv2",
+      "requestClasses": [
+        "01",
+        "02",
+        "03"
+      ],
+      "skipCondition": "runtime unavailable, approved local Trial config unavailable, parser ambiguity, credential/raw-artifact risk, or non-Trial endpoint detection",
+      "successCriteria": "sanitized read-only inventory summary exists with credentialsCaptured=false, rawArtifactsCommittedOrPackaged=false, liveTrialOrca.executed=false, and target-ready row classification recorded",
+      "nextOnSuccess": "ACCEPTMODV2_RN02_DUPLICATE_CHECKPOINT_PREFLIGHT",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+    },
+    {
       "taskId": "RWO-06F_READONLY_PRECONDITION_PROBES",
       "lane": "critical_path",
       "status": "completed",
@@ -7520,6 +7544,48 @@
       "mutation": false
     },
     "recommendedNextTask": "Implement or expose a reviewed runtime-safe read-only acceptlstv2 route, then run sanitized target inventory against WebORCA Trial before RN02/RN03/RN04 live preflight.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestAcceptmodv2TargetInventoryReadonlyRoute": {
+    "runId": "20260427T170708Z",
+    "workOrder": "ACCEPTMODV2",
+    "result": "ACCEPTMODV2_TARGET_INVENTORY_READONLY_ROUTE_READY_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "769e49ee0a447b27a5d6143c41bfdb0640683a55",
+    "evidence": "docs/implementation/acceptmodv2-target-inventory-readonly-route-20260427T170708Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/acceptmodv2-target-inventory-readonly-route-20260427T170708Z/summary.sanitized.json",
+    "route": {
+      "endpoint": "/api/orca/official/visits/acceptance-list",
+      "method": "POST",
+      "orcaEndpoint": "/api01rv2/acceptlstv2",
+      "requestClasses": [
+        "01",
+        "02",
+        "03"
+      ],
+      "serializer": "acceptlstreq_xml2_server_sanitized_readonly",
+      "parser": "acceptlstres_allowlisted_presence_flags_and_hashes_only",
+      "sanitizer": "drop_patient_names_insurance_numbers_and_raw_orca_body"
+    },
+    "checks": {
+      "serverFocused": "pass_42_tests",
+      "webFocused": "pass_5_tests_with_web_guard_pretest",
+      "dryRun": "pass_no_live"
+    },
+    "readOnlyTrialOrca": {
+      "executed": false,
+      "mutation": false,
+      "businessSuccessClassification": "not_executed_route_ready_only"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false,
+      "businessSuccessClassification": "not_applicable_no_live_route_ready_only"
+    },
+    "claimBoundary": "Runtime-safe read-only acceptlstv2 route/action and focused no-live tests only; no read-only Trial inventory result, RN02/RN03/RN04 live readiness, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Run sanitized read-only WebORCA Trial target inventory through /api/orca/official/visits/acceptance-list when approved non-S3 runtime is available.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false

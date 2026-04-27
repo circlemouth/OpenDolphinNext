@@ -12,6 +12,7 @@ import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.orca.transport.StubOrcaTransport;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
 import open.dolphin.rest.dto.orca.InsuranceCombinationRequest;
 import open.dolphin.rest.dto.orca.PatientAppointmentListRequest;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,25 @@ class OrcaLiveGatewayReadOnlyContractPayloadTest {
         assertTrue(transport.lastPayload.contains("<End_Date>2026-04-30</End_Date>"));
         assertFalse(transport.lastPayload.contains("insurancecombinationreq"));
         assertFalse(transport.lastPayload.contains("Perform_Date"));
+    }
+
+    @Test
+    void acceptanceInventoryTransportPayloadUsesAcceptlstv2ClassMeta() {
+        CapturingTransport transport = new CapturingTransport(new StubOrcaTransport());
+        OrcaLiveGateway service = new DefaultOrcaLiveGateway(transport, new OrcaXmlMapper());
+        AcceptanceInventoryRequest request = new AcceptanceInventoryRequest();
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 27));
+        request.setClassCode("03");
+
+        service.getAcceptanceInventory("F001", request);
+
+        assertEquals(OrcaEndpoint.ACCEPTANCE_LIST, transport.lastEndpoint);
+        assertNotNull(transport.lastPayload);
+        assertTrue(transport.lastPayload.contains("query=class=03"));
+        assertTrue(transport.lastPayload.contains("<acceptlstreq type=\"record\">"));
+        assertTrue(transport.lastPayload.contains("<Acceptance_Date type=\"string\">2026-04-27</Acceptance_Date>"));
+        assertFalse(transport.lastPayload.contains("<Patient_ID"));
+        assertFalse(transport.lastPayload.contains("<Acceptance_Id"));
     }
 
     private static final class CapturingTransport implements OrcaTransport {

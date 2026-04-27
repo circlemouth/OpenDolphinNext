@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -12,6 +15,8 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import open.dolphin.orca.OrcaGatewayException;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse.AcceptanceInventoryRow;
 import open.dolphin.rest.dto.orca.AbstractPatientListResponse;
 import open.dolphin.rest.dto.orca.AppointmentMutationResponse;
 import open.dolphin.rest.dto.orca.BillingSimulationResponse;
@@ -204,6 +209,26 @@ public class OrcaXmlMapper {
         return response;
     }
 
+    public AcceptanceInventoryResponse toAcceptanceInventory(String xml) {
+        JsonNode body = read(xml).path("acceptlstres");
+        AcceptanceInventoryResponse response = new AcceptanceInventoryResponse();
+        populateCommon(body, response);
+        for (JsonNode node : iterable(body.path("Acceptlst_Information"))) {
+            AcceptanceInventoryRow row = toAcceptanceInventoryRow(node);
+            response.getRows().add(row);
+            if (isTargetReady(row)) {
+                response.setTargetReadyRowCount(response.getTargetReadyRowCount() + 1);
+            }
+        }
+        response.setSourceRowCount(response.getRows().size());
+        response.setSanitizedRowCount(response.getRows().size());
+        response.setTargetReady(response.getTargetReadyRowCount() > 0);
+        response.setRawSensitiveFieldsExcluded(true);
+        response.setClientProvidedIdentifiersTrusted(false);
+        response.setServerDerivedAuthorityRequired(true);
+        return response;
+    }
+
     public OrcaMedicalInformationListResponse toMedicalInformationList(String xml) {
         JsonNode body = resolveMedicalInformationBody(read(xml));
         OrcaMedicalInformationListResponse response = new OrcaMedicalInformationListResponse();
@@ -369,6 +394,71 @@ public class OrcaXmlMapper {
         combination.setCertificateExpiredDate(textValue(node, "Certificate_ExpiredDate"));
         populatePublicInsurances(node.path("PublicInsurance_Information"), combination.getPublicInsurances());
         return combination;
+    }
+
+    private AcceptanceInventoryRow toAcceptanceInventoryRow(JsonNode node) {
+        String acceptanceId = textValue(node, "Acceptance_Id");
+        String patientId = textValue(node.path("Patient_Information"), "Patient_ID");
+        String acceptanceDate = textValue(node, "Acceptance_Date");
+        String acceptanceTime = textValue(node, "Acceptance_Time");
+        String departmentCode = textValue(node, "Department_Code");
+        String physicianCode = textValue(node, "Physician_Code");
+        String medicalInformation = textValue(node, "Medical_Information");
+        String insuranceCombinationNumber = textValue(node, "Insurance_Combination_Number");
+
+        AcceptanceInventoryRow row = new AcceptanceInventoryRow();
+        row.setRowHash(sha256(String.join("|",
+                safeHashSeed(acceptanceId),
+                safeHashSeed(patientId),
+                safeHashSeed(acceptanceDate),
+                safeHashSeed(acceptanceTime),
+                safeHashSeed(departmentCode),
+                safeHashSeed(physicianCode),
+                safeHashSeed(medicalInformation),
+                safeHashSeed(insuranceCombinationNumber))));
+        row.setHasAcceptanceId(hasText(acceptanceId));
+        row.setHasPatientId(hasText(patientId));
+        row.setHasAcceptanceDate(hasText(acceptanceDate));
+        row.setHasAcceptanceTime(hasText(acceptanceTime));
+        row.setHasDepartmentCode(hasText(departmentCode));
+        row.setHasPhysicianCode(hasText(physicianCode));
+        row.setHasMedicalInformation(hasText(medicalInformation));
+        row.setHasInsuranceCombinationNumber(hasText(insuranceCombinationNumber));
+        row.setRawSensitiveFieldsExcluded(true);
+        return row;
+    }
+
+    private boolean isTargetReady(AcceptanceInventoryRow row) {
+        return row != null
+                && row.isHasAcceptanceId()
+                && row.isHasPatientId()
+                && row.isHasAcceptanceDate()
+                && row.isHasAcceptanceTime()
+                && row.isHasDepartmentCode()
+                && row.isHasPhysicianCode()
+                && row.isHasInsuranceCombinationNumber();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String safeHashSeed(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder(hash.length * 2);
+            for (byte item : hash) {
+                builder.append(String.format("%02x", item));
+            }
+            return builder.toString();
+        } catch (NoSuchAlgorithmException ex) {
+            throw new OrcaGatewayException("SHA-256 digest is unavailable", ex);
+        }
     }
 
     private void populatePublicInsurances(JsonNode node, java.util.List<PublicInsuranceInfo> target) {

@@ -14,6 +14,8 @@ import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.orca.transport.RestOrcaTransport;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
 import open.dolphin.rest.dto.orca.AppointmentMutationRequest;
 import open.dolphin.rest.dto.orca.AppointmentMutationResponse;
 import open.dolphin.rest.dto.orca.BillingSimulationRequest;
@@ -153,6 +155,36 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         if (response == null) {
             response = new BillingSimulationResponse();
         }
+        enrich(response, result);
+        return response;
+    }
+
+    public AcceptanceInventoryResponse getAcceptanceInventory(String facilityId, AcceptanceInventoryRequest request) {
+        facilityId = requireText(facilityId, "facilityId");
+        ensureNotNull(request, "acceptance inventory request");
+        String payload = buildAcceptanceInventoryPayload(request);
+        OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.ACCEPTANCE_LIST, OrcaTransportRequest.post(payload));
+        String xml = result != null ? result.getBody() : null;
+        AcceptanceInventoryResponse response = mapResponse(xml, mapper::toAcceptanceInventory);
+        if (response == null) {
+            response = new AcceptanceInventoryResponse();
+        }
+        String classCode = normalizeAcceptanceInventoryClass(request.getClassCode());
+        response.setClassCode(classCode);
+        response.setAcceptanceDate(request.getAcceptanceDate() != null ? request.getAcceptanceDate().toString() : null);
+        response.setEndpoint("/api/orca/official/visits/acceptance-list");
+        response.setOrcaEndpoint(OrcaEndpoint.ACCEPTANCE_LIST.getPath());
+        response.setRequestClass("acceptlstv2_class_" + classCode + "_target_inventory_readonly");
+        response.setMethod(OrcaEndpoint.ACCEPTANCE_LIST.getMethod());
+        response.setSerializer("acceptlstreq_xml2_server_sanitized_readonly");
+        response.setParser("acceptlstres_allowlisted_presence_flags_and_hashes_only");
+        response.setSanitizer("drop_patient_names_insurance_numbers_and_raw_orca_body");
+        response.setRecordsReturned(response.getRows().size());
+        response.setSourceRowCount(response.getRows().size());
+        response.setSanitizedRowCount(response.getRows().size());
+        response.setRawSensitiveFieldsExcluded(true);
+        response.setClientProvidedIdentifiersTrusted(false);
+        response.setServerDerivedAuthorityRequired(true);
         enrich(response, result);
         return response;
     }
@@ -348,6 +380,8 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
     private OrcaLiveGatewaySupport.DateRange resolveAppointmentRange(OrcaAppointmentListRequest request) { return support.resolveAppointmentRange(request); }
     private void enforceRangeLimit(LocalDate from, LocalDate to, int maxDays, String label) { support.enforceRangeLimit(from, to, maxDays, label); }
     private String buildVisitListPayload(VisitPatientListRequest request, OrcaLiveGatewaySupport.DateRange range) { return support.buildVisitListPayload(request, range); }
+    private String buildAcceptanceInventoryPayload(AcceptanceInventoryRequest request) { return support.buildAcceptanceInventoryPayload(request); }
+    private String normalizeAcceptanceInventoryClass(String value) { return support.normalizeAcceptanceInventoryClass(value); }
     private OrcaLiveGatewaySupport.DateRange resolveVisitRange(VisitPatientListRequest request) { return support.resolveVisitRange(request); }
     private String buildPatientAppointmentListPayload(PatientAppointmentListRequest request) { return support.buildPatientAppointmentListPayload(request); }
     private String buildBillingSimulationPayload(BillingSimulationRequest request, OrcaLiveGatewaySupport.InsuranceSelection selection) { return support.buildBillingSimulationPayload(request, selection); }

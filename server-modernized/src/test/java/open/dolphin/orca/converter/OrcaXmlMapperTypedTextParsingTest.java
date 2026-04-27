@@ -2,7 +2,9 @@ package open.dolphin.orca.converter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
 import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
 import open.dolphin.rest.dto.orca.OrcaReceptionSelectorOptionsResponse;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
@@ -57,6 +59,49 @@ class OrcaXmlMapperTypedTextParsingTest {
         assertEquals("S-1001", response.getVisits().get(0).getSequentialNumber());
         assertEquals("0005", response.getVisits().get(0).getInsuranceCombinationNumber());
         assertEquals("00001", response.getVisits().get(0).getPatient().getPatientId());
+    }
+
+    @Test
+    void parsesAcceptanceInventoryAsSanitizedPresenceOnlyRows() {
+        String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <xmlio2>
+                  <acceptlstres>
+                    <Api_Result type="string">00</Api_Result>
+                    <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                    <Acceptlst_Information type="array">
+                      <Acceptlst_Information_child type="record">
+                        <Acceptance_Id type="string">A-20260427-001</Acceptance_Id>
+                        <Acceptance_Date type="string">2026-04-27</Acceptance_Date>
+                        <Acceptance_Time type="string">09:01:02</Acceptance_Time>
+                        <Department_Code type="string">11</Department_Code>
+                        <Physician_Code type="string">10005</Physician_Code>
+                        <Medical_Information type="string">01</Medical_Information>
+                        <Patient_Information type="record">
+                          <Patient_ID type="string">00001</Patient_ID>
+                          <WholeName type="string">事例 一</WholeName>
+                          <WholeName_inKana type="string">ジレイ イチ</WholeName_inKana>
+                        </Patient_Information>
+                        <Insurance_Combination_Number type="string">0005</Insurance_Combination_Number>
+                      </Acceptlst_Information_child>
+                    </Acceptlst_Information>
+                  </acceptlstres>
+                </xmlio2>
+                """;
+
+        OrcaXmlMapper mapper = new OrcaXmlMapper();
+        AcceptanceInventoryResponse response = mapper.toAcceptanceInventory(xml);
+
+        assertNotNull(response);
+        assertEquals("00", response.getApiResult());
+        assertEquals(1, response.getRows().size());
+        assertEquals(1, response.getTargetReadyRowCount());
+        assertEquals(1, response.getSourceRowCount());
+        assertTrue(response.isTargetReady());
+        assertTrue(response.isRawSensitiveFieldsExcluded());
+        assertTrue(response.getRows().get(0).isHasAcceptanceId());
+        assertTrue(response.getRows().get(0).isHasPatientId());
+        assertEquals(64, response.getRows().get(0).getRowHash().length());
     }
 
     @Test

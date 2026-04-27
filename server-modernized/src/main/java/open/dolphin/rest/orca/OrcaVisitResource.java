@@ -30,6 +30,8 @@ import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.rest.OrcaApiProxySupport;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListRequest;
@@ -47,6 +49,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
     private static final Logger LOGGER = Logger.getLogger(OrcaVisitResource.class.getName());
     private static final String OPERATION_VISIT_MUTATION = "visit_mutation";
     private static final String OPERATION_VISIT_LIST = "visit_list";
+    private static final String OPERATION_ACCEPTANCE_INVENTORY = "acceptance_inventory";
     private static final ZoneId TOKYO_ZONE = ZoneId.of("Asia/Tokyo");
     private static final DateTimeFormatter ORCA_TIME_FORMAT = DateTimeFormatter.ofPattern("HHmm").withZone(TOKYO_ZONE);
 
@@ -196,6 +199,66 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.visit.error", ex.getMessage());
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw ex;
+        }
+    }
+
+    @POST
+    @Path("/acceptance-list")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public AcceptanceInventoryResponse acceptanceInventory(@Context HttpServletRequest request,
+            AcceptanceInventoryRequest body) {
+        if (request == null || request.getRemoteUser() == null || request.getRemoteUser().isBlank()) {
+            Map<String, Object> details = newAuditDetails(request);
+            details.put("operation", OPERATION_ACCEPTANCE_INVENTORY);
+            markFailureDetails(details, Response.Status.UNAUTHORIZED.getStatusCode(),
+                    "remote_user_missing", "Authenticated user is required");
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.UNAUTHORIZED, "remote_user_missing",
+                    "Authenticated user is required");
+        }
+        if (body == null || body.getAcceptanceDate() == null) {
+            Map<String, Object> details = newAuditDetails(request);
+            details.put("operation", OPERATION_ACCEPTANCE_INVENTORY);
+            markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
+                    "orca.acceptance.inventory.invalid", "acceptanceDate is required");
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.BAD_REQUEST, "orca.acceptance.inventory.invalid",
+                    "acceptanceDate is required");
+        }
+        String classCode = normalizeAcceptanceInventoryClass(body.getClassCode());
+        if (classCode == null) {
+            Map<String, Object> details = newAuditDetails(request);
+            details.put("operation", OPERATION_ACCEPTANCE_INVENTORY);
+            putAuditDetail(details, "acceptanceDate", body.getAcceptanceDate());
+            markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
+                    "orca.acceptance.inventory.invalid", "classCode must be one of 01, 02, or 03");
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.BAD_REQUEST, "orca.acceptance.inventory.invalid",
+                    "classCode must be one of 01, 02, or 03");
+        }
+        body.setClassCode(classCode);
+        String facilityId = requireFacilityId(request);
+        Map<String, Object> details = newAuditDetails(request);
+        details.put("operation", OPERATION_ACCEPTANCE_INVENTORY);
+        putAuditDetail(details, "acceptanceDate", body.getAcceptanceDate());
+        details.put("classCode", classCode);
+        try {
+            AcceptanceInventoryResponse response = wrapperService.getAcceptanceInventory(facilityId, body);
+            applyResponseAuditDetails(response, details);
+            applyResponseMetadata(response, details);
+            details.put("targetReadyRowCount", response.getTargetReadyRowCount());
+            details.put("targetReady", response.isTargetReady());
+            details.put("rawSensitiveFieldsExcluded", response.isRawSensitiveFieldsExcluded());
+            details.put("clientProvidedIdentifiersTrusted", response.isClientProvidedIdentifiersTrusted());
+            markSuccessDetails(details);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
+            return response;
+        } catch (RuntimeException ex) {
+            markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
+                    "orca.acceptance.inventory.error", ex.getMessage());
             recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
@@ -495,6 +558,25 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             case "claim", "claim-send", "claim-send-info", "send-claim" -> "04";
             case "query", "read", "get", "list", "inquiry" -> "00";
             default -> normalized;
+        };
+    }
+
+    private String normalizeAcceptanceInventoryClass(String value) {
+        String normalized = value == null || value.isBlank() ? "01" : value.trim().toLowerCase(Locale.ROOT);
+        if (normalized.startsWith("class=")) {
+            normalized = normalized.substring("class=".length());
+        } else if (normalized.startsWith("?class=")) {
+            normalized = normalized.substring("?class=".length());
+        }
+        if (normalized.matches("\\d")) {
+            normalized = "0" + normalized;
+        }
+        return switch (normalized) {
+            case "01", "02", "03" -> normalized;
+            case "active", "accounting-wait" -> "01";
+            case "completed", "accounting-completed" -> "02";
+            case "all" -> "03";
+            default -> null;
         };
     }
 
