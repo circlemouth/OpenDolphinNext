@@ -147,6 +147,26 @@
       "status": "rwo06i_endpoint_specific_candidate_live_business_rejected_do_not_repeat",
       "workflow": "surgery"
     },
+    "medicalmodv2_surgery_trial_reachability_v2.json": {
+      "bytes": 687,
+      "candidateSourceRunId": "20260425T010143Z",
+      "candidateSourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+      "duplicateLiveCheckpointKey": "rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-f7fbb890b62b7211b47c2672e85f0e70acbcdee18c9cbe9d7ea24c7942bbaa0e",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_surgery_trial_reachability_v2.json",
+      "sha256": "f7fbb890b62b7211b47c2672e85f0e70acbcdee18c9cbe9d7ea24c7942bbaa0e",
+      "status": "rwo06i_v2_endpoint_specific_candidate_live_business_rejected_do_not_repeat",
+      "workflow": "surgery"
+    },
+    "medicalmodv2_surgery_trial_reachability_v3.json": {
+      "bytes": 840,
+      "candidateSourceRunId": "20260427T091616Z",
+      "candidateSourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+      "duplicateLiveCheckpointKey": "rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_surgery_trial_reachability_v3.json",
+      "sha256": "f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421",
+      "status": "rwo06i_v3_endpoint_specific_candidate_no_live_prepared_not_live_executed",
+      "workflow": "surgery"
+    },
     "medicalmodv2_test_order_trial_reachability_v1.json": {
       "bytes": 817,
       "duplicateLiveCheckpointKey": "rwo06j:medicalmodv2:rwo06j-test-order-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-b4fd3a422ac38f51b73a2fb2a56d07e2418339878f9451a6d73eb185bbd334d2",

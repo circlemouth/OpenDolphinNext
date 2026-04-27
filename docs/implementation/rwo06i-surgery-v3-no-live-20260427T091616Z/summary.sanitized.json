@@ -1,0 +1,90 @@
+{
+  "runId": "20260427T091616Z",
+  "result": "RWO06I_SURGERY_V3_NO_LIVE_PACKET_PREPARED",
+  "branch": "master",
+  "headAtSelection": "115a8fad48db63b65129af915eb2f7ced9571713",
+  "workOrder": "RWO-06I",
+  "taskId": "RWO-06I_SURGERY_V2_REJECTION_NO_LIVE_INVESTIGATION",
+  "activeHandoffPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+  "sourceEvidence": "docs/implementation/rwo06i-surgery-v2-live-20260425T020245Z/summary.sanitized.json",
+  "priorLiveResultReviewed": {
+    "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+    "requestClass": "medicalmodv2",
+    "target": "00001",
+    "payloadSha256": "f7fbb890b62b7211b47c2672e85f0e70acbcdee18c9cbe9d7ea24c7942bbaa0e",
+    "httpStatus": 200,
+    "apiResult": "80",
+    "responseClassification": "businessRejected",
+    "businessAccepted": false
+  },
+  "officialSpecificationEvidence": [
+    {
+      "checkedAt": "2026-04-27T09:16:16Z",
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+      "endpoint": "medicalmodv2",
+      "finding": "official error list maps Api_Result 80 to intermediate medical data registration error",
+      "derivedNoLiveAction": "do not treat prior HTTP 200 as success; changed payload identity must be no-live verified before any future retry"
+    },
+    {
+      "checkedAt": "2026-04-27T09:16:16Z",
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+      "endpoint": "medicalmodv2",
+      "finding": "the official request sample includes surgery class 500 procedure 150003110 with adjunct rows 641210099 and 840000042",
+      "derivedNoLiveAction": "prepare an official-sample-style changed no-live identity instead of repeating the rejected bare 150003110 v2 payload"
+    }
+  ],
+  "changedPayloadIdentity": {
+    "workflow": "surgery",
+    "entity": "surgeryOrder",
+    "claim007Class": "500",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_surgery_trial_reachability_v3.json",
+    "sha256": "f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421",
+    "bytes": 840,
+    "candidateCodes": [
+      "150003110",
+      "641210099",
+      "840000042"
+    ],
+    "duplicateLiveCheckpoint": "rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421"
+  },
+  "noLiveEvidence": {
+    "surgeryV3SafeWrapperDryRun": "pass_no_live",
+    "liveTrialMutation": "not_run",
+    "businessSuccessClassification": "not_applicable_no_live_packet_only"
+  },
+  "retryReadinessDecision": {
+    "changedPayloadIdentityPrepared": true,
+    "liveReadyNow": false,
+    "unchangedV2RepeatAllowed": false,
+    "nextRequiredBeforeLive": [
+      "row-level read-only master proof or documented stop condition for adjunct rows",
+      "runtime readiness immediately before live",
+      "duplicate-live checkpoint decision",
+      "endpoint-specific success criteria and stop conditions in sanitized preflight packet"
+    ]
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_no_live_packet_only",
+    "businessAccepted": false
+  },
+  "checks": {
+    "wrapperDryRun": "pass_no_live",
+    "jsonValidity": "pass",
+    "docLinks": "pass",
+    "webGuard": "pass",
+    "focusedVitest": "pass_37_tests",
+    "reviewerSubmissionPacketContractTests": "pass_7_tests",
+    "reviewPackageContractTests": "pass_25_tests",
+    "gitDiffCheck": "pass"
+  },
+  "claimBoundary": "RWO-06I surgeryOrder/500 v3 no-live packet only; no surgery Trial business acceptance, retry readiness, all-surgery coverage, Request_Number 02/03/04 success, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Run current-head non-S3 static/package/security refresh, then before any surgery v3 live attempt record adjunct-row master proof or an explicit stop condition plus duplicate/runtime preflight.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

@@ -1,8 +1,8 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-06H",
-  "blockerId": "rwo06h-fresh-lock-free-target-precondition-needed",
+  "sourceWorkOrder": "RWO-06I",
+  "blockerId": "rwo06i-surgery-v3-adjunct-master-proof-needed",
   "priority": "normal",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T08:56:30Z",
+  "lastUpdated": "2026-04-27T09:16:16Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "automation_reassigned_by_owner_20260427T051855Z",
     "automationMustNot": [
@@ -5263,7 +5263,7 @@
     {
       "taskId": "RWO-06H_FRESH_LOCK_FREE_TARGET_PREFLIGHT",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "blocked_safety_stop",
       "workOrder": "RWO-06H",
       "summary": "Find or prove a fresh/lock-free target precondition for a future injectionOrder/310 changed-precondition retry without repeating the v3 send.",
       "requiresRuntime": true,
@@ -5275,6 +5275,59 @@
       "skipCondition": "no safe read-only target-lock/fresh-target proof exists, runtime unavailable, target ambiguity, parser ambiguity, credential/raw-artifact risk, or proof requires raw patient/insurance detail",
       "successCriteria": "sanitized no-live/read-only evidence identifies a lock-free/fresh target or blocks RWO-06H retry without live mutation",
       "nextOnSuccess": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "result": "blocked_no_safe_readonly_target_lock_or_fresh_target_proof",
+      "completedRunId": "20260427T091616Z",
+      "evidence": "docs/implementation/rwo06h-fresh-lock-free-target-preflight-20260427T091616Z/summary.sanitized.json",
+      "targetPreconditionDecision": {
+        "lockFreeTargetProven": false,
+        "freshTargetIdentified": false,
+        "retryReadyNow": false,
+        "unchangedRepeatSendAllowed": false
+      }
+    },
+    {
+      "taskId": "RWO-06I_SURGERY_V2_REJECTION_NO_LIVE_INVESTIGATION",
+      "lane": "parallel_no_live",
+      "status": "completed",
+      "workOrder": "RWO-06I",
+      "summary": "Investigate the sanitized surgeryOrder/500 v2 Api_Result 80 rejection without repeating the unchanged v2 live send.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06i-surgery-v2-live-20260425T020245Z/summary.sanitized.json",
+      "skipCondition": "official endpoint semantics or payload/precondition evidence cannot be investigated without raw ORCA bodies, raw patient/insurance detail, credentials, S3/object storage, or live mutation",
+      "successCriteria": "sanitized no-live investigation records a concrete changed precondition/payload identity or classifies surgeryOrder/500 v2 as blocked without repeating the live send",
+      "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "result": "changed_surgery_v3_no_live_packet_prepared",
+      "completedRunId": "20260427T091616Z",
+      "evidence": "docs/implementation/rwo06i-surgery-v3-no-live-20260427T091616Z/summary.sanitized.json",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_surgery_trial_reachability_v3.json",
+      "payloadSha256": "f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421"
+    },
+    {
+      "taskId": "RWO-06I_SURGERY_V3_ADJUNCT_MASTER_PROOF_PREFLIGHT",
+      "lane": "critical_path",
+      "status": "queued",
+      "workOrder": "RWO-06I",
+      "summary": "Prove or block surgery v3 adjunct rows before any future surgeryOrder/500 v3 live attempt.",
+      "requiresRuntime": true,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06i-surgery-v3-no-live-20260427T091616Z/summary.sanitized.json",
+      "readOnlyChecks": [
+        "medicationgetv2_or_masterlastupdatev3_for_150003110",
+        "medicationgetv2_or_masterlastupdatev3_for_641210099",
+        "medicationgetv2_or_masterlastupdatev3_for_840000042"
+      ],
+      "skipCondition": "runtime unavailable, safe read-only wrapper missing, parser ambiguity, credential/raw-artifact risk, or adjunct row proof requires raw patient/insurance detail",
+      "successCriteria": "sanitized row-level proof or explicit stop condition exists for surgery v3 adjunct rows; no live mutation executed",
+      "nextOnSuccess": "RWO-06I_DUPLICATE_CHECKPOINT_PREFLIGHT",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
     },
     {
@@ -5970,6 +6023,88 @@
     },
     "claimBoundary": "Current-head non-S3 static/package/security refresh only; not instruction-charge Trial business acceptance, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
     "recommendedNextTask": "Continue independent no-live roadmap work; do not execute instractionChargeOrder/130 live until all listed preconditions have sanitized server-derived proof.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
+  "latestRwo06HFreshLockFreeTargetPreflight": {
+    "runId": "20260427T091616Z",
+    "workOrder": "RWO-06H",
+    "taskId": "RWO-06H_FRESH_LOCK_FREE_TARGET_PREFLIGHT",
+    "result": "RWO06H_FRESH_LOCK_FREE_TARGET_PREFLIGHT_BLOCKED_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "115a8fad48db63b65129af915eb2f7ced9571713",
+    "evidence": "docs/implementation/rwo06h-fresh-lock-free-target-preflight-20260427T091616Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06h-fresh-lock-free-target-preflight-20260427T091616Z/summary.sanitized.json",
+    "priorLiveResult": {
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "requestClass": "medicalmodv2",
+      "target": "00001",
+      "payloadSha256": "6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d",
+      "apiResult": "90",
+      "responseClassification": "businessRejected",
+      "businessAccepted": false
+    },
+    "targetPreconditionDecision": {
+      "lockFreeTargetProven": false,
+      "freshTargetIdentified": false,
+      "retryReadyNow": false,
+      "unchangedRepeatSendAllowed": false,
+      "blockedReason": "no_safe_readonly_target_lock_or_fresh_target_proof_exists_in_current_repo"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_blocked_no_live_preflight",
+      "businessAccepted": false
+    },
+    "claimBoundary": "RWO-06H injectionOrder/310 v3 fresh/lock-free target precondition is blocked without live mutation. No injection Trial business acceptance, retry readiness, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Do not retry RWO-06H v3 unchanged; continue independent no-live work, starting with RWO-06I surgeryOrder/500 v2 rejection investigation.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
+  "latestRwo06ISurgeryV3NoLivePacket": {
+    "runId": "20260427T091616Z",
+    "workOrder": "RWO-06I",
+    "taskId": "RWO-06I_SURGERY_V2_REJECTION_NO_LIVE_INVESTIGATION",
+    "result": "RWO06I_SURGERY_V3_NO_LIVE_PACKET_PREPARED",
+    "branch": "master",
+    "headAtSelection": "115a8fad48db63b65129af915eb2f7ced9571713",
+    "evidence": "docs/implementation/rwo06i-surgery-v3-no-live-20260427T091616Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06i-surgery-v3-no-live-20260427T091616Z/summary.sanitized.json",
+    "priorLiveResult": {
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "requestClass": "medicalmodv2",
+      "target": "00001",
+      "payloadSha256": "f7fbb890b62b7211b47c2672e85f0e70acbcdee18c9cbe9d7ea24c7942bbaa0e",
+      "apiResult": "80",
+      "responseClassification": "businessRejected",
+      "businessAccepted": false
+    },
+    "payloadIdentity": {
+      "workflow": "surgery",
+      "entity": "surgeryOrder",
+      "claim007Class": "500",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_surgery_trial_reachability_v3.json",
+      "sha256": "f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421",
+      "candidateCodes": [
+        "150003110",
+        "641210099",
+        "840000042"
+      ],
+      "duplicateLiveCheckpoint": "rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421"
+    },
+    "noLiveEvidence": {
+      "wrapperDryRun": "pass_no_live",
+      "liveTrialMutation": "not_run",
+      "businessSuccessClassification": "not_applicable_no_live_packet_only"
+    },
+    "claimBoundary": "RWO-06I surgeryOrder/500 v3 no-live packet only; no surgery Trial business acceptance, retry readiness, all-surgery coverage, Request_Number 02/03/04 success, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Run current-head static/package/security refresh, then before any surgery v3 live attempt record adjunct-row master proof or stop condition plus duplicate/runtime preflight.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false,
