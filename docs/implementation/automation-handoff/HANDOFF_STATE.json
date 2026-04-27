@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06H",
-  "blockerId": "rwo06h-injection-v3-business-rejected-no-live-investigation-needed",
+  "blockerId": "rwo06h-fresh-lock-free-target-precondition-needed",
   "priority": "normal",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T08:53:44Z",
+  "lastUpdated": "2026-04-27T08:56:30Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "automation_reassigned_by_owner_20260427T051855Z",
     "automationMustNot": [
@@ -5243,7 +5243,7 @@
     {
       "taskId": "RWO-06H_INJECTION_V3_REJECTION_NO_LIVE_INVESTIGATION",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06H",
       "summary": "Investigate the sanitized RWO-06H injection v3 Api_Result 90 rejection without another live send.",
       "requiresRuntime": false,
@@ -5255,6 +5255,26 @@
       "skipCondition": "official endpoint semantics or local payload/precondition evidence cannot be investigated without raw ORCA bodies, raw patient/insurance detail, credentials, S3/object storage, or live mutation",
       "successCriteria": "sanitized no-live investigation records a concrete changed precondition/payload identity or classifies the row as blocked without repeating the live send",
       "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "result": "changed_precondition_required_fresh_or_lock_free_target",
+      "completedRunId": "20260427T084616Z",
+      "evidence": "docs/implementation/rwo06h-injection-v3-rejection-investigation-20260427T084616Z/summary.sanitized.json"
+    },
+    {
+      "taskId": "RWO-06H_FRESH_LOCK_FREE_TARGET_PREFLIGHT",
+      "lane": "critical_path",
+      "status": "queued",
+      "workOrder": "RWO-06H",
+      "summary": "Find or prove a fresh/lock-free target precondition for a future injectionOrder/310 changed-precondition retry without repeating the v3 send.",
+      "requiresRuntime": true,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06h-injection-v3-rejection-investigation-20260427T084616Z/summary.sanitized.json",
+      "skipCondition": "no safe read-only target-lock/fresh-target proof exists, runtime unavailable, target ambiguity, parser ambiguity, credential/raw-artifact risk, or proof requires raw patient/insurance detail",
+      "successCriteria": "sanitized no-live/read-only evidence identifies a lock-free/fresh target or blocks RWO-06H retry without live mutation",
+      "nextOnSuccess": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
     },
     {
@@ -6151,6 +6171,27 @@
     },
     "claimBoundary": "RWO-06H injectionOrder/310 v3 executed one scoped WebORCA / ORCA Trial live attempt and was businessRejected; no injection Trial acceptance, all-injection coverage, all-order readiness, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
     "recommendedNextTask": "Do not repeat this exact RWO-06H v3 live send. Continue with no-live investigation or the next independent non-S3 roadmap item unless a concrete changed precondition is established.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06HInjectionV3RejectionInvestigation": {
+    "runId": "20260427T084616Z",
+    "workOrder": "RWO-06H",
+    "result": "RWO06H_INJECTION_V3_REJECTION_INVESTIGATED_NO_LIVE_CHANGED_PRECONDITION_REQUIRED",
+    "branch": "master",
+    "headAtSelection": "4ceda23d8fb88ae213c1ee56e31b1039b70074f3",
+    "evidence": "docs/implementation/rwo06h-injection-v3-rejection-investigation-20260427T084616Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06h-injection-v3-rejection-investigation-20260427T084616Z/summary.sanitized.json",
+    "sourceLiveDecision": "docs/implementation/rwo06h-injection-v3-live-decision-20260427T084616Z/summary.sanitized.json",
+    "classification": {
+      "apiResult": "90",
+      "responseClassification": "businessRejected",
+      "changedPreconditionRequired": "fresh_or_lock_free_target_required",
+      "unchangedRepeatSendAllowed": false
+    },
+    "claimBoundary": "RWO-06H injection v3 rejection was investigated without another live mutation; Api_Result 90 is treated as a target lock/state precondition blocker, not injection Trial acceptance or retry readiness.",
+    "recommendedNextTask": "Select a fresh or lock-free target path for RWO-06H only if it can be proven with sanitized no-live/read-only evidence; otherwise continue the next independent non-S3 roadmap item.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false

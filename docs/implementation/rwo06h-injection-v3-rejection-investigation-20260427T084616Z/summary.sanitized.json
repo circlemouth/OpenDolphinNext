@@ -1,0 +1,63 @@
+{
+  "runId": "20260427T084616Z",
+  "result": "RWO06H_INJECTION_V3_REJECTION_INVESTIGATED_NO_LIVE_CHANGED_PRECONDITION_REQUIRED",
+  "branch": "master",
+  "headAtSelection": "4ceda23d8fb88ae213c1ee56e31b1039b70074f3",
+  "workOrder": "RWO-06H",
+  "taskId": "RWO-06H_INJECTION_V3_REJECTION_NO_LIVE_INVESTIGATION",
+  "sourceEvidence": "docs/implementation/rwo06h-injection-v3-live-decision-20260427T084616Z/summary.sanitized.json",
+  "liveResultReviewed": {
+    "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+    "requestClass": "medicalmodv2",
+    "target": "00001",
+    "payloadSha256": "6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d",
+    "httpStatus": 200,
+    "apiResult": "90",
+    "responseClassification": "businessRejected",
+    "businessAccepted": false,
+    "rawApiResultMessageStored": false
+  },
+  "officialSpecificationEvidence": [
+    {
+      "checkedAt": "2026-04-27T08:56:30Z",
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+      "endpoint": "medicalmodv2",
+      "finding": "class=01 is registration and the endpoint checks patient existence, target-patient exclusive use, department, physician, comments, and insurance correctness before completing registration",
+      "derivedNoLiveAction": "treat target lock/state and insurance correctness as preconditions; do not classify dry-run or HTTP 200 as acceptance"
+    },
+    {
+      "checkedAt": "2026-04-27T08:56:30Z",
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+      "endpoint": "medicalmodv2",
+      "finding": "official error list maps Api_Result 90 to target in-use/other-terminal condition",
+      "derivedNoLiveAction": "do not retry exact v3 identity until a lock-free or fresh target precondition is established"
+    },
+    {
+      "checkedAt": "2026-04-27T08:56:30Z",
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+      "endpoint": "medicalmodv2",
+      "finding": "successful class=01 registration returns Medical_Uid; the RWO-06H v3 response had no completion identifier evidence",
+      "derivedNoLiveAction": "keep businessSuccessClassification=business_rejected"
+    }
+  ],
+  "changedPreconditionDecision": {
+    "unchangedRepeatSendAllowed": false,
+    "candidateChangedPrecondition": "fresh_or_lock_free_target_required",
+    "retryReadyNow": false,
+    "retryRequires": [
+      "sanitized read-only or otherwise safe proof that target is not locked/other-terminal in-use",
+      "fresh target selection or target-lock release evidence without raw patient/insurance detail",
+      "safe wrapper dry-run for any changed payload identity",
+      "new duplicate-live checkpoint and runtime-readiness preflight"
+    ]
+  },
+  "claimBoundary": "RWO-06H injection v3 rejection was investigated without another live mutation. Api_Result 90 is treated as a target lock/state precondition blocker; no injection Trial acceptance, fresh target readiness, retry readiness, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Select a fresh or lock-free target path for RWO-06H only if it can be proven with sanitized no-live/read-only evidence; otherwise continue the next independent non-S3 roadmap item.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}
