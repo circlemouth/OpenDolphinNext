@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T140628Z",
+  "branch": "master",
+  "headAtSelection": "7a2c6199516439049abc9f453fb2403e3b1f94a7",
+  "activeHandoffPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+  "workOrders": [
+    "RWO-06G",
+    "RWO-06H",
+    "RWO-09"
+  ],
+  "completedTasks": [
+    {
+      "taskId": "RWO-06G_BASE_CHARGE_RN00_FIRST_VISIT_GATE",
+      "result": "RWO06G_RN00_FIRST_VISIT_COMPATIBILITY_NOT_VALIDATED_STOP_BEFORE_LIVE",
+      "endpoint": "/api/orca11/acceptmodv2",
+      "requestClass": "acceptmodv2_readonly_request_00",
+      "targetIdentityClass": "official_initial_trial_patient_00001",
+      "payloadSha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+      "dryRunEvidence": "artifacts/orca-remediation/closeout/20260427T140628Z/qa/rwo06g-base-charge-rn00-dry-run/base-charge-first-visit-readonly-summary.sanitized.json",
+      "dryRunEvidenceSha256": "c791ec1bc8863c1184cb506c5cb10c51b188d120610d651e496bed36ce5eb39e",
+      "readonlyEvidence": "artifacts/orca-remediation/closeout/20260427T140628Z/qa/rwo06g-base-charge-rn00-readonly/base-charge-first-visit-readonly-summary.sanitized.json",
+      "readonlyEvidenceSha256": "73b746e1d6bbf520bc3d0ca4ba162e97b077085b2b2e56ed787926ccc1d1287a",
+      "readonlyStatusClassification": "2xx/nonzero_numeric/not_verified_or_not_first_visit_compatible",
+      "firstVisitCompatible": false,
+      "businessSuccessClassification": "not_applicable_or_readonly_first_visit_not_validated",
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      }
+    },
+    {
+      "taskId": "RWO-06H_INJECTION_RN01_RN02_SPLIT",
+      "result": "RWO06H_RN01_RN02_CONTRACT_SPLIT_READY_NO_LIVE",
+      "officialSpecificationEvidence": {
+        "checkedAt": "2026-04-27T14:06:28Z",
+        "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicationgetv2.html",
+        "endpoint": "medicationgetv2",
+        "requestNumber01": "input-code lookup / point-master lookup only",
+        "requestNumber02": "9-digit medical practice code lookup with selectable-comment list",
+        "derivedNoLiveAction": "RN01 sanitized success must not be row-level selectable-comment proof; RWO-06H injection row proof remains RN02-only."
+      },
+      "changedContracts": [
+        "web-client/scripts/qa-lib/phase4-master-validity-evidence.mjs",
+        "web-client/scripts/__tests__/phase4MasterValidityEvidence.test.ts"
+      ],
+      "contractDecision": {
+        "rn01SelectableCommentProof": false,
+        "rn02SelectableCommentProof": true,
+        "rn01MasterFoundForInjectionRowProof": false,
+        "rn02MasterFoundCanProveRowWhenMedicationCodeMatches": true
+      },
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      }
+    },
+    {
+      "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO06G_RWO06H",
+      "result": "CURRENT_HEAD_NON_S3_STATIC_SECURITY_REFRESH_PASS",
+      "scope": "focused current-head static/security refresh after RWO-06G/RWO-06H wrapper and evidence update",
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      }
+    }
+  ],
+  "carriedExistingEvidence": [
+    {
+      "taskId": "RWO-06H_INJECTION_TARGET_FRESHNESS_READONLY",
+      "status": "already_blocked_by_existing_sanitized_evidence",
+      "evidence": "docs/implementation/rwo06h-fresh-lock-free-target-preflight-20260427T091616Z/summary.sanitized.json",
+      "classification": "no_safe_readonly_target_lock_or_fresh_target_proof_exists_in_current_repo"
+    },
+    {
+      "taskId": "RWO-06F_INSTRUCTION_CHARGE_CONTEXT_READONLY",
+      "status": "already_blocked_by_existing_sanitized_evidence",
+      "evidence": "docs/implementation/rwo06f-readonly-precondition-probes-20260427T074616Z/summary.sanitized.json",
+      "classification": "readonly_preconditions_not_proven"
+    }
+  ],
+  "checks": {
+    "nodeCheckBaseChargeWrapper": "pass",
+    "phase4BaseChargeFirstVisitEvidenceTest": "pass_7_tests_with_web_guard_pretest",
+    "phase4MasterValidityEvidenceTest": "pass_13_tests_with_web_guard_pretest",
+    "rwo06gDryRun": "pass_no_readonly_orca",
+    "rwo06gReadonly": "expected_stop_before_live_first_visit_not_validated",
+    "jsonValidity": "pass",
+    "gitDiffCheck": "pass",
+    "webGuardRefresh": "pass"
+  },
+  "misuseCasesChecked": [
+    "HTTP 2xx or Request_Number 00 alone is not promoted to mutation success or first-visit compatibility.",
+    "RN01 medicationgetv2 point-master lookup is not promoted to RN02 selectable-comment row proof.",
+    "RWO-06G/RWO-06H evidence paths record only sanitized classifications and hashes, not raw ORCA bodies, credentials, patient detail, or insurance detail."
+  ],
+  "claimBoundary": "RWO-06G RN00 read-only first-visit compatibility gate, RWO-06H RN01/RN02 no-live contract split, and focused current-head non-S3 static/security refresh only. No baseChargeOrder or injectionOrder Trial business acceptance, live Trial mutation, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Select the next independent no-live/read-only queue item; do not run baseChargeOrder or injectionOrder live without changed preconditions and a complete sanitized endpoint packet.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

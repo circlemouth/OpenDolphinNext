@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   buildMasterLastUpdateXml,
   buildMasterValiditySummary,
+  buildMedicationGetInputCodeXml,
   buildMedicationGetXml,
   buildSurgeryMasterProofSummary,
   executeReadonlyMasterChecks,
   executeReadonlySurgeryMasterProofChecks,
+  MEDICATIONGETV2_REQUEST_SEMANTICS,
   resolveTrialReadonlyConfig,
   sanitizeReadonlyXmlResult,
   validateMasterValidityCommand,
@@ -182,6 +184,58 @@ describe('phase4 injection master validity readonly evidence', () => {
       apiResultClass: 'official_warning',
       request02ResultClass: 'official_warning_no_row_proof',
       masterFound: false,
+    }));
+  });
+
+  it('keeps medicationgetv2 RN01 input-code lookup separate from RN02 selectable-comment row proof', () => {
+    expect(MEDICATIONGETV2_REQUEST_SEMANTICS['01']).toEqual(expect.objectContaining({
+      proofClass: 'point_master_lookup_only',
+      selectableCommentProof: false,
+    }));
+    expect(MEDICATIONGETV2_REQUEST_SEMANTICS['02']).toEqual(expect.objectContaining({
+      proofClass: 'row_level_selectable_comment_lookup',
+      selectableCommentProof: true,
+    }));
+    expect(buildMedicationGetInputCodeXml({ inputCode: 'Y00001', baseDate: '2026-04-27' }))
+      .toContain('<Request_Number type="string">01</Request_Number>');
+    expect(buildMedicationGetXml({ requestCode: '621894701', baseDate: '2026-04-27' }))
+      .toContain('<Request_Number type="string">02</Request_Number>');
+
+    const rn01 = sanitizeReadonlyXmlResult({
+      role: 'medication',
+      endpoint: 'medicationgetv2',
+      requestNumber: '01',
+      code: '621894701',
+      httpStatus: 200,
+      xml:
+        '<xmlio2><medicationgetres><Api_Result>000</Api_Result>' +
+        '<Medication_Information><Medication_Code>621894701</Medication_Code></Medication_Information></medicationgetres></xmlio2>',
+    });
+    expect(rn01).toEqual(expect.objectContaining({
+      requestNumber: '01',
+      requestSemantics: 'point_master_lookup_only',
+      request02ResultClass: 'input_code_point_master_lookup_not_selectable_comment_proof',
+      selectableCommentProof: false,
+      masterFound: false,
+    }));
+
+    const rn02 = sanitizeReadonlyXmlResult({
+      role: 'medication',
+      endpoint: 'medicationgetv2',
+      requestNumber: '02',
+      code: '621894701',
+      httpStatus: 200,
+      xml:
+        '<xmlio2><medicationgetres><Api_Result>000</Api_Result>' +
+        '<Medication_Information><Medication_Code>621894701</Medication_Code></Medication_Information>' +
+        '<Selection_Expression_Information></Selection_Expression_Information></medicationgetres></xmlio2>',
+    });
+    expect(rn02).toEqual(expect.objectContaining({
+      requestNumber: '02',
+      requestSemantics: 'row_level_selectable_comment_lookup',
+      request02ResultClass: 'row_found_with_selection_comments',
+      selectableCommentProof: true,
+      masterFound: true,
     }));
   });
 

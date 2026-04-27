@@ -1,9 +1,9 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-06G",
-  "blockerId": "rwo06g-base-charge-rn00-first-visit-gate",
-  "priority": "high",
+  "sourceWorkOrder": "SOAP-SUBJECTIVESV2",
+  "blockerId": "soap-subjectivesv2-route-contract",
+  "priority": "medium",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
   "s3ObjectStorageApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T13:50:43Z",
+  "lastUpdated": "2026-04-27T14:06:28Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5684,7 +5684,7 @@
     {
       "taskId": "RWO-06G_BASE_CHARGE_RN00_FIRST_VISIT_GATE",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06G",
       "summary": "Use acceptmodv2 Request_Number=00 read-only evidence to prove or block first-visit compatibility for baseChargeOrder/110.",
       "requiresRuntime": true,
@@ -5696,12 +5696,15 @@
       "skipCondition": "runtime unavailable, safe read-only wrapper missing, target ambiguity, parser ambiguity, credential/raw-artifact risk, or RN00 cannot prove first-visit compatibility without raw detail",
       "successCriteria": "sanitized RN00 first-visit compatibility gate evidence exists; no live mutation executed",
       "nextOnSuccess": "RWO-06G_DUPLICATE_CHECKPOINT_PREFLIGHT",
-      "nextOnSkip": "RWO-06H_INJECTION_RN01_RN02_SPLIT"
+      "nextOnSkip": "RWO-06H_INJECTION_RN01_RN02_SPLIT",
+      "result": "rwo06g_rn00_first_visit_compatibility_not_validated_stop_before_live",
+      "completedRunId": "20260427T140628Z",
+      "evidence": "docs/implementation/rwo06g-rn00-rwo06h-rn-split-20260427T140628Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-06H_INJECTION_RN01_RN02_SPLIT",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06H",
       "summary": "Split injection row proof so medicationgetv2 RN01 master-valid proof is not conflated with RN02 selectable-comment proof.",
       "requiresRuntime": false,
@@ -5713,12 +5716,15 @@
       "skipCondition": "focused wrapper/parser contract unavailable or source evidence cannot be consumed without raw artifacts",
       "successCriteria": "repo-local no-live contract/test evidence separates RN01 master validity from RN02 comment selectability; no live mutation executed",
       "nextOnSuccess": "RWO-06H_INJECTION_TARGET_FRESHNESS_READONLY",
-      "nextOnSkip": "RWO-06H_INJECTION_TARGET_FRESHNESS_READONLY"
+      "nextOnSkip": "RWO-06H_INJECTION_TARGET_FRESHNESS_READONLY",
+      "result": "rwo06h_rn01_rn02_contract_split_ready_no_live",
+      "completedRunId": "20260427T140628Z",
+      "evidence": "docs/implementation/rwo06g-rn00-rwo06h-rn-split-20260427T140628Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-06H_INJECTION_TARGET_FRESHNESS_READONLY",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06H",
       "summary": "Investigate fresh/lock-free target preconditions after prior injectionOrder/310 Api_Result 90 without repeating the live send.",
       "requiresRuntime": true,
@@ -5730,12 +5736,15 @@
       "skipCondition": "runtime unavailable, no safe read-only target-lock/fresh-target proof exists, target ambiguity, parser ambiguity, credential/raw-artifact risk, or proof requires raw patient/insurance detail",
       "successCriteria": "sanitized no-live/read-only target freshness evidence exists or retry remains blocked without live mutation",
       "nextOnSuccess": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
-      "nextOnSkip": "RWO-06F_INSTRUCTION_CHARGE_CONTEXT_READONLY"
+      "nextOnSkip": "RWO-06F_INSTRUCTION_CHARGE_CONTEXT_READONLY",
+      "result": "carried_existing_blocked_no_live_evidence_forward",
+      "completedRunId": "20260427T091616Z",
+      "evidence": "docs/implementation/rwo06h-fresh-lock-free-target-preflight-20260427T091616Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-06F_INSTRUCTION_CHARGE_CONTEXT_READONLY",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06F",
       "summary": "Probe disease, insurance, facility, and monthly context before any instractionChargeOrder/130 live work.",
       "requiresRuntime": true,
@@ -5747,12 +5756,15 @@
       "skipCondition": "runtime unavailable, safe read-only wrappers missing, target ambiguity, parser ambiguity, credential/raw-artifact risk, or context cannot be proven without raw disease/patient/insurance detail",
       "successCriteria": "sanitized disease/insurance/monthly/facility context evidence exists or instruction-charge live remains blocked; no live mutation executed",
       "nextOnSuccess": "RWO-06F_DUPLICATE_CHECKPOINT_PREFLIGHT",
-      "nextOnSkip": "RWO-06I_SURGERY_ROW_RULE_SPEC_RESEARCH"
+      "nextOnSkip": "RWO-06I_SURGERY_ROW_RULE_SPEC_RESEARCH",
+      "result": "carried_existing_readonly_preconditions_not_proven_evidence_forward",
+      "completedRunId": "20260427T074616Z",
+      "evidence": "docs/implementation/rwo06f-readonly-precondition-probes-20260427T074616Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-06I_SURGERY_ROW_RULE_SPEC_RESEARCH",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06I",
       "summary": "Research surgery row/adjunct semantics and changed row identity before any surgeryOrder/500 retry.",
       "requiresRuntime": false,
@@ -5764,7 +5776,9 @@
       "skipCondition": "no official/source-backed row or adjunct rationale can be identified without raw detail, credentials, live mutation, production ORCA, S3/object storage, or human billing context",
       "successCriteria": "sanitized official-source surgery row/adjunct research evidence exists; no live mutation executed",
       "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RESEARCH_INTAKE_WORK",
-      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RESEARCH_INTAKE_WORK"
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RESEARCH_INTAKE_WORK",
+      "result": "carried_existing_changed_row_identity_research_forward",
+      "evidence": "docs/implementation/rwo06i-changed-row-identity-research-20260427T101613Z/summary.sanitized.json"
     },
     {
       "taskId": "RWO-06F_OWNER_BUSINESS_CONTEXT",
@@ -7199,5 +7213,73 @@
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
-  }
+  },
+  "latestRwo06gRn00FirstVisitGate": {
+    "runId": "20260427T140628Z",
+    "workOrder": "RWO-06G",
+    "taskId": "RWO-06G_BASE_CHARGE_RN00_FIRST_VISIT_GATE",
+    "result": "RWO06G_RN00_FIRST_VISIT_COMPATIBILITY_NOT_VALIDATED_STOP_BEFORE_LIVE",
+    "branch": "master",
+    "headAtSelection": "7a2c6199516439049abc9f453fb2403e3b1f94a7",
+    "evidence": "docs/implementation/rwo06g-rn00-rwo06h-rn-split-20260427T140628Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06g-rn00-rwo06h-rn-split-20260427T140628Z/summary.sanitized.json",
+    "endpoint": "/api/orca11/acceptmodv2",
+    "requestClass": "acceptmodv2_readonly_request_00",
+    "targetIdentityClass": "official_initial_trial_patient_00001",
+    "readonlyStatusClassification": "2xx/nonzero_numeric/not_verified_or_not_first_visit_compatible",
+    "firstVisitCompatible": false,
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "recommendedNextTask": "Do not run baseChargeOrder/110 live until changed first-visit evidence exists; continue independent no-live/read-only queue items."
+  },
+  "latestRwo06hRn01Rn02Split": {
+    "runId": "20260427T140628Z",
+    "workOrder": "RWO-06H",
+    "taskId": "RWO-06H_INJECTION_RN01_RN02_SPLIT",
+    "result": "RWO06H_RN01_RN02_CONTRACT_SPLIT_READY_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "7a2c6199516439049abc9f453fb2403e3b1f94a7",
+    "evidence": "docs/implementation/rwo06g-rn00-rwo06h-rn-split-20260427T140628Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06g-rn00-rwo06h-rn-split-20260427T140628Z/summary.sanitized.json",
+    "officialSpecificationEvidence": "https://www.orca.med.or.jp/receipt/users/tec/api/medicationgetv2.html",
+    "decision": "RN01 is point-master lookup only and is not selectable-comment row proof; RN02 remains row-level proof path.",
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "recommendedNextTask": "Continue independent no-live/read-only queue items; do not run injectionOrder live without changed preconditions and complete endpoint packet."
+  },
+  "latestRwo09StaticRefreshAfterRwo06gRwo06h": {
+    "runId": "20260427T140628Z",
+    "workOrder": "RWO-09",
+    "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO06G_RWO06H",
+    "result": "CURRENT_HEAD_NON_S3_STATIC_SECURITY_REFRESH_PASS",
+    "branch": "master",
+    "evidence": "docs/implementation/rwo06g-rn00-rwo06h-rn-split-20260427T140628Z/summary.sanitized.json",
+    "checks": {
+      "jsonValidity": "pass",
+      "gitDiffCheck": "pass",
+      "webGuard": "pass",
+      "focusedBaseChargeTests": "pass_7_tests",
+      "focusedMasterValidityTests": "pass_13_tests"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "recommendedNextTask": "Select SOAP_SUBJECTIVESV2_ROUTE_CONTRACT or the next independent no-live queue item."
+  },
+  "activeNextTask": "SOAP_SUBJECTIVESV2_ROUTE_CONTRACT",
+  "recommendedNextTask": "Run SOAP_SUBJECTIVESV2_ROUTE_CONTRACT as the next independent repo-local no-live queue item; keep RWO-11/RWO-09 external."
 }

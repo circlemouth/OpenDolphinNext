@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T140628Z",
+  "traceId": "trace-20260427T140628Z",
+  "taskId": "RWO-06G_READONLY_FIRST_VISIT_CHECK",
+  "workOrder": "RWO-06G",
+  "contract": "phase4-base-charge-first-visit-sanitized-readonly",
+  "verdict": "dry_run_passed_no_readonly_orca",
+  "blocker": "first_visit_compatibility_not_validated",
+  "endpoint": "/api/orca11/acceptmodv2",
+  "requestClass": "acceptmodv2_readonly_request_00",
+  "target": {
+    "patientId": "00001",
+    "acceptanceDate": "20260427"
+  },
+  "payload": {
+    "path": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v2.json",
+    "sha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+    "bytes": 707,
+    "workflow": "base-charge",
+    "entity": "baseChargeOrder",
+    "claim007Class": "110",
+    "candidateCode": "111000110"
+  },
+  "commandGuard": {
+    "ok": true,
+    "blockers": [],
+    "dryRun": true,
+    "executeReadonly": false,
+    "sanitizedEvidenceOnly": true,
+    "disableBrowserArtifacts": true
+  },
+  "readonlyResult": null,
+  "successCriteria": {
+    "readOnlyOnly": true,
+    "firstVisitCompatible": false,
+    "mutationSuccess": false,
+    "http200AloneIsNotBusinessSuccess": true,
+    "requestNumber00IsNotMutationSuccess": true
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_or_readonly_first_visit_not_validated",
+    "businessAccepted": false
+  },
+  "claimBoundary": "Sanitized acceptmodv2 Request_Number=00 read-only first-visit compatibility evidence only; not baseChargeOrder Trial acceptance, acceptmodv2 mutation success, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodyStored": false,
+  "rawPatientOrInsuranceDetailStored": false
+}

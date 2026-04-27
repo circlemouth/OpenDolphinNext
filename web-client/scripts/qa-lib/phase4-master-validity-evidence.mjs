@@ -11,6 +11,18 @@ import {
 export const MASTER_VALIDITY_CONTRACT = 'phase4-injection-master-validity-sanitized-readonly';
 export const SURGERY_MASTER_PROOF_CONTRACT = 'phase4-surgery-v3-adjunct-master-proof-sanitized-readonly';
 export const MASTER_VALIDITY_ALLOWED_HOST = 'weborca-trial.orca.med.or.jp';
+export const MEDICATIONGETV2_REQUEST_SEMANTICS = {
+  '01': {
+    inputCodeKind: 'input_code',
+    proofClass: 'point_master_lookup_only',
+    selectableCommentProof: false,
+  },
+  '02': {
+    inputCodeKind: 'nine_digit_medical_practice_code',
+    proofClass: 'row_level_selectable_comment_lookup',
+    selectableCommentProof: true,
+  },
+};
 export const MASTER_VALIDITY_READONLY_CHECKS = [
   { role: 'medication', endpoint: 'medicationgetv2', requestNumber: '02' },
   { role: 'procedure', endpoint: 'masterlastupdatev3' },
@@ -367,6 +379,11 @@ export const buildMedicationGetXml = ({ requestCode, baseDate }) =>
     requestCode,
   )}</Request_Code><Base_Date type="string">${escapeXml(baseDate)}</Base_Date></medicationgetreq></data>`;
 
+export const buildMedicationGetInputCodeXml = ({ inputCode, baseDate }) =>
+  `<data><medicationgetreq type="record"><Request_Number type="string">01</Request_Number><Request_Code type="string">${escapeXml(
+    inputCode,
+  )}</Request_Code><Base_Date type="string">${escapeXml(baseDate)}</Base_Date></medicationgetreq></data>`;
+
 export const buildMasterLastUpdateXml = () =>
   '<data><masterlastupdatev3req type="record"></masterlastupdatev3req></data>';
 
@@ -402,23 +419,40 @@ const classifyMedicationGetRequest02Result = ({ apiResultClass, medicationCode, 
   return 'not_proven';
 };
 
-export const sanitizeReadonlyXmlResult = ({ role, endpoint, code, httpStatus, xml }) => {
+const classifyMedicationGetResult = ({ requestNumber, apiResultClass, medicationCode, expectedCode }) => {
+  if (requestNumber === '01') {
+    if (apiResultClass === 'success_zero' && medicationCode) return 'input_code_point_master_lookup_not_selectable_comment_proof';
+    if (apiResultClass === 'official_error') return 'official_error_no_row_proof';
+    if (apiResultClass === 'official_warning') return 'official_warning_no_row_proof';
+    return 'not_proven';
+  }
+  return classifyMedicationGetRequest02Result({ apiResultClass, medicationCode, expectedCode });
+};
+
+export const sanitizeReadonlyXmlResult = ({ role, endpoint, code, httpStatus, xml, requestNumber = '02' }) => {
   const apiResult = tagText(xml, 'Api_Result');
   const apiResultClass = classifyApiResult(apiResult);
   const medicationCode = endpoint === 'medicationgetv2' ? tagText(xml, 'Medication_Code') : '';
   const lastUpdate = endpoint === 'masterlastupdatev3' ? tagText(xml, 'Last_Update_Date') || tagText(xml, 'Last_Update') : '';
   const startDate = endpoint === 'medicationgetv2' ? tagText(xml, 'StartDate') : '';
   const endDate = endpoint === 'medicationgetv2' ? tagText(xml, 'EndDate') : '';
+  const semantics = endpoint === 'medicationgetv2' ? MEDICATIONGETV2_REQUEST_SEMANTICS[requestNumber] : undefined;
   const sanitized = {
     role,
     endpoint,
     code,
+    requestNumber: endpoint === 'medicationgetv2' ? requestNumber : undefined,
+    requestSemantics: semantics?.proofClass,
     httpStatusClass: classifyHttpStatus(httpStatus),
     apiResultClass,
-    masterFound: endpoint === 'medicationgetv2' ? apiResultClass === 'success_zero' && medicationCode === code : apiResultClass === 'success_zero',
+    masterFound:
+      endpoint === 'medicationgetv2'
+        ? requestNumber === '02' && apiResultClass === 'success_zero' && medicationCode === code
+        : apiResultClass === 'success_zero',
     request02ResultClass: endpoint === 'medicationgetv2'
-      ? classifyMedicationGetRequest02Result({ apiResultClass, medicationCode, expectedCode: code })
+      ? classifyMedicationGetResult({ requestNumber, apiResultClass, medicationCode, expectedCode: code })
       : undefined,
+    selectableCommentProof: endpoint === 'medicationgetv2' ? semantics?.selectableCommentProof === true : undefined,
     effectiveDateClass: startDate ? 'present' : 'missing',
     endDateClass: endDate ? 'present' : 'missing',
     lastUpdateDateClass: lastUpdate ? 'present' : 'missing',
