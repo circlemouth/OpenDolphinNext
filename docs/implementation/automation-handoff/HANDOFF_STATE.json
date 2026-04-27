@@ -1,8 +1,8 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "SOAP-SUBJECTIVESV2",
-  "blockerId": "soap-subjectivesv2-route-contract",
+  "sourceWorkOrder": "ACCEPTMODV2",
+  "blockerId": "acceptmodv2-rn020304-target-inventory-runtime-readonly-route",
   "priority": "medium",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T15:03:50Z",
+  "lastUpdated": "2026-04-27T16:02:29Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5918,7 +5918,7 @@
     {
       "taskId": "ACCEPTMODV2_RN02_03_04_TARGET_INVENTORY",
       "lane": "critical_path",
-      "status": "skipped_environment_unavailable",
+      "status": "completed",
       "workOrder": "ACCEPTMODV2",
       "summary": "Build sanitized acceptlstv2/RN00 inventory for server-derived Acceptance_Id, date/time, department, physician, and insurance scope.",
       "requiresRuntime": true,
@@ -5931,10 +5931,10 @@
       "successCriteria": "sanitized server-derived acceptmodv2 target inventory exists; no RN02/RN03/RN04 mutation executed",
       "nextOnSuccess": "ACCEPTMODV2_RN02_03_04_STOP_GATE",
       "nextOnSkip": "PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK",
-      "result": "skipped_environment_unavailable_safe_readonly_wrapper_missing",
-      "completedRunId": "20260427T150350Z",
-      "evidence": "docs/implementation/acceptmodv2-rn020304-target-inventory-skip-20260427T150350Z/summary.sanitized.json",
-      "correctedNextAction": "Implement safe read-only acceptlstv2/RN00 target inventory wrapper before any RN02/RN03/RN04 live preflight; continue no-live stop-gate work."
+      "result": "target_inventory_wrapper_contract_ready_no_live_runtime_readonly_not_executed",
+      "completedRunId": "20260427T160229Z",
+      "evidence": "docs/implementation/acceptmodv2-target-inventory-wrapper-20260427T160229Z/summary.sanitized.json",
+      "correctedNextAction": "Implement or expose a reviewed runtime-safe read-only acceptlstv2 route before any RN02/RN03/RN04 live preflight; keep existing RN02/RN03/RN04 stop-gates active."
     },
     {
       "taskId": "ACCEPTMODV2_RN02_03_04_STOP_GATE",
@@ -7496,6 +7496,30 @@
       "executed": false,
       "businessAccepted": false
     },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestAcceptmodv2TargetInventoryWrapperContract": {
+    "runId": "20260427T160229Z",
+    "workOrder": "ACCEPTMODV2",
+    "result": "ACCEPTMODV2_RN020304_TARGET_INVENTORY_WRAPPER_CONTRACT_READY_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "4303fec7261d2f316602e777c098f97e4adc3869",
+    "evidence": "docs/implementation/acceptmodv2-target-inventory-wrapper-20260427T160229Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/acceptmodv2-target-inventory-wrapper-20260427T160229Z/summary.sanitized.json",
+    "contract": "phase4-acceptmodv2-target-inventory-sanitized-no-live",
+    "endpoint": "/api/orca/official/visits/acceptance-list",
+    "orcaEndpoint": "/api01rv2/acceptlstv2",
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executed": false,
+      "mutation": false
+    },
+    "recommendedNextTask": "Implement or expose a reviewed runtime-safe read-only acceptlstv2 route, then run sanitized target inventory against WebORCA Trial before RN02/RN03/RN04 live preflight.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
