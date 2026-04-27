@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06I",
-  "blockerId": "rwo06i-surgery-v3-adjunct-master-proof-needed",
+  "blockerId": "rwo06i-changed-row-identity-research-needed",
   "priority": "normal",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T09:16:16Z",
+  "lastUpdated": "2026-04-27T09:46:13Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "automation_reassigned_by_owner_20260427T051855Z",
     "automationMustNot": [
@@ -5311,7 +5311,7 @@
     {
       "taskId": "RWO-06I_SURGERY_V3_ADJUNCT_MASTER_PROOF_PREFLIGHT",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "blocked_safety_stop",
       "workOrder": "RWO-06I",
       "summary": "Prove or block surgery v3 adjunct rows before any future surgeryOrder/500 v3 live attempt.",
       "requiresRuntime": true,
@@ -5328,7 +5328,52 @@
       "skipCondition": "runtime unavailable, safe read-only wrapper missing, parser ambiguity, credential/raw-artifact risk, or adjunct row proof requires raw patient/insurance detail",
       "successCriteria": "sanitized row-level proof or explicit stop condition exists for surgery v3 adjunct rows; no live mutation executed",
       "nextOnSuccess": "RWO-06I_DUPLICATE_CHECKPOINT_PREFLIGHT",
-      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH_AFTER_RWO06I_SURGERY_MASTER_PROOF",
+      "result": "blocked_no_row_proof_no_live",
+      "completedRunId": "20260427T094613Z",
+      "evidence": "docs/implementation/rwo06i-surgery-v3-adjunct-master-proof-20260427T094613Z/summary.sanitized.json",
+      "rowProofDecision": {
+        "allRowsProven": false,
+        "liveReadyNow": false,
+        "stopCondition": "surgery_v3_adjunct_rows_not_proven_by_sanitized_readonly_medicationgetv2"
+      }
+    },
+    {
+      "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_AFTER_RWO06I_SURGERY_MASTER_PROOF",
+      "lane": "parallel_no_live",
+      "status": "completed",
+      "workOrder": "RWO-09",
+      "summary": "Refresh current-head non-S3 static/package/security checks after the RWO-06I surgery master-proof wrapper and evidence update.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06i-surgery-v3-adjunct-master-proof-20260427T094613Z/summary.sanitized.json",
+      "skipCondition": "repo state unsafe or focused static/package/security checks unavailable",
+      "successCriteria": "current-head non-S3 static/package/security evidence exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false",
+      "nextOnSuccess": "RWO-06I_CHANGED_ROW_IDENTITY_RESEARCH_NO_LIVE",
+      "nextOnSkip": "RWO-06I_CHANGED_ROW_IDENTITY_RESEARCH_NO_LIVE",
+      "result": "current_head_non_s3_static_package_security_refresh_pass",
+      "completedRunId": "20260427T094613Z",
+      "evidence": "docs/implementation/rwo09-static-refresh-after-rwo06i-surgery-master-proof-20260427T094613Z/summary.sanitized.json"
+    },
+    {
+      "taskId": "RWO-06I_CHANGED_ROW_IDENTITY_RESEARCH_NO_LIVE",
+      "lane": "parallel_no_live",
+      "status": "queued",
+      "workOrder": "RWO-06I",
+      "summary": "Research or draft a changed source-backed surgeryOrder/500 row identity after v3 adjunct rows failed sanitized read-only proof.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06i-surgery-v3-adjunct-master-proof-20260427T094613Z/summary.sanitized.json",
+      "skipCondition": "no official/source-backed row identity can be identified without raw patient/insurance detail, credentials, live mutation, or production/S3 scope",
+      "successCriteria": "sanitized no-live research or payload-drafting evidence exists; no live mutation executed; no row is treated as ready until read-only proof succeeds",
+      "nextOnSuccess": "RWO-06I_SURGERY_CHANGED_IDENTITY_MASTER_PROOF_PREFLIGHT",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD"
     },
     {
       "taskId": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN",
@@ -6327,6 +6372,78 @@
     },
     "claimBoundary": "RWO-06H injection v3 rejection was investigated without another live mutation; Api_Result 90 is treated as a target lock/state precondition blocker, not injection Trial acceptance or retry readiness.",
     "recommendedNextTask": "Select a fresh or lock-free target path for RWO-06H only if it can be proven with sanitized no-live/read-only evidence; otherwise continue the next independent non-S3 roadmap item.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06ISurgeryV3AdjunctMasterProof": {
+    "runId": "20260427T094613Z",
+    "workOrder": "RWO-06I",
+    "result": "RWO06I_SURGERY_V3_ADJUNCT_MASTER_PROOF_BLOCKED_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "d2f3fa5c703b05482192b45a47fa624326cb179d",
+    "evidence": "docs/implementation/rwo06i-surgery-v3-adjunct-master-proof-20260427T094613Z/summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "surgery",
+      "entity": "surgeryOrder",
+      "claim007Class": "500",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_surgery_trial_reachability_v3.json",
+      "sha256": "f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421",
+      "candidateCodes": [
+        "150003110",
+        "641210099",
+        "840000042"
+      ],
+      "duplicateLiveCheckpoint": "rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421"
+    },
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "mutation": false,
+      "endpoint": "medicationgetv2",
+      "requestNumber": "02",
+      "allRowsProven": false,
+      "rowProofDecision": "blocked_no_row_proof",
+      "sanitizedResults": [
+        "150003110:2xx/official_error/official_error_no_row_proof/masterFound=false",
+        "641210099:2xx/official_error/official_error_no_row_proof/masterFound=false",
+        "840000042:2xx/official_error/official_error_no_row_proof/masterFound=false"
+      ]
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_readonly_blocked",
+      "businessAccepted": false
+    },
+    "retryReadinessDecision": {
+      "liveReadyNow": false,
+      "futureLiveAllowedWithoutNewEvidence": false,
+      "stopCondition": "surgery_v3_adjunct_rows_not_proven_by_sanitized_readonly_medicationgetv2",
+      "unchangedV2RepeatAllowed": false
+    },
+    "claimBoundary": "RWO-06I surgeryOrder/500 v3 adjunct row proof is blocked by sanitized read-only medicationgetv2 evidence; no surgery Trial business acceptance or retry readiness is claimed.",
+    "recommendedNextTask": "Run current-head non-S3 static/package/security refresh after wrapper and evidence changes.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo09StaticRefreshAfterRwo06ISurgeryMasterProof": {
+    "runId": "20260427T094613Z",
+    "workOrder": "RWO-09",
+    "result": "RWO09_STATIC_PACKAGE_REFRESH_AFTER_RWO06I_SURGERY_MASTER_PROOF_PASS",
+    "branch": "master",
+    "headAtSelection": "d2f3fa5c703b05482192b45a47fa624326cb179d",
+    "evidence": "docs/implementation/rwo09-static-refresh-after-rwo06i-surgery-master-proof-20260427T094613Z/summary.sanitized.json",
+    "checks": {
+      "jsonValidity": "pass",
+      "webGuard": "pass",
+      "docLinks": "pass",
+      "reviewerSubmissionPacketContractTests": "pass_7_tests",
+      "focusedVitest": "pass_40_tests_with_web_guard_pretest",
+      "reviewPackageContractTests": "pass_25_tests",
+      "gitDiffCheck": "pass"
+    },
+    "claimBoundary": "Current-head non-S3 static/package/security refresh only after RWO-06I wrapper/evidence changes; no release readiness or storage/production claims.",
+    "recommendedNextTask": "RWO-06I changed row identity research/no-live path, or another independent non-S3 roadmap item.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false

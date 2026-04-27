@@ -4,14 +4,19 @@ import {
   buildMasterLastUpdateXml,
   buildMasterValiditySummary,
   buildMedicationGetXml,
+  buildSurgeryMasterProofSummary,
   executeReadonlyMasterChecks,
+  executeReadonlySurgeryMasterProofChecks,
   resolveTrialReadonlyConfig,
   sanitizeReadonlyXmlResult,
   validateMasterValidityCommand,
+  validateSurgeryMasterProofCommand,
 } from '../qa-lib/phase4-master-validity-evidence.mjs';
 
 const payloadPath = 'qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v2.json';
 const payloadSha256 = '1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300';
+const surgeryPayloadPath = 'qa/payloads/phase4/medicalmodv2_surgery_trial_reachability_v3.json';
+const surgeryPayloadSha256 = 'f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421';
 
 describe('phase4 injection master validity readonly evidence', () => {
   it('accepts the injection v2 payload only in sanitized dry-run mode', () => {
@@ -272,5 +277,112 @@ describe('phase4 injection master validity readonly evidence', () => {
       'readonly_master_validity_validated_not_business_acceptance',
     );
     expect(summary.security.credentialsCaptured).toBe(false);
+  });
+});
+
+describe('phase4 surgery v3 adjunct master proof evidence', () => {
+  it('accepts only the official-sample-style surgery v3 payload in sanitized mode', () => {
+    const guard = validateSurgeryMasterProofCommand({
+      argv: [
+        '--dry-run',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--payload',
+        surgeryPayloadPath,
+        '--payload-sha256',
+        surgeryPayloadSha256,
+      ],
+      env: {},
+      cwd: process.cwd(),
+    });
+
+    expect(guard.ok).toBe(true);
+    expect(guard.payloadEvidence?.plan.candidateCodes).toEqual(['150003110', '641210099', '840000042']);
+    expect(guard.payloadEvidence?.plan.readOnlyChecksRequiredBeforeLive).toEqual([
+      expect.objectContaining({ role: 'surgeryProcedure', endpoint: 'medicationgetv2', requestNumber: '02', code: '150003110' }),
+      expect.objectContaining({ role: 'surgeryAdjunct', endpoint: 'medicationgetv2', requestNumber: '02', code: '641210099' }),
+      expect.objectContaining({ role: 'surgeryAdjunct', endpoint: 'medicationgetv2', requestNumber: '02', code: '840000042' }),
+    ]);
+    expect(guard.rawPayloadStored).toBe(false);
+    expect(guard.rawOrcaBodyStored).toBe(false);
+    expect(guard.credentialsCaptured).toBe(false);
+  });
+
+  it('rejects ambiguous surgery proof modes and raw artifact flags before network use', () => {
+    const guard = validateSurgeryMasterProofCommand({
+      argv: [
+        '--dry-run',
+        '--execute-readonly',
+        '--record-har',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--payload',
+        surgeryPayloadPath,
+      ],
+      env: {},
+      cwd: process.cwd(),
+    });
+
+    expect(guard.ok).toBe(false);
+    expect(guard.blockers).toContain('forbidden flag: --record-har');
+    expect(guard.blockers).toContain('exactly one of --dry-run or --execute-readonly is required');
+  });
+
+  it('executes surgery row proof checks through medicationgetv2 Request_Number 02 without storing raw bodies', async () => {
+    const guard = validateSurgeryMasterProofCommand({
+      argv: [
+        '--dry-run',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--payload',
+        surgeryPayloadPath,
+        '--payload-sha256',
+        surgeryPayloadSha256,
+      ],
+      env: {},
+      cwd: process.cwd(),
+    });
+    const fetched: Array<{ url: string; body?: string }> = [];
+    const fetchImpl = async (url: string, init: RequestInit) => {
+      const body = typeof init.body === 'string' ? init.body : '';
+      fetched.push({ url, body });
+      const code = body.match(/<Request_Code type="string">(\d+)<\/Request_Code>/)?.[1] ?? '';
+      return new Response(
+        `<data><Api_Result>0000</Api_Result><Medication_Code>${code}</Medication_Code><StartDate>20260401</StartDate></data>`,
+        { status: 200 },
+      );
+    };
+
+    const checks = await executeReadonlySurgeryMasterProofChecks({
+      config: {
+        baseUrl: new URL('https://weborca-trial.orca.med.or.jp/'),
+        user: 'user',
+        password: 'password',
+      },
+      plan: guard.payloadEvidence?.plan,
+      baseDate: '2026-04-27',
+      fetchImpl: fetchImpl as typeof fetch,
+    });
+    const summary = buildSurgeryMasterProofSummary({
+      guard,
+      runId: '20260427T094613Z',
+      traceId: 'trace-test',
+      readonlyChecks: checks,
+      verdict: 'readonly_surgery_adjunct_rows_validated',
+    });
+
+    expect(checks).toHaveLength(3);
+    expect(checks.every((entry) => entry.masterFound && entry.rawOrcaBodyStored === false)).toBe(true);
+    expect(fetched.every((entry) => entry.url.includes('/api/api01rv2/medicationgetv2?class=01'))).toBe(true);
+    expect(fetched.map((entry) => entry.body?.includes('<Request_Number type="string">02</Request_Number>'))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(summary.surgeryMasterProof.allRowsProven).toBe(true);
+    expect(summary.surgeryMasterProof.businessSuccessClassification).toBe(
+      'readonly_surgery_adjunct_rows_validated_not_business_acceptance',
+    );
+    expect(JSON.stringify(summary)).not.toContain('password');
   });
 });

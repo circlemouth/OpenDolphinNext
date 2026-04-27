@@ -1,0 +1,33 @@
+{
+  "runId": "20260427T094613Z",
+  "result": "RWO09_STATIC_PACKAGE_REFRESH_AFTER_RWO06I_SURGERY_MASTER_PROOF_PASS",
+  "branch": "master",
+  "headAtSelection": "d2f3fa5c703b05482192b45a47fa624326cb179d",
+  "workOrder": "RWO-09",
+  "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_AFTER_RWO06I_SURGERY_MASTER_PROOF",
+  "sourceEvidence": "docs/implementation/rwo06i-surgery-v3-adjunct-master-proof-20260427T094613Z/summary.sanitized.json",
+  "scope": "current-head non-S3 static/package/security checks after RWO-06I surgery master-proof wrapper and evidence changes",
+  "checks": {
+    "jsonValidity": "pass",
+    "webGuard": "pass",
+    "docLinks": "pass",
+    "reviewerSubmissionPacketContractTests": "pass_7_tests",
+    "focusedVitest": "pass_40_tests_with_web_guard_pretest",
+    "reviewPackageContractTests": "pass_25_tests",
+    "gitDiffCheck": "pass"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_static_refresh",
+    "businessAccepted": false
+  },
+  "claimBoundary": "Current-head non-S3 static/package/security refresh only after RWO-06I wrapper/evidence changes. No surgery Trial business acceptance, retry readiness, all-surgery coverage, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Select the next independent non-S3 roadmap item; RWO-06I surgery v3 must remain stopped until new source-backed row identity or row-proof evidence exists.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

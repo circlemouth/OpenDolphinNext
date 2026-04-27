@@ -1,0 +1,138 @@
+{
+  "runId": "20260427T094613Z",
+  "result": "RWO06I_SURGERY_V3_ADJUNCT_MASTER_PROOF_BLOCKED_NO_LIVE",
+  "branch": "master",
+  "headAtSelection": "d2f3fa5c703b05482192b45a47fa624326cb179d",
+  "workOrder": "RWO-06I",
+  "taskId": "RWO-06I_SURGERY_V3_ADJUNCT_MASTER_PROOF_PREFLIGHT",
+  "activeHandoffPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+  "sourceEvidence": "docs/implementation/rwo06i-surgery-v3-no-live-20260427T091616Z/summary.sanitized.json",
+  "payloadIdentity": {
+    "workflow": "surgery",
+    "entity": "surgeryOrder",
+    "claim007Class": "500",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_surgery_trial_reachability_v3.json",
+    "sha256": "f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421",
+    "candidateCodes": [
+      "150003110",
+      "641210099",
+      "840000042"
+    ],
+    "duplicateLiveCheckpoint": "rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421"
+  },
+  "officialSpecificationEvidence": [
+    {
+      "checkedAt": "2026-04-27T09:46:13Z",
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+      "endpoint": "medicalmodv2",
+      "finding": "The official medicalmodv2 request sample includes surgery class 500 rows 150003110, 641210099, and 840000042.",
+      "derivedNoLiveAction": "Use the three official-sample-style rows as the exact v3 adjunct proof target; do not infer Trial business acceptance from the sample."
+    },
+    {
+      "checkedAt": "2026-04-27T09:46:13Z",
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicationgetv2.html",
+      "endpoint": "medicationgetv2",
+      "finding": "Request_Number 02 accepts Request_Code and Base_Date for row-specific point/master lookup on class=01.",
+      "derivedNoLiveAction": "Use medicationgetv2 Request_Number 02 read-only checks for each surgery v3 row before any future live mutation."
+    }
+  ],
+  "noLiveEvidence": {
+    "wrapperAdded": "web-client/scripts/qa-phase4-surgery-master-proof.mjs",
+    "wrapperContract": "phase4-surgery-v3-adjunct-master-proof-sanitized-readonly",
+    "dryRun": "pass_no_readonly_orca",
+    "focusedTests": "pass_12_tests_with_web_guard_pretest",
+    "liveTrialMutation": "not_run"
+  },
+  "readOnlyTrialOrca": {
+    "executed": true,
+    "mutation": false,
+    "endpoint": "medicationgetv2",
+    "requestNumber": "02",
+    "targetHost": "weborca-trial.orca.med.or.jp",
+    "baseDateAttempts": [
+      {
+        "baseDateClass": "payload_current_head_date",
+        "allRowsProven": false,
+        "rowResults": [
+          {
+            "code": "150003110",
+            "sanitizedResult": "2xx/official_error/official_error_no_row_proof/masterFound=false"
+          },
+          {
+            "code": "641210099",
+            "sanitizedResult": "2xx/official_error/official_error_no_row_proof/masterFound=false"
+          },
+          {
+            "code": "840000042",
+            "sanitizedResult": "2xx/official_error/official_error_no_row_proof/masterFound=false"
+          }
+        ],
+        "evidence": "docs/implementation/rwo06i-surgery-v3-adjunct-master-proof-20260427T094613Z/read-only/surgery-master-proof-summary.sanitized.json"
+      },
+      {
+        "baseDateClass": "official_sample_date",
+        "allRowsProven": false,
+        "rowResults": [
+          {
+            "code": "150003110",
+            "sanitizedResult": "2xx/official_error/official_error_no_row_proof/masterFound=false"
+          },
+          {
+            "code": "641210099",
+            "sanitizedResult": "2xx/official_error/official_error_no_row_proof/masterFound=false"
+          },
+          {
+            "code": "840000042",
+            "sanitizedResult": "2xx/official_error/official_error_no_row_proof/masterFound=false"
+          }
+        ],
+        "evidence": "docs/implementation/rwo06i-surgery-v3-adjunct-master-proof-20260427T094613Z/read-only-official-sample-date/surgery-master-proof-summary.sanitized.json"
+      }
+    ]
+  },
+  "retryReadinessDecision": {
+    "adjunctRowsProven": false,
+    "liveReadyNow": false,
+    "stopCondition": "surgery_v3_adjunct_rows_not_proven_by_sanitized_readonly_medicationgetv2",
+    "unchangedV2RepeatAllowed": false,
+    "futureLiveAllowedWithoutNewEvidence": false,
+    "nextRequiredBeforeLive": [
+      "new source-backed row identity or official/read-only row proof that yields masterFound=true for all required rows",
+      "duplicate-live checkpoint decision",
+      "runtime readiness immediately before live",
+      "endpoint-specific success criteria and stop conditions in sanitized preflight packet"
+    ]
+  },
+  "misuseCases": [
+    {
+      "case": "Treat official sample row presence as Trial row proof.",
+      "control": "Read-only medicationgetv2 Request_Number 02 row proof is required for all rows.",
+      "result": "Mitigated; sample alone is not counted as proof."
+    },
+    {
+      "case": "Proceed to surgery v3 live after read-only official errors.",
+      "control": "retryReadinessDecision.liveReadyNow=false and future live requires new evidence.",
+      "result": "Mitigated."
+    },
+    {
+      "case": "Leak raw ORCA response details while diagnosing row failure.",
+      "control": "Wrapper stores only status classes, result classes, booleans, and evidence hashes.",
+      "result": "Mitigated."
+    }
+  ],
+  "checks": {
+    "surgeryMasterProofDryRun": "pass_no_readonly_orca",
+    "surgeryMasterProofReadOnlyCurrentDate": "completed_not_validated",
+    "surgeryMasterProofReadOnlyOfficialSampleDate": "completed_not_validated",
+    "focusedVitest": "pass_12_tests_with_web_guard_pretest"
+  },
+  "claimBoundary": "RWO-06I surgeryOrder/500 v3 adjunct row proof is blocked by sanitized read-only medicationgetv2 results. No surgery Trial business acceptance, retry readiness, all-surgery coverage, Request_Number 02/03/04 success, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Run current-head non-S3 static/package/security refresh after the wrapper and evidence changes, then continue with another independent non-S3 roadmap item.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}
