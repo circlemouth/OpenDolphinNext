@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06H",
-  "blockerId": "rwo06h-injectable-candidate-discovery-no-live-needed",
+  "blockerId": "rwo06h-duplicate-checkpoint-runtime-preflight-needed",
   "priority": "normal",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T07:46:16Z",
+  "lastUpdated": "2026-04-27T08:16:23Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "automation_reassigned_by_owner_20260427T051855Z",
     "automationMustNot": [
@@ -5009,7 +5009,7 @@
     {
       "taskId": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06H",
       "summary": "Discover additional source-backed injectable medication candidates, then validate them with sanitized medicationgetv2 Request_Number=02 read-only checks.",
       "activePromptDependency": "RWO-11/RWO-09 rollback/owner gates are external to automation; skip them and continue",
@@ -5033,27 +5033,24 @@
       ],
       "skipCondition": "no additional source-backed injectable candidate can be identified, runtime unavailable, safe read-only wrapper missing, parser ambiguity, credential/raw-artifact risk, or all checked new candidates return masterFound=false",
       "successCriteria": "at least one new source-backed injectable candidate has sanitized medicationgetv2 Request_Number=02 masterFound=true evidence with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false; no live mutation executed",
-      "nextOnSuccess": "RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF",
+      "nextOnSuccess": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
-      "result": "candidate_discovery_requires_repaired_wrapper_rerun",
-      "completedRunId": "20260427T055015Z",
-      "evidence": "docs/implementation/rwo06h-medicationgetv2-contract-fix-20260427T055015Z/summary.sanitized.json",
+      "result": "additional_candidate_discovery_completed_one_row_proof",
+      "completedRunId": "20260427T081623Z",
+      "evidence": "docs/implementation/rwo06h-additional-injectable-candidates-20260427T081623Z/summary.sanitized.json",
       "candidatesChecked": [
-        "620006203",
-        "620004173",
-        "620002589",
-        "621958501",
-        "620006734",
-        "620767312",
-        "620738012",
-        "621429304"
+        "620009259",
+        "620004428",
+        "640408131",
+        "621894701"
       ],
-      "correctedPriorEvidenceBoundary": "Prior checked candidates should be rerun if still relevant because the wrapper contract was repaired."
+      "correctedPriorEvidenceBoundary": "Prior checked candidates should be rerun if still relevant because the wrapper contract was repaired.",
+      "selectedCandidate": "621894701"
     },
     {
       "taskId": "RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06H",
       "summary": "Select an injectable candidate identity and prove the medication row with medicationgetv2 Request_Number=02 before any injectionOrder/310 live path.",
       "activePromptDependency": "RWO-11/RWO-09 rollback/owner gates are external to automation; skip them and continue",
@@ -5064,9 +5061,9 @@
       "safeToBatchWithNoLiveTasks": true,
       "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
       "requestClass": "medicalmodv2",
-      "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v2.json",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v3.json",
       "sourceEvidence": "docs/implementation/orca-spec-research-intake-20260426T212101Z/summary.sanitized.json",
-      "candidateIdentityRule": "620000012 is treated as oral-tablet evidence and must not be retried unchanged as injection; 620076111/620007539 are candidate identities only until row-level proof exists",
+      "candidateIdentityRule": "621894701 has sanitized medicationgetv2 Request_Number=02 row-level proof; still requires duplicate checkpoint, runtime readiness, success criteria, and stop conditions before any live mutation.",
       "readOnlyChecks": [
         "medicationgetv2:Request_Number=02:injectable_candidate",
         "row_specific_proof_required_for_procedure_material_comment_or_fail_closed",
@@ -5076,14 +5073,16 @@
       "successCriteria": "sanitized row-level injectable medication proof exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false; no live mutation executed",
       "nextOnSuccess": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
       "nextOnSkip": "RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR",
-      "result": "wrapper_contract_repaired_prior_candidate_rejections_need_rerun",
-      "completedRunId": "20260427T055015Z",
-      "evidence": "docs/implementation/rwo06h-medicationgetv2-contract-fix-20260427T055015Z/summary.sanitized.json",
+      "result": "readonly_injectable_master_row_proof_validated_no_live",
+      "completedRunId": "20260427T081623Z",
+      "evidence": "docs/implementation/rwo06h-additional-injectable-candidates-20260427T081623Z/summary.sanitized.json",
       "candidatesChecked": [
         "641210099"
       ],
       "correctedPriorEvidenceBoundary": "Do not rely on prior medicationgetv2 other_present/masterFound=false candidate checks that omitted class=01 or used compact Base_Date; rerun relevant candidates with repaired wrapper.",
-      "controlCheck": "114030710 official sample validated repaired wrapper"
+      "controlCheck": "114030710 official sample validated repaired wrapper",
+      "payloadSha256": "6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d",
+      "selectedCandidate": "621894701"
     },
     {
       "taskId": "RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR",
@@ -5182,7 +5181,7 @@
     {
       "taskId": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
       "lane": "critical_path",
-      "status": "skipped_environment_unavailable",
+      "status": "queued",
       "workOrder": "RWO-06H",
       "summary": "Check duplicate-live checkpoint and assemble endpoint packet for one possible injectionOrder/310 live attempt.",
       "requiresRuntime": false,
@@ -5190,14 +5189,13 @@
       "requiresHumanDecision": false,
       "requiresS3ObjectStorage": false,
       "safeToBatchWithNoLiveTasks": true,
-      "duplicateLiveCheckpoint": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300",
-      "skipCondition": "read-only master validity not yet validated or accepted checkpoint already exists",
-      "successCriteria": "endpoint packet complete and live_ready_pending_single_attempt recorded without executing live mutation",
+      "duplicateLiveCheckpoint": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d",
+      "skipCondition": "runtime unavailable, accepted checkpoint already exists, target drift, parser ambiguity, credential/raw-artifact risk, or endpoint packet success criteria/stop conditions missing",
+      "successCriteria": "endpoint packet complete and live_ready_pending_single_attempt recorded for injection v3 without executing live mutation",
       "nextOnSuccess": "RWO-06H_SINGLE_LIVE_ATTEMPT_PENDING_WORKER_DECISION",
       "nextOnSkip": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN",
-      "result": "skipped_precondition_not_met_readonly_master_validity_not_validated",
-      "completedRunId": "20260426T140206Z",
-      "evidence": "docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/summary.sanitized.json"
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v3.json",
+      "payloadSha256": "6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d"
     },
     {
       "taskId": "RWO-06G_NO_LIVE_FIRST_VISIT_PLAN",
@@ -5973,5 +5971,51 @@
     "rawArtifactsCommittedOrPackaged": false,
     "productionOrcaAttempted": false,
     "s3ObjectStorageUsed": false
+  },
+  "latestRwo06HInjectionV3NoLivePacket": {
+    "runId": "20260427T081623Z",
+    "workOrder": "RWO-06H",
+    "result": "RWO06H_ADDITIONAL_INJECTABLE_CANDIDATE_ROW_PROOF_READY_NO_LIVE",
+    "branch": "master",
+    "evidence": "docs/implementation/rwo06h-additional-injectable-candidates-20260427T081623Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06h-additional-injectable-candidates-20260427T081623Z/summary.sanitized.json",
+    "readOnlyEndpoint": "medicationgetv2",
+    "readOnlyRequestNumber": "02",
+    "selectedCandidate": {
+      "medicationCode": "621894701",
+      "sourceUrl": "https://medley.life/medicines/prescription/2290400D1033/",
+      "rowLevelProof": "validated_sanitized_readonly_not_business_acceptance",
+      "allMasterVerified": true
+    },
+    "payloadIdentity": {
+      "workflow": "injection",
+      "entity": "injectionOrder",
+      "claim007Class": "310",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v3.json",
+      "sha256": "6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d",
+      "candidateCodes": [
+        "130000510",
+        "621894701",
+        "700000031",
+        "0085001"
+      ],
+      "duplicateLiveCheckpoint": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d"
+    },
+    "noLiveEvidence": {
+      "masterValidityWrapperDryRun": "pass_no_live",
+      "medicationgetv2ReadOnlyChecks": "pass_one_candidate_validated_three_candidates_no_row_proof",
+      "injectionV3SafeWrapperDryRun": "pass_no_live",
+      "duplicateLiveCheckpointSearch": "no_accepted_checkpoint_found_in_sanitized_evidence_search"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_packet_only",
+      "businessAccepted": false
+    },
+    "claimBoundary": "RWO-06H injectionOrder/310 v3 no-live packet and read-only row proof only; not Trial business acceptance, fullflow, production ORCA, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+    "recommendedNextTask": "Prepare duplicate-checkpoint/runtime-readiness preflight for a single main-worker-controlled RWO-06H injection v3 live decision; do not run live until endpoint packet is complete.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
   }
 }

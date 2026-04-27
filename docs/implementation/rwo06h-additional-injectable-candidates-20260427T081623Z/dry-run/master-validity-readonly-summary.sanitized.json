@@ -1,0 +1,95 @@
+{
+  "runId": "20260427T081623Z",
+  "traceId": "trace-20260427T081623Z",
+  "contract": "phase4-injection-master-validity-sanitized-readonly",
+  "verdict": "dry_run_passed_no_readonly_orca",
+  "liveTrialMutation": "not_run",
+  "readOnlyTrialAction": "not_run",
+  "payload": {
+    "sha256": "1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300",
+    "bytes": 1022,
+    "rawPayloadStored": false
+  },
+  "masterValidity": {
+    "plan": {
+      "ok": true,
+      "blockers": [],
+      "candidateCodes": {
+        "procedure": "130000510",
+        "medication": "620000012",
+        "material": "700000031",
+        "comment": "0085001"
+      },
+      "readOnlyChecksRequiredBeforeLive": [
+        {
+          "role": "medication",
+          "endpoint": "medicationgetv2",
+          "code": "620000012",
+          "expectedSanitizedEvidence": [
+            "httpStatusClass",
+            "apiResultClass",
+            "masterFoundBoolean",
+            "effectiveDateClass",
+            "evidenceHash"
+          ]
+        },
+        {
+          "role": "procedure",
+          "endpoint": "masterlastupdatev3",
+          "code": "130000510",
+          "expectedSanitizedEvidence": [
+            "httpStatusClass",
+            "apiResultClass",
+            "masterFoundBoolean",
+            "lastUpdateDateClass",
+            "evidenceHash"
+          ]
+        },
+        {
+          "role": "material",
+          "endpoint": "masterlastupdatev3",
+          "code": "700000031",
+          "expectedSanitizedEvidence": [
+            "httpStatusClass",
+            "apiResultClass",
+            "masterFoundBoolean",
+            "lastUpdateDateClass",
+            "evidenceHash"
+          ]
+        },
+        {
+          "role": "comment",
+          "endpoint": "masterlastupdatev3",
+          "code": "0085001",
+          "expectedSanitizedEvidence": [
+            "httpStatusClass",
+            "apiResultClass",
+            "masterFoundBoolean",
+            "lastUpdateDateClass",
+            "evidenceHash"
+          ]
+        }
+      ],
+      "stopBeforeLiveIfAnyMasterUnverified": true,
+      "runtimeMasterLookupExecuted": false,
+      "liveTrialAction": "not_run",
+      "rawPayloadStored": false,
+      "rawOrcaBodyStored": false,
+      "rawPatientOrInsuranceDetailStored": false
+    },
+    "readonlyChecks": [],
+    "allMasterVerified": false,
+    "businessSuccessClassification": "not_applicable_or_readonly_master_validity_not_validated"
+  },
+  "security": {
+    "trialHostAllowlist": "weborca-trial.orca.med.or.jp",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "rawOrcaBodyStored": false,
+    "rawPatientOrInsuranceDetailStored": false,
+    "diagnosticArtifactsCaptured": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  }
+}

@@ -129,6 +129,16 @@
       "status": "rwo06h_v2_endpoint_specific_candidate_no_live_prepared_not_live_executed",
       "workflow": "injection"
     },
+    "medicalmodv2_injection_trial_reachability_v3.json": {
+      "bytes": 1022,
+      "candidateSourceRunId": "20260427T081623Z",
+      "candidateSourceUrl": "https://medley.life/medicines/prescription/2290400D1033/",
+      "duplicateLiveCheckpointKey": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v3.json",
+      "sha256": "6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d",
+      "status": "rwo06h_v3_endpoint_specific_candidate_no_live_prepared_not_live_executed",
+      "workflow": "injection"
+    },
     "medicalmodv2_surgery_trial_reachability_v1.json": {
       "bytes": 812,
       "duplicateLiveCheckpointKey": "rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-23441f818148820c2b1364c6a7424b1255995738cd05fa35e1328f41db96c000",
