@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T020309Z",
+  "workOrder": "RWO-06K",
+  "result": "RWO06K_RADIOLOGY_V3_LIVE_TRIAL_BUSINESS_ACCEPTED",
+  "branch": "master",
+  "headAtSelection": "a2fabec3a5894b9ab53642ce58dd2a2faec9742c",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "rwo11-rwo09-external-owner-operator-gate-not-automation-work",
+    "statusAfterRun": "left_external_and_advanced_independent_rwo06k_live_trial_checkpoint"
+  },
+  "payloadIdentity": {
+    "workflow": "radiology",
+    "entity": "radiologyOrder",
+    "claim007Class": "700",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v3.json",
+    "sha256": "144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a",
+    "bytes": 1055,
+    "target": "00001",
+    "requestNumber": "01",
+    "classCode": "01",
+    "candidateCodes": [
+      "002000099",
+      "170027910",
+      "820181000"
+    ],
+    "duplicateLiveCheckpoint": "rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a"
+  },
+  "preflightEvidence": {
+    "wrapperDryRun": "pass_no_live",
+    "duplicateLiveCheckpointBeforeAttempt": "not_found",
+    "runtimeReadiness": {
+      "ok": true,
+      "healthHttpStatus": 200,
+      "readinessHttpStatus": 200,
+      "rawReadinessBodyStored": false,
+      "rawHealthBodyStored": false
+    },
+    "endpointSpecificSuccessCriteria": "HTTP 2xx plus zero-like apiResult plus allowlisted completion evidence; HTTP 200 or apiResult zero alone is not business success",
+    "stopConditions": [
+      "duplicate accepted checkpoint found",
+      "runtime readiness not 2xx",
+      "parser ambiguity",
+      "credential or raw-artifact risk",
+      "non-Trial endpoint detection",
+      "business acceptance reached"
+    ]
+  },
+  "liveTrialOrca": {
+    "executed": true,
+    "attempt": 1,
+    "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+    "target": "00001",
+    "requestClass": "medicalmodv2",
+    "httpStatus": 200,
+    "apiResult": "00",
+    "responseClassification": "businessAccepted",
+    "businessSuccessClassification": "live_trial_business_accepted",
+    "businessAccepted": true,
+    "completionEvidence": {
+      "informationTimestampPresent": true,
+      "medicalUidPresent": true,
+      "invoiceNumberPresent": false,
+      "dataIdPresent": false
+    }
+  },
+  "evidence": {
+    "finalReport": "docs/implementation/rwo06k-radiology-v3-live-preflight-20260427T020309Z/FINAL_REPORT.md",
+    "dryRunSummary": "docs/implementation/rwo06k-radiology-v3-live-preflight-20260427T020309Z/wrapper-dry-run/phase4-medicalmodv2-summary.sanitized.json",
+    "liveAttemptSummary": "docs/implementation/rwo06k-radiology-v3-live-preflight-20260427T020309Z/live-attempt-1/phase4-medicalmodv2-summary.sanitized.json"
+  },
+  "claimBoundary": "RWO-06K radiologyOrder/700 v3 reached one scoped WebORCA / ORCA Trial medicalmodv2 L3 business-accepted checkpoint only. This is not all-radiology coverage, body-part billing exhaustiveness, all order-item readiness, Request_Number 02/03/04 success, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+  "recommendedNextTask": "Continue independent roadmap work; the next safe candidates are RWO-06H injectable row-proof discovery, RWO-06G base-charge first-visit readiness, RWO-08B fresh-target/server-derived-identifier preflight, or non-S3/static release readiness refresh.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "diagnosticArtifactsLocalOnlyUntracked": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}
