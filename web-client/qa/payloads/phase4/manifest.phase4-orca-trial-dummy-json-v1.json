@@ -152,7 +152,17 @@
       "duplicateLiveCheckpointKey": "rwo06j:medicalmodv2:rwo06j-test-order-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-35f787437641e3aa16981465f62277ad9d080de0d93b8c105d5a63f43a3df9d9",
       "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_test_order_trial_reachability_v2.json",
       "sha256": "35f787437641e3aa16981465f62277ad9d080de0d93b8c105d5a63f43a3df9d9",
-      "status": "rwo06j_v2_endpoint_specific_candidate_no_live_prepared_not_live_executed",
+      "status": "rwo06j_v2_endpoint_specific_candidate_live_business_rejected_do_not_repeat",
+      "workflow": "test-order"
+    },
+    "medicalmodv2_test_order_trial_reachability_v3.json": {
+      "bytes": 858,
+      "candidateSourceRunId": "20260427T003310Z",
+      "candidateSourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/comment85-831-api.html",
+      "duplicateLiveCheckpointKey": "rwo06j:medicalmodv2:rwo06j-test-order-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-6a4e1800dbc6993c08c90d01a5ed57e490c0b38a346b6966325bfa0d86a61a28",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_test_order_trial_reachability_v3.json",
+      "sha256": "6a4e1800dbc6993c08c90d01a5ed57e490c0b38a346b6966325bfa0d86a61a28",
+      "status": "rwo06j_v3_endpoint_specific_candidate_no_live_prepared_not_live_executed",
       "workflow": "test-order"
     },
     "medicalmodv2_radiology_trial_reachability_v1.json": {
@@ -213,7 +223,8 @@
     "RWO-06H injection v2 is a source-backed no-live candidate using procedure code 130000510 plus paired drug/material rows; do not execute it live until wrapper dry-run, runtime readiness, duplicate checkpoint, and endpoint-specific success criteria are recorded for the current run.",
     "RWO-06I surgery is the endpoint-specific surgeryOrder class 500 candidate; the v1 live Trial attempt was businessRejected, so do not repeat it or treat it as surgery acceptance.",
     "RWO-06J test-order is the endpoint-specific testOrder class 600 candidate; the v1 live Trial attempt was businessRejected, so do not repeat it or treat it as test-order acceptance.",
-    "RWO-06J test-order v2 is a source-backed no-live candidate using code 160000310; do not execute it live until wrapper dry-run, runtime readiness, duplicate checkpoint, and endpoint-specific success criteria are recorded for the current run.",
+    "RWO-06J test-order v2 used code 160000310 and was live Trial businessRejected; do not repeat it unchanged.",
+    "RWO-06J test-order v3 is a changed no-live candidate using code 160000310 plus structured comment code 831000000; do not execute it live until wrapper dry-run, runtime readiness, duplicate checkpoint, and endpoint-specific success criteria are recorded for the current run.",
     "RWO-06K radiology is the endpoint-specific radiologyOrder class 700 candidate; use --workflow radiology and do not treat one radiology class as all radiology variants.",
     "RWO-06K radiology v2 is a source-backed no-live candidate using body-part code 002000099 and imaging fee code 170027910; do not execute it live until wrapper dry-run, runtime readiness, duplicate checkpoint, and endpoint-specific success criteria are recorded for the current run.",
     "Do not store raw ORCA request/response, HAR, trace, screenshots, video, raw network, credentials, cookies, tokens, session IDs, or CSRF values."

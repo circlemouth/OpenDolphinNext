@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T00:04:33Z",
+  "lastUpdated": "2026-04-27T00:39:00Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_not_automation_work",
     "automationMustNot": [
@@ -66,6 +66,41 @@
     ],
     "resultUse": "sanitized_no_live_evidence_only_for_task_selection_payload_drafting_parser_tests_wrapper_dry_runs_readonly_probes_or_queue_reordering",
     "liveAuthorization": false
+  },
+  "latestRwo06JTestOrderV3NoLivePacket": {
+    "runId": "20260427T003310Z",
+    "workOrder": "RWO-06J",
+    "result": "RWO06J_TEST_ORDER_V3_NO_LIVE_PACKET_PREPARED",
+    "branch": "master",
+    "evidence": "docs/implementation/rwo06j-test-order-v3-no-live-20260427T003310Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06j-test-order-v3-no-live-20260427T003310Z/summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "test-order",
+      "entity": "testOrder",
+      "claim007Class": "600",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_test_order_trial_reachability_v3.json",
+      "sha256": "6a4e1800dbc6993c08c90d01a5ed57e490c0b38a346b6966325bfa0d86a61a28",
+      "candidateCodes": [
+        "160000310",
+        "831000000"
+      ],
+      "duplicateLiveCheckpoint": "rwo06j:medicalmodv2:rwo06j-test-order-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-6a4e1800dbc6993c08c90d01a5ed57e490c0b38a346b6966325bfa0d86a61a28"
+    },
+    "noLiveEvidence": {
+      "wrapperDryRun": "pass_no_live",
+      "safeEvidenceTests": "pass_26_tests_with_web_guard_pretest",
+      "manifestJson": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_packet_only",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Test-order v3 no-live packet only; not Trial business acceptance, all-test coverage, fullflow, production ORCA, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+    "recommendedNextTask": "Before any test-order v3 live Trial attempt, record runtime readiness, duplicate checkpoint decision, endpoint-specific success criteria, stop conditions, and a sanitized preflight packet.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
   },
   "latestRemainingOrcaSpecIntake": {
     "runId": "20260426T124656Z",

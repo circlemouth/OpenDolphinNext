@@ -237,7 +237,9 @@ Checkpoint:
 
 - RUN_ID `20260424T055036Z` added the `test-order` workflow, payload `medicalmodv2_test_order_trial_reachability_v1.json`, SHA-256 `b4fd3a422ac38f51b73a2fb2a56d07e2418339878f9451a6d73eb185bbd334d2`, and a passing wrapper dry-run.
 - The single v1 live Trial attempt reached readiness HTTP `200` / `200` and executed once, but ORCA Trial classified the request as `businessRejected`.
-- Do not repeat the v1 checkpoint. Use web-researched official/public sources and local no-live contract checks to propose a justified test-order v2 candidate before any live retry.
+- RUN_ID `20260424T222329Z` executed one sanitized Trial checkpoint for source-backed v2 code `160000310`; live result was HTTP `200`, parsed API result `80`, `businessRejected`, `businessAccepted=false`.
+- RUN_ID `20260427T003310Z` prepared changed no-live v3 candidate `160000310+831000000` after official-source structured-comment research; wrapper dry-run and focused contract tests passed, but no live Trial mutation was executed.
+- Do not repeat the v1 or v2 checkpoints unchanged. Before any v3 live attempt, record runtime readiness, duplicate checkpoint decision, endpoint-specific success criteria, stop conditions, and a sanitized preflight packet.
 
 ### RWO-06K: Radiology Trial Reachability
 
