@@ -1,8 +1,8 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "automation-scope-policy",
-  "blockerId": "rwo11-rwo09-external-owner-operator-gate-not-automation-work",
+  "sourceWorkOrder": "RWO-11/RWO-09",
+  "blockerId": "rwo11-rwo09-owner-authorized-automation-progression",
   "priority": "normal",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,17 +30,23 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T05:03:14Z",
+  "lastUpdated": "2026-04-27T05:18:55Z",
   "automationResponsibilityBoundary": {
-    "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_not_automation_work",
+    "rwo11Rwo09RollbackOwnerDecision": "automation_reassigned_by_owner_20260427T051855Z",
     "automationMustNot": [
-      "select_rwo11_rwo09_as_work",
-      "execute_rollback_rehearsal",
-      "capture_final_owner_go_no_go_pending",
-      "reclassify_rollback_owner_blocker_hourly",
-      "block_on_owner_operator_release_management_decision"
+      "execute_production_release_or_rollback_actions",
+      "claim_production_orca_readiness",
+      "use_s3_or_object_storage_setup",
+      "capture_or_commit_raw_artifacts",
+      "print_or_store_credentials",
+      "infer_owner_go_no_go_pending_from_silence",
+      "proceed_when_rollback_target_or_stop_conditions_are_ambiguous"
     ],
     "automationShouldContinueWith": [
+      "rwo11_rwo09_sanitized_rollback_preparation",
+      "rwo11_rwo09_safe_non_production_rehearsal_when_target_and_commands_are_clear",
+      "rwo11_rwo09_operator_acceptance_evidence_capture_when_sanitized",
+      "rwo11_rwo09_explicit_owner_decision_recording_when_supplied",
       "orca_official_specification_research",
       "no_live_endpoint_packets",
       "payload_identity_drafting",
@@ -50,7 +56,33 @@
       "static_package_security_checks",
       "sanitized_evidence_and_claim_boundary_updates"
     ],
-    "recordedByUserDirection": "2026-04-27"
+    "recordedByUserDirection": "2026-04-27T05:18:55Z"
+  },
+  "latestRwo11Rwo09OwnerAutomationReassignment": {
+    "runId": "20260427T051855Z",
+    "workOrder": "RWO-11/RWO-09",
+    "result": "RWO11_RWO09_AUTOMATION_REASSIGNED_BY_OWNER",
+    "branch": "master",
+    "headAtSelection": "2ad0c42e54345ec71ed95077126ab133275f6a70",
+    "ownerDirection": "User explicitly permitted these tasks so subsequent workers can proceed.",
+    "allowedAutomationScope": [
+      "sanitized rollback rehearsal preparation",
+      "safe non-production rollback rehearsal when target and commands are clear",
+      "operator acceptance evidence capture when sanitized",
+      "explicit final GO/NO-GO/PENDING decision recording when supplied by owner"
+    ],
+    "requiredBoundaries": [
+      "trial_backed_non_s3_scope_only",
+      "no_production_release_or_rollback_actions",
+      "no_production_orca",
+      "no_s3_object_storage_setup",
+      "no_credentials_or_raw_artifact_capture",
+      "no_inferred_owner_decision"
+    ],
+    "recommendedNextTask": "Select RWO-11/RWO-09 next: create or run a sanitized rollback rehearsal/operator-acceptance plan using documented non-production targets, or record explicit owner GO/NO-GO/PENDING if the owner supplies decision text.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
   },
   "orcaOfficialSpecificationResearchPolicy": {
     "requiredWhen": [
@@ -5168,18 +5200,18 @@
     },
     {
       "taskId": "RWO-11_ROLLBACK_OWNER_DECISION",
-      "lane": "human_pending",
-      "status": "superseded",
+      "lane": "critical_path",
+      "status": "queued",
       "workOrder": "RWO-11/RWO-09",
-      "summary": "External owner/operator release-management gate; not automation work.",
+      "summary": "Owner-authorized automation task: prepare or execute safe sanitized rollback rehearsal/operator evidence, or record explicit owner final decision.",
       "requiresRuntime": false,
       "requiresLiveTrialMutation": false,
-      "requiresHumanDecision": true,
+      "requiresHumanDecision": false,
       "requiresS3ObjectStorage": false,
       "safeToBatchWithNoLiveTasks": false,
-      "skipCondition": "always skip for automation unless explicitly reassigned by a later user instruction",
-      "successCriteria": "not_applicable_external_release_management_gate",
-      "carryForwardWhenNoNewInput": "external_not_automation_work",
+      "skipCondition": "skip only if safe non-production rollback target/commands are ambiguous, production infrastructure would be required, raw artifacts or credentials would be needed, or explicit owner decision text is absent for decision recording",
+      "successCriteria": "sanitized rollback/operator evidence or explicit owner GO/NO-GO/PENDING record exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false",
+      "nextOnSuccess": "RWO-06H_READONLY_MASTER_VALIDITY",
       "nextOnSkip": "RWO-06H_READONLY_MASTER_VALIDITY"
     }
   ],

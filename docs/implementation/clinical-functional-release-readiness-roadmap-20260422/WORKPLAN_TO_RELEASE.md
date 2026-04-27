@@ -10,9 +10,9 @@ Trial evidence must not be used to claim production ORCA readiness. If productio
 
 ## Automation Responsibility Boundary
 
-`RWO-11/RWO-09` rollback rehearsal, final owner GO/NO-GO/PENDING, release-candidate deployment stop, paired restore, restored-target smoke, and operator acceptance are external owner/operator release-management gates. They remain claim-boundary context, but they are not work assigned to this automation.
+Owner direction recorded on 2026-04-27T05:18:55Z reassigns `RWO-11/RWO-09` rollback rehearsal preparation, safe sanitized rehearsal execution, operator-acceptance evidence capture, and explicit final owner GO/NO-GO/PENDING decision recording to this automation.
 
-Automation workers must not select, execute, reclassify, or block on `RWO-11/RWO-09`. When these gates appear in a queue, prompt, matrix, or summary, workers should preserve the non-claim boundary and immediately proceed to the next safe task outside `RWO-11/RWO-09`.
+Automation workers may select `RWO-11/RWO-09` when the next step can be performed under the Trial-backed, non-S3, non-production scope using sanitized evidence only. Workers must stop or skip with evidence if the next step would require production infrastructure, production ORCA, S3/object-storage, credentials, raw artifacts, target ambiguity, or a final owner decision that has not been explicitly supplied.
 
 ## ORCA Official Specification Research
 
@@ -66,7 +66,7 @@ Environment-only blockers include Docker unavailable, local backend unavailable,
 
 When a Work Order is skipped, the same run should continue with docs, static guards, unit/component tests, parser/sanitizer tests, safe wrapper dry-runs, package metadata checks, claim-boundary updates, release gate updates, risk register updates, and final summaries that do not depend on the skipped runtime.
 
-Hourly workers must use the executable queue in `docs/implementation/automation-handoff/HANDOFF_STATE.json` before falling back to this prose queue. The queue separates work into `critical_path`, `parallel_no_live`, and `human_pending` lanes. `RWO-11/RWO-09` rollback rehearsal and owner GO/NO-GO are outside automation scope and must not be selected or rechecked by automation; preserve them as external claim-boundary gates and continue to the next executable non-human, non-RWO-11/RWO-09 item.
+Hourly workers must use the executable queue in `docs/implementation/automation-handoff/HANDOFF_STATE.json` before falling back to this prose queue. The queue separates work into `critical_path`, `parallel_no_live`, and `human_pending` lanes. `RWO-11/RWO-09` rollback preparation, safe sanitized rehearsal, operator-acceptance evidence capture, and explicit owner-decision recording are now automation-selectable under the 2026-04-27T05:18:55Z owner reassignment. Final owner GO/NO-GO/PENDING still requires explicit owner evidence and must not be inferred.
 
 The queue may contain several safe no-live tasks. Workers should process more than one item per run when possible, especially official ORCA specification research, docs, parser/sanitizer tests, wrapper dry-runs, read-only preflight plans, static guards, and matrix updates. Live Trial mutation is the exception: it remains one endpoint, one target, one request class, one payload identity, and one sanitized attempt at a time.
 
@@ -108,7 +108,7 @@ Do not commit approved local runtime secret files, ORCA credentials, S3/MinIO/ob
 20. RWO-08B: fullflow reachability variants, batched through artifact-free or diagnostic mode with only sanitized extracted evidence committed.
 20. RWO-09: security, secrets, CI, package, deployment readiness without production ORCA execution or S3/MinIO/object-storage setup.
 21. RWO-10: record production ORCA as out-of-scope / not applicable for this Trial-only roadmap.
-22. RWO-11: final Trial-backed release candidate validation and owner sign-off. This is an external owner/operator release-management gate and is not assigned to this automation.
+22. RWO-11: final Trial-backed release candidate validation, safe sanitized rollback/operator evidence, and owner sign-off recording. This is assigned to automation after the 2026-04-27T05:18:55Z owner reassignment, subject to the non-production, non-S3, sanitized-evidence, explicit-owner-decision boundaries above.
 
 ## Current Safe Work Queue
 
@@ -123,7 +123,7 @@ When the active handoff is superseded or skipped, process this queue in order an
 7. For RWO-06B through RWO-06F and later endpoint families, batch multiple reachability checks in one automation run when each check has independent preflight, wrapper, parser, business-success criteria, and sanitized evidence. If endpoint semantics are unclear, first perform official ORCA specification research and record sanitized no-live findings. RUN_ID `20260425T030245Z` prepared no-live v2 candidates for `instractionChargeOrder/130`, `baseChargeOrder/110`, and `injectionOrder/310`; RUN_ID `20260425T215740Z` added source-backed no-live candidate research for these and the rejected surgery/test/radiology families. No live Trial should run from research alone; live progression still requires endpoint-specific Trial/business preconditions, no-live wrapper checks, runtime readiness, sanitized preflight, and duplicate-checkpoint preflight.
 8. Complete RWO-09 non-S3 security/secret handling, CI/static evidence, packaging, rollback, and non-claim updates that are possible without unavailable runtime services.
 9. Complete RWO-10 production ORCA non-claim docs-only marker.
-10. Do not execute or reclassify RWO-11 rollback/owner decision work. Keep it as an external owner/operator gate and continue only with non-RWO-11 automation tasks.
+10. Execute `RWO-11/RWO-09` rollback preparation or safe sanitized rehearsal when the target, commands, evidence directory, stop conditions, and non-production/non-S3/non-raw-artifact boundaries are clear. Record explicit owner GO/NO-GO/PENDING only when the owner supplies the decision text; otherwise keep the decision pending and continue independent safe tasks.
 
 ## Why This Sequence Is Safe
 
