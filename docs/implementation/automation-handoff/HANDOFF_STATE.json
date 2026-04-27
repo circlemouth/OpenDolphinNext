@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T05:33:12Z",
+  "lastUpdated": "2026-04-27T05:50:15Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "automation_reassigned_by_owner_20260427T051855Z",
     "automationMustNot": [
@@ -4945,7 +4945,7 @@
     {
       "taskId": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
       "lane": "critical_path",
-      "status": "skipped_environment_unavailable",
+      "status": "queued",
       "workOrder": "RWO-06H",
       "summary": "Discover additional source-backed injectable medication candidates, then validate them with sanitized medicationgetv2 Request_Number=02 read-only checks.",
       "activePromptDependency": "RWO-11/RWO-09 rollback/owner gates are external to automation; skip them and continue",
@@ -4971,9 +4971,9 @@
       "successCriteria": "at least one new source-backed injectable candidate has sanitized medicationgetv2 Request_Number=02 masterFound=true evidence with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false; no live mutation executed",
       "nextOnSuccess": "RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
-      "result": "skipped_all_checked_source_backed_candidates_returned_masterFound_false_stop_before_live",
-      "completedRunId": "20260426T231411Z",
-      "evidence": "docs/implementation/rwo06h-injectable-candidate-discovery-20260426T231411Z/summary.sanitized.json",
+      "result": "candidate_discovery_requires_repaired_wrapper_rerun",
+      "completedRunId": "20260427T055015Z",
+      "evidence": "docs/implementation/rwo06h-medicationgetv2-contract-fix-20260427T055015Z/summary.sanitized.json",
       "candidatesChecked": [
         "620006203",
         "620004173",
@@ -4983,12 +4983,13 @@
         "620767312",
         "620738012",
         "621429304"
-      ]
+      ],
+      "correctedPriorEvidenceBoundary": "Prior checked candidates should be rerun if still relevant because the wrapper contract was repaired."
     },
     {
       "taskId": "RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF",
       "lane": "critical_path",
-      "status": "skipped_environment_unavailable",
+      "status": "queued",
       "workOrder": "RWO-06H",
       "summary": "Select an injectable candidate identity and prove the medication row with medicationgetv2 Request_Number=02 before any injectionOrder/310 live path.",
       "activePromptDependency": "RWO-11/RWO-09 rollback/owner gates are external to automation; skip them and continue",
@@ -5011,13 +5012,14 @@
       "successCriteria": "sanitized row-level injectable medication proof exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false; no live mutation executed",
       "nextOnSuccess": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
       "nextOnSkip": "RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR",
-      "result": "skipped_row_level_proof_not_produced_for_checked_candidates_stop_before_live",
-      "completedRunId": "20260426T223215Z",
-      "evidence": "docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/summary.sanitized.json",
+      "result": "wrapper_contract_repaired_prior_candidate_rejections_need_rerun",
+      "completedRunId": "20260427T055015Z",
+      "evidence": "docs/implementation/rwo06h-medicationgetv2-contract-fix-20260427T055015Z/summary.sanitized.json",
       "candidatesChecked": [
-        "620076111",
-        "620007539"
-      ]
+        "641210099"
+      ],
+      "correctedPriorEvidenceBoundary": "Do not rely on prior medicationgetv2 other_present/masterFound=false candidate checks that omitted class=01 or used compact Base_Date; rerun relevant candidates with repaired wrapper.",
+      "controlCheck": "114030710 official sample validated repaired wrapper"
     },
     {
       "taskId": "RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR",
@@ -5715,5 +5717,34 @@
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06HMedicationgetv2ContractRepair": {
+    "runId": "20260427T055015Z",
+    "workOrder": "RWO-06H",
+    "result": "RWO06H_MEDICATIONGETV2_CONTRACT_REPAIRED_AND_REVALIDATED_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "d90a440161d66a7e6d16984961780e9968859580",
+    "evidence": "docs/implementation/rwo06h-medicationgetv2-contract-fix-20260427T055015Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06h-medicationgetv2-contract-fix-20260427T055015Z/summary.sanitized.json",
+    "contractRepair": [
+      "medicationgetv2 URL includes class=01",
+      "Base_Date normalized to YYYY-MM-DD",
+      "official E/W Api_Result values classified separately",
+      "Request_Number=02 masterFound requires success_zero and matching Medication_Code"
+    ],
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "mutation": false,
+      "injectionCandidate641210099": "2xx/official_error/official_error_no_row_proof/masterFound=false",
+      "officialSample114030710": "2xx/success_zero/row_found_with_selection_comments/masterFound=true"
+    },
+    "correctedPriorEvidenceBoundary": "Prior RWO-06H medicationgetv2 results generated without class=01 or dashed Base_Date are insufficient as candidate rejection proof; rerun relevant candidates with repaired wrapper.",
+    "recommendedNextTask": "Rerun remaining source-backed injectable candidates with the repaired medicationgetv2 wrapper before selecting or skipping RWO-06H; do not run injectionOrder/310 live until row proof and endpoint packet are complete.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "liveTrialMutationExecuted": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
   }
 }

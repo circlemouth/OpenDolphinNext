@@ -94,8 +94,12 @@ export const parseMasterValidityArgs = (argv) => {
 };
 
 const normalizeBaseDate = (value) => {
-  const digits = normalize(value).replace(/[^0-9]/g, '');
-  return digits.length === 8 ? digits : '';
+  const raw = normalize(value);
+  const dashed = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dashed) return `${dashed[1]}-${dashed[2]}-${dashed[3]}`;
+  const digits = raw.replace(/[^0-9]/g, '');
+  if (digits.length !== 8) return '';
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
 };
 
 const normalizeMedicationCode = (value) => normalize(value).replace(/[^0-9]/g, '');
@@ -225,9 +229,9 @@ const escapeXml = (value) =>
     .replace(/'/g, '&apos;');
 
 export const buildMedicationGetXml = ({ requestCode, baseDate }) =>
-  `<data><medicationgetreq type="record"><Request_Number>02</Request_Number><Request_Code>${escapeXml(
+  `<data><medicationgetreq type="record"><Request_Number type="string">02</Request_Number><Request_Code type="string">${escapeXml(
     requestCode,
-  )}</Request_Code><Base_Date>${escapeXml(baseDate)}</Base_Date></medicationgetreq></data>`;
+  )}</Request_Code><Base_Date type="string">${escapeXml(baseDate)}</Base_Date></medicationgetreq></data>`;
 
 export const buildMasterLastUpdateXml = () =>
   '<data><masterlastupdatev3req type="record"></masterlastupdatev3req></data>';
@@ -251,8 +255,17 @@ const classifyApiResult = (apiResult) => {
   const normalized = normalize(apiResult);
   if (!normalized) return 'missing';
   if (/^0+$/.test(normalized)) return 'success_zero';
+  if (/^E\d{2}$/i.test(normalized)) return 'official_error';
+  if (/^W\d{2}$/i.test(normalized)) return 'official_warning';
   if (/^\d+$/.test(normalized)) return 'nonzero_numeric';
   return 'other_present';
+};
+
+const classifyMedicationGetRequest02Result = ({ apiResultClass, medicationCode, expectedCode }) => {
+  if (apiResultClass === 'success_zero' && medicationCode === expectedCode) return 'row_found_with_selection_comments';
+  if (apiResultClass === 'official_error') return 'official_error_no_row_proof';
+  if (apiResultClass === 'official_warning') return 'official_warning_no_row_proof';
+  return 'not_proven';
 };
 
 export const sanitizeReadonlyXmlResult = ({ role, endpoint, code, httpStatus, xml }) => {
@@ -268,7 +281,10 @@ export const sanitizeReadonlyXmlResult = ({ role, endpoint, code, httpStatus, xm
     code,
     httpStatusClass: classifyHttpStatus(httpStatus),
     apiResultClass,
-    masterFound: endpoint === 'medicationgetv2' ? medicationCode === code : apiResultClass === 'success_zero',
+    masterFound: endpoint === 'medicationgetv2' ? apiResultClass === 'success_zero' && medicationCode === code : apiResultClass === 'success_zero',
+    request02ResultClass: endpoint === 'medicationgetv2'
+      ? classifyMedicationGetRequest02Result({ apiResultClass, medicationCode, expectedCode: code })
+      : undefined,
     effectiveDateClass: startDate ? 'present' : 'missing',
     endDateClass: endDate ? 'present' : 'missing',
     lastUpdateDateClass: lastUpdate ? 'present' : 'missing',
@@ -282,7 +298,7 @@ export const sanitizeReadonlyXmlResult = ({ role, endpoint, code, httpStatus, xm
 };
 
 const endpointUrl = (baseUrl, endpoint) => {
-  const pathName = endpoint === 'medicationgetv2' ? '/api/api01rv2/medicationgetv2' : '/api/orca51/masterlastupdatev3';
+  const pathName = endpoint === 'medicationgetv2' ? '/api/api01rv2/medicationgetv2?class=01' : '/api/orca51/masterlastupdatev3';
   return new URL(pathName, baseUrl).toString();
 };
 

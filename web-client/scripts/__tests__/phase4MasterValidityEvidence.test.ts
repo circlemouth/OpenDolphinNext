@@ -145,10 +145,39 @@ describe('phase4 injection master validity readonly evidence', () => {
       httpStatusClass: '2xx',
       apiResultClass: 'success_zero',
       masterFound: true,
+      request02ResultClass: 'row_found_with_selection_comments',
       effectiveDateClass: 'present',
       rawOrcaBodyStored: false,
     }));
     expect(JSON.stringify(sanitized)).not.toContain('raw-name-not-copied');
+  });
+
+  it('classifies official medicationgetv2 E/W results without treating them as row proof', () => {
+    const officialError = sanitizeReadonlyXmlResult({
+      role: 'medication',
+      endpoint: 'medicationgetv2',
+      code: '620000012',
+      httpStatus: 200,
+      xml: '<xmlio2><medicationgetres><Api_Result>E02</Api_Result></medicationgetres></xmlio2>',
+    });
+    expect(officialError).toEqual(expect.objectContaining({
+      apiResultClass: 'official_error',
+      request02ResultClass: 'official_error_no_row_proof',
+      masterFound: false,
+    }));
+
+    const officialWarning = sanitizeReadonlyXmlResult({
+      role: 'medication',
+      endpoint: 'medicationgetv2',
+      code: '620000012',
+      httpStatus: 200,
+      xml: '<xmlio2><medicationgetres><Api_Result>W24</Api_Result><Medication_Code>620000012</Medication_Code></medicationgetres></xmlio2>',
+    });
+    expect(officialWarning).toEqual(expect.objectContaining({
+      apiResultClass: 'official_warning',
+      request02ResultClass: 'official_warning_no_row_proof',
+      masterFound: false,
+    }));
   });
 
   it('executes readonly checks through sanitized fetch results only', async () => {
@@ -177,7 +206,7 @@ describe('phase4 injection master validity readonly evidence', () => {
           comment: '0085001',
         },
       },
-      baseDate: '20260422',
+      baseDate: '2026-04-22',
       fetchImpl: fetchImpl as typeof fetch,
     });
 
@@ -189,8 +218,33 @@ describe('phase4 injection master validity readonly evidence', () => {
       'weborca-trial.orca.med.or.jp',
       'weborca-trial.orca.med.or.jp',
     ]);
-    expect(buildMedicationGetXml({ requestCode: '620000012', baseDate: '20260422' })).toContain('620000012');
+    expect(fetched[0].url).toContain('/api/api01rv2/medicationgetv2?class=01');
+    expect(fetched[0].body).toContain('<Base_Date type="string">2026-04-22</Base_Date>');
+    expect(buildMedicationGetXml({ requestCode: '620000012', baseDate: '2026-04-22' })).toContain('620000012');
     expect(fetched.slice(1).every((entry) => entry.body === buildMasterLastUpdateXml())).toBe(true);
+  });
+
+  it('normalizes compact base dates to the official dashed medicationgetv2 format', () => {
+    const guard = validateMasterValidityCommand({
+      argv: [
+        '--execute-readonly',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--payload',
+        payloadPath,
+        '--payload-sha256',
+        payloadSha256,
+        '--base-date',
+        '20260422',
+        '--medication-code',
+        '620076111',
+      ],
+      env: {},
+      cwd: process.cwd(),
+    });
+
+    expect(guard.ok).toBe(true);
+    expect(guard.options.baseDate).toBe('2026-04-22');
   });
 
   it('classifies readonly validation separately from live business acceptance', () => {

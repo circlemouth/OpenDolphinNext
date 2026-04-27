@@ -2,6 +2,7 @@
 
 status: active
 created_at: 2026-04-27T05:33:12Z
+updated_at: 2026-04-27T05:50:15Z
 source_work_order: RWO-06H
 blocker_id: rwo06h-injectable-row-proof-needs-changed-candidate
 priority: normal
@@ -26,16 +27,27 @@ The same run also completed current-head `RWO-09` non-S3 static/package/security
 
 No live Trial mutation, diagnostic artifact capture, production ORCA, S3/object-storage setup, rollback rehearsal execution, owner final decision, or final release readiness is claimed.
 
+RUN_ID `20260427T055015Z` repaired the `medicationgetv2 Request_Number=02` read-only wrapper contract:
+
+- evidence: `docs/implementation/rwo06h-medicationgetv2-contract-fix-20260427T055015Z/FINAL_REPORT.md`
+- summary: `docs/implementation/rwo06h-medicationgetv2-contract-fix-20260427T055015Z/summary.sanitized.json`
+- fix: append `class=01`, send `Base_Date` as `YYYY-MM-DD`, classify official `E##` / `W##` results separately, and require `success_zero` plus matching `Medication_Code` before `masterFound=true`
+- repaired-wrapper control: official sample `114030710` returned `2xx/success_zero/row_found_with_selection_comments/masterFound=true`
+- repaired-wrapper injection candidate check: `641210099` returned `2xx/official_error/official_error_no_row_proof/masterFound=false`
+
+Prior RWO-06H `medicationgetv2` candidate checks that omitted `class=01` or used compact `Base_Date` are insufficient as final candidate rejection proof. Rerun any still-relevant source-backed injectable candidates with the repaired wrapper before using `masterFound=false` as a stop reason.
+
 ## Goal
 
-Continue independent no-live endpoint precondition work. The next useful path is `RWO-06H` injectable row-proof discovery only if a changed, source-backed injectable medication candidate or changed precondition exists. If no changed candidate/precondition exists, safely skip with evidence and continue to the next independent no-live queue item.
+Continue independent no-live endpoint precondition work. The next useful path is `RWO-06H` injectable row-proof discovery using the repaired `medicationgetv2` wrapper. Prefer rerunning still-relevant source-backed injectable candidates under the repaired wrapper before selecting or skipping RWO-06H. If no changed candidate/precondition exists after repaired-wrapper rerun, safely skip with evidence and continue to the next independent no-live queue item.
 
 ## Required First Steps
 
 1. Inspect current branch, HEAD, status, and worktrees.
 2. Read `$CODEX_HOME/automations/orca/memory.md`, `HANDOFF_STATE.json`, this prompt, and the latest RWO-06H evidence.
 3. Confirm the prior rejected/invalid candidates are not reused unchanged as success evidence: `620000012`, `620076111`, `620007539`, `620006203`, `620004173`, `620002589`, `621958501`, `620006734`, `620767312`, `620738012`, `621429304`.
-4. If endpoint semantics or candidate validity are unclear, perform ORCA official-source research first and record sanitized no-live evidence.
+4. Also confirm that old `2xx/other_present/masterFound=false` results generated before RUN_ID `20260427T055015Z` are not treated as final candidate rejection proof unless rerun with the repaired wrapper.
+5. If endpoint semantics or candidate validity are unclear, perform ORCA official-source research first and record sanitized no-live evidence.
 
 ## Allowed Actions
 
@@ -61,4 +73,4 @@ Continue independent no-live endpoint precondition work. The next useful path is
 
 ## Completion Criteria
 
-This prompt is complete when a changed RWO-06H candidate/precondition is proven or safely skipped with sanitized evidence, handoff state is updated, relevant checks pass, and roadmap-scoped changes are committed.
+This prompt is complete when a changed RWO-06H candidate/precondition is proven or safely skipped with repaired-wrapper sanitized evidence, handoff state is updated, relevant checks pass, and roadmap-scoped changes are committed.
