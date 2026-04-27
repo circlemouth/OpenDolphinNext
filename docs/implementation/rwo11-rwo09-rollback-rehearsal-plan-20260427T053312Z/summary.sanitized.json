@@ -1,0 +1,47 @@
+{
+  "runId": "20260427T053312Z",
+  "workOrder": "RWO-11/RWO-09",
+  "result": "RWO11_RWO09_ROLLBACK_REHEARSAL_PLAN_READY_EXECUTION_BLOCKED_TARGET_AMBIGUITY",
+  "branch": "master",
+  "head": "c53c73638442894c267410b813f008d588422afe",
+  "activeHandoffPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+  "ownerReassignmentEvidence": "docs/implementation/rwo11-rwo09-owner-automation-authorization-20260427T051855Z/summary.sanitized.json",
+  "rollbackRehearsal": {
+    "planPrepared": true,
+    "executed": false,
+    "classification": "blocked_safety_stop_target_ambiguity",
+    "reason": "documented rollback execution requires a named non-production rehearsal environment, exact paired web-client/server-modernized restore target, target-specific stop/start commands, restored-target smoke path, and explicit operator/owner acceptance evidence; those inputs are not present in the repo-local handoff state",
+    "productionOrcaRequired": false,
+    "s3ObjectStorageRequired": false,
+    "rawArtifactsRequired": false
+  },
+  "ownerDecision": {
+    "explicitDecisionSupplied": false,
+    "decisionRecorded": false,
+    "classification": "not_recorded_explicit_owner_text_absent"
+  },
+  "evidence": {
+    "checklist": "docs/implementation/rwo11-rwo09-rollback-rehearsal-plan-20260427T053312Z/rollback-rehearsal-checklist.sanitized.md",
+    "finalReport": "docs/implementation/rwo11-rwo09-rollback-rehearsal-plan-20260427T053312Z/FINAL_REPORT.md"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "endpoint": null,
+    "target": null,
+    "requestClass": null,
+    "businessSuccessClassification": "not_applicable_no_live_rollback_rehearsal_preparation",
+    "businessAccepted": false
+  },
+  "claimBoundary": "Rollback rehearsal checklist and safety-stop classification only; not actual rollback rehearsal, operator acceptance, final owner GO/NO-GO/PENDING, fullflow success, production ORCA readiness, S3/object-storage readiness, or final release readiness.",
+  "blockers": [
+    "non-production rehearsal target not named",
+    "paired rollback target commit or artifact not selected",
+    "target-specific stop/start commands not selected",
+    "restored-target smoke not executed",
+    "explicit owner GO/NO-GO/PENDING text absent"
+  ],
+  "recommendedNextTask": "Select a concrete non-production rollback rehearsal target and paired restore artifact/commit, or continue independent no-live roadmap work until that input exists.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false
+}

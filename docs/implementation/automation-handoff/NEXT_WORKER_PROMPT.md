@@ -1,189 +1,64 @@
 # NEXT_WORKER_PROMPT
 
 status: active
-created_at: 2026-04-27T05:18:55Z
-source_work_order: RWO-11/RWO-09
-blocker_id: rwo11-rwo09-owner-authorized-automation-progression
-priority: high
+created_at: 2026-04-27T05:33:12Z
+source_work_order: RWO-06H
+blocker_id: rwo06h-injectable-row-proof-needs-changed-candidate
+priority: normal
 supersedes:
-- rollback-rehearsal-or-final-owner-go-pending
-- final-owner-go-or-operator-rollback-rehearsal-pending
-
-## Automation Scope Override
-
-Owner direction recorded on 2026-04-27T05:18:55Z: `RWO-11/RWO-09` rollback rehearsal preparation, safe sanitized rehearsal execution, operator-acceptance evidence capture, and explicit final owner GO/NO-GO/PENDING decision recording are now assigned to this automation so subsequent workers can proceed.
-
-Select `RWO-11/RWO-09` when the next action can be completed inside the Trial-backed, non-S3, non-production scope with sanitized evidence only. Stop or skip with evidence if the next step would require production infrastructure, production ORCA, S3/object-storage, raw artifacts, credentials, ambiguous rollback target/commands, or a final owner decision that has not been explicitly supplied.
+- rwo11-rwo09-owner-authorized-automation-progression
+- rwo11-rwo09-rollback-target-ambiguity-continue-independent-work
 
 ## Context
 
-RUN_ID `20260425T182930Z` classified the active rollback/owner-decision handoff.
+RUN_ID `20260427T053312Z` completed the owner-authorized `RWO-11/RWO-09` preparation step:
 
-RUN_ID `20260425T191429Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, left this blocker pending, and advanced independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `7670a304a703a39a14c811dd03a9200c2487302f`.
+- rollback rehearsal checklist: `docs/implementation/rwo11-rwo09-rollback-rehearsal-plan-20260427T053312Z/rollback-rehearsal-checklist.sanitized.md`
+- rollback summary: `docs/implementation/rwo11-rwo09-rollback-rehearsal-plan-20260427T053312Z/summary.sanitized.json`
+- rollback report: `docs/implementation/rwo11-rwo09-rollback-rehearsal-plan-20260427T053312Z/FINAL_REPORT.md`
 
-RUN_ID `20260425T204432Z` again found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, did not reclassify the existing rollback blocker, and refreshed the independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `86c2d18b9d56dbfdd15937de5845f04f81402c53`.
+The actual rollback rehearsal remains stopped as `blocked_safety_stop_target_ambiguity`. Do not retry it unless new explicit input names a non-production rehearsal target, paired `web-client` / `server-modernized` restore commit or artifact, target-specific commands, restored-target smoke path, and operator/owner evidence. Do not infer final owner `GO` / `NO-GO` / `PENDING`.
 
-RUN_ID `20260425T215740Z` was an external research-only worker result later intaken at HEAD `ed3999aa5`: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md`. It is source-backed no-live research only, not live acceptance evidence. It may be used by future automation to prepare independent non-live order-family candidate/contract work if rollback/final owner input remains absent.
+The same run also completed current-head `RWO-09` non-S3 static/package/security refresh:
 
-RUN_ID `20260426T112213Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input and advanced independent no-live RWO-06H work. It added focused injection v2 row-role/code-shape contract coverage plus a safe wrapper dry-run for `injectionOrder/310` payload SHA `1af0b23246e8f9ee79879b28a09888ecc719ec8f6381e2b798cd63fa020e3300`; no live Trial request was executed.
+- static summary: `docs/implementation/rwo09-non-s3-static-refresh-20260427T053312Z/summary.sanitized.json`
+- static report: `docs/implementation/rwo09-non-s3-static-refresh-20260427T053312Z/FINAL_REPORT.md`
 
-RUN_ID `20260426T124656Z` intook a sanitized external ChatGPT ORCA-spec report as automation evidence: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/orca-trial-remaining-spec-intake-20260426T124656Z.md`. It records no-live priority, operation mappings, official URL pointers, and live stop conditions. It is documentation-only evidence and does not authorize live Trial execution by itself.
-
-RUN_ID `20260426T132941Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input and advanced independent no-live RWO-06H work. It added a sanitized injection v2 master-validity preflight plan requiring read-only `medicationgetv2` / `masterlastupdatev3` checks for the procedure, medication, material, and comment rows before any live Trial attempt; no runtime master lookup and no live Trial request was executed.
-
-RUN_ID `20260426T145500Z` updated the automation handoff document set with an executable-queue throughput policy. `HANDOFF_STATE.json.nextExecutableQueue` is now the machine-readable next-task list. If this human-pending rollback/owner blocker has no new explicit input, workers should carry it forward without reclassification and immediately continue to the first safe non-human queue item.
-
-RUN_ID `20260426T140206Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input and advanced the executable queue. It added a sanitized read-only Trial wrapper for `RWO-06H` injection master validity, ran one read-only `medicationgetv2` / `masterlastupdatev3` pass, and stopped before live because medication code `620000012` was not validated (`2xx` / `other_present` / `masterFound=false`). The same run prepared the `RWO-06G` no-live `acceptmodv2` `Request_Number=00` first-visit compatibility plan. No live Trial mutation was executed.
-
-RUN_ID `20260426T170241Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, left this blocker pending, and refreshed independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `9a35c5c0ff312bf9fc78c7dd252ac9a936d36203`. No live Trial mutation, diagnostic artifact capture, production ORCA, or S3/object-storage setup was executed.
-
-RUN_ID `20260426T180208Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, left this blocker pending, and refreshed independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `6d3e319b915d3a0976e13015bda046028dc6d66c`. No live Trial mutation, diagnostic artifact capture, production ORCA, or S3/object-storage setup was executed.
-
-RUN_ID `20260426T190239Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, left this blocker pending, and refreshed independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `faa53ec28e893dff6606030d7d99a2399c6f63a2`. No live Trial mutation, diagnostic artifact capture, production ORCA, or S3/object-storage setup was executed.
-
-RUN_ID `20260426T200210Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, left this blocker pending, and refreshed independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `1ee2778ff39dfba640ac174a8fb0a0dc4d7311ae`. No live Trial mutation, diagnostic artifact capture, production ORCA, or S3/object-storage setup was executed.
-
-RUN_ID `20260426T210142Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, left this blocker pending, and refreshed independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `3980669ce40d6c64e3315f15eb1665ac8e1412e7`. No live Trial mutation, diagnostic artifact capture, production ORCA, or S3/object-storage setup was executed.
-
-RUN_ID `20260426T212101Z` intook the user-supplied ORCA Trial Specification Research Report as sanitized secondary research: `docs/implementation/orca-spec-research-intake-20260426T212101Z/README.md`. It is not live acceptance evidence and does not authorize live execution. It updates no-live priorities: `RWO-06H` must prove an injectable medication row with `medicationgetv2 Request_Number=02` and must not retry oral-tablet code `620000012`; `RWO-06G` must repair/tighten `acceptmodv2 Request_Number=00` parsing so active acceptance plus consultation-fee/first-visit-compatible fields are required; `RWO-08B` must use a fresh target with unique active acceptance, no duplicate, and server-derived official identifiers before any diagnostic fullflow retry.
-
-RUN_ID `20260426T223215Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input and advanced the executable queue. It added a read-only candidate override guard for `RWO-06H` so unchanged `620000012` cannot be reused as injectable evidence, checked candidate medication codes `620076111` and `620007539` with `medicationgetv2 Request_Number=02`, and stopped before live because both returned sanitized `2xx` / `other_present` / `masterFound=false`. The same run hardened `RWO-06G` `acceptmodv2 Request_Number=00` parsing so `apiResult=60`, HTTP 2xx, patient-info-only, or active acceptance without consultation-fee/first-visit fields fail closed. `RWO-08B` was skipped without diagnostic fullflow because no fresh target or server-derived official identifier precondition was available without live mutation/raw artifacts.
-
-RUN_ID `20260426T231411Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input and advanced `RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE`. It checked eight additional source-backed injectable medication candidates (`620006203`, `620004173`, `620002589`, `621958501`, `620006734`, `620767312`, `620738012`, `621429304`) with sanitized read-only `medicationgetv2 Request_Number=02`; all returned sanitized `2xx` / `other_present` / `masterFound=false`, so injection live remains stopped. No live Trial mutation, diagnostic artifact capture, production ORCA, or S3/object-storage setup was executed.
-
-RUN_ID `20260426T233244Z` found no new owner/operator rollback rehearsal evidence or final GO/NO-GO/PENDING input, left this blocker pending, and refreshed independent non-live RWO-09/RWO-11 static/package/security checks at current HEAD `3f3a42e72ac0a3c7fc29d9526ccb7250e76f5a11`. No live Trial mutation, diagnostic artifact capture, production ORCA, or S3/object-storage setup was executed.
-
-The same RUN_ID `20260426T233244Z` then advanced independent no-live `RWO-06K` work. It added changed `radiologyOrder/700` v3 payload `web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v3.json` with SHA-256 `144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a`, including body-part comment code `820181000`, and verified the safe wrapper dry-run plus focused contract tests. No live Trial mutation was executed.
-
-RUN_ID `20260427T000309Z` advanced independent no-live `RWO-06K` manifest/packet hygiene. It registered that changed radiology v3 payload in `web-client/qa/payloads/phase4/manifest.phase4-orca-trial-dummy-json-v1.json`, reran the safe wrapper dry-run into sanitized evidence, and reran focused `phase4Medicalmodv2SafeEvidence` tests. No live Trial mutation was executed.
-
-RUN_ID `20260427T043310Z` advanced independent no-live `RWO-07` work. It extended the existing artifact-safe `acceptmodv2` operation wrapper/parser contract to Request_Number `03` and `04`; dry-runs for both request numbers and focused contract tests passed. No live Trial mutation was executed.
-
-RUN_ID `20260427T050314Z` found `RWO-11/RWO-09` still external to automation scope and advanced independent non-live `RWO-09` work. It refreshed current-head non-S3 static/package/security checks at HEAD `6d98d0fd5ee513120baf916c2248ced68fd83a00`; web guard, doc links, reviewer packet contract tests, review package contract tests, server config/runtime/persistence/generated-artifact guards, runtime lookup/facility greps, and `git diff --check` passed. No live Trial mutation, diagnostic artifact capture, production ORCA, or S3/object-storage setup was executed.
-
-RUN_ID `20260427T051855Z` records the owner's explicit reassignment of `RWO-11/RWO-09` to automation. Future workers should no longer skip this task solely because it is rollback/operator/final-decision work. They must still preserve strict non-production, non-S3, sanitized-evidence, no-raw-artifact, no-credential, and explicit-owner-decision boundaries.
-
-Sanitized evidence:
-
-- `docs/implementation/rwo11-rollback-owner-pending-20260425T182930Z/FINAL_REPORT.md`
-- `docs/implementation/rwo11-rollback-owner-pending-20260425T182930Z/summary.sanitized.json`
-- `artifacts/orca-remediation/closeout/20260425T182930Z/`
-- `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md`
-- `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/orca-trial-remaining-spec-intake-20260426T124656Z.md`
-- `docs/implementation/rwo06h-injection-v2-contract-preflight-20260426T112213Z/FINAL_REPORT.md`
-- `docs/implementation/rwo06h-injection-v2-contract-preflight-20260426T112213Z/summary.sanitized.json`
-- `docs/implementation/rwo06h-injection-master-validity-preflight-20260426T132941Z/FINAL_REPORT.md`
-- `docs/implementation/rwo06h-injection-master-validity-preflight-20260426T132941Z/summary.sanitized.json`
-- `docs/implementation/automation-handoff/AUTOMATION_THROUGHPUT_POLICY.md`
-- `docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/FINAL_REPORT.md`
-- `docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/summary.sanitized.json`
-- `docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/base-charge-first-visit-plan.sanitized.json`
-- `docs/implementation/rwo06g-base-charge-first-visit-readonly-20260426T150137Z/FINAL_REPORT.md`
-- `docs/implementation/rwo06g-base-charge-first-visit-readonly-20260426T150137Z/summary.sanitized.json`
-- `docs/implementation/rwo07-operation-matrix-hardening-20260426T150137Z/OPERATION_MATRIX_HARDENING.md`
-- `docs/implementation/rwo07-operation-matrix-hardening-20260426T150137Z/summary.sanitized.json`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T160138Z/FINAL_REPORT.md`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T160138Z/summary.sanitized.json`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T170241Z/FINAL_REPORT.md`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T170241Z/summary.sanitized.json`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T180208Z/FINAL_REPORT.md`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T180208Z/summary.sanitized.json`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T190239Z/FINAL_REPORT.md`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T190239Z/summary.sanitized.json`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T200210Z/FINAL_REPORT.md`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T200210Z/summary.sanitized.json`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T210142Z/FINAL_REPORT.md`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T210142Z/summary.sanitized.json`
-- `docs/implementation/orca-spec-research-intake-20260426T212101Z/README.md`
-- `docs/implementation/orca-spec-research-intake-20260426T212101Z/summary.sanitized.json`
-- `docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/FINAL_REPORT.md`
-- `docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/summary.sanitized.json`
-- `docs/implementation/rwo06h-injectable-candidate-discovery-20260426T231411Z/FINAL_REPORT.md`
-- `docs/implementation/rwo06h-injectable-candidate-discovery-20260426T231411Z/summary.sanitized.json`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T233244Z/FINAL_REPORT.md`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260426T233244Z/summary.sanitized.json`
-- `docs/implementation/rwo06k-radiology-v3-no-live-20260426T233244Z/FINAL_REPORT.md`
-- `docs/implementation/rwo06k-radiology-v3-no-live-20260426T233244Z/summary.sanitized.json`
-- `docs/implementation/rwo06k-radiology-v3-manifest-packet-20260427T000309Z/FINAL_REPORT.md`
-- `docs/implementation/rwo06k-radiology-v3-manifest-packet-20260427T000309Z/summary.sanitized.json`
-- `docs/implementation/rwo07-acceptmodv2-rn03-rn04-wrapper-contract-20260427T043310Z/FINAL_REPORT.md`
-- `docs/implementation/rwo07-acceptmodv2-rn03-rn04-wrapper-contract-20260427T043310Z/summary.sanitized.json`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260427T050314Z/FINAL_REPORT.md`
-- `docs/implementation/rwo09-non-s3-static-refresh-20260427T050314Z/summary.sanitized.json`
-- `docs/implementation/rwo11-rwo09-owner-automation-authorization-20260427T051855Z/FINAL_REPORT.md`
-- `docs/implementation/rwo11-rwo09-owner-automation-authorization-20260427T051855Z/summary.sanitized.json`
-
-Current result:
-
-- Current branch/head: `master` / `2ad0c42e`
-- Accepted reviewer packet source freeze: `master` / `b103e49ee06d1c1043c066a097f7c62408c32263`
-- Reviewer packet: `artifacts/reviewer-submission-packets/submission-packet-20260425T174429Z.zip`
-- Packet sha256: `415b1fb493632176b44d5d38cc02c8f95c6783de392e491082803542d201529a`
-- Checks passed in the classifier run: reviewer packet contract tests (7), `check-doc-links`, and `web-client verify:web-guard`.
-- Rollback rehearsal was previously classified as `pending_human_operator_decision`, but owner direction on 2026-04-27T05:18:55Z now permits automation to prepare or run safe sanitized non-production rehearsal/operator evidence where target and commands are clear.
-- No live Trial mutation, production ORCA, S3/MinIO/object-storage setup, diagnostic artifact capture, raw artifact packaging, actual rollback rehearsal, owner final GO, or final release readiness is claimed.
-- Latest independent non-live refresh evidence: `docs/implementation/rwo09-non-s3-static-refresh-20260426T233244Z/FINAL_REPORT.md` and `docs/implementation/rwo09-non-s3-static-refresh-20260426T233244Z/summary.sanitized.json`.
-- Latest order-family research evidence: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/order-family-v2-candidate-research-20260425T215740Z.md`. Recommended no-live priority is `injectionOrder/310` `130000510`, then `baseChargeOrder/110` `111000110`, then `instractionChargeOrder/130` `113001810`; `radiologyOrder/700`, `surgeryOrder/500`, and `testOrder/600` require changed identities or changed preconditions before any live retry.
-- Latest remaining ORCA-spec intake: `docs/implementation/clinical-functional-release-readiness-roadmap-20260422/orca-trial-remaining-spec-intake-20260426T124656Z.md`. It adds `medicationgetv2` / `masterlastupdatev3` read-only master-validity guidance for injection, `acceptmodv2` `Request_Number=00` first-visit inquiry guidance for base-charge, wrapper/no-live stop conditions for `subjectivesv2` and `diseasev3`, and RWO-07 operation mapping.
-- Latest injection master-validity read-only attempt: `docs/implementation/rwo06h-injection-master-validity-readonly-20260426T140206Z/FINAL_REPORT.md`. `masterlastupdatev3` returned sanitized `2xx` / `success_zero` for procedure/material/comment, but `medicationgetv2` for medication `620000012` returned sanitized `2xx` / `other_present` and `masterFound=false`; injection live remains stopped until changed evidence or a changed candidate identity exists.
-- Latest base-charge first-visit read-only attempt: `docs/implementation/rwo06g-base-charge-first-visit-readonly-20260426T150137Z/FINAL_REPORT.md`. The read-only `acceptmodv2` `Request_Number=00` check returned sanitized `2xx` / `nonzero_numeric` / `not_verified_or_not_first_visit_compatible`; baseChargeOrder/110 live remains stopped until changed first-visit evidence or a changed candidate/precondition exists.
-- Latest ORCA spec research intake: `docs/implementation/orca-spec-research-intake-20260426T212101Z/README.md`. Treat it as no-live/read-only guidance only. Next priority is injection row-level proof for an injectable candidate using `medicationgetv2 Request_Number=02`; `masterlastupdatev3` is not row-level proof, `620000012` must not be retried unchanged as injection, base-charge RN00 evidence must include active acceptance plus consultation-fee/first-visit-compatible fields, and RWO-08B fullflow must not repeat `00001`/`00005` unchanged or synthesize official identifiers.
-- Latest RWO-06H injectable candidate discovery: `docs/implementation/rwo06h-injectable-candidate-discovery-20260426T231411Z/FINAL_REPORT.md`. Eight additional source-backed injectable medication candidates did not produce row-level `medicationgetv2 Request_Number=02` proof; injection live remains stopped until a different candidate or changed precondition yields `masterFound=true`.
-- Latest RWO-06K radiology changed-identity no-live preflight: `docs/implementation/rwo06k-radiology-v3-no-live-20260426T233244Z/FINAL_REPORT.md`. Changed v3 payload `144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a` passed safe wrapper dry-run and focused contract tests only; radiology live remains stopped until runtime readiness, duplicate checkpoint decision, endpoint-specific success criteria, stop conditions, and sanitized preflight packet are recorded. Do not repeat prior v1/v2 radiology identities unchanged.
-- Latest RWO-06K radiology v3 manifest packet refresh: `docs/implementation/rwo06k-radiology-v3-manifest-packet-20260427T000309Z/FINAL_REPORT.md`. The v3 identity is now recorded in the phase4 payload manifest and revalidated no-live; this still does not authorize live Trial mutation.
-- Latest RWO-06H/RWO-06G/RWO-08B queue result: `docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/FINAL_REPORT.md`. `620076111` and `620007539` did not produce row-level injectable medication proof; injection live remains stopped. `acceptmodv2 Request_Number=00` parser/preflight is hardened; base-charge live remains stopped until active acceptance plus consultation-fee/first-visit fields are proven. RWO-08B remains blocked until a fresh target and server-derived official identifiers are proven without raw artifacts.
-- Latest RWO-07 operation wrapper hardening: `docs/implementation/rwo07-acceptmodv2-rn03-rn04-wrapper-contract-20260427T043310Z/FINAL_REPORT.md`. `Request_Number=02`, `03`, and `04` now have no-live wrapper/parser contracts; live remains stopped until request-specific active acceptance, server-derived identifiers/fields, duplicate checkpoint, runtime readiness, and sanitized preflight evidence exist.
-- Latest independent non-live refresh evidence: `docs/implementation/rwo09-non-s3-static-refresh-20260427T050314Z/FINAL_REPORT.md` and `docs/implementation/rwo09-non-s3-static-refresh-20260427T050314Z/summary.sanitized.json`.
-- Latest RWO-11/RWO-09 owner authorization: `docs/implementation/rwo11-rwo09-owner-automation-authorization-20260427T051855Z/FINAL_REPORT.md` and `docs/implementation/rwo11-rwo09-owner-automation-authorization-20260427T051855Z/summary.sanitized.json`. Next workers may select RWO-11/RWO-09 under the stated non-production, non-S3, sanitized-evidence boundaries.
-- Latest throughput policy: `docs/implementation/automation-handoff/AUTOMATION_THROUGHPUT_POLICY.md`. `HANDOFF_STATE.json.nextExecutableQueue` now makes `RWO-11_ROLLBACK_OWNER_DECISION` a queued critical-path item after the 2026-04-27T05:18:55Z owner reassignment. The next worker should select it when a safe sanitized rollback/operator-evidence step is available. Do not run injection, baseChargeOrder/110, diagnostic fullflow, or RWO-07 live operations without their own complete endpoint-specific preconditions.
+No live Trial mutation, diagnostic artifact capture, production ORCA, S3/object-storage setup, rollback rehearsal execution, owner final decision, or final release readiness is claimed.
 
 ## Goal
 
-Advance `RWO-11/RWO-09` under the new owner authorization. First create or execute the next safe sanitized rollback rehearsal/operator-acceptance step using documented non-production targets and existing scripts/runbooks. If explicit owner GO/NO-GO/PENDING text is supplied, record it. If the rollback target/commands are ambiguous or would require production/S3/raw artifacts/credentials, write a sanitized blocker and then continue to the next safe independent roadmap item.
+Continue independent no-live endpoint precondition work. The next useful path is `RWO-06H` injectable row-proof discovery only if a changed, source-backed injectable medication candidate or changed precondition exists. If no changed candidate/precondition exists, safely skip with evidence and continue to the next independent no-live queue item.
 
 ## Required First Steps
 
 1. Inspect current branch, HEAD, status, and worktrees.
-2. Read `$CODEX_HOME/automations/orca/memory.md`, `HANDOFF_STATE.json`, this prompt, roadmap docs, and RUN_ID `20260425T182930Z` sanitized evidence.
-3. Confirm no unrelated uncommitted changes would be overwritten.
-4. Treat `RWO-11/RWO-09` as automation-selectable under the 2026-04-27T05:18:55Z owner reassignment. Inspect documented rollback/release-validation commands and determine whether a safe non-production sanitized rehearsal/evidence step can run.
+2. Read `$CODEX_HOME/automations/orca/memory.md`, `HANDOFF_STATE.json`, this prompt, and the latest RWO-06H evidence.
+3. Confirm the prior rejected/invalid candidates are not reused unchanged as success evidence: `620000012`, `620076111`, `620007539`, `620006203`, `620004173`, `620002589`, `621958501`, `620006734`, `620767312`, `620738012`, `621429304`.
+4. If endpoint semantics or candidate validity are unclear, perform ORCA official-source research first and record sanitized no-live evidence.
 
 ## Allowed Actions
 
-- Select and advance `RWO-11/RWO-09` rollback preparation, safe sanitized non-production rehearsal, operator-acceptance evidence capture, or explicit owner decision recording when the next step is clear and safe.
-- Continue to independent non-live static/package/security checks only after completing or safely skipping the current `RWO-11/RWO-09` step.
-- Continue to independent non-live order-family candidate preparation using `order-family-v2-candidate-research-20260425T215740Z.md`. This is limited to payload identity drafting, parser/sanitizer tests, wrapper dry-runs, duplicate checkpoint checks, and claim-boundary updates; it is not approval to run live Trial.
-- Continue to ORCA official specification research when endpoint semantics, request numbers, class codes, row ordering, master lookup behavior, or business success criteria are unclear. Prefer `orca.med.or.jp` official API pages and record sanitized no-live research evidence only.
-- Process `HANDOFF_STATE.json.nextExecutableQueue` and complete or skip multiple independent no-live/read-only items in the same run when safe.
+- Source-backed no-live candidate research for an injectable medication row.
+- Sanitized read-only `medicationgetv2 Request_Number=02` row-proof checks when runtime is available and the wrapper/evidence mode is safe.
+- Parser/sanitizer tests, wrapper dry-runs, duplicate checkpoint checks, and claim-boundary updates.
+- Current-head static/package/security checks only if source/docs changed and focused verification is needed.
 
 ## Forbidden Actions
 
-- Production ORCA execution or production readiness claims.
-- Production release stop/restore/smoke, production rollback, production deployment changes, or any action that affects production infrastructure.
-- Inferring owner GO/NO-GO/PENDING from silence or from static evidence; record final decision only from explicit owner-provided text/evidence.
-- Running rollback rehearsal when the target, commands, restored-target smoke, or stop conditions are ambiguous.
-- S3/MinIO/object-storage setup, dummy storage, fake object-storage credentials, or storage readiness claims.
-- Printing, requesting, committing, or packaging credentials, cookies, session IDs, auth headers, anti-forgery values, credential-bearing URLs, raw ORCA bodies, raw patient details, raw insurance details, screenshots, HAR, traces, videos, raw network dumps, request XML, or raw request/response bodies.
-- Running live Trial mutation as a substitute for rollback/owner-decision readiness.
-- Running live Trial mutation from order-family research or ORCA official specification research without a later endpoint-specific no-live verification record, sanitized preflight, duplicate-live checkpoint, and applicable approval scope.
-- Repeating diagnostic fullflow for candidates `00001` or `00005` unchanged.
-- Broad refactors or changes under legacy `client/` or `server/`.
+- Live Trial mutation without a complete endpoint packet and current sanitized preflight.
+- Reusing prior rejected candidates unchanged as injectable acceptance evidence.
+- Production ORCA, production readiness claims, S3/MinIO/object-storage setup, or storage readiness claims.
+- Credentials, cookies, sessions, Authorization headers, CSRF values, credential-bearing URLs, raw ORCA bodies, raw patient/insurance detail, screenshots, HAR, traces, videos, raw network dumps, request XML, or raw request/response bodies in committed evidence or packages.
+- Re-running `RWO-11/RWO-09` rollback execution while target/restore identity remains ambiguous.
 
 ## Evidence Requirements
 
 - Sanitized Markdown/JSON only.
-- Record branch/HEAD, current accepted reviewer packet identity when relevant, ORCA official source URLs checked when research is performed, and claim boundaries.
+- Record candidate source, checked date, request number, sanitized result classification, claim boundary, and stop condition.
 - `credentialsCaptured=false`.
 - `rawArtifactsCommittedOrPackaged=false`.
 
 ## Completion Criteria
 
-This prompt is complete when either:
-
-- rollback rehearsal / stop-policy evidence is refreshed through a safe sanitized repo-local path and matrices/handoff are updated; or
-- final owner GO/NO-GO/PENDING is recorded from explicit owner evidence; or
-- a sanitized blocker records exactly why no safe RWO-11/RWO-09 action can proceed, then the run advances another independent safe Work Order.
-
-## Final Report Requirements
-
-Use `【ワーカー報告】` and include branch/HEAD, active prompt, current Work Order, next Work Order, files changed, commit id, tests/checks, diagnostic artifact handling, live Trial endpoint/target/request class if used, sanitized business-success classification, blockers, recommended next action, credentials captured, and raw artifacts committed/packaged.
+This prompt is complete when a changed RWO-06H candidate/precondition is proven or safely skipped with sanitized evidence, handoff state is updated, relevant checks pass, and roadmap-scoped changes are committed.

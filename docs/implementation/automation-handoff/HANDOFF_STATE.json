@@ -1,8 +1,8 @@
 {
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-11/RWO-09",
-  "blockerId": "rwo11-rwo09-owner-authorized-automation-progression",
+  "sourceWorkOrder": "RWO-06H",
+  "blockerId": "rwo06h-injectable-row-proof-needs-changed-candidate",
   "priority": "normal",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T05:18:55Z",
+  "lastUpdated": "2026-04-27T05:33:12Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "automation_reassigned_by_owner_20260427T051855Z",
     "automationMustNot": [
@@ -4690,39 +4690,37 @@
     "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo09NonS3StaticRefresh": {
-    "runId": "20260427T050314Z",
-    "workOrder": "RWO-09/RWO-11",
-    "result": "RWO09_NON_S3_STATIC_REFRESH_PASS",
+    "runId": "20260427T053312Z",
+    "workOrder": "RWO-09",
+    "result": "RWO09_CURRENT_HEAD_NON_S3_STATIC_PACKAGE_SECURITY_REFRESH_PASS",
     "branch": "master",
-    "head": "6d98d0fd5ee513120baf916c2248ced68fd83a00",
-    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260427T050314Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260427T050314Z/summary.sanitized.json",
+    "headAtSelection": "c53c73638442894c267410b813f008d588422afe",
+    "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260427T053312Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-non-s3-static-refresh-20260427T053312Z/summary.sanitized.json",
     "checks": {
-      "webGuard": "pass",
+      "jsonParse": "pass",
+      "reviewerPacketContractTests": "pass_7_tests",
       "serverDocLinks": "pass",
-      "reviewerSubmissionPacketContractTests": "pass_7_tests",
-      "reviewPackageContractTests": "pass_25_tests",
+      "webGuard": "pass",
       "serverConfigContract": "pass",
       "serverNoDirectRuntimeLookup": "pass",
       "serverNoRuntimeDdl": "pass",
       "serverPersistenceEntities": "pass",
       "serverNoGeneratedArtifacts": "pass",
-      "serverRuntimeLookupGrep": "pass_only_server_configuration_resolver_configprovider_lookup",
-      "serverFacilityIdGrep": "pass_0_hits",
+      "runtimeLookupGrep": "pass_expected_single_configprovider",
+      "facilityIdGrep": "pass_zero_hits",
       "gitDiffCheck": "pass"
     },
     "liveTrialOrca": {
       "executed": false,
-      "businessSuccessClassification": "not_applicable_static_non_live_refresh",
+      "businessSuccessClassification": "not_applicable_non_s3_static_refresh",
       "businessAccepted": false
     },
-    "claimBoundary": "Current-HEAD non-S3 static/package/security refresh only; no live Trial business success in this run, L4 fullflow, Request_Number 02/03/04 Trial success, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
-    "recommendedNextTask": "Continue independent non-live endpoint contract/precondition work; safe next candidates include RWO-06H injectable row-proof discovery with a changed candidate/precondition, RWO-06G base-charge first-visit readiness, RWO-08B fresh-target/server-derived-identifier preflight, or a live-preflight packet for RWO-07 operations only after all request-specific preconditions are proven.",
+    "claimBoundary": "Current-head non-S3 static/package/security refresh only; not rollback rehearsal, owner final GO/NO-GO/PENDING, live Trial business success, fullflow, production ORCA, S3/object-storage, or final release readiness.",
+    "recommendedNextTask": "Continue independent no-live endpoint preconditions with changed preconditions/candidates.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
-    "rawArtifactsCommittedOrPackaged": false,
-    "productionOrcaAttempted": false,
-    "s3ObjectStorageUsed": false
+    "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo06KRadiologyV3NoLive": {
     "runId": "20260426T233244Z",
@@ -5201,7 +5199,7 @@
     {
       "taskId": "RWO-11_ROLLBACK_OWNER_DECISION",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "blocked_safety_stop",
       "workOrder": "RWO-11/RWO-09",
       "summary": "Owner-authorized automation task: prepare or execute safe sanitized rollback rehearsal/operator evidence, or record explicit owner final decision.",
       "requiresRuntime": false,
@@ -5211,8 +5209,30 @@
       "safeToBatchWithNoLiveTasks": false,
       "skipCondition": "skip only if safe non-production rollback target/commands are ambiguous, production infrastructure would be required, raw artifacts or credentials would be needed, or explicit owner decision text is absent for decision recording",
       "successCriteria": "sanitized rollback/operator evidence or explicit owner GO/NO-GO/PENDING record exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false",
-      "nextOnSuccess": "RWO-06H_READONLY_MASTER_VALIDITY",
-      "nextOnSkip": "RWO-06H_READONLY_MASTER_VALIDITY"
+      "nextOnSuccess": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
+      "nextOnSkip": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
+      "result": "rollback_rehearsal_plan_ready_execution_blocked_target_ambiguity",
+      "completedRunId": "20260427T053312Z",
+      "evidence": "docs/implementation/rwo11-rwo09-rollback-rehearsal-plan-20260427T053312Z/summary.sanitized.json"
+    },
+    {
+      "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD",
+      "lane": "parallel_no_live",
+      "status": "completed",
+      "workOrder": "RWO-09",
+      "summary": "Refresh current-head non-S3 static/package/security checks after rollback rehearsal planning safety stop.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "skipCondition": "repo state unsafe or focused static/package/security checks unavailable",
+      "successCriteria": "current-head non-S3 static/package/security evidence exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false",
+      "nextOnSuccess": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
+      "nextOnSkip": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
+      "result": "current_head_non_s3_static_package_security_refresh_pass",
+      "completedRunId": "20260427T053312Z",
+      "evidence": "docs/implementation/rwo09-non-s3-static-refresh-20260427T053312Z/summary.sanitized.json"
     }
   ],
   "latestRwo06HInjectionMasterValidityReadonly": {
@@ -5659,5 +5679,41 @@
     "rawArtifactsCommittedOrPackaged": false,
     "productionOrcaAttempted": false,
     "s3ObjectStorageUsed": false
+  },
+  "latestRwo11Rwo09RollbackRehearsalPlan": {
+    "runId": "20260427T053312Z",
+    "workOrder": "RWO-11/RWO-09",
+    "result": "RWO11_RWO09_ROLLBACK_REHEARSAL_PLAN_READY_EXECUTION_BLOCKED_TARGET_AMBIGUITY",
+    "branch": "master",
+    "headAtSelection": "c53c73638442894c267410b813f008d588422afe",
+    "evidence": "docs/implementation/rwo11-rwo09-rollback-rehearsal-plan-20260427T053312Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo11-rwo09-rollback-rehearsal-plan-20260427T053312Z/summary.sanitized.json",
+    "checklist": "docs/implementation/rwo11-rwo09-rollback-rehearsal-plan-20260427T053312Z/rollback-rehearsal-checklist.sanitized.md",
+    "rollbackRehearsal": {
+      "planPrepared": true,
+      "executed": false,
+      "classification": "blocked_safety_stop_target_ambiguity",
+      "requiredMissingInputs": [
+        "named_non_production_rehearsal_target",
+        "paired_web_client_server_modernized_restore_commit_or_artifact",
+        "target_specific_stop_start_commands",
+        "restored_target_smoke_path",
+        "explicit_operator_owner_acceptance_evidence"
+      ]
+    },
+    "ownerDecision": {
+      "explicitDecisionSupplied": false,
+      "decisionRecorded": false
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_rollback_rehearsal_preparation",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Rollback checklist and target-ambiguity safety-stop only; not actual rollback rehearsal, operator acceptance, final owner GO/NO-GO/PENDING, fullflow success, production ORCA, S3/object-storage, or final release readiness.",
+    "recommendedNextTask": "Continue independent no-live roadmap work until a concrete non-production rollback target and paired restore identity are supplied.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
   }
 }
