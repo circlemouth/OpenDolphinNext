@@ -513,8 +513,13 @@ final class OrcaChartSupportSupport {
             response.setOk(false);
             response.setApiOk(false);
             response.setBusinessAccepted(false);
-            response.setResponseClassification("parserAmbiguous");
-            response.setError("parser_error");
+            if (response.getStatus() < 200 || response.getStatus() >= 300) {
+                response.setResponseClassification("transportRejected");
+                response.setError("transport_error");
+            } else {
+                response.setResponseClassification("parserAmbiguous");
+                response.setError("parser_error");
+            }
         }
         return response;
     }

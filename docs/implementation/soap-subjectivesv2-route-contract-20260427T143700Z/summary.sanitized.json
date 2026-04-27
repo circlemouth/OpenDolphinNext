@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T143700Z",
+  "result": "SOAP_SUBJECTIVESV2_ROUTE_CONTRACT_COMPLETED_NO_LIVE",
+  "branch": "master",
+  "headAtSelection": "d7cc752973060d9ec0f2c941b706d837296913fe",
+  "workOrder": "SOAP-SUBJECTIVESV2",
+  "taskId": "SOAP_SUBJECTIVESV2_ROUTE_CONTRACT",
+  "endpointContract": {
+    "workflow": "subjectivesv2",
+    "orcaEndpoint": "/orca25/subjectivesv2",
+    "officialServerRoute": "/api/orca/official/chart-support/subjectives-mod-v2",
+    "localProductRoute": "/api/local/charts/subjectives",
+    "method": "POST",
+    "requestClass": "class=01",
+    "serializer": "subjectivesmodreq XML without body Request_Number",
+    "responseRoot": "subjectivesmodres",
+    "successCriteria": {
+      "transport2xxRequired": true,
+      "apiResultZeroRequired": true,
+      "completionEvidenceRequired": true,
+      "http200AloneIsBusinessSuccess": false,
+      "apiResultZeroAloneIsBusinessSuccess": false
+    }
+  },
+  "changedContracts": [
+    "server-modernized/src/main/java/open/dolphin/rest/orca/OrcaChartSupportSupport.java",
+    "server-modernized/src/test/java/open/dolphin/rest/orca/OrcaChartSupportResourceTest.java",
+    "web-client/scripts/qa-lib/phase4-soap-disease-safe-evidence.mjs",
+    "web-client/scripts/__tests__/phase4SoapDiseaseSafeEvidence.test.ts"
+  ],
+  "transportFailureClassification": {
+    "http404": "transportRejected",
+    "http502": "transportRejected",
+    "businessRejected": false,
+    "businessAccepted": false,
+    "notes": "Non-2xx transport failures are not promoted to business rejection, business acceptance, or parser success."
+  },
+  "payloadIdentity": {
+    "payload": "web-client/qa/payloads/phase4/subjectivesv2_phase4_dummy_native_intent_v1.json",
+    "sha256": "9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308",
+    "duplicateLiveCheckpointKey": "rwo06b:subjectivesv2:rwo06b-subjectivesv2-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-9c90a3b0d731bce2b9e1280d01a5c61222bbd97126e3f9fc50aa6135842dc308"
+  },
+  "noLiveEvidence": {
+    "wrapperDryRun": "docs/implementation/soap-subjectivesv2-route-contract-20260427T143700Z/wrapper-dry-run/phase4-soap-disease-summary.sanitized.json",
+    "wrapperDryRunSha256": "3344f6bd083874461bd8b70839a4e9fcd085a6b834443415259923e9d0475df0",
+    "responseClassification": "notVerified",
+    "businessAccepted": false
+  },
+  "checks": {
+    "webClientFocused": "pass: npm run test:ci -- scripts/__tests__/phase4SoapDiseaseSafeEvidence.test.ts",
+    "apiContractInstall": "pass: mvn -f api-contract/pom.xml install -DskipTests",
+    "serverModernizedFocused": "pass: mvn -pl server-modernized -Dtest=OrcaChartSupportResourceTest test",
+    "initialServerFocusedAttempt": "blocked_until_api_contract_installed: root reactor does not include api-contract module"
+  },
+  "misuseCasesChecked": [
+    "HTTP 404/502 with zero-like Api_Result is classified as transportRejected, not businessRejected or businessAccepted.",
+    "A response JSON that claims businessAccepted cannot override non-2xx transport classification.",
+    "HTTP 200 plus Api_Result zero without completion evidence remains notVerified.",
+    "Raw XML, raw ORCA bodies, patient detail, insurance detail, credentials, cookies, sessions, screenshots, HAR, traces, and videos are not captured or committed."
+  ],
+  "liveTrialOrca": {
+    "executed": false,
+    "businessAccepted": false,
+    "businessSuccessClassification": "not_applicable_no_live_contract_only"
+  },
+  "claimBoundary": "SOAP subjectivesv2 route/parser/sanitizer/transport-failure contract only. No subjectivesv2 Trial business acceptance, diseasev3 Trial readiness, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Continue to DISEASEV3_ENDPOINT_SEMANTICS_CONTRACT before any diseasev3 live mutation.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

@@ -321,6 +321,24 @@ class OrcaChartSupportResourceTest {
     }
 
     @Test
+    void subjectivesModV2ClassifiesTransportFailureBeforeBusinessOrParserResult() {
+        CapturingTransport transport = new CapturingTransport(502, "Bad Gateway");
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+
+        ChartSupportSubjectivesModV2Response response = resource.subjectivesModV2(
+                buildRequest(),
+                newSubjectivesPayload());
+
+        assertEquals(OrcaEndpoint.SUBJECTIVES_MOD, transport.endpoint());
+        assertEquals("class=01", transport.query());
+        assertEquals(502, response.getStatus());
+        assertEquals("transportRejected", response.getResponseClassification());
+        assertTrue(!response.isBusinessAccepted());
+        assertEquals("transport_error", response.getError());
+    }
+
+    @Test
     void subjectivesModV2RejectsNonOutpatientInOutBeforeOfficialInvoke() {
         CapturingTransport transport = new CapturingTransport();
         OrcaChartSupportResource resource = new OrcaChartSupportResource();
@@ -463,6 +481,7 @@ class OrcaChartSupportResourceTest {
         private String requestXml;
         private String requestNumber;
         private final String responseXml;
+        private final int status;
         private final RuntimeException failure;
         private OrcaEndpoint endpoint;
         private String query;
@@ -483,12 +502,18 @@ class OrcaChartSupportResourceTest {
         }
 
         CapturingTransport(String responseXml) {
+            this(200, responseXml);
+        }
+
+        CapturingTransport(int status, String responseXml) {
             this.responseXml = responseXml;
+            this.status = status;
             this.failure = null;
         }
 
         CapturingTransport(RuntimeException failure) {
             this.responseXml = null;
+            this.status = 200;
             this.failure = failure;
         }
 
@@ -501,7 +526,7 @@ class OrcaChartSupportResourceTest {
             if (failure != null) {
                 throw failure;
             }
-            return OrcaTransportResult.fallback(responseXml, "application/xml");
+            return new OrcaTransportResult(null, "POST", status, responseXml, "application/xml", Map.of());
         }
 
         String requestXml() {

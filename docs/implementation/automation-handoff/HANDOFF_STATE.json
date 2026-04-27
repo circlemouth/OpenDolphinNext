@@ -1,5 +1,5 @@
 {
-  "status": "active",
+  "status": "completed",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "SOAP-SUBJECTIVESV2",
   "blockerId": "soap-subjectivesv2-route-contract",
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T14:06:28Z",
+  "lastUpdated": "2026-04-27T14:37:00Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5834,7 +5834,7 @@
     {
       "taskId": "SOAP_SUBJECTIVESV2_ROUTE_CONTRACT",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "SOAP-SUBJECTIVESV2",
       "summary": "Lock subjectivesv2 endpoint, method, serializer, parser, sanitizer, and 404/502 classification as repo-local no-live contract work.",
       "requiresRuntime": false,
@@ -5846,12 +5846,19 @@
       "skipCondition": "contract cannot be tested without raw artifacts, credentials, live mutation, production ORCA, or S3/object storage",
       "successCriteria": "repo-local no-live subjectivesv2 route/parser/sanitizer contract evidence exists and transport failures are not classified as business rejection",
       "nextOnSuccess": "DISEASEV3_ENDPOINT_SEMANTICS_CONTRACT",
-      "nextOnSkip": "DISEASEV3_ENDPOINT_SEMANTICS_CONTRACT"
+      "nextOnSkip": "DISEASEV3_ENDPOINT_SEMANTICS_CONTRACT",
+      "result": "soap_subjectivesv2_route_contract_completed_no_live",
+      "completedRunId": "20260427T143700Z",
+      "evidence": "docs/implementation/soap-subjectivesv2-route-contract-20260427T143700Z/summary.sanitized.json",
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      }
     },
     {
       "taskId": "DISEASEV3_ENDPOINT_SEMANTICS_CONTRACT",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "DISEASEV3",
       "summary": "Define diseasev3 Request_Number, success, warning, and unmatch-disease semantics from official sources before any live disease mutation.",
       "requiresRuntime": false,
@@ -5863,7 +5870,14 @@
       "skipCondition": "official/source-backed semantics cannot be established without live mutation, raw artifacts, credentials, production ORCA, or S3/object storage",
       "successCriteria": "sanitized no-live diseasev3 endpoint semantics contract exists",
       "nextOnSuccess": "DISEASEV3_READONLY_BASELINE",
-      "nextOnSkip": "ACCEPTMODV2_RN02_03_04_TARGET_INVENTORY"
+      "nextOnSkip": "ACCEPTMODV2_RN02_03_04_TARGET_INVENTORY",
+      "result": "diseasev3_endpoint_semantics_contract_researched_no_live",
+      "completedRunId": "20260427T143700Z",
+      "evidence": "docs/implementation/diseasev3-endpoint-semantics-contract-20260427T143700Z/summary.sanitized.json",
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      }
     },
     {
       "taskId": "DISEASEV3_READONLY_BASELINE",
@@ -7281,5 +7295,44 @@
     "recommendedNextTask": "Select SOAP_SUBJECTIVESV2_ROUTE_CONTRACT or the next independent no-live queue item."
   },
   "activeNextTask": "SOAP_SUBJECTIVESV2_ROUTE_CONTRACT",
-  "recommendedNextTask": "Run SOAP_SUBJECTIVESV2_ROUTE_CONTRACT as the next independent repo-local no-live queue item; keep RWO-11/RWO-09 external."
+  "recommendedNextTask": "Run SOAP_SUBJECTIVESV2_ROUTE_CONTRACT as the next independent repo-local no-live queue item; keep RWO-11/RWO-09 external.",
+  "latestSoapSubjectivesv2RouteContract": {
+    "runId": "20260427T143700Z",
+    "workOrder": "SOAP-SUBJECTIVESV2",
+    "result": "SOAP_SUBJECTIVESV2_ROUTE_CONTRACT_COMPLETED_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "d7cc752973060d9ec0f2c941b706d837296913fe",
+    "evidence": "docs/implementation/soap-subjectivesv2-route-contract-20260427T143700Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/soap-subjectivesv2-route-contract-20260427T143700Z/FINAL_REPORT.md",
+    "endpoint": "/api/orca/official/chart-support/subjectives-mod-v2",
+    "orcaEndpoint": "/orca25/subjectivesv2",
+    "requestClass": "class=01",
+    "transportFailureClassification": "404_or_502_transportRejected_not_businessRejected_or_businessAccepted",
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestDiseasev3EndpointSemanticsContract": {
+    "runId": "20260427T143700Z",
+    "workOrder": "DISEASEV3",
+    "result": "DISEASEV3_ENDPOINT_SEMANTICS_CONTRACT_RESEARCHED_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "d7cc752973060d9ec0f2c941b706d837296913fe",
+    "evidence": "docs/implementation/diseasev3-endpoint-semantics-contract-20260427T143700Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/diseasev3-endpoint-semantics-contract-20260427T143700Z/FINAL_REPORT.md",
+    "endpoint": "/api/orca/official/chart-support/disease-mod-v3",
+    "orcaEndpoint": "/orca22/diseasev3",
+    "requestSelection": "Request_Number_in_body_create_only_01_no_query_class",
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  }
 }

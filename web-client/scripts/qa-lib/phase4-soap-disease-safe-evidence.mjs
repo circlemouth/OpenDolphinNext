@@ -276,6 +276,7 @@ export const sanitizeSoapDiseaseOfficialResponse = ({ workflow = '', httpStatus 
       completionEvidence,
     },
   });
+  const businessAccepted = responseJson?.businessAccepted === true && business.businessAccepted === true;
   return {
     httpStatus: Number(httpStatus) || 0,
     apiResult,
@@ -285,8 +286,8 @@ export const sanitizeSoapDiseaseOfficialResponse = ({ workflow = '', httpStatus 
     apiResultMessageCategory,
     completionEvidence,
     responseClassification:
-      responseJson?.businessAccepted === true ? 'businessAccepted' : business.responseClassification,
-    businessAccepted: responseJson?.businessAccepted === true && business.businessAccepted === true,
+      businessAccepted ? 'businessAccepted' : business.responseClassification,
+    businessAccepted,
     rawResponseBodyStored: false,
     rawApiResultMessageStored: false,
     rawPatientOrInsuranceDetailStored: false,

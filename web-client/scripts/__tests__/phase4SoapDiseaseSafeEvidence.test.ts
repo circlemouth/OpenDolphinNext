@@ -204,6 +204,31 @@ describe('phase4 SOAP/disease no-live safe evidence', () => {
     expect(JSON.stringify(response)).not.toContain('<xmlio2>');
   });
 
+  it.each([404, 502])('classifies subjectivesv2 HTTP %s as transport rejection, not business result', (httpStatus) => {
+    const xmlResponse = sanitizeSoapDiseaseResponse({
+      workflow: 'subjectivesv2',
+      httpStatus,
+      xml: fs.readFileSync(SUBJECTIVES_STUB, 'utf8'),
+    });
+    const officialResponse = sanitizeSoapDiseaseOfficialResponse({
+      workflow: 'subjectivesv2',
+      httpStatus,
+      responseJson: {
+        ok: true,
+        apiOk: true,
+        businessAccepted: true,
+        apiResult: '00',
+        informationDate: '2026-04-24',
+        informationTime: '10:15:00',
+      },
+    });
+
+    expect(xmlResponse.responseClassification).toBe('transportRejected');
+    expect(xmlResponse.businessAccepted).toBe(false);
+    expect(officialResponse.responseClassification).toBe('transportRejected');
+    expect(officialResponse.businessAccepted).toBe(false);
+  });
+
   it('redacts sensitive-shaped Api_Result_Message into a category only', () => {
     const sensitiveMessage = ['患者', '番号 00001 は', '保険', '未確認'].join('');
     const xml = [
