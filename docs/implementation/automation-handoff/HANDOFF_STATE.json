@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T23:07:48Z",
+  "lastUpdated": "2026-04-27T23:15:41Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -60,6 +60,79 @@
       "ownerInstruction": "RWO-11/RWO-09 external release-management gates are not performed by this automation."
     },
     "supersedesPriorRwo11Rwo09AutomationReassignment": "2026-04-27T05:18:55Z"
+  },
+  "latestAcceptmodV2TargetInventoryParserFix": {
+    "runId": "20260427T231541Z",
+    "workOrder": "ACCEPTMODV2",
+    "taskId": "ACCEPTMODV2_TARGET_INVENTORY_PARSER_FIX_NO_LIVE",
+    "result": "server_parser_presence_flags_repaired_readonly_target_ready",
+    "branch": "master",
+    "headAtSelection": "387af27addabfa853579db0402c7513e7cd8855c",
+    "evidence": "docs/implementation/acceptmodv2-target-inventory-parser-fix-20260427T231541Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/acceptmodv2-target-inventory-parser-fix-20260427T231541Z/summary.sanitized.json",
+    "sourceBlockerEvidence": "docs/implementation/acceptmodv2-create-and-inventory-20260427T224743Z/summary.sanitized.json",
+    "officialSourceChecked": "https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html",
+    "fix": "acceptlstv2 parser now derives Acceptance_Date from row or response-level field and Insurance_Combination_Number from row or nested HealthInsurance_Information while exposing only presence flags and row hashes.",
+    "checks": {
+      "webTargetInventoryEvidenceTest": "pass_9_tests_with_web_guard_pretest",
+      "serverOrcaXmlMapperTypedTextParsingTest": "pass_7_tests",
+      "serverImageBuild": "pass",
+      "serverRuntimeRestart": "pass",
+      "acceptlstv2ReadonlyInventory": "target_ready_classes_01_03"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_parser_fix_only",
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "mutation": false,
+      "endpoint": "/api/orca/official/visits/acceptance-list",
+      "orcaEndpoint": "/api01rv2/acceptlstv2",
+      "acceptanceDate": "2026-04-28",
+      "businessSuccessClassification": "readonly_inventory_target_ready_for_classes_01_and_03",
+      "classes": [
+        {
+          "classCode": "01",
+          "businessSuccessClassification": "readonly_inventory_target_ready",
+          "transportStatusClass": "2xx",
+          "apiResultClass": "zero",
+          "sourceRowCount": 1,
+          "targetReadyRowCount": 1,
+          "rowHashes": [
+            "e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be"
+          ],
+          "presenceFlagsReady": true
+        },
+        {
+          "classCode": "02",
+          "businessSuccessClassification": "readonly_inventory_no_target_ready",
+          "transportStatusClass": "2xx",
+          "apiResultClass": "nonzero",
+          "sourceRowCount": 0,
+          "targetReadyRowCount": 0,
+          "rowHashes": [],
+          "presenceFlagsReady": false
+        },
+        {
+          "classCode": "03",
+          "businessSuccessClassification": "readonly_inventory_target_ready",
+          "transportStatusClass": "2xx",
+          "apiResultClass": "zero",
+          "sourceRowCount": 1,
+          "targetReadyRowCount": 1,
+          "rowHashes": [
+            "e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be"
+          ],
+          "presenceFlagsReady": true
+        }
+      ]
+    },
+    "recommendedNextTask": "Assemble RN02/RN03/RN04 duplicate checkpoint and endpoint-specific preflight from the target-ready class 01/03 inventory; do not execute RN02/RN03/RN04 live until that packet is complete.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
   },
   "latestRwo11Rwo09AutomationBoundaryCorrection": {
     "runId": "20260427T104612Z",
@@ -5015,6 +5088,87 @@
     "rawArtifactsCommittedOrPackaged": false
   },
   "nextExecutableQueue": [
+    {
+      "taskId": "ACCEPTMODV2_TARGET_INVENTORY_READONLY_TRIAL_AFTER_PARSER_FIX",
+      "lane": "critical_path",
+      "status": "completed",
+      "workOrder": "ACCEPTMODV2",
+      "summary": "Rerun sanitized read-only acceptlstv2 inventory after the server parser fix for response-level date and nested insurance presence.",
+      "requiresRuntime": true,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": false,
+      "sourceEvidence": "docs/implementation/acceptmodv2-target-inventory-parser-fix-20260427T231541Z/summary.sanitized.json",
+      "route": "/api/orca/official/visits/acceptance-list",
+      "orcaEndpoint": "/api01rv2/acceptlstv2",
+      "requestClasses": [
+        "01",
+        "02",
+        "03"
+      ],
+      "skipCondition": "rebuilt approved non-S3 runtime unavailable, approved local Trial config unavailable, parser ambiguity, credential/raw-artifact risk, or non-Trial endpoint detection",
+      "successCriteria": "sanitized read-only inventory summary exists after the parser fix with credentialsCaptured=false, rawArtifactsCommittedOrPackaged=false, liveTrialOrca.executed=false, and target-ready row classification recorded",
+      "nextOnSuccess": "ACCEPTMODV2_RN02_DUPLICATE_CHECKPOINT_PREFLIGHT",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "result": "readonly_inventory_target_ready_for_classes_01_and_03",
+      "completedRunId": "20260427T231541Z",
+      "evidence": "docs/implementation/acceptmodv2-target-inventory-parser-fix-20260427T231541Z/summary.sanitized.json",
+      "readOnlyTrialOrca": {
+        "executed": true,
+        "mutation": false,
+        "endpoint": "/api/orca/official/visits/acceptance-list",
+        "orcaEndpoint": "/api01rv2/acceptlstv2",
+        "acceptanceDate": "2026-04-28",
+        "businessSuccessClassification": "readonly_inventory_target_ready_for_classes_01_and_03",
+        "classResults": [
+          {
+            "classCode": "01",
+            "targetReadyRowCount": 1,
+            "rowHash": "e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be"
+          },
+          {
+            "classCode": "02",
+            "targetReadyRowCount": 0,
+            "rowHash": null
+          },
+          {
+            "classCode": "03",
+            "targetReadyRowCount": 1,
+            "rowHash": "e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be"
+          }
+        ]
+      },
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      },
+      "correctedNextAction": "Do not execute RN02/RN03/RN04 live until the duplicate-live checkpoint and endpoint-specific packet are complete."
+    },
+    {
+      "taskId": "ACCEPTMODV2_RN02_03_04_DUPLICATE_CHECKPOINT_PREFLIGHT",
+      "lane": "critical_path",
+      "status": "queued",
+      "workOrder": "ACCEPTMODV2",
+      "summary": "Assemble duplicate-live checkpoint and endpoint-specific RN02/RN03/RN04 preflight from sanitized target-ready class 01/03 inventory.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/acceptmodv2-target-inventory-parser-fix-20260427T231541Z/summary.sanitized.json",
+      "requiredPreconditions": [
+        "target-ready class 01 or 03 row hash selected from sanitized read-only inventory",
+        "endpoint/request number mapping recorded",
+        "duplicate-live checkpoint documented",
+        "parser/sanitizer contract recorded",
+        "stop conditions recorded",
+        "Claim_Send_Info policy for RN04 recorded"
+      ],
+      "successCriteria": "Sanitized endpoint packet exists with no live mutation, credentialsCaptured=false, rawArtifactsCommittedOrPackaged=false, endpoint-specific success criteria, duplicate checkpoint, stop conditions, and next live decision boundary.",
+      "nextOnSuccess": "ACCEPTMODV2_RN02_SINGLE_LIVE_ATTEMPT_PENDING_WORKER_DECISION",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+    },
     {
       "taskId": "ACCEPTMODV2_TARGET_INVENTORY_READONLY_TRIAL",
       "lane": "critical_path",

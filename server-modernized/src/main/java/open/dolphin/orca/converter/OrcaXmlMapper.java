@@ -213,8 +213,9 @@ public class OrcaXmlMapper {
         JsonNode body = read(xml).path("acceptlstres");
         AcceptanceInventoryResponse response = new AcceptanceInventoryResponse();
         populateCommon(body, response);
+        String responseAcceptanceDate = textValue(body, "Acceptance_Date");
         for (JsonNode node : iterable(body.path("Acceptlst_Information"))) {
-            AcceptanceInventoryRow row = toAcceptanceInventoryRow(node);
+            AcceptanceInventoryRow row = toAcceptanceInventoryRow(node, responseAcceptanceDate);
             response.getRows().add(row);
             if (isTargetReady(row)) {
                 response.setTargetReadyRowCount(response.getTargetReadyRowCount() + 1);
@@ -396,15 +397,19 @@ public class OrcaXmlMapper {
         return combination;
     }
 
-    private AcceptanceInventoryRow toAcceptanceInventoryRow(JsonNode node) {
+    private AcceptanceInventoryRow toAcceptanceInventoryRow(JsonNode node, String responseAcceptanceDate) {
         String acceptanceId = textValue(node, "Acceptance_Id");
         String patientId = textValue(node.path("Patient_Information"), "Patient_ID");
-        String acceptanceDate = textValue(node, "Acceptance_Date");
+        String acceptanceDate = firstNonBlankText(
+                textValue(node, "Acceptance_Date"),
+                responseAcceptanceDate);
         String acceptanceTime = textValue(node, "Acceptance_Time");
         String departmentCode = textValue(node, "Department_Code");
         String physicianCode = textValue(node, "Physician_Code");
         String medicalInformation = textValue(node, "Medical_Information");
-        String insuranceCombinationNumber = textValue(node, "Insurance_Combination_Number");
+        String insuranceCombinationNumber = firstNonBlankText(
+                textValue(node, "Insurance_Combination_Number"),
+                textValue(node.path("HealthInsurance_Information"), "Insurance_Combination_Number"));
 
         AcceptanceInventoryRow row = new AcceptanceInventoryRow();
         row.setRowHash(sha256(String.join("|",

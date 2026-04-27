@@ -105,6 +105,47 @@ class OrcaXmlMapperTypedTextParsingTest {
     }
 
     @Test
+    void parsesAcceptanceInventoryDateAndNestedInsuranceAsPresenceOnlyRows() {
+        String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <xmlio2>
+                  <acceptlstres>
+                    <Api_Result type="string">00</Api_Result>
+                    <Acceptance_Date type="string">2026-04-28</Acceptance_Date>
+                    <Acceptlst_Information type="array">
+                      <Acceptlst_Information_child type="record">
+                        <Acceptance_Time type="string">09:01:02</Acceptance_Time>
+                        <Acceptance_Id type="string">00001</Acceptance_Id>
+                        <Department_Code type="string">01</Department_Code>
+                        <Physician_Code type="string">10001</Physician_Code>
+                        <Medical_Information type="string">01</Medical_Information>
+                        <Patient_Information type="record">
+                          <Patient_ID type="string">00001</Patient_ID>
+                          <WholeName type="string">事例 一</WholeName>
+                        </Patient_Information>
+                        <HealthInsurance_Information type="record">
+                          <Insurance_Combination_Number type="string">0001</Insurance_Combination_Number>
+                        </HealthInsurance_Information>
+                      </Acceptlst_Information_child>
+                    </Acceptlst_Information>
+                  </acceptlstres>
+                </xmlio2>
+                """;
+
+        OrcaXmlMapper mapper = new OrcaXmlMapper();
+        AcceptanceInventoryResponse response = mapper.toAcceptanceInventory(xml);
+
+        assertNotNull(response);
+        assertEquals(1, response.getRows().size());
+        assertEquals(1, response.getTargetReadyRowCount());
+        assertTrue(response.isTargetReady());
+        assertTrue(response.getRows().get(0).isHasAcceptanceDate());
+        assertTrue(response.getRows().get(0).isHasInsuranceCombinationNumber());
+        assertTrue(response.getRows().get(0).isRawSensitiveFieldsExcluded());
+        assertEquals(64, response.getRows().get(0).getRowHash().length());
+    }
+
+    @Test
     void parsesVisitMutationFieldsWithTypeAttributes() {
         String xml = """
                 <?xml version="1.0" encoding="UTF-8"?>
