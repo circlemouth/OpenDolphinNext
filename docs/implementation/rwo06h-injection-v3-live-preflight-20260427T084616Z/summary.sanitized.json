@@ -1,0 +1,106 @@
+{
+  "runId": "20260427T084616Z",
+  "result": "RWO06H_INJECTION_V3_LIVE_READY_PENDING_SINGLE_ATTEMPT",
+  "branch": "master",
+  "headAtSelection": "82dd94b7eb5271f9487c364e876cd409c8f63d4b",
+  "workOrder": "RWO-06H",
+  "taskId": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
+  "activeHandoffPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+  "endpointPacket": {
+    "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+    "requestClass": "medicalmodv2",
+    "workflow": "injection",
+    "workflowId": "rwo06h-injection-medicalmodv2-v1",
+    "target": "00001",
+    "requestNumber": "01",
+    "classCode": "01",
+    "entity": "injectionOrder",
+    "claim007Class": "310",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v3.json",
+    "payloadSha256": "6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d",
+    "payloadBytes": 1022,
+    "candidateCodes": [
+      "130000510",
+      "621894701",
+      "700000031",
+      "0085001"
+    ],
+    "duplicateLiveCheckpoint": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d"
+  },
+  "preflightEvidence": {
+    "payloadSha256Verified": true,
+    "wrapperDryRun": "pass_no_live",
+    "wrapperDryRunEvidence": "docs/implementation/rwo06h-injection-v3-live-preflight-20260427T084616Z/injection-v3-dry-run/phase4-medicalmodv2-summary.sanitized.json",
+    "parserSanitizerContract": "pass_via_safe_wrapper_dry_run_and_existing_focused_tests",
+    "runtimeReadiness": "pass_200_200",
+    "runtimeReadinessCheckedAt": "2026-04-27T08:46:16Z",
+    "runtimeReadinessProbe": {
+      "healthEndpoint": "/openDolphin/api/health",
+      "healthHttpStatus": 200,
+      "readinessEndpoint": "/openDolphin/api/health/readiness",
+      "readinessHttpStatus": 200,
+      "responseBodiesStored": false
+    },
+    "duplicateLiveCheckpointBeforeAttempt": "not_found",
+    "duplicateLiveCheckpointEvidence": "safe checkpoint search returned not_found",
+    "liveTrialMutation": "not_run"
+  },
+  "endpointSpecificSuccessCriteria": {
+    "http200AloneIsSuccess": false,
+    "wrapperExitZeroAloneIsSuccess": false,
+    "apiResultZeroAloneIsSuccess": false,
+    "requiredBusinessEvidence": [
+      "sanitized response classification businessAccepted",
+      "apiResult zero-equivalent plus completion evidence",
+      "information timestamp present",
+      "medical UID, invoice number, or data ID present as allowlisted completion evidence"
+    ],
+    "inconclusiveWhen": [
+      "business success cannot be established from allowlisted parsed fields",
+      "parser ambiguity",
+      "target drift",
+      "credential or raw-artifact redaction risk"
+    ]
+  },
+  "stopConditions": [
+    "accepted duplicate checkpoint appears before attempt",
+    "runtime health or readiness is not 2xx immediately before attempt",
+    "payload SHA or target differs from this packet",
+    "safe wrapper guard rejects the command",
+    "non-Trial ORCA target is detected",
+    "raw ORCA body, credential, cookie, CSRF, patient detail, insurance detail, HAR, trace, video, screenshot, or raw network artifact would need to be captured, committed, or packaged",
+    "unexpected target drift, parser ambiguity, or credential redaction risk",
+    "business acceptance is reached"
+  ],
+  "misuseCases": [
+    {
+      "case": "Repeat an already accepted live mutation as new evidence.",
+      "control": "Exact duplicate-live checkpoint was searched before any live attempt.",
+      "result": "mitigated_not_found"
+    },
+    {
+      "case": "Treat dry-run or HTTP 200 readiness as business acceptance.",
+      "control": "Packet records dry-run/readiness as prerequisites only and requires parsed completion evidence.",
+      "result": "mitigated"
+    },
+    {
+      "case": "Use stale rejected injection payloads or oral-tablet candidate as live-ready evidence.",
+      "control": "Packet is bound to v3 SHA and selected injectable candidate 621894701 with row-level read-only proof.",
+      "result": "mitigated"
+    },
+    {
+      "case": "Leak credentials, raw ORCA payloads, patient detail, or insurance detail while preparing live.",
+      "control": "Only sanitized summary fields, hashes, endpoint identity, status codes, and classifications are recorded.",
+      "result": "mitigated"
+    }
+  ],
+  "claimBoundary": "RWO-06H injectionOrder/310 v3 duplicate-checkpoint/runtime-readiness preflight is complete and live-ready for one future main-worker-controlled decision only. This is not Trial business acceptance, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+  "recommendedNextTask": "Execute at most one RWO-06H injection v3 live Trial attempt through the safe medicalmodv2 wrapper after rechecking runtime readiness and duplicate checkpoint immediately before send.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}
