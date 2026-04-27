@@ -99,6 +99,7 @@ Good same-run batches:
 - RWO-06F disease/monthly precondition plan plus RWO-07 operation matrix update.
 - RWO-06K official-spec research plus no-live payload/contract refinement.
 - RWO-09 static/package refresh plus RWO-10 production-ORCA non-claim docs.
+- RWO-08B local exact-match taxonomy review plus RWO-06H RN01/RN02 parser-contract split, when both stay repo-local and no runtime/live mutation is used.
 
 Forbidden batches:
 
@@ -125,3 +126,5 @@ No-live progress should be recorded with specific result labels such as `preflig
 ## Current Priority
 
 Do not select `RWO-11/RWO-09` rollback/owner-decision work in hourly automation. Treat it as an external release-management gate and continue to independent safe tasks such as official ORCA specification research, no-live endpoint packets, parser/sanitizer tests, wrapper dry-runs, read-only probes, static/package/security checks, and claim-boundary updates. Do not run a live mutation until endpoint packet preconditions are recorded.
+
+After RUN_ID `20260427T125006Z`, the next active blocker-resolution task is `RWO-08B_LOCAL_EXACT_MATCH_DIAGNOSTIC`. It exists to split the coarse `local_exact_match_missing` fullflow blocker into actionable sanitized categories before any exact selected-candidate preflight or fullflow discussion. This research intake is sufficient for no-live/read-only tasks only; it is not live retry authorization.
