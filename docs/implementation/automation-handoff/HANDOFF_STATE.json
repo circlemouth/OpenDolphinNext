@@ -1,5 +1,5 @@
 {
-  "status": "completed",
+  "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "SOAP-SUBJECTIVESV2",
   "blockerId": "soap-subjectivesv2-route-contract",
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T14:37:00Z",
+  "lastUpdated": "2026-04-27T15:03:50Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5800,7 +5800,7 @@
     {
       "taskId": "RWO-06G_BASE_CHARGE_ROW_ORDER_CONTRACT",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06G",
       "summary": "Verify or add a no-live contract that baseChargeOrder/110 consultation fee rows are first row of first set and not duplicated.",
       "requiresRuntime": false,
@@ -5812,12 +5812,18 @@
       "skipCondition": "contract cannot be implemented without live mutation, raw artifacts, production ORCA, S3/object storage, or human business context",
       "successCriteria": "repo-local no-live test/contract evidence exists for base-charge row ordering and duplicate consultation-fee stop conditions",
       "nextOnSuccess": "RWO-06G_BASE_CHARGE_RN00_FIRST_VISIT_GATE",
-      "nextOnSkip": "RWO-06H_INJECTION_RN01_RN02_SPLIT"
+      "nextOnSkip": "RWO-06H_INJECTION_RN01_RN02_SPLIT",
+      "result": "rwo06g_base_charge_row_order_contract_completed_no_live",
+      "completedRunId": "20260427T150350Z",
+      "evidence": "docs/implementation/rwo06g-base-charge-row-order-contract-20260427T150350Z/summary.sanitized.json",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v2.json",
+      "payloadSha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+      "correctedNextAction": "Do not run baseChargeOrder/110 live from row-order evidence alone; first-visit compatibility remains separately blocked until proven."
     },
     {
       "taskId": "RWO-06I_SURGERY_MASTER_ADJUNCT_PREFLIGHT",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06I",
       "summary": "Prove Trial-date surgery row master validity and adjunct/comment rationale through sanitized read-only evidence before any retry.",
       "requiresRuntime": true,
@@ -5829,7 +5835,11 @@
       "skipCondition": "runtime unavailable, safe read-only wrapper missing, no source-backed adjunct rationale, parser ambiguity, credential/raw-artifact risk, or proof would require live mutation",
       "successCriteria": "sanitized read-only row master/adjunct proof exists or surgery retry remains blocked without live mutation",
       "nextOnSuccess": "RWO-06I_DUPLICATE_CHECKPOINT_PREFLIGHT",
-      "nextOnSkip": "SOAP_SUBJECTIVESV2_ROUTE_CONTRACT"
+      "nextOnSkip": "SOAP_SUBJECTIVESV2_ROUTE_CONTRACT",
+      "result": "carried_existing_readonly_row_proof_blocker_forward",
+      "completedRunId": "20260427T150350Z",
+      "evidence": "docs/implementation/rwo06i-surgery-v3-adjunct-master-proof-20260427T094613Z/summary.sanitized.json",
+      "correctedNextAction": "Do not repeat surgery v2/v3 live; require a new source-backed row identity or sanitized row proof before any duplicate/runtime preflight."
     },
     {
       "taskId": "SOAP_SUBJECTIVESV2_ROUTE_CONTRACT",
@@ -5882,7 +5892,7 @@
     {
       "taskId": "DISEASEV3_READONLY_BASELINE",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "DISEASEV3",
       "summary": "Create sanitized diseasegetv2 before-state evidence for future diseasev3 reasoning without mutation.",
       "requiresRuntime": true,
@@ -5894,12 +5904,21 @@
       "skipCondition": "runtime unavailable, safe read-only wrapper missing, target ambiguity, parser ambiguity, credential/raw-artifact risk, or proof requires raw disease/patient/insurance detail",
       "successCriteria": "sanitized diseasegetv2 before-state baseline exists or diseasev3 remains blocked without live mutation",
       "nextOnSuccess": "DISEASEV3_DUPLICATE_CHECKPOINT_PREFLIGHT",
-      "nextOnSkip": "ACCEPTMODV2_RN02_03_04_TARGET_INVENTORY"
+      "nextOnSkip": "ACCEPTMODV2_RN02_03_04_TARGET_INVENTORY",
+      "result": "diseasev3_readonly_baseline_completed_stop_before_live",
+      "completedRunId": "20260427T150350Z",
+      "evidence": "docs/implementation/diseasev3-readonly-baseline-20260427T150350Z/summary.sanitized.json",
+      "readOnlyTrialOrca": {
+        "executed": true,
+        "mutation": false,
+        "diseasegetv2Baseline": "2xx/success_zero/diseaseRowCountClass_zero"
+      },
+      "correctedNextAction": "Do not run diseasev3 live from baseline alone; continue acceptmodv2 target inventory or no-live stop-gate work."
     },
     {
       "taskId": "ACCEPTMODV2_RN02_03_04_TARGET_INVENTORY",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "skipped_environment_unavailable",
       "workOrder": "ACCEPTMODV2",
       "summary": "Build sanitized acceptlstv2/RN00 inventory for server-derived Acceptance_Id, date/time, department, physician, and insurance scope.",
       "requiresRuntime": true,
@@ -5911,12 +5930,16 @@
       "skipCondition": "runtime unavailable, safe read-only wrapper missing, target ambiguity, parser ambiguity, credential/raw-artifact risk, or proof requires raw patient/insurance detail",
       "successCriteria": "sanitized server-derived acceptmodv2 target inventory exists; no RN02/RN03/RN04 mutation executed",
       "nextOnSuccess": "ACCEPTMODV2_RN02_03_04_STOP_GATE",
-      "nextOnSkip": "PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK"
+      "nextOnSkip": "PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK",
+      "result": "skipped_environment_unavailable_safe_readonly_wrapper_missing",
+      "completedRunId": "20260427T150350Z",
+      "evidence": "docs/implementation/acceptmodv2-rn020304-target-inventory-skip-20260427T150350Z/summary.sanitized.json",
+      "correctedNextAction": "Implement safe read-only acceptlstv2/RN00 target inventory wrapper before any RN02/RN03/RN04 live preflight; continue no-live stop-gate work."
     },
     {
       "taskId": "ACCEPTMODV2_RN02_03_04_STOP_GATE",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "ACCEPTMODV2",
       "summary": "Ensure wrappers stop when server-derived acceptance target or scope fields are missing before RN02/RN03/RN04 mutation.",
       "requiresRuntime": false,
@@ -5928,12 +5951,16 @@
       "skipCondition": "stop-gate cannot be implemented without live mutation, raw artifacts, production ORCA, S3/object storage, or unresolved human target ambiguity",
       "successCriteria": "repo-local no-live stop-gate evidence exists for missing Acceptance_Id, patient/date/scope, department, physician, insurance, or duplicate checkpoint",
       "nextOnSuccess": "PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK",
-      "nextOnSkip": "PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK"
+      "nextOnSkip": "PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK",
+      "result": "acceptmodv2_rn020304_stop_gate_completed_no_live",
+      "completedRunId": "20260427T150350Z",
+      "evidence": "docs/implementation/acceptmodv2-rn020304-stop-gate-20260427T150350Z/summary.sanitized.json",
+      "correctedNextAction": "Keep RN02/RN03/RN04 stopped before live until server-derived target inventory and duplicate checkpoints exist."
     },
     {
       "taskId": "PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "PHASE4",
       "summary": "Lock accepted testOrder/600 and radiologyOrder/700 references as regression anchors and avoid unnecessary live repeats.",
       "requiresRuntime": false,
@@ -5945,12 +5972,15 @@
       "skipCondition": "accepted reference ledger cannot be updated from sanitized evidence only",
       "successCriteria": "sanitized ledger/claim-boundary evidence records accepted references as anchors and forbids unnecessary live repeats",
       "nextOnSuccess": "GLOBAL_NO_RAW_EVIDENCE_POLICY_ENFORCEMENT",
-      "nextOnSkip": "GLOBAL_NO_RAW_EVIDENCE_POLICY_ENFORCEMENT"
+      "nextOnSkip": "GLOBAL_NO_RAW_EVIDENCE_POLICY_ENFORCEMENT",
+      "result": "phase4_accepted_reference_ledger_lock_completed_no_live",
+      "completedRunId": "20260427T150350Z",
+      "evidence": "docs/implementation/phase4-accepted-reference-ledger-lock-20260427T150350Z/summary.sanitized.json"
     },
     {
       "taskId": "GLOBAL_NO_RAW_EVIDENCE_POLICY_ENFORCEMENT",
       "lane": "parallel_no_live",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "GLOBAL",
       "summary": "Continue guard evidence that raw ORCA bodies, patient/insurance details, credentials, HAR, traces, screenshots, and videos are excluded from evidence.",
       "requiresRuntime": false,
@@ -5962,7 +5992,10 @@
       "skipCondition": "no independent evidence/package path exists to scan without raw artifact exposure",
       "successCriteria": "sanitized scan/package evidence confirms forbidden raw artifacts are not committed or packaged",
       "nextOnSuccess": "CONTINUE_NEXT_SAFE_QUEUE_ITEM",
-      "nextOnSkip": "CONTINUE_NEXT_SAFE_QUEUE_ITEM"
+      "nextOnSkip": "CONTINUE_NEXT_SAFE_QUEUE_ITEM",
+      "result": "global_no_raw_evidence_policy_enforcement_pass",
+      "completedRunId": "20260427T150350Z",
+      "evidence": "docs/implementation/global-no-raw-evidence-policy-enforcement-20260427T150350Z/summary.sanitized.json"
     }
   ],
   "latestRwo06HInjectionMasterValidityReadonly": {
@@ -7294,8 +7327,8 @@
     "rawArtifactsCommittedOrPackaged": false,
     "recommendedNextTask": "Select SOAP_SUBJECTIVESV2_ROUTE_CONTRACT or the next independent no-live queue item."
   },
-  "activeNextTask": "SOAP_SUBJECTIVESV2_ROUTE_CONTRACT",
-  "recommendedNextTask": "Run SOAP_SUBJECTIVESV2_ROUTE_CONTRACT as the next independent repo-local no-live queue item; keep RWO-11/RWO-09 external.",
+  "activeNextTask": "CONTINUE_NEXT_SAFE_QUEUE_ITEM",
+  "recommendedNextTask": "No currently queued safe item remains after GLOBAL_NO_RAW_EVIDENCE_POLICY_ENFORCEMENT; next worker should inspect updated handoff queue and roadmap for newly inserted work.",
   "latestSoapSubjectivesv2RouteContract": {
     "runId": "20260427T143700Z",
     "workOrder": "SOAP-SUBJECTIVESV2",
@@ -7327,6 +7360,138 @@
     "endpoint": "/api/orca/official/chart-support/disease-mod-v3",
     "orcaEndpoint": "/orca22/diseasev3",
     "requestSelection": "Request_Number_in_body_create_only_01_no_query_class",
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06GBaseChargeRowOrderContract": {
+    "runId": "20260427T150350Z",
+    "workOrder": "RWO-06G",
+    "taskId": "RWO-06G_BASE_CHARGE_ROW_ORDER_CONTRACT",
+    "result": "RWO06G_BASE_CHARGE_ROW_ORDER_CONTRACT_COMPLETED_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "4823bccd52fa9c075099c418897db5734c56eed2",
+    "evidence": "docs/implementation/rwo06g-base-charge-row-order-contract-20260427T150350Z/summary.sanitized.json",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v2.json",
+    "payloadSha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+    "rowOrderContract": {
+      "consultationFeeFirstRowOfFirstSet": true,
+      "consultationFeeOccurrences": 1,
+      "stopBeforeLiveIfDuplicateOrNotFirstRow": true
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "claimBoundary": "No-live row-order/duplicate consultation-fee contract only; no Trial business acceptance or release readiness claim.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06ISurgeryMasterAdjunctPreflightCarryForward": {
+    "runId": "20260427T150350Z",
+    "workOrder": "RWO-06I",
+    "taskId": "RWO-06I_SURGERY_MASTER_ADJUNCT_PREFLIGHT",
+    "result": "CARRIED_EXISTING_READONLY_ROW_PROOF_BLOCKER_FORWARD",
+    "evidence": "docs/implementation/rwo06i-surgery-v3-adjunct-master-proof-20260427T094613Z/summary.sanitized.json",
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "claimBoundary": "Existing sanitized read-only proof remains blocked; no live retry readiness claim.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestDiseasev3ReadonlyBaseline": {
+    "runId": "20260427T150350Z",
+    "workOrder": "DISEASEV3",
+    "taskId": "DISEASEV3_READONLY_BASELINE",
+    "result": "DISEASEV3_READONLY_BASELINE_COMPLETED_STOP_BEFORE_LIVE",
+    "branch": "master",
+    "headAtSelection": "4823bccd52fa9c075099c418897db5734c56eed2",
+    "evidence": "docs/implementation/diseasev3-readonly-baseline-20260427T150350Z/summary.sanitized.json",
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "mutation": false,
+      "diseasegetv2Baseline": "2xx/success_zero/diseaseRowCountClass_zero"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "claimBoundary": "Diseasev3 read-only before-state baseline only; no diseasev3 mutation readiness or business acceptance claim.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestAcceptmodv2Rn020304TargetInventorySkip": {
+    "runId": "20260427T150350Z",
+    "workOrder": "ACCEPTMODV2",
+    "taskId": "ACCEPTMODV2_RN02_03_04_TARGET_INVENTORY",
+    "result": "ACCEPTMODV2_RN020304_TARGET_INVENTORY_SKIPPED_SAFE_READONLY_WRAPPER_MISSING",
+    "evidence": "docs/implementation/acceptmodv2-rn020304-target-inventory-skip-20260427T150350Z/summary.sanitized.json",
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestAcceptmodv2Rn020304StopGate": {
+    "runId": "20260427T150350Z",
+    "workOrder": "ACCEPTMODV2",
+    "taskId": "ACCEPTMODV2_RN02_03_04_STOP_GATE",
+    "result": "ACCEPTMODV2_RN020304_STOP_GATE_COMPLETED_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "4823bccd52fa9c075099c418897db5734c56eed2",
+    "evidence": "docs/implementation/acceptmodv2-rn020304-stop-gate-20260427T150350Z/summary.sanitized.json",
+    "requestNumbers": {
+      "02": "preconditions_missing_stop_before_live",
+      "03": "preconditions_missing_stop_before_live",
+      "04": "preconditions_missing_stop_before_live"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestPhase4AcceptedReferenceLedgerLock": {
+    "runId": "20260427T150350Z",
+    "workOrder": "PHASE4",
+    "taskId": "PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK",
+    "result": "PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK_COMPLETED_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "4823bccd52fa9c075099c418897db5734c56eed2",
+    "evidence": "docs/implementation/phase4-accepted-reference-ledger-lock-20260427T150350Z/summary.sanitized.json",
+    "acceptedReferences": [
+      "RWO-06J testOrder/600 v3",
+      "RWO-06K radiologyOrder/700 v3"
+    ],
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestGlobalNoRawEvidencePolicyEnforcement": {
+    "runId": "20260427T150350Z",
+    "workOrder": "GLOBAL",
+    "taskId": "GLOBAL_NO_RAW_EVIDENCE_POLICY_ENFORCEMENT",
+    "result": "GLOBAL_NO_RAW_EVIDENCE_POLICY_ENFORCEMENT_PASS",
+    "branch": "master",
+    "headAtSelection": "4823bccd52fa9c075099c418897db5734c56eed2",
+    "evidence": "docs/implementation/global-no-raw-evidence-policy-enforcement-20260427T150350Z/summary.sanitized.json",
     "liveTrialOrca": {
       "executed": false,
       "businessAccepted": false

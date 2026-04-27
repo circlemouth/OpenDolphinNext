@@ -11,8 +11,8 @@ RUN_ID: `20260422T134401Z`
 | Generic order input | Accepted local matrix | Local/static only | CWP-04 |
 | Document two-phase failure | Accepted local/component behavior | Local/static only | CWP-06 |
 | acceptmodv2 | Limited Trial ORCA success for prior `00001` Phase 3 | Limited trial-only acceptmodv2 | Phase 3 retry summary |
-| medicalmodv2 | Not run live; latest Trial-only handoff skipped for missing local non-S3 runtime inputs | No | CWP-03/04 boundaries / RWO-06 skip RUN_ID `20260423T080150Z` |
-| diseasev3 | Not run live | No | CWP-05 boundary |
+| medicalmodv2 | Limited Trial ORCA accepted checkpoints for `testOrder/600` v3 and `radiologyOrder/700` v3; other families remain blocked or not accepted | Limited endpoint-specific trial-only anchors; no broad all-order claim | RWO-06J RUN_ID `20260427T013313Z`, RWO-06K RUN_ID `20260427T020309Z`, PHASE4 ledger lock RUN_ID `20260427T150350Z` |
+| diseasev3 | Read-only before-state baseline only; no mutation acceptance | No | CWP-05 boundary / DISEASEV3 baseline RUN_ID `20260427T150350Z` |
 | subjectivesv2 | Not run live | No | CWP-02 boundary |
 | Browser e2e | Not run for Clinical Wave 1 | No | WO-3/4 |
 | Fullflow | Not run | No | WO-3/4/5/6/7/8 |

@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T150350Z",
+  "result": "DISEASEV3_READONLY_BASELINE_COMPLETED_STOP_BEFORE_LIVE",
+  "branch": "master",
+  "headAtSelection": "4823bccd52fa9c075099c418897db5734c56eed2",
+  "workOrder": "DISEASEV3",
+  "taskId": "DISEASEV3_READONLY_BASELINE",
+  "sourceEvidence": "docs/implementation/diseasev3-endpoint-semantics-contract-20260427T143700Z/summary.sanitized.json",
+  "readOnlyTrialOrca": {
+    "executed": true,
+    "mutation": false,
+    "targetHost": "weborca-trial.orca.med.or.jp",
+    "endpoints": [
+      "diseasegetv2:class01",
+      "medicalgetv2:class03",
+      "system01dailyv2:request01",
+      "system01lstv2:request04"
+    ],
+    "diseasegetv2Baseline": {
+      "httpStatusClass": "2xx",
+      "apiResultClass": "success_zero",
+      "diseaseRowCountClass": "zero",
+      "managementFeeDiseaseClassPresent": false,
+      "targetDepartmentReferenced": false,
+      "targetInsuranceCombinationReferenced": false,
+      "evidenceHash": "64478499c5a10fda64efc365cb5f46052aa1be2b32d6a41faa66f21c6e0b002f"
+    },
+    "preconditionStatus": {
+      "diseaseContext": "not_proven",
+      "monthlyDuplicateContext": "not_proven",
+      "departmentInsuranceContext": "not_proven",
+      "facilityContext": "facility_summary_observed_sanitized"
+    },
+    "evidence": "docs/implementation/diseasev3-readonly-baseline-20260427T150350Z/read-only/instruction-charge-preconditions-readonly-summary.sanitized.json",
+    "evidenceSha256": "afb4e9d2a925057fe4ca973be73cf0b34f457e01dd9f6d3328c15dc505205c93"
+  },
+  "baselineDecision": {
+    "beforeStateEvidenceCreated": true,
+    "diseasev3LiveReadyNow": false,
+    "businessSuccessClassification": "not_applicable_readonly_baseline_only",
+    "stopBeforeLive": true,
+    "nextRequiredBeforeLive": [
+      "complete diseasev3 endpoint packet",
+      "duplicate-live checkpoint decision",
+      "runtime readiness immediately before live",
+      "endpoint-specific success criteria and stop conditions",
+      "sanitized evidence policy for create/update/delete scope"
+    ]
+  },
+  "checks": {
+    "readOnlyWrapper": "completed_exit_1_expected_stop_before_live: qa-phase4-instruction-charge-preconditions.mjs --execute-readonly",
+    "credentialsPrinted": false,
+    "rawArtifactsCaptured": false
+  },
+  "misuseCasesChecked": [
+    "A read-only diseasegetv2 2xx/success_zero baseline is not treated as diseasev3 create business acceptance.",
+    "Disease row absence is recorded as a sanitized count class only; raw disease names and patient/insurance detail are not stored.",
+    "The wrapper remains stopped before mutation and does not authorize diseasev3 Request_Number 02/03/04."
+  ],
+  "liveTrialOrca": {
+    "executed": false,
+    "businessAccepted": false,
+    "businessSuccessClassification": "not_applicable_readonly_baseline_only"
+  },
+  "claimBoundary": "Diseasev3 read-only before-state baseline only. No diseasev3 create/update/delete Trial business acceptance, Request_Number 02/03/04 success, subjectivesv2 acceptance, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Continue to ACCEPTMODV2_RN02_03_04_TARGET_INVENTORY if safe runtime remains available, or to no-live ACCEPTMODV2_RN02_03_04_STOP_GATE if target inventory cannot be proven without raw detail.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

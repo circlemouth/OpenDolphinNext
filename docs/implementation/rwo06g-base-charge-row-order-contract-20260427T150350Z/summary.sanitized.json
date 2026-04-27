@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T150350Z",
+  "result": "RWO06G_BASE_CHARGE_ROW_ORDER_CONTRACT_COMPLETED_NO_LIVE",
+  "branch": "master",
+  "headAtSelection": "4823bccd52fa9c075099c418897db5734c56eed2",
+  "workOrder": "RWO-06G",
+  "taskId": "RWO-06G_BASE_CHARGE_ROW_ORDER_CONTRACT",
+  "sourceEvidence": "docs/implementation/chatgpt-research-intake-validation-20260427T125006Z/summary.sanitized.json",
+  "payloadIdentity": {
+    "workflow": "base-charge",
+    "entity": "baseChargeOrder",
+    "claim007Class": "110",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_base_charge_trial_reachability_v2.json",
+    "sha256": "4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a",
+    "candidateCodes": [
+      "111000110"
+    ],
+    "duplicateLiveCheckpoint": "rwo06g:medicalmodv2:rwo06g-base-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-4c092e032dd6f56eb5542ad65b2b6b28a8e1c1c802900f83e795dbbdba7a403a"
+  },
+  "rowOrderContract": {
+    "ok": true,
+    "blockers": [],
+    "firstSetEntity": "baseChargeOrder",
+    "firstSetMedicalClass": "110",
+    "firstRowCode": "111000110",
+    "consultationFeeFirstRowOfFirstSet": true,
+    "consultationFeeOccurrences": 1,
+    "stopBeforeLiveIfDuplicateOrNotFirstRow": true,
+    "requestNumber01Only": true,
+    "classCode01Only": true,
+    "requestNumber02To04Forbidden": true
+  },
+  "noLiveEvidence": {
+    "contractFunction": "summarizeBaseChargeRowOrderNoLiveContract",
+    "wrapperDryRun": "docs/implementation/rwo06g-base-charge-row-order-contract-20260427T150350Z/base-charge-v2-dry-run/phase4-medicalmodv2-summary.sanitized.json",
+    "wrapperDryRunSha256": "506ce2aa22dcb1f752e16600a51aed6d50e9420f0e35471baee9ef3c591ad7d8",
+    "responseClassification": "notObserved",
+    "businessAccepted": false
+  },
+  "changedContracts": [
+    "web-client/scripts/qa-lib/phase4-medicalmodv2-safe-evidence.mjs",
+    "web-client/scripts/__tests__/phase4Medicalmodv2SafeEvidence.test.ts"
+  ],
+  "checks": {
+    "webClientFocused": "pass: npm run test:ci -- scripts/__tests__/phase4Medicalmodv2SafeEvidence.test.ts",
+    "baseChargeV2DryRun": "pass_no_live: qa-phase4-safe-medicalmodv2.mjs --dry-run --workflow base-charge",
+    "webGuard": "pass_via_pretest"
+  },
+  "misuseCasesChecked": [
+    "A baseChargeOrder/110 payload whose consultation fee is not the first row of the first medicalInformation set fails closed before live mutation.",
+    "A baseChargeOrder/110 payload with duplicated consultation fee code 111000110 fails closed before live mutation.",
+    "Request_Number 02/03/04 or non-class-01 payload semantics are not accepted by this no-live create contract.",
+    "Dry-run output and HTTP/API placeholders are not classified as Trial business acceptance."
+  ],
+  "liveTrialOrca": {
+    "executed": false,
+    "businessAccepted": false,
+    "businessSuccessClassification": "not_applicable_no_live_contract_only"
+  },
+  "claimBoundary": "RWO-06G baseChargeOrder/110 row-order and duplicate consultation-fee no-live contract only. No baseChargeOrder Trial business acceptance, first-visit compatibility proof, Request_Number 02/03/04 success, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Continue to DISEASEV3_READONLY_BASELINE when safe runtime is available; otherwise ACCEPTMODV2_RN02_03_04_TARGET_INVENTORY or independent no-live stop-gate work.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

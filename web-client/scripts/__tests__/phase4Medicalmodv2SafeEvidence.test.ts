@@ -14,6 +14,7 @@ import {
   sanitizePhase4Response,
   summarizeInjectionMasterValidityNoLivePlan,
   summarizeInjectionOrderNoLiveContract,
+  summarizeBaseChargeRowOrderNoLiveContract,
   summarizeRuntimeReadiness,
   summarizeInstructionChargePreconditionNoLivePlan,
   validatePhase4Payload,
@@ -340,6 +341,59 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(result.rawPayloadStored).toBe(false);
     expect(result.rawOrcaBodyStored).toBe(false);
     expect(result.rawPatientOrInsuranceDetailStored).toBe(false);
+  });
+
+  it('locks base-charge v2 consultation fee as first row of first set without duplicates', () => {
+    const payload = JSON.parse(fs.readFileSync(BASE_CHARGE_V2_PAYLOAD, 'utf8'));
+    const result = summarizeBaseChargeRowOrderNoLiveContract(payload);
+
+    expect(result.ok).toBe(true);
+    expect(result.blockers).toEqual([]);
+    expect(result.rowOrder).toEqual({
+      firstSetEntity: 'baseChargeOrder',
+      firstSetMedicalClass: '110',
+      firstRowCode: '111000110',
+      consultationFeeFirstRowOfFirstSet: true,
+      consultationFeeOccurrences: 1,
+    });
+    expect(result.requestSemantics).toEqual({
+      requestNumber01Only: true,
+      classCode01Only: true,
+      requestNumber02To04Forbidden: true,
+    });
+    expect(result.stopBeforeLiveIfDuplicateOrNotFirstRow).toBe(true);
+    expect(result.runtimeMasterLookupExecuted).toBe(false);
+    expect(result.liveTrialAction).toBe('not_run');
+    expect(result.rawPayloadStored).toBe(false);
+    expect(result.rawOrcaBodyStored).toBe(false);
+    expect(result.rawPatientOrInsuranceDetailStored).toBe(false);
+  });
+
+  it('rejects base-charge payloads when consultation fee is duplicated or not first', () => {
+    const notFirst = JSON.parse(fs.readFileSync(BASE_CHARGE_V2_PAYLOAD, 'utf8'));
+    notFirst.medicalInformation.unshift({
+      entity: 'treatmentOrder',
+      medicalClass: '400',
+      medications: [{ code: '140000610', number: '1' }],
+    });
+
+    const notFirstResult = summarizeBaseChargeRowOrderNoLiveContract(notFirst);
+    expect(notFirstResult.ok).toBe(false);
+    expect(notFirstResult.blockers).toContain(
+      'baseChargeOrder class 110 group must be the first medicalInformation set',
+    );
+    expect(notFirstResult.blockers).toContain('consultation fee row must be first row of first set');
+    expect(notFirstResult.liveTrialAction).toBe('not_run');
+
+    const duplicated = JSON.parse(fs.readFileSync(BASE_CHARGE_V2_PAYLOAD, 'utf8'));
+    duplicated.includeInitialConsultation = true;
+    duplicated.medicalInformation[0].medications.push({ code: '111000110', number: '1' });
+
+    const duplicatedResult = summarizeBaseChargeRowOrderNoLiveContract(duplicated);
+    expect(duplicatedResult.ok).toBe(false);
+    expect(duplicatedResult.blockers).toContain('consultation fee code 111000110 must appear exactly once');
+    expect(duplicatedResult.blockers).toContain('includeInitialConsultation must not add a second consultation fee row');
+    expect(duplicatedResult.rawOrcaBodyStored).toBe(false);
   });
 
   it('rejects instruction-charge payloads with mismatched class-130 code shape before live ORCA', () => {

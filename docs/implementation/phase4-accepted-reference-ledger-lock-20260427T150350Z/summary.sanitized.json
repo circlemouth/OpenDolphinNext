@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T150350Z",
+  "result": "PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK_COMPLETED_NO_LIVE",
+  "branch": "master",
+  "headAtSelection": "4823bccd52fa9c075099c418897db5734c56eed2",
+  "workOrder": "PHASE4",
+  "taskId": "PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK",
+  "ledgerUpdated": "docs/implementation/clinical-functional-release-readiness-roadmap-20260422/FEATURE_STATUS_LEDGER.md",
+  "acceptedReferences": [
+    {
+      "workOrder": "RWO-06J",
+      "workflow": "test-order",
+      "entity": "testOrder",
+      "claim007Class": "600",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_test_order_trial_reachability_v3.json",
+      "sha256": "6a4e1800dbc6993c08c90d01a5ed57e490c0b38a346b6966325bfa0d86a61a28",
+      "duplicateLiveCheckpoint": "rwo06j:medicalmodv2:rwo06j-test-order-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-6a4e1800dbc6993c08c90d01a5ed57e490c0b38a346b6966325bfa0d86a61a28",
+      "evidence": "docs/implementation/rwo06j-test-order-v3-live-preflight-20260427T013313Z/summary.sanitized.json",
+      "businessSuccessClassification": "live_trial_business_accepted"
+    },
+    {
+      "workOrder": "RWO-06K",
+      "workflow": "radiology",
+      "entity": "radiologyOrder",
+      "claim007Class": "700",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v3.json",
+      "sha256": "144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a",
+      "duplicateLiveCheckpoint": "rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a",
+      "evidence": "docs/implementation/rwo06k-radiology-v3-live-preflight-20260427T020309Z/summary.sanitized.json",
+      "businessSuccessClassification": "live_trial_business_accepted"
+    }
+  ],
+  "repeatPolicy": {
+    "unnecessaryLiveRepeatForbidden": true,
+    "sameCheckpointRepeatAllowed": false,
+    "futureUse": "regression anchors and duplicate-live checkpoint references only"
+  },
+  "checks": {
+    "sourceEvidenceReview": "completed_sanitized_summaries_only",
+    "liveTrialOrcaThisRun": "not_run"
+  },
+  "claimBoundary": "Accepted reference ledger lock only. TestOrder/600 and radiologyOrder/700 v3 are endpoint-specific Trial anchors; this does not claim all-test coverage, all-radiology coverage, all-order readiness, Request_Number 02/03/04 success, diseasev3 or subjectivesv2 acceptance, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+  "recommendedNextTask": "Run GLOBAL_NO_RAW_EVIDENCE_POLICY_ENFORCEMENT for current changed evidence, then continue with the next queue item.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

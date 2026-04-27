@@ -335,6 +335,83 @@ export const summarizeInjectionOrderNoLiveContract = (payload) => {
   };
 };
 
+export const summarizeBaseChargeRowOrderNoLiveContract = (payload) => {
+  const summary = summarizePayload(payload);
+  const groups = Array.isArray(payload?.medicalInformation) ? payload.medicalInformation : [];
+  const firstGroup = groups[0] ?? null;
+  const baseChargeGroups = groups.filter(
+    (entry) => normalizeCode(entry?.entity) === 'baseChargeOrder' && normalizeCode(entry?.medicalClass) === '110',
+  );
+  const rows = groups.flatMap((entry, groupIndex) =>
+    (Array.isArray(entry?.medications) ? entry.medications : []).map((row, rowIndex) => ({
+      groupIndex,
+      rowIndex,
+      entity: normalizeCode(entry?.entity),
+      medicalClass: normalizeCode(entry?.medicalClass),
+      code: normalizeCode(row?.code),
+      number: normalizeCode(row?.number),
+    })),
+  );
+  const baseChargeRows = rows.filter((row) => row.entity === 'baseChargeOrder' && row.medicalClass === '110');
+  const consultationFeeRows = rows.filter((row) => row.code === '111000110');
+  const blockers = [];
+
+  if (summary.requestNumber !== PHASE4_ALLOWED_REQUEST_NUMBER) {
+    blockers.push(`requestNumber must be ${PHASE4_ALLOWED_REQUEST_NUMBER}`);
+  }
+  if (summary.classCode !== PHASE4_ALLOWED_CLASS_CODE) {
+    blockers.push(`classCode must be ${PHASE4_ALLOWED_CLASS_CODE}`);
+  }
+  if (baseChargeGroups.length !== 1) {
+    blockers.push('exactly one baseChargeOrder class 110 group is required');
+  }
+  if (
+    normalizeCode(firstGroup?.entity) !== 'baseChargeOrder' ||
+    normalizeCode(firstGroup?.medicalClass) !== '110'
+  ) {
+    blockers.push('baseChargeOrder class 110 group must be the first medicalInformation set');
+  }
+  if (baseChargeRows.length !== 1 || baseChargeRows[0]?.code !== '111000110') {
+    blockers.push('base-charge first row must be the consultation fee code 111000110');
+  }
+  if (baseChargeRows[0] && (baseChargeRows[0].groupIndex !== 0 || baseChargeRows[0].rowIndex !== 0)) {
+    blockers.push('consultation fee row must be first row of first set');
+  }
+  if (consultationFeeRows.length !== 1) {
+    blockers.push('consultation fee code 111000110 must appear exactly once');
+  }
+  if (baseChargeRows.some((row) => !row.number)) {
+    blockers.push('base-charge row requires a medication number');
+  }
+  if (payload?.includeInitialConsultation === true) {
+    blockers.push('includeInitialConsultation must not add a second consultation fee row');
+  }
+
+  return {
+    ok: blockers.length === 0,
+    blockers,
+    rowOrder: {
+      firstSetEntity: normalizeCode(firstGroup?.entity) || null,
+      firstSetMedicalClass: normalizeCode(firstGroup?.medicalClass) || null,
+      firstRowCode: rows[0]?.code || null,
+      consultationFeeFirstRowOfFirstSet:
+        baseChargeRows[0]?.groupIndex === 0 && baseChargeRows[0]?.rowIndex === 0 && baseChargeRows[0]?.code === '111000110',
+      consultationFeeOccurrences: consultationFeeRows.length,
+    },
+    requestSemantics: {
+      requestNumber01Only: summary.requestNumber === PHASE4_ALLOWED_REQUEST_NUMBER,
+      classCode01Only: summary.classCode === PHASE4_ALLOWED_CLASS_CODE,
+      requestNumber02To04Forbidden: true,
+    },
+    stopBeforeLiveIfDuplicateOrNotFirstRow: true,
+    runtimeMasterLookupExecuted: false,
+    liveTrialAction: 'not_run',
+    rawPayloadStored: false,
+    rawOrcaBodyStored: false,
+    rawPatientOrInsuranceDetailStored: false,
+  };
+};
+
 export const summarizeInjectionMasterValidityNoLivePlan = (payload) => {
   const contract = summarizeInjectionOrderNoLiveContract(payload);
   const groups = Array.isArray(payload?.medicalInformation) ? payload.medicalInformation : [];

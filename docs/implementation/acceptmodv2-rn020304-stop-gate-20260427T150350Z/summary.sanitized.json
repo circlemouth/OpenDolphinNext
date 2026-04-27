@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T150350Z",
+  "result": "ACCEPTMODV2_RN020304_STOP_GATE_COMPLETED_NO_LIVE",
+  "branch": "master",
+  "headAtSelection": "4823bccd52fa9c075099c418897db5734c56eed2",
+  "workOrder": "ACCEPTMODV2",
+  "taskId": "ACCEPTMODV2_RN02_03_04_STOP_GATE",
+  "sourceEvidence": "docs/implementation/acceptmodv2-rn020304-target-inventory-skip-20260427T150350Z/summary.sanitized.json",
+  "dryRunEvidence": {
+    "rn02": {
+      "requestNumber": "02",
+      "operation": "reception_delete_or_cancel",
+      "summary": "docs/implementation/acceptmodv2-rn020304-stop-gate-20260427T150350Z/rn02/phase4-acceptmodv2-operation-summary.sanitized.json",
+      "sha256": "ffb577a08c09e60c9790d8b58fbff3a0baac266303c687952e6575c00ca17be2",
+      "preconditionStatus": "preconditions_missing_stop_before_live",
+      "liveReady": false,
+      "missing": [
+        "active_acceptance_row",
+        "server_derived_acceptance_id",
+        "matching_patient_id",
+        "acceptance_date",
+        "department_physician_scope",
+        "duplicate_live_checkpoint"
+      ]
+    },
+    "rn03": {
+      "requestNumber": "03",
+      "operation": "reception_update_or_change",
+      "summary": "docs/implementation/acceptmodv2-rn020304-stop-gate-20260427T150350Z/rn03/phase4-acceptmodv2-operation-summary.sanitized.json",
+      "sha256": "74bc6daf32ebdd92100869da12b794ca8b5ccb49e1fff3ee298c13981536b35a",
+      "preconditionStatus": "preconditions_missing_stop_before_live",
+      "liveReady": false,
+      "missing": [
+        "active_acceptance_row",
+        "server_derived_acceptance_id",
+        "server_authoritative_update_fields",
+        "server_state_insurance_combination_when_needed",
+        "duplicate_live_checkpoint"
+      ]
+    },
+    "rn04": {
+      "requestNumber": "04",
+      "operation": "claim_send_information_update_or_supporting_action",
+      "summary": "docs/implementation/acceptmodv2-rn020304-stop-gate-20260427T150350Z/rn04/phase4-acceptmodv2-operation-summary.sanitized.json",
+      "sha256": "71231293a177f2b66dc38c379868ef880b2f4b2df170109d0993d9451b0105d6",
+      "preconditionStatus": "preconditions_missing_stop_before_live",
+      "liveReady": false,
+      "missing": [
+        "active_acceptance_row",
+        "server_derived_acceptance_identifiers",
+        "explicit_claim_send_info_policy",
+        "duplicate_live_checkpoint",
+        "rollback_duplicate_policy"
+      ]
+    }
+  },
+  "checks": {
+    "webClientFocused": "pass: npm run test:ci -- scripts/__tests__/phase4Acceptmodv2OperationEvidence.test.ts",
+    "rn02DryRun": "pass_no_live",
+    "rn03DryRun": "pass_no_live",
+    "rn04DryRun": "pass_no_live",
+    "webGuard": "pass_via_pretest"
+  },
+  "misuseCasesChecked": [
+    "Client-provided acceptance identifiers are not trusted for RN02/RN03/RN04 readiness.",
+    "HTTP 2xx or Api_Result zero alone cannot classify RN02/RN03/RN04 as business success.",
+    "RN02/RN03/RN04 wrappers require dry-run sanitized mode and reject live/raw-artifact flags."
+  ],
+  "liveTrialOrca": {
+    "executed": false,
+    "businessAccepted": false,
+    "businessSuccessClassification": "not_applicable_no_live_stop_gate_only"
+  },
+  "claimBoundary": "Acceptmodv2 RN02/RN03/RN04 no-live stop-gate only. No acceptmodv2 mutation, target inventory proof, operation business acceptance, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Continue to PHASE4_ACCEPTED_REFERENCE_LEDGER_LOCK or GLOBAL_NO_RAW_EVIDENCE_POLICY_ENFORCEMENT; do not run RN02/RN03/RN04 live until server-derived target inventory exists.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}
