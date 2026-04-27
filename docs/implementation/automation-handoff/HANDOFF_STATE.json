@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-27T12:16:15Z",
+  "lastUpdated": "2026-04-27T12:50:06Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -53,7 +53,12 @@
       "static_package_security_checks",
       "sanitized_evidence_and_claim_boundary_updates"
     ],
-    "recordedByUserDirection": "2026-04-27T10:46:12Z",
+    "recordedByUserDirection": "2026-04-27T12:50:06Z",
+    "latestReaffirmation": {
+      "runId": "20260427T125006Z",
+      "evidence": "docs/implementation/external-gate-and-chatgpt-research-prompts-20260427T125006Z/summary.sanitized.json",
+      "ownerInstruction": "RWO-11/RWO-09 external release-management gates are not performed by this automation."
+    },
     "supersedesPriorRwo11Rwo09AutomationReassignment": "2026-04-27T05:18:55Z"
   },
   "latestRwo11Rwo09AutomationBoundaryCorrection": {
@@ -6762,6 +6767,37 @@
     },
     "claimBoundary": "Current-head non-S3 static/package/security refresh only after RWO-08B read-only candidate refresh; no fullflow success, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
     "recommendedNextTask": "Continue independent non-S3 roadmap work; RWO-08B remains blocked until a new fresh/local-selectable candidate or changed local-sync precondition is available.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
+  "latestExternalGateAndChatgptResearchPrompts": {
+    "runId": "20260427T125006Z",
+    "result": "EXTERNAL_GATE_BOUNDARY_RECORDED_AND_RESEARCH_PROMPTS_PREPARED",
+    "branch": "master",
+    "headAtSelection": "96989a0e629a70d0cb0086a959677505f9317b36",
+    "evidence": "docs/implementation/external-gate-and-chatgpt-research-prompts-20260427T125006Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/external-gate-and-chatgpt-research-prompts-20260427T125006Z/summary.sanitized.json",
+    "rwo11Rwo09Boundary": {
+      "classification": "external_owner_operator_release_management_gate",
+      "automationDoesNotExecute": [
+        "rollback_rehearsal",
+        "release_candidate_deployment_stop",
+        "paired_restore",
+        "restored_target_smoke",
+        "operator_acceptance",
+        "final_owner_go_no_go_pending_decision_capture"
+      ],
+      "laterExplicitOwnerInstructionRequiredToChange": true
+    },
+    "researchPrompts": [
+      "docs/implementation/external-gate-and-chatgpt-research-prompts-20260427T125006Z/CHATGPT_PROMPT_RWO08B_FRESH_FULLFLOW_TARGET.md",
+      "docs/implementation/external-gate-and-chatgpt-research-prompts-20260427T125006Z/CHATGPT_PROMPT_ORCA_TRIAL_BUSINESS_REJECTIONS.md"
+    ],
+    "claimBoundary": "Docs-only boundary and prompt preparation; no RWO-08B resolution, ORCA Trial business acceptance, rollback rehearsal, operator acceptance, final owner GO/NO-GO/PENDING, production ORCA, S3/object-storage, or final release readiness is claimed.",
+    "recommendedNextTask": "Send the prompts to ChatGPT research agents and use findings only to select safe no-live/read-only repo work unless later explicit owner instruction changes scope.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false,

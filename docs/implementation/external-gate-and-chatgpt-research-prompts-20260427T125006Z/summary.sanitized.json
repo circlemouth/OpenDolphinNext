@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260427T125006Z",
+  "result": "EXTERNAL_GATE_BOUNDARY_RECORDED_AND_RESEARCH_PROMPTS_PREPARED",
+  "branch": "master",
+  "headAtSelection": "96989a0e629a70d0cb0086a959677505f9317b36",
+  "workOrders": [
+    "RWO-08B",
+    "RWO-09",
+    "RWO-11",
+    "RWO-06"
+  ],
+  "rwo11Rwo09Boundary": {
+    "automationDoesNotExecute": [
+      "rollback_rehearsal",
+      "release_candidate_deployment_stop",
+      "paired_restore",
+      "restored_target_smoke",
+      "operator_acceptance",
+      "final_owner_go_no_go_pending_decision_capture"
+    ],
+    "classification": "external_owner_operator_release_management_gate",
+    "laterExplicitOwnerInstructionRequiredToChange": true
+  },
+  "researchPrompts": [
+    {
+      "path": "docs/implementation/external-gate-and-chatgpt-research-prompts-20260427T125006Z/CHATGPT_PROMPT_RWO08B_FRESH_FULLFLOW_TARGET.md",
+      "topic": "RWO-08B fresh fullflow target absence",
+      "purpose": "Investigate safe no-live/read-only next actions for local-selectable fresh target blocker."
+    },
+    {
+      "path": "docs/implementation/external-gate-and-chatgpt-research-prompts-20260427T125006Z/CHATGPT_PROMPT_ORCA_TRIAL_BUSINESS_REJECTIONS.md",
+      "topic": "ORCA Trial business rejections",
+      "purpose": "Investigate possible official-semantics or business-context explanations for rejected/blocked endpoint families."
+    }
+  ],
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_docs_only",
+    "businessAccepted": false
+  },
+  "claimBoundary": "Docs-only boundary and prompt preparation. No RWO-08B resolution, new fullflow target, ORCA Trial business acceptance, rollback rehearsal, operator acceptance, final owner GO/NO-GO/PENDING, production ORCA readiness, S3/object-storage readiness, or final release readiness is claimed.",
+  "recommendedNextTask": "Send the prepared prompts to ChatGPT research agents; use returned findings only to choose safe no-live/read-only repo work unless a later explicit owner instruction changes scope.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

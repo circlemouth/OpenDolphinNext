@@ -6,9 +6,9 @@ This policy reduces hourly automation stalls while preserving the Trial-only, no
 
 ## Automation Responsibility Boundary
 
-Current automation prompt boundary recorded by RUN_ID `20260427T104612Z` treats `RWO-11/RWO-09` rollback rehearsal, release-candidate deployment stop, paired restore, restored-target smoke, operator acceptance, and final owner GO/NO-GO/PENDING decision capture as external owner/operator release-management gates.
+Current automation prompt boundary recorded by RUN_ID `20260427T104612Z` and reaffirmed by owner instruction in RUN_ID `20260427T125006Z` treats `RWO-11/RWO-09` rollback rehearsal, release-candidate deployment stop, paired restore, restored-target smoke, operator acceptance, and final owner GO/NO-GO/PENDING decision capture as external owner/operator release-management gates.
 
-Hourly automation must not select, execute, repeatedly reclassify, or block on those `RWO-11/RWO-09` gates unless a later explicit user instruction reassigns them to automation. Preserve the non-claim boundary and continue to the next safe non-RWO-11/RWO-09 task.
+Hourly automation must not select, execute, repeatedly reclassify, or block on those `RWO-11/RWO-09` gates. The current owner instruction is that these gates are not performed by this automation. Preserve the non-claim boundary and continue to the next safe non-RWO-11/RWO-09 task. A later explicit owner instruction is required to change this boundary.
 
 ## Problem
 
