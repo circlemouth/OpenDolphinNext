@@ -97,9 +97,6 @@ export const validateAcceptmodOperationCommand = ({ argv, env = process.env }) =
   if (!options.disableBrowserArtifacts) blockers.push('--disable-browser-artifacts is required');
   if (!options.dryRun) blockers.push('--dry-run is required; live acceptmodv2 RN02/03/04 is not implemented by this wrapper');
   if (!ALLOWED_REQUEST_NUMBERS.has(requestNumber)) blockers.push('--request-number must be one of 02, 03, or 04');
-  if (requestNumber !== '02') {
-    blockers.push('only Request_Number=02 has a no-live dry-run packet in this wrapper revision');
-  }
 
   return {
     ok: blockers.length === 0,
@@ -298,6 +295,6 @@ export const buildAcceptmodOperationDryRunSummary = ({ runId, requestNumber, com
     diagnosticArtifactsCaptured: false,
     rawArtifactsCommittedOrPackaged: false,
     claimBoundary:
-      'No-live acceptmodv2 Request_Number 02 operation wrapper/parser contract only; not Trial mutation success, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.',
+      `No-live acceptmodv2 Request_Number ${normalizedRequestNumber} operation wrapper/parser contract only; not Trial mutation success, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.`,
   };
 };

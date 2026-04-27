@@ -24,6 +24,23 @@ const rn02Preconditions = {
   parserSanitizerContract: true,
 };
 
+const rn03Preconditions = {
+  activeAcceptanceRow: true,
+  serverDerivedAcceptanceId: true,
+  serverAuthoritativeUpdateFields: true,
+  duplicateLiveCheckpoint: true,
+  parserSanitizerContract: true,
+};
+
+const rn04Preconditions = {
+  activeAcceptanceRow: true,
+  serverDerivedAcceptanceIdentifiers: true,
+  explicitClaimSendInfoPolicy: true,
+  duplicateLiveCheckpoint: true,
+  rollbackDuplicatePolicy: true,
+  parserSanitizerContract: true,
+};
+
 describe('phase4 acceptmodv2 operation no-live evidence', () => {
   it('accepts only sanitized dry-run mode for Request_Number=02', () => {
     const gate = validateAcceptmodOperationCommand({ argv: requiredArgs, env: {} });
@@ -34,15 +51,11 @@ describe('phase4 acceptmodv2 operation no-live evidence', () => {
     expect(gate.liveTrialMutationExecuted).toBe(false);
   });
 
-  it('fails closed for live/raw artifact flags and Request_Number=03/04 in this revision', () => {
-    const liveGate = validateAcceptmodOperationCommand({
-      argv: [...requiredArgs, '--execute-live'],
-      env: {},
-    });
-    expect(liveGate.ok).toBe(false);
-    expect(liveGate.blockers).toContain('forbidden flag: --execute-live');
-
-    for (const requestNumber of ['03', '04']) {
+  it('accepts sanitized dry-run mode for Request_Number=03 and 04 without live mutation', () => {
+    for (const [requestNumber, operation] of [
+      ['03', 'reception_update_or_change'],
+      ['04', 'claim_send_information_update_or_supporting_action'],
+    ] as const) {
       const gate = validateAcceptmodOperationCommand({
         argv: [
           '--dry-run',
@@ -53,9 +66,33 @@ describe('phase4 acceptmodv2 operation no-live evidence', () => {
         ],
         env: {},
       });
-      expect(gate.ok).toBe(false);
-      expect(gate.blockers).toContain('only Request_Number=02 has a no-live dry-run packet in this wrapper revision');
+
+      expect(gate.ok).toBe(true);
+      expect(gate.options.operation).toBe(operation);
+      expect(gate.liveTrialMutationExecuted).toBe(false);
     }
+  });
+
+  it('fails closed for live/raw artifact flags and unsupported request numbers', () => {
+    const liveGate = validateAcceptmodOperationCommand({
+      argv: [...requiredArgs, '--execute-live'],
+      env: {},
+    });
+    expect(liveGate.ok).toBe(false);
+    expect(liveGate.blockers).toContain('forbidden flag: --execute-live');
+
+    const unsupportedGate = validateAcceptmodOperationCommand({
+      argv: [
+        '--dry-run',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--request-number',
+        '01',
+      ],
+      env: {},
+    });
+    expect(unsupportedGate.ok).toBe(false);
+    expect(unsupportedGate.blockers).toContain('--request-number must be one of 02, 03, or 04');
   });
 
   it('does not treat HTTP 2xx or apiResult zero alone as RN02 business success', () => {
@@ -102,6 +139,74 @@ describe('phase4 acceptmodv2 operation no-live evidence', () => {
     expect(result.mutationSuccess).toBe(true);
   });
 
+  it('classifies RN03 success only with server-authoritative update preconditions and evidence', () => {
+    const missingEvidence = classifyAcceptmodOperationResponse({
+      httpStatus: 200,
+      requestNumber: '03',
+      apiResult: '00',
+      preconditions: rn03Preconditions,
+      completionEvidence: {},
+    });
+    expect(missingEvidence.responseClassification).toBe('notVerified');
+    expect(missingEvidence.businessAccepted).toBe(false);
+
+    const missingPrecondition = classifyAcceptmodOperationResponse({
+      httpStatus: 200,
+      requestNumber: '03',
+      apiResult: '00',
+      preconditions: {
+        ...rn03Preconditions,
+        serverAuthoritativeUpdateFields: false,
+      },
+      completionEvidence: { updateEvidencePresent: true },
+    });
+    expect(missingPrecondition.responseClassification).toBe('preconditionNotVerified');
+
+    const accepted = classifyAcceptmodOperationResponse({
+      httpStatus: 200,
+      requestNumber: '03',
+      apiResult: '00',
+      preconditions: rn03Preconditions,
+      completionEvidence: { updateEvidencePresent: true },
+    });
+    expect(accepted.responseClassification).toBe('businessAccepted');
+    expect(accepted.mutationSuccess).toBe(true);
+  });
+
+  it('classifies RN04 success only with explicit Claim_Send_Info policy and evidence', () => {
+    const missingPolicy = classifyAcceptmodOperationResponse({
+      httpStatus: 200,
+      requestNumber: '04',
+      apiResult: '00',
+      preconditions: {
+        ...rn04Preconditions,
+        explicitClaimSendInfoPolicy: false,
+      },
+      completionEvidence: { claimSendInfoEvidencePresent: true },
+    });
+    expect(missingPolicy.responseClassification).toBe('preconditionNotVerified');
+    expect(missingPolicy.businessAccepted).toBe(false);
+
+    const missingEvidence = classifyAcceptmodOperationResponse({
+      httpStatus: 200,
+      requestNumber: '04',
+      apiResult: '00',
+      preconditions: rn04Preconditions,
+      completionEvidence: {},
+    });
+    expect(missingEvidence.responseClassification).toBe('notVerified');
+
+    const accepted = classifyAcceptmodOperationResponse({
+      httpStatus: 200,
+      requestNumber: '04',
+      apiResult: '00',
+      preconditions: rn04Preconditions,
+      completionEvidence: { claimSendInfoEvidencePresent: true },
+    });
+    expect(accepted.responseClassification).toBe('businessAccepted');
+    expect(accepted.businessAccepted).toBe(true);
+  });
+
   it('builds sanitized no-live summary with explicit non-claims', () => {
     const gate = validateAcceptmodOperationCommand({ argv: requiredArgs, env: {} });
     const summary = buildAcceptmodOperationDryRunSummary({
@@ -114,5 +219,29 @@ describe('phase4 acceptmodv2 operation no-live evidence', () => {
     expect(summary.noLivePacket.clientProvidedIdentifiersTrusted).toBe(false);
     expect(summary.rawArtifactsCommittedOrPackaged).toBe(false);
     expect(summary.claimBoundary).toContain('No-live acceptmodv2 Request_Number 02');
+  });
+
+  it('builds RN03/RN04 summaries with request-specific claim boundaries', () => {
+    for (const requestNumber of ['03', '04']) {
+      const gate = validateAcceptmodOperationCommand({
+        argv: [
+          '--dry-run',
+          '--sanitized-evidence-only',
+          '--disable-browser-artifacts',
+          '--request-number',
+          requestNumber,
+        ],
+        env: {},
+      });
+      const summary = buildAcceptmodOperationDryRunSummary({
+        runId: '20260427T043310Z',
+        requestNumber,
+        commandGate: gate,
+      });
+
+      expect(summary.liveTrialOrca.executed).toBe(false);
+      expect(summary.claimBoundary).toContain(`Request_Number ${requestNumber}`);
+      expect(summary.noLivePacket.requiredPreconditions.length).toBeGreaterThan(0);
+    }
   });
 });
