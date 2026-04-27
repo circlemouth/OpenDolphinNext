@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-26T23:48:19Z",
+  "lastUpdated": "2026-04-27T00:04:33Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_not_automation_work",
     "automationMustNot": [
@@ -4605,6 +4605,53 @@
     },
     "claimBoundary": "Changed radiologyOrder/700 v3 no-live preflight only; no radiology Trial business acceptance, all-radiology coverage, body-part billing success, Request_Number 02/03/04 success, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
     "recommendedNextTask": "Before any radiology v3 live Trial attempt, record runtime readiness, duplicate checkpoint decision, endpoint-specific success criteria, stop conditions, and a sanitized preflight packet; do not repeat prior v1/v2 radiology identities unchanged.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
+  "latestRwo06KRadiologyV3ManifestPacket": {
+    "runId": "20260427T000309Z",
+    "workOrder": "RWO-06K",
+    "result": "RWO06K_RADIOLOGY_V3_MANIFEST_PACKET_NO_LIVE_REFRESHED",
+    "branch": "master",
+    "headAtSelection": "605f5181de54344dd1a7009cb1e567f85d29c537",
+    "evidence": "docs/implementation/rwo06k-radiology-v3-manifest-packet-20260427T000309Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06k-radiology-v3-manifest-packet-20260427T000309Z/summary.sanitized.json",
+    "manifestEntry": "web-client/qa/payloads/phase4/manifest.phase4-orca-trial-dummy-json-v1.json#medicalmodv2_radiology_trial_reachability_v3.json",
+    "payloadIdentity": {
+      "workflow": "radiology",
+      "entity": "radiologyOrder",
+      "claim007Class": "700",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v3.json",
+      "sha256": "144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a",
+      "target": "00001",
+      "requestNumber": "01",
+      "classCode": "01",
+      "candidateCodes": [
+        "002000099",
+        "170027910",
+        "820181000"
+      ],
+      "duplicateLiveCheckpoint": "rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a"
+    },
+    "checks": {
+      "manifestJson": "pass",
+      "wrapperDryRun": "pass_no_live",
+      "phase4Medicalmodv2SafeEvidence": "pass_25_tests_with_web_guard_pretest",
+      "syntaxChecks": "pass"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "target": "00001",
+      "requestClass": "medicalmodv2",
+      "businessSuccessClassification": "not_applicable_no_live_manifest_packet_refresh_only",
+      "businessAccepted": false
+    },
+    "claimBoundary": "Radiology v3 manifest registration and no-live wrapper/contract refresh only; no radiology Trial business acceptance, all-radiology coverage, body-part billing success, Request_Number 02/03/04 success, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Before any radiology v3 live Trial attempt, record runtime readiness, duplicate checkpoint decision, endpoint-specific success criteria, stop conditions, and a sanitized preflight packet; otherwise continue independent no-live/static roadmap work.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false,

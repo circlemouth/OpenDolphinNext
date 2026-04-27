@@ -173,6 +173,16 @@
       "status": "rwo06k_v2_endpoint_specific_candidate_no_live_prepared_not_live_executed",
       "workflow": "radiology"
     },
+    "medicalmodv2_radiology_trial_reachability_v3.json": {
+      "bytes": 1055,
+      "candidateSourceRunId": "20260426T233244Z",
+      "candidateSourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/comment842-830-bui-api.html",
+      "duplicateLiveCheckpointKey": "rwo06k:medicalmodv2:rwo06k-radiology-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a",
+      "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v3.json",
+      "sha256": "144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a",
+      "status": "rwo06k_v3_endpoint_specific_candidate_no_live_prepared_not_live_executed",
+      "workflow": "radiology"
+    },
     "medicalmodv2_phase4_dummy_owner_aligned_v1.json": {
       "bytes": 639,
       "repo_path": "web-client/qa/payloads/phase4/medicalmodv2_phase4_dummy_owner_aligned_v1.json",

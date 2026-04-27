@@ -54,6 +54,8 @@ RUN_ID `20260426T233244Z` found no new owner/operator rollback rehearsal evidenc
 
 The same RUN_ID `20260426T233244Z` then advanced independent no-live `RWO-06K` work. It added changed `radiologyOrder/700` v3 payload `web-client/qa/payloads/phase4/medicalmodv2_radiology_trial_reachability_v3.json` with SHA-256 `144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a`, including body-part comment code `820181000`, and verified the safe wrapper dry-run plus focused contract tests. No live Trial mutation was executed.
 
+RUN_ID `20260427T000309Z` advanced independent no-live `RWO-06K` manifest/packet hygiene. It registered that changed radiology v3 payload in `web-client/qa/payloads/phase4/manifest.phase4-orca-trial-dummy-json-v1.json`, reran the safe wrapper dry-run into sanitized evidence, and reran focused `phase4Medicalmodv2SafeEvidence` tests. No live Trial mutation was executed.
+
 Sanitized evidence:
 
 - `docs/implementation/rwo11-rollback-owner-pending-20260425T182930Z/FINAL_REPORT.md`
@@ -95,6 +97,8 @@ Sanitized evidence:
 - `docs/implementation/rwo09-non-s3-static-refresh-20260426T233244Z/summary.sanitized.json`
 - `docs/implementation/rwo06k-radiology-v3-no-live-20260426T233244Z/FINAL_REPORT.md`
 - `docs/implementation/rwo06k-radiology-v3-no-live-20260426T233244Z/summary.sanitized.json`
+- `docs/implementation/rwo06k-radiology-v3-manifest-packet-20260427T000309Z/FINAL_REPORT.md`
+- `docs/implementation/rwo06k-radiology-v3-manifest-packet-20260427T000309Z/summary.sanitized.json`
 
 Current result:
 
@@ -113,6 +117,7 @@ Current result:
 - Latest ORCA spec research intake: `docs/implementation/orca-spec-research-intake-20260426T212101Z/README.md`. Treat it as no-live/read-only guidance only. Next priority is injection row-level proof for an injectable candidate using `medicationgetv2 Request_Number=02`; `masterlastupdatev3` is not row-level proof, `620000012` must not be retried unchanged as injection, base-charge RN00 evidence must include active acceptance plus consultation-fee/first-visit-compatible fields, and RWO-08B fullflow must not repeat `00001`/`00005` unchanged or synthesize official identifiers.
 - Latest RWO-06H injectable candidate discovery: `docs/implementation/rwo06h-injectable-candidate-discovery-20260426T231411Z/FINAL_REPORT.md`. Eight additional source-backed injectable medication candidates did not produce row-level `medicationgetv2 Request_Number=02` proof; injection live remains stopped until a different candidate or changed precondition yields `masterFound=true`.
 - Latest RWO-06K radiology changed-identity no-live preflight: `docs/implementation/rwo06k-radiology-v3-no-live-20260426T233244Z/FINAL_REPORT.md`. Changed v3 payload `144850285178276d543ebb424610cbf91a2e188b8dc597f957cc882577c4a16a` passed safe wrapper dry-run and focused contract tests only; radiology live remains stopped until runtime readiness, duplicate checkpoint decision, endpoint-specific success criteria, stop conditions, and sanitized preflight packet are recorded. Do not repeat prior v1/v2 radiology identities unchanged.
+- Latest RWO-06K radiology v3 manifest packet refresh: `docs/implementation/rwo06k-radiology-v3-manifest-packet-20260427T000309Z/FINAL_REPORT.md`. The v3 identity is now recorded in the phase4 payload manifest and revalidated no-live; this still does not authorize live Trial mutation.
 - Latest RWO-06H/RWO-06G/RWO-08B queue result: `docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/FINAL_REPORT.md`. `620076111` and `620007539` did not produce row-level injectable medication proof; injection live remains stopped. `acceptmodv2 Request_Number=00` parser/preflight is hardened; base-charge live remains stopped until active acceptance plus consultation-fee/first-visit fields are proven. RWO-08B remains blocked until a fresh target and server-derived official identifiers are proven without raw artifacts.
 - Latest RWO-07 operation matrix hardening: `docs/implementation/rwo07-operation-matrix-hardening-20260426T150137Z/OPERATION_MATRIX_HARDENING.md`. `Request_Number=00` is inquiry-only, `01` is create, and `02` / `03` / `04` remain queued for endpoint-specific no-live contracts before any live action.
 - Latest throughput policy: `docs/implementation/automation-handoff/AUTOMATION_THROUGHPUT_POLICY.md`. `HANDOFF_STATE.json.nextExecutableQueue` has processed the 20260426T212101Z follow-up items through RUN_ID `20260426T231411Z`: `RWO-06H_READONLY_INJECTABLE_MASTER_ROW_PROOF` is skipped/stopped before live because row proof was not produced, `RWO-06G_RN00_PARSER_PREFLIGHT_REPAIR` is completed, `RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT` is skipped until a fresh target/server-derived identifier precondition exists, and `RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE` is skipped/stopped before live because all checked source-backed candidates returned `masterFound=false`. The next independent safe item is `RWO-09_STATIC_PACKAGE_REFRESH` or another roadmap no-live/static gate. Do not run injection, baseChargeOrder/110, or diagnostic fullflow live from this intake alone.
