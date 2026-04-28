@@ -1,6 +1,6 @@
 {
-  "status": "active",
-  "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+  "status": "no_active_prompt",
+  "currentPrompt": null,
   "sourceWorkOrder": "RWO-06F",
   "blockerId": "rwo06f-readonly-context-wrapper-gaps",
   "priority": "high",
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T07:06:26Z",
+  "lastUpdated": "2026-04-28T07:36:57Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5170,6 +5170,60 @@
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   },
+  "latestRwo06FReadonlyContextWrapperGapClosure": {
+    "runId": "20260428T073657Z",
+    "workOrder": "RWO-06F",
+    "taskId": "RWO-06F_READONLY_CONTEXT_WRAPPER_GAP_CLOSURE_NO_LIVE",
+    "result": "RWO06F_READONLY_CONTEXT_WRAPPER_GAP_CLOSURE_COMPLETED_STOP_BEFORE_LIVE",
+    "branch": "master",
+    "headAtSelection": "9562c5a1928d6fe604154a7b6d848eb0bf92621a",
+    "evidence": "docs/implementation/rwo06f-readonly-context-wrapper-gap-closure-20260428T073657Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06f-readonly-context-wrapper-gap-closure-20260428T073657Z/summary.sanitized.json",
+    "changedSource": [
+      "web-client/scripts/qa-lib/phase4-instruction-charge-preconditions-evidence.mjs",
+      "web-client/scripts/__tests__/phase4InstructionChargePreconditionsEvidence.test.ts"
+    ],
+    "wrapperGapClosure": {
+      "candidateCodeValidityProbe": "implemented_medicationgetv2_request_02_sanitizer",
+      "selectableCommentStatusProbe": "implemented_medicationgetv2_request_02_sanitizer",
+      "physicianStatusProbe": "implemented_system01lstv2_request_02_sanitizer",
+      "insuranceCombinationReadinessProbe": "implemented_patientlst6v2_sanitizer",
+      "masterFreshnessProbe": "implemented_masterlastupdatev3_sanitizer",
+      "apiResultOfficialErrorDoesNotValidateCandidate": true,
+      "unchangedRejectedCheckpointRefusal": "preserved_in_stop_conditions_and_duplicate_checkpoint_identity"
+    },
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "mutation": false,
+      "preconditionStatus": {
+        "candidateCodeValidity": "static_shape_valid_readonly_probe_required",
+        "selectableCommentStatus": "readonly_selectable_comment_invalid_stop_before_live",
+        "diseaseContext": "not_proven",
+        "monthlyDuplicateContext": "not_proven",
+        "departmentContext": "not_proven",
+        "physicianContext": "observed_in_readonly_orca_response_sanitized",
+        "insuranceCombinationContext": "not_proven",
+        "facilityContext": "facility_summary_observed_sanitized",
+        "masterFreshnessStatus": "readonly_master_freshness_observed_sanitized"
+      },
+      "allPreconditionsProven": false,
+      "businessSuccessClassification": "not_applicable_or_readonly_preconditions_not_proven"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "checks": {
+      "focusedVitest": "pass_9_tests_with_web_guard_pretest",
+      "syntaxCheck": "pass",
+      "dryRun": "pass_no_readonly_orca",
+      "readOnlyProbe": "completed_expected_nonzero_stop_before_live"
+    },
+    "recommendedNextTask": "Do not run RWO-06F live medicalmodv2; carry RWO-06F owner/business context as human pending and wait for a new safe queue item or explicit owner input.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "nextExecutableQueue": [
     {
       "taskId": "RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING",
@@ -5219,7 +5273,7 @@
     {
       "taskId": "RWO-06F_READONLY_CONTEXT_PREFLIGHT_OR_CARRY_FORWARD",
       "lane": "critical_path",
-      "status": "blocked_safety_stop",
+      "status": "completed",
       "workOrder": "RWO-06F",
       "summary": "Run or carry forward sanitized read-only disease/monthly/department/physician/insurance/facility context preflight for instractionChargeOrder/130 after packet hardening.",
       "requiresRuntime": true,
@@ -5232,25 +5286,29 @@
       "successCriteria": "sanitized read-only context status evidence exists or a precise sanitized carry-forward blocker exists; mutation=false, liveTrialOrca.executed=false, credentialsCaptured=false, rawArtifactsCommittedOrPackaged=false",
       "nextOnSuccess": "RWO-06F_OWNER_BUSINESS_CONTEXT",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
-      "result": "carried_forward_safe_wrapper_gaps",
-      "completedRunId": "20260428T070626Z",
-      "evidence": "docs/implementation/rwo06f-readonly-context-carry-forward-20260428T070626Z/summary.sanitized.json",
-      "missingReadOnlyProbeCoverage": [
-        "medicationgetv2 candidate code validity sanitizer",
-        "selectable-comment applicability sanitizer",
-        "system01lstv2 physician status sanitizer",
-        "patientlst6v2 or equivalent insurance-combination readiness sanitizer",
-        "masterlastupdatev3 master freshness sanitizer",
-        "unchanged rejected checkpoint refusal evidence tied to prior checkpoint state"
-      ],
+      "result": "readonly_context_wrapper_gap_closure_completed_stop_before_live",
+      "completedRunId": "20260428T073657Z",
+      "evidence": "docs/implementation/rwo06f-readonly-context-wrapper-gap-closure-20260428T073657Z/summary.sanitized.json",
+      "preconditionStatus": {
+        "candidateCodeValidity": "static_shape_valid_readonly_probe_required",
+        "selectableCommentStatus": "readonly_selectable_comment_invalid_stop_before_live",
+        "diseaseContext": "not_proven",
+        "monthlyDuplicateContext": "not_proven",
+        "departmentContext": "not_proven",
+        "physicianContext": "observed_in_readonly_orca_response_sanitized",
+        "insuranceCombinationContext": "not_proven",
+        "facilityContext": "facility_summary_observed_sanitized",
+        "masterFreshnessStatus": "readonly_master_freshness_observed_sanitized"
+      },
       "liveTrialOrca": {
         "executed": false,
         "businessAccepted": false
       },
       "readOnlyTrialOrca": {
-        "executed": false,
+        "executed": true,
         "mutation": false
-      }
+      },
+      "correctedNextAction": "Do not run instractionChargeOrder/130 live; owner/business context remains human pending and no safe unblocked non-human queue item remains after this update."
     },
     {
       "taskId": "ACCEPTMODV2_TARGET_INVENTORY_READONLY_TRIAL_AFTER_PARSER_FIX",

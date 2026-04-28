@@ -3,9 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   buildDiseaseGetXml,
   buildInstructionChargePreconditionSummary,
+  buildMedicationGetCodeXml,
   buildMedicalGetMonthlyXml,
+  buildMasterLastUpdateXml,
+  buildPatientInsuranceCombinationXml,
   buildSystem01DailyXml,
   buildSystem01ManageXml,
+  buildSystem01PhysicianXml,
   executeInstructionChargeReadonlyPreconditionChecks,
   resolveInstructionChargeReadonlyConfig,
   sanitizeInstructionChargeReadonlyXmlResult,
@@ -36,6 +40,7 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
     expect(guard.payloadEvidence?.context).toEqual(expect.objectContaining({
       patientId: '00001',
       departmentCode: '01',
+      physicianCode: '10001',
       insuranceCombinationNumber: '0001',
       baseDate: '2026-04-25',
       baseMonth: '2026-04',
@@ -99,6 +104,14 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
     })).toContain('<Perform_Date type="string">2026-04-25</Perform_Date>');
     expect(buildSystem01DailyXml({ baseDate: '2026-04-25' })).toContain('<Request_Number type="string">01</Request_Number>');
     expect(buildSystem01ManageXml({ baseDate: '2026-04-25' })).toContain('<Request_Number type="string">04</Request_Number>');
+    expect(buildMedicationGetCodeXml({ candidateCode: '113001810', baseDate: '2026-04-25' })).toContain(
+      '<Request_Number type="string">02</Request_Number>',
+    );
+    expect(buildSystem01PhysicianXml()).toContain('<Request_Number type="string">02</Request_Number>');
+    expect(buildPatientInsuranceCombinationXml({ patientId: '00001', baseDate: '2026-04-25' })).toContain(
+      '<Patient_ID>00001</Patient_ID>',
+    );
+    expect(buildMasterLastUpdateXml()).toContain('<masterlastupdatev3req type="record">');
   });
 
   it('sanitizes disease context without preserving raw disease or patient detail', () => {
@@ -168,11 +181,102 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
     }));
   });
 
+  it('sanitizes new readonly context probes without preserving raw detail', () => {
+    const code = sanitizeInstructionChargeReadonlyXmlResult({
+      role: 'candidateCodeValidity',
+      endpoint: 'medicationgetv2',
+      httpStatus: 200,
+      xml: [
+        '<xmlio2><medicationgetres><Api_Result>00</Api_Result>',
+        '<Medication_Code>113001810</Medication_Code><Medication_Name>raw master name</Medication_Name>',
+        '<StartDate>20260401</StartDate></medicationgetres></xmlio2>',
+      ].join(''),
+      context: { candidateCode: '113001810' },
+    });
+    expect(code).toEqual(expect.objectContaining({
+      candidateCodeValid: true,
+      candidateCodeReferenceCountClass: 'one',
+      rawMasterRowsStored: false,
+    }));
+    expect(JSON.stringify(code)).not.toContain('raw master name');
+
+    const officialErrorCode = sanitizeInstructionChargeReadonlyXmlResult({
+      role: 'candidateCodeValidity',
+      endpoint: 'medicationgetv2',
+      httpStatus: 200,
+      xml: '<xmlio2><medicationgetres><Api_Result>E90</Api_Result><Medication_Code>113001810</Medication_Code></medicationgetres></xmlio2>',
+      context: { candidateCode: '113001810' },
+    });
+    expect(officialErrorCode).toEqual(expect.objectContaining({
+      candidateCodeValid: false,
+      candidateCodeReferenceCountClass: 'one',
+    }));
+
+    const selectable = sanitizeInstructionChargeReadonlyXmlResult({
+      role: 'selectableCommentStatus',
+      endpoint: 'medicationgetv2',
+      httpStatus: 200,
+      xml: '<xmlio2><medicationgetres><Api_Result>00</Api_Result><Medication_Code>113001810</Medication_Code></medicationgetres></xmlio2>',
+      context: { candidateCode: '113001810' },
+    });
+    expect(selectable).toEqual(expect.objectContaining({
+      status: 'readonly_selectable_comment_valid_sanitized',
+      selectableCommentValid: true,
+      selectableCommentProof: true,
+    }));
+
+    const physician = sanitizeInstructionChargeReadonlyXmlResult({
+      role: 'physicianContext',
+      endpoint: 'system01physicianv2',
+      httpStatus: 200,
+      xml: '<xmlio2><physicianres><Api_Result>00</Api_Result><Physician_Information><Code>10001</Code><WholeName>raw physician</WholeName></Physician_Information></physicianres></xmlio2>',
+      context: { physicianCode: '10001' },
+    });
+    expect(physician).toEqual(expect.objectContaining({
+      targetPhysicianReferenced: true,
+      physicianCountClass: 'one',
+      rawPhysicianNamesStored: false,
+    }));
+    expect(JSON.stringify(physician)).not.toContain('raw physician');
+
+    const insurance = sanitizeInstructionChargeReadonlyXmlResult({
+      role: 'insuranceCombinationContext',
+      endpoint: 'patientlst6v2',
+      httpStatus: 200,
+      xml: '<xmlio2><patientlst2res><Api_Result>00</Api_Result><WholeName>raw patient</WholeName><HealthInsurance_Information><Insurance_Combination_Number>0001</Insurance_Combination_Number><InsuranceProvider_WholeName>raw insurer</InsuranceProvider_WholeName></HealthInsurance_Information></patientlst2res></xmlio2>',
+      context: { insuranceCombinationNumber: '0001' },
+    });
+    expect(insurance).toEqual(expect.objectContaining({
+      targetInsuranceCombinationReferenced: true,
+      insuranceCombinationCountClass: 'one',
+      rawInsuranceDetailStored: false,
+    }));
+    expect(JSON.stringify(insurance)).not.toContain('raw patient');
+    expect(JSON.stringify(insurance)).not.toContain('raw insurer');
+
+    const masterFreshness = sanitizeInstructionChargeReadonlyXmlResult({
+      role: 'masterFreshnessStatus',
+      endpoint: 'masterlastupdatev3',
+      httpStatus: 200,
+      xml: '<xmlio2><masterlastupdatev3res><Api_Result>00</Api_Result><Last_Update_Date>2026-04-01</Last_Update_Date></masterlastupdatev3res></xmlio2>',
+      context: {},
+    });
+    expect(masterFreshness).toEqual(expect.objectContaining({
+      masterFreshnessObserved: true,
+      lastUpdatePresence: 'present',
+      freshnessStatusOnly: true,
+      rawMasterRowsStored: false,
+    }));
+  });
+
   it('executes all readonly probes through sanitized fetch results only', async () => {
     const fetched: Array<{ url: string; body?: string }> = [];
     const fetchImpl = async (url: string, init: RequestInit) => {
       fetched.push({ url, body: typeof init.body === 'string' ? init.body : undefined });
       let body = '<xmlio2><res><Api_Result>00</Api_Result></res></xmlio2>';
+      if (url.includes('medicationgetv2')) {
+        body = '<xmlio2><medicationgetres><Api_Result>00</Api_Result><Medication_Code>113001810</Medication_Code><StartDate>20260401</StartDate></medicationgetres></xmlio2>';
+      }
       if (url.includes('diseasegetv2')) {
         body = '<xmlio2><disease_infores><Api_Result>00</Api_Result><Disease_Class>05</Disease_Class><Department_Code>01</Department_Code><Insurance_Combination_Number>0001</Insurance_Combination_Number></disease_infores></xmlio2>';
       }
@@ -183,7 +287,15 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
         body = '<xmlio2><system01_dailyres><Api_Result>00</Api_Result><Disease_Med_Auto_Class>1</Disease_Med_Auto_Class></system01_dailyres></xmlio2>';
       }
       if (url.includes('system01lstv2')) {
-        body = '<xmlio2><medicalores><Api_Result>00</Api_Result><Institution_Code>1</Institution_Code></medicalores></xmlio2>';
+        body = url.includes('class=02')
+          ? '<xmlio2><physicianres><Api_Result>00</Api_Result><Physician_Information><Code>10001</Code><WholeName>raw physician</WholeName></Physician_Information></physicianres></xmlio2>'
+          : '<xmlio2><medicalores><Api_Result>00</Api_Result><Institution_Code>1</Institution_Code></medicalores></xmlio2>';
+      }
+      if (url.includes('patientlst6v2')) {
+        body = '<xmlio2><patientlst2res><Api_Result>00</Api_Result><HealthInsurance_Information><Insurance_Combination_Number>0001</Insurance_Combination_Number><InsuranceProvider_WholeName>raw insurer</InsuranceProvider_WholeName></HealthInsurance_Information></patientlst2res></xmlio2>';
+      }
+      if (url.includes('masterlastupdatev3')) {
+        body = '<xmlio2><masterlastupdatev3res><Api_Result>00</Api_Result><Last_Update_Date>2026-04-01</Last_Update_Date></masterlastupdatev3res></xmlio2>';
       }
       return new Response(body, { status: 200 });
     };
@@ -197,6 +309,7 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
       context: {
         patientId: '00001',
         departmentCode: '01',
+        physicianCode: '10001',
         insuranceCombinationNumber: '0001',
         baseDate: '2026-04-25',
         baseMonth: '2026-04',
@@ -205,18 +318,29 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
       fetchImpl: fetchImpl as typeof fetch,
     });
 
-    expect(checks).toHaveLength(4);
+    expect(checks).toHaveLength(9);
     expect(fetched.map((entry) => new URL(entry.url).hostname)).toEqual([
       'weborca-trial.orca.med.or.jp',
       'weborca-trial.orca.med.or.jp',
       'weborca-trial.orca.med.or.jp',
       'weborca-trial.orca.med.or.jp',
+      'weborca-trial.orca.med.or.jp',
+      'weborca-trial.orca.med.or.jp',
+      'weborca-trial.orca.med.or.jp',
+      'weborca-trial.orca.med.or.jp',
+      'weborca-trial.orca.med.or.jp',
     ]);
-    expect(fetched[0].url).toContain('/api01rv2/diseasegetv2?class=01');
-    expect(fetched[1].url).toContain('/api01rv2/medicalgetv2?class=03');
-    expect(fetched[2].url).toContain('/api01rv2/system01dailyv2');
-    expect(fetched[3].url).toContain('/api01rv2/system01lstv2?class=04');
-    expect(fetched[1].body).toContain('<Insurance_Combination_Number type="string">0001</Insurance_Combination_Number>');
+    expect(fetched[0].url).toContain('/api01rv2/medicationgetv2?class=01');
+    expect(fetched[1].url).toContain('/api01rv2/medicationgetv2?class=01');
+    expect(fetched[2].url).toContain('/api01rv2/diseasegetv2?class=01');
+    expect(fetched[3].url).toContain('/api01rv2/medicalgetv2?class=03');
+    expect(fetched[4].url).toContain('/api01rv2/system01dailyv2');
+    expect(fetched[5].url).toContain('/api01rv2/system01lstv2?class=04');
+    expect(fetched[6].url).toContain('/api01rv2/system01lstv2?class=02');
+    expect(fetched[7].url).toContain('/api01rv2/patientlst6v2');
+    expect(fetched[8].url).toContain('/api/orca51/masterlastupdatev3');
+    expect(fetched[3].body).toContain('<Insurance_Combination_Number type="string">0001</Insurance_Combination_Number>');
+    expect(fetched[7].body).toContain('<Patient_ID>00001</Patient_ID>');
   });
 
   it('classifies incomplete readonly preconditions separately from live business acceptance', () => {
@@ -243,7 +367,7 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
           role: 'diseaseContext',
           httpStatusClass: '2xx',
           apiResultClass: 'success_zero',
-          managementFeeDiseaseClassPresent: true,
+          managementFeeDiseaseClassPresent: false,
         },
         {
           role: 'monthlyDuplicateContext',
@@ -254,6 +378,30 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
           targetInsuranceCombinationReferenced: true,
         },
         { role: 'facilityContext', httpStatusClass: '2xx', apiResultClass: 'success_zero' },
+        {
+          role: 'candidateCodeValidity',
+          httpStatusClass: '2xx',
+          apiResultClass: 'success_zero',
+          candidateCodeValid: true,
+        },
+        {
+          role: 'selectableCommentStatus',
+          httpStatusClass: '2xx',
+          apiResultClass: 'success_zero',
+          status: 'readonly_selectable_comment_valid_sanitized',
+        },
+        {
+          role: 'physicianContext',
+          httpStatusClass: '2xx',
+          apiResultClass: 'success_zero',
+          targetPhysicianReferenced: true,
+        },
+        {
+          role: 'masterFreshnessStatus',
+          httpStatusClass: '2xx',
+          apiResultClass: 'success_zero',
+          masterFreshnessObserved: true,
+        },
       ],
     });
 
@@ -276,12 +424,12 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
       http200OrApiResultZeroAloneIsBusinessSuccess: false,
     });
     expect(summary.preconditions.preconditionStatus).toEqual(expect.objectContaining({
-      candidateCodeValidity: 'static_shape_valid_readonly_probe_required',
-      selectableCommentStatus: 'not_applicable_candidate_is_not_selectable_comment',
+      candidateCodeValidity: 'readonly_code_valid_sanitized',
+      selectableCommentStatus: 'readonly_selectable_comment_valid_sanitized',
       departmentContext: 'observed_in_readonly_orca_response_sanitized',
-      physicianContext: 'not_proven',
+      physicianContext: 'observed_in_readonly_orca_response_sanitized',
       insuranceCombinationContext: 'observed_in_readonly_orca_response_sanitized',
-      masterFreshnessStatus: 'not_proven',
+      masterFreshnessStatus: 'readonly_master_freshness_observed_sanitized',
     }));
     expect(summary.preconditions.allPreconditionsProven).toBe(false);
     expect(summary.preconditions.businessSuccessClassification).toBe(

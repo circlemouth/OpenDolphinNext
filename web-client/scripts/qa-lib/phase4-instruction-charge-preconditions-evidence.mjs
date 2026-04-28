@@ -114,6 +114,7 @@ const payloadBaseDate = (payload) => {
 const payloadContext = (payload) => ({
   patientId: normalize(payload?.encounterContext?.patientId || payload?.patientId),
   departmentCode: normalize(payload?.encounterContext?.departmentCode || payload?.departmentCode),
+  physicianCode: normalize(payload?.encounterContext?.physicianCode || payload?.physicianCode),
   insuranceCombinationNumber: normalize(
     payload?.encounterContext?.insuranceCombinationNumber || payload?.insuranceCombinationNumber,
   ),
@@ -144,6 +145,7 @@ export const validateInstructionChargePreconditionCommand = ({ argv, env = proce
     const context = payloadContext(loaded.payload);
     if (!context.patientId) blockers.push('payload encounterContext.patientId is required');
     if (!context.departmentCode) blockers.push('payload encounterContext.departmentCode is required');
+    if (!context.physicianCode) blockers.push('payload encounterContext.physicianCode is required');
     if (!context.insuranceCombinationNumber) {
       blockers.push('payload encounterContext.insuranceCombinationNumber is required');
     }
@@ -255,6 +257,24 @@ export const buildSystem01ManageXml = ({ baseDate }) =>
     baseDate,
   )}</Base_Date></system01_managereq></data>`;
 
+export const buildMedicationGetCodeXml = ({ candidateCode, baseDate }) =>
+  `<data><medicationgetreq type="record"><Request_Number type="string">02</Request_Number><Request_Code type="string">${escapeXml(
+    candidateCode,
+  )}</Request_Code><Base_Date type="string">${escapeXml(baseDate)}</Base_Date></medicationgetreq></data>`;
+
+export const buildSystem01PhysicianXml = () =>
+  '<data><system01lstv2req type="record"><Request_Number type="string">02</Request_Number></system01lstv2req></data>';
+
+export const buildPatientInsuranceCombinationXml = ({ patientId, baseDate }) =>
+  `<data><patientlst6req><Reqest_Number>01</Reqest_Number><Patient_ID>${escapeXml(
+    patientId,
+  )}</Patient_ID><Base_Date>${escapeXml(baseDate)}</Base_Date><Start_Date>${escapeXml(
+    baseDate,
+  )}</Start_Date><End_Date>${escapeXml(baseDate)}</End_Date></patientlst6req></data>`;
+
+export const buildMasterLastUpdateXml = () =>
+  '<data><masterlastupdatev3req type="record"></masterlastupdatev3req></data>';
+
 const tagText = (xml, tagName) => {
   const pattern = new RegExp(`<${tagName}(?:\\s[^>]*)?>([\\s\\S]*?)</${tagName}>`, 'i');
   const match = String(xml ?? '').match(pattern);
@@ -342,6 +362,67 @@ export const sanitizeInstructionChargeReadonlyXmlResult = ({ role, endpoint, htt
     return { ...sanitized, evidenceHash: sha256Text(JSON.stringify(sanitized)) };
   }
 
+  if (role === 'candidateCodeValidity') {
+    const medicationCodes = allTagText(xml, 'Medication_Code');
+    const startDate = tagText(xml, 'StartDate');
+    const endDate = tagText(xml, 'EndDate');
+    const candidateCode = context.candidateCode;
+    const candidateCodeValid =
+      apiResultClass === 'success_zero' && Boolean(candidateCode && medicationCodes.includes(candidateCode));
+    const sanitized = {
+      ...base,
+      requestNumber: '02',
+      candidateCodeValid,
+      candidateCodeReferenceCountClass: countClass(medicationCodes.filter((code) => code === candidateCode).length),
+      effectiveStartDatePresence: classForPresence(startDate),
+      effectiveEndDatePresence: classForPresence(endDate),
+      requestSemantics: 'medicationgetv2_request_02_code_lookup_sanitized',
+      rawMasterRowsStored: false,
+    };
+    return { ...sanitized, evidenceHash: sha256Text(JSON.stringify(sanitized)) };
+  }
+
+  if (role === 'selectableCommentStatus') {
+    const medicationCodes = allTagText(xml, 'Medication_Code');
+    const candidateCode = context.candidateCode;
+    const selectableCommentValid =
+      apiResultClass === 'success_zero' && Boolean(candidateCode && medicationCodes.includes(candidateCode));
+    const sanitized = {
+      ...base,
+      requestNumber: '02',
+      status: selectableCommentValid
+        ? 'readonly_selectable_comment_valid_sanitized'
+        : 'readonly_selectable_comment_invalid_stop_before_live',
+      selectableCommentValid,
+      selectableCommentProof: true,
+      rawMasterRowsStored: false,
+    };
+    return { ...sanitized, evidenceHash: sha256Text(JSON.stringify(sanitized)) };
+  }
+
+  if (role === 'physicianContext') {
+    const physicianCodes = [...allTagText(xml, 'Code'), ...allTagText(xml, 'Physician_Code')];
+    const sanitized = {
+      ...base,
+      targetPhysicianReferenced: physicianCodes.includes(context.physicianCode),
+      physicianCountClass: countClass(physicianCodes.length),
+      rawPhysicianNamesStored: false,
+    };
+    return { ...sanitized, evidenceHash: sha256Text(JSON.stringify(sanitized)) };
+  }
+
+  if (role === 'insuranceCombinationContext') {
+    const insuranceCombinationNumbers = allTagText(xml, 'Insurance_Combination_Number');
+    const sanitized = {
+      ...base,
+      targetInsuranceCombinationReferenced: insuranceCombinationNumbers.includes(context.insuranceCombinationNumber),
+      insuranceCombinationCountClass: countClass(insuranceCombinationNumbers.length),
+      insuranceAuthority: 'patientlst6v2_readonly_orca_response_sanitized_not_client_authority',
+      rawInsuranceDetailStored: false,
+    };
+    return { ...sanitized, evidenceHash: sha256Text(JSON.stringify(sanitized)) };
+  }
+
   if (role === 'facilityContext') {
     const sanitized = {
       ...base,
@@ -354,20 +435,50 @@ export const sanitizeInstructionChargeReadonlyXmlResult = ({ role, endpoint, htt
     return { ...sanitized, evidenceHash: sha256Text(JSON.stringify(sanitized)) };
   }
 
+  if (role === 'masterFreshnessStatus') {
+    const lastUpdate =
+      tagText(xml, 'Last_Update_Date') ||
+      tagText(xml, 'Last_Update') ||
+      tagText(xml, 'Information_Date') ||
+      tagText(xml, 'Information_Time');
+    const sanitized = {
+      ...base,
+      masterFreshnessObserved: apiResultClass === 'success_zero',
+      lastUpdatePresence: classForPresence(lastUpdate),
+      freshnessStatusOnly: true,
+      rawMasterRowsStored: false,
+    };
+    return { ...sanitized, evidenceHash: sha256Text(JSON.stringify(sanitized)) };
+  }
+
   return { ...base, evidenceHash: sha256Text(JSON.stringify(base)) };
 };
 
 const endpointUrl = (baseUrl, endpoint) => {
   const pathName = {
+    medicationgetv2: '/api01rv2/medicationgetv2?class=01',
     diseasegetv2: '/api01rv2/diseasegetv2?class=01',
     medicalgetv2: '/api01rv2/medicalgetv2?class=03',
     system01dailyv2: '/api01rv2/system01dailyv2',
+    system01physicianv2: '/api01rv2/system01lstv2?class=02',
     system01lstv2: '/api01rv2/system01lstv2?class=04',
+    patientlst6v2: '/api01rv2/patientlst6v2',
+    masterlastupdatev3: '/api/orca51/masterlastupdatev3',
   }[endpoint];
   return new URL(pathName, baseUrl).toString();
 };
 
 const readonlyRequestsForContext = (context) => [
+  {
+    role: 'candidateCodeValidity',
+    endpoint: 'medicationgetv2',
+    body: buildMedicationGetCodeXml({ candidateCode: context.candidateCode, baseDate: context.baseDate }),
+  },
+  {
+    role: 'selectableCommentStatus',
+    endpoint: 'medicationgetv2',
+    body: buildMedicationGetCodeXml({ candidateCode: context.candidateCode, baseDate: context.baseDate }),
+  },
   {
     role: 'diseaseContext',
     endpoint: 'diseasegetv2',
@@ -392,6 +503,21 @@ const readonlyRequestsForContext = (context) => [
     role: 'facilityContext',
     endpoint: 'system01lstv2',
     body: buildSystem01ManageXml({ baseDate: context.baseDate }),
+  },
+  {
+    role: 'physicianContext',
+    endpoint: 'system01physicianv2',
+    body: buildSystem01PhysicianXml(),
+  },
+  {
+    role: 'insuranceCombinationContext',
+    endpoint: 'patientlst6v2',
+    body: buildPatientInsuranceCombinationXml({ patientId: context.patientId, baseDate: context.baseDate }),
+  },
+  {
+    role: 'masterFreshnessStatus',
+    endpoint: 'masterlastupdatev3',
+    body: buildMasterLastUpdateXml(),
   },
 ];
 
@@ -496,6 +622,7 @@ export const buildInstructionChargePreconditionSummary = ({
   const allProven =
     preconditionStatus.candidateCodeValidity === 'readonly_code_valid_sanitized' &&
     preconditionStatus.selectableCommentStatus !== 'not_proven' &&
+    preconditionStatus.selectableCommentStatus !== 'readonly_selectable_comment_invalid_stop_before_live' &&
     preconditionStatus.diseaseContext === 'proven_sanitized' &&
     preconditionStatus.monthlyDuplicateContext === 'no_candidate_duplicate_observed_sanitized' &&
     preconditionStatus.departmentContext === 'observed_in_readonly_orca_response_sanitized' &&

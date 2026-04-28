@@ -1,13 +1,16 @@
 # NEXT_WORKER_PROMPT
 
-status: active
+status: completed
 created_at: 2026-04-28T07:06:26Z
-updated_at: 2026-04-28T07:06:26Z
+updated_at: 2026-04-28T07:36:57Z
 source_work_order: RWO-06F
 blocker_id: rwo06f-readonly-context-wrapper-gaps
 priority: high
 supersedes:
 - rwo06f-no-live-precondition-packet-hardening-needed
+
+completed_by_run: 20260428T073657Z
+completion_evidence: docs/implementation/rwo06f-readonly-context-wrapper-gap-closure-20260428T073657Z/summary.sanitized.json
 
 ## Context
 
