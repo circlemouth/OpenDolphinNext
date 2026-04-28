@@ -5232,15 +5232,15 @@
     "credentialsCaptureAllowed": false
   },
   "latestRwo09CurrentHeadStaticRefresh": {
-    "runId": "20260428T180112Z",
+    "runId": "20260428T190240Z",
     "workOrder": "RWO-09",
     "taskId": "RWO-09_CURRENT_HEAD_STATIC_REFRESH_AFTER_QUEUE_RECONCILE",
     "result": "CURRENT_HEAD_NON_S3_STATIC_PACKAGE_SECURITY_REFRESH_PASS",
     "branch": "master",
-    "headAtSelection": "b2aef6e886261af577812f08b4fe93e4ec3074d8",
-    "evidence": "docs/implementation/rwo09-current-head-static-refresh-20260428T180112Z/summary.sanitized.json",
-    "report": "docs/implementation/rwo09-current-head-static-refresh-20260428T180112Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-current-head-static-refresh-20260428T180112Z/summary.sanitized.json",
+    "headAtSelection": "1f376996220e2a040265435ad26a511f64923b69",
+    "evidence": "docs/implementation/rwo09-current-head-static-refresh-20260428T190240Z/summary.sanitized.json",
+    "report": "docs/implementation/rwo09-current-head-static-refresh-20260428T190240Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-current-head-static-refresh-20260428T190240Z/summary.sanitized.json",
     "activePrompt": {
       "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
       "statusAtSelection": "completed",
