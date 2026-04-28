@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260428T063423Z",
+  "workOrder": "RWO-06F",
+  "taskId": "RWO-06F_OFFICIAL_SPEC_CONTEXT_MAP_DOCS_ONLY",
+  "result": "RWO06F_OFFICIAL_SPEC_CONTEXT_MAP_READY_NO_LIVE",
+  "branch": "master",
+  "headAtSelection": "077f85d84ccc3eb35358810ebf65cbb5c038e554",
+  "input": {
+    "kind": "owner_supplied_chatgpt_orca_spec_research",
+    "reviewedAgainstCurrentRepoEvidence": true,
+    "storedRawChatgptResponse": false
+  },
+  "sourceEvidence": [
+    "docs/implementation/rwo06f-instruction-charge-preconditions-20260427T071611Z/summary.sanitized.json",
+    "docs/implementation/rwo06f-readonly-precondition-probes-20260427T074616Z/summary.sanitized.json",
+    "docs/implementation/diseasev3-official-contract-refresh-20260428T050947Z/summary.sanitized.json"
+  ],
+  "officialSourcesChecked": [
+    "https://www.orca.med.or.jp/receipt/users/tec/api/overview.html",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/medicalinfo.html",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/disease.html",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/systemkanri.html",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/system_daily.html",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/medicationgetv2.html",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/insurancecombi.html",
+    "https://www.orca.med.or.jp/receipt/users/tec/api/master_last_update.html",
+    "https://orcamanual.orca.med.or.jp/gairai/chapter/2-6-2/",
+    "https://orcamanual.orca.med.or.jp/gairai/chapter/2-5-3/"
+  ],
+  "classification": {
+    "rwo06f": "no_live_readonly_docs_static_progress_possible",
+    "rwo11Rwo09": "external_owner_operator_release_management_gate"
+  },
+  "rwo06fNextQueue": [
+    "RWO-06F_OFFICIAL_SPEC_CONTEXT_MAP_DOCS_ONLY",
+    "RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING",
+    "RWO-06F_READONLY_CONTEXT_PREFLIGHT_OR_CARRY_FORWARD"
+  ],
+  "rwo06fMapping": {
+    "mutationEndpoint": "/api21/medicalmodv2",
+    "createClass": "01",
+    "representativeEntity": "instractionChargeOrder",
+    "medicalClass": "130",
+    "candidateCode": "113001810",
+    "payloadSha256": "043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858",
+    "readOnlyPreflightCandidates": [
+      "medicationgetv2",
+      "diseasegetv2",
+      "medicalgetv2",
+      "system01lstv2",
+      "system01dailyv2",
+      "patientlst6v2",
+      "masterlastupdatev3"
+    ]
+  },
+  "preconditionGaps": {
+    "candidateCodeValidity": "probeable_readonly_or_static",
+    "diseaseContext": "probeable_readonly_but_business_judgment_remains",
+    "facilityContext": "partially_probeable_readonly_business_judgment_remains",
+    "monthlyDuplicateContext": "probeable_readonly_business_judgment_remains",
+    "departmentPhysicianContext": "probeable_readonly_business_judgment_remains",
+    "insuranceCombinationContext": "probeable_readonly_business_judgment_remains",
+    "liveMutationReadiness": "not_ready_owner_operator_context_required"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessSuccessClassification": "not_applicable_docs_only_no_live",
+    "businessAccepted": false
+  },
+  "readOnlyTrialOrca": {
+    "executed": false,
+    "mutation": false
+  },
+  "recommendedNextTask": "Execute RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING: harden the existing v2 no-live endpoint packet, parser/sanitizer contract, duplicate checkpoint, context statuses, and stop conditions without live mutation.",
+  "stopConditions": [
+    "official_semantics_would_need_guessing",
+    "live_medicalmodv2_mutation_required",
+    "raw_orca_body_or_patient_insurance_disease_detail_required",
+    "credential_cookie_session_authorization_csrf_capture_risk",
+    "production_orca_or_s3_object_storage_required",
+    "wrapper_success_or_readonly_result_would_be_misclassified_as_business_success",
+    "rwo11_rwo09_external_gate_would_be_selected_as_automation_execution"
+  ],
+  "claimBoundary": "RWO-06F official-spec context map and RWO-11/RWO-09 external-gate intake schema only. No RWO-06F Trial business acceptance, class 130 billing eligibility, all guidance-fee coverage, fullflow success, rollback rehearsal, operator acceptance, final owner GO/NO-GO/PENDING, production ORCA readiness, S3/object-storage readiness, or final release readiness is claimed.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

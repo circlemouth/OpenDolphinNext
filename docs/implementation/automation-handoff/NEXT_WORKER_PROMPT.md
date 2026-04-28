@@ -1,87 +1,112 @@
 # NEXT_WORKER_PROMPT
 
-status: completed
-created_at: 2026-04-28T01:01:35Z
-updated_at: 2026-04-28T02:12:00Z
-source_work_order: ACCEPTMODV2
-blocker_id: acceptmodv2-rn02-single-live-attempt-pending-runtime-preflight
+status: active
+created_at: 2026-04-28T06:34:23Z
+updated_at: 2026-04-28T06:34:23Z
+source_work_order: RWO-06F
+blocker_id: rwo06f-no-live-precondition-packet-hardening-needed
 priority: high
 supersedes:
-- acceptmodv2-rn02-safe-live-wrapper-action-missing
+- acceptmodv2-rn02-single-live-attempt-completed-business-accepted
 
 ## Context
 
-RUN_ID `20260428T010135Z` implemented the RN02 server-derived action needed by the prior handoff:
+RUN_ID `20260428T063423Z` intook owner-supplied ChatGPT ORCA specification research and converted it into repo-local sanitized context:
 
-- Evidence: `docs/implementation/acceptmodv2-rn02-server-derived-action-20260428T010135Z/summary.sanitized.json`
-- Report: `docs/implementation/acceptmodv2-rn02-server-derived-action-20260428T010135Z/FINAL_REPORT.md`
-- Route: `/api/orca/official/visits/acceptance-operation`
-- Request class: `acceptmodv2_request_02_server_derived_action`
-- Request number: `02`
-- Target identity mode: sanitized `acceptlstv2` target row hash
-- Duplicate checkpoint: `acceptmodv2:rn02:trial:acceptlstv2-target-row:e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be:date-2026-04-28:request-02`
+- Evidence: `docs/implementation/rwo06f-official-spec-context-map-20260428T063423Z/summary.sanitized.json`
+- Context map: `docs/implementation/rwo06f-official-spec-context-map-20260428T063423Z/RWO06F_OFFICIAL_SPEC_CONTEXT_MAP.md`
+- External gate intake schema: `docs/implementation/rwo06f-official-spec-context-map-20260428T063423Z/RWO11_RWO09_EXTERNAL_GATE_INTAKE_SCHEMA.md`
 
-The action intentionally does not accept client-provided ORCA identifiers. It re-reads `acceptlstv2`, resolves the row by hash, rejects target drift before mutation, and builds `mutateVisit` from server-derived internal fields that are excluded from public JSON serialization.
+The vetted classification is:
 
-RWO-11/RWO-09 rollback rehearsal, release-candidate stop, paired restore, restored-target smoke, operator acceptance, and final owner GO/NO-GO/PENDING capture remain external release-management gates and are not performed by this automation.
+- `RWO-06F` / `instractionChargeOrder` / `指導料` / class `130` can progress through official-spec docs, no-live endpoint packet hardening, and sanitized read-only preflight/carry-forward.
+- `RWO-11/RWO-09` rollback rehearsal, release-candidate stop, paired restore, restored-target smoke, operator acceptance, and final owner GO/NO-GO/PENDING remain external owner/operator release-management gates. Do not execute or reclassify them as automation work.
+
+Prior RWO-06F evidence:
+
+- `docs/implementation/rwo06f-instruction-charge-preconditions-20260427T071611Z/summary.sanitized.json`
+- `docs/implementation/rwo06f-readonly-precondition-probes-20260427T074616Z/summary.sanitized.json`
+- payload: `web-client/qa/payloads/phase4/medicalmodv2_instruction_charge_trial_reachability_v2.json`
+- payload SHA-256: `043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858`
+- representative entity: `instractionChargeOrder`
+- medical class: `130`
+- candidate code: `113001810`
+
+The prior read-only probe observed `facilityContext` in sanitized form, but `diseaseContext`, `monthlyDuplicateContext`, and `departmentInsuranceContext` remained `not_proven`. Live Trial ORCA mutation is still forbidden until all preconditions and owner/operator business context are complete.
 
 ## Goal
 
-Prepare and, only if every immediate gate passes, perform one main-worker-controlled RN02 WebORCA / ORCA Trial live attempt through the server-derived action.
+Execute `RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING`.
 
-Do not run RN03/RN04. Do not run any production ORCA, S3/MinIO/object-storage setup, raw artifact capture, screenshots, HAR, traces, videos, request XML, raw ORCA bodies, raw patient detail, raw insurance detail, credentials, cookies, sessions, Authorization headers, or CSRF capture.
+Harden the existing RWO-06F v2 no-live packet, parser/sanitizer contract, duplicate checkpoint, context status schema, stop conditions, and focused tests so a later worker can either run a safe read-only preflight or carry forward a precise sanitized blocker.
+
+Do not run live `medicalmodv2`. Do not run production ORCA, S3/MinIO/object-storage setup, raw artifact capture, screenshots, HAR, traces, videos, request XML, raw ORCA bodies, raw patient detail, raw disease detail, raw insurance detail, credentials, cookies, sessions, Authorization headers, or CSRF capture.
 
 ## Required First Steps
 
 1. Inspect current branch, HEAD, status, and registered worktrees.
-2. Read `$CODEX_HOME/automations/orca/memory.md`, `HANDOFF_STATE.json`, this prompt, and:
-   - `docs/implementation/acceptmodv2-rn02-server-derived-action-20260428T010135Z/summary.sanitized.json`
-   - `docs/implementation/acceptmodv2-rn020304-duplicate-preflight-20260428T000407Z/summary.sanitized.json`
-   - `docs/implementation/acceptmodv2-target-inventory-parser-fix-20260427T231541Z/summary.sanitized.json`
-3. Preserve the RWO-11/RWO-09 boundary as external release-management gates.
-4. Before live, record sanitized preflight evidence for:
-   - current runtime readiness;
-   - immediate target-drift check against `/api/orca/official/visits/acceptance-list`;
-   - duplicate checkpoint status;
-   - exact endpoint/request class/target row hash;
-   - parser/sanitizer and no-raw-artifact policy;
-   - completion criteria and stop conditions.
+2. Read `$CODEX_HOME/automations/orca/memory.md`, `HANDOFF_STATE.json`, this prompt, and the RWO-06F evidence listed above.
+3. Preserve `RWO-11/RWO-09` as external release-management gates.
+4. Review existing RWO-06F helper/test surfaces:
+   - `web-client/scripts/qa-phase4-instruction-charge-preconditions.mjs`
+   - `web-client/scripts/qa-lib/phase4-instruction-charge-preconditions-evidence.mjs`
+   - `web-client/scripts/__tests__/phase4InstructionChargePreconditionsEvidence.test.ts`
+   - `web-client/scripts/qa-lib/phase4-medicalmodv2-safe-evidence.mjs`
+5. Identify whether the current no-live packet already records or needs to record:
+   - candidate code validity;
+   - selectable-comment status;
+   - disease context status;
+   - facility/system context status;
+   - monthly duplicate status;
+   - department status;
+   - physician status;
+   - insurance-combination status;
+   - master freshness status;
+   - duplicate checkpoint identity;
+   - parser/sanitizer and raw-artifact exclusion flags;
+   - endpoint-specific business-success criteria and stop conditions.
 
 ## Allowed Actions
 
-- Run read-only target inventory probes against WebORCA / ORCA Trial.
-- Run dry-runs, unit tests, web guard, JSON parse checks, and `git diff --check`.
-- If all gates pass and approved local runtime config is available, run exactly one RN02 live Trial attempt through `/api/orca/official/visits/acceptance-operation`.
-- After a live attempt, rerun sanitized read-only inventory to classify whether the selected active row is absent.
-- Record only sanitized Markdown/JSON evidence.
+- Edit `web-client/` RWO-06F no-live/read-only helper code and focused tests.
+- Edit `docs/implementation/automation-handoff/HANDOFF_STATE.json`.
+- Add sanitized evidence under a new `docs/implementation/rwo06f-no-live-precondition-packet-hardening-<RUN_ID>/` directory.
+- Run focused no-live dry-runs, unit tests, JSON validation, web guard, doc links, and `git diff --check`.
+- If a runtime/read-only probe is not necessary for the packet hardening, do not run it.
 
 ## Forbidden Actions
 
-- Any RN03/RN04 live work.
-- Blind repeat of the same live request after a failure.
-- Production ORCA, production credentials, production patient data, S3/MinIO/object-storage setup, storage readiness claims, screenshots, HAR, traces, videos, raw network dumps, request XML, raw ORCA bodies, raw patient detail, raw insurance detail, credentials, cookies, sessions, Authorization headers, or CSRF values.
+- Any live `medicalmodv2` mutation.
+- Any `Request_Number` / class `02` / `03` / `04` live work for RWO-06F.
+- Production ORCA, production credentials, production patient data, S3/MinIO/object-storage setup, storage readiness claims, screenshots, HAR, traces, videos, raw network dumps, request XML, raw ORCA bodies, raw patient detail, raw disease detail, raw insurance detail, credentials, cookies, sessions, Authorization headers, or CSRF values.
 - Changes under legacy `client/` or `server/`.
+- Treating HTTP 200, `Api_Result`, wrapper exit, dry-run pass, read-only preflight, or code validity as business success.
+- Selecting `RWO-11/RWO-09` rollback/operator/final owner decision as automation execution work.
 
 ## Evidence Requirements
 
-- Sanitized Markdown/JSON only.
-- Record endpoint/request class, target identity mode, duplicate checkpoint key, target-drift gate, runtime readiness, parser/sanitizer contract, completion evidence criteria, stop conditions, and non-claims.
-- `credentialsCaptured=false`.
-- `rawArtifactsCommittedOrPackaged=false`.
-- If live executes, `liveTrialOrca.executed=true` with attempt number, sanitized classification, and business-success criteria. HTTP 2xx, Api_Result zero, and wrapper exit 0 alone are not success.
+Record sanitized Markdown/JSON only:
+
+- endpoint/request-class mapping;
+- payload hash/identity;
+- duplicate checkpoint identity;
+- precondition status schema;
+- parser/sanitizer contract;
+- stop conditions;
+- business-success separation;
+- non-claims;
+- `credentialsCaptured=false`;
+- `diagnosticArtifactsCaptured=false`;
+- `rawArtifactsCommittedOrPackaged=false`;
+- `liveTrialOrca.executed=false`.
 
 ## Completion Criteria
 
-This prompt is complete when one of the following exists:
+This prompt is complete when sanitized evidence exists showing one of:
 
-- one RN02 live Trial attempt is executed through the server-derived action and classified with sanitized business evidence; or
-- a fresh sanitized blocker explains why the live attempt cannot proceed safely, then identifies the next independent safe task.
+- RWO-06F no-live precondition packet hardening completed with focused tests/checks; or
+- a fresh sanitized blocker explains why the no-live packet cannot be hardened safely and identifies the next independent safe task.
 
 ## Same-Run Continuation Requirement
 
-Completing or skipping this prompt is not, by itself, a valid reason to end the automation run. After recording evidence or a sanitized blocker, continue to the next safe item in `HANDOFF_STATE.json.nextExecutableQueue` unless a global stop condition is reached.
-
-
-## Completion Update - 20260428T020135Z
-
-RN02 WebORCA / ORCA Trial live verification completed through the server-derived action. Attempt 1 returned sanitized transport 404 because the runtime image did not yet expose the route; after rebuilding/restarting server-modernized-dev from current HEAD, attempt 2 reached `live_trial_business_accepted_selected_active_row_absent`. Evidence: `docs/implementation/acceptmodv2-rn02-live-attempt-20260428T020135Z/summary.sanitized.json`. No RN03/RN04, production ORCA, S3/object-storage, raw artifacts, credentials, screenshots, HAR, traces, videos, raw ORCA bodies, patient details, or insurance details were captured or committed.
+Completing this prompt is not, by itself, a valid reason to end the automation run. After recording evidence or a sanitized blocker, continue to the next safe item in `HANDOFF_STATE.json.nextExecutableQueue` unless a global stop condition is reached.

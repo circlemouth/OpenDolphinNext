@@ -1,8 +1,8 @@
 {
-  "status": "completed",
+  "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "ACCEPTMODV2",
-  "blockerId": "acceptmodv2-rn02-single-live-attempt-completed-business-accepted",
+  "sourceWorkOrder": "RWO-06F",
+  "blockerId": "rwo06f-no-live-precondition-packet-hardening-needed",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T05:09:47Z",
+  "lastUpdated": "2026-04-28T06:34:23Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5172,6 +5172,57 @@
   },
   "nextExecutableQueue": [
     {
+      "taskId": "RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING",
+      "lane": "critical_path",
+      "status": "queued",
+      "workOrder": "RWO-06F",
+      "summary": "Harden the instractionChargeOrder/130 v2 no-live endpoint packet, context-status schema, parser/sanitizer contract, duplicate checkpoint, stop conditions, and business-success separation.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06f-official-spec-context-map-20260428T063423Z/summary.sanitized.json",
+      "payload": "web-client/qa/payloads/phase4/medicalmodv2_instruction_charge_trial_reachability_v2.json",
+      "payloadSha256": "043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858",
+      "requiredPacketFields": [
+        "candidate_code_validity",
+        "selectable_comment_status",
+        "disease_context_status",
+        "facility_system_context_status",
+        "monthly_duplicate_status",
+        "department_status",
+        "physician_status",
+        "insurance_combination_status",
+        "master_freshness_status",
+        "duplicate_checkpoint_identity",
+        "parser_sanitizer_contract",
+        "endpoint_specific_business_success_criteria",
+        "stop_conditions"
+      ],
+      "skipCondition": "focused no-live helper/test surface unavailable, official semantics require guessing, raw patient/insurance/disease detail would be required, or live mutation would be needed",
+      "successCriteria": "sanitized no-live packet-hardening evidence exists with focused tests/checks, credentialsCaptured=false, rawArtifactsCommittedOrPackaged=false, liveTrialOrca.executed=false, and no business acceptance claimed",
+      "nextOnSuccess": "RWO-06F_READONLY_CONTEXT_PREFLIGHT_OR_CARRY_FORWARD",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+    },
+    {
+      "taskId": "RWO-06F_READONLY_CONTEXT_PREFLIGHT_OR_CARRY_FORWARD",
+      "lane": "critical_path",
+      "status": "queued",
+      "workOrder": "RWO-06F",
+      "summary": "Run or carry forward sanitized read-only disease/monthly/department/physician/insurance/facility context preflight for instractionChargeOrder/130 after packet hardening.",
+      "requiresRuntime": true,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/rwo06f-official-spec-context-map-20260428T063423Z/summary.sanitized.json",
+      "skipCondition": "approved non-S3 Trial runtime unavailable, safe read-only wrapper missing, parser ambiguity, target/context ambiguity, credential/raw-artifact risk, non-Trial endpoint detection, or raw detail required",
+      "successCriteria": "sanitized read-only context status evidence exists or a precise sanitized carry-forward blocker exists; mutation=false, liveTrialOrca.executed=false, credentialsCaptured=false, rawArtifactsCommittedOrPackaged=false",
+      "nextOnSuccess": "RWO-06F_OWNER_BUSINESS_CONTEXT",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+    },
+    {
       "taskId": "ACCEPTMODV2_TARGET_INVENTORY_READONLY_TRIAL_AFTER_PARSER_FIX",
       "lane": "critical_path",
       "status": "completed",
@@ -8005,28 +8056,28 @@
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   },
-  "lastRunId": "20260428T050947Z",
+  "lastRunId": "20260428T063423Z",
   "lastResult": {
-    "taskId": "DISEASEV3_OFFICIAL_CONTRACT_REFRESH_NO_LIVE",
-    "workOrder": "DISEASEV3",
-    "result": "DISEASEV3_OFFICIAL_CONTRACT_REFRESH_READY_NO_LIVE",
-    "evidence": "docs/implementation/diseasev3-official-contract-refresh-20260428T050947Z/summary.sanitized.json",
+    "taskId": "RWO-06F_OFFICIAL_SPEC_CONTEXT_MAP_DOCS_ONLY",
+    "workOrder": "RWO-06F",
+    "result": "RWO06F_OFFICIAL_SPEC_CONTEXT_MAP_READY_NO_LIVE",
+    "evidence": "docs/implementation/rwo06f-official-spec-context-map-20260428T063423Z/summary.sanitized.json",
     "liveTrialOrca": {
       "executed": false,
       "businessAccepted": false,
-      "businessSuccessClassification": "not_applicable_no_live_contract_refresh"
+      "businessSuccessClassification": "not_applicable_docs_only_no_live"
     },
     "readOnlyTrialOrca": {
       "executed": false,
       "mutation": false
     },
-    "claimBoundary": "Diseasev3 official-source contract refresh and no-live wrapper hardening only. No diseasev3 Trial business acceptance, disease update/delete, subjectivesv2 Trial business acceptance, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness is claimed.",
+    "claimBoundary": "RWO-06F official-spec context map and RWO-11/RWO-09 external-gate intake schema only. No RWO-06F Trial business acceptance, class 130 billing eligibility, all guidance-fee coverage, fullflow success, rollback rehearsal, operator acceptance, final owner GO/NO-GO/PENDING, production ORCA readiness, S3/object-storage readiness, or final release readiness is claimed.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false,
     "rawOrcaBodiesCaptured": false,
     "patientInsuranceDetailsCaptured": false,
-    "recommendedNextTask": "Before any diseasev3 live retry, record current runtime readiness, duplicate checkpoint status for the request-absent/class-absent identity, sanitized target/precondition evidence, and endpoint-specific stop conditions."
+    "recommendedNextTask": "Execute RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING before any read-only rerun or live Trial mutation."
   },
   "orcaTrialBlockerResolutionPolicy": {
     "recordedByUserDirection": "2026-04-27T23:07:48Z",
@@ -8204,6 +8255,54 @@
     },
     "claimBoundary": "Current-head non-S3 static/package/security refresh only. No Trial live mutation, RN03/RN04 business acceptance, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness is claimed.",
     "recommendedNextTask": "Continue with the next independent no-live roadmap item, preferably diseasev3/subjectivesv2 wrapper hardening or current queue refresh; keep RWO-11/RWO-09 external unless later explicitly reassigned.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06FOfficialSpecContextMap": {
+    "runId": "20260428T063423Z",
+    "workOrder": "RWO-06F",
+    "taskId": "RWO-06F_OFFICIAL_SPEC_CONTEXT_MAP_DOCS_ONLY",
+    "result": "RWO06F_OFFICIAL_SPEC_CONTEXT_MAP_READY_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "077f85d84ccc3eb35358810ebf65cbb5c038e554",
+    "evidence": "docs/implementation/rwo06f-official-spec-context-map-20260428T063423Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06f-official-spec-context-map-20260428T063423Z/summary.sanitized.json",
+    "contextMap": "docs/implementation/rwo06f-official-spec-context-map-20260428T063423Z/RWO06F_OFFICIAL_SPEC_CONTEXT_MAP.md",
+    "externalGateIntakeSchema": "docs/implementation/rwo06f-official-spec-context-map-20260428T063423Z/RWO11_RWO09_EXTERNAL_GATE_INTAKE_SCHEMA.md",
+    "input": {
+      "kind": "owner_supplied_chatgpt_orca_spec_research",
+      "reviewedAgainstCurrentRepoEvidence": true,
+      "storedRawChatgptResponse": false
+    },
+    "classification": {
+      "rwo06f": "no_live_readonly_docs_static_progress_possible",
+      "rwo11Rwo09": "external_owner_operator_release_management_gate"
+    },
+    "rwo06fNextQueue": [
+      "RWO-06F_OFFICIAL_SPEC_CONTEXT_MAP_DOCS_ONLY",
+      "RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING",
+      "RWO-06F_READONLY_CONTEXT_PREFLIGHT_OR_CARRY_FORWARD"
+    ],
+    "rwo06fMapping": {
+      "mutationEndpoint": "/api21/medicalmodv2",
+      "createClass": "01",
+      "representativeEntity": "instractionChargeOrder",
+      "medicalClass": "130",
+      "candidateCode": "113001810",
+      "payloadSha256": "043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_docs_only_no_live",
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executed": false,
+      "mutation": false
+    },
+    "recommendedNextTask": "Execute RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING: harden the existing v2 no-live endpoint packet, parser/sanitizer contract, duplicate checkpoint, context statuses, and stop conditions without live mutation.",
+    "claimBoundary": "RWO-06F official-spec context map and RWO-11/RWO-09 external-gate intake schema only. No RWO-06F Trial business acceptance, class 130 billing eligibility, all guidance-fee coverage, fullflow success, rollback rehearsal, operator acceptance, final owner GO/NO-GO/PENDING, production ORCA readiness, S3/object-storage readiness, or final release readiness is claimed.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
