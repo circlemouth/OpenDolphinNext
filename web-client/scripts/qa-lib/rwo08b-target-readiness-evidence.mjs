@@ -168,6 +168,7 @@ const exactPreflightPatientId = (summary) =>
 
 export const sanitizeIdentifierPreflightRouteResponse = ({ httpStatus = 0, responseJson = {} } = {}) => {
   const medicalRows = Array.isArray(responseJson?.medicalRows) ? responseJson.medicalRows : [];
+  const visitRows = Array.isArray(responseJson?.visitRows) ? responseJson.visitRows : [];
   const details = responseJson?.details && typeof responseJson.details === 'object' ? responseJson.details : {};
   const sanitizedErrorCode = normalize(responseJson?.sanitizedErrorCode || responseJson?.errorCode || responseJson?.code || responseJson?.error);
   const sanitizedValidationError = normalize(
@@ -186,6 +187,25 @@ export const sanitizeIdentifierPreflightRouteResponse = ({ httpStatus = 0, respo
     row.rowHash &&
     row.hasPerformDate &&
     row.hasDepartmentCode &&
+    row.hasSequentialNumber &&
+    row.hasInsuranceCombinationNumber &&
+    row.rawSensitiveFieldsExcluded);
+  const sanitizedVisitRows = visitRows.map((row) => ({
+    rowHash: SHA256_HEX_RE.test(normalize(row?.rowHash)) ? normalize(row.rowHash).toLowerCase() : '',
+    hasPatientId: bool(row?.hasPatientId),
+    hasVisitDate: bool(row?.hasVisitDate),
+    hasDepartmentCode: bool(row?.hasDepartmentCode),
+    hasVoucherNumber: bool(row?.hasVoucherNumber),
+    hasSequentialNumber: bool(row?.hasSequentialNumber),
+    hasInsuranceCombinationNumber: bool(row?.hasInsuranceCombinationNumber),
+    rawSensitiveFieldsExcluded: row?.rawSensitiveFieldsExcluded !== false,
+  }));
+  const readyVisitRows = sanitizedVisitRows.filter((row) =>
+    row.rowHash &&
+    row.hasPatientId &&
+    row.hasVisitDate &&
+    row.hasDepartmentCode &&
+    row.hasVoucherNumber &&
     row.hasSequentialNumber &&
     row.hasInsuranceCombinationNumber &&
     row.rawSensitiveFieldsExcluded);
@@ -211,7 +231,12 @@ export const sanitizeIdentifierPreflightRouteResponse = ({ httpStatus = 0, respo
     medicalSourceRowCount: Number(responseJson?.medicalSourceRowCount ?? medicalRows.length) || 0,
     medicalSanitizedRowCount: Number(responseJson?.medicalSanitizedRowCount ?? sanitizedRows.length) || 0,
     medicalReadyRowCount: readyRows.length,
-    identifierPreflightReady: bool(responseJson?.identifierPreflightReady) && readyRows.length > 0,
+    visitListEndpoint: normalize(responseJson?.visitListEndpoint),
+    visitListRequestClass: normalize(responseJson?.visitListRequestClass),
+    visitSourceRowCount: Number(responseJson?.visitSourceRowCount ?? visitRows.length) || 0,
+    visitSanitizedRowCount: Number(responseJson?.visitSanitizedRowCount ?? sanitizedVisitRows.length) || 0,
+    visitReadyRowCount: readyVisitRows.length,
+    identifierPreflightReady: bool(responseJson?.identifierPreflightReady) && (readyRows.length > 0 || readyVisitRows.length > 0),
     artifactFree: responseJson?.artifactFree !== false,
     rawSensitiveFieldsExcluded: responseJson?.rawSensitiveFieldsExcluded !== false,
     clientProvidedIdentifiersTrusted: bool(responseJson?.clientProvidedIdentifiersTrusted),
@@ -219,6 +244,7 @@ export const sanitizeIdentifierPreflightRouteResponse = ({ httpStatus = 0, respo
     sanitizedErrorCode,
     sanitizedValidationError,
     medicalRows: sanitizedRows,
+    visitRows: sanitizedVisitRows,
   };
 };
 

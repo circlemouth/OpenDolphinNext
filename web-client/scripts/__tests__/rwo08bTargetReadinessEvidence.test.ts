@@ -208,6 +208,54 @@ describe('RWO-08B target-readiness evidence wrapper', () => {
     expect(JSON.stringify(sanitized)).not.toContain('must-not-leak');
   });
 
+  it('accepts official visit list identifier rows as sanitized alternative proof', () => {
+    const sanitized = sanitizeIdentifierPreflightRouteResponse({
+      httpStatus: 200,
+      responseJson: identifierPreflight({
+        apiResult: '15',
+        identifierPreflightReady: true,
+        medicalRows: [
+          {
+            rowHash: 'd'.repeat(64),
+            hasPerformDate: true,
+            hasDepartmentCode: false,
+            hasSequentialNumber: false,
+            hasInsuranceCombinationNumber: false,
+            rawSensitiveFieldsExcluded: true,
+          },
+        ],
+        visitRows: [
+          {
+            rowHash: 'e'.repeat(64),
+            hasPatientId: true,
+            hasVisitDate: true,
+            hasDepartmentCode: true,
+            hasVoucherNumber: true,
+            hasSequentialNumber: true,
+            hasInsuranceCombinationNumber: true,
+            serverVoucherNumber: 'must-not-leak',
+            serverSequentialNumber: 'must-not-leak',
+          },
+        ],
+      }),
+    });
+
+    expect(sanitized.medicalReadyRowCount).toBe(0);
+    expect(sanitized.visitReadyRowCount).toBe(1);
+    expect(sanitized.identifierPreflightReady).toBe(true);
+    expect(sanitized.visitRows[0]).toEqual({
+      rowHash: 'e'.repeat(64),
+      hasPatientId: true,
+      hasVisitDate: true,
+      hasDepartmentCode: true,
+      hasVoucherNumber: true,
+      hasSequentialNumber: true,
+      hasInsuranceCombinationNumber: true,
+      rawSensitiveFieldsExcluded: true,
+    });
+    expect(JSON.stringify(sanitized)).not.toContain('must-not-leak');
+  });
+
   it('keeps sanitized error classifications from identifier-preflight 4xx responses', () => {
     const sanitized = sanitizeIdentifierPreflightRouteResponse({
       httpStatus: 400,

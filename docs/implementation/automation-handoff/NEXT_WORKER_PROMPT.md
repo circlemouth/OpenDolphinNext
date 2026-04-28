@@ -1,84 +1,75 @@
 # NEXT_WORKER_PROMPT
 
-status: completed
-created_at: 2026-04-28T21:24:00Z
-updated_at: 2026-04-28T22:46:46Z
+status: blocked_environment_unavailable
+created_at: 2026-04-28T23:03:20Z
+updated_at: 2026-04-28T23:03:20Z
 source_work_order: RWO-08B
-blocker_id: fullflow-l4-medicalgetv2-api15-history-row-identifier-contract-blocker
+blocker_id: rwo08b-visitptlstv2-identifier-preflight-runtime-orca-config-decrypt-blocker
 priority: high
 supersedes:
-- fullflow-l4-combined-target-readiness-refresh
-- fullflow-l4-identifier-preflight-medicalgetv2-blocker
+- fullflow-l4-medicalgetv2-api15-history-row-identifier-contract-blocker
 
 ## Context
 
-Completed by RUN_ID `20260428T224646Z`.
-
-Result: `MINIMIZED_TRIAL_BUSINESS_STATE_BLOCKER_RECORDED`.
+RUN_ID `20260428T230320Z` implemented the official `visitptlstv2` `Request_Number=01` alternative identifier-preflight contract for RWO-08B.
 
 Evidence:
 
-- `docs/implementation/rwo08b-fullflow-l4-medicalgetv2-contract-20260428T224646Z/summary.sanitized.json`
-- `docs/implementation/rwo08b-fullflow-l4-medicalgetv2-contract-20260428T224646Z/FINAL_REPORT.md`
+- `docs/implementation/rwo08b-visitptlstv2-identifier-preflight-20260428T230320Z/summary.sanitized.json`
+- `docs/implementation/rwo08b-visitptlstv2-identifier-preflight-20260428T230320Z/FINAL_REPORT.md`
 
-The current blocker is resolved as a minimized Trial business-state/test-data prerequisite. Combining server-derived `acceptlstv2` metadata with an Api_Result `15` medicalgetv2 row is not a safe identifier-preflight contract, and no alternative official read-only endpoint was proven to supply the missing `Sequential_Number` safely without raw artifacts. Diagnostic Fullflow remains not authorized until a changed Trial target/business state or fresh read-only candidate evidence provides a ready medicalgetv2 class `01` visit-history row.
+The previous contract blocker is resolved repo-locally:
 
-RWO-08B is not complete. Do not treat the current handoff queue or read-only evidence as Fullflow L4 success.
+- `acceptlstv2` remains the server-derived selected target source.
+- `medicalgetv2` class `01` remains accepted when it returns a ready identifier row.
+- Official `visitptlstv2` `Request_Number=01` is now accepted as an alternative read-only identifier-proof source only when a sanitized visit row matches the server-selected acceptance patient, visit date, department, and insurance combination and includes voucher and sequential identifiers.
+- Client-provided identifiers remain non-authoritative.
 
-Latest sanitized evidence:
+The read-only Trial rerun did not produce usable identifier-preflight evidence because the local runtime failed before ORCA identifier proof could be obtained. The sanitized classification is `runtime_orca_config_decrypt_blocked_before_identifier_preflight`.
 
-- `docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/run-summary.sanitized.json`: non-duplicate candidate `00002` was locally imported, exact selected-candidate preflight accepted, one guarded acceptmodv2 Trial mutation created an acceptlstv2 target row, and the combined wrapper then blocked at identifier-preflight.
-- `docs/implementation/rwo08b-fullflow-l4-target-readiness-20260428T213244Z/summary.sanitized.json`: after a repo-local repair and server rebuild, read-only acceptlstv2 inventory for `2026-04-29` class `01` still found one target-ready `00002` row hash. Identifier-preflight preserved server-derived acceptance metadata, but blocked because medicalgetv2-compatible identifier rows were absent/unavailable.
-- `docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/summary.sanitized.json`: repo-local payload repair added body-level `Request_Number`, outpatient `InOut=O`, `For_Months=1`, and class `01` history request shape. After rebuild, medicalgetv2 reached HTTP `2xx` and returned sanitized `apiResult=15` / `apiResultClass=nonzero`; one sanitized history row has `hasPerformDate=true` but lacks `Department_Code`, `Sequential_Number`, and `Insurance_Combination_Number`, so `medicalReadyRowCount=0` and `identifierPreflightReady=false`.
-- `docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/class03-probe/summary.sanitized.json`: class `03` read-only probe also returned `apiResult=15` / `apiResultClass=nonzero` and no ready identifier rows.
+Do not run diagnostic Fullflow while this blocker remains.
 
-The current evidence does not prove an ORCA server defect and does not prove Fullflow L4. It proves a narrower blocker: `00002` has an acceptlstv2 target row, medicalgetv2 is reachable through the safe wrapper, but class `01`/`03` read-only results do not provide the currently required identifier fields.
+## Current Blocker
+
+The local server runtime could not decrypt its existing ORCA connection configuration with the currently loaded local runtime key. Treat this as `skipped_environment_unavailable_missing_runtime_secret_or_config`.
+
+Do not print, replace, or silently regenerate ORCA credentials, encrypted connection records, cookies, sessions, Authorization headers, or external-service secrets. If the matching approved local runtime configuration/key is not available, carry this blocker forward and continue independent non-live roadmap work.
 
 ## Goal
 
-Execute `RWO-08B_MEDICALGETV2_API15_IDENTIFIER_CONTRACT_DECISION_NO_LIVE`.
+After the approved local ORCA runtime configuration and matching local-only encryption key are restored or realigned without exposing secret values, rerun the exact artifact-free read-only RWO-08B target-readiness wrapper.
 
-Produce sanitized evidence that either:
+Diagnostic Fullflow is allowed only if same-run sanitized read-only evidence proves `identifierPreflightReady=true` through either:
 
-1. proves that combining server-derived `acceptlstv2` department/insurance metadata with a class `01` medicalgetv2 history row is a safe and sufficient identifier-preflight contract for diagnostic Fullflow retry;
-2. proves that another official read-only endpoint can supply the missing `Sequential_Number` / order-send identifiers without raw artifacts; or
-3. records a minimized owner/operator question if this is a business-state/test-data prerequisite rather than a repo-local contract issue.
+- a ready `medicalgetv2` row; or
+- a ready matching `visitptlstv2` `Request_Number=01` row.
 
 ## Required Task Order
 
 1. Inspect current branch, HEAD, status, worktrees, and this prompt.
-2. Read:
-   - `docs/implementation/rwo08b-fullflow-l4-target-readiness-20260428T213244Z/summary.sanitized.json`
-   - `docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/run-summary.sanitized.json`
-   - `docs/runbooks/release-validation.md`
-3. Threat-model at least these misuse cases before changes:
-   - treating the target-ready acceptlstv2 row as medicalgetv2/order-send readiness;
-   - reusing duplicate-blocked `00001` or `00005` unchanged;
-   - treating HTTP 200, read-only discovery, dry-run, or identifier-preflight metadata as Fullflow L4 success;
-   - capturing or committing raw ORCA bodies, credentials, patient details, insurance details, HAR, trace, video, screenshot, or raw network dumps.
-4. Start from the accepted non-duplicate `00002` evidence and row hash. Do not repeat candidate discovery unless target drift is suspected.
-5. Investigate official medicalgetv2 semantics and repo wrapper behavior without raw bodies. Prefer official ORCA documentation first, especially whether class `01` history rows are intended to omit sequence/insurance details under `apiResult=15`.
-6. If runtime is used, run only artifact-free read-only wrappers with `--sanitized-evidence-only --disable-browser-artifacts`.
-7. Do not run diagnostic Fullflow unless identifier-preflight becomes target-ready and artifact containment/preflight requirements are recorded in the same run.
+2. Confirm that `docs/implementation/rwo08b-visitptlstv2-identifier-preflight-20260428T230320Z/summary.sanitized.json` is the latest RWO-08B evidence.
+3. Confirm approved local runtime configuration availability without printing secret values.
+4. If the local ORCA configuration/key mismatch is still present and cannot be safely repaired under the local-only policy, record a sanitized skip and continue independent non-live roadmap work.
+5. If runtime is repaired, run only the artifact-free read-only wrapper with `--sanitized-evidence-only --disable-browser-artifacts`.
+6. Do not run diagnostic Fullflow unless identifier-preflight is target-ready and the same run records endpoint packet, target, stop conditions, artifact containment, and sanitized evidence policy.
 
 ## Allowed Actions
 
 - Repo inspection under `web-client/`, `server-modernized/`, `api-contract/`, `docs/`, `ops/`, `tests/`, and `scripts/`.
 - Edit `docs/implementation/automation-handoff/HANDOFF_STATE.json`.
-- Add sanitized evidence under `docs/implementation/rwo08b-fullflow-l4-medicalgetv2-contract-<RUN_ID>/`.
-- Add or edit narrow no-live/read-only tests or wrappers for medicalgetv2 identifier-row classification.
-- Run focused server tests, web script tests, JSON validation, `git diff --check`, and safe read-only Trial wrappers when approved runtime/config is available.
+- Add sanitized evidence under `docs/implementation/rwo08b-visitptlstv2-identifier-preflight-<RUN_ID>/`.
+- Run focused server tests, web script tests, JSON validation, `git diff --check`, Docker build/recreate for the local dev/Trial runtime, and safe read-only Trial wrappers when approved runtime/config is available.
 - Commit roadmap/handoff-scoped source/doc/evidence changes before reporting.
 
 ## Forbidden Actions
 
-- Do not assert ORCA-side fault from current evidence alone.
-- Do not claim Fullflow L4 success unless order-send business success is proven by endpoint-specific sanitized evidence.
-- Do not repeat candidates `00001` or `00005` unchanged.
-- Do not run live Trial mutation unless a complete endpoint packet and same-run preflight explicitly authorize it.
+- Do not print or commit secret values, ORCA credentials, encrypted credential material, cookies, sessions, Authorization headers, CSRF values, raw ORCA bodies, raw patient details, raw insurance details, HAR, traces, videos, screenshots, request XML, raw network dumps, or credential-bearing URLs.
+- Do not overwrite existing non-empty local runtime secret/config values when the classification is ambiguous.
+- Do not run live Trial mutation from this prompt.
+- Do not run diagnostic Fullflow unless identifier-preflight readiness is proven in the same run.
 - Do not use production ORCA, production credentials, production patient data, S3/MinIO/object-storage setup, dummy object storage, or object-storage readiness claims.
 - Do not change legacy `client/` or `server/`.
-- Do not commit or package raw ORCA bodies, raw patient/insurance detail, credentials, cookies, sessions, Authorization headers, CSRF values, HAR, traces, videos, screenshots, request XML, raw network dumps, or credential-bearing URLs.
+- Do not treat HTTP 200, wrapper exit 0, read-only discovery, dry-run, or identifier-preflight metadata as Fullflow L4 success.
 - Do not treat browser UI hiding, local storage state, client-provided identifiers, or client-provided facility/patient/owner data as authority.
 
 ## Evidence Requirements
@@ -88,9 +79,9 @@ Record sanitized Markdown/JSON only:
 - current branch/HEAD/status/worktree;
 - task id and RUN_ID;
 - prior evidence files read;
-- candidate/row-hash continuity for `00002`;
-- read-only medicalgetv2 `apiResult` / row-presence classification;
-- wrapper/test changes, if any;
+- selected target continuity for `00002` and row hash;
+- runtime configuration availability classification without values;
+- read-only wrapper result, if rerun;
 - explicit non-claims;
 - `credentialsCaptured=false`;
 - `rawArtifactsCommittedOrPackaged=false`;
@@ -101,10 +92,9 @@ Record sanitized Markdown/JSON only:
 
 This prompt may be marked `completed` only when one of these is true:
 
-- identifier-preflight becomes target-ready for the accepted non-duplicate target and queues a diagnostic Fullflow retry packet;
-- a contract-safe alternative identifier-preflight rule is implemented with tests and read-only evidence; or
-- a minimized blocker is recorded proving this requires Trial business-state/test-data setup outside the current wrapper contract.
+- identifier-preflight becomes target-ready for the accepted non-duplicate target and queues or executes an authorized diagnostic Fullflow retry packet; or
+- the environment blocker is recorded again and the worker has continued to the next safe independent non-live roadmap task.
 
 ## Next Recommended First Action
 
-Use the latest `00002` row hash and decide, from official specs and sanitized wrapper behavior, whether class `01` medicalgetv2 `apiResult=15` history evidence plus server-derived acceptlstv2 metadata is sufficient, or whether another official endpoint/test-data state is required before diagnostic Fullflow can safely run.
+Restore or realign the approved local ORCA runtime configuration and its matching local-only encryption key without printing values. Then rerun the same artifact-free read-only RWO-08B target-readiness wrapper for patient `00002`, date `2026-04-29`, class `01`, row hash `b3b3d7c1416f047abb6450023e575fa39f53ed1d8f804aef8cf3551d945a5ddb`.

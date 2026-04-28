@@ -24,6 +24,11 @@ public class MedicalIdentifierPreflightResponse extends OrcaApiResponse {
     private int acceptanceTargetReadyRowCount;
     private int medicalSourceRowCount;
     private int medicalSanitizedRowCount;
+    private String visitListEndpoint;
+    private String visitListRequestClass;
+    private int visitSourceRowCount;
+    private int visitSanitizedRowCount;
+    private int visitReadyRowCount;
     private boolean artifactFree = true;
     private boolean rawSensitiveFieldsExcluded = true;
     private boolean clientProvidedIdentifiersTrusted;
@@ -32,6 +37,7 @@ public class MedicalIdentifierPreflightResponse extends OrcaApiResponse {
     private String sanitizedErrorCode;
     private String sanitizedValidationError;
     private final List<MedicalIdentifierRow> medicalRows = new ArrayList<>();
+    private final List<VisitIdentifierRow> visitRows = new ArrayList<>();
 
     public String getEndpoint() {
         return endpoint;
@@ -153,6 +159,46 @@ public class MedicalIdentifierPreflightResponse extends OrcaApiResponse {
         this.medicalSanitizedRowCount = medicalSanitizedRowCount;
     }
 
+    public String getVisitListEndpoint() {
+        return visitListEndpoint;
+    }
+
+    public void setVisitListEndpoint(String visitListEndpoint) {
+        this.visitListEndpoint = visitListEndpoint;
+    }
+
+    public String getVisitListRequestClass() {
+        return visitListRequestClass;
+    }
+
+    public void setVisitListRequestClass(String visitListRequestClass) {
+        this.visitListRequestClass = visitListRequestClass;
+    }
+
+    public int getVisitSourceRowCount() {
+        return visitSourceRowCount;
+    }
+
+    public void setVisitSourceRowCount(int visitSourceRowCount) {
+        this.visitSourceRowCount = visitSourceRowCount;
+    }
+
+    public int getVisitSanitizedRowCount() {
+        return visitSanitizedRowCount;
+    }
+
+    public void setVisitSanitizedRowCount(int visitSanitizedRowCount) {
+        this.visitSanitizedRowCount = visitSanitizedRowCount;
+    }
+
+    public int getVisitReadyRowCount() {
+        return visitReadyRowCount;
+    }
+
+    public void setVisitReadyRowCount(int visitReadyRowCount) {
+        this.visitReadyRowCount = visitReadyRowCount;
+    }
+
     public boolean isArtifactFree() {
         return artifactFree;
     }
@@ -211,6 +257,10 @@ public class MedicalIdentifierPreflightResponse extends OrcaApiResponse {
 
     public List<MedicalIdentifierRow> getMedicalRows() {
         return medicalRows;
+    }
+
+    public List<VisitIdentifierRow> getVisitRows() {
+        return visitRows;
     }
 
     public static class MedicalIdentifierRow {
@@ -298,6 +348,141 @@ public class MedicalIdentifierPreflightResponse extends OrcaApiResponse {
 
         public void setServerDepartmentCode(String serverDepartmentCode) {
             this.serverDepartmentCode = serverDepartmentCode;
+        }
+
+        @JsonIgnore
+        public String getServerSequentialNumber() {
+            return serverSequentialNumber;
+        }
+
+        public void setServerSequentialNumber(String serverSequentialNumber) {
+            this.serverSequentialNumber = serverSequentialNumber;
+        }
+
+        @JsonIgnore
+        public String getServerInsuranceCombinationNumber() {
+            return serverInsuranceCombinationNumber;
+        }
+
+        public void setServerInsuranceCombinationNumber(String serverInsuranceCombinationNumber) {
+            this.serverInsuranceCombinationNumber = serverInsuranceCombinationNumber;
+        }
+    }
+
+    public static class VisitIdentifierRow {
+        private String rowHash;
+        private boolean hasPatientId;
+        private boolean hasVisitDate;
+        private boolean hasDepartmentCode;
+        private boolean hasVoucherNumber;
+        private boolean hasSequentialNumber;
+        private boolean hasInsuranceCombinationNumber;
+        private boolean rawSensitiveFieldsExcluded = true;
+        private String serverPatientId;
+        private String serverVisitDate;
+        private String serverDepartmentCode;
+        private String serverVoucherNumber;
+        private String serverSequentialNumber;
+        private String serverInsuranceCombinationNumber;
+
+        public String getRowHash() {
+            return rowHash;
+        }
+
+        public void setRowHash(String rowHash) {
+            this.rowHash = rowHash;
+        }
+
+        public boolean isHasPatientId() {
+            return hasPatientId;
+        }
+
+        public void setHasPatientId(boolean hasPatientId) {
+            this.hasPatientId = hasPatientId;
+        }
+
+        public boolean isHasVisitDate() {
+            return hasVisitDate;
+        }
+
+        public void setHasVisitDate(boolean hasVisitDate) {
+            this.hasVisitDate = hasVisitDate;
+        }
+
+        public boolean isHasDepartmentCode() {
+            return hasDepartmentCode;
+        }
+
+        public void setHasDepartmentCode(boolean hasDepartmentCode) {
+            this.hasDepartmentCode = hasDepartmentCode;
+        }
+
+        public boolean isHasVoucherNumber() {
+            return hasVoucherNumber;
+        }
+
+        public void setHasVoucherNumber(boolean hasVoucherNumber) {
+            this.hasVoucherNumber = hasVoucherNumber;
+        }
+
+        public boolean isHasSequentialNumber() {
+            return hasSequentialNumber;
+        }
+
+        public void setHasSequentialNumber(boolean hasSequentialNumber) {
+            this.hasSequentialNumber = hasSequentialNumber;
+        }
+
+        public boolean isHasInsuranceCombinationNumber() {
+            return hasInsuranceCombinationNumber;
+        }
+
+        public void setHasInsuranceCombinationNumber(boolean hasInsuranceCombinationNumber) {
+            this.hasInsuranceCombinationNumber = hasInsuranceCombinationNumber;
+        }
+
+        public boolean isRawSensitiveFieldsExcluded() {
+            return rawSensitiveFieldsExcluded;
+        }
+
+        public void setRawSensitiveFieldsExcluded(boolean rawSensitiveFieldsExcluded) {
+            this.rawSensitiveFieldsExcluded = rawSensitiveFieldsExcluded;
+        }
+
+        @JsonIgnore
+        public String getServerPatientId() {
+            return serverPatientId;
+        }
+
+        public void setServerPatientId(String serverPatientId) {
+            this.serverPatientId = serverPatientId;
+        }
+
+        @JsonIgnore
+        public String getServerVisitDate() {
+            return serverVisitDate;
+        }
+
+        public void setServerVisitDate(String serverVisitDate) {
+            this.serverVisitDate = serverVisitDate;
+        }
+
+        @JsonIgnore
+        public String getServerDepartmentCode() {
+            return serverDepartmentCode;
+        }
+
+        public void setServerDepartmentCode(String serverDepartmentCode) {
+            this.serverDepartmentCode = serverDepartmentCode;
+        }
+
+        @JsonIgnore
+        public String getServerVoucherNumber() {
+            return serverVoucherNumber;
+        }
+
+        public void setServerVoucherNumber(String serverVoucherNumber) {
+            this.serverVoucherNumber = serverVoucherNumber;
         }
 
         @JsonIgnore

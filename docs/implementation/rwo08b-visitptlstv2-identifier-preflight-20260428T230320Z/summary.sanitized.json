@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260428T230320Z",
+  "workOrder": "RWO-08B",
+  "taskId": "RWO-08B_VISITPTLSTV2_IDENTIFIER_PREFLIGHT_CONTRACT_AND_RUNTIME_RERUN",
+  "result": "VISITPTLSTV2_CONTRACT_IMPLEMENTED_RUNTIME_ORCA_CONFIG_DECRYPT_BLOCKED",
+  "branch": "master",
+  "headAtSelection": "a7fca95b7",
+  "priorEvidenceRead": [
+    "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-contract-20260428T224646Z/summary.sanitized.json",
+    "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/summary.sanitized.json",
+    "docs/implementation/rwo08b-fullflow-l4-target-readiness-20260428T213244Z/summary.sanitized.json",
+    "docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/run-summary.sanitized.json"
+  ],
+  "officialSourcesChecked": [
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/visitpatient.html",
+      "checkedDate": "2026-04-29",
+      "endpoint": "/api01rv2/visitptlstv2",
+      "requestClass": "Request_Number=01",
+      "sanitizedFinding": "Official read-only visit-date lookup returns Visit_List_Information rows that include Patient_ID, Department_Code, Voucher_Number, Sequential_Number, and Insurance_Combination_Number. This is sufficient as an alternative identifier-proof source only when the row matches the server-selected acceptance patient, visit date, department, and insurance combination."
+    },
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalinfo.html",
+      "checkedDate": "2026-04-29",
+      "endpoint": "/api01rv2/medicalgetv2",
+      "requestClass": "01",
+      "sanitizedFinding": "medicalgetv2 class 01 remains an official visit-history lookup. Api_Result=15 is not business success and cannot be combined with acceptlstv2 alone to claim identifier readiness."
+    },
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html",
+      "checkedDate": "2026-04-29",
+      "endpoint": "/api01rv2/acceptlstv2",
+      "requestClass": "01",
+      "sanitizedFinding": "acceptlstv2 remains the server-derived selected-acceptance source; it is required for target continuity but is not sufficient by itself as order-send readiness evidence."
+    }
+  ],
+  "contractDecision": {
+    "acceptlstv2PlusApi15Medicalgetv2AloneIsSufficient": false,
+    "visitptlstv2Request01AlternativeIdentifierProofImplemented": true,
+    "readyRule": "identifierPreflightReady requires a selected server-derived acceptlstv2 row plus either a ready medicalgetv2 row or a sanitized visitptlstv2 Request_Number=01 row matching the selected patient, visit date, department, and insurance combination with Voucher_Number and Sequential_Number present.",
+    "clientProvidedIdentifiersTrusted": false,
+    "rawSensitiveFieldsExcluded": true
+  },
+  "implementation": {
+    "apiContract": "api-contract/src/main/java/open/dolphin/rest/dto/orca/MedicalIdentifierPreflightResponse.java",
+    "serverGateway": "server-modernized/src/main/java/open/dolphin/orca/service/DefaultOrcaLiveGateway.java",
+    "serverTests": "server-modernized/src/test/java/open/dolphin/orca/service/DefaultOrcaLiveGatewayTest.java",
+    "webSanitizer": "web-client/scripts/qa-lib/rwo08b-target-readiness-evidence.mjs",
+    "webTests": "web-client/scripts/__tests__/rwo08bTargetReadinessEvidence.test.ts"
+  },
+  "selectedTargetContinuity": {
+    "patientId": "00002",
+    "acceptanceDate": "2026-04-29",
+    "acceptanceClassCode": "01",
+    "selectedAcceptanceRowHash": "b3b3d7c1416f047abb6450023e575fa39f53ed1d8f804aef8cf3551d945a5ddb",
+    "duplicateBlockedCandidateIdsExcluded": [
+      "00001",
+      "00005"
+    ],
+    "targetDriftSuspected": false
+  },
+  "readOnlyTrialOrca": {
+    "executed": true,
+    "mutation": false,
+    "wrapper": "web-client/scripts/qa-rwo08b-target-readiness.mjs",
+    "artifactFree": true,
+    "sanitizedEvidenceOnly": true,
+    "diagnosticArtifactsCaptured": false,
+    "httpStatus": 500,
+    "transportStatusClass": "5xx",
+    "businessSuccessClassification": "runtime_orca_config_decrypt_blocked_before_identifier_preflight",
+    "sanitizedErrorCode": "internal_server_error",
+    "summarySource": "artifacts/diagnostic-fullflow/20260428T230320Z/rwo08b-target-readiness-visitptlstv2/summary.sanitized.json"
+  },
+  "runtimeBlocker": {
+    "type": "skipped_environment_unavailable_missing_runtime_secret_or_config",
+    "classification": "local_encrypted_orca_config_key_mismatch",
+    "sanitizedEvidence": "Server runtime failed before usable ORCA identifier-preflight evidence could be produced because the local encrypted ORCA connection configuration could not be decrypted with the currently loaded local runtime key.",
+    "credentialsCaptured": false,
+    "valuesPrintedOrReplaced": false,
+    "safeAutomationRepairAvailable": false,
+    "reasonSafeRepairNotAvailable": "The existing encrypted local ORCA configuration and local-only encryption key relationship is ambiguous. The automation must not print, overwrite, or silently regenerate credentials or key material."
+  },
+  "diagnosticFullflow": {
+    "executed": false,
+    "businessSuccessClassification": "not_run_runtime_identifier_preflight_blocked"
+  },
+  "checks": {
+    "serverFocusedTests": "pass_17_tests",
+    "webTargetReadinessEvidenceTest": "pass_10_tests_with_web_guard_pretest",
+    "serverImageBuild": "pass_with_gitignored_local_runtime_env_loaded",
+    "serverRuntimeRecreate": "started_but_readiness_unhealthy_due_runtime_orca_config_decrypt_blocker"
+  },
+  "misuseCasesChecked": [
+    {
+      "case": "Treating any visitptlstv2 row for the same date and department as the selected target.",
+      "control": "Rejected. The ready rule requires patient, visit date, department, and insurance combination to match the server-selected acceptlstv2 row."
+    },
+    {
+      "case": "Treating Api_Result=15 or HTTP 500 as identifier readiness.",
+      "control": "Rejected. The wrapper remains fail-closed and diagnostic Fullflow was not run."
+    },
+    {
+      "case": "Capturing or committing raw ORCA bodies, credentials, patient details, insurance details, HAR, traces, videos, screenshots, request XML, or raw network dumps.",
+      "control": "No raw artifacts were committed or packaged. Runtime diagnostic artifact source remains local and untracked; committed evidence is sanitized."
+    }
+  ],
+  "recommendedNextTask": "Restore or realign the local approved runtime ORCA connection configuration and matching local-only encryption key without printing values, then rerun the same artifact-free read-only RWO-08B target-readiness wrapper. Run diagnostic Fullflow only if visitReadyRowCount or medicalReadyRowCount proves identifier-preflight readiness.",
+  "claimBoundary": "RWO-08B visitptlstv2 identifier-preflight contract and tests are implemented. This is not diagnostic Fullflow success, Trial order-send business acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

@@ -3,6 +3,9 @@ package open.dolphin.orca.service;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.spi.CDI;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
@@ -231,15 +234,137 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         response.setSelectedAcceptanceTargetReady(isMedicalIdentifierTargetReady(selected));
         response.setAcceptanceSourceRowCount(inventory.getSourceRowCount());
         response.setAcceptanceTargetReadyRowCount(inventory.getTargetReadyRowCount());
+        attachVisitListIdentifierProof(facilityId, selected, response);
         response.setIdentifierPreflightReady(response.isSelectedAcceptanceTargetReady()
-                && response.getMedicalSanitizedRowCount() > 0
+                && (hasReadyMedicalIdentifierRow(response) || response.getVisitReadyRowCount() > 0));
+        enrich(response, result);
+        return response;
+    }
+
+    private void attachVisitListIdentifierProof(
+            String facilityId,
+            AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
+            MedicalIdentifierPreflightResponse response) {
+        response.setVisitListEndpoint(OrcaEndpoint.VISIT_LIST.getPath());
+        response.setVisitListRequestClass("visitptlstv2_request_01_visit_date_readonly_identifier_proof");
+        try {
+            VisitPatientListRequest request = new VisitPatientListRequest();
+            request.setRequestNumber("01");
+            request.setVisitDate(LocalDate.parse(selected.getServerAcceptanceDate()));
+            request.setDepartmentCode(selected.getServerDepartmentCode());
+            String payload = buildVisitListPayload(request, new DateRange(request.getVisitDate(), request.getVisitDate()));
+            OrcaTransportResult visitResult =
+                    transport.invoke(facilityId, OrcaEndpoint.VISIT_LIST, OrcaTransportRequest.post(payload));
+            VisitPatientListResponse visitResponse =
+                    mapResponse(visitResult != null ? visitResult.getBody() : null, mapper::toVisitList);
+            if (visitResponse == null) {
+                return;
+            }
+            response.setVisitSourceRowCount(visitResponse.getVisits().size());
+            for (VisitPatientListResponse.VisitEntry entry : visitResponse.getVisits()) {
+                MedicalIdentifierPreflightResponse.VisitIdentifierRow row =
+                        toVisitIdentifierRow(selected, visitResponse.getVisitDate(), entry);
+                response.getVisitRows().add(row);
+                if (isReadyVisitIdentifierRow(selected, row)) {
+                    response.setVisitReadyRowCount(response.getVisitReadyRowCount() + 1);
+                }
+            }
+            response.setVisitSanitizedRowCount(response.getVisitRows().size());
+        } catch (RuntimeException ex) {
+            response.setVisitSourceRowCount(0);
+            response.setVisitSanitizedRowCount(0);
+            response.setVisitReadyRowCount(0);
+        }
+    }
+
+    private MedicalIdentifierPreflightResponse.VisitIdentifierRow toVisitIdentifierRow(
+            AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
+            String visitDate,
+            VisitPatientListResponse.VisitEntry entry) {
+        MedicalIdentifierPreflightResponse.VisitIdentifierRow row =
+                new MedicalIdentifierPreflightResponse.VisitIdentifierRow();
+        String patientId = entry != null && entry.getPatient() != null ? entry.getPatient().getPatientId() : null;
+        String normalizedVisitDate = hasText(visitDate) ? visitDate : selected.getServerAcceptanceDate();
+        String departmentCode = entry != null ? entry.getDepartmentCode() : null;
+        String voucherNumber = entry != null ? entry.getVoucherNumber() : null;
+        String sequentialNumber = entry != null ? entry.getSequentialNumber() : null;
+        String insuranceCombinationNumber = entry != null ? entry.getInsuranceCombinationNumber() : null;
+        row.setRowHash(sha256(String.join("|",
+                safeHashSeed(patientId),
+                safeHashSeed(normalizedVisitDate),
+                safeHashSeed(departmentCode),
+                safeHashSeed(voucherNumber),
+                safeHashSeed(sequentialNumber),
+                safeHashSeed(insuranceCombinationNumber))));
+        row.setHasPatientId(hasText(patientId));
+        row.setHasVisitDate(hasText(normalizedVisitDate));
+        row.setHasDepartmentCode(hasText(departmentCode));
+        row.setHasVoucherNumber(hasText(voucherNumber));
+        row.setHasSequentialNumber(hasText(sequentialNumber));
+        row.setHasInsuranceCombinationNumber(hasText(insuranceCombinationNumber));
+        row.setRawSensitiveFieldsExcluded(true);
+        row.setServerPatientId(patientId);
+        row.setServerVisitDate(normalizedVisitDate);
+        row.setServerDepartmentCode(departmentCode);
+        row.setServerVoucherNumber(voucherNumber);
+        row.setServerSequentialNumber(sequentialNumber);
+        row.setServerInsuranceCombinationNumber(insuranceCombinationNumber);
+        return row;
+    }
+
+    private boolean hasReadyMedicalIdentifierRow(MedicalIdentifierPreflightResponse response) {
+        return response.getMedicalSanitizedRowCount() > 0
                 && response.getMedicalRows().stream().anyMatch(row ->
                         row.isHasPerformDate()
                                 && row.isHasDepartmentCode()
                                 && row.isHasSequentialNumber()
-                                && row.isHasInsuranceCombinationNumber()));
-        enrich(response, result);
-        return response;
+                                && row.isHasInsuranceCombinationNumber());
+    }
+
+    private boolean isReadyVisitIdentifierRow(
+            AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
+            MedicalIdentifierPreflightResponse.VisitIdentifierRow row) {
+        return row != null
+                && row.isRawSensitiveFieldsExcluded()
+                && row.isHasPatientId()
+                && row.isHasVisitDate()
+                && row.isHasDepartmentCode()
+                && row.isHasVoucherNumber()
+                && row.isHasSequentialNumber()
+                && row.isHasInsuranceCombinationNumber()
+                && hasText(row.getServerPatientId())
+                && hasText(row.getServerVisitDate())
+                && hasText(row.getServerDepartmentCode())
+                && hasText(row.getServerVoucherNumber())
+                && hasText(row.getServerSequentialNumber())
+                && hasText(row.getServerInsuranceCombinationNumber())
+                && safeHashSeed(row.getServerPatientId()).equals(safeHashSeed(selected.getServerPatientId()))
+                && safeHashSeed(row.getServerVisitDate()).equals(safeHashSeed(selected.getServerAcceptanceDate()))
+                && safeHashSeed(row.getServerDepartmentCode()).equals(safeHashSeed(selected.getServerDepartmentCode()))
+                && safeHashSeed(row.getServerInsuranceCombinationNumber())
+                        .equals(safeHashSeed(selected.getServerInsuranceCombinationNumber()));
+    }
+
+    private String safeHashSeed(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder(hash.length * 2);
+            for (byte item : hash) {
+                builder.append(String.format("%02x", item));
+            }
+            return builder.toString();
+        } catch (NoSuchAlgorithmException ex) {
+            throw new OrcaGatewayException("SHA-256 digest is unavailable", ex);
+        }
     }
 
     public VisitPatientListResponse getVisitList(String facilityId, VisitPatientListRequest request) {

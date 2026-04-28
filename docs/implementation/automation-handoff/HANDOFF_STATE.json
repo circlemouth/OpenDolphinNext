@@ -1,5 +1,5 @@
 {
-  "status": "completed",
+  "status": "blocked_environment_unavailable",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B",
   "blockerId": "fullflow-l4-medicalgetv2-api15-history-row-identifier-contract-blocker",
@@ -30,7 +30,68 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T22:46:46Z",
+  "lastUpdated": "2026-04-28T23:03:20Z",
+  "latestRwo08bVisitptlstv2IdentifierPreflight": {
+    "runId": "20260428T230320Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_VISITPTLSTV2_IDENTIFIER_PREFLIGHT_CONTRACT_AND_RUNTIME_RERUN",
+    "result": "VISITPTLSTV2_CONTRACT_IMPLEMENTED_RUNTIME_ORCA_CONFIG_DECRYPT_BLOCKED",
+    "branch": "master",
+    "headAtSelection": "a7fca95b7",
+    "evidence": "docs/implementation/rwo08b-visitptlstv2-identifier-preflight-20260428T230320Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-visitptlstv2-identifier-preflight-20260428T230320Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/rwo08b-visitptlstv2-identifier-preflight-20260428T230320Z/FINAL_REPORT.md",
+    "officialSourcesChecked": [
+      "https://www.orca.med.or.jp/receipt/users/tec/api/visitpatient.html",
+      "https://www.orca.med.or.jp/receipt/users/tec/api/medicalinfo.html",
+      "https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html"
+    ],
+    "selectedTarget": {
+      "patientId": "00002",
+      "acceptanceDate": "2026-04-29",
+      "acceptanceClassCode": "01",
+      "selectedAcceptanceRowHash": "b3b3d7c1416f047abb6450023e575fa39f53ed1d8f804aef8cf3551d945a5ddb",
+      "duplicateBlockedCandidateIdsExcluded": [
+        "00001",
+        "00005"
+      ]
+    },
+    "contractDecision": {
+      "acceptlstv2PlusApi15Medicalgetv2AloneIsSufficient": false,
+      "visitptlstv2Request01AlternativeIdentifierProofImplemented": true,
+      "clientProvidedIdentifiersTrusted": false,
+      "readyRule": "server-selected acceptlstv2 target plus either ready medicalgetv2 row or matching visitptlstv2 Request_Number=01 row with voucher/sequential/insurance identifiers"
+    },
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "mutation": false,
+      "businessSuccessClassification": "runtime_orca_config_decrypt_blocked_before_identifier_preflight",
+      "httpStatus": 500,
+      "sanitizedErrorCode": "internal_server_error"
+    },
+    "diagnosticFullflow": {
+      "executed": false,
+      "businessSuccessClassification": "not_run_runtime_identifier_preflight_blocked"
+    },
+    "checks": {
+      "focusedServerTests": "pass_17_tests",
+      "webRwo08bTargetReadinessEvidenceTest": "pass_10_tests_with_web_guard_pretest",
+      "serverImageBuild": "pass",
+      "serverRuntimeRecreate": "started_but_readiness_unhealthy_due_runtime_orca_config_decrypt_blocker"
+    },
+    "runtimeBlocker": {
+      "type": "skipped_environment_unavailable_missing_runtime_secret_or_config",
+      "classification": "local_encrypted_orca_config_key_mismatch",
+      "safeAutomationRepairAvailable": false,
+      "valuesPrintedOrReplaced": false
+    },
+    "recommendedNextTask": "Restore or realign the approved local ORCA runtime configuration and matching local-only encryption key without printing values, then rerun the same artifact-free read-only RWO-08B target-readiness wrapper.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
   "latestRwo08bMedicalgetv2ContractDecision": {
     "runId": "20260428T224646Z",
     "workOrder": "RWO-08B",

@@ -109,6 +109,52 @@ class DefaultOrcaLiveGatewayTest {
         assertFalse(response.isClientProvidedIdentifiersTrusted());
     }
 
+    @Test
+    void identifierPreflightUsesVisitListIdentifierProofWhenMedicalGetHasNoReadyRows() {
+        OrcaLiveGateway gateway = new DefaultOrcaLiveGateway(new AcceptanceMedicalGetApi15ThenVisitReadyTransport(),
+                new OrcaXmlMapper());
+        MedicalIdentifierPreflightRequest request = new MedicalIdentifierPreflightRequest();
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 29));
+        request.setClassCode("01");
+        request.setMedicalGetClassCode("01");
+
+        MedicalIdentifierPreflightResponse response = gateway.getMedicalIdentifierPreflight("F001", request);
+
+        assertEquals("15", response.getApiResult());
+        assertEquals(1, response.getMedicalSanitizedRowCount());
+        assertEquals(1, response.getVisitSourceRowCount());
+        assertEquals(1, response.getVisitSanitizedRowCount());
+        assertEquals(1, response.getVisitReadyRowCount());
+        assertEquals("/api01rv2/visitptlstv2", response.getVisitListEndpoint());
+        assertEquals("visitptlstv2_request_01_visit_date_readonly_identifier_proof",
+                response.getVisitListRequestClass());
+        assertEquals(64, response.getVisitRows().get(0).getRowHash().length());
+        assertTrue(response.getVisitRows().get(0).isHasPatientId());
+        assertTrue(response.getVisitRows().get(0).isHasVisitDate());
+        assertTrue(response.getVisitRows().get(0).isHasVoucherNumber());
+        assertTrue(response.getVisitRows().get(0).isHasSequentialNumber());
+        assertTrue(response.getVisitRows().get(0).isHasInsuranceCombinationNumber());
+        assertTrue(response.isIdentifierPreflightReady());
+        assertFalse(response.isClientProvidedIdentifiersTrusted());
+    }
+
+    @Test
+    void identifierPreflightRejectsVisitListRowsForDifferentPatient() {
+        OrcaLiveGateway gateway = new DefaultOrcaLiveGateway(new AcceptanceMedicalGetApi15ThenVisitMismatchedTransport(),
+                new OrcaXmlMapper());
+        MedicalIdentifierPreflightRequest request = new MedicalIdentifierPreflightRequest();
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 29));
+        request.setClassCode("01");
+        request.setMedicalGetClassCode("01");
+
+        MedicalIdentifierPreflightResponse response = gateway.getMedicalIdentifierPreflight("F001", request);
+
+        assertEquals(1, response.getVisitSourceRowCount());
+        assertEquals(1, response.getVisitSanitizedRowCount());
+        assertEquals(0, response.getVisitReadyRowCount());
+        assertFalse(response.isIdentifierPreflightReady());
+    }
+
     private static final class AlwaysFailTransport implements OrcaTransport {
 
         @Override
@@ -151,6 +197,110 @@ class DefaultOrcaLiveGatewayTest {
                 throw new OrcaGatewayException("[http_status] ORCA HTTP response status 400");
             }
             throw new OrcaGatewayException("unexpected endpoint " + endpoint);
+        }
+    }
+
+    private static final class AcceptanceMedicalGetApi15ThenVisitReadyTransport implements OrcaTransport {
+
+        @Override
+        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
+            if (endpoint == OrcaEndpoint.ACCEPTANCE_LIST) {
+                return new OrcaTransportResult(null, "POST", 200, """
+                        <xmlio2>
+                          <acceptlstres type="record">
+                            <Api_Result type="string">00</Api_Result>
+                            <Acceptance_Date type="string">2026-04-29</Acceptance_Date>
+                            <Acceptlst_Information type="array">
+                              <Acceptlst_Information_child type="record">
+                                <Acceptance_Id type="string">1</Acceptance_Id>
+                                <Acceptance_Time type="string">09:00:00</Acceptance_Time>
+                                <Department_Code type="string">01</Department_Code>
+                                <Physician_Code type="string">10001</Physician_Code>
+                                <Medical_Information type="string">01</Medical_Information>
+                                <Patient_Information type="record">
+                                  <Patient_ID type="string">00002</Patient_ID>
+                                  <WholeName type="string">must not leak</WholeName>
+                                </Patient_Information>
+                                <HealthInsurance_Information type="record">
+                                  <Insurance_Combination_Number type="string">0001</Insurance_Combination_Number>
+                                </HealthInsurance_Information>
+                              </Acceptlst_Information_child>
+                            </Acceptlst_Information>
+                          </acceptlstres>
+                        </xmlio2>
+                        """, "application/xml", Collections.emptyMap());
+            }
+            if (endpoint == OrcaEndpoint.MEDICAL_GET) {
+                return new OrcaTransportResult(null, "POST", 200, """
+                        <xmlio2>
+                          <medicalget01res type="record">
+                            <Api_Result type="string">15</Api_Result>
+                            <Api_Result_Message type="string">must not leak</Api_Result_Message>
+                            <Medical_List_Information type="array">
+                              <Medical_List_Information_child type="record">
+                                <Perform_Date type="string">2026-04-29</Perform_Date>
+                              </Medical_List_Information_child>
+                            </Medical_List_Information>
+                          </medicalget01res>
+                        </xmlio2>
+                        """, "application/xml", Collections.emptyMap());
+            }
+            if (endpoint == OrcaEndpoint.VISIT_LIST) {
+                return new OrcaTransportResult(null, "POST", 200, """
+                        <xmlio2>
+                          <visitptlst01res type="record">
+                            <Api_Result type="string">00</Api_Result>
+                            <Visit_Date type="string">2026-04-29</Visit_Date>
+                            <Visit_List_Information type="array">
+                              <Visit_List_Information_child type="record">
+                                <Department_Code type="string">01</Department_Code>
+                                <Voucher_Number type="string">V-1</Voucher_Number>
+                                <Sequential_Number type="string">1</Sequential_Number>
+                                <Insurance_Combination_Number type="string">0001</Insurance_Combination_Number>
+                                <Patient_Information type="record">
+                                  <Patient_ID type="string">00002</Patient_ID>
+                                  <WholeName type="string">must not leak</WholeName>
+                                </Patient_Information>
+                              </Visit_List_Information_child>
+                            </Visit_List_Information>
+                          </visitptlst01res>
+                        </xmlio2>
+                        """, "application/xml", Collections.emptyMap());
+            }
+            throw new OrcaGatewayException("unexpected endpoint " + endpoint);
+        }
+    }
+
+    private static final class AcceptanceMedicalGetApi15ThenVisitMismatchedTransport implements OrcaTransport {
+
+        private final AcceptanceMedicalGetApi15ThenVisitReadyTransport delegate =
+                new AcceptanceMedicalGetApi15ThenVisitReadyTransport();
+
+        @Override
+        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
+            if (endpoint != OrcaEndpoint.VISIT_LIST) {
+                return delegate.invoke(facilityId, endpoint, request);
+            }
+            return new OrcaTransportResult(null, "POST", 200, """
+                    <xmlio2>
+                      <visitptlst01res type="record">
+                        <Api_Result type="string">00</Api_Result>
+                        <Visit_Date type="string">2026-04-29</Visit_Date>
+                        <Visit_List_Information type="array">
+                          <Visit_List_Information_child type="record">
+                            <Department_Code type="string">01</Department_Code>
+                            <Voucher_Number type="string">V-1</Voucher_Number>
+                            <Sequential_Number type="string">1</Sequential_Number>
+                            <Insurance_Combination_Number type="string">0001</Insurance_Combination_Number>
+                            <Patient_Information type="record">
+                              <Patient_ID type="string">99999</Patient_ID>
+                              <WholeName type="string">must not leak</WholeName>
+                            </Patient_Information>
+                          </Visit_List_Information_child>
+                        </Visit_List_Information>
+                      </visitptlst01res>
+                    </xmlio2>
+                    """, "application/xml", Collections.emptyMap());
         }
     }
 }
