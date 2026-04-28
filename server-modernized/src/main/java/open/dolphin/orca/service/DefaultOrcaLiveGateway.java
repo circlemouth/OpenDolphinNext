@@ -203,17 +203,28 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
                 selectMedicalIdentifierTarget(inventory, request.getTargetRowHash());
 
         String medicalGetClassCode = normalizeMedicalGetClassCode(request.getMedicalGetClassCode());
-        String payload = buildMedicalIdentifierPayload(selected, medicalGetClassCode);
-        OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.MEDICAL_GET, OrcaTransportRequest.post(payload));
-        String xml = result != null ? result.getBody() : null;
-        MedicalIdentifierPreflightResponse response =
-                mapResponse(xml, body -> mapper.toMedicalIdentifierSnapshot(body, medicalGetClassCode));
-        if (response == null) {
+        MedicalIdentifierPreflightResponse response;
+        OrcaTransportResult result = null;
+        try {
+            String payload = buildMedicalIdentifierPayload(selected, medicalGetClassCode);
+            result = transport.invoke(facilityId, OrcaEndpoint.MEDICAL_GET, OrcaTransportRequest.post(payload));
+            String xml = result != null ? result.getBody() : null;
+            response = mapResponse(xml, body -> mapper.toMedicalIdentifierSnapshot(body, medicalGetClassCode));
+            if (response == null) {
+                response = new MedicalIdentifierPreflightResponse();
+            }
+        } catch (OrcaGatewayException ex) {
             response = new MedicalIdentifierPreflightResponse();
+            response.setSanitizedErrorCode("orca_gateway_error");
+            response.setSanitizedValidationError("medicalgetv2_unavailable_or_rejected");
         }
         response.setEndpoint("/api/orca/official/visits/identifier-preflight");
         response.setAcceptanceEndpoint(OrcaEndpoint.ACCEPTANCE_LIST.getPath());
         response.setMedicalGetEndpoint(OrcaEndpoint.MEDICAL_GET.getPath());
+        response.setMedicalGetClassCode(medicalGetClassCode);
+        response.setRequestClass("medicalgetv2_class_" + medicalGetClassCode + "_identifier_snapshot_readonly");
+        response.setParser("medicalgetres_allowlisted_identifier_presence_flags_and_hashes_only");
+        response.setSanitizer("drop_patient_names_insurance_numbers_raw_detail_and_raw_orca_body");
         response.setAcceptanceClassCode(inventory.getClassCode());
         response.setAcceptanceDate(inventory.getAcceptanceDate());
         response.setSelectedAcceptanceRowHash(selected.getRowHash());

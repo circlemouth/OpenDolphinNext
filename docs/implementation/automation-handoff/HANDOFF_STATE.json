@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B",
-  "blockerId": "fullflow-l4-combined-target-readiness-refresh",
+  "blockerId": "fullflow-l4-identifier-preflight-medicalgetv2-blocker",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T21:24:00Z",
+  "lastUpdated": "2026-04-28T21:44:00Z",
   "latestContinuingResearchPlan": {
     "runId": "20260428T123347Z",
     "workOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B",
@@ -9344,5 +9344,68 @@
     "productionOrcaAttempted": false,
     "s3ObjectStorageUsed": false,
     "recommendedNextTask": "Confirm the 00002 acceptlstv2 target row remains present, then investigate medicalgetv2-compatible identifier row readiness before any diagnostic Fullflow retry."
+  },
+  "latestRwo08bIdentifierPreflightMedicalgetv2Blocker": {
+    "runId": "20260428T213244Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_IDENTIFIER_PREFLIGHT_MEDICALGETV2_BLOCKER_INVESTIGATION",
+    "result": "RWO08B_IDENTIFIER_PREFLIGHT_PRECISE_MEDICALGETV2_BLOCKER_RECORDED",
+    "branch": "master",
+    "headAtSelection": "ff5f03403",
+    "evidence": "docs/implementation/rwo08b-fullflow-l4-target-readiness-20260428T213244Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-fullflow-l4-target-readiness-20260428T213244Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/rwo08b-fullflow-l4-target-readiness-20260428T213244Z/FINAL_REPORT.md",
+    "activePrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAfterRun": "active_narrowed_successor_updated",
+      "blockerId": "fullflow-l4-identifier-preflight-medicalgetv2-blocker"
+    },
+    "candidate": {
+      "selectedPatientId": "00002",
+      "duplicateBlockedCandidateIdsExcluded": [
+        "00001",
+        "00005"
+      ],
+      "localExactMatchAccepted": true,
+      "exactSelectedCandidatePreflightAccepted": true
+    },
+    "repoLocalFixes": [
+      "api-contract/src/main/java/open/dolphin/rest/dto/orca/MedicalIdentifierPreflightResponse.java",
+      "server-modernized/src/main/java/open/dolphin/orca/service/DefaultOrcaLiveGateway.java",
+      "server-modernized/src/test/java/open/dolphin/orca/service/DefaultOrcaLiveGatewayTest.java"
+    ],
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "mutation": false,
+      "acceptlstv2BusinessSuccessClassification": "readonly_inventory_target_ready",
+      "acceptlstv2TargetReadyRowCount": 1,
+      "identifierPreflightBusinessSuccessClassification": "readonly_identifier_preflight_target_blocked",
+      "identifierPreflightHttpStatus": 200,
+      "identifierPreflightErrorCode": "orca_gateway_error",
+      "identifierPreflightValidationError": "medicalgetv2_unavailable_or_rejected",
+      "identifierPreflightReady": false,
+      "medicalReadyRowCount": 0
+    },
+    "checks": {
+      "focusedServerTests": "pass_15_tests",
+      "serverModernizedDevRebuilt": true,
+      "serverModernizedDevHealthy": true
+    },
+    "diagnosticFullflow": {
+      "executed": false,
+      "orderSendReached": false,
+      "businessSuccessClassification": "not_run_identifier_preflight_target_blocked"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false,
+    "recommendedNextTask": "Investigate whether medicalgetv2 class 01 needs a different safe read-only request shape, prerequisite billing/order state, or another official read-only endpoint before diagnostic Fullflow can safely run."
   }
 }

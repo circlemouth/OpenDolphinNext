@@ -1,78 +1,67 @@
 # NEXT_WORKER_PROMPT
 
 status: active
-created_at: 2026-04-28T20:16:56Z
-updated_at: 2026-04-28T21:24:00Z
+created_at: 2026-04-28T21:24:00Z
+updated_at: 2026-04-28T21:44:00Z
 source_work_order: RWO-08B
-blocker_id: fullflow-l4-combined-target-readiness-refresh
+blocker_id: fullflow-l4-identifier-preflight-medicalgetv2-blocker
 priority: high
 supersedes:
-- continuing-official-and-public-research-until-actionable-info-found
-- fullflow-l4-target-readiness-investigation
+- fullflow-l4-combined-target-readiness-refresh
 
 ## Context
 
-User correction on 2026-04-28T19:52:56Z: an empty `HANDOFF_STATE.json.nextExecutableQueue` does not mean Fullflow L4 is complete. RWO-08B still has release-readiness work. The next worker must not treat the current state as "all validation done".
+RWO-08B is not complete. Do not treat the current handoff queue or read-only evidence as Fullflow L4 success.
 
-Current evidence does **not** prove an ORCA Trial server-side defect. It shows Fullflow L4 is blocked by unresolved target-readiness and handoff prerequisites that could be repo/local-sync/selector/handoff/harness issues, Trial test-data state, or ORCA business state. Do not blame ORCA unless sanitized evidence eliminates repo and harness causes.
+Latest sanitized evidence:
 
-Important prior evidence:
+- `docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/run-summary.sanitized.json`: non-duplicate candidate `00002` was locally imported, exact selected-candidate preflight accepted, one guarded acceptmodv2 Trial mutation created an acceptlstv2 target row, and the combined wrapper then blocked at identifier-preflight.
+- `docs/implementation/rwo08b-fullflow-l4-target-readiness-20260428T213244Z/summary.sanitized.json`: after a repo-local repair and server rebuild, read-only acceptlstv2 inventory for `2026-04-29` class `01` still found one target-ready `00002` row hash. Identifier-preflight now preserves server-derived acceptance metadata, but remains blocked because medicalgetv2-compatible identifier rows are absent/unavailable. Sanitized blocker: `orca_gateway_error` / `medicalgetv2_unavailable_or_rejected`; `identifierPreflightReady=false`.
 
-- `docs/implementation/rwo08b-candidate-00005-diagnostic-fullflow-20260425T144428Z/summary.sanitized.json`: candidate `00005` reached diagnostic fullflow pre-send but `acceptmodv2` returned duplicate acceptance classification (`apiResult=16`), no canonical acceptance keys, and no order send. Do not repeat `00005` unchanged.
-- `docs/implementation/rwo08b-readonly-candidate-refresh-20260427T121615Z/summary.sanitized.json`: read-only discovery excluding duplicate-blocked `00001` and `00005` found no fresh selected candidate; remaining candidates failed local exact-match/selectability.
-- `docs/implementation/rwo08b-local-exact-match-diagnostic-20260427T135043Z/summary.sanitized.json`: candidates `00002` through `00011` were categorized as `local_absent` / `local_exact_match_missing` despite official ORCA patient/insurance evidence; repo/local sync, facility scope, ID format, or UI selectability remain unproven.
-- `docs/implementation/rwo08b-artifact-free-identifier-preflight-20260428T140210Z/summary.sanitized.json`: `/api/orca/official/visits/identifier-preflight` was implemented as an artifact-free, server-derived read-only preflight route, but it was not yet executed against Trial runtime and is not Fullflow success.
-- `docs/implementation/rwo08b-combined-target-readiness-20260428T204909Z/summary.sanitized.json`: `qa-rwo08b-target-readiness.mjs` now joins candidate discovery, exact selected-candidate preflight, and server-derived identifier-preflight into one artifact-free sanitized target-readiness summary. Dry-run against current prior evidence classified `candidate_discovery_no_selected_candidate`.
-- `docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/run-summary.sanitized.json`: RUN_ID `20260428T210334Z` resolved the local exact-match blocker for non-duplicate candidate `00002` by local ORCA patient import, exact selected-candidate preflight accepted, one guarded sanitized `acceptmodv2` Trial mutation created an acceptlstv2 target row, the stale backend image was rebuilt so `identifier-preflight` route was available, and the combined wrapper now blocks at `identifier_preflight_target_blocked` / HTTP `400` / sanitized `orca_gateway_error`. No diagnostic Fullflow or order-send was executed.
+The current evidence does not prove an ORCA server defect and does not prove Fullflow L4. It proves a precise blocker: `00002` has an acceptlstv2 target row, but medicalgetv2-compatible identifier rows are not yet available through the artifact-free preflight.
 
 ## Goal
 
-Execute `RWO-08B_COMBINED_TARGET_READINESS_REFRESH`.
+Execute `RWO-08B_IDENTIFIER_PREFLIGHT_MEDICALGETV2_BLOCKER_INVESTIGATION`.
 
-The goal is to make Fullflow L4 actionable again by producing sanitized evidence that either:
+Produce sanitized evidence that either:
 
-1. preserves the proven non-duplicate local-exact target `00002` and avoids repeating `00001`/`00005`;
-2. resolves or precisely classifies the remaining `medicalgetv2`/identifier-preflight blocker for the server-derived `00002` target row; or
-3. records a precise blocker with the next concrete safe action, without overclaiming ORCA fault or L4 success.
+1. proves a safe read-only path or Trial business-state prerequisite for medicalgetv2-compatible identifier rows for `00002`;
+2. updates the wrapper/tests to classify a more precise no-live/read-only medicalgetv2 blocker without raw artifacts; or
+3. records a narrower blocker and concrete next safe action before any diagnostic Fullflow retry.
 
 ## Required Task Order
 
 1. Inspect current branch, HEAD, status, worktrees, and this prompt.
-2. Read the four prior evidence files listed above and `docs/runbooks/release-validation.md` Fullflow policy.
+2. Read:
+   - `docs/implementation/rwo08b-fullflow-l4-target-readiness-20260428T213244Z/summary.sanitized.json`
+   - `docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/run-summary.sanitized.json`
+   - `docs/runbooks/release-validation.md`
 3. Threat-model at least these misuse cases before changes:
-   - Treating official ORCA patient existence as local selectability/readiness.
-   - Reusing duplicate-blocked `00001` or `00005` unchanged.
-   - Treating read-only discovery, HTTP 200, dry-run, or wrapper exit as L4 business success.
-   - Capturing or committing raw diagnostic artifacts, credentials, raw ORCA bodies, patient details, or insurance details.
-4. Start from the latest `00002` evidence rather than repeating candidate discovery unless the target row has drifted.
-5. Re-run read-only acceptlstv2 inventory for `2026-04-29` / class `01` to confirm the target row hash is still present.
-6. Re-run `node scripts/qa-rwo08b-target-readiness.mjs --execute-readonly --sanitized-evidence-only --disable-browser-artifacts --candidate-discovery-summary <latest-candidate-summary> --exact-preflight-summary <latest-exact-preflight-summary> --acceptance-date 2026-04-29 --class 01 --medical-get-class <candidate> --target-row-hash <server-derived-row-hash>`.
-7. If `identifier-preflight` still returns sanitized `orca_gateway_error`, investigate `medicalgetv2` official semantics and repo wrapper behavior without raw ORCA bodies. Do not treat this as ORCA fault or Fullflow success.
-8. Only consider a diagnostic fullflow retry if the evidence proves:
-   - exact selected-candidate preflight accepted for a fresh target;
-   - local exact match/selectability is present;
-   - duplicate-blocked `00001`/`00005` are not reused unchanged;
-   - server-derived official visit identifiers or their absence are proven through sanitized evidence;
-   - diagnostic artifacts can remain local-only/untracked under the Diagnostic Artifact Exception.
+   - treating the target-ready acceptlstv2 row as medicalgetv2/order-send readiness;
+   - reusing duplicate-blocked `00001` or `00005` unchanged;
+   - treating HTTP 200, read-only discovery, dry-run, or identifier-preflight metadata as Fullflow L4 success;
+   - capturing or committing raw ORCA bodies, credentials, patient details, insurance details, HAR, trace, video, screenshot, or raw network dumps.
+4. Start from the accepted non-duplicate `00002` evidence and row hash. Do not repeat candidate discovery unless target drift is suspected.
+5. Investigate official medicalgetv2 semantics and repo wrapper behavior without raw bodies. Prefer official ORCA documentation first.
+6. If runtime is used, run only artifact-free read-only wrappers with `--sanitized-evidence-only --disable-browser-artifacts`.
+7. Do not run diagnostic Fullflow unless identifier-preflight becomes target-ready and artifact containment/preflight requirements are recorded in the same run.
 
 ## Allowed Actions
 
-- Repo inspection under `web-client/`, `server-modernized/`, `docs/`, `ops/`, `tests/`, and `scripts/`.
+- Repo inspection under `web-client/`, `server-modernized/`, `api-contract/`, `docs/`, `ops/`, `tests/`, and `scripts/`.
 - Edit `docs/implementation/automation-handoff/HANDOFF_STATE.json`.
-- Add sanitized evidence under `docs/implementation/rwo08b-fullflow-l4-target-readiness-<RUN_ID>/`.
-- Add or edit narrow no-live tests/wrappers for local exact-match, local sync classification, selector readiness, Charts handoff, and official identifier hydration.
-- Run focused no-live tests, JSON validation, web guard, doc links, and `git diff --check`.
-- Run `web-client/scripts/qa-rwo08b-target-readiness.mjs` in dry-run mode and, only when same-run exact target proof exists, read-only identifier-preflight mode.
-- Run artifact-free read-only Trial identifier preflight only if existing approved local Trial runtime/config is available without printing secrets.
-- Run one diagnostic fullflow only after all same-run preconditions above pass and diagnostic artifacts can be contained local-only/untracked.
+- Add sanitized evidence under `docs/implementation/rwo08b-fullflow-l4-medicalgetv2-<RUN_ID>/`.
+- Add or edit narrow no-live/read-only tests or wrappers for medicalgetv2 identifier-row classification.
+- Run focused server tests, web script tests, JSON validation, `git diff --check`, and safe read-only Trial wrappers when approved runtime/config is available.
 - Commit roadmap/handoff-scoped source/doc/evidence changes before reporting.
 
 ## Forbidden Actions
 
 - Do not assert ORCA-side fault from current evidence alone.
-- Do not claim Fullflow L4 success unless order-send business success is proven by endpoint-specific sanitized evidence, not by HTTP 200/dry-run/read-only/preflight.
+- Do not claim Fullflow L4 success unless order-send business success is proven by endpoint-specific sanitized evidence.
 - Do not repeat candidates `00001` or `00005` unchanged.
-- Do not run live Trial mutation without complete endpoint packet, same-run preflight, duplicate checkpoint, runtime readiness, and sanitized evidence policy.
+- Do not run live Trial mutation unless a complete endpoint packet and same-run preflight explicitly authorize it.
 - Do not use production ORCA, production credentials, production patient data, S3/MinIO/object-storage setup, dummy object storage, or object-storage readiness claims.
 - Do not change legacy `client/` or `server/`.
 - Do not commit or package raw ORCA bodies, raw patient/insurance detail, credentials, cookies, sessions, Authorization headers, CSRF values, HAR, traces, videos, screenshots, request XML, raw network dumps, or credential-bearing URLs.
@@ -85,11 +74,9 @@ Record sanitized Markdown/JSON only:
 - current branch/HEAD/status/worktree;
 - task id and RUN_ID;
 - prior evidence files read;
-- candidate set and excluded duplicate-blocked identities using only sanitized IDs/classes already present in prior evidence;
-- local exact-match/sync classification and whether repo-local fix was applied;
-- combined target-readiness wrapper status and classification;
-- identifier-preflight status if run: endpoint, mutation=false, request class, row-hash/presence flags only, no raw bodies;
-- diagnostic fullflow status if run: local-only artifact root, artifact containment proof, route coverage/status classes, order-send reached/not reached, targetMutationRequestCount, business-success classification;
+- candidate/row-hash continuity for `00002`;
+- read-only medicalgetv2/identifier-preflight classification;
+- wrapper/test changes, if any;
 - explicit non-claims;
 - `credentialsCaptured=false`;
 - `rawArtifactsCommittedOrPackaged=false`;
@@ -100,13 +87,10 @@ Record sanitized Markdown/JSON only:
 
 This prompt may be marked `completed` only when one of these is true:
 
-- a fresh non-duplicate target is proven by candidate discovery, exact selected-candidate preflight, and combined target-readiness wrapper evidence;
-- read-only Trial identifier preflight produces a fresh target-ready or precise target-blocked classification through the combined wrapper and queues the next safe action;
-- diagnostic fullflow reaches endpoint-specific L4 order-send business success with sanitized evidence; or
-- a precise safety/environment/test-data blocker is recorded with the next concrete safe action.
-
-If the worker cannot safely run runtime/read-only/diagnostic steps, it must still complete repo-local no-live analysis/tests where possible, write a sanitized blocker record, keep this prompt active or replace it with a narrower active successor, and continue to independent safe no-live/static work.
+- identifier-preflight becomes target-ready for the accepted non-duplicate target and queues a diagnostic Fullflow retry packet;
+- a more precise medicalgetv2/test-data/business-state blocker is recorded with the next safe action; or
+- runtime is unavailable but repo-local no-live investigation is completed and a sanitized blocker/successor prompt is written.
 
 ## Next Recommended First Action
 
-Confirm the `00002` acceptlstv2 target row is still present, then continue no-live/read-only investigation of why `identifier-preflight` cannot derive medicalgetv2-compatible identifier rows. Do not run `qa-fullflow-weborca` until identifier-preflight is target-ready.
+Use the latest `00002` row hash and investigate whether medicalgetv2 class `01` needs a different read-only request shape, prerequisite billing/order state, or another official read-only endpoint before diagnostic Fullflow can safely run.

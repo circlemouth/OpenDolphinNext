@@ -29,6 +29,8 @@ public class MedicalIdentifierPreflightResponse extends OrcaApiResponse {
     private boolean clientProvidedIdentifiersTrusted;
     private boolean serverDerivedAuthorityRequired = true;
     private boolean identifierPreflightReady;
+    private String sanitizedErrorCode;
+    private String sanitizedValidationError;
     private final List<MedicalIdentifierRow> medicalRows = new ArrayList<>();
 
     public String getEndpoint() {
@@ -189,6 +191,22 @@ public class MedicalIdentifierPreflightResponse extends OrcaApiResponse {
 
     public void setIdentifierPreflightReady(boolean identifierPreflightReady) {
         this.identifierPreflightReady = identifierPreflightReady;
+    }
+
+    public String getSanitizedErrorCode() {
+        return sanitizedErrorCode;
+    }
+
+    public void setSanitizedErrorCode(String sanitizedErrorCode) {
+        this.sanitizedErrorCode = sanitizedErrorCode;
+    }
+
+    public String getSanitizedValidationError() {
+        return sanitizedValidationError;
+    }
+
+    public void setSanitizedValidationError(String sanitizedValidationError) {
+        this.sanitizedValidationError = sanitizedValidationError;
     }
 
     public List<MedicalIdentifierRow> getMedicalRows() {
