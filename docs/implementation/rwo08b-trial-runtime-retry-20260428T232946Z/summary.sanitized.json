@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260428T232946Z",
+  "workOrder": "RWO-08B",
+  "taskId": "RWO-08B_TRIAL_RUNTIME_FALLBACK_AND_FRESH_READONLY_TARGET_EVIDENCE",
+  "result": "TRIAL_RUNTIME_DECRYPT_BLOCKER_RESOLVED_TARGET_IDENTIFIER_STILL_BLOCKED",
+  "branch": "master",
+  "headAtSelection": "118a4c0f9",
+  "trialScope": {
+    "target": "WebORCA / ORCA Trial",
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
+  "runtimeRepair": {
+    "change": "docker-compose.modernized.dev.yml now passes OPENDOLPHIN_ENVIRONMENT with default trial-local into server-modernized-dev",
+    "classification": "repo_local_object_storage_free_trial_runtime_profile_repair",
+    "secretValuesPrintedOrReplaced": false,
+    "storedOrcaCredentialRecordOverwritten": false,
+    "effect": "The stored encrypted ORCA connection config can fail closed while the Trial-only runtime fallback resolves WebORCA Trial settings from the approved local runtime environment."
+  },
+  "readOnlyTrialOrca": {
+    "executed": true,
+    "mutation": false,
+    "businessSuccessClassification": "readonly_identifier_preflight_target_blocked",
+    "runtimeReadiness": "session_bootstrap_ok",
+    "httpStatus": 200,
+    "transportStatusClass": "2xx"
+  },
+  "freshCandidateEvidence": {
+    "duplicateBlockedCandidateIdsExcluded": [
+      "00001",
+      "00005"
+    ],
+    "candidateDiscoveryAcceptedCandidateCount": 1,
+    "selectedCandidatePatientId": "00002",
+    "candidateDiscoveryAloneAuthorizesFullflow": false,
+    "exactSelectedCandidatePreflightAccepted": true,
+    "exactSelectedCandidatePatientId": "00002"
+  },
+  "identifierPreflight": {
+    "endpoint": "/api/orca/official/visits/identifier-preflight",
+    "acceptanceEndpoint": "/api01rv2/acceptlstv2",
+    "medicalGetEndpoint": "/api01rv2/medicalgetv2",
+    "visitListEndpoint": "/api01rv2/visitptlstv2",
+    "medicalGetRequestClass": "medicalgetv2_class_01_identifier_snapshot_readonly",
+    "visitListRequestClass": "visitptlstv2_request_01_visit_date_readonly_identifier_proof",
+    "acceptanceDate": "2026-04-29",
+    "acceptanceClassCode": "01",
+    "medicalGetClassCode": "01",
+    "selectedAcceptanceRowHash": "b3b3d7c1416f047abb6450023e575fa39f53ed1d8f804aef8cf3551d945a5ddb",
+    "selectedAcceptanceTargetReady": true,
+    "acceptanceSourceRowCount": 1,
+    "acceptanceTargetReadyRowCount": 1,
+    "apiResult": "15",
+    "apiResultClass": "nonzero",
+    "medicalSourceRowCount": 1,
+    "medicalReadyRowCount": 0,
+    "visitSourceRowCount": 1,
+    "visitReadyRowCount": 0,
+    "identifierPreflightReady": false,
+    "sanitizedMissingPresence": {
+      "medicalRow": {
+        "hasPerformDate": true,
+        "hasDepartmentCode": false,
+        "hasSequentialNumber": false,
+        "hasInsuranceCombinationNumber": false
+      },
+      "visitRow": {
+        "hasPatientId": false,
+        "hasVisitDate": true,
+        "hasDepartmentCode": true,
+        "hasVoucherNumber": false,
+        "hasSequentialNumber": false,
+        "hasInsuranceCombinationNumber": false
+      }
+    }
+  },
+  "diagnosticFullflow": {
+    "executed": false,
+    "businessSuccessClassification": "not_run_identifier_preflight_target_blocked"
+  },
+  "checks": {
+    "dockerComposeTrialLocalEnvPresence": "pass_OPENDOLPHIN_ENVIRONMENT_present_in_container",
+    "readOnlyTargetReadinessWrapper": "identifier_preflight_target_blocked",
+    "freshCandidateDiscoveryExcludingDuplicates": "pass_selected_nonduplicate_00002_only",
+    "freshExactReadonlyPreflight00002": "pass_accepted"
+  },
+  "recommendedNextTask": "Do not run diagnostic Fullflow for the current Trial target. The remaining blocker is Trial business/test-data state: provide or create a non-duplicate Trial target whose official medicalgetv2 or visitptlstv2 read-only response includes server-derived voucher/sequential/insurance identifiers, then rerun the same artifact-free target-readiness wrapper.",
+  "claimBoundary": "This resolves the local Trial runtime decrypt blocker and records fresh read-only Trial evidence. It does not prove diagnostic Fullflow success, Trial order-send business acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

@@ -1,71 +1,68 @@
 # NEXT_WORKER_PROMPT
 
-status: blocked_environment_unavailable
-created_at: 2026-04-28T23:03:20Z
-updated_at: 2026-04-28T23:03:20Z
+status: blocked_trial_business_state
+created_at: 2026-04-28T23:29:46Z
+updated_at: 2026-04-28T23:29:46Z
 source_work_order: RWO-08B
-blocker_id: rwo08b-visitptlstv2-identifier-preflight-runtime-orca-config-decrypt-blocker
+blocker_id: rwo08b-current-trial-target-missing-official-identifier-proof
 priority: high
 supersedes:
-- fullflow-l4-medicalgetv2-api15-history-row-identifier-contract-blocker
+- rwo08b-visitptlstv2-identifier-preflight-runtime-orca-config-decrypt-blocker
 
 ## Context
 
-RUN_ID `20260428T230320Z` implemented the official `visitptlstv2` `Request_Number=01` alternative identifier-preflight contract for RWO-08B.
+RUN_ID `20260428T232946Z` resolved the local Trial runtime decrypt blocker and refreshed read-only WebORCA / ORCA Trial evidence.
 
 Evidence:
 
-- `docs/implementation/rwo08b-visitptlstv2-identifier-preflight-20260428T230320Z/summary.sanitized.json`
-- `docs/implementation/rwo08b-visitptlstv2-identifier-preflight-20260428T230320Z/FINAL_REPORT.md`
+- `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/summary.sanitized.json`
+- `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/FINAL_REPORT.md`
 
-The previous contract blocker is resolved repo-locally:
+The dev/Trial runtime now passes `OPENDOLPHIN_ENVIRONMENT=trial-local` into `server-modernized-dev`, allowing the Trial-only runtime fallback to resolve WebORCA Trial settings when an old local encrypted ORCA connection record cannot be decrypted. No secret values were printed, replaced, or committed.
 
-- `acceptlstv2` remains the server-derived selected target source.
-- `medicalgetv2` class `01` remains accepted when it returns a ready identifier row.
-- Official `visitptlstv2` `Request_Number=01` is now accepted as an alternative read-only identifier-proof source only when a sanitized visit row matches the server-selected acceptance patient, visit date, department, and insurance combination and includes voucher and sequential identifiers.
-- Client-provided identifiers remain non-authoritative.
+Fresh read-only evidence:
 
-The read-only Trial rerun did not produce usable identifier-preflight evidence because the local runtime failed before ORCA identifier proof could be obtained. The sanitized classification is `runtime_orca_config_decrypt_blocked_before_identifier_preflight`.
+- duplicate-blocked candidates `00001` and `00005` were excluded;
+- fresh candidate discovery selected only non-duplicate candidate `00002`;
+- exact read-only preflight for `00002` passed;
+- target-readiness reached `/api/orca/official/visits/identifier-preflight` with HTTP `200`;
+- `acceptlstv2` selected target row remains target-ready;
+- `medicalgetv2` class `01` returned `apiResult=15`, `medicalReadyRowCount=0`;
+- `visitptlstv2` `Request_Number=01` returned one sanitized row, but `visitReadyRowCount=0`;
+- `identifierPreflightReady=false`.
 
-Do not run diagnostic Fullflow while this blocker remains.
+Diagnostic Fullflow remains not authorized for the current Trial target.
 
 ## Current Blocker
 
-The local server runtime could not decrypt its existing ORCA connection configuration with the currently loaded local runtime key. Treat this as `skipped_environment_unavailable_missing_runtime_secret_or_config`.
+The blocker is now Trial business/test-data state, not repo-local runtime configuration.
 
-Do not print, replace, or silently regenerate ORCA credentials, encrypted connection records, cookies, sessions, Authorization headers, or external-service secrets. If the matching approved local runtime configuration/key is not available, carry this blocker forward and continue independent non-live roadmap work.
+The current non-duplicate Trial target `00002`, date `2026-04-29`, class `01`, row hash `b3b3d7c1416f047abb6450023e575fa39f53ed1d8f804aef8cf3551d945a5ddb` lacks official read-only voucher / sequential / insurance identifier proof.
 
-## Goal
+## Required Boundary
 
-After the approved local ORCA runtime configuration and matching local-only encryption key are restored or realigned without exposing secret values, rerun the exact artifact-free read-only RWO-08B target-readiness wrapper.
+Do not run diagnostic Fullflow for this current target unless a same-run artifact-free read-only target-readiness wrapper proves `identifierPreflightReady=true`.
 
-Diagnostic Fullflow is allowed only if same-run sanitized read-only evidence proves `identifierPreflightReady=true` through either:
+Do not reuse `00001` or `00005` unchanged. They remain duplicate-blocked candidates for this RWO-08B path.
 
-- a ready `medicalgetv2` row; or
-- a ready matching `visitptlstv2` `Request_Number=01` row.
+## Next Safe Work
 
-## Required Task Order
+Select the next independent roadmap item, or prepare a new complete endpoint packet for a non-duplicate Trial target setup path if one is explicitly allowed by the current roadmap/handoff and has:
 
-1. Inspect current branch, HEAD, status, worktrees, and this prompt.
-2. Confirm that `docs/implementation/rwo08b-visitptlstv2-identifier-preflight-20260428T230320Z/summary.sanitized.json` is the latest RWO-08B evidence.
-3. Confirm approved local runtime configuration availability without printing secret values.
-4. If the local ORCA configuration/key mismatch is still present and cannot be safely repaired under the local-only policy, record a sanitized skip and continue independent non-live roadmap work.
-5. If runtime is repaired, run only the artifact-free read-only wrapper with `--sanitized-evidence-only --disable-browser-artifacts`.
-6. Do not run diagnostic Fullflow unless identifier-preflight is target-ready and the same run records endpoint packet, target, stop conditions, artifact containment, and sanitized evidence policy.
-
-## Allowed Actions
-
-- Repo inspection under `web-client/`, `server-modernized/`, `api-contract/`, `docs/`, `ops/`, `tests/`, and `scripts/`.
-- Edit `docs/implementation/automation-handoff/HANDOFF_STATE.json`.
-- Add sanitized evidence under `docs/implementation/rwo08b-visitptlstv2-identifier-preflight-<RUN_ID>/`.
-- Run focused server tests, web script tests, JSON validation, `git diff --check`, Docker build/recreate for the local dev/Trial runtime, and safe read-only Trial wrappers when approved runtime/config is available.
-- Commit roadmap/handoff-scoped source/doc/evidence changes before reporting.
+- endpoint/request class;
+- target identity;
+- payload hash/identity;
+- duplicate-live checkpoint;
+- no-live wrapper result;
+- parser/sanitizer result;
+- runtime readiness;
+- endpoint-specific business success criteria;
+- stop conditions;
+- sanitized evidence policy.
 
 ## Forbidden Actions
 
 - Do not print or commit secret values, ORCA credentials, encrypted credential material, cookies, sessions, Authorization headers, CSRF values, raw ORCA bodies, raw patient details, raw insurance details, HAR, traces, videos, screenshots, request XML, raw network dumps, or credential-bearing URLs.
-- Do not overwrite existing non-empty local runtime secret/config values when the classification is ambiguous.
-- Do not run live Trial mutation from this prompt.
 - Do not run diagnostic Fullflow unless identifier-preflight readiness is proven in the same run.
 - Do not use production ORCA, production credentials, production patient data, S3/MinIO/object-storage setup, dummy object storage, or object-storage readiness claims.
 - Do not change legacy `client/` or `server/`.
@@ -79,7 +76,7 @@ Record sanitized Markdown/JSON only:
 - current branch/HEAD/status/worktree;
 - task id and RUN_ID;
 - prior evidence files read;
-- selected target continuity for `00002` and row hash;
+- selected target continuity or replacement target identity;
 - runtime configuration availability classification without values;
 - read-only wrapper result, if rerun;
 - explicit non-claims;
@@ -92,9 +89,9 @@ Record sanitized Markdown/JSON only:
 
 This prompt may be marked `completed` only when one of these is true:
 
-- identifier-preflight becomes target-ready for the accepted non-duplicate target and queues or executes an authorized diagnostic Fullflow retry packet; or
-- the environment blocker is recorded again and the worker has continued to the next safe independent non-live roadmap task.
+- identifier-preflight becomes target-ready for a non-duplicate accepted Trial target and queues or executes an authorized diagnostic Fullflow retry packet; or
+- another independent safe roadmap item is selected and completed/skipped under the throughput policy.
 
 ## Next Recommended First Action
 
-Restore or realign the approved local ORCA runtime configuration and its matching local-only encryption key without printing values. Then rerun the same artifact-free read-only RWO-08B target-readiness wrapper for patient `00002`, date `2026-04-29`, class `01`, row hash `b3b3d7c1416f047abb6450023e575fa39f53ed1d8f804aef8cf3551d945a5ddb`.
+Continue to the next independent safe roadmap item. Return to RWO-08B only when a non-duplicate Trial target can provide official `medicalgetv2` or `visitptlstv2` voucher / sequential / insurance identifier proof through artifact-free read-only evidence.

@@ -1,8 +1,8 @@
 {
-  "status": "blocked_environment_unavailable",
+  "status": "blocked_trial_business_state",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B",
-  "blockerId": "fullflow-l4-medicalgetv2-api15-history-row-identifier-contract-blocker",
+  "blockerId": "rwo08b-current-trial-target-missing-official-identifier-proof",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,59 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T23:03:20Z",
+  "lastUpdated": "2026-04-28T23:29:46Z",
+  "latestRwo08bTrialRuntimeRetry": {
+    "runId": "20260428T232946Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_TRIAL_RUNTIME_FALLBACK_AND_FRESH_READONLY_TARGET_EVIDENCE",
+    "result": "TRIAL_RUNTIME_DECRYPT_BLOCKER_RESOLVED_TARGET_IDENTIFIER_STILL_BLOCKED",
+    "branch": "master",
+    "headAtSelection": "118a4c0f9",
+    "evidence": "docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/FINAL_REPORT.md",
+    "trialScope": {
+      "target": "WebORCA / ORCA Trial",
+      "productionOrcaAttempted": false,
+      "s3ObjectStorageUsed": false
+    },
+    "runtimeRepair": {
+      "change": "docker-compose.modernized.dev.yml passes OPENDOLPHIN_ENVIRONMENT with default trial-local",
+      "secretValuesPrintedOrReplaced": false,
+      "storedOrcaCredentialRecordOverwritten": false
+    },
+    "freshCandidateEvidence": {
+      "duplicateBlockedCandidateIdsExcluded": [
+        "00001",
+        "00005"
+      ],
+      "acceptedNonDuplicateCandidateCount": 1,
+      "selectedCandidatePatientId": "00002",
+      "exactReadonlyPreflightAccepted": true
+    },
+    "identifierPreflight": {
+      "httpStatus": 200,
+      "transportStatusClass": "2xx",
+      "apiResult": "15",
+      "apiResultClass": "nonzero",
+      "selectedAcceptanceRowHash": "b3b3d7c1416f047abb6450023e575fa39f53ed1d8f804aef8cf3551d945a5ddb",
+      "selectedAcceptanceTargetReady": true,
+      "medicalReadyRowCount": 0,
+      "visitReadyRowCount": 0,
+      "identifierPreflightReady": false,
+      "businessSuccessClassification": "readonly_identifier_preflight_target_blocked"
+    },
+    "diagnosticFullflow": {
+      "executed": false,
+      "businessSuccessClassification": "not_run_identifier_preflight_target_blocked"
+    },
+    "recommendedNextTask": "Do not run diagnostic Fullflow for the current Trial target. Provide or create a non-duplicate Trial target with official medicalgetv2 or visitptlstv2 voucher/sequential/insurance identifier proof, then rerun artifact-free target-readiness.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
   "latestRwo08bVisitptlstv2IdentifierPreflight": {
     "runId": "20260428T230320Z",
     "workOrder": "RWO-08B",
