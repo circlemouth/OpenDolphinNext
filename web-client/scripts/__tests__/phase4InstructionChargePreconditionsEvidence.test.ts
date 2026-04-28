@@ -43,6 +43,10 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
     expect(guard.rawPayloadStored).toBe(false);
     expect(guard.rawOrcaBodyStored).toBe(false);
     expect(guard.credentialsCaptured).toBe(false);
+    expect(guard.payloadEvidence?.duplicateLiveCheckpoint).toEqual(expect.objectContaining({
+      key: `rwo06f:medicalmodv2:rwo06f-instruction-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-${payloadSha256}`,
+      status: 'not_checked_no_live_packet_hardening',
+    }));
   });
 
   it('rejects raw artifact flags and ambiguous execution mode before network use', () => {
@@ -215,7 +219,7 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
     expect(fetched[1].body).toContain('<Insurance_Combination_Number type="string">0001</Insurance_Combination_Number>');
   });
 
-  it('classifies readonly preconditions separately from live business acceptance', () => {
+  it('classifies incomplete readonly preconditions separately from live business acceptance', () => {
     const guard = validateInstructionChargePreconditionCommand({
       argv: [
         '--dry-run',
@@ -254,9 +258,34 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
     });
 
     expect(summary.liveTrialMutation).toBe('not_run');
-    expect(summary.preconditions.allPreconditionsProven).toBe(true);
+    expect(summary.endpointPacket.duplicateLiveCheckpoint).toEqual(expect.objectContaining({
+      key: `rwo06f:medicalmodv2:rwo06f-instruction-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-${payloadSha256}`,
+    }));
+    expect(summary.endpointPacket.parserSanitizerContract).toEqual(expect.objectContaining({
+      contextStatusSchemaPresent: true,
+      rawOrcaBodyStored: false,
+      rawPatientOrInsuranceDetailStored: false,
+    }));
+    expect(summary.endpointPacket.endpointSpecificBusinessSuccessCriteria).toContain(
+      'http200_or_apiResult_zero_alone_is_not_success',
+    );
+    expect(summary.endpointPacket.stopConditions).toContain('candidate_code_not_readonly_validated');
+    expect(summary.endpointPacket.businessSuccessSeparation).toEqual({
+      readonlyPreflightIsBusinessSuccess: false,
+      dryRunIsBusinessSuccess: false,
+      http200OrApiResultZeroAloneIsBusinessSuccess: false,
+    });
+    expect(summary.preconditions.preconditionStatus).toEqual(expect.objectContaining({
+      candidateCodeValidity: 'static_shape_valid_readonly_probe_required',
+      selectableCommentStatus: 'not_applicable_candidate_is_not_selectable_comment',
+      departmentContext: 'observed_in_readonly_orca_response_sanitized',
+      physicianContext: 'not_proven',
+      insuranceCombinationContext: 'observed_in_readonly_orca_response_sanitized',
+      masterFreshnessStatus: 'not_proven',
+    }));
+    expect(summary.preconditions.allPreconditionsProven).toBe(false);
     expect(summary.preconditions.businessSuccessClassification).toBe(
-      'readonly_preconditions_proven_not_business_acceptance',
+      'not_applicable_or_readonly_preconditions_not_proven',
     );
     expect(summary.security.credentialsCaptured).toBe(false);
   });

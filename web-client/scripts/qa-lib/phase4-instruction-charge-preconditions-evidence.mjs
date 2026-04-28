@@ -4,6 +4,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+  PHASE4_ENDPOINT_PATH,
+  PHASE4_REQUEST_CLASS,
+  PHASE4_TARGET_PATIENT_ID,
   loadPhase4Payload,
   summarizeInstructionChargePreconditionNoLivePlan,
 } from './phase4-medicalmodv2-safe-evidence.mjs';
@@ -58,6 +61,8 @@ const normalizeBaseDate = (value) => {
 };
 
 const normalizeBaseMonth = (baseDate) => normalizeBaseDate(baseDate).slice(0, 7);
+const instructionChargeDuplicateCheckpoint = (payloadSha256) =>
+  `rwo06f:medicalmodv2:rwo06f-instruction-charge-medicalmodv2-v1:target-${PHASE4_TARGET_PATIENT_ID}:request-01:class-01:payload-sha256-${payloadSha256}`;
 
 export const parseInstructionChargePreconditionArgs = (argv) => {
   const options = {
@@ -148,6 +153,18 @@ export const validateInstructionChargePreconditionCommand = ({ argv, env = proce
       sha256: loaded.sha256,
       bytes: loaded.bytes,
       plan,
+      duplicateLiveCheckpoint: {
+        key: instructionChargeDuplicateCheckpoint(loaded.sha256),
+        status: 'not_checked_no_live_packet_hardening',
+        identity: {
+          endpoint: PHASE4_ENDPOINT_PATH,
+          requestClass: PHASE4_REQUEST_CLASS,
+          target: PHASE4_TARGET_PATIENT_ID,
+          requestNumber: '01',
+          classCode: '01',
+          payloadSha256: loaded.sha256,
+        },
+      },
       context: {
         ...context,
         baseDate,
@@ -407,7 +424,20 @@ const classifyPreconditionStatus = (readonlyChecks) => {
   const disease = readonlyChecks.find((entry) => entry.role === 'diseaseContext');
   const monthly = readonlyChecks.find((entry) => entry.role === 'monthlyDuplicateContext');
   const facilityChecks = readonlyChecks.filter((entry) => entry.role === 'facilityContext');
+  const candidateCode = readonlyChecks.find((entry) => entry.role === 'candidateCodeValidity');
+  const selectableComment = readonlyChecks.find((entry) => entry.role === 'selectableCommentStatus');
+  const physician = readonlyChecks.find((entry) => entry.role === 'physicianContext');
+  const insurance = readonlyChecks.find((entry) => entry.role === 'insuranceCombinationContext');
+  const masterFreshness = readonlyChecks.find((entry) => entry.role === 'masterFreshnessStatus');
+  const readonlyProbeRan = readonlyChecks.length > 0;
   return {
+    candidateCodeValidity:
+      candidateCode?.httpStatusClass === '2xx' && candidateCode?.apiResultClass === 'success_zero' &&
+      candidateCode?.candidateCodeValid === true
+        ? 'readonly_code_valid_sanitized'
+        : 'static_shape_valid_readonly_probe_required',
+    selectableCommentStatus:
+      selectableComment?.status ?? 'not_applicable_candidate_is_not_selectable_comment',
     diseaseContext:
       disease?.httpStatusClass === '2xx' && disease?.apiResultClass === 'success_zero' && disease?.managementFeeDiseaseClassPresent
         ? 'proven_sanitized'
@@ -418,13 +448,29 @@ const classifyPreconditionStatus = (readonlyChecks) => {
           ? 'duplicate_or_existing_candidate_observed_stop_before_live'
           : 'no_candidate_duplicate_observed_sanitized'
         : 'not_proven',
-    departmentInsuranceContext:
+    departmentContext:
       monthly?.targetDepartmentReferenced && monthly?.targetInsuranceCombinationReferenced
+        ? 'observed_in_readonly_orca_response_sanitized'
+        : 'not_proven',
+    physicianContext:
+      physician?.httpStatusClass === '2xx' && physician?.apiResultClass === 'success_zero' &&
+      physician?.targetPhysicianReferenced
+        ? 'observed_in_readonly_orca_response_sanitized'
+        : 'not_proven',
+    insuranceCombinationContext:
+      (insurance?.httpStatusClass === '2xx' && insurance?.apiResultClass === 'success_zero' &&
+        insurance?.targetInsuranceCombinationReferenced) ||
+      (monthly?.targetInsuranceCombinationReferenced && readonlyProbeRan)
         ? 'observed_in_readonly_orca_response_sanitized'
         : 'not_proven',
     facilityContext:
       facilityChecks.some((entry) => entry.httpStatusClass === '2xx' && entry.apiResultClass === 'success_zero')
         ? 'facility_summary_observed_sanitized'
+        : 'not_proven',
+    masterFreshnessStatus:
+      masterFreshness?.httpStatusClass === '2xx' && masterFreshness?.apiResultClass === 'success_zero' &&
+      masterFreshness?.masterFreshnessObserved
+        ? 'readonly_master_freshness_observed_sanitized'
         : 'not_proven',
   };
 };
@@ -448,10 +494,15 @@ export const buildInstructionChargePreconditionSummary = ({
   };
   const preconditionStatus = classifyPreconditionStatus(readonlyChecks);
   const allProven =
+    preconditionStatus.candidateCodeValidity === 'readonly_code_valid_sanitized' &&
+    preconditionStatus.selectableCommentStatus !== 'not_proven' &&
     preconditionStatus.diseaseContext === 'proven_sanitized' &&
     preconditionStatus.monthlyDuplicateContext === 'no_candidate_duplicate_observed_sanitized' &&
-    preconditionStatus.departmentInsuranceContext === 'observed_in_readonly_orca_response_sanitized' &&
-    preconditionStatus.facilityContext === 'facility_summary_observed_sanitized';
+    preconditionStatus.departmentContext === 'observed_in_readonly_orca_response_sanitized' &&
+    preconditionStatus.physicianContext === 'observed_in_readonly_orca_response_sanitized' &&
+    preconditionStatus.insuranceCombinationContext === 'observed_in_readonly_orca_response_sanitized' &&
+    preconditionStatus.facilityContext === 'facility_summary_observed_sanitized' &&
+    preconditionStatus.masterFreshnessStatus === 'readonly_master_freshness_observed_sanitized';
 
   return {
     runId,
@@ -465,6 +516,31 @@ export const buildInstructionChargePreconditionSummary = ({
       sha256: guard.payloadEvidence?.sha256 ?? null,
       bytes: guard.payloadEvidence?.bytes ?? 0,
       rawPayloadStored: false,
+    },
+    endpointPacket: {
+      endpoint: PHASE4_ENDPOINT_PATH,
+      requestClass: PHASE4_REQUEST_CLASS,
+      target: PHASE4_TARGET_PATIENT_ID,
+      requestNumber: '01',
+      classCode: '01',
+      duplicateLiveCheckpoint: guard.payloadEvidence?.duplicateLiveCheckpoint ?? null,
+      parserSanitizerContract: {
+        commandContract: guard.contract,
+        contextStatusSchemaPresent: Boolean(guard.payloadEvidence?.plan?.contextStatusSchema),
+        rawPayloadStored: false,
+        rawOrcaBodyStored: false,
+        rawPatientOrInsuranceDetailStored: false,
+        rawDiseaseNameStored: false,
+        rawMedicalRowsStored: false,
+      },
+      endpointSpecificBusinessSuccessCriteria:
+        guard.payloadEvidence?.plan?.endpointSpecificBusinessSuccessCriteria ?? [],
+      stopConditions: guard.payloadEvidence?.plan?.stopConditions ?? [],
+      businessSuccessSeparation: {
+        readonlyPreflightIsBusinessSuccess: false,
+        dryRunIsBusinessSuccess: false,
+        http200OrApiResultZeroAloneIsBusinessSuccess: false,
+      },
     },
     preconditions: {
       plan: guard.payloadEvidence?.plan ?? null,

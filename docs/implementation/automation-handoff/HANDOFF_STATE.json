@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06F",
-  "blockerId": "rwo06f-no-live-precondition-packet-hardening-needed",
+  "blockerId": "rwo06f-readonly-context-wrapper-gaps",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T06:34:23Z",
+  "lastUpdated": "2026-04-28T07:06:26Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5174,7 +5174,7 @@
     {
       "taskId": "RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-06F",
       "summary": "Harden the instractionChargeOrder/130 v2 no-live endpoint packet, context-status schema, parser/sanitizer contract, duplicate checkpoint, stop conditions, and business-success separation.",
       "requiresRuntime": false,
@@ -5203,12 +5203,23 @@
       "skipCondition": "focused no-live helper/test surface unavailable, official semantics require guessing, raw patient/insurance/disease detail would be required, or live mutation would be needed",
       "successCriteria": "sanitized no-live packet-hardening evidence exists with focused tests/checks, credentialsCaptured=false, rawArtifactsCommittedOrPackaged=false, liveTrialOrca.executed=false, and no business acceptance claimed",
       "nextOnSuccess": "RWO-06F_READONLY_CONTEXT_PREFLIGHT_OR_CARRY_FORWARD",
-      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "result": "RWO06F_NO_LIVE_PRECONDITION_PACKET_HARDENED",
+      "completedRunId": "20260428T070626Z",
+      "evidence": "docs/implementation/rwo06f-no-live-precondition-packet-hardening-20260428T070626Z/summary.sanitized.json",
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      },
+      "readOnlyTrialOrca": {
+        "executed": false,
+        "mutation": false
+      }
     },
     {
       "taskId": "RWO-06F_READONLY_CONTEXT_PREFLIGHT_OR_CARRY_FORWARD",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "blocked_safety_stop",
       "workOrder": "RWO-06F",
       "summary": "Run or carry forward sanitized read-only disease/monthly/department/physician/insurance/facility context preflight for instractionChargeOrder/130 after packet hardening.",
       "requiresRuntime": true,
@@ -5220,7 +5231,26 @@
       "skipCondition": "approved non-S3 Trial runtime unavailable, safe read-only wrapper missing, parser ambiguity, target/context ambiguity, credential/raw-artifact risk, non-Trial endpoint detection, or raw detail required",
       "successCriteria": "sanitized read-only context status evidence exists or a precise sanitized carry-forward blocker exists; mutation=false, liveTrialOrca.executed=false, credentialsCaptured=false, rawArtifactsCommittedOrPackaged=false",
       "nextOnSuccess": "RWO-06F_OWNER_BUSINESS_CONTEXT",
-      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH"
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "result": "carried_forward_safe_wrapper_gaps",
+      "completedRunId": "20260428T070626Z",
+      "evidence": "docs/implementation/rwo06f-readonly-context-carry-forward-20260428T070626Z/summary.sanitized.json",
+      "missingReadOnlyProbeCoverage": [
+        "medicationgetv2 candidate code validity sanitizer",
+        "selectable-comment applicability sanitizer",
+        "system01lstv2 physician status sanitizer",
+        "patientlst6v2 or equivalent insurance-combination readiness sanitizer",
+        "masterlastupdatev3 master freshness sanitizer",
+        "unchanged rejected checkpoint refusal evidence tied to prior checkpoint state"
+      ],
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      },
+      "readOnlyTrialOrca": {
+        "executed": false,
+        "mutation": false
+      }
     },
     {
       "taskId": "ACCEPTMODV2_TARGET_INVENTORY_READONLY_TRIAL_AFTER_PARSER_FIX",
@@ -8303,6 +8333,81 @@
     },
     "recommendedNextTask": "Execute RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING: harden the existing v2 no-live endpoint packet, parser/sanitizer contract, duplicate checkpoint, context statuses, and stop conditions without live mutation.",
     "claimBoundary": "RWO-06F official-spec context map and RWO-11/RWO-09 external-gate intake schema only. No RWO-06F Trial business acceptance, class 130 billing eligibility, all guidance-fee coverage, fullflow success, rollback rehearsal, operator acceptance, final owner GO/NO-GO/PENDING, production ORCA readiness, S3/object-storage readiness, or final release readiness is claimed.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06FNoLivePreconditionPacketHardening": {
+    "runId": "20260428T070626Z",
+    "workOrder": "RWO-06F",
+    "taskId": "RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING",
+    "result": "RWO06F_NO_LIVE_PRECONDITION_PACKET_HARDENED",
+    "branch": "master",
+    "headAtSelection": "ddcbf9c82af128aceefee5dda65ac89a54d1dd75",
+    "evidence": "docs/implementation/rwo06f-no-live-precondition-packet-hardening-20260428T070626Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo06f-no-live-precondition-packet-hardening-20260428T070626Z/summary.sanitized.json",
+    "dryRunSummary": "docs/implementation/rwo06f-no-live-precondition-packet-hardening-20260428T070626Z/instruction-charge-preconditions-dry-run/instruction-charge-preconditions-readonly-summary.sanitized.json",
+    "payloadIdentity": {
+      "workflow": "instruction-charge",
+      "entity": "instractionChargeOrder",
+      "claim007Class": "130",
+      "candidateCode": "113001810",
+      "payloadSha256": "043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858",
+      "duplicateLiveCheckpoint": "rwo06f:medicalmodv2:rwo06f-instruction-charge-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-043c2a657746820a96950d6c05e2179d65040123d677a028e9ab86bc9af98858"
+    },
+    "checks": {
+      "focusedVitest": "pass_38_tests_with_web_guard_pretest"
+    },
+    "subagents": [
+      {
+        "id": "019dd2ec-cfea-7373-85c4-ae42cd46ca2b",
+        "scope": "read-only independent review in temporary worktree",
+        "changedFiles": [],
+        "integratedFindings": [
+          "candidate/selectable/master/physician/insurance schema gaps",
+          "class 130 facility observation is not business approval",
+          "unchanged rejected checkpoint retry refusal"
+        ]
+      }
+    ],
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_packet_hardening_only",
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executed": false,
+      "mutation": false
+    },
+    "recommendedNextTask": "Implement RWO-06F read-only wrapper gap closure for candidate, selectable-comment, physician, insurance, master freshness, and unchanged-retry refusal before any read-only preflight rerun or live mutation.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06FReadonlyContextCarryForward": {
+    "runId": "20260428T070626Z",
+    "workOrder": "RWO-06F",
+    "taskId": "RWO-06F_READONLY_CONTEXT_PREFLIGHT_OR_CARRY_FORWARD",
+    "result": "RWO06F_READONLY_CONTEXT_PREFLIGHT_CARRIED_FORWARD_SAFE_WRAPPER_GAPS",
+    "evidence": "docs/implementation/rwo06f-readonly-context-carry-forward-20260428T070626Z/summary.sanitized.json",
+    "missingReadOnlyProbeCoverage": [
+      "medicationgetv2 candidate code validity sanitizer",
+      "selectable-comment applicability sanitizer",
+      "system01lstv2 physician status sanitizer",
+      "patientlst6v2 or equivalent insurance-combination readiness sanitizer",
+      "masterlastupdatev3 master freshness sanitizer",
+      "unchanged rejected checkpoint refusal evidence tied to prior checkpoint state"
+    ],
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_readonly_preflight_not_executed",
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executed": false,
+      "mutation": false
+    },
+    "recommendedNextTask": "Execute active successor prompt RWO-06F_READONLY_CONTEXT_WRAPPER_GAP_CLOSURE_NO_LIVE.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false

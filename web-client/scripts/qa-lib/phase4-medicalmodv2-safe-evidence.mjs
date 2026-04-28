@@ -529,7 +529,57 @@ export const summarizeInstructionChargePreconditionNoLivePlan = (payload) => {
     ok: blockers.length === 0,
     blockers,
     candidateCodes,
+    contextStatusSchema: {
+      candidateCodeValidity: [
+        'static_shape_valid_readonly_probe_required',
+        'readonly_code_valid_sanitized',
+        'readonly_code_invalid_stop_before_live',
+        'not_proven',
+      ],
+      selectableCommentStatus: [
+        'not_applicable_candidate_is_not_selectable_comment',
+        'readonly_selectable_comment_valid_sanitized',
+        'readonly_selectable_comment_invalid_stop_before_live',
+        'not_proven',
+      ],
+      diseaseContext: ['proven_sanitized', 'not_proven', 'blocked_sanitized'],
+      facilityContext: ['facility_summary_observed_sanitized', 'not_proven', 'blocked_sanitized'],
+      monthlyDuplicateContext: [
+        'no_candidate_duplicate_observed_sanitized',
+        'duplicate_or_existing_candidate_observed_stop_before_live',
+        'not_proven',
+        'blocked_sanitized',
+      ],
+      departmentContext: ['observed_in_readonly_orca_response_sanitized', 'not_proven', 'blocked_sanitized'],
+      physicianContext: ['observed_in_readonly_orca_response_sanitized', 'not_proven', 'blocked_sanitized'],
+      insuranceCombinationContext: [
+        'observed_in_readonly_orca_response_sanitized',
+        'not_proven',
+        'blocked_sanitized',
+      ],
+      masterFreshnessStatus: [
+        'readonly_master_freshness_observed_sanitized',
+        'not_proven',
+        'blocked_sanitized',
+      ],
+    },
     preconditionsRequiredBeforeLive: [
+      {
+        name: 'candidateCodeValidity',
+        requiredEvidence: [
+          'medicationgetv2OrEquivalentSanitizedCodeLookup',
+          'candidateCodeHashOnly',
+          'noRawMedicationNameOrMasterDetail',
+        ],
+      },
+      {
+        name: 'selectableCommentStatus',
+        requiredEvidence: [
+          'selectableCommentApplicabilityClassified',
+          'sanitizedCommentCandidateStatusWhenApplicable',
+          'noRawCommentText',
+        ],
+      },
       {
         name: 'diseaseContext',
         requiredEvidence: [
@@ -554,16 +604,44 @@ export const summarizeInstructionChargePreconditionNoLivePlan = (payload) => {
         ],
       },
       {
-        name: 'departmentInsuranceContext',
+        name: 'departmentContext',
         requiredEvidence: [
           'departmentCodeServerDerived',
+          'departmentReadinessSanitized',
+          'noClientProvidedDepartmentAuthority',
+        ],
+      },
+      {
+        name: 'physicianContext',
+        requiredEvidence: [
+          'physicianCodeServerDerived',
+          'physicianReadinessSanitized',
+          'noClientProvidedPhysicianAuthority',
+        ],
+      },
+      {
+        name: 'insuranceCombinationContext',
+        requiredEvidence: [
+          'insuranceCombinationServerDerived',
           'insuranceCombinationReadiness',
           'noClientProvidedInsuranceAuthority',
+        ],
+      },
+      {
+        name: 'masterFreshnessStatus',
+        requiredEvidence: [
+          'masterlastupdatev3OrEquivalentSanitizedFreshness',
+          'freshnessStatusOnly',
+          'noRawMasterRows',
         ],
       },
     ],
     stopBeforeLiveUntilAllPreconditionsProven: true,
     readOnlyChecksAllowedBeforeLive: [
+      {
+        endpoint: 'medicationgetv2',
+        purpose: 'prove candidate code validity and selectable-comment applicability without raw master rows',
+      },
       {
         endpoint: 'diseasegetv2_or_diseasev3_sanitized_summary',
         purpose: 'prove target has compatible disease context without raw disease or patient detail',
@@ -574,7 +652,15 @@ export const summarizeInstructionChargePreconditionNoLivePlan = (payload) => {
       },
       {
         endpoint: 'system01dailyv2_or_system01lstv2',
-        purpose: 'prove facility/system classification only when safe sanitized wrapper exists',
+        purpose: 'prove facility/system/department/physician classification only when safe sanitized wrapper exists',
+      },
+      {
+        endpoint: 'patientlst6v2_or_readonly_medical_context',
+        purpose: 'prove insurance-combination readiness without raw insurance detail',
+      },
+      {
+        endpoint: 'masterlastupdatev3',
+        purpose: 'record master freshness status without raw master rows',
       },
     ],
     requestSemantics: {
@@ -582,6 +668,25 @@ export const summarizeInstructionChargePreconditionNoLivePlan = (payload) => {
       classCode01Only: summary.classCode === PHASE4_ALLOWED_CLASS_CODE,
       requestNumber02To04Forbidden: true,
     },
+    endpointSpecificBusinessSuccessCriteria: [
+      'future_live_response_businessAccepted_true',
+      'future_live_completion_evidence_informationTimestamp_or_medicalUid_or_invoiceNumber_or_dataId',
+      'http200_or_apiResult_zero_alone_is_not_success',
+      'readonly_preconditions_are_not_business_success',
+    ],
+    stopConditions: [
+      'candidate_code_not_readonly_validated',
+      'selectable_comment_applicability_ambiguous',
+      'disease_context_not_proven_or_business_judgment_missing',
+      'facility_or_monthly_duplicate_context_not_proven',
+      'department_physician_or_insurance_context_not_server_derived',
+      'master_freshness_not_observed',
+      'duplicate_live_checkpoint_already_accepted',
+      'prior_rejected_checkpoint_unchanged_retry_without_changed_precondition',
+      'raw_orca_body_or_patient_insurance_disease_detail_required',
+      'credential_or_diagnostic_artifact_capture_risk',
+      'production_orca_or_s3_object_storage_required',
+    ],
     runtimeReadOnlyProbeExecuted: false,
     liveTrialAction: 'not_run',
     rawPayloadStored: false,

@@ -320,16 +320,36 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(result.blockers).toEqual([]);
     expect(result.candidateCodes).toEqual(['113001810']);
     expect(result.preconditionsRequiredBeforeLive.map((item) => item.name)).toEqual([
+      'candidateCodeValidity',
+      'selectableCommentStatus',
       'diseaseContext',
       'facilityContext',
       'monthlyDuplicateContext',
-      'departmentInsuranceContext',
+      'departmentContext',
+      'physicianContext',
+      'insuranceCombinationContext',
+      'masterFreshnessStatus',
     ]);
+    expect(result.contextStatusSchema).toEqual(expect.objectContaining({
+      candidateCodeValidity: expect.arrayContaining(['static_shape_valid_readonly_probe_required']),
+      selectableCommentStatus: expect.arrayContaining(['not_applicable_candidate_is_not_selectable_comment']),
+      masterFreshnessStatus: expect.arrayContaining(['readonly_master_freshness_observed_sanitized']),
+    }));
     expect(result.readOnlyChecksAllowedBeforeLive).toEqual([
+      expect.objectContaining({ endpoint: 'medicationgetv2' }),
       expect.objectContaining({ endpoint: 'diseasegetv2_or_diseasev3_sanitized_summary' }),
       expect.objectContaining({ endpoint: 'medicalgetv2' }),
       expect.objectContaining({ endpoint: 'system01dailyv2_or_system01lstv2' }),
+      expect.objectContaining({ endpoint: 'patientlst6v2_or_readonly_medical_context' }),
+      expect.objectContaining({ endpoint: 'masterlastupdatev3' }),
     ]);
+    expect(result.endpointSpecificBusinessSuccessCriteria).toContain(
+      'http200_or_apiResult_zero_alone_is_not_success',
+    );
+    expect(result.stopConditions).toContain('duplicate_live_checkpoint_already_accepted');
+    expect(result.stopConditions).toContain(
+      'prior_rejected_checkpoint_unchanged_retry_without_changed_precondition',
+    );
     expect(result.requestSemantics).toEqual({
       requestNumber01Only: true,
       classCode01Only: true,
