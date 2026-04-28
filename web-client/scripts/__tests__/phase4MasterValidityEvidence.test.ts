@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -11,6 +12,7 @@ import {
   MEDICATIONGETV2_REQUEST_SEMANTICS,
   resolveTrialReadonlyConfig,
   sanitizeReadonlyXmlResult,
+  summarizeSurgeryV3AdjunctMasterProofPlan,
   validateMasterValidityCommand,
   validateSurgeryMasterProofCommand,
 } from '../qa-lib/phase4-master-validity-evidence.mjs';
@@ -352,6 +354,18 @@ describe('phase4 surgery v3 adjunct master proof evidence', () => {
 
     expect(guard.ok).toBe(true);
     expect(guard.payloadEvidence?.plan.candidateCodes).toEqual(['150003110', '641210099', '840000042']);
+    expect(guard.payloadEvidence?.plan.officialSampleRowRoles).toEqual([
+      { role: 'surgeryProcedure', code: '150003110' },
+      { role: 'surgeryAdjunct', code: '641210099' },
+      { role: 'surgeryAdjunct', code: '840000042' },
+    ]);
+    expect(guard.payloadEvidence?.plan.rowRoleProofScope).toEqual(
+      expect.objectContaining({
+        rowOrderFixtureSource: 'official_medicalmodv2_class_500_sample',
+        rowCodeValiditySeparatedFromRoleApplicability: true,
+        roleApplicabilityProofEndpointFound: false,
+      }),
+    );
     expect(guard.payloadEvidence?.plan.readOnlyChecksRequiredBeforeLive).toEqual([
       expect.objectContaining({ role: 'surgeryProcedure', endpoint: 'medicationgetv2', requestNumber: '02', code: '150003110' }),
       expect.objectContaining({ role: 'surgeryAdjunct', endpoint: 'medicationgetv2', requestNumber: '02', code: '641210099' }),
@@ -360,6 +374,22 @@ describe('phase4 surgery v3 adjunct master proof evidence', () => {
     expect(guard.rawPayloadStored).toBe(false);
     expect(guard.rawOrcaBodyStored).toBe(false);
     expect(guard.credentialsCaptured).toBe(false);
+  });
+
+  it('rejects surgery row-role fixtures that do not preserve official sample ordering', () => {
+    const payload = JSON.parse(fs.readFileSync(surgeryPayloadPath, 'utf8'));
+    payload.medicalInformation[0].medications = [
+      payload.medicalInformation[0].medications[1],
+      payload.medicalInformation[0].medications[0],
+      payload.medicalInformation[0].medications[2],
+    ];
+    const plan = summarizeSurgeryV3AdjunctMasterProofPlan(payload);
+
+    expect(plan.ok).toBe(false);
+    expect(plan.blockers).toContain('official surgery sample row 1 must be surgeryProcedure:150003110');
+    expect(plan.blockers).toContain('official surgery sample row 2 must be surgeryAdjunct:641210099');
+    expect(plan.rawPayloadStored).toBe(false);
+    expect(plan.rawPatientOrInsuranceDetailStored).toBe(false);
   });
 
   it('rejects ambiguous surgery proof modes and raw artifact flags before network use', () => {

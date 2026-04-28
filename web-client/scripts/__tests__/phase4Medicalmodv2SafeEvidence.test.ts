@@ -9,6 +9,7 @@ import {
   PHASE4_TARGET_PATIENT_ID,
   buildPhase4DuplicateLiveCheckpointKey,
   buildSyntheticPayloadFixture,
+  classifyPhase4ApiResultReason,
   classifyPhase4BusinessResult,
   parsePhase4SafeArgs,
   sanitizePhase4Response,
@@ -938,6 +939,30 @@ describe('phase4 medicalmodv2 safe evidence', () => {
     expect(summary.responseClassification).toBe('businessRejected');
     expect(summary.apiResultMessageCategory).toBe('present_redacted_sensitive_shape');
     expect(JSON.stringify(summary)).not.toContain('保険未確認');
+  });
+
+  it('classifies Api_Result 90 as an official target-lock rejection without raw detail', () => {
+    expect(classifyPhase4ApiResultReason('90')).toBe('target_lock_other_terminal');
+
+    const summary = sanitizePhase4Response({
+      httpStatus: 200,
+      responseJson: {
+        ok: false,
+        apiOk: false,
+        apiResult: '90',
+        apiResultMessage: '他端末使用中',
+        informationDate: '2026-04-22',
+        informationTime: '09:00:00',
+      },
+    });
+
+    expect(summary.responseClassification).toBe('businessRejected');
+    expect(summary.businessAccepted).toBe(false);
+    expect(summary.apiResultReason).toBe('target_lock_other_terminal');
+    expect(summary.apiResultMessageCategory).toBe('present_redacted');
+    expect(summary.rawResponseBodyStored).toBe(false);
+    expect(summary.rawPatientOrInsuranceDetailStored).toBe(false);
+    expect(JSON.stringify(summary)).not.toContain('他端末使用中');
   });
 
   it('requires readiness before live Trial execution and stores status only', () => {

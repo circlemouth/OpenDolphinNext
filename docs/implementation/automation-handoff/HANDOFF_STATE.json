@@ -1,5 +1,5 @@
 {
-  "status": "active",
+  "status": "completed",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B",
   "blockerId": "continuing-official-and-public-research-until-actionable-info-found",
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T13:01:39Z",
+  "lastUpdated": "2026-04-28T15:01:42Z",
   "latestContinuingResearchPlan": {
     "runId": "20260428T123347Z",
     "workOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B",
@@ -62,8 +62,8 @@
     "headAtSelection": "a3230155949fb1453e89e0eb83641cbeebacc493",
     "activePrompt": {
       "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-      "statusAfterRun": "active",
-      "reason": "Prompt remains active because RWO-06I/RWO-06F still need no-live implementation or minimized owner/operator decision handling."
+      "statusAfterRun": "completed_by_20260428T150142Z",
+      "reason": "Queued no-live tasks for RWO-08B, RWO-06H, and RWO-06I are completed; RWO-06F owner/operator question is minimized."
     },
     "evidence": "docs/implementation/continuing-official-research-20260428T130139Z/summary.sanitized.json",
     "summary": "docs/implementation/continuing-official-research-20260428T130139Z/summary.sanitized.json",
@@ -5352,6 +5352,60 @@
       }
     },
     {
+      "taskId": "RWO-06H_API90_LOCK_CLASSIFICATION_PACKET_NO_LIVE",
+      "lane": "critical_path",
+      "status": "completed",
+      "workOrder": "RWO-06H",
+      "summary": "Classify official medicalmodv2 Api_Result=90 as target_lock_other_terminal and harden the no-live retry gate.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/continuing-official-research-20260428T130139Z/summary.sanitized.json",
+      "result": "API90_TARGET_LOCK_CLASSIFICATION_PACKET_READY_NO_LIVE",
+      "completedRunId": "20260428T150142Z",
+      "evidence": "docs/implementation/rwo06h-api90-lock-classification-packet-20260428T150142Z/summary.sanitized.json",
+      "successCriteria": "sanitized Api_Result=90 reason classification exists and unchanged repeat retry remains forbidden",
+      "nextOnSuccess": "RWO-06I_SURGERY_ROW_ROLE_SPEC_TEST_NO_LIVE",
+      "nextOnSkip": "RWO-06I_SURGERY_ROW_ROLE_SPEC_TEST_NO_LIVE",
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      },
+      "readOnlyTrialOrca": {
+        "executed": false,
+        "mutation": false
+      }
+    },
+    {
+      "taskId": "RWO-06I_SURGERY_ROW_ROLE_SPEC_TEST_NO_LIVE",
+      "lane": "parallel_no_live",
+      "status": "completed",
+      "workOrder": "RWO-06I",
+      "summary": "Lock official medicalmodv2 class 500 row-order fixture and separate row-code validity from role applicability.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/continuing-official-research-20260428T130139Z/summary.sanitized.json",
+      "result": "SURGERY_ROW_ROLE_SPEC_TEST_READY_NO_LIVE",
+      "completedRunId": "20260428T150142Z",
+      "evidence": "docs/implementation/rwo06i-surgery-row-role-spec-20260428T150142Z/summary.sanitized.json",
+      "successCriteria": "sanitized no-live surgery row-role spec/test exists and live remains stopped without row proof",
+      "nextOnSuccess": "RWO-06F_OWNER_BUSINESS_CONTEXT",
+      "nextOnSkip": "RWO-06F_OWNER_BUSINESS_CONTEXT",
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      },
+      "readOnlyTrialOrca": {
+        "executed": false,
+        "mutation": false
+      }
+    },
+    {
       "taskId": "RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING",
       "lane": "critical_path",
       "status": "completed",
@@ -8861,5 +8915,121 @@
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false,
     "liveTrialOrcaExecuted": false
+  },
+  "latestRwo06hApi90LockClassificationPacket": {
+    "runId": "20260428T150142Z",
+    "workOrder": "RWO-06H",
+    "taskId": "RWO-06H_API90_LOCK_CLASSIFICATION_PACKET_NO_LIVE",
+    "result": "API90_TARGET_LOCK_CLASSIFICATION_PACKET_READY_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "b1b0cefab",
+    "evidence": "docs/implementation/rwo06h-api90-lock-classification-packet-20260428T150142Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo06h-api90-lock-classification-packet-20260428T150142Z/summary.sanitized.json",
+    "implementedContract": {
+      "sanitizedField": "response.apiResultReason",
+      "apiResult90Classification": "target_lock_other_terminal",
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html"
+    },
+    "endpointPacket": {
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "requestClass": "medicalmodv2",
+      "workflow": "injection",
+      "claim007Class": "310",
+      "payloadSha256": "6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d",
+      "duplicateLiveCheckpoint": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d"
+    },
+    "retryGate": {
+      "unchangedRepeatSendAllowed": false,
+      "retryReadyNow": false,
+      "sameRunTargetDriftAndConflictingRowAbsencePreflightRequired": true
+    },
+    "checks": {
+      "focusedVitest": "pass_31_tests",
+      "webGuard": "pass",
+      "injectionV3DryRun": "pass_no_live"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executed": false,
+      "mutation": false
+    },
+    "recommendedNextTask": "Implement RWO-06I surgery row-role spec/test no-live work; keep RWO-06H live stopped until a same-run target-drift and conflicting-row absence preflight proves a changed precondition.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo06iSurgeryRowRoleSpecTest": {
+    "runId": "20260428T150142Z",
+    "workOrder": "RWO-06I",
+    "taskId": "RWO-06I_SURGERY_ROW_ROLE_SPEC_TEST_NO_LIVE",
+    "result": "SURGERY_ROW_ROLE_SPEC_TEST_READY_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "b1b0cefab",
+    "evidence": "docs/implementation/rwo06i-surgery-row-role-spec-20260428T150142Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo06i-surgery-row-role-spec-20260428T150142Z/summary.sanitized.json",
+    "implementedContract": {
+      "rowOrderFixtureSource": "official_medicalmodv2_class_500_sample",
+      "officialSampleRowRoles": [
+        {
+          "role": "surgeryProcedure",
+          "code": "150003110"
+        },
+        {
+          "role": "surgeryAdjunct",
+          "code": "641210099"
+        },
+        {
+          "role": "surgeryAdjunct",
+          "code": "840000042"
+        }
+      ],
+      "rowCodeValiditySeparatedFromRoleApplicability": true,
+      "roleApplicabilityProofEndpointFound": false
+    },
+    "endpointPacket": {
+      "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+      "requestClass": "medicalmodv2",
+      "workflow": "surgery",
+      "claim007Class": "500",
+      "payloadSha256": "f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421",
+      "duplicateLiveCheckpoint": "rwo06i:medicalmodv2:rwo06i-surgery-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-f1046a303a1d78e12c6409efc7cb68bcb96bc6737428846c24e2fa4981af9421"
+    },
+    "checks": {
+      "focusedVitest": "pass_14_tests",
+      "webGuard": "pass",
+      "surgeryDryRun": "pass_no_readonly_orca"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executed": false,
+      "mutation": false
+    },
+    "recommendedNextTask": "Keep RWO-06I live stopped; carry RWO-06F owner/business-context question and continue independent static/package/security checks if queued.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "currentPromptStatus": "completed",
+  "completedPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "completedRunId": "20260428T150142Z",
+    "completionReason": "RWO-08B artifact-free identifier preflight was already completed; RWO-06H Api_Result=90 lock classification packet and RWO-06I surgery row-role spec/test were completed no-live; RWO-06F is reduced to a minimized owner/operator business-context question.",
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executed": false,
+      "mutation": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
   }
 }

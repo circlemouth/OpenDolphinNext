@@ -282,6 +282,11 @@ export const summarizeSurgeryV3AdjunctMasterProofPlan = (payload) => {
   const rows = Array.isArray(surgeryGroup?.medications) ? surgeryGroup.medications : [];
   const codes = rows.map((row) => normalizeCode(row?.code)).filter(Boolean);
   const requiredCodes = ['150003110', '641210099', '840000042'];
+  const officialSampleRowRoles = [
+    { role: 'surgeryProcedure', code: '150003110' },
+    { role: 'surgeryAdjunct', code: '641210099' },
+    { role: 'surgeryAdjunct', code: '840000042' },
+  ];
   const blockers = [];
 
   if (normalizeCode(payload?.requestNumber) !== '01') blockers.push('surgery proof payload requestNumber must be 01');
@@ -295,13 +300,25 @@ export const summarizeSurgeryV3AdjunctMasterProofPlan = (payload) => {
     if (!requiredCodes.includes(code)) blockers.push(`unexpected surgery v3 code present: ${code}`);
     if (!/^\d{9}$/.test(code)) blockers.push(`surgery v3 code must be 9 digits: ${code || 'missing'}`);
   }
+  for (const [index, row] of officialSampleRowRoles.entries()) {
+    if (codes[index] !== row.code) {
+      blockers.push(`official surgery sample row ${index + 1} must be ${row.role}:${row.code}`);
+    }
+  }
 
   return {
     ok: blockers.length === 0,
     blockers,
     candidateCodes: requiredCodes,
-    readOnlyChecksRequiredBeforeLive: requiredCodes.map((code) => ({
-      role: code === '150003110' ? 'surgeryProcedure' : 'surgeryAdjunct',
+    officialSampleRowRoles,
+    rowRoleProofScope: {
+      rowOrderFixtureSource: 'official_medicalmodv2_class_500_sample',
+      rowCodeValiditySeparatedFromRoleApplicability: true,
+      roleApplicabilityProofEndpointFound: false,
+      stopBeforeLiveUntilRowCodeValidityOrExplicitStopCondition: true,
+    },
+    readOnlyChecksRequiredBeforeLive: officialSampleRowRoles.map(({ role, code }) => ({
+      role,
       endpoint: 'medicationgetv2',
       requestNumber: '02',
       code,

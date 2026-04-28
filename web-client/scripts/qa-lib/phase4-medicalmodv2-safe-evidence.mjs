@@ -117,6 +117,9 @@ const BOOLEAN_FLAGS = new Set([
 const SENSITIVE_MESSAGE_PATTERN =
   /患者|保険|番号|氏名|住所|電話|記号|cookie|authorization|password|passwd|token|session|csrf|jsessionid/i;
 const ZERO_API_RESULT_PATTERN = /^0+$/;
+const API_RESULT_REASON_BY_CODE = new Map([
+  ['90', 'target_lock_other_terminal'],
+]);
 
 export const repoRootFromCwd = (cwd = process.cwd()) =>
   path.basename(cwd) === 'web-client' ? path.dirname(cwd) : cwd;
@@ -863,6 +866,13 @@ export const classifyMessageCategory = (message) => {
   return 'present_redacted';
 };
 
+export const classifyPhase4ApiResultReason = (apiResult) => {
+  const value = normalizeCode(apiResult).toUpperCase();
+  if (!value) return 'not_observed';
+  if (ZERO_API_RESULT_PATTERN.test(value)) return 'success_zero';
+  return API_RESULT_REASON_BY_CODE.get(value) ?? 'nonzero_business_rejected';
+};
+
 export const classifyPhase4BusinessResult = ({ httpStatus, responseJson }) => {
   const apiResult = normalizeCode(responseJson?.apiResult ?? responseJson?.Api_Result).toUpperCase();
   const httpOk = Number(httpStatus) >= 200 && Number(httpStatus) < 300;
@@ -888,6 +898,7 @@ export const sanitizePhase4Response = ({ httpStatus, responseJson }) => {
   return {
     httpStatus: Number(httpStatus) || 0,
     apiResult: normalizeCode(responseJson?.apiResult ?? responseJson?.Api_Result),
+    apiResultReason: classifyPhase4ApiResultReason(responseJson?.apiResult ?? responseJson?.Api_Result),
     apiOk: responseJson?.apiOk === true,
     ok: responseJson?.ok === true,
     apiResultMessageCategory: classifyMessageCategory(responseJson?.apiResultMessage ?? responseJson?.Api_Result_Message),

@@ -1,0 +1,119 @@
+{
+  "runId": "20260428T150142Z",
+  "workOrder": "RWO-06H",
+  "taskId": "RWO-06H_API90_LOCK_CLASSIFICATION_PACKET_NO_LIVE",
+  "result": "API90_TARGET_LOCK_CLASSIFICATION_PACKET_READY_NO_LIVE",
+  "branch": "master",
+  "headAtSelection": "b1b0cefab",
+  "activeHandoffPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+  "sourceEvidence": [
+    "docs/implementation/continuing-official-research-20260428T130139Z/summary.sanitized.json",
+    "docs/implementation/rwo06h-injection-v3-live-decision-20260427T084616Z/summary.sanitized.json",
+    "docs/implementation/rwo06h-fresh-lock-free-target-preflight-20260427T091616Z/summary.sanitized.json"
+  ],
+  "officialSpecificationEvidence": [
+    {
+      "checkedAt": "2026-04-28T15:01:42Z",
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+      "sourceClass": "official",
+      "endpoint": "medicalmodv2",
+      "requestClass": "01",
+      "classCode": "310",
+      "finding": "official medicalmodv2 maps Api_Result=90 to other-terminal-in-use / target lock state",
+      "derivedNoLiveAction": "classify Api_Result=90 as target_lock_other_terminal and require changed target-state preconditions before any retry"
+    },
+    {
+      "checkedAt": "2026-04-28T15:01:42Z",
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html",
+      "sourceClass": "official",
+      "endpoint": "acceptlstv2",
+      "finding": "acceptance inventory can support target presence and server-derived identifier checks as presence flags or row hashes",
+      "derivedNoLiveAction": "use same-run target-drift preflight; do not treat inventory presence as lock-free proof"
+    },
+    {
+      "checkedAt": "2026-04-28T15:01:42Z",
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalinfo.html",
+      "sourceClass": "official",
+      "endpoint": "medicalgetv2",
+      "finding": "medical information read-only rows can support conflicting-row absence checks as row hashes or counters",
+      "derivedNoLiveAction": "require conflicting-row absence preflight before any changed-precondition injection retry"
+    }
+  ],
+  "implementedContract": {
+    "file": "web-client/scripts/qa-lib/phase4-medicalmodv2-safe-evidence.mjs",
+    "sanitizedField": "response.apiResultReason",
+    "apiResult90Classification": "target_lock_other_terminal",
+    "zeroClassification": "success_zero",
+    "fallbackNonzeroClassification": "nonzero_business_rejected",
+    "rawApiResultMessageStored": false,
+    "rawPatientOrInsuranceDetailStored": false
+  },
+  "endpointPacket": {
+    "endpoint": "/api/orca/official/chart-support/medical-mod-v2",
+    "requestClass": "medicalmodv2",
+    "workflow": "injection",
+    "workflowId": "rwo06h-injection-medicalmodv2-v1",
+    "target": "00001",
+    "requestNumber": "01",
+    "classCode": "01",
+    "claim007Class": "310",
+    "payload": "web-client/qa/payloads/phase4/medicalmodv2_injection_trial_reachability_v3.json",
+    "payloadSha256": "6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d",
+    "duplicateLiveCheckpoint": "rwo06h:medicalmodv2:rwo06h-injection-medicalmodv2-v1:target-00001:request-01:class-01:payload-sha256-6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d"
+  },
+  "priorLiveResultReviewed": {
+    "evidence": "docs/implementation/rwo06h-injection-v3-live-decision-20260427T084616Z/summary.sanitized.json",
+    "httpStatus": 200,
+    "apiResult": "90",
+    "apiResultReason": "target_lock_other_terminal",
+    "responseClassification": "businessRejected",
+    "businessAccepted": false
+  },
+  "retryGate": {
+    "unchangedRepeatSendAllowed": false,
+    "retryReadyNow": false,
+    "sameRunPreflightRequiredBeforeAnyChangedPreconditionRetry": [
+      "runtime_readiness",
+      "target_drift_absent_from_server_derived_acceptlstv2_or_equivalent",
+      "conflicting_injection_row_absent_or_classified_from_medicalgetv2_hashes",
+      "duplicate_live_checkpoint_not_accepted",
+      "payload_sha256_verified",
+      "api_result_reason_sanitizer_contract_passed"
+    ],
+    "stopConditions": [
+      "target_drift_observed",
+      "conflicting_row_presence_ambiguous",
+      "lock_free_state_not_proven",
+      "parser_or_sanitizer_ambiguity",
+      "raw_orca_body_or_patient_insurance_detail_required",
+      "credential_or_diagnostic_artifact_capture_risk",
+      "production_orca_or_s3_object_storage_required"
+    ]
+  },
+  "checks": {
+    "focusedVitest": "pass_31_tests",
+    "webGuard": "pass",
+    "injectionV3DryRun": "pass_no_live",
+    "payloadSha256": "pass",
+    "dryRunSummarySha256": "de7aa5ac142744c3d90dafabd9ef69d12860f60d3587a945d7a045951be2f923"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessAccepted": false,
+    "businessSuccessClassification": "not_applicable_no_live_packet_only"
+  },
+  "readOnlyTrialOrca": {
+    "executed": false,
+    "mutation": false
+  },
+  "claimBoundary": "RWO-06H Api_Result=90 sanitizer and retry-gate packet only. No injection Trial business acceptance, lock-free target proof, changed-precondition retry readiness, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+  "recommendedNextTask": "Implement RWO-06I surgery row-role spec/test no-live work; keep RWO-06H live stopped until a same-run target-drift and conflicting-row absence preflight proves a changed precondition.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false,
+  "subagentsUsed": false
+}

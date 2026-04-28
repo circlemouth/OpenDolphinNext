@@ -1,8 +1,8 @@
 # NEXT_WORKER_PROMPT
 
-status: active
+status: completed
 created_at: 2026-04-28T12:33:47Z
-updated_at: 2026-04-28T13:01:39Z
+updated_at: 2026-04-28T15:01:42Z
 source_work_order: RWO-06I/RWO-06H/RWO-06F/RWO-08B
 blocker_id: continuing-official-and-public-research-until-actionable-info-found
 priority: high
@@ -22,6 +22,8 @@ The previous no-live research pass recorded evidence at `docs/implementation/rem
 Execute `CONTINUING_RESEARCH_UNTIL_ACTIONABLE_INFO_FOUND_NO_LIVE`.
 
 Latest continuation: RUN_ID `20260428T130139Z` recorded sanitized evidence at `docs/implementation/continuing-official-research-20260428T130139Z/summary.sanitized.json`. This run found actionable no-live next tasks for `RWO-06H` and `RWO-08B`, a no-live row-role spec/test path for `RWO-06I`, and preserved the minimized owner/operator question for `RWO-06F`.
+
+Completion update: RUN_ID `20260428T150142Z` completed the queued no-live follow-ups for `RWO-06H_API90_LOCK_CLASSIFICATION_PACKET_NO_LIVE` and `RWO-06I_SURGERY_ROW_ROLE_SPEC_TEST_NO_LIVE`. `RWO-08B_ARTIFACT_FREE_IDENTIFIER_PREFLIGHT_IMPLEMENTATION_NO_LIVE` was already completed by RUN_ID `20260428T140210Z`, and `RWO-06F` remains reduced to the minimized owner/operator business-context question below. This handoff is therefore completed; no live Trial mutation, read-only Trial call, production ORCA, S3/object-storage setup, diagnostic artifact capture, credential capture, or raw artifact packaging was performed by the completion update.
 
 Continue official-source-first and secondary public-source research until one of the following is found for each remaining research target:
 
