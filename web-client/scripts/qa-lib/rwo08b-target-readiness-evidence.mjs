@@ -163,6 +163,11 @@ const exactPreflightPatientId = (summary) =>
 
 export const sanitizeIdentifierPreflightRouteResponse = ({ httpStatus = 0, responseJson = {} } = {}) => {
   const medicalRows = Array.isArray(responseJson?.medicalRows) ? responseJson.medicalRows : [];
+  const details = responseJson?.details && typeof responseJson.details === 'object' ? responseJson.details : {};
+  const sanitizedErrorCode = normalize(responseJson?.sanitizedErrorCode || responseJson?.errorCode || responseJson?.code || responseJson?.error);
+  const sanitizedValidationError = normalize(
+    responseJson?.sanitizedValidationError || responseJson?.validationError || details.validationError,
+  );
   const sanitizedRows = medicalRows.map((row) => ({
     rowHash: SHA256_HEX_RE.test(normalize(row?.rowHash)) ? normalize(row.rowHash).toLowerCase() : '',
     hasPerformDate: bool(row?.hasPerformDate),
@@ -204,6 +209,8 @@ export const sanitizeIdentifierPreflightRouteResponse = ({ httpStatus = 0, respo
     rawSensitiveFieldsExcluded: responseJson?.rawSensitiveFieldsExcluded !== false,
     clientProvidedIdentifiersTrusted: bool(responseJson?.clientProvidedIdentifiersTrusted),
     serverDerivedAuthorityRequired: responseJson?.serverDerivedAuthorityRequired !== false,
+    sanitizedErrorCode,
+    sanitizedValidationError,
     medicalRows: sanitizedRows,
   };
 };
@@ -380,4 +387,3 @@ export const buildRwo08bTargetReadinessSummary = ({
       'Combined artifact-free read-only target-readiness wrapper only. This is not diagnostic Fullflow success, Trial order-send business acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness.',
   };
 };
-

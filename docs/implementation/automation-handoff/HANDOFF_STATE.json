@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T21:05:00Z",
+  "lastUpdated": "2026-04-28T21:24:00Z",
   "latestContinuingResearchPlan": {
     "runId": "20260428T123347Z",
     "workOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B",
@@ -5360,25 +5360,23 @@
   },
   "nextExecutableQueue": [
     {
-      "taskId": "RWO-08B_FULLFLOW_L4_TARGET_READINESS_INVESTIGATION",
+      "taskId": "RWO-08B_IDENTIFIER_PREFLIGHT_MEDICALGETV2_BLOCKER_INVESTIGATION",
       "lane": "critical_path",
       "status": "queued",
       "workOrder": "RWO-08B",
-      "summary": "Investigate and fix Fullflow L4 target readiness by separating repo/local-sync/selector/handoff/harness causes from Trial test-data or ORCA business state before any L4 success claim.",
+      "summary": "Investigate the remaining RWO-08B identifier-preflight medicalgetv2 blocker for accepted non-duplicate target 00002 before any diagnostic Fullflow retry.",
       "requiresRuntime": false,
       "requiresLiveTrialMutation": false,
       "requiresHumanDecision": false,
       "requiresS3ObjectStorage": false,
       "safeToBatchWithNoLiveTasks": true,
       "sourceEvidence": [
-        "docs/implementation/rwo08b-candidate-00005-diagnostic-fullflow-20260425T144428Z/summary.sanitized.json",
-        "docs/implementation/rwo08b-readonly-candidate-refresh-20260427T121615Z/summary.sanitized.json",
-        "docs/implementation/rwo08b-local-exact-match-diagnostic-20260427T135043Z/summary.sanitized.json",
-        "docs/implementation/rwo08b-artifact-free-identifier-preflight-20260428T140210Z/summary.sanitized.json"
+        "docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/run-summary.sanitized.json",
+        "docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/summary.sanitized.json"
       ],
       "skipCondition": "Only skip runtime/read-only/diagnostic portions when approved non-S3 runtime/config or safe artifact containment is unavailable; still perform repo-local no-live investigation and write sanitized blocker evidence.",
-      "successCriteria": "Sanitized evidence exists showing a repo-local fix/test result, an artifact-free read-only identifier preflight classification, a precise target/test-data blocker, or endpoint-specific L4 order-send business success. ORCA-side fault is not asserted unless repo/harness causes are eliminated.",
-      "nextOnSuccess": "RWO-08B_EXACT_SELECTED_CANDIDATE_PREFLIGHT_OR_DIAGNOSTIC_FULLFLOW",
+      "successCriteria": "Sanitized evidence proves identifier-preflight target-ready for 00002 or records a precise medicalgetv2/test-data/business-state blocker without raw artifacts.",
+      "nextOnSuccess": "RWO-08B_DIAGNOSTIC_FULLFLOW_AFTER_IDENTIFIER_PREFLIGHT_READY",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO08B_L4_PLAN",
       "credentialsCaptured": false,
       "diagnosticArtifactsCaptured": false,
@@ -5386,6 +5384,10 @@
       "liveTrialOrca": {
         "executed": false,
         "businessAccepted": false
+      },
+      "readOnlyTrialOrca": {
+        "executed": false,
+        "mutation": false
       }
     },
     {
@@ -8222,8 +8224,8 @@
     "rawArtifactsCommittedOrPackaged": false,
     "recommendedNextTask": "Select SOAP_SUBJECTIVESV2_ROUTE_CONTRACT or the next independent no-live queue item."
   },
-  "activeNextTask": "CONTINUE_NEXT_SAFE_QUEUE_ITEM",
-  "recommendedNextTask": "No currently queued safe item remains; next worker should inspect updated handoff queue and roadmap for newly inserted non-S3, non-production, no-live/read-only work, while keeping RWO-11/RWO-09 external.",
+  "activeNextTask": "RWO-08B_IDENTIFIER_PREFLIGHT_MEDICALGETV2_BLOCKER_INVESTIGATION",
+  "recommendedNextTask": "Confirm the 00002 acceptlstv2 target row remains present, then investigate medicalgetv2-compatible identifier row readiness before any diagnostic Fullflow retry.",
   "latestSoapSubjectivesv2RouteContract": {
     "runId": "20260427T143700Z",
     "workOrder": "SOAP-SUBJECTIVESV2",
@@ -8593,29 +8595,8 @@
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   },
-  "lastRunId": "20260428T063423Z",
-  "lastResult": {
-    "taskId": "RWO-06F_OFFICIAL_SPEC_CONTEXT_MAP_DOCS_ONLY",
-    "workOrder": "RWO-06F",
-    "result": "RWO06F_OFFICIAL_SPEC_CONTEXT_MAP_READY_NO_LIVE",
-    "evidence": "docs/implementation/rwo06f-official-spec-context-map-20260428T063423Z/summary.sanitized.json",
-    "liveTrialOrca": {
-      "executed": false,
-      "businessAccepted": false,
-      "businessSuccessClassification": "not_applicable_docs_only_no_live"
-    },
-    "readOnlyTrialOrca": {
-      "executed": false,
-      "mutation": false
-    },
-    "claimBoundary": "RWO-06F official-spec context map and RWO-11/RWO-09 external-gate intake schema only. No RWO-06F Trial business acceptance, class 130 billing eligibility, all guidance-fee coverage, fullflow success, rollback rehearsal, operator acceptance, final owner GO/NO-GO/PENDING, production ORCA readiness, S3/object-storage readiness, or final release readiness is claimed.",
-    "credentialsCaptured": false,
-    "diagnosticArtifactsCaptured": false,
-    "rawArtifactsCommittedOrPackaged": false,
-    "rawOrcaBodiesCaptured": false,
-    "patientInsuranceDetailsCaptured": false,
-    "recommendedNextTask": "Execute RWO-06F_NO_LIVE_PRECONDITION_PACKET_HARDENING before any read-only rerun or live Trial mutation."
-  },
+  "lastRunId": "20260428T210334Z",
+  "lastResult": "RWO08B_TARGET_READINESS_ADVANCED_IDENTIFIER_PREFLIGHT_BLOCKED",
   "orcaTrialBlockerResolutionPolicy": {
     "recordedByUserDirection": "2026-04-27T23:07:48Z",
     "runId": "20260427T230748Z",
@@ -9282,5 +9263,86 @@
     "rawArtifactsCommittedOrPackaged": false,
     "productionOrcaAttempted": false,
     "s3ObjectStorageUsed": false
+  },
+  "latestRwo08bTargetReadinessAfterImport": {
+    "runId": "20260428T210334Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_COMBINED_TARGET_READINESS_REFRESH",
+    "result": "RWO08B_TARGET_READINESS_ADVANCED_IDENTIFIER_PREFLIGHT_BLOCKED",
+    "branch": "master",
+    "headAtSelection": "b7d12c0b4",
+    "evidence": "docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/run-summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/FINAL_REPORT.md",
+    "activePrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAfterRun": "active_narrowed_successor_updated",
+      "blockerId": "fullflow-l4-combined-target-readiness-refresh"
+    },
+    "candidate": {
+      "selectedPatientId": "00002",
+      "duplicateBlockedCandidateIdsExcluded": [
+        "00001",
+        "00005"
+      ],
+      "localExactMatchAccepted": true,
+      "exactSelectedCandidatePreflightAccepted": true
+    },
+    "localPatientImport": {
+      "executed": true,
+      "endpoint": "/api/orca/official/patients/import",
+      "trialOrcaMutation": false,
+      "localDbMutation": true,
+      "businessSuccessClassification": "local_patient_import_accepted"
+    },
+    "liveTrialOrca": {
+      "executed": true,
+      "endpoint": "/api/orca/official/visits/mutation",
+      "target": "00002",
+      "requestClass": "acceptmodv2_request_01",
+      "businessAccepted": false,
+      "businessSuccessClassification": "target_row_created_but_not_fullflow_success"
+    },
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "mutation": false,
+      "acceptlstv2BusinessSuccessClassification": "readonly_inventory_target_ready",
+      "identifierPreflightBusinessSuccessClassification": "readonly_identifier_preflight_target_blocked",
+      "identifierPreflightHttpStatus": 400,
+      "identifierPreflightErrorCode": "orca_gateway_error"
+    },
+    "repoLocalFixes": [
+      "web-client/scripts/qa-acceptmodv2-weborca.mjs",
+      "web-client/scripts/qa-lib/medical-information-gate.mjs",
+      "web-client/scripts/qa-lib/acceptmodv2-business-evidence.mjs",
+      "web-client/scripts/qa-rwo08b-target-readiness.mjs",
+      "web-client/scripts/qa-lib/rwo08b-target-readiness-evidence.mjs",
+      "web-client/scripts/__tests__/medicalInformationGate.test.ts",
+      "web-client/scripts/__tests__/rwo08bTargetReadinessEvidence.test.ts"
+    ],
+    "runtimeRepair": {
+      "serverModernizedDevRebuilt": true,
+      "serverModernizedDevRecreated": true,
+      "staleRoute404Resolved": true
+    },
+    "officialResearch": {
+      "sources": [
+        "https://www.orca.med.or.jp/receipt/users/tec/api/overview.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/medicalinfo.html"
+      ],
+      "derivedNoLiveConclusion": "plain acceptlstv2 reception target is not sufficient; medicalgetv2-compatible identifier rows remain required before diagnostic Fullflow retry"
+    },
+    "diagnosticFullflow": {
+      "executed": false,
+      "orderSendReached": false,
+      "businessSuccessClassification": "not_run_identifier_preflight_target_blocked"
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false,
+    "recommendedNextTask": "Confirm the 00002 acceptlstv2 target row remains present, then investigate medicalgetv2-compatible identifier row readiness before any diagnostic Fullflow retry."
   }
 }

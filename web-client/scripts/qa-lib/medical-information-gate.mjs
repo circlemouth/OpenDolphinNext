@@ -236,14 +236,14 @@ export const evaluateMedicalInformationGate = ({
   const requestNumber02_03_04Absent = !requestNumberValues.some((value) =>
     ['02', '03', '04'].includes(normalizeScalar(value)),
   );
-  const targetPatientId00001Verified =
+  const targetPatientIdVerified =
     mutationRequests.length === 1 &&
     mutationInspections.every((inspection) =>
       inspection.patientIdFieldPresent &&
       inspection.patientIdValues.length === 1 &&
       valueMatches(inspection.patientIdValues[0], expectedPatientId),
     );
-  const targetCandidateOnly00001 =
+  const targetCandidateOnly =
     mutationRequests.length === 1 &&
     mutationInspections.every((inspection) =>
       !inspection.candidateIdFieldPresent ||
@@ -263,8 +263,10 @@ export const evaluateMedicalInformationGate = ({
     requestNumberKeysObserved: observedRequestNumberKeys,
     requestNumber01ValueVerified,
     requestNumber02_03_04Absent,
-    targetPatientId00001Verified,
-    targetCandidateOnly00001,
+    targetPatientIdVerified,
+    targetCandidateOnly,
+    targetPatientId00001Verified: targetPatientIdVerified,
+    targetCandidateOnly00001: targetCandidateOnly,
     patientIdKeysObserved: observedPatientIdKeys,
     candidateIdKeysObserved: observedCandidateIdKeys,
     unspecifiedRun: !normalizedSelection,
@@ -331,7 +333,7 @@ export const evaluateMedicalInformationGate = ({
     };
   }
 
-  if (!targetPatientId00001Verified) {
+  if (!targetPatientIdVerified) {
     return {
       ...baseResult,
       ok: false,
@@ -343,7 +345,7 @@ export const evaluateMedicalInformationGate = ({
     };
   }
 
-  if (!targetCandidateOnly00001) {
+  if (!targetCandidateOnly) {
     return {
       ...baseResult,
       ok: false,

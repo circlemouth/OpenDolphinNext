@@ -2,7 +2,7 @@
 
 status: active
 created_at: 2026-04-28T20:16:56Z
-updated_at: 2026-04-28T21:05:00Z
+updated_at: 2026-04-28T21:24:00Z
 source_work_order: RWO-08B
 blocker_id: fullflow-l4-combined-target-readiness-refresh
 priority: high
@@ -23,6 +23,7 @@ Important prior evidence:
 - `docs/implementation/rwo08b-local-exact-match-diagnostic-20260427T135043Z/summary.sanitized.json`: candidates `00002` through `00011` were categorized as `local_absent` / `local_exact_match_missing` despite official ORCA patient/insurance evidence; repo/local sync, facility scope, ID format, or UI selectability remain unproven.
 - `docs/implementation/rwo08b-artifact-free-identifier-preflight-20260428T140210Z/summary.sanitized.json`: `/api/orca/official/visits/identifier-preflight` was implemented as an artifact-free, server-derived read-only preflight route, but it was not yet executed against Trial runtime and is not Fullflow success.
 - `docs/implementation/rwo08b-combined-target-readiness-20260428T204909Z/summary.sanitized.json`: `qa-rwo08b-target-readiness.mjs` now joins candidate discovery, exact selected-candidate preflight, and server-derived identifier-preflight into one artifact-free sanitized target-readiness summary. Dry-run against current prior evidence classified `candidate_discovery_no_selected_candidate`.
+- `docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/run-summary.sanitized.json`: RUN_ID `20260428T210334Z` resolved the local exact-match blocker for non-duplicate candidate `00002` by local ORCA patient import, exact selected-candidate preflight accepted, one guarded sanitized `acceptmodv2` Trial mutation created an acceptlstv2 target row, the stale backend image was rebuilt so `identifier-preflight` route was available, and the combined wrapper now blocks at `identifier_preflight_target_blocked` / HTTP `400` / sanitized `orca_gateway_error`. No diagnostic Fullflow or order-send was executed.
 
 ## Goal
 
@@ -30,8 +31,8 @@ Execute `RWO-08B_COMBINED_TARGET_READINESS_REFRESH`.
 
 The goal is to make Fullflow L4 actionable again by producing sanitized evidence that either:
 
-1. refreshes read-only candidate discovery and exact selected-candidate preflight until a non-duplicate local-exact target is proven;
-2. runs `qa-rwo08b-target-readiness.mjs` to prove a fresh target/read-only identifier preflight is available and queues the next safe diagnostic fullflow step; or
+1. preserves the proven non-duplicate local-exact target `00002` and avoids repeating `00001`/`00005`;
+2. resolves or precisely classifies the remaining `medicalgetv2`/identifier-preflight blocker for the server-derived `00002` target row; or
 3. records a precise blocker with the next concrete safe action, without overclaiming ORCA fault or L4 success.
 
 ## Required Task Order
@@ -43,11 +44,11 @@ The goal is to make Fullflow L4 actionable again by producing sanitized evidence
    - Reusing duplicate-blocked `00001` or `00005` unchanged.
    - Treating read-only discovery, HTTP 200, dry-run, or wrapper exit as L4 business success.
    - Capturing or committing raw diagnostic artifacts, credentials, raw ORCA bodies, patient details, or insurance details.
-4. First run or refresh artifact-free/read-only candidate discovery excluding duplicate-blocked `00001` and `00005`.
-5. If discovery finds a non-duplicate proposal, run exact selected-candidate preflight for the same RUN_ID and candidate.
-6. Run `node scripts/qa-rwo08b-target-readiness.mjs --dry-run --sanitized-evidence-only --disable-browser-artifacts --candidate-discovery-summary <path> --exact-preflight-summary <path>` to join the gates.
-7. If the combined wrapper reports `identifier_preflight_not_run` and runtime is available with approved non-S3 Trial config, rerun with `--execute-readonly --acceptance-date <YYYY-MM-DD> --target-row-hash <server-derived-row-hash>` before any diagnostic fullflow retry.
-8. Only consider a diagnostic fullflow retry if the same-run evidence proves:
+4. Start from the latest `00002` evidence rather than repeating candidate discovery unless the target row has drifted.
+5. Re-run read-only acceptlstv2 inventory for `2026-04-29` / class `01` to confirm the target row hash is still present.
+6. Re-run `node scripts/qa-rwo08b-target-readiness.mjs --execute-readonly --sanitized-evidence-only --disable-browser-artifacts --candidate-discovery-summary <latest-candidate-summary> --exact-preflight-summary <latest-exact-preflight-summary> --acceptance-date 2026-04-29 --class 01 --medical-get-class <candidate> --target-row-hash <server-derived-row-hash>`.
+7. If `identifier-preflight` still returns sanitized `orca_gateway_error`, investigate `medicalgetv2` official semantics and repo wrapper behavior without raw ORCA bodies. Do not treat this as ORCA fault or Fullflow success.
+8. Only consider a diagnostic fullflow retry if the evidence proves:
    - exact selected-candidate preflight accepted for a fresh target;
    - local exact match/selectability is present;
    - duplicate-blocked `00001`/`00005` are not reused unchanged;
@@ -108,4 +109,4 @@ If the worker cannot safely run runtime/read-only/diagnostic steps, it must stil
 
 ## Next Recommended First Action
 
-Start by refreshing read-only candidate discovery excluding `00001` and `00005`. If a non-duplicate proposal appears, run exact selected-candidate preflight for the same RUN_ID, then run `qa-rwo08b-target-readiness.mjs`. Do not run `qa-fullflow-weborca` first.
+Confirm the `00002` acceptlstv2 target row is still present, then continue no-live/read-only investigation of why `identifier-preflight` cannot derive medicalgetv2-compatible identifier rows. Do not run `qa-fullflow-weborca` until identifier-preflight is target-ready.

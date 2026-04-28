@@ -102,7 +102,7 @@ try {
     },
     body: JSON.stringify(payload),
   });
-  const responseJson = response.ok ? await response.json().catch(() => ({})) : {};
+  const responseJson = await response.json().catch(() => ({}));
   identifierPreflight = sanitizeIdentifierPreflightRouteResponse({
     httpStatus: response.status,
     responseJson,

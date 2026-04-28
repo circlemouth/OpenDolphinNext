@@ -223,8 +223,10 @@ export const buildSanitizedAcceptmodv2Summary = ({
   const requestNumberKeyPresent = medicalInformationGate?.requestNumberKeyPresent === true;
   const requestNumber01ValueVerified = medicalInformationGate?.requestNumber01ValueVerified === true;
   const requestNumber02_03_04Absent = medicalInformationGate?.requestNumber02_03_04Absent === true;
-  const targetPatientId00001Verified = medicalInformationGate?.targetPatientId00001Verified === true;
-  const targetCandidateOnly00001 = medicalInformationGate?.targetCandidateOnly00001 === true;
+  const targetPatientIdVerified = medicalInformationGate?.targetPatientIdVerified === true ||
+    medicalInformationGate?.targetPatientId00001Verified === true;
+  const targetCandidateOnly = medicalInformationGate?.targetCandidateOnly === true ||
+    medicalInformationGate?.targetCandidateOnly00001 === true;
   const c7Accepted =
     medicalInformationGate?.ok === true &&
     targetMutationRequestCount > 0 &&
@@ -234,8 +236,8 @@ export const buildSanitizedAcceptmodv2Summary = ({
     requestNumberKeyPresent &&
     requestNumber01ValueVerified &&
     requestNumber02_03_04Absent &&
-    targetPatientId00001Verified &&
-    targetCandidateOnly00001 &&
+    targetPatientIdVerified &&
+    targetCandidateOnly &&
     patientIdMatched !== false &&
     preflightArtifactIncluded;
   const business = classifyBusinessResult({
@@ -302,8 +304,10 @@ export const buildSanitizedAcceptmodv2Summary = ({
       requestNumberKeysObserved: sortKeys(medicalInformationGate?.requestNumberKeysObserved ?? []),
       requestNumber01ValueVerified,
       requestNumber02_03_04Absent,
-      targetPatientId00001Verified,
-      targetCandidateOnly00001,
+      targetPatientIdVerified,
+      targetCandidateOnly,
+      targetPatientId00001Verified: targetPatientIdVerified,
+      targetCandidateOnly00001: targetCandidateOnly,
       patientIdKeysObserved: sortKeys(medicalInformationGate?.patientIdKeysObserved ?? []),
       candidateIdKeysObserved: sortKeys(medicalInformationGate?.candidateIdKeysObserved ?? []),
       unspecifiedRun: Boolean(medicalInformationGate?.unspecifiedRun),

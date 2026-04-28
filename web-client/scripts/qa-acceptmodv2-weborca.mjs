@@ -602,6 +602,13 @@ const patientIdMatchedForEvidence = () => {
   return !preflightGateResult.mismatches?.some((item) => item.field === 'input.patientId' || item.field === 'candidate');
 };
 
+const evaluateTargetMutationGate = () => evaluateMedicalInformationGate({
+  requestRecords,
+  medicalInformation,
+  expectedPatientId: patientId || '00001',
+  expectedCandidateId: candidateId || patientId || '00001',
+});
+
 const buildSanitizedSummary = (summary, exitCode) => buildSanitizedAcceptmodv2Summary({
   runId,
   candidateId,
@@ -613,12 +620,7 @@ const buildSanitizedSummary = (summary, exitCode) => buildSanitizedAcceptmodv2Su
   endTime: new Date().toISOString(),
   exitCode,
   acceptResponse: summary?.acceptResponse ?? null,
-  medicalInformationGate: summary?.medicalInformationGate ?? evaluateMedicalInformationGate({
-    requestRecords,
-    medicalInformation,
-    expectedPatientId: patientId || '00001',
-    expectedCandidateId: candidateId || patientId || '00001',
-  }),
+  medicalInformationGate: summary?.medicalInformationGate ?? evaluateTargetMutationGate(),
   patientIdMatched: patientIdMatchedForEvidence(),
 });
 
@@ -733,10 +735,7 @@ const run = async () => {
       acceptedLiveEvidence: false,
       selection: {},
       medicalInformationProbe: undefined,
-      medicalInformationGate: evaluateMedicalInformationGate({
-        requestRecords,
-        medicalInformation,
-      }),
+      medicalInformationGate: evaluateTargetMutationGate(),
       acceptResult: {},
       acceptResponse: null,
       harPath: recordHar ? harPath : undefined,
@@ -964,10 +963,7 @@ const run = async () => {
     acceptedLiveEvidence,
     selection,
     medicalInformationProbe,
-    medicalInformationGate: evaluateMedicalInformationGate({
-      requestRecords,
-      medicalInformation,
-    }),
+    medicalInformationGate: evaluateTargetMutationGate(),
     acceptResult: {
       toneText,
       apiResultText,
@@ -1045,10 +1041,7 @@ run().catch(async (error) => {
       },
       acceptedLiveEvidence: false,
       medicalInformationProbe: undefined,
-      medicalInformationGate: evaluateMedicalInformationGate({
-        requestRecords,
-        medicalInformation,
-      }),
+      medicalInformationGate: evaluateTargetMutationGate(),
       selection: {},
       acceptResult: {},
       acceptResponse: parseMutationResponse(),

@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260428T210334Z",
+  "workOrder": "RWO-08B",
+  "taskId": "RWO-08B_COMBINED_TARGET_READINESS_REFRESH",
+  "result": "RWO08B_TARGET_READINESS_ADVANCED_IDENTIFIER_PREFLIGHT_BLOCKED",
+  "candidate": {
+    "selectedPatientId": "00002",
+    "duplicateBlockedCandidateIdsExcluded": [
+      "00001",
+      "00005"
+    ],
+    "localExactMatchAccepted": true,
+    "exactSelectedCandidatePreflightAccepted": true
+  },
+  "localPatientImport": {
+    "endpoint": "/api/orca/official/patients/import",
+    "trialOrcaMutation": false,
+    "localDbMutation": true,
+    "httpStatusClass": "2xx",
+    "apiResultClass": "zero",
+    "requestedPatientIdCount": 1,
+    "createdCount": 1,
+    "updatedCount": 0,
+    "errorsCount": 0,
+    "businessSuccessClassification": "local_patient_import_accepted"
+  },
+  "acceptmodv2TrialMutation": {
+    "executed": true,
+    "endpoint": "/api/orca/official/visits/mutation",
+    "target": "00002",
+    "requestNumber": "01",
+    "sameRunPreflightHash": "efe9de6c2ce261c718546457762080fed6ed52258ab3ba67d3d2581e23a652d1",
+    "inputIdentityHash": "7030706f182b383b7f98b41a2524a54004cfa7388ec862026856abbaa6448bd2",
+    "sanitizedEvidenceOnly": true,
+    "browserArtifactsDisabled": true,
+    "rawArtifactsCommittedOrPackaged": false,
+    "resultClassification": "target_row_created_but_original_c7_summary_not_verified_due_to_harness_fixed_candidate_bug"
+  },
+  "repoLocalFixes": [
+    {
+      "path": "web-client/scripts/qa-acceptmodv2-weborca.mjs",
+      "fix": "Pass current selected patient/candidate into C7 target mutation gate."
+    },
+    {
+      "path": "web-client/scripts/qa-lib/medical-information-gate.mjs",
+      "fix": "Expose generic targetPatientIdVerified/targetCandidateOnly aliases while preserving legacy fields."
+    },
+    {
+      "path": "web-client/scripts/qa-lib/acceptmodv2-business-evidence.mjs",
+      "fix": "Use generic C7 target identity fields for business evidence."
+    },
+    {
+      "path": "web-client/scripts/qa-rwo08b-target-readiness.mjs",
+      "fix": "Parse JSON response bodies for non-2xx identifier-preflight results so sanitized error classifications are retained."
+    },
+    {
+      "path": "web-client/scripts/qa-lib/rwo08b-target-readiness-evidence.mjs",
+      "fix": "Preserve sanitized identifier-preflight error code and validation classification without raw messages."
+    }
+  ],
+  "runtimeRepair": {
+    "serverModernizedDevRebuilt": true,
+    "serverModernizedDevRecreated": true,
+    "reason": "Running backend image returned 404 for current source route /api/orca/official/visits/identifier-preflight.",
+    "postRepairRootHttpStatus": 200
+  },
+  "readOnlyTrialOrca": {
+    "acceptlstv2InventoryExecuted": true,
+    "acceptlstv2Mutation": false,
+    "acceptlstv2BusinessSuccessClassification": "readonly_inventory_target_ready",
+    "targetReadyRowCount": 1,
+    "identifierPreflightExecuted": true,
+    "identifierPreflightMutation": false,
+    "identifierPreflightHttpStatus": 400,
+    "identifierPreflightErrorCode": "orca_gateway_error",
+    "identifierPreflightValidationError": "true",
+    "identifierPreflightBusinessSuccessClassification": "readonly_identifier_preflight_target_blocked"
+  },
+  "officialResearch": [
+    {
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/overview.html",
+      "checkedDate": "2026-04-28",
+      "finding": "acceptlstv2 class 01/02/03 and medicalgetv2 class 01/02/03/04 are official read-only endpoints relevant to server-derived target readiness."
+    },
+    {
+      "sourceUrl": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalinfo.html",
+      "checkedDate": "2026-04-28",
+      "finding": "medicalgetv2 returns outpatient medical information; class 01 is visit history and class 02/03/04 require medical-practice context beyond plain reception existence."
+    }
+  ],
+  "diagnosticFullflow": {
+    "executed": false,
+    "orderSendReached": false,
+    "businessSuccessClassification": "not_run_identifier_preflight_target_blocked"
+  },
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": true,
+  "diagnosticArtifactsLocalOnlyUntracked": true,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false,
+  "claimBoundary": "Trial-backed target-readiness progress only; not Fullflow L4 success, order-send business success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness.",
+  "recommendedNextTask": "Investigate or implement a safe no-live/read-only path that can produce medicalgetv2-compatible identifier rows for the accepted 00002 target before any diagnostic Fullflow retry."
+}

@@ -255,6 +255,26 @@ describe('evaluateMedicalInformationGate', () => {
     expect(result.medicalInformationFieldPresent).toBe(false);
   });
 
+  it('current selected candidate を expectedPatientId/expectedCandidateId として検証できる', () => {
+    const result = evaluateMedicalInformationGate({
+      medicalInformation: '',
+      expectedPatientId: '00002',
+      expectedCandidateId: '00002',
+      requestRecords: [
+        {
+          url: 'https://localhost/api/orca/official/visits/mutation',
+          postData: '{"requestNumber":"01","patientId":"00002","candidateId":"00002","acceptancePush":"1"}',
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.targetPatientIdVerified).toBe(true);
+    expect(result.targetCandidateOnly).toBe(true);
+    expect(result.targetPatientId00001Verified).toBe(true);
+    expect(result.targetCandidateOnly00001).toBe(true);
+  });
+
   it('candidate が 00001 以外なら failure にする', () => {
     const result = evaluateMedicalInformationGate({
       medicalInformation: '',

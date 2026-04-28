@@ -180,6 +180,25 @@ describe('RWO-08B target-readiness evidence wrapper', () => {
     });
   });
 
+  it('keeps sanitized error classifications from identifier-preflight 4xx responses', () => {
+    const sanitized = sanitizeIdentifierPreflightRouteResponse({
+      httpStatus: 400,
+      responseJson: {
+        errorCode: 'orca_gateway_error',
+        message: 'must-not-leak free text',
+        details: {
+          validationError: 'upstream_rejected',
+          message: 'must-not-leak detail',
+        },
+      },
+    });
+
+    expect(sanitized.httpStatus).toBe(400);
+    expect(sanitized.sanitizedErrorCode).toBe('orca_gateway_error');
+    expect(sanitized.sanitizedValidationError).toBe('upstream_rejected');
+    expect(JSON.stringify(sanitized)).not.toContain('must-not-leak');
+  });
+
   it('rejects execute-readonly without a pinned server-derived target row hash', () => {
     const gate = validateRwo08bTargetReadinessCommand({
       argv: [
