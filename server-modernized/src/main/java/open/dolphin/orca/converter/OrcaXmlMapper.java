@@ -430,6 +430,13 @@ public class OrcaXmlMapper {
         row.setHasMedicalInformation(hasText(medicalInformation));
         row.setHasInsuranceCombinationNumber(hasText(insuranceCombinationNumber));
         row.setRawSensitiveFieldsExcluded(true);
+        row.setServerAcceptanceId(acceptanceId);
+        row.setServerPatientId(patientId);
+        row.setServerAcceptanceDate(acceptanceDate);
+        row.setServerAcceptanceTime(acceptanceTime);
+        row.setServerDepartmentCode(departmentCode);
+        row.setServerPhysicianCode(physicianCode);
+        row.setServerMedicalInformation(medicalInformation);
         return row;
     }
 

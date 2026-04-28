@@ -8,11 +8,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
@@ -32,6 +34,7 @@ import open.dolphin.orca.transport.StubOrcaTransport;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
 import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
 import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
+import open.dolphin.rest.dto.orca.AcceptanceOperationRequest;
 import open.dolphin.rest.dto.orca.PatientSummary;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
@@ -319,6 +322,28 @@ class OrcaVisitResourceTest {
     }
 
     @Test
+    void acceptanceInventoryInternalServerFieldsAreNotSerialized() throws Exception {
+        AcceptanceInventoryResponse.AcceptanceInventoryRow row =
+                new AcceptanceInventoryResponse.AcceptanceInventoryRow();
+        row.setRowHash("a".repeat(64));
+        row.setServerAcceptanceId("SERVER-A1");
+        row.setServerPatientId("000001");
+        row.setServerAcceptanceDate("2026-04-28");
+        row.setServerAcceptanceTime("09:10:00");
+        row.setServerDepartmentCode("01");
+        row.setServerPhysicianCode("10001");
+        row.setServerMedicalInformation("server-medical-presence");
+
+        String json = new ObjectMapper().writeValueAsString(row);
+
+        assertTrue(json.contains("rowHash"));
+        assertTrue(!json.contains("serverAcceptanceId"));
+        assertTrue(!json.contains("SERVER-A1"));
+        assertTrue(!json.contains("serverPatientId"));
+        assertTrue(!json.contains("000001"));
+    }
+
+    @Test
     void acceptanceInventoryRejectsMissingRemoteUser() {
         OrcaVisitResource resource = new OrcaVisitResource();
         resource.setWrapperService(createService());
@@ -343,6 +368,106 @@ class OrcaVisitResourceTest {
         WebApplicationException ex = assertThrows(WebApplicationException.class,
                 () -> resource.acceptanceInventory(createRequest("F001:doctor01", Map.of()), request));
         assertRestError(ex, Response.Status.BAD_REQUEST.getStatusCode(), "orca.acceptance.inventory.invalid");
+    }
+
+    @Test
+    void serverDerivedRn02AcceptanceOperationUsesOnlyInventoryResolvedIdentifiers() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        String rowHash = "b".repeat(64);
+        AcceptanceInventoryResponse inventory = new AcceptanceInventoryResponse();
+        AcceptanceInventoryResponse.AcceptanceInventoryRow row =
+                new AcceptanceInventoryResponse.AcceptanceInventoryRow();
+        row.setRowHash(rowHash);
+        row.setHasAcceptanceId(true);
+        row.setHasPatientId(true);
+        row.setHasAcceptanceDate(true);
+        row.setHasAcceptanceTime(true);
+        row.setHasDepartmentCode(true);
+        row.setHasPhysicianCode(true);
+        row.setHasInsuranceCombinationNumber(true);
+        row.setServerAcceptanceId("SERVER-A1");
+        row.setServerPatientId("000001");
+        row.setServerAcceptanceDate("2026-04-28");
+        row.setServerAcceptanceTime("09:10:00");
+        row.setServerDepartmentCode("01");
+        row.setServerPhysicianCode("10001");
+        row.setServerMedicalInformation("server-medical-presence");
+        inventory.getRows().add(row);
+        when(wrapperService.getAcceptanceInventory(anyString(), any(AcceptanceInventoryRequest.class))).thenReturn(inventory);
+        VisitMutationResponse stub = new VisitMutationResponse();
+        stub.setApiResult("00");
+        stub.setApiResultMessage("OK");
+        when(wrapperService.mutateVisit(anyString(), any(VisitMutationRequest.class))).thenReturn(stub);
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+
+        AcceptanceOperationRequest request = new AcceptanceOperationRequest();
+        request.setRequestNumber("02");
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 28));
+        request.setClassCode("01");
+        request.setTargetRowHash(rowHash);
+        request.setDuplicateLiveCheckpoint(
+                "acceptmodv2:rn02:trial:acceptlstv2-target-row:" + rowHash + ":date-2026-04-28:request-02");
+
+        VisitMutationResponse response =
+                resource.mutateServerDerivedAcceptance(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals("00", response.getApiResult());
+        verify(wrapperService).getAcceptanceInventory(eq("F001"), argThat(candidate ->
+                LocalDate.of(2026, 4, 28).equals(candidate.getAcceptanceDate())
+                        && "01".equals(candidate.getClassCode())));
+        verify(wrapperService).mutateVisit(eq("F001"), argThat(candidate ->
+                "02".equals(candidate.getRequestNumber())
+                        && "SERVER-A1".equals(candidate.getAcceptanceId())
+                        && "000001".equals(candidate.getPatientId())
+                        && "2026-04-28".equals(candidate.getAcceptanceDate())
+                        && "09:10:00".equals(candidate.getAcceptanceTime())
+                        && "01".equals(candidate.getDepartmentCode())
+                        && "10001".equals(candidate.getPhysicianCode())));
+    }
+
+    @Test
+    void serverDerivedRn02AcceptanceOperationRejectsTargetDriftBeforeMutation() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        when(wrapperService.getAcceptanceInventory(anyString(), any(AcceptanceInventoryRequest.class)))
+                .thenReturn(new AcceptanceInventoryResponse());
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+
+        String rowHash = "c".repeat(64);
+        AcceptanceOperationRequest request = new AcceptanceOperationRequest();
+        request.setRequestNumber("02");
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 28));
+        request.setClassCode("01");
+        request.setTargetRowHash(rowHash);
+        request.setDuplicateLiveCheckpoint(
+                "acceptmodv2:rn02:trial:acceptlstv2-target-row:" + rowHash + ":date-2026-04-28:request-02");
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.mutateServerDerivedAcceptance(createRequest("F001:doctor01", Map.of()), request));
+
+        assertRestError(ex, Response.Status.CONFLICT.getStatusCode(), "orca.acceptance.operation.target_drift");
+        verify(wrapperService, never()).mutateVisit(anyString(), any(VisitMutationRequest.class));
+    }
+
+    @Test
+    void serverDerivedRn02AcceptanceOperationRejectsCheckpointMismatch() {
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(createService());
+
+        AcceptanceOperationRequest request = new AcceptanceOperationRequest();
+        request.setRequestNumber("02");
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 28));
+        request.setClassCode("01");
+        request.setTargetRowHash("d".repeat(64));
+        request.setDuplicateLiveCheckpoint("wrong");
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.mutateServerDerivedAcceptance(createRequest("F001:doctor01", Map.of()), request));
+
+        assertRestError(ex, Response.Status.BAD_REQUEST.getStatusCode(), "orca.acceptance.operation.invalid");
     }
 
     @Test

@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260428T010135Z",
+  "workOrder": "ACCEPTMODV2",
+  "taskId": "ACCEPTMODV2_RN02_SERVER_DERIVED_ACTION_READY_NO_LIVE",
+  "result": "ACCEPTMODV2_RN02_SAFE_SERVER_DERIVED_ACTION_READY_NO_LIVE",
+  "branch": "master",
+  "headAtSelection": "367d3bdf5b661059edfccb76da3c723dd541e807",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "blockerId": "acceptmodv2-rn02-safe-live-wrapper-action-missing",
+    "statusAfterRun": "completed_with_successor_live_attempt_prompt"
+  },
+  "sourceEvidence": [
+    "docs/implementation/acceptmodv2-target-inventory-parser-fix-20260427T231541Z/summary.sanitized.json",
+    "docs/implementation/acceptmodv2-rn020304-duplicate-preflight-20260428T000407Z/summary.sanitized.json",
+    "docs/implementation/acceptmodv2-rn020304-stop-gate-20260427T150350Z/summary.sanitized.json",
+    "docs/implementation/rwo07-acceptmodv2-rn02-wrapper-contract-20260427T040311Z/summary.sanitized.json"
+  ],
+  "implementedAction": {
+    "route": "/api/orca/official/visits/acceptance-operation",
+    "method": "POST",
+    "requestClass": "acceptmodv2_request_02_server_derived_action",
+    "allowedRequestNumber": "02",
+    "targetIdentityMode": "sanitized_acceptlstv2_target_row_hash",
+    "duplicateLiveCheckpointFormat": "acceptmodv2:rn02:trial:acceptlstv2-target-row:<rowHash>:date-<YYYY-MM-DD>:request-02",
+    "serverDerivedAuthorityRequired": true,
+    "clientProvidedIdentifiersTrusted": false,
+    "rawIdentifierFieldsAcceptedFromClient": false,
+    "targetDriftGate": "server re-reads acceptlstv2 class/date, locates the requested rowHash, and rejects with target_drift before mutateVisit when absent or not RN02-ready",
+    "parserSanitizerContract": "acceptlstv2 public JSON keeps row hash and presence flags only; internal server fields are JsonIgnore and used only inside the server action",
+    "completionEvidenceCriteria": [
+      "future wrapper must record current runtime readiness before live",
+      "future wrapper must re-run target-drift preflight immediately before live",
+      "future wrapper must enforce the duplicate checkpoint before live",
+      "future business success requires parsed RN02 cancellation evidence plus post-attempt sanitized inventory absence of the selected active row",
+      "HTTP 2xx, Api_Result zero, route exit 0, and dry-run success are not business success by themselves"
+    ],
+    "stopConditions": [
+      "target row hash drifts before live",
+      "duplicate checkpoint mismatch or prior accepted checkpoint",
+      "parser ambiguity",
+      "completion evidence cannot be derived from allowlisted fields",
+      "credential or raw artifact redaction risk",
+      "non-Trial endpoint detection"
+    ]
+  },
+  "selectedTarget": {
+    "identityKind": "sanitized_acceptlstv2_target_row_hash",
+    "acceptanceDate": "2026-04-28",
+    "selectedClassCode": "01",
+    "alternateClassCode": "03",
+    "rowHash": "e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be",
+    "duplicateLiveCheckpoint": "acceptmodv2:rn02:trial:acceptlstv2-target-row:e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be:date-2026-04-28:request-02",
+    "rawPatientInsuranceOrOrcaFieldsStored": false
+  },
+  "dryRunEvidence": {
+    "command": "RUN_ID=20260428T010135Z node web-client/scripts/qa-phase4-acceptmodv2-operation.mjs --dry-run --sanitized-evidence-only --disable-browser-artifacts --request-number 02 --precondition-summary docs/implementation/acceptmodv2-rn020304-duplicate-preflight-20260428T000407Z/precondition-summary.sanitized.json --artifact-dir artifacts/orca-remediation/closeout/20260428T010135Z/qa/phase4-acceptmodv2-operation",
+    "result": "pass_no_live",
+    "summarySha256": "ff2cf8fbfefa660d459fdeb1104767d9818bbd0a38827451ed7f8aba0d651519",
+    "committedRawDryRunArtifact": false
+  },
+  "checks": {
+    "serverFocusedTests": "pass_33_tests",
+    "serverFocusedCommand": "mvn -f pom.server-modernized.xml -pl server-modernized -am -Dtest=OrcaVisitResourceTest,OrcaXmlMapperTypedTextParsingTest -Dsurefire.failIfNoSpecifiedTests=false test",
+    "rn02DryRun": "pass_no_live"
+  },
+  "misuseCasesChecked": [
+    "Client-supplied Acceptance_Id, Patient_ID, facility, department, physician, insurance, owner, URI, digest, or role is not accepted as RN02 authority.",
+    "Target row hash drift rejects before mutateVisit, preventing a stale or different acceptance row from being deleted.",
+    "Internal server-derived acceptlstv2 fields are excluded from public JSON serialization and are not committed to evidence."
+  ],
+  "liveTrialOrca": {
+    "executed": false,
+    "endpoint": "/api/orca/official/visits/acceptance-operation",
+    "target": "sanitized_acceptlstv2_target_row_hash:e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be",
+    "requestClass": "acceptmodv2_request_02_server_derived_action",
+    "businessSuccessClassification": "not_applicable_no_live_action_implementation_only",
+    "businessAccepted": false
+  },
+  "recommendedNextTask": "Run one main-worker-controlled RN02 live Trial attempt only after current runtime readiness, immediate target-drift preflight, duplicate checkpoint status, and sanitized evidence mode are recorded.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false,
+  "claimBoundary": "RN02 server-derived action readiness only. No RN02 live Trial mutation, RN02 business success, RN03/RN04 readiness, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed."
+}

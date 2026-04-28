@@ -6,6 +6,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -32,6 +33,7 @@ import open.dolphin.rest.ReceptionRealtimeSseSupport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
 import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
+import open.dolphin.rest.dto.orca.AcceptanceOperationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListRequest;
@@ -50,8 +52,10 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
     private static final String OPERATION_VISIT_MUTATION = "visit_mutation";
     private static final String OPERATION_VISIT_LIST = "visit_list";
     private static final String OPERATION_ACCEPTANCE_INVENTORY = "acceptance_inventory";
+    private static final String OPERATION_ACCEPTANCE_SERVER_DERIVED_OPERATION = "acceptance_server_derived_operation";
     private static final ZoneId TOKYO_ZONE = ZoneId.of("Asia/Tokyo");
     private static final DateTimeFormatter ORCA_TIME_FORMAT = DateTimeFormatter.ofPattern("HHmm").withZone(TOKYO_ZONE);
+    private static final String SHA256_PATTERN = "^[a-fA-F0-9]{64}$";
 
     private OrcaLiveGateway wrapperService;
     private ReceptionRealtimeSseSupport receptionRealtimeSseSupport;
@@ -259,6 +263,58 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.acceptance.inventory.error", ex.getMessage());
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw ex;
+        }
+    }
+
+    @POST
+    @Path("/acceptance-operation")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public VisitMutationResponse mutateServerDerivedAcceptance(@Context HttpServletRequest request,
+            AcceptanceOperationRequest body) {
+        if (request == null || request.getRemoteUser() == null || request.getRemoteUser().isBlank()) {
+            Map<String, Object> details = newAuditDetails(request);
+            details.put("operation", OPERATION_ACCEPTANCE_SERVER_DERIVED_OPERATION);
+            markFailureDetails(details, Response.Status.UNAUTHORIZED.getStatusCode(),
+                    "remote_user_missing", "Authenticated user is required");
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.UNAUTHORIZED, "remote_user_missing",
+                    "Authenticated user is required");
+        }
+        validateServerDerivedAcceptanceRequest(request, body);
+        String facilityId = requireFacilityId(request);
+        String classCode = normalizeAcceptanceInventoryClass(body.getClassCode());
+        String targetRowHash = body.getTargetRowHash().trim().toLowerCase(Locale.ROOT);
+        Map<String, Object> details = newAuditDetails(request);
+        details.put("operation", OPERATION_ACCEPTANCE_SERVER_DERIVED_OPERATION);
+        details.put("requestNumber", "02");
+        details.put("acceptanceDate", body.getAcceptanceDate());
+        details.put("classCode", classCode);
+        details.put("targetRowHash", targetRowHash);
+        try {
+            AcceptanceInventoryRequest inventoryRequest = new AcceptanceInventoryRequest();
+            inventoryRequest.setAcceptanceDate(body.getAcceptanceDate());
+            inventoryRequest.setClassCode(classCode);
+            AcceptanceInventoryResponse inventory = wrapperService.getAcceptanceInventory(facilityId, inventoryRequest);
+            AcceptanceInventoryResponse.AcceptanceInventoryRow row =
+                    findServerDerivedTargetRow(request, inventory, targetRowHash, details);
+            VisitMutationRequest mutationRequest = buildServerDerivedRn02Mutation(row);
+            VisitMutationResponse response = wrapperService.mutateVisit(facilityId, mutationRequest);
+            enrichVisitMutationKeys(facilityId, response);
+            applyResponseAuditDetails(response, details);
+            applyResponseMetadata(response, details);
+            details.put("clientProvidedIdentifiersTrusted", false);
+            details.put("serverDerivedAuthorityRequired", true);
+            markSuccessDetails(details);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
+            return response;
+        } catch (WebApplicationException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
+                    "orca.acceptance.operation.error", ex.getMessage());
             recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
@@ -578,6 +634,108 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             case "all" -> "03";
             default -> null;
         };
+    }
+
+    private void validateServerDerivedAcceptanceRequest(HttpServletRequest request, AcceptanceOperationRequest body) {
+        if (body == null) {
+            rejectServerDerivedAcceptanceRequest(request, Response.Status.BAD_REQUEST,
+                    "orca.acceptance.operation.invalid", "Request payload is required");
+        }
+        String requestNumber = normalizeRequestNumber(body.getRequestNumber());
+        if (!"02".equals(requestNumber)) {
+            rejectServerDerivedAcceptanceRequest(request, Response.Status.BAD_REQUEST,
+                    "orca.acceptance.operation.invalid", "Only Request_Number=02 is supported");
+        }
+        if (body.getAcceptanceDate() == null) {
+            rejectServerDerivedAcceptanceRequest(request, Response.Status.BAD_REQUEST,
+                    "orca.acceptance.operation.invalid", "acceptanceDate is required");
+        }
+        if (normalizeAcceptanceInventoryClass(body.getClassCode()) == null) {
+            rejectServerDerivedAcceptanceRequest(request, Response.Status.BAD_REQUEST,
+                    "orca.acceptance.operation.invalid", "classCode must be one of 01, 02, or 03");
+        }
+        String targetRowHash = body.getTargetRowHash();
+        if (targetRowHash == null || !targetRowHash.trim().matches(SHA256_PATTERN)) {
+            rejectServerDerivedAcceptanceRequest(request, Response.Status.BAD_REQUEST,
+                    "orca.acceptance.operation.invalid", "targetRowHash must be a SHA-256 hex row hash");
+        }
+        String expectedCheckpoint = expectedRn02DuplicateCheckpoint(targetRowHash.trim().toLowerCase(Locale.ROOT),
+                body.getAcceptanceDate());
+        if (!expectedCheckpoint.equals(body.getDuplicateLiveCheckpoint())) {
+            rejectServerDerivedAcceptanceRequest(request, Response.Status.BAD_REQUEST,
+                    "orca.acceptance.operation.invalid", "duplicateLiveCheckpoint does not match the server policy");
+        }
+    }
+
+    private String expectedRn02DuplicateCheckpoint(String rowHash, LocalDate acceptanceDate) {
+        return "acceptmodv2:rn02:trial:acceptlstv2-target-row:" + rowHash
+                + ":date-" + acceptanceDate + ":request-02";
+    }
+
+    private AcceptanceInventoryResponse.AcceptanceInventoryRow findServerDerivedTargetRow(HttpServletRequest request,
+            AcceptanceInventoryResponse inventory,
+            String targetRowHash,
+            Map<String, Object> details) {
+        if (inventory == null || inventory.getRows() == null) {
+            rejectServerDerivedAcceptanceRequest(request, Response.Status.CONFLICT,
+                    "orca.acceptance.operation.target_drift", "Target inventory is unavailable");
+        }
+        for (AcceptanceInventoryResponse.AcceptanceInventoryRow row : inventory.getRows()) {
+            if (row != null && targetRowHash.equals(normalize(row.getRowHash())) && isServerDerivedRn02Ready(row)) {
+                return row;
+            }
+        }
+        if (details != null) {
+            details.put("targetDrift", true);
+        }
+        rejectServerDerivedAcceptanceRequest(request, Response.Status.CONFLICT,
+                "orca.acceptance.operation.target_drift", "Selected acceptance target is no longer active");
+        return null;
+    }
+
+    private boolean isServerDerivedRn02Ready(AcceptanceInventoryResponse.AcceptanceInventoryRow row) {
+        return row != null
+                && row.isRawSensitiveFieldsExcluded()
+                && row.isHasAcceptanceId()
+                && row.isHasPatientId()
+                && row.isHasAcceptanceDate()
+                && row.isHasAcceptanceTime()
+                && row.isHasDepartmentCode()
+                && row.isHasPhysicianCode()
+                && hasText(row.getServerAcceptanceId())
+                && hasText(row.getServerPatientId())
+                && hasText(row.getServerAcceptanceDate())
+                && hasText(row.getServerAcceptanceTime())
+                && hasText(row.getServerDepartmentCode())
+                && hasText(row.getServerPhysicianCode());
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private VisitMutationRequest buildServerDerivedRn02Mutation(AcceptanceInventoryResponse.AcceptanceInventoryRow row) {
+        VisitMutationRequest mutation = new VisitMutationRequest();
+        mutation.setRequestNumber("02");
+        mutation.setPatientId(row.getServerPatientId());
+        mutation.setAcceptanceId(row.getServerAcceptanceId());
+        mutation.setAcceptanceDate(row.getServerAcceptanceDate());
+        mutation.setAcceptanceTime(row.getServerAcceptanceTime());
+        mutation.setDepartmentCode(row.getServerDepartmentCode());
+        mutation.setPhysicianCode(row.getServerPhysicianCode());
+        mutation.setMedicalInformation(row.getServerMedicalInformation());
+        return mutation;
+    }
+
+    private void rejectServerDerivedAcceptanceRequest(HttpServletRequest request,
+            Response.Status status,
+            String code,
+            String message) {
+        Map<String, Object> details = newAuditDetails(request);
+        details.put("operation", OPERATION_ACCEPTANCE_SERVER_DERIVED_OPERATION);
+        markFailureDetails(details, status.getStatusCode(), code, message);
+        recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+        throw restError(request, status, code, message);
     }
 
     private void validateVisitMutationRequest(HttpServletRequest request, VisitMutationRequest body) {

@@ -1,5 +1,6 @@
 package open.dolphin.rest.dto.orca;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -169,6 +170,13 @@ public class AcceptanceInventoryResponse extends OrcaApiResponse {
         private boolean hasMedicalInformation;
         private boolean hasInsuranceCombinationNumber;
         private boolean rawSensitiveFieldsExcluded = true;
+        private String serverAcceptanceId;
+        private String serverPatientId;
+        private String serverAcceptanceDate;
+        private String serverAcceptanceTime;
+        private String serverDepartmentCode;
+        private String serverPhysicianCode;
+        private String serverMedicalInformation;
 
         public String getRowHash() {
             return rowHash;
@@ -248,6 +256,69 @@ public class AcceptanceInventoryResponse extends OrcaApiResponse {
 
         public void setRawSensitiveFieldsExcluded(boolean rawSensitiveFieldsExcluded) {
             this.rawSensitiveFieldsExcluded = rawSensitiveFieldsExcluded;
+        }
+
+        @JsonIgnore
+        public String getServerAcceptanceId() {
+            return serverAcceptanceId;
+        }
+
+        public void setServerAcceptanceId(String serverAcceptanceId) {
+            this.serverAcceptanceId = serverAcceptanceId;
+        }
+
+        @JsonIgnore
+        public String getServerPatientId() {
+            return serverPatientId;
+        }
+
+        public void setServerPatientId(String serverPatientId) {
+            this.serverPatientId = serverPatientId;
+        }
+
+        @JsonIgnore
+        public String getServerAcceptanceDate() {
+            return serverAcceptanceDate;
+        }
+
+        public void setServerAcceptanceDate(String serverAcceptanceDate) {
+            this.serverAcceptanceDate = serverAcceptanceDate;
+        }
+
+        @JsonIgnore
+        public String getServerAcceptanceTime() {
+            return serverAcceptanceTime;
+        }
+
+        public void setServerAcceptanceTime(String serverAcceptanceTime) {
+            this.serverAcceptanceTime = serverAcceptanceTime;
+        }
+
+        @JsonIgnore
+        public String getServerDepartmentCode() {
+            return serverDepartmentCode;
+        }
+
+        public void setServerDepartmentCode(String serverDepartmentCode) {
+            this.serverDepartmentCode = serverDepartmentCode;
+        }
+
+        @JsonIgnore
+        public String getServerPhysicianCode() {
+            return serverPhysicianCode;
+        }
+
+        public void setServerPhysicianCode(String serverPhysicianCode) {
+            this.serverPhysicianCode = serverPhysicianCode;
+        }
+
+        @JsonIgnore
+        public String getServerMedicalInformation() {
+            return serverMedicalInformation;
+        }
+
+        public void setServerMedicalInformation(String serverMedicalInformation) {
+            this.serverMedicalInformation = serverMedicalInformation;
         }
     }
 }

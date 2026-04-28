@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "ACCEPTMODV2",
-  "blockerId": "acceptmodv2-rn02-safe-live-wrapper-action-missing",
+  "blockerId": "acceptmodv2-rn02-single-live-attempt-pending-runtime-preflight",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T00:04:07Z",
+  "lastUpdated": "2026-04-28T01:01:35Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -171,6 +171,48 @@
       "businessAccepted": false
     },
     "recommendedNextTask": "Implement or select a reviewed RN02 safe live wrapper/action and rerun immediate runtime/target-drift preflight before any live Trial attempt; keep RN03/RN04 stopped until their request-specific policies are complete.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestAcceptmodV2Rn02ServerDerivedAction": {
+    "runId": "20260428T010135Z",
+    "workOrder": "ACCEPTMODV2",
+    "taskId": "ACCEPTMODV2_RN02_SERVER_DERIVED_ACTION_READY_NO_LIVE",
+    "result": "ACCEPTMODV2_RN02_SAFE_SERVER_DERIVED_ACTION_READY_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "367d3bdf5b661059edfccb76da3c723dd541e807",
+    "evidence": "docs/implementation/acceptmodv2-rn02-server-derived-action-20260428T010135Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/acceptmodv2-rn02-server-derived-action-20260428T010135Z/summary.sanitized.json",
+    "implementedAction": {
+      "route": "/api/orca/official/visits/acceptance-operation",
+      "requestClass": "acceptmodv2_request_02_server_derived_action",
+      "requestNumber": "02",
+      "targetIdentityMode": "sanitized_acceptlstv2_target_row_hash",
+      "clientProvidedIdentifiersTrusted": false,
+      "serverDerivedAuthorityRequired": true,
+      "targetDriftGate": "server rereads acceptlstv2 by class/date and rejects before mutateVisit if the selected row hash is absent or not RN02-ready",
+      "publicInventoryRawIdentifiersSerialized": false
+    },
+    "selectedTarget": {
+      "identityKind": "sanitized_acceptlstv2_target_row_hash",
+      "acceptanceDate": "2026-04-28",
+      "selectedClassCode": "01",
+      "alternateClassCode": "03",
+      "rowHash": "e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be",
+      "duplicateLiveCheckpoint": "acceptmodv2:rn02:trial:acceptlstv2-target-row:e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be:date-2026-04-28:request-02",
+      "rawPatientInsuranceOrOrcaFieldsStored": false
+    },
+    "checks": {
+      "serverFocusedTests": "pass_33_tests",
+      "rn02DryRun": "pass_no_live"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessSuccessClassification": "not_applicable_no_live_action_implementation_only",
+      "businessAccepted": false
+    },
+    "recommendedNextTask": "Run one main-worker-controlled RN02 live Trial attempt only after current runtime readiness, immediate target-drift preflight, duplicate checkpoint status, and sanitized evidence mode are recorded.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
@@ -5218,6 +5260,36 @@
         "rn04": "stopped_before_live_missing_explicit_claim_send_info_and_rollback_policy"
       },
       "correctedNextAction": "Do not run RN02 live until a reviewed safe live wrapper/action, current runtime readiness, target drift check, duplicate checkpoint, and sanitized preflight are recorded immediately before execution. Keep RN03/RN04 stopped."
+    },
+    {
+      "taskId": "ACCEPTMODV2_RN02_SERVER_DERIVED_ACTION_READY_NO_LIVE",
+      "lane": "critical_path",
+      "status": "completed",
+      "workOrder": "ACCEPTMODV2",
+      "summary": "Implement a server-derived RN02 action that resolves acceptlstv2 row identifiers server-side from the sanitized row hash.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": "docs/implementation/acceptmodv2-rn020304-duplicate-preflight-20260428T000407Z/summary.sanitized.json",
+      "successCriteria": "Server-derived RN02 action exists with focused tests, no live mutation, credentialsCaptured=false, and rawArtifactsCommittedOrPackaged=false.",
+      "nextOnSuccess": "ACCEPTMODV2_RN02_SINGLE_LIVE_ATTEMPT_PENDING_WORKER_DECISION",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "result": "server_derived_action_ready_no_live",
+      "completedRunId": "20260428T010135Z",
+      "evidence": "docs/implementation/acceptmodv2-rn02-server-derived-action-20260428T010135Z/summary.sanitized.json",
+      "implementedAction": {
+        "route": "/api/orca/official/visits/acceptance-operation",
+        "requestClass": "acceptmodv2_request_02_server_derived_action",
+        "clientProvidedIdentifiersTrusted": false,
+        "serverDerivedAuthorityRequired": true
+      },
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      },
+      "correctedNextAction": "Before any RN02 live attempt, record current runtime readiness, immediate target-drift preflight, duplicate checkpoint status, parser/sanitizer status, and sanitized evidence policy."
     },
     {
       "taskId": "ACCEPTMODV2_TARGET_INVENTORY_READONLY_TRIAL",
