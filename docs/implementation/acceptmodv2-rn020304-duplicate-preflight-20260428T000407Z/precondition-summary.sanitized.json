@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260428T000407Z",
+  "workOrder": "ACCEPTMODV2",
+  "taskId": "ACCEPTMODV2_RN02_03_04_DUPLICATE_CHECKPOINT_PREFLIGHT",
+  "sourceEvidence": "docs/implementation/acceptmodv2-target-inventory-parser-fix-20260427T231541Z/summary.sanitized.json",
+  "target": {
+    "identityKind": "sanitized_acceptlstv2_target_row_hash",
+    "acceptanceDate": "2026-04-28",
+    "selectedClassCode": "01",
+    "alternateClassCode": "03",
+    "rowHash": "e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be",
+    "sourceRowCountClass01": 1,
+    "targetReadyRowCountClass01": 1,
+    "sourceRowCountClass03": 1,
+    "targetReadyRowCountClass03": 1,
+    "rawPatientInsuranceOrOrcaFieldsStored": false
+  },
+  "readOnlyResult": {
+    "endpoint": "/api/orca/official/visits/acceptance-list",
+    "orcaEndpoint": "/api01rv2/acceptlstv2",
+    "requestClassesChecked": [
+      "01",
+      "02",
+      "03"
+    ],
+    "activeAcceptanceEvidencePresent": true,
+    "evidenceHash": "e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be",
+    "classifications": [
+      {
+        "classCode": "01",
+        "businessSuccessClassification": "readonly_inventory_target_ready",
+        "transportStatusClass": "2xx",
+        "apiResultClass": "zero",
+        "sourceRowCount": 1,
+        "targetReadyRowCount": 1
+      },
+      {
+        "classCode": "02",
+        "businessSuccessClassification": "readonly_inventory_no_target_ready",
+        "transportStatusClass": "2xx",
+        "apiResultClass": "nonzero",
+        "sourceRowCount": 0,
+        "targetReadyRowCount": 0
+      },
+      {
+        "classCode": "03",
+        "businessSuccessClassification": "readonly_inventory_target_ready",
+        "transportStatusClass": "2xx",
+        "apiResultClass": "zero",
+        "sourceRowCount": 1,
+        "targetReadyRowCount": 1
+      }
+    ]
+  },
+  "acceptmodOperationPreconditions": {
+    "activeAcceptanceRow": true,
+    "serverDerivedAcceptanceId": true,
+    "matchingPatientId": true,
+    "acceptanceDate": true,
+    "departmentPhysicianScope": true,
+    "serverAuthoritativeUpdateFields": false,
+    "serverStateInsuranceCombinationWhenNeeded": true,
+    "serverDerivedAcceptanceIdentifiers": true,
+    "explicitClaimSendInfoPolicy": false,
+    "rollbackDuplicatePolicy": false,
+    "duplicateLiveCheckpoint": true
+  },
+  "duplicateLiveCheckpoints": {
+    "rn02": "acceptmodv2:rn02:trial:acceptlstv2-target-row:e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be:date-2026-04-28:request-02",
+    "rn03": "acceptmodv2:rn03:trial:acceptlstv2-target-row:e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be:date-2026-04-28:request-03",
+    "rn04": "acceptmodv2:rn04:trial:acceptlstv2-target-row:e93b97c2c70016eddffac3e68976c5b0322da86d1ee870bb730c613e5fde73be:date-2026-04-28:request-04"
+  },
+  "requestNumberPolicy": {
+    "rn02": {
+      "operation": "reception_delete_or_cancel",
+      "preflightStatus": "duplicate_checkpoint_ready_no_live",
+      "endpointSpecificSuccessCriteria": [
+        "transportStatusClass=2xx",
+        "zero_like_api_result",
+        "server-derived cancellation/deletion completion evidence",
+        "post-attempt sanitized read-only inventory no longer exposes the selected active target row for class 01"
+      ],
+      "stopConditions": [
+        "target row hash drifts before live",
+        "safe live wrapper/action is missing",
+        "parser ambiguity",
+        "completion evidence cannot be derived from allowlisted fields",
+        "credential/raw-artifact redaction risk",
+        "non-Trial endpoint detection"
+      ]
+    },
+    "rn03": {
+      "operation": "reception_update_or_change",
+      "preflightStatus": "stopped_before_live_missing_server_authoritative_update_fields",
+      "endpointSpecificSuccessCriteria": [
+        "server-authoritative update intent is selected before live",
+        "transportStatusClass=2xx",
+        "zero_like_api_result",
+        "server-derived update completion evidence",
+        "post-attempt sanitized read-only inventory reflects the intended server-authoritative changed field without exposing raw patient/insurance detail"
+      ],
+      "stopConditions": [
+        "update fields come from DOM/display text or client-only state",
+        "target row hash drifts before live",
+        "parser ambiguity",
+        "completion evidence cannot be derived from allowlisted fields",
+        "credential/raw-artifact redaction risk",
+        "non-Trial endpoint detection"
+      ]
+    },
+    "rn04": {
+      "operation": "claim_send_information_update_or_supporting_action",
+      "preflightStatus": "stopped_before_live_missing_explicit_claim_send_info_and_rollback_policy",
+      "claimSendInfoPolicy": "not_selected_for_live; Request_Number=04 remains stopped until a separate explicit Claim_Send_Info value, rollback duplicate policy, and endpoint-specific business meaning are recorded without raw claim payloads.",
+      "endpointSpecificSuccessCriteria": [
+        "explicit Claim_Send_Info policy is recorded before live",
+        "transportStatusClass=2xx",
+        "zero_like_api_result",
+        "server-derived claim-send completion evidence",
+        "post-attempt sanitized read-only evidence supports the selected claim-send policy"
+      ],
+      "stopConditions": [
+        "Claim_Send_Info value or business meaning is ambiguous",
+        "rollback/duplicate policy is absent",
+        "request 04 is used as generic chart-order success",
+        "raw claim payload would be needed to decide success",
+        "credential/raw-artifact redaction risk",
+        "non-Trial endpoint detection"
+      ]
+    }
+  },
+  "misuseCasesChecked": [
+    "Do not use client-provided Acceptance_Id, patient, facility, department, physician, insurance, owner, URI, digest, or role as live authority.",
+    "Do not treat the target-ready row hash, HTTP 2xx, Api_Result zero, or wrapper exit 0 as RN02/RN03/RN04 business success.",
+    "Do not run RN03/RN04 live from a generic target-ready row without request-specific update or claim-send policy evidence."
+  ],
+  "liveTrialOrca": {
+    "executed": false,
+    "businessAccepted": false,
+    "businessSuccessClassification": "not_applicable_no_live_duplicate_checkpoint_preflight"
+  },
+  "readOnlyTrialOrca": {
+    "executedInThisRun": false,
+    "sourceEvidenceReused": true,
+    "mutation": false
+  },
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false,
+  "claimBoundary": "No-live duplicate-checkpoint and endpoint-specific preflight only. This selects a sanitized acceptlstv2 target row hash and records RN02/RN03/RN04 stop conditions, but does not claim RN02/RN03/RN04 live Trial business success, fullflow, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness."
+}
