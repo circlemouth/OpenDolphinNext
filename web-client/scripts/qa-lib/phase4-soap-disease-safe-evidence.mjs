@@ -28,7 +28,7 @@ export const SOAP_DISEASE_ENDPOINTS = {
     officialServerRoute: '/api/orca/official/chart-support/disease-mod-v3',
     localProductRoute: '/api/local/diagnoses',
     allowedOperation: 'create',
-    businessScope: 'outpatient disease create, class=01, Request_Number=01 only',
+    businessScope: 'outpatient disease create, no query class, no body Request_Number',
     payloadRequiredFields: ['patientId', 'performDate', 'diagnosisInformation', 'diseaseInformation'],
     fixtureResponseRoot: 'diseaseres',
     completionEvidenceKeys: ['diseaseMutationMarkerPresent'],
@@ -191,8 +191,8 @@ export const validateSoapDiseasePayload = ({ workflow, payload, payloadSha256 = 
   if (summary.requestNumber02To04Present) {
     blockers.push('Request_Number 02/03/04 is forbidden for subjectivesv2/diseasev3 no-live wrappers');
   }
-  if (normalizeCode(workflow) === 'diseasev3' && summary.requestNumber && summary.requestNumber !== '01') {
-    blockers.push('diseasev3 no-live wrapper allows only create semantics; Request_Number must be absent or 01');
+  if (normalizeCode(workflow) === 'diseasev3' && summary.requestNumber) {
+    blockers.push('diseasev3 create wrapper requires Request_Number to be absent');
   }
   for (const [field, present] of Object.entries(summary.requiredFieldsPresent)) {
     if (!present) blockers.push(`${field} is required`);
@@ -327,8 +327,7 @@ export const buildSoapDiseaseLiveReadinessCheckpointKey = ({ workflow, payloadSh
     contract?.liveReadinessWorkflowId ?? 'unknown-live-readiness-workflow',
     `target-${SOAP_DISEASE_TARGET_PATIENT_ID}`,
     `operation-${contract?.allowedOperation ?? 'unknown'}`,
-    'request-01',
-    'class-01',
+    ...(normalizeCode(workflow) === 'subjectivesv2' ? ['request-01', 'class-01'] : ['request-absent', 'class-absent']),
     `payload-sha256-${hash}`,
   ].join(':');
 };

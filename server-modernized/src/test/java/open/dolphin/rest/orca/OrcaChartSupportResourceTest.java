@@ -355,7 +355,7 @@ class OrcaChartSupportResourceTest {
     }
 
     @Test
-    void diseaseModV3UsesFixedOfficialEndpointAndCreateOnlyRequestNumber() {
+    void diseaseModV3UsesFixedOfficialEndpointAndOmitsRequestNumberAndClassQueryForCreate() {
         CapturingTransport transport = new CapturingTransport("""
                 <xmlio2>
                   <diseaseres>
@@ -372,9 +372,9 @@ class OrcaChartSupportResourceTest {
                 newDiseasePayload());
 
         assertEquals(OrcaEndpoint.DISEASE_MOD_V3, transport.endpoint());
-        assertEquals("class=01", transport.query());
+        assertNull(transport.query());
         assertTrue(transport.requestXml().contains("<diseasereq type=\"record\">"));
-        assertTrue(transport.requestXml().contains("<Request_Number type=\"string\">01</Request_Number>"));
+        assertTrue(!transport.requestXml().contains("<Request_Number"));
         assertTrue(transport.requestXml().contains("<Patient_ID type=\"string\">00001</Patient_ID>"));
         assertTrue(transport.requestXml().contains("<Disease_Code type=\"string\">3089002</Disease_Code>"));
         assertEquals("0000", response.getApiResult());
@@ -400,6 +400,7 @@ class OrcaChartSupportResourceTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
         assertEquals("payload.requestNumber", body.get("field"));
+        assertEquals("diseaseModV3 create currently requires Request_Number to be absent", body.get("message"));
         assertNull(transport.endpoint());
     }
 

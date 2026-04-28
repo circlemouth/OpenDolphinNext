@@ -312,9 +312,9 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             throw validationError(request, "payload",
                     "patientId, performDate, departmentCode, and diseaseInformation are required");
         }
-        if (!isBlank(payload.getRequestNumber()) && !"01".equals(payload.getRequestNumber().trim())) {
+        if (!isBlank(payload.getRequestNumber())) {
             throw validationError(request, "payload.requestNumber",
-                    "diseaseModV3 currently allows only create semantics; Request_Number must be absent or 01");
+                    "diseaseModV3 create currently requires Request_Number to be absent");
         }
         for (ChartSupportDiseaseModV3Request.DiseaseInformation entry : payload.getDiseaseInformation()) {
             if (entry == null || isBlank(entry.getDiseaseCode()) || isBlank(entry.getDiseaseStartDate())) {
@@ -329,7 +329,7 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         OrcaTransportResult result = orcaTransport.invoke(
                 facilityId,
                 OrcaEndpoint.DISEASE_MOD_V3,
-                OrcaTransportRequest.post(requestXml).withQuery("class=01"));
+                OrcaTransportRequest.post(requestXml));
         ChartSupportDiseaseModV3Response response = support().parseDiseaseModV3Response(result, runId, traceId);
 
         Map<String, Object> details = new LinkedHashMap<>();

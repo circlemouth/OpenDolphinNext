@@ -19,8 +19,8 @@ The source report named these public / official references. This intake does not
 - ORCA `medicalmodv2`: `https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html`
 - ORCA `medicationgetv2`: `https://www.orca.med.or.jp/receipt/users/tec/api/medicationgetv2.html`
 - ORCA `masterlastupdatev3`: `https://www.orca.med.or.jp/receipt/users/tec/api/masterlastupdatev3.html`
-- ORCA `subjectivesv2`: `https://www.orca.med.or.jp/receipt/users/tec/api/subjectivesv2.html`
-- ORCA `diseasev3`: `https://www.orca.med.or.jp/receipt/users/tec/api/diseasev3.html`
+- ORCA `subjectivesv2`: `https://www.orca.med.or.jp/receipt/users/tec/api/subjectives.html`
+- ORCA `diseasev3`: `https://www.orca.med.or.jp/receipt/users/tec/api/diseasemod.html`
 - ORCA `acceptmodv2`: `https://www.orca.med.or.jp/receipt/users/tec/api/acceptmod.html`
 - ORCA radiology comment / body-part guidance: `https://www.orca.med.or.jp/receipt/users/tec/api/comment842-830-bui-api.html`
 - ORCA manual auto-calculation guidance: `https://www.orca.med.or.jp/receipt/users/tec/claim/`
@@ -78,6 +78,8 @@ Stop rather than execute live Trial when any of the following applies:
 - `Request_Number=01` is for deleted-disease deletion / resequence behavior, not normal create/update.
 - Delete uses `Disease_OutCome=O` with exact match.
 - HTTP `400` is classified as wrapper/input contract failure until corrected no-live evidence exists.
+
+2026-04-28 refresh: RUN_ID `20260428T050947Z` aligned the current create-only wrapper with the official-source no-query/no-body-`Request_Number` contract. The live-readiness identity is now `request-absent/class-absent`; no live retry is authorized from this intake alone.
 
 ### `acceptmodv2`
 

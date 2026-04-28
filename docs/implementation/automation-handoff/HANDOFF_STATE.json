@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T04:01:35Z",
+  "lastUpdated": "2026-04-28T05:09:47Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -7675,6 +7675,35 @@
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   },
+  "latestDiseasev3OfficialContractRefresh": {
+    "runId": "20260428T050947Z",
+    "workOrder": "DISEASEV3",
+    "taskId": "DISEASEV3_OFFICIAL_CONTRACT_REFRESH_NO_LIVE",
+    "result": "DISEASEV3_OFFICIAL_CONTRACT_REFRESH_READY_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "1123b73d8e98d864a772f582ca3356a1c097200c",
+    "evidence": "docs/implementation/diseasev3-official-contract-refresh-20260428T050947Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/diseasev3-official-contract-refresh-20260428T050947Z/FINAL_REPORT.md",
+    "endpoint": "/api/orca/official/chart-support/disease-mod-v3",
+    "orcaEndpoint": "/orca22/diseasev3",
+    "requestSelection": "no_query_class_no_body_request_number_for_current_create_wrapper",
+    "payloadSha256": "da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+    "liveReadinessCheckpointKey": "rwo06b:diseasev3:rwo06b-diseasev3-live-readiness-v1:target-00001:operation-create:request-absent:class-absent:payload-sha256-da4bd8dfd726e0c5838d0e06e0cabcf34d7fd984286c753ae4d59fb629f5f8df",
+    "checks": {
+      "webClientFocusedSoapDiseaseEvidence": "pass_1_file_13_tests_with_web_guard_pretest",
+      "serverFocusedOrcaChartSupportResource": "pass_14_tests_with_reactor"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false,
+      "businessSuccessClassification": "not_applicable_no_live_contract_refresh"
+    },
+    "claimBoundary": "Diseasev3 official-source contract refresh and no-live wrapper hardening only; no diseasev3 Trial business acceptance, disease update/delete, subjectivesv2 Trial business acceptance, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness is claimed.",
+    "recommendedNextTask": "Before any diseasev3 live retry, record current runtime readiness, duplicate checkpoint status for the request-absent/class-absent identity, sanitized target/precondition evidence, and endpoint-specific stop conditions.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "latestRwo06GBaseChargeRowOrderContract": {
     "runId": "20260427T150350Z",
     "workOrder": "RWO-06G",
@@ -7976,28 +8005,28 @@
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   },
-  "lastRunId": "20260428T040135Z",
+  "lastRunId": "20260428T050947Z",
   "lastResult": {
-    "taskId": "RWO-09_CURRENT_HEAD_STATIC_REFRESH_AFTER_ACCEPTMODV2_RN03_RN04_STOP_GATE",
-    "workOrder": "RWO-09",
-    "result": "RWO09_CURRENT_HEAD_NON_S3_STATIC_REFRESH_PASS",
-    "evidence": "docs/implementation/rwo09-current-head-static-refresh-20260428T040135Z/summary.sanitized.json",
+    "taskId": "DISEASEV3_OFFICIAL_CONTRACT_REFRESH_NO_LIVE",
+    "workOrder": "DISEASEV3",
+    "result": "DISEASEV3_OFFICIAL_CONTRACT_REFRESH_READY_NO_LIVE",
+    "evidence": "docs/implementation/diseasev3-official-contract-refresh-20260428T050947Z/summary.sanitized.json",
     "liveTrialOrca": {
       "executed": false,
       "businessAccepted": false,
-      "businessSuccessClassification": "not_applicable_no_live_static_refresh"
+      "businessSuccessClassification": "not_applicable_no_live_contract_refresh"
     },
     "readOnlyTrialOrca": {
       "executed": false,
       "mutation": false
     },
-    "claimBoundary": "Current-head non-S3 static/package/security refresh only. No Trial live mutation, RN03/RN04 business acceptance, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness is claimed.",
+    "claimBoundary": "Diseasev3 official-source contract refresh and no-live wrapper hardening only. No diseasev3 Trial business acceptance, disease update/delete, subjectivesv2 Trial business acceptance, fullflow, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness is claimed.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false,
     "rawOrcaBodiesCaptured": false,
     "patientInsuranceDetailsCaptured": false,
-    "recommendedNextTask": "Continue with the next independent no-live roadmap item, preferably diseasev3/subjectivesv2 wrapper hardening or current queue refresh; keep RWO-11/RWO-09 external unless later explicitly reassigned."
+    "recommendedNextTask": "Before any diseasev3 live retry, record current runtime readiness, duplicate checkpoint status for the request-absent/class-absent identity, sanitized target/precondition evidence, and endpoint-specific stop conditions."
   },
   "orcaTrialBlockerResolutionPolicy": {
     "recordedByUserDirection": "2026-04-27T23:07:48Z",

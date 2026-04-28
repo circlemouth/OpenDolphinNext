@@ -528,7 +528,6 @@ final class OrcaChartSupportSupport {
         StringBuilder builder = new StringBuilder();
         builder.append("<data>");
         builder.append("<diseasereq type=\"record\">");
-        appendTag(builder, "Request_Number", "01");
         appendTag(builder, "Patient_ID", payload.getPatientId());
         appendTag(builder, "Perform_Date", payload.getPerformDate());
         appendTag(builder, "Perform_Time", fallback(payload.getPerformTime(), "00:00:00"));

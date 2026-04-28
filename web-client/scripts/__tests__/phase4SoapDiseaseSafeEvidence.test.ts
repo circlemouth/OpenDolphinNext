@@ -121,7 +121,7 @@ describe('phase4 SOAP/disease no-live safe evidence', () => {
         payloadSha256: DISEASE_SHA256,
       }),
     ).toBe(
-      `rwo06b:diseasev3:rwo06b-diseasev3-live-readiness-v1:target-00001:operation-create:request-01:class-01:payload-sha256-${DISEASE_SHA256}`,
+      `rwo06b:diseasev3:rwo06b-diseasev3-live-readiness-v1:target-00001:operation-create:request-absent:class-absent:payload-sha256-${DISEASE_SHA256}`,
     );
   });
 
@@ -186,7 +186,7 @@ describe('phase4 SOAP/disease no-live safe evidence', () => {
     expect(result.blockers).toContain('endpoint must be /orca22/diseasev3');
     expect(result.blockers).toContain('target patient must be 00001');
     expect(result.blockers).toContain('Request_Number 02/03/04 is forbidden for subjectivesv2/diseasev3 no-live wrappers');
-    expect(result.blockers).toContain('diseasev3 no-live wrapper allows only create semantics; Request_Number must be absent or 01');
+    expect(result.blockers).toContain('diseasev3 create wrapper requires Request_Number to be absent');
     expect(result.blockers).toContain('payload sha256 mismatch');
   });
 
