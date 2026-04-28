@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260428T224646Z",
+  "workOrder": "RWO-08B",
+  "taskId": "RWO-08B_MEDICALGETV2_API15_IDENTIFIER_CONTRACT_DECISION_NO_LIVE",
+  "result": "MINIMIZED_TRIAL_BUSINESS_STATE_BLOCKER_RECORDED",
+  "branch": "master",
+  "headAtSelection": "1d72d532a",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAfterRun": "completed",
+    "blockerId": "fullflow-l4-medicalgetv2-api15-history-row-identifier-contract-blocker"
+  },
+  "priorEvidenceRead": [
+    "docs/implementation/rwo08b-fullflow-l4-target-readiness-20260428T213244Z/summary.sanitized.json",
+    "docs/implementation/rwo08b-target-readiness-after-import-20260428T210334Z/run-summary.sanitized.json",
+    "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/summary.sanitized.json",
+    "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/class03-probe/summary.sanitized.json",
+    "docs/runbooks/release-validation.md"
+  ],
+  "officialSourcesChecked": [
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalinfo.html",
+      "checkedDate": "2026-04-29",
+      "endpoint": "/api01rv2/medicalgetv2",
+      "requestClasses": [
+        "01",
+        "02",
+        "03",
+        "04"
+      ],
+      "sanitizedFinding": "class 01 is the official visit-history lookup. Official response fields include Perform_Date, Department_Code, Sequential_Number, Insurance_Combination_Number, and Invoice_Number for visit-history rows. Api_Result 15 is documented as no target/object found."
+    },
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html",
+      "checkedDate": "2026-04-29",
+      "endpoint": "/api01rv2/acceptlstv2",
+      "requestClasses": [
+        "01",
+        "02",
+        "03"
+      ],
+      "sanitizedFinding": "acceptlstv2 can provide server-derived acceptance, department, patient, and insurance-combination presence, but it is not documented as a source for medicalgetv2 Sequential_Number or order-send visit-history readiness."
+    }
+  ],
+  "misuseCasesChecked": [
+    {
+      "case": "Treating a target-ready acceptlstv2 row as medicalgetv2/order-send readiness.",
+      "control": "Rejected. Acceptlstv2 metadata is necessary for target identity but not sufficient because it cannot prove official visit-history Sequential_Number readiness."
+    },
+    {
+      "case": "Reusing duplicate-blocked 00001 or 00005 unchanged.",
+      "control": "Rejected. The continuity target remains non-duplicate patient 00002 and the duplicate-blocked candidates stay excluded."
+    },
+    {
+      "case": "Treating HTTP 200, read-only discovery, dry-run, or identifier-preflight metadata as Fullflow L4 success.",
+      "control": "Rejected. Api_Result 15 and missing identifier fields remain a blocker, and diagnostic Fullflow was not run."
+    },
+    {
+      "case": "Capturing or committing raw ORCA bodies, credentials, patient details, insurance details, HAR, trace, video, screenshot, or raw network dumps.",
+      "control": "No raw artifacts were captured, committed, or packaged. Evidence uses sanitized counts, hashes, endpoint identities, and classifications only."
+    }
+  ],
+  "selectedTargetContinuity": {
+    "patientId": "00002",
+    "acceptanceDate": "2026-04-29",
+    "acceptanceClassCode": "01",
+    "selectedAcceptanceRowHash": "b3b3d7c1416f047abb6450023e575fa39f53ed1d8f804aef8cf3551d945a5ddb",
+    "duplicateBlockedCandidateIdsExcluded": [
+      "00001",
+      "00005"
+    ],
+    "candidateDiscoveryRepeated": false,
+    "targetDriftSuspected": false
+  },
+  "sanitizedWrapperBehaviorReviewed": {
+    "route": "/api/orca/official/visits/identifier-preflight",
+    "acceptanceEndpoint": "/api01rv2/acceptlstv2",
+    "medicalGetEndpoint": "/api01rv2/medicalgetv2",
+    "clientProvidedIdentifiersTrusted": false,
+    "serverDerivedAuthorityRequired": true,
+    "artifactFree": true,
+    "rawSensitiveFieldsExcluded": true,
+    "failClosedRule": "identifierPreflightReady requires a selected server-derived acceptance row plus at least one sanitized medicalgetv2 row with Perform_Date, Department_Code, Sequential_Number, and Insurance_Combination_Number."
+  },
+  "readOnlyMedicalgetv2Evidence": {
+    "class01": {
+      "source": "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/summary.sanitized.json",
+      "transportStatusClass": "2xx",
+      "apiResult": "15",
+      "apiResultClass": "nonzero",
+      "medicalSourceRowCount": 1,
+      "medicalSanitizedRowCount": 1,
+      "medicalReadyRowCount": 0,
+      "identifierPreflightReady": false,
+      "sanitizedRows": [
+        {
+          "rowHash": "bfa02de3fc48b0106e52eaa643ff934305beb76027d310eec8336bc1b055ebd3",
+          "hasPerformDate": true,
+          "hasDepartmentCode": false,
+          "hasSequentialNumber": false,
+          "hasInsuranceCombinationNumber": false,
+          "hasInvoiceNumber": false,
+          "rawSensitiveFieldsExcluded": true
+        }
+      ]
+    },
+    "class03": {
+      "source": "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/class03-probe/summary.sanitized.json",
+      "transportStatusClass": "2xx",
+      "apiResult": "15",
+      "apiResultClass": "nonzero",
+      "medicalSourceRowCount": 0,
+      "medicalSanitizedRowCount": 0,
+      "medicalReadyRowCount": 0,
+      "identifierPreflightReady": false
+    }
+  },
+  "contractDecision": {
+    "acceptlstv2PlusApi15HistoryRowIsSufficient": false,
+    "anotherOfficialReadOnlyEndpointProvenToSupplyMissingIdentifiers": false,
+    "minimizedBlockerType": "trial_business_state_or_test_data_prerequisite",
+    "reason": "Official medicalgetv2 class 01 visit-history rows are the documented source for Department_Code, Sequential_Number, and Insurance_Combination_Number. The current Trial target returns Api_Result 15 / no target and no ready identifier row. Combining acceptlstv2 metadata with an Api_Result 15 medicalgetv2 result would overclaim readiness."
+  },
+  "minimizedOwnerOperatorQuestion": {
+    "question": "For Trial patient 00002 on 2026-04-29 class 01, should the operator create or select a target that has an actual medicalgetv2 class 01 visit-history row with Department_Code, Sequential_Number, and Insurance_Combination_Number before diagnostic Fullflow retry?",
+    "whyNeeded": "The accepted acceptance row alone is not official visit-history/order-send readiness evidence, and no official read-only alternative endpoint has been proven to supply the missing Sequential_Number safely.",
+    "automationCanProceedWithoutAnswer": true,
+    "recommendedNextIndependentTask": "Continue non-live/static roadmap work or prepare a fresh target-readiness packet only after changed Trial business state or fresh read-only candidate evidence exists."
+  },
+  "diagnosticFullflow": {
+    "executed": false,
+    "orderSendReached": false,
+    "businessSuccessClassification": "not_run_identifier_contract_not_ready"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessAccepted": false
+  },
+  "readOnlyTrialOrca": {
+    "executedInThisRun": false,
+    "mutation": false,
+    "businessSuccessClassification": "prior_readonly_evidence_reviewed_only"
+  },
+  "checks": {
+    "jsonValidation": "pass",
+    "gitDiffCheck": "pass"
+  },
+  "claimBoundary": "RWO-08B identifier-contract decision only. This resolves the current blocker by minimizing it to a Trial business-state/test-data prerequisite. It does not prove identifier-preflight target readiness, diagnostic Fullflow success, Trial order-send business acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness.",
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

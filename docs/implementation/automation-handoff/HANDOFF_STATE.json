@@ -1,5 +1,5 @@
 {
-  "status": "active",
+  "status": "completed",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B",
   "blockerId": "fullflow-l4-medicalgetv2-api15-history-row-identifier-contract-blocker",
@@ -30,7 +30,62 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T22:42:00Z",
+  "lastUpdated": "2026-04-28T22:46:46Z",
+  "latestRwo08bMedicalgetv2ContractDecision": {
+    "runId": "20260428T224646Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_MEDICALGETV2_API15_IDENTIFIER_CONTRACT_DECISION_NO_LIVE",
+    "result": "MINIMIZED_TRIAL_BUSINESS_STATE_BLOCKER_RECORDED",
+    "branch": "master",
+    "headAtSelection": "1d72d532a",
+    "activePrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAfterRun": "completed",
+      "blockerId": "fullflow-l4-medicalgetv2-api15-history-row-identifier-contract-blocker"
+    },
+    "evidence": "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-contract-20260428T224646Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-contract-20260428T224646Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-contract-20260428T224646Z/FINAL_REPORT.md",
+    "selectedTarget": {
+      "patientId": "00002",
+      "acceptanceDate": "2026-04-29",
+      "acceptanceClassCode": "01",
+      "selectedAcceptanceRowHash": "b3b3d7c1416f047abb6450023e575fa39f53ed1d8f804aef8cf3551d945a5ddb",
+      "duplicateBlockedCandidateIdsExcluded": [
+        "00001",
+        "00005"
+      ]
+    },
+    "officialSourcesChecked": [
+      "https://www.orca.med.or.jp/receipt/users/tec/api/medicalinfo.html",
+      "https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html"
+    ],
+    "contractDecision": {
+      "acceptlstv2PlusApi15HistoryRowIsSufficient": false,
+      "anotherOfficialReadOnlyEndpointProvenToSupplyMissingIdentifiers": false,
+      "minimizedBlockerType": "trial_business_state_or_test_data_prerequisite"
+    },
+    "minimizedOwnerOperatorQuestion": "For Trial patient 00002 on 2026-04-29 class 01, create or select a target with a medicalgetv2 class 01 visit-history row containing Department_Code, Sequential_Number, and Insurance_Combination_Number before diagnostic Fullflow retry.",
+    "diagnosticFullflow": {
+      "executed": false,
+      "businessSuccessClassification": "not_run_identifier_contract_not_ready"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executedInThisRun": false,
+      "mutation": false,
+      "businessSuccessClassification": "prior_readonly_evidence_reviewed_only"
+    },
+    "recommendedNextTask": "Continue independent non-live/static roadmap work or prepare fresh target-readiness only after changed Trial business state or fresh read-only candidate evidence exists.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
   "latestRwo08bMedicalgetv2IdentifierBlockerInvestigation": {
     "runId": "20260428T220414Z",
     "workOrder": "RWO-08B",
@@ -5435,7 +5490,9 @@
       "result": "MEDICALGETV2_REACHABLE_API15_IDENTIFIER_CONTRACT_BLOCKER_RECORDED",
       "completedRunId": "20260428T220414Z",
       "evidence": "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/summary.sanitized.json",
-      "correctedNextAction": "Do not run diagnostic Fullflow yet; decide/test the safe identifier-preflight contract for medicalgetv2 apiResult=15 history rows plus server-derived acceptlstv2 metadata, or identify another official read-only endpoint/test-data prerequisite.",
+      "contractDecisionRunId": "20260428T224646Z",
+      "contractDecisionEvidence": "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-contract-20260428T224646Z/summary.sanitized.json",
+      "correctedNextAction": "Do not run diagnostic Fullflow yet; current blocker is minimized to a Trial business-state/test-data prerequisite. Continue independent non-live/static work or prepare fresh target-readiness only after changed Trial business state or fresh read-only candidate evidence exists.",
       "nextOnSuccess": "RWO-08B_DIAGNOSTIC_FULLFLOW_AFTER_IDENTIFIER_PREFLIGHT_READY",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO08B_L4_PLAN",
       "credentialsCaptured": false,
