@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260428T220414Z",
+  "workOrder": "RWO-08B",
+  "taskId": "RWO-08B_COMBINED_TARGET_READINESS_WRAPPER",
+  "contract": "rwo08b-fullflow-target-readiness-artifact-free-readonly",
+  "endpoint": "/api/orca/official/visits/identifier-preflight",
+  "orcaEndpoints": [
+    "/api01rv2/acceptlstv2",
+    "/api01rv2/medicalgetv2"
+  ],
+  "commandGate": {
+    "ok": true,
+    "blockers": []
+  },
+  "duplicateBlockedCandidateIdsExcluded": [
+    "00001",
+    "00005"
+  ],
+  "candidateDiscovery": {
+    "present": true,
+    "source": "qa-weborca-candidate-discovery",
+    "flowMode": "candidate-discovery-proposal",
+    "selectedCandidatePatientId": "00002",
+    "acceptedCandidateCount": 3,
+    "aloneAuthorizesFullflow": false,
+    "mutation": false,
+    "targetMutationRequestCount": 0
+  },
+  "exactSelectedCandidatePreflight": {
+    "present": true,
+    "source": "qa-weborca-readonly-preflight",
+    "flowMode": "exact-readonly-preflight",
+    "accepted": true,
+    "patientId": "00002",
+    "localExactMatchAccepted": true,
+    "localExactMatchCount": 1,
+    "selectorAccepted": true,
+    "medicalInformationAccepted": true,
+    "targetMutationRequestCount": 0
+  },
+  "identifierPreflight": {
+    "endpoint": "/api/orca/official/visits/identifier-preflight",
+    "mutation": false,
+    "httpStatus": 200,
+    "transportStatusClass": "2xx",
+    "apiResult": "15",
+    "apiResultClass": "nonzero",
+    "requestClass": "medicalgetv2_class_03_identifier_snapshot_readonly",
+    "acceptanceEndpoint": "/api01rv2/acceptlstv2",
+    "medicalGetEndpoint": "/api01rv2/medicalgetv2",
+    "acceptanceClassCode": "01",
+    "medicalGetClassCode": "03",
+    "acceptanceDate": "2026-04-29",
+    "selectedAcceptanceRowHash": "b3b3d7c1416f047abb6450023e575fa39f53ed1d8f804aef8cf3551d945a5ddb",
+    "selectedAcceptanceTargetReady": true,
+    "acceptanceSourceRowCount": 1,
+    "acceptanceTargetReadyRowCount": 1,
+    "medicalSourceRowCount": 0,
+    "medicalSanitizedRowCount": 0,
+    "medicalReadyRowCount": 0,
+    "identifierPreflightReady": false,
+    "artifactFree": true,
+    "rawSensitiveFieldsExcluded": true,
+    "clientProvidedIdentifiersTrusted": false,
+    "serverDerivedAuthorityRequired": true,
+    "sanitizedErrorCode": "",
+    "sanitizedValidationError": "",
+    "medicalRows": []
+  },
+  "runtimeReadiness": {
+    "checked": true,
+    "statusOnly": "session_bootstrap_ok",
+    "blockers": []
+  },
+  "targetReadiness": {
+    "readyForDiagnosticFullflow": false,
+    "businessSuccessClassification": "identifier_preflight_target_blocked",
+    "nextConcreteSafeAction": "Investigate the sanitized identifier-preflight presence flags and target row hash before any diagnostic Fullflow retry."
+  },
+  "diagnosticFullflow": {
+    "executed": false,
+    "orderSendReached": false,
+    "businessSuccessClassification": "not_run_by_target_readiness_wrapper"
+  },
+  "liveTrialOrca": {
+    "executed": false,
+    "businessAccepted": false
+  },
+  "readOnlyTrialOrca": {
+    "executed": true,
+    "mutation": false,
+    "businessSuccessClassification": "readonly_identifier_preflight_target_blocked"
+  },
+  "checks": {
+    "http2xxAloneIsNotSuccess": true,
+    "readOnlyDiscoveryAloneIsNotSuccess": true,
+    "identifierPreflightAloneIsNotFullflowSuccess": true,
+    "diagnosticFullflowRequiresTargetReady": true
+  },
+  "evidenceHashes": {
+    "candidateDiscoverySummaryHash": "c8139a3ade59abab94c0c3131cacff88634fe5de2f6aff621355afc837d9e20b",
+    "exactPreflightSummaryHash": "965a584efd69a1bb4b93b8a2b5fddaca81c4178758278ecd2ce7be3cee2ad9c4",
+    "identifierPreflightSummaryHash": "9c70f28b4ebc548e1b67916abcd00ad54474c4878dee7a295a9c2c695f4b9d6e"
+  },
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false,
+  "claimBoundary": "Combined artifact-free read-only target-readiness wrapper only. This is not diagnostic Fullflow success, Trial order-send business acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness."
+}

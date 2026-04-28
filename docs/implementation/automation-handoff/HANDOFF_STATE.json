@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B",
-  "blockerId": "fullflow-l4-identifier-preflight-medicalgetv2-blocker",
+  "blockerId": "fullflow-l4-medicalgetv2-api15-history-row-identifier-contract-blocker",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,63 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T21:44:00Z",
+  "lastUpdated": "2026-04-28T22:42:00Z",
+  "latestRwo08bMedicalgetv2IdentifierBlockerInvestigation": {
+    "runId": "20260428T220414Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_IDENTIFIER_PREFLIGHT_MEDICALGETV2_BLOCKER_INVESTIGATION",
+    "result": "MEDICALGETV2_REACHABLE_API15_IDENTIFIER_CONTRACT_BLOCKER_RECORDED",
+    "branch": "master",
+    "headAtSelection": "6a8a80adc",
+    "evidence": "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/FINAL_REPORT.md",
+    "selectedTarget": {
+      "patientId": "00002",
+      "acceptanceDate": "2026-04-29",
+      "acceptanceClassCode": "01",
+      "selectedAcceptanceRowHash": "b3b3d7c1416f047abb6450023e575fa39f53ed1d8f804aef8cf3551d945a5ddb",
+      "duplicateBlockedCandidateIdsExcluded": [
+        "00001",
+        "00005"
+      ]
+    },
+    "repoLocalFix": "medicalgetv2 identifier payload now sends body Request_Number, outpatient InOut=O, For_Months=1, and omits detail filters for class 01 history lookup.",
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "mutation": false,
+      "endpoint": "/api/orca/official/visits/identifier-preflight",
+      "orcaEndpoint": "/api01rv2/medicalgetv2",
+      "requestClass": "medicalgetv2_class_01_identifier_snapshot_readonly",
+      "transportStatusClass": "2xx",
+      "apiResult": "15",
+      "apiResultClass": "nonzero",
+      "medicalSourceRowCount": 1,
+      "medicalReadyRowCount": 0,
+      "identifierPreflightReady": false,
+      "businessSuccessClassification": "readonly_identifier_preflight_target_blocked"
+    },
+    "class03Probe": {
+      "evidence": "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/class03-probe/summary.sanitized.json",
+      "transportStatusClass": "2xx",
+      "apiResult": "15",
+      "apiResultClass": "nonzero",
+      "medicalReadyRowCount": 0
+    },
+    "checks": {
+      "focusedServerTests": "pass_28_tests",
+      "webRwo08bTargetReadinessEvidenceTest": "pass_9_tests_with_web_guard_pretest",
+      "serverImageBuild": "pass",
+      "serverRuntimeRecreateHealth": "healthy",
+      "readonlyIdentifierPreflight": "target_blocked_api15_nonzero_no_ready_identifier_rows"
+    },
+    "recommendedNextTask": "Decide and test whether server-derived acceptlstv2 metadata plus class 01 medicalgetv2 history row is a safe identifier-preflight contract, or identify another official read-only endpoint/test-data prerequisite before diagnostic Fullflow.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
   "latestContinuingResearchPlan": {
     "runId": "20260428T123347Z",
     "workOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B",
@@ -5362,7 +5418,7 @@
     {
       "taskId": "RWO-08B_IDENTIFIER_PREFLIGHT_MEDICALGETV2_BLOCKER_INVESTIGATION",
       "lane": "critical_path",
-      "status": "queued",
+      "status": "completed",
       "workOrder": "RWO-08B",
       "summary": "Investigate the remaining RWO-08B identifier-preflight medicalgetv2 blocker for accepted non-duplicate target 00002 before any diagnostic Fullflow retry.",
       "requiresRuntime": false,
@@ -5376,6 +5432,10 @@
       ],
       "skipCondition": "Only skip runtime/read-only/diagnostic portions when approved non-S3 runtime/config or safe artifact containment is unavailable; still perform repo-local no-live investigation and write sanitized blocker evidence.",
       "successCriteria": "Sanitized evidence proves identifier-preflight target-ready for 00002 or records a precise medicalgetv2/test-data/business-state blocker without raw artifacts.",
+      "result": "MEDICALGETV2_REACHABLE_API15_IDENTIFIER_CONTRACT_BLOCKER_RECORDED",
+      "completedRunId": "20260428T220414Z",
+      "evidence": "docs/implementation/rwo08b-fullflow-l4-medicalgetv2-20260428T220414Z/summary.sanitized.json",
+      "correctedNextAction": "Do not run diagnostic Fullflow yet; decide/test the safe identifier-preflight contract for medicalgetv2 apiResult=15 history rows plus server-derived acceptlstv2 metadata, or identify another official read-only endpoint/test-data prerequisite.",
       "nextOnSuccess": "RWO-08B_DIAGNOSTIC_FULLFLOW_AFTER_IDENTIFIER_PREFLIGHT_READY",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO08B_L4_PLAN",
       "credentialsCaptured": false,
@@ -5386,8 +5446,9 @@
         "businessAccepted": false
       },
       "readOnlyTrialOrca": {
-        "executed": false,
-        "mutation": false
+        "executed": true,
+        "mutation": false,
+        "businessSuccessClassification": "readonly_identifier_preflight_target_blocked"
       }
     },
     {

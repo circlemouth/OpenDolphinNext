@@ -270,18 +270,23 @@ final class OrcaLiveGatewaySupport {
         builder.append(buildOrcaMeta(OrcaEndpoint.MEDICAL_GET, classCode));
         builder.append("<data>");
         builder.append("<medicalgetreq type=\"record\">");
+        builder.append("<Request_Number type=\"string\">").append(classCode).append("</Request_Number>");
+        builder.append("<InOut type=\"string\">O</InOut>");
         builder.append("<Patient_ID type=\"string\">").append(requireIdentifierToken(row.getServerPatientId(), "patientId"))
                 .append("</Patient_ID>");
         builder.append("<Perform_Date type=\"string\">").append(requireDateToken(row.getServerAcceptanceDate(), "performDate"))
                 .append("</Perform_Date>");
-        builder.append("<Medical_Information type=\"record\">");
-        builder.append("<Department_Code type=\"string\">")
-                .append(requireIdentifierToken(row.getServerDepartmentCode(), "departmentCode"))
-                .append("</Department_Code>");
-        builder.append("<Insurance_Combination_Number type=\"string\">")
-                .append(requireIdentifierToken(row.getServerInsuranceCombinationNumber(), "insuranceCombinationNumber"))
-                .append("</Insurance_Combination_Number>");
-        builder.append("</Medical_Information>");
+        builder.append("<For_Months type=\"string\">1</For_Months>");
+        if (!"01".equals(classCode)) {
+            builder.append("<Medical_Information type=\"record\">");
+            builder.append("<Department_Code type=\"string\">")
+                    .append(requireIdentifierToken(row.getServerDepartmentCode(), "departmentCode"))
+                    .append("</Department_Code>");
+            builder.append("<Insurance_Combination_Number type=\"string\">")
+                    .append(requireIdentifierToken(row.getServerInsuranceCombinationNumber(), "insuranceCombinationNumber"))
+                    .append("</Insurance_Combination_Number>");
+            builder.append("</Medical_Information>");
+        }
         builder.append("</medicalgetreq>");
         builder.append("</data>");
         return builder.toString();

@@ -56,6 +56,11 @@ const statusClass = (status) => {
   const code = Number(status || 0) || 0;
   return code ? `${Math.floor(code / 100)}xx` : 'not_observed';
 };
+const apiResultClass = (value) => {
+  const normalized = normalize(value);
+  if (!normalized) return 'blank';
+  return /^0+$/.test(normalized) ? 'zero' : 'nonzero';
+};
 const sha256 = (value) => crypto.createHash('sha256').update(String(value ?? ''), 'utf8').digest('hex');
 
 export const parseRwo08bTargetReadinessArgs = (argv = []) => {
@@ -189,6 +194,8 @@ export const sanitizeIdentifierPreflightRouteResponse = ({ httpStatus = 0, respo
     mutation: false,
     httpStatus: Number(httpStatus || responseJson?.httpStatus || responseJson?.status || 0) || 0,
     transportStatusClass: statusClass(httpStatus || responseJson?.httpStatus || responseJson?.status),
+    apiResult: normalize(responseJson?.apiResult),
+    apiResultClass: apiResultClass(responseJson?.apiResult),
     requestClass: normalize(responseJson?.requestClass) || `identifier_preflight_readonly`,
     acceptanceEndpoint: normalize(responseJson?.acceptanceEndpoint) || '/api01rv2/acceptlstv2',
     medicalGetEndpoint: normalize(responseJson?.medicalGetEndpoint) || '/api01rv2/medicalgetv2',

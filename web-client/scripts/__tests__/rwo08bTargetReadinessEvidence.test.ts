@@ -154,9 +154,9 @@ describe('RWO-08B target-readiness evidence wrapper', () => {
     const sanitized = sanitizeIdentifierPreflightRouteResponse({
       httpStatus: 200,
       responseJson: identifierPreflight({
-        medicalRows: [
-          {
-            rowHash: 'c'.repeat(64),
+      medicalRows: [
+        {
+          rowHash: 'c'.repeat(64),
             hasPerformDate: true,
             hasDepartmentCode: true,
             hasSequentialNumber: true,
@@ -169,6 +169,7 @@ describe('RWO-08B target-readiness evidence wrapper', () => {
     });
 
     expect(sanitized.identifierPreflightReady).toBe(true);
+    expect(sanitized.apiResultClass).toBe('blank');
     expect(sanitized.medicalRows[0]).toEqual({
       rowHash: 'c'.repeat(64),
       hasPerformDate: true,
@@ -178,6 +179,33 @@ describe('RWO-08B target-readiness evidence wrapper', () => {
       hasInvoiceNumber: false,
       rawSensitiveFieldsExcluded: true,
     });
+  });
+
+  it('keeps allowlisted medicalgetv2 apiResult classification without raw messages', () => {
+    const sanitized = sanitizeIdentifierPreflightRouteResponse({
+      httpStatus: 200,
+      responseJson: identifierPreflight({
+        apiResult: '15',
+        apiResultMessage: 'must-not-leak message',
+        identifierPreflightReady: false,
+        medicalRows: [
+          {
+            rowHash: 'd'.repeat(64),
+            hasPerformDate: true,
+            hasDepartmentCode: false,
+            hasSequentialNumber: false,
+            hasInsuranceCombinationNumber: false,
+            rawSensitiveFieldsExcluded: true,
+          },
+        ],
+      }),
+    });
+
+    expect(sanitized.httpStatus).toBe(200);
+    expect(sanitized.apiResult).toBe('15');
+    expect(sanitized.apiResultClass).toBe('nonzero');
+    expect(sanitized.identifierPreflightReady).toBe(false);
+    expect(JSON.stringify(sanitized)).not.toContain('must-not-leak');
   });
 
   it('keeps sanitized error classifications from identifier-preflight 4xx responses', () => {

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.time.LocalDate;
 import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
 import open.dolphin.rest.dto.orca.InsuranceCombinationRequest;
 import open.dolphin.rest.dto.orca.PatientAppointmentListRequest;
 import open.dolphin.rest.dto.orca.PatientNameSearchRequest;
@@ -101,6 +102,46 @@ class OrcaLiveGatewaySupportTest {
         request.setClassCode("04");
 
         assertThrows(RuntimeException.class, () -> support.buildAcceptanceInventoryPayload(request));
+    }
+
+    @Test
+    void buildMedicalIdentifierPayloadUsesOutpatientMonthlyMedicalGetClass01Shape() {
+        AcceptanceInventoryResponse.AcceptanceInventoryRow row = new AcceptanceInventoryResponse.AcceptanceInventoryRow();
+        row.setServerPatientId("00002");
+        row.setServerAcceptanceDate("2026-04-29");
+        row.setServerDepartmentCode("01");
+        row.setServerInsuranceCombinationNumber("0001");
+
+        String xml = support.buildMedicalIdentifierPayload(row, "1");
+
+        assertTrue(xml.contains("path=/api01rv2/medicalgetv2"));
+        assertTrue(xml.contains("query=class=01"));
+        assertTrue(xml.contains("<medicalgetreq type=\"record\">"));
+        assertTrue(xml.contains("<Request_Number type=\"string\">01</Request_Number>"));
+        assertTrue(xml.contains("<InOut type=\"string\">O</InOut>"));
+        assertTrue(xml.contains("<Patient_ID type=\"string\">00002</Patient_ID>"));
+        assertTrue(xml.contains("<Perform_Date type=\"string\">2026-04-29</Perform_Date>"));
+        assertTrue(xml.contains("<For_Months type=\"string\">1</For_Months>"));
+        assertFalse(xml.contains("<Medical_Information"));
+        assertFalse(xml.contains("<Department_Code"));
+        assertFalse(xml.contains("<Insurance_Combination_Number"));
+    }
+
+    @Test
+    void buildMedicalIdentifierPayloadKeepsDetailFiltersForNonHistoryClasses() {
+        AcceptanceInventoryResponse.AcceptanceInventoryRow row = new AcceptanceInventoryResponse.AcceptanceInventoryRow();
+        row.setServerPatientId("00002");
+        row.setServerAcceptanceDate("2026-04-29");
+        row.setServerDepartmentCode("01");
+        row.setServerInsuranceCombinationNumber("0001");
+
+        String xml = support.buildMedicalIdentifierPayload(row, "2");
+
+        assertTrue(xml.contains("query=class=02"));
+        assertTrue(xml.contains("<Request_Number type=\"string\">02</Request_Number>"));
+        assertTrue(xml.contains("<Medical_Information type=\"record\">"));
+        assertTrue(xml.contains("<Department_Code type=\"string\">01</Department_Code>"));
+        assertTrue(xml.contains("<Insurance_Combination_Number type=\"string\">0001</Insurance_Combination_Number>"));
     }
 
     @Test
