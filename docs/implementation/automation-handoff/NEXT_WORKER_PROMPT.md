@@ -1,8 +1,8 @@
 # NEXT_WORKER_PROMPT
 
-status: active
+status: completed
 created_at: 2026-04-28T11:12:00Z
-updated_at: 2026-04-28T11:12:00Z
+updated_at: 2026-04-28T11:50:55Z
 source_work_order: RWO-06I/RWO-06H/RWO-06F/RWO-08B/RWO-11
 blocker_id: remaining-automation-tasks-web-research-required
 priority: high
@@ -131,6 +131,8 @@ This prompt is complete when sanitized evidence exists showing, for every queued
 - focused repo-local no-live wrapper/test work completed;
 - a narrower sanitized blocker explains why the task still cannot proceed;
 - `RWO-11/RWO-09` is confirmed as external release-management work with no remaining repo-local non-live automation task.
+
+Completion evidence: `docs/implementation/remaining-task-web-research-20260428T115055Z/summary.sanitized.json`.
 
 ## Same-Run Continuation Requirement
 

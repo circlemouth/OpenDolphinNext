@@ -1,0 +1,163 @@
+{
+  "runId": "20260428T115055Z",
+  "workOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B/RWO-11",
+  "taskId": "REMAINING_TASKS_OFFICIAL_WEB_RESEARCH_NO_LIVE",
+  "result": "REMAINING_TASKS_OFFICIAL_WEB_RESEARCH_COMPLETED_NO_LIVE",
+  "branch": "master",
+  "headAtStart": "0345aca605cb3a8117d116d66a4566e3f3e96c64",
+  "activeHandoffPrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtStart": "active",
+    "statusAfterRun": "completed",
+    "blockerId": "remaining-automation-tasks-web-research-required"
+  },
+  "officialSourcesChecked": [
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/overview.html",
+      "checkedDate": "2026-04-28",
+      "use": "endpoint/class inventory for system01lstv2, medicalgetv2, diseasegetv2, acceptlstv2, and related APIs"
+    },
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+      "checkedDate": "2026-04-28",
+      "use": "medicalmodv2 class mapping, surgery class 500 sample rows, request validation, lock/check semantics, and update/delete constraints"
+    },
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/medicationgetv2.html",
+      "checkedDate": "2026-04-28",
+      "use": "Request_Number 01 and 02 semantics, 9-digit medical-code lookup, selectable-comment lookup, and base-date validity"
+    },
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/master_last_update.html",
+      "checkedDate": "2026-04-28",
+      "use": "masterlastupdatev3 freshness/update-date scope"
+    },
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/disease.html",
+      "checkedDate": "2026-04-28",
+      "use": "diseasegetv2 class 01 read-only patient disease context"
+    },
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/medicalinfo.html",
+      "checkedDate": "2026-04-28",
+      "use": "medicalgetv2 class 01/02/03/04 read-only visit/monthly medical information and identifier fields"
+    },
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html",
+      "checkedDate": "2026-04-28",
+      "use": "acceptlstv2 class 01/02/03 target inventory and acceptance identifiers"
+    },
+    {
+      "url": "https://www.orca.med.or.jp/receipt/users/tec/api/systemkanri.html",
+      "checkedDate": "2026-04-28",
+      "use": "system01lstv2 Request_Number/class 01-07 department, physician, facility, and medical-information master context"
+    }
+  ],
+  "taskResults": [
+    {
+      "taskId": "RWO-06I_SURGERY_V3_ADJUNCT_MASTER_PROOF_PREFLIGHT",
+      "workOrder": "RWO-06I",
+      "officialEndpointIdentity": "medicalmodv2 class=01, Medical_Class=500, medicationgetv2 Request_Number=02, masterlastupdatev3",
+      "researchFinding": "Official medicalmodv2 sample includes class 500 rows for procedure/material/comment in the same Medication_info sequence. Official medicationgetv2 Request_Number=02 can prove a 9-digit medical code is valid for the base date and can return selectable-comment candidates, but it does not by itself prove every surgery adjunct row role. masterlastupdatev3 proves only master freshness/update-date classes, not row-level validity.",
+      "repoFinding": "Existing sanitized surgery proof wrapper already checks 150003110, 641210099, and 840000042 with medicationgetv2 Request_Number=02 and recorded masterFound=false for all rows under prior Trial dates.",
+      "derivedNextAction": "Keep live surgery retry stopped. Narrow next safe task to a no-live/read-only row-proof refinement that separates procedure row, medication/material row, and comment row proof sources; do not use masterlastupdatev3 as row proof.",
+      "statusAfterResearch": "completed_narrowed_blocker",
+      "blocker": "surgery_v3_adjunct_rows_not_proven_by_official_readonly_row_level_evidence",
+      "liveTrialOrca": { "executed": false, "businessAccepted": false }
+    },
+    {
+      "taskId": "RWO-06H_FRESH_LOCK_FREE_TARGET_PREFLIGHT",
+      "workOrder": "RWO-06H",
+      "officialEndpointIdentity": "medicalmodv2 class=01, acceptlstv2 class=01/02/03, medicalgetv2 class=01/02/03",
+      "researchFinding": "Official medicalmodv2 documents patient existence, patient lock/exclusive check, department/physician, comment, and insurance validation, but the page does not expose a read-only lock-free assertion endpoint or an Api_Result=90 diagnostic mapping that is precise enough to distinguish lock, stale target, or other retry state. acceptlstv2 and medicalgetv2 can prove target presence, date, department, physician, insurance combination, and existing medical rows as sanitized presence/hash evidence.",
+      "repoFinding": "Existing evidence blocks unchanged injection retry after prior live rejection and lacks a current safe read-only lock/fresh target proof.",
+      "derivedNextAction": "Keep injection live retry stopped unless a future read-only preflight proves current target presence and absence of conflicting existing class 310 rows through sanitized acceptlstv2/medicalgetv2 evidence; lock-free itself remains unprovable from official read-only specs.",
+      "statusAfterResearch": "completed_narrowed_blocker",
+      "blocker": "lock_free_state_not_officially_readable; fresh_target_can_only_be_partially_proven_by_acceptlstv2_medicalgetv2_presence_hashes",
+      "liveTrialOrca": { "executed": false, "businessAccepted": false }
+    },
+    {
+      "taskId": "RWO-06F_OWNER_BUSINESS_CONTEXT",
+      "workOrder": "RWO-06F",
+      "officialEndpointIdentity": "medicalmodv2 class=01, medicationgetv2 Request_Number=02, diseasegetv2 class=01, medicalgetv2 class=03, system01lstv2 Request_Number 01/02/04/06, patientlst6v2",
+      "researchFinding": "Official read-only APIs can prove code/base-date validity, selectable-comment candidates, disease-row presence classes, monthly medical-code presence, department/physician/facility master presence, and insurance-combination presence as sanitized status flags or hashes. They cannot decide whether the chosen class 130 guidance fee is clinically/billing appropriate for the target patient, whether disease context is sufficient, or whether a monthly duplicate is acceptable as a business decision.",
+      "repoFinding": "Existing read-only wrapper already observed facility and physician context, master freshness, and a selectable-comment invalid stop, while disease, monthly duplicate, department, and insurance-combination context remain not proven.",
+      "classification": {
+        "candidateCodeValidity": "repo_local_no_live_plus_readonly_trial_probe",
+        "selectableCommentApplicability": "read_only_trial_probe_currently_invalid_stop_before_live",
+        "diseaseContext": "read_only_trial_probe_can_count_or_hash; owner_operator_decision_for_clinical_sufficiency",
+        "monthlyDuplicateContext": "read_only_trial_probe_can_detect; owner_operator_decision_for_acceptability",
+        "departmentPhysicianInsuranceReadiness": "read_only_trial_probe",
+        "facilityContext": "read_only_trial_probe_for_presence; owner_operator_decision_for billing eligibility when facility attributes matter",
+        "masterFreshness": "read_only_trial_probe_freshness_only_not_business_success"
+      },
+      "shortestOwnerQuestion": "For RWO-06F class 130, which exact Trial patient/context should be used, and should the worker require no existing monthly class 130 row plus a disease/facility context matching the selected guidance-fee code before any live attempt?",
+      "derivedNextAction": "Do not run live class 130. Carry the owner/business-context question in narrowed form; independent no-live work may continue.",
+      "statusAfterResearch": "completed_narrowed_owner_question",
+      "liveTrialOrca": { "executed": false, "businessAccepted": false }
+    },
+    {
+      "taskId": "RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT",
+      "workOrder": "RWO-08B",
+      "officialEndpointIdentity": "acceptlstv2 class=01/02/03, medicalgetv2 class=01/02, medicalmodv2 class=01",
+      "researchFinding": "acceptlstv2 can inventory acceptance rows including acceptance date/time/id, department, physician, medical information, patient, and insurance data. medicalgetv2 can return visit/monthly medical information and fields such as insurance combination and invoice/sequential-like identifiers when the correct class and target are supplied. Official docs support using these as server-derived identifiers, but raw identifiers and patient/insurance details must not be serialized publicly.",
+      "repoFinding": "Existing fullflow diagnostic evidence is blocked before Charts handoff or by duplicate acceptance. The current harness can generate raw diagnostic artifacts, so release evidence must remain sanitized extracted summaries only.",
+      "identifierPolicy": {
+        "publicSanitizedAllowed": [
+          "target-ready presence flags",
+          "row hashes",
+          "HTTP/status classes",
+          "apiResult class",
+          "route coverage",
+          "identifier presence booleans"
+        ],
+        "mustNotSerializePublicly": [
+          "raw patient identifiers",
+          "raw insurance numbers/details",
+          "raw acceptance id/date/time tuple when linkable to patient",
+          "raw voucher/sequential numbers",
+          "raw ORCA request/response bodies",
+          "credential-bearing URLs"
+        ]
+      },
+      "derivedNextAction": "Define the smallest artifact-free no-live preflight as acceptlstv2 target inventory plus medicalgetv2 detail presence/hash check, producing only row hashes and required identifier presence booleans before Charts handoff/order send. Keep diagnostic fullflow blocked until fresh unique target and server-derived identifiers are proven.",
+      "statusAfterResearch": "completed_no_live_preflight_design_ready",
+      "liveTrialOrca": { "executed": false, "businessAccepted": false }
+    },
+    {
+      "taskId": "RWO-11_ROLLBACK_OWNER_DECISION",
+      "workOrder": "RWO-11/RWO-09",
+      "officialEndpointIdentity": "not_applicable_release_management_gate",
+      "researchFinding": "Repository runbooks already define sanitized release-validation, reviewer-packet, fullflow, rollback, and evidence boundaries. No remaining automation-owned repo-local non-live check was identified that would replace release-candidate stop, paired restore, restored-target smoke, operator acceptance, or final owner GO/NO-GO/PENDING.",
+      "minimumFutureReassignmentInputs": [
+        "explicit non-production target identity",
+        "paired restore artifact or commit identity",
+        "target-specific stop/restore/smoke commands",
+        "sanitized evidence destination and allowlist",
+        "operator/owner acceptance text or decision source",
+        "explicit confirmation that production ORCA and S3/object-storage remain out of scope"
+      ],
+      "derivedNextAction": "Preserve RWO-11/RWO-09 as external owner/operator release-management work. Do not select it as hourly automation work unless later explicitly reassigned.",
+      "statusAfterResearch": "completed_external_gate_confirmed",
+      "liveTrialOrca": { "executed": false, "businessAccepted": false }
+    }
+  ],
+  "sameRunContinuation": {
+    "processedAllQueuedRemainingTasks": true,
+    "nextSafeAutomationTask": "RWO-08B artifact-free acceptlstv2/medicalgetv2 official-identifier no-live preflight design or implementation when selected by queue; keep RWO-06F live and RWO-11/RWO-09 external gates stopped."
+  },
+  "claimBoundary": "Official web research and repo-local inspection only. No Trial live mutation, no production ORCA execution/readiness, no S3/object-storage setup/readiness, no raw ORCA body, no patient/insurance detail, no credential capture, no diagnostic artifact capture, no rollback rehearsal, no operator acceptance, no final owner GO/NO-GO/PENDING, and no final release readiness are claimed.",
+  "liveTrialOrca": {
+    "executed": false,
+    "businessAccepted": false,
+    "businessSuccessClassification": "not_applicable_official_web_research_no_live"
+  },
+  "readOnlyTrialOrca": {
+    "executed": false,
+    "mutation": false
+  },
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "subagentsUsed": false
+}
