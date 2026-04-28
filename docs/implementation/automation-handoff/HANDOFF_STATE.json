@@ -5131,32 +5131,27 @@
     "credentialsCaptureAllowed": false
   },
   "latestRwo09CurrentHeadStaticRefresh": {
-    "runId": "20260427T111613Z",
+    "runId": "20260428T122109Z",
     "workOrder": "RWO-09",
     "taskId": "RWO-09_CURRENT_HEAD_STATIC_PACKAGE_SECURITY_REFRESH",
     "result": "RWO09_CURRENT_HEAD_STATIC_REFRESH_PASS",
     "branch": "master",
-    "headAtSelection": "74cde973ab80c8dc6176b182676fbe533162a4af",
+    "headAtSelection": "dc98b86777872da0d50e65fc97d99b087237db3f",
     "activeHandoffPrompt": {
       "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
       "statusAtStart": "completed",
-      "sourceWorkOrder": "RWO-06I"
+      "sourceWorkOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B/RWO-11"
     },
-    "evidence": "docs/implementation/rwo09-current-head-static-refresh-20260427T111613Z/FINAL_REPORT.md",
-    "summary": "docs/implementation/rwo09-current-head-static-refresh-20260427T111613Z/summary.sanitized.json",
+    "evidence": "docs/implementation/rwo09-current-head-static-refresh-20260428T122109Z/FINAL_REPORT.md",
+    "summary": "docs/implementation/rwo09-current-head-static-refresh-20260428T122109Z/summary.sanitized.json",
     "checks": {
-      "handoffStateJsonValidity": "pass",
+      "implementationJsonValidity": "pass",
       "webGuard": "pass",
-      "focusedMasterValidityTests": "pass_12_tests_with_web_guard_pretest",
-      "focusedPhase4EvidenceTests": "pass_38_tests_with_web_guard_pretest",
+      "serverDocLinks": "pass",
+      "focusedEslint": "pass_after_corrected_workdir",
+      "focusedPhase4EvidenceTests": "pass_51_tests_with_web_guard_pretest",
       "reviewerSubmissionPacketContractTests": "pass_7_tests",
       "reviewPackageContractTests": "pass_27_tests",
-      "serverDocLinks": "pass",
-      "serverConfigContract": "pass",
-      "serverNoDirectRuntimeLookup": "pass",
-      "serverNoRuntimeDdl": "pass",
-      "serverPersistenceEntities": "pass",
-      "serverNoGeneratedArtifacts": "pass",
       "gitDiffCheck": "pass"
     },
     "liveTrialOrca": {
@@ -5164,8 +5159,8 @@
       "businessSuccessClassification": "not_applicable_static_refresh",
       "businessAccepted": false
     },
-    "claimBoundary": "Current-head non-S3 static/package/security refresh only. No Trial business acceptance, RWO-08B fullflow success, production ORCA, S3/object-storage, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness is claimed.",
-    "recommendedNextTask": "Continue the next independent no-live/static roadmap item; keep RWO-11/RWO-09 rollback and owner-decision gates external unless later explicitly reassigned.",
+    "claimBoundary": "Current-head non-S3 static/package/security refresh only. No Trial business acceptance, fullflow success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, operator acceptance, final owner GO/NO-GO/PENDING, or final release readiness is claimed.",
+    "recommendedNextTask": "Continue the next independent no-live/static roadmap item or wait for owner/operator input for the narrowed RWO-06F class 130 context and the external RWO-11/RWO-09 release-management gates.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
