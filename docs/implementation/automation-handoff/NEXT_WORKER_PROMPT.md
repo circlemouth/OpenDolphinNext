@@ -2,12 +2,13 @@
 
 status: active
 created_at: 2026-04-28T20:16:56Z
-updated_at: 2026-04-28T20:16:56Z
+updated_at: 2026-04-28T21:05:00Z
 source_work_order: RWO-08B
-blocker_id: fullflow-l4-target-readiness-investigation
+blocker_id: fullflow-l4-combined-target-readiness-refresh
 priority: high
 supersedes:
 - continuing-official-and-public-research-until-actionable-info-found
+- fullflow-l4-target-readiness-investigation
 
 ## Context
 
@@ -21,15 +22,16 @@ Important prior evidence:
 - `docs/implementation/rwo08b-readonly-candidate-refresh-20260427T121615Z/summary.sanitized.json`: read-only discovery excluding duplicate-blocked `00001` and `00005` found no fresh selected candidate; remaining candidates failed local exact-match/selectability.
 - `docs/implementation/rwo08b-local-exact-match-diagnostic-20260427T135043Z/summary.sanitized.json`: candidates `00002` through `00011` were categorized as `local_absent` / `local_exact_match_missing` despite official ORCA patient/insurance evidence; repo/local sync, facility scope, ID format, or UI selectability remain unproven.
 - `docs/implementation/rwo08b-artifact-free-identifier-preflight-20260428T140210Z/summary.sanitized.json`: `/api/orca/official/visits/identifier-preflight` was implemented as an artifact-free, server-derived read-only preflight route, but it was not yet executed against Trial runtime and is not Fullflow success.
+- `docs/implementation/rwo08b-combined-target-readiness-20260428T204909Z/summary.sanitized.json`: `qa-rwo08b-target-readiness.mjs` now joins candidate discovery, exact selected-candidate preflight, and server-derived identifier-preflight into one artifact-free sanitized target-readiness summary. Dry-run against current prior evidence classified `candidate_discovery_no_selected_candidate`.
 
 ## Goal
 
-Execute `RWO-08B_FULLFLOW_L4_TARGET_READINESS_INVESTIGATION`.
+Execute `RWO-08B_COMBINED_TARGET_READINESS_REFRESH`.
 
 The goal is to make Fullflow L4 actionable again by producing sanitized evidence that either:
 
-1. identifies and fixes a repo-local blocker needed for a fresh exact selected candidate and Charts/official identifier handoff;
-2. proves a fresh target/read-only identifier preflight is available and queues the next safe diagnostic fullflow step; or
+1. refreshes read-only candidate discovery and exact selected-candidate preflight until a non-duplicate local-exact target is proven;
+2. runs `qa-rwo08b-target-readiness.mjs` to prove a fresh target/read-only identifier preflight is available and queues the next safe diagnostic fullflow step; or
 3. records a precise blocker with the next concrete safe action, without overclaiming ORCA fault or L4 success.
 
 ## Required Task Order
@@ -41,9 +43,11 @@ The goal is to make Fullflow L4 actionable again by producing sanitized evidence
    - Reusing duplicate-blocked `00001` or `00005` unchanged.
    - Treating read-only discovery, HTTP 200, dry-run, or wrapper exit as L4 business success.
    - Capturing or committing raw diagnostic artifacts, credentials, raw ORCA bodies, patient details, or insurance details.
-4. First perform repo-local/no-live analysis and focused tests for local exact-match/sync and Charts official identifier hydration.
-5. If runtime is available and approved non-S3 Trial config is already available through the documented local path, run the artifact-free read-only identifier preflight before any diagnostic fullflow retry.
-6. Only consider a diagnostic fullflow retry if the same-run evidence proves:
+4. First run or refresh artifact-free/read-only candidate discovery excluding duplicate-blocked `00001` and `00005`.
+5. If discovery finds a non-duplicate proposal, run exact selected-candidate preflight for the same RUN_ID and candidate.
+6. Run `node scripts/qa-rwo08b-target-readiness.mjs --dry-run --sanitized-evidence-only --disable-browser-artifacts --candidate-discovery-summary <path> --exact-preflight-summary <path>` to join the gates.
+7. If the combined wrapper reports `identifier_preflight_not_run` and runtime is available with approved non-S3 Trial config, rerun with `--execute-readonly --acceptance-date <YYYY-MM-DD> --target-row-hash <server-derived-row-hash>` before any diagnostic fullflow retry.
+8. Only consider a diagnostic fullflow retry if the same-run evidence proves:
    - exact selected-candidate preflight accepted for a fresh target;
    - local exact match/selectability is present;
    - duplicate-blocked `00001`/`00005` are not reused unchanged;
@@ -57,6 +61,7 @@ The goal is to make Fullflow L4 actionable again by producing sanitized evidence
 - Add sanitized evidence under `docs/implementation/rwo08b-fullflow-l4-target-readiness-<RUN_ID>/`.
 - Add or edit narrow no-live tests/wrappers for local exact-match, local sync classification, selector readiness, Charts handoff, and official identifier hydration.
 - Run focused no-live tests, JSON validation, web guard, doc links, and `git diff --check`.
+- Run `web-client/scripts/qa-rwo08b-target-readiness.mjs` in dry-run mode and, only when same-run exact target proof exists, read-only identifier-preflight mode.
 - Run artifact-free read-only Trial identifier preflight only if existing approved local Trial runtime/config is available without printing secrets.
 - Run one diagnostic fullflow only after all same-run preconditions above pass and diagnostic artifacts can be contained local-only/untracked.
 - Commit roadmap/handoff-scoped source/doc/evidence changes before reporting.
@@ -81,6 +86,7 @@ Record sanitized Markdown/JSON only:
 - prior evidence files read;
 - candidate set and excluded duplicate-blocked identities using only sanitized IDs/classes already present in prior evidence;
 - local exact-match/sync classification and whether repo-local fix was applied;
+- combined target-readiness wrapper status and classification;
 - identifier-preflight status if run: endpoint, mutation=false, request class, row-hash/presence flags only, no raw bodies;
 - diagnostic fullflow status if run: local-only artifact root, artifact containment proof, route coverage/status classes, order-send reached/not reached, targetMutationRequestCount, business-success classification;
 - explicit non-claims;
@@ -93,8 +99,8 @@ Record sanitized Markdown/JSON only:
 
 This prompt may be marked `completed` only when one of these is true:
 
-- a repo-local blocker is fixed and focused tests plus sanitized evidence show the next exact selected-candidate/identifier preflight step is ready;
-- read-only Trial identifier preflight produces a fresh target-ready or precise target-blocked classification and queues the next safe action;
+- a fresh non-duplicate target is proven by candidate discovery, exact selected-candidate preflight, and combined target-readiness wrapper evidence;
+- read-only Trial identifier preflight produces a fresh target-ready or precise target-blocked classification through the combined wrapper and queues the next safe action;
 - diagnostic fullflow reaches endpoint-specific L4 order-send business success with sanitized evidence; or
 - a precise safety/environment/test-data blocker is recorded with the next concrete safe action.
 
@@ -102,4 +108,4 @@ If the worker cannot safely run runtime/read-only/diagnostic steps, it must stil
 
 ## Next Recommended First Action
 
-Start with repo-local no-live investigation of local exact-match/sync and Charts official identifier hydration. Then, if runtime prerequisites exist, run `/api/orca/official/visits/identifier-preflight` in artifact-free read-only mode for a non-duplicate fresh candidate. Do not run `qa-fullflow-weborca` first.
+Start by refreshing read-only candidate discovery excluding `00001` and `00005`. If a non-duplicate proposal appears, run exact selected-candidate preflight for the same RUN_ID, then run `qa-rwo08b-target-readiness.mjs`. Do not run `qa-fullflow-weborca` first.

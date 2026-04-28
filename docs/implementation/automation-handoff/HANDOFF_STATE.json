@@ -2,7 +2,7 @@
   "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B",
-  "blockerId": "fullflow-l4-target-readiness-investigation",
+  "blockerId": "fullflow-l4-combined-target-readiness-refresh",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T20:29:43Z",
+  "lastUpdated": "2026-04-28T21:05:00Z",
   "latestContinuingResearchPlan": {
     "runId": "20260428T123347Z",
     "workOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B",
@@ -9230,5 +9230,57 @@
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRwo08bCombinedTargetReadinessWrapper": {
+    "runId": "20260428T204909Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_COMBINED_TARGET_READINESS_WRAPPER",
+    "result": "COMBINED_TARGET_READINESS_WRAPPER_READY_CURRENT_EVIDENCE_BLOCKED",
+    "branch": "master",
+    "headAtSelection": "a3e19063b",
+    "evidence": "docs/implementation/rwo08b-combined-target-readiness-20260428T204909Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-combined-target-readiness-20260428T204909Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/rwo08b-combined-target-readiness-20260428T204909Z/FINAL_REPORT.md",
+    "implementedFiles": [
+      "web-client/scripts/qa-rwo08b-target-readiness.mjs",
+      "web-client/scripts/qa-lib/rwo08b-target-readiness-evidence.mjs",
+      "web-client/scripts/__tests__/rwo08bTargetReadinessEvidence.test.ts"
+    ],
+    "activePrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAfterRun": "active_successor_updated",
+      "blockerId": "fullflow-l4-combined-target-readiness-refresh"
+    },
+    "wrapperDryRun": {
+      "executed": true,
+      "mutation": false,
+      "classification": "candidate_discovery_no_selected_candidate",
+      "readyForDiagnosticFullflow": false,
+      "candidateDiscoverySource": "docs/implementation/rwo08b-readonly-candidate-refresh-20260427T121615Z/summary.sanitized.json",
+      "exactPreflightSource": "docs/implementation/rwo08b-local-exact-match-diagnostic-20260427T135043Z/summary.sanitized.json"
+    },
+    "checks": {
+      "webFocused": "pass_89_tests_with_web_guard",
+      "webLint": "pass_existing_warnings_only_0_errors",
+      "wrapperDryRun": "pass_failclosed_candidate_discovery_no_selected_candidate",
+      "jsonValidation": "pass",
+      "diffCheck": "pass",
+      "rawSecretArtifactScan": "pass_no_raw_values_detected_in_new_evidence"
+    },
+    "recommendedNextTask": "Refresh read-only candidate discovery excluding 00001/00005; if a non-duplicate proposal appears, run exact selected-candidate preflight, then qa-rwo08b-target-readiness.mjs.",
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executed": false,
+      "mutation": false,
+      "businessSuccessClassification": "not_run_current_evidence_no_selected_candidate"
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
   }
 }
