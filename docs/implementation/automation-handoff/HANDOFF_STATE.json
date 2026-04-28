@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T12:33:47Z",
+  "lastUpdated": "2026-04-28T13:01:39Z",
   "latestContinuingResearchPlan": {
     "runId": "20260428T123347Z",
     "workOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B",
@@ -48,6 +48,51 @@
     "liveTrialOrca": {
       "executed": false,
       "businessAccepted": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestContinuingOfficialResearch": {
+    "runId": "20260428T130139Z",
+    "workOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B",
+    "taskId": "CONTINUING_RESEARCH_UNTIL_ACTIONABLE_INFO_FOUND_NO_LIVE",
+    "result": "CONTINUING_RESEARCH_NARROWED_ACTIONABLE_NO_LIVE_TASKS",
+    "branch": "master",
+    "headAtSelection": "a3230155949fb1453e89e0eb83641cbeebacc493",
+    "activePrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAfterRun": "active",
+      "reason": "Prompt remains active because RWO-06I/RWO-06F still need no-live implementation or minimized owner/operator decision handling."
+    },
+    "evidence": "docs/implementation/continuing-official-research-20260428T130139Z/summary.sanitized.json",
+    "summary": "docs/implementation/continuing-official-research-20260428T130139Z/summary.sanitized.json",
+    "officialSourcesChecked": [
+      "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+      "https://www.orca.med.or.jp/receipt/users/tec/api/medicationgetv2.html",
+      "https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html",
+      "https://www.orca.med.or.jp/receipt/users/tec/api/medicalinfo.html"
+    ],
+    "narrowedNextQueue": [
+      "RWO-08B_ARTIFACT_FREE_IDENTIFIER_PREFLIGHT_IMPLEMENTATION_NO_LIVE",
+      "RWO-06H_API90_LOCK_CLASSIFICATION_PACKET_NO_LIVE",
+      "RWO-06I_SURGERY_ROW_ROLE_SPEC_TEST_NO_LIVE",
+      "RWO-06F_OWNER_BUSINESS_CONTEXT"
+    ],
+    "keyFindings": {
+      "rwo06hApiResult90": "official_medicalmodv2_maps_to_other_terminal_in_use_target_lock_state",
+      "rwo08bIdentifierPreflight": "official_acceptlstv2_medicalgetv2_support_presence_hash_identifier_preflight",
+      "rwo06iSurgery": "official_class_500_sample_rows_confirmed_but_row_role_applicability_not_separately_proven",
+      "rwo06fGuidanceFee": "official_sources_cannot_decide_patient_specific_billing_appropriateness"
+    },
+    "recommendedNextTask": "Implement RWO-08B artifact-free identifier preflight first, then RWO-06H Api_Result 90 lock-classification packet; keep RWO-06I/RWO-06F live stopped.",
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executed": false,
+      "mutation": false
     },
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
@@ -8772,5 +8817,15 @@
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false,
     "recommendedNextTask": "Select the next independent no-live queue item; prefer RWO-08B artifact-free identifier preflight implementation/design if queued, keep RWO-06F live stopped and RWO-11/RWO-09 external."
+  },
+  "latestAutomationRun": {
+    "runId": "20260428T130139Z",
+    "completedAt": "2026-04-28T13:01:39Z",
+    "result": "official_research_narrowed_no_live_queue",
+    "evidence": "docs/implementation/continuing-official-research-20260428T130139Z/summary.sanitized.json",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "liveTrialOrcaExecuted": false
   }
 }

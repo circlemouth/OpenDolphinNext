@@ -2,7 +2,7 @@
 
 status: active
 created_at: 2026-04-28T12:33:47Z
-updated_at: 2026-04-28T12:33:47Z
+updated_at: 2026-04-28T13:01:39Z
 source_work_order: RWO-06I/RWO-06H/RWO-06F/RWO-08B
 blocker_id: continuing-official-and-public-research-until-actionable-info-found
 priority: high
@@ -20,6 +20,8 @@ The previous no-live research pass recorded evidence at `docs/implementation/rem
 ## Goal
 
 Execute `CONTINUING_RESEARCH_UNTIL_ACTIONABLE_INFO_FOUND_NO_LIVE`.
+
+Latest continuation: RUN_ID `20260428T130139Z` recorded sanitized evidence at `docs/implementation/continuing-official-research-20260428T130139Z/summary.sanitized.json`. This run found actionable no-live next tasks for `RWO-06H` and `RWO-08B`, a no-live row-role spec/test path for `RWO-06I`, and preserved the minimized owner/operator question for `RWO-06F`.
 
 Continue official-source-first and secondary public-source research until one of the following is found for each remaining research target:
 
@@ -39,6 +41,8 @@ Find row-level evidence for class `500` surgery payloads:
 - row-level proof path for procedure/material/comment rows such as `150003110`, `641210099`, `840000042`;
 - whether any official master endpoint beyond `medicationgetv2 Request_Number=02` can prove surgery material/comment applicability, not just code existence or master freshness.
 
+Current narrowed next action: implement or prepare `RWO-06I_SURGERY_ROW_ROLE_SPEC_TEST_NO_LIVE`, using the official `medicalmodv2` class `500` sample as a sanitized row-order fixture while keeping row-code validity separate from row-role applicability. Do not run surgery live unless a future packet proves a source-backed changed identity or records an explicit stop condition.
+
 ### RWO-06H Injection
 
 Find target-readiness and retry-state evidence for class `310` injection:
@@ -46,6 +50,8 @@ Find target-readiness and retry-state evidence for class `310` injection:
 - official explanation or source-confirmed meaning of `medicalmodv2 Api_Result=90`;
 - read-only evidence path for fresh/lock-free or conflict-free target readiness using `acceptlstv2`, `medicalgetv2`, or another official endpoint;
 - whether target freshness can be reduced to sanitized presence/hash checks without raw patient or insurance detail.
+
+Current narrowed next action: implement or prepare `RWO-06H_API90_LOCK_CLASSIFICATION_PACKET_NO_LIVE`. Official `medicalmodv2` maps `Api_Result=90` to other-terminal-in-use, so the prior v3 injection rejection must be treated as a target lock/state rejection. Require same-run target-drift and conflicting-row absence preflight before any changed-precondition retry; unchanged retry remains forbidden.
 
 ### RWO-06F Guidance Fee
 
@@ -55,6 +61,8 @@ Find business-context proof or the smallest remaining owner question for class `
 - source-confirmed guidance-fee prerequisites that decide whether the current class `130` candidate is appropriate;
 - if no source can decide it, preserve only the shortest exact owner/operator question.
 
+Current narrowed owner/operator question: For `RWO-06F` class `130`, which exact Trial patient/context should be used, and must live preflight require no existing monthly class `130` row plus disease/facility context matching the selected guidance-fee code?
+
 ### RWO-08B Fullflow Identifiers
 
 Find the smallest artifact-free no-live identifier preflight:
@@ -63,6 +71,8 @@ Find the smallest artifact-free no-live identifier preflight:
 - which identifiers may be represented as presence flags or row hashes;
 - which identifiers must remain non-public and server-derived only;
 - a no-live plan using `acceptlstv2` and `medicalgetv2` that avoids diagnostic artifacts.
+
+Current narrowed next action: implement or prepare `RWO-08B_ARTIFACT_FREE_IDENTIFIER_PREFLIGHT_IMPLEMENTATION_NO_LIVE`: server-derived `acceptlstv2` candidate inventory plus `medicalgetv2` presence/hash checks that emit only target-ready flags, official identifier presence booleans, and row hashes. Do not run `qa-fullflow-weborca` for this task because the current harness can persist request XML/raw diagnostic artifacts.
 
 ## Required Research Method
 
@@ -119,7 +129,7 @@ This prompt may be marked `completed` only when every research target has one of
 - focused repo-local no-live wrapper/test work completed;
 - authoritative official/source-confirmed evidence that no further public/official research can answer the question and the exact owner/operator question is minimized.
 
-If any target still lacks that outcome, do not complete this prompt. Update `HANDOFF_STATE.json`, write sanitized evidence, and leave this prompt active or replace it with a narrower active successor listing the next source/query set.
+If any target still lacks that outcome, do not complete this prompt. Update `HANDOFF_STATE.json`, write sanitized evidence, and leave this prompt active or replace it with a narrower active successor listing the next source/query set. After RUN_ID `20260428T130139Z`, prefer implementing the queued no-live tasks before repeating broad web research.
 
 ## Same-Run Continuation Requirement
 
