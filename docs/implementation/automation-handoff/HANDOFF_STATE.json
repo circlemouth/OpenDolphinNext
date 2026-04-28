@@ -1,8 +1,8 @@
 {
-  "status": "no_active_prompt",
-  "currentPrompt": null,
-  "sourceWorkOrder": "RWO-06F",
-  "blockerId": "rwo06f-readonly-context-wrapper-gaps",
+  "status": "active_prompt",
+  "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+  "sourceWorkOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B/RWO-11",
+  "blockerId": "remaining-automation-tasks-web-research-required",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T07:36:57Z",
+  "lastUpdated": "2026-04-28T11:12:00Z",
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [
@@ -5633,9 +5633,9 @@
     {
       "taskId": "RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT",
       "lane": "parallel_no_live",
-      "status": "skipped_environment_unavailable",
+      "status": "queued",
       "workOrder": "RWO-08B",
-      "summary": "Prepare no-live preflight for a fresh L4 fullflow target with unique active acceptance, no duplicate, and server-derived official identifiers before send.",
+      "summary": "Perform ORCA official-spec web research and repo inspection to design a no-live L4 fullflow official-identifier preflight for a fresh target, unique active acceptance, no duplicate, and server-derived identifiers before any send.",
       "requiresRuntime": false,
       "requiresLiveTrialMutation": false,
       "requiresHumanDecision": false,
@@ -5658,13 +5658,44 @@
         "patient_info_presence_only",
         "synthesized_official_identifiers"
       ],
-      "skipCondition": "no fresh target or no server-derived official identifiers can be proven without live mutation/raw artifacts",
-      "successCriteria": "sanitized no-live preflight evidence exists and any future diagnostic fullflow remains stopped until all preconditions pass",
+      "skipCondition": "official specs/repo inspection cannot identify a no-live/read-only identifier preflight, or proof would require live mutation, raw artifacts, credentials, production ORCA, S3/object storage, or raw patient/insurance detail",
+      "successCriteria": "sanitized official-spec research and repo-local no-live preflight design evidence exists; any future diagnostic fullflow remains stopped until all preconditions pass",
       "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
       "result": "skipped_no_fresh_target_or_server_derived_official_identifiers",
       "completedRunId": "20260426T223215Z",
-      "evidence": "docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/summary.sanitized.json"
+      "evidence": "docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/summary.sanitized.json",
+      "webResearchRequired": true,
+      "officialSpecResearchRequired": true,
+      "officialSourcePreference": [
+        "https://www.orca.med.or.jp/receipt/tec/api/overview.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/medicationgetv2.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/masterlastupdatev3.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/diseasegetv2.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html"
+      ],
+      "researchQuestions": [
+        "which official read-only endpoints can establish unique active acceptance and no duplicate without raw patient or insurance details",
+        "which fullflow identifiers must be server-derived and which can be represented only as sanitized presence flags or row hashes",
+        "whether an artifact-free no-live preflight can replace or narrow diagnostic fullflow prerequisites"
+      ],
+      "previousResult": "skipped_no_fresh_target_or_server_derived_official_identifiers",
+      "priorQueueStateBeforeWebResearchRequeue": {
+        "status": "skipped_environment_unavailable",
+        "lane": "parallel_no_live",
+        "result": "skipped_no_fresh_target_or_server_derived_official_identifiers",
+        "completedRunId": "20260426T223215Z",
+        "evidence": "docs/implementation/rwo06h-rwo06g-rwo08b-preflight-20260426T223215Z/summary.sanitized.json"
+      },
+      "requeuedForWebResearchAt": "2026-04-28T11:12:00Z",
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      },
+      "diagnosticArtifactsAllowedForThisTask": false,
+      "rawArtifactsAllowedForThisTask": false,
+      "credentialsCaptureAllowedForThisTask": false
     },
     {
       "taskId": "RWO-06H_READONLY_MASTER_VALIDITY",
@@ -5782,17 +5813,17 @@
     {
       "taskId": "RWO-06H_FRESH_LOCK_FREE_TARGET_PREFLIGHT",
       "lane": "critical_path",
-      "status": "blocked_safety_stop",
+      "status": "queued",
       "workOrder": "RWO-06H",
-      "summary": "Find or prove a fresh/lock-free target precondition for a future injectionOrder/310 changed-precondition retry without repeating the v3 send.",
-      "requiresRuntime": true,
+      "summary": "Perform ORCA official-spec web research and repo inspection to find a safe no-live/read-only way to prove a fresh or lock-free target before any future injectionOrder/310 changed-precondition retry.",
+      "requiresRuntime": false,
       "requiresLiveTrialMutation": false,
       "requiresHumanDecision": false,
       "requiresS3ObjectStorage": false,
       "safeToBatchWithNoLiveTasks": true,
       "sourceEvidence": "docs/implementation/rwo06h-injection-v3-rejection-investigation-20260427T084616Z/summary.sanitized.json",
-      "skipCondition": "no safe read-only target-lock/fresh-target proof exists, runtime unavailable, target ambiguity, parser ambiguity, credential/raw-artifact risk, or proof requires raw patient/insurance detail",
-      "successCriteria": "sanitized no-live/read-only evidence identifies a lock-free/fresh target or blocks RWO-06H retry without live mutation",
+      "skipCondition": "official specs/repo inspection cannot identify a safe no-live/read-only target-lock or fresh-target proof, runtime would be required before a wrapper exists, or proof would require live mutation, raw patient/insurance detail, credentials, production ORCA, S3/object storage, or raw artifacts",
+      "successCriteria": "sanitized official-spec research plus repo-local no-live/read-only preflight plan identifies a lock-free/fresh target proof path or records a narrower safety stop without live mutation",
       "nextOnSuccess": "RWO-06H_DUPLICATE_CHECKPOINT_PREFLIGHT",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
       "result": "blocked_no_safe_readonly_target_lock_or_fresh_target_proof",
@@ -5803,7 +5834,38 @@
         "freshTargetIdentified": false,
         "retryReadyNow": false,
         "unchangedRepeatSendAllowed": false
-      }
+      },
+      "webResearchRequired": true,
+      "officialSpecResearchRequired": true,
+      "officialSourcePreference": [
+        "https://www.orca.med.or.jp/receipt/tec/api/overview.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/medicationgetv2.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/masterlastupdatev3.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/diseasegetv2.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html"
+      ],
+      "researchQuestions": [
+        "whether medicalmodv2 Api_Result 90 has an official lock/stale/target-state interpretation relevant to retry safety",
+        "whether acceptlstv2, medicalgetv2, or another official read-only endpoint can prove fresh or lock-free target readiness using sanitized fields",
+        "what exact stop condition should remain if official docs do not expose a safe lock-free proof"
+      ],
+      "previousResult": "blocked_no_safe_readonly_target_lock_or_fresh_target_proof",
+      "priorQueueStateBeforeWebResearchRequeue": {
+        "status": "blocked_safety_stop",
+        "lane": "critical_path",
+        "result": "blocked_no_safe_readonly_target_lock_or_fresh_target_proof",
+        "completedRunId": "20260427T091616Z",
+        "evidence": "docs/implementation/rwo06h-fresh-lock-free-target-preflight-20260427T091616Z/summary.sanitized.json"
+      },
+      "requeuedForWebResearchAt": "2026-04-28T11:12:00Z",
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      },
+      "diagnosticArtifactsAllowedForThisTask": false,
+      "rawArtifactsAllowedForThisTask": false,
+      "credentialsCaptureAllowedForThisTask": false
     },
     {
       "taskId": "RWO-06I_SURGERY_V2_REJECTION_NO_LIVE_INVESTIGATION",
@@ -5830,22 +5892,24 @@
     {
       "taskId": "RWO-06I_SURGERY_V3_ADJUNCT_MASTER_PROOF_PREFLIGHT",
       "lane": "critical_path",
-      "status": "blocked_safety_stop",
+      "status": "queued",
       "workOrder": "RWO-06I",
-      "summary": "Prove or block surgery v3 adjunct rows before any future surgeryOrder/500 v3 live attempt.",
-      "requiresRuntime": true,
+      "summary": "Perform ORCA official-spec web research and repo inspection for surgeryOrder/500 v3 row shape, adjunct/material/comment semantics, and row-level master proof before any live attempt.",
+      "requiresRuntime": false,
       "requiresLiveTrialMutation": false,
       "requiresHumanDecision": false,
       "requiresS3ObjectStorage": false,
       "safeToBatchWithNoLiveTasks": true,
       "sourceEvidence": "docs/implementation/rwo06i-surgery-v3-no-live-20260427T091616Z/summary.sanitized.json",
       "readOnlyChecks": [
-        "medicationgetv2_or_masterlastupdatev3_for_150003110",
-        "medicationgetv2_or_masterlastupdatev3_for_641210099",
-        "medicationgetv2_or_masterlastupdatev3_for_840000042"
+        "official_spec_research_for_medicalmodv2_class_500_sample_rows",
+        "medicationgetv2_or_other_official_master_lookup_for_150003110",
+        "medicationgetv2_or_other_official_master_lookup_for_641210099",
+        "medicationgetv2_or_other_official_master_lookup_for_840000042",
+        "masterlastupdatev3_freshness_only_claim_boundary_if_applicable"
       ],
-      "skipCondition": "runtime unavailable, safe read-only wrapper missing, parser ambiguity, credential/raw-artifact risk, or adjunct row proof requires raw patient/insurance detail",
-      "successCriteria": "sanitized row-level proof or explicit stop condition exists for surgery v3 adjunct rows; no live mutation executed",
+      "skipCondition": "official specs/repo inspection cannot establish a safe no-live row-proof path, or proof would require live mutation, raw patient/insurance detail, credentials, production ORCA, S3/object storage, or raw artifacts",
+      "successCriteria": "sanitized official-spec evidence and repo-local no-live row-proof plan exists for surgery v3 rows, or a narrower explicit stop condition identifies the missing master/API proof; no live mutation executed",
       "nextOnSuccess": "RWO-06I_DUPLICATE_CHECKPOINT_PREFLIGHT",
       "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH_AFTER_RWO06I_SURGERY_MASTER_PROOF",
       "result": "blocked_no_row_proof_no_live",
@@ -5855,7 +5919,38 @@
         "allRowsProven": false,
         "liveReadyNow": false,
         "stopCondition": "surgery_v3_adjunct_rows_not_proven_by_sanitized_readonly_medicationgetv2"
-      }
+      },
+      "webResearchRequired": true,
+      "officialSpecResearchRequired": true,
+      "officialSourcePreference": [
+        "https://www.orca.med.or.jp/receipt/tec/api/overview.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/medicationgetv2.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/masterlastupdatev3.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/diseasegetv2.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html"
+      ],
+      "researchQuestions": [
+        "confirm official medicalmodv2 surgery class 500 sample row structure for 150003110, 641210099, and 840000042 including quantities and row order",
+        "determine whether medicationgetv2 Request_Number=02 can prove each surgery procedure/material/comment row or whether another official master endpoint is required",
+        "determine whether masterlastupdatev3 is freshness-only or can support row-level validity claims for these rows"
+      ],
+      "previousResult": "blocked_no_row_proof_no_live",
+      "priorQueueStateBeforeWebResearchRequeue": {
+        "status": "blocked_safety_stop",
+        "lane": "critical_path",
+        "result": "blocked_no_row_proof_no_live",
+        "completedRunId": "20260427T094613Z",
+        "evidence": "docs/implementation/rwo06i-surgery-v3-adjunct-master-proof-20260427T094613Z/summary.sanitized.json"
+      },
+      "requeuedForWebResearchAt": "2026-04-28T11:12:00Z",
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      },
+      "diagnosticArtifactsAllowedForThisTask": false,
+      "rawArtifactsAllowedForThisTask": false,
+      "credentialsCaptureAllowedForThisTask": false
     },
     {
       "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_AFTER_RWO06I_SURGERY_MASTER_PROOF",
@@ -5970,22 +6065,45 @@
     },
     {
       "taskId": "RWO-11_ROLLBACK_OWNER_DECISION",
-      "lane": "critical_path",
-      "status": "blocked_safety_stop",
+      "lane": "parallel_no_live",
+      "status": "queued",
       "workOrder": "RWO-11/RWO-09",
-      "summary": "Owner-authorized automation task: prepare or execute safe sanitized rollback rehearsal/operator evidence, or record explicit owner final decision.",
+      "summary": "Perform web/runbook and repo-local static research only to identify any non-live automation-owned checks that remain before external RWO-11/RWO-09 rollback or owner-decision gates; do not execute release-management actions.",
       "requiresRuntime": false,
       "requiresLiveTrialMutation": false,
       "requiresHumanDecision": false,
       "requiresS3ObjectStorage": false,
-      "safeToBatchWithNoLiveTasks": false,
-      "skipCondition": "skip only if safe non-production rollback target/commands are ambiguous, production infrastructure would be required, raw artifacts or credentials would be needed, or explicit owner decision text is absent for decision recording",
-      "successCriteria": "sanitized rollback/operator evidence or explicit owner GO/NO-GO/PENDING record exists with credentialsCaptured=false and rawArtifactsCommittedOrPackaged=false",
-      "nextOnSuccess": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
-      "nextOnSkip": "RWO-06H_INJECTABLE_CANDIDATE_DISCOVERY_NO_LIVE",
+      "safeToBatchWithNoLiveTasks": true,
+      "skipCondition": "research finds only external release-management actions, production infrastructure, raw artifacts, credentials, or explicit owner decision text would be required",
+      "successCriteria": "sanitized research/static review evidence records any remaining automation-owned non-live checks or confirms RWO-11/RWO-09 remains an external release-management gate",
+      "nextOnSuccess": "RWO-09_STATIC_PACKAGE_REFRESH",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH",
       "result": "rollback_rehearsal_plan_ready_execution_blocked_target_ambiguity",
       "completedRunId": "20260427T053312Z",
-      "evidence": "docs/implementation/rwo11-rwo09-rollback-rehearsal-plan-20260427T053312Z/summary.sanitized.json"
+      "evidence": "docs/implementation/rwo11-rwo09-rollback-rehearsal-plan-20260427T053312Z/summary.sanitized.json",
+      "webResearchRequired": true,
+      "officialSpecResearchRequired": false,
+      "researchQuestions": [
+        "whether current runbooks or public deployment/release guidance imply any missing static repo-local checks that automation can complete safely",
+        "whether the current external release-management gate boundary remains coherent with repository runbooks and automation policy",
+        "what exact owner/operator target, command, and sanitized evidence inputs would be required before any future reassignment could be safe"
+      ],
+      "previousResult": "rollback_rehearsal_plan_ready_execution_blocked_target_ambiguity",
+      "priorQueueStateBeforeWebResearchRequeue": {
+        "status": "blocked_safety_stop",
+        "lane": "critical_path",
+        "result": "rollback_rehearsal_plan_ready_execution_blocked_target_ambiguity",
+        "completedRunId": "20260427T053312Z",
+        "evidence": "docs/implementation/rwo11-rwo09-rollback-rehearsal-plan-20260427T053312Z/summary.sanitized.json"
+      },
+      "requeuedForWebResearchAt": "2026-04-28T11:12:00Z",
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      },
+      "diagnosticArtifactsAllowedForThisTask": false,
+      "rawArtifactsAllowedForThisTask": false,
+      "credentialsCaptureAllowedForThisTask": false
     },
     {
       "taskId": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD",
@@ -6228,20 +6346,48 @@
     },
     {
       "taskId": "RWO-06F_OWNER_BUSINESS_CONTEXT",
-      "lane": "human_pending",
-      "status": "carried_forward_without_reclassification",
+      "lane": "parallel_no_live",
+      "status": "queued",
       "workOrder": "RWO-06F",
-      "summary": "Owner/operator decision may be required for class 130 facility, disease-class, and monthly billing context after read-only evidence is collected.",
+      "summary": "Perform ORCA official-spec web research and repo inspection to reduce the class 130 guidance-fee owner/operator business-context question before asking for human input.",
       "requiresRuntime": false,
       "requiresLiveTrialMutation": false,
-      "requiresHumanDecision": true,
+      "requiresHumanDecision": false,
       "requiresS3ObjectStorage": false,
-      "safeToBatchWithNoLiveTasks": false,
+      "safeToBatchWithNoLiveTasks": true,
       "sourceEvidence": "docs/implementation/chatgpt-research-intake-validation-20260427T125006Z/summary.sanitized.json",
-      "skipCondition": "no new explicit owner/operator business input exists",
-      "successCriteria": "owner/operator business context is explicitly recorded separately without raw artifacts or live mutation",
+      "skipCondition": "official specs/repo inspection cannot reduce the business-context ambiguity without raw patient/insurance/disease detail, live mutation, credentials, production ORCA, S3/object storage, or raw artifacts",
+      "successCriteria": "sanitized official-spec research classifies each class 130 context gap as repo-local no-live, read-only Trial probe, or owner/operator decision, and drafts the shortest remaining owner question if needed",
       "nextOnSuccess": "RWO-06F_DUPLICATE_CHECKPOINT_PREFLIGHT",
-      "nextOnSkip": "RWO-06G_BASE_CHARGE_ROW_ORDER_CONTRACT"
+      "nextOnSkip": "RWO-06G_BASE_CHARGE_ROW_ORDER_CONTRACT",
+      "webResearchRequired": true,
+      "officialSpecResearchRequired": true,
+      "officialSourcePreference": [
+        "https://www.orca.med.or.jp/receipt/tec/api/overview.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/medicalmod.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/medicationgetv2.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/masterlastupdatev3.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/diseasegetv2.html",
+        "https://www.orca.med.or.jp/receipt/users/tec/api/acceptancelst.html"
+      ],
+      "researchQuestions": [
+        "which class 130 guidance-fee preconditions can be proven by official read-only APIs without raw disease/patient/insurance detail",
+        "whether disease-class, monthly duplicate, department, physician, insurance-combination, and facility context can be narrowed by official specs or repo wrappers",
+        "what shortest owner/operator question remains after official-spec and repo-local no-live analysis"
+      ],
+      "previousResult": "carried_forward_without_reclassification",
+      "priorQueueStateBeforeWebResearchRequeue": {
+        "status": "carried_forward_without_reclassification",
+        "lane": "human_pending"
+      },
+      "requeuedForWebResearchAt": "2026-04-28T11:12:00Z",
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      },
+      "diagnosticArtifactsAllowedForThisTask": false,
+      "rawArtifactsAllowedForThisTask": false,
+      "credentialsCaptureAllowedForThisTask": false
     },
     {
       "taskId": "RWO-06G_BASE_CHARGE_ROW_ORDER_CONTRACT",
@@ -8466,6 +8612,21 @@
       "mutation": false
     },
     "recommendedNextTask": "Execute active successor prompt RWO-06F_READONLY_CONTEXT_WRAPPER_GAP_CLOSURE_NO_LIVE.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
+  "latestRemainingTaskWebResearchRequeue": {
+    "runId": "20260428T111200Z",
+    "result": "remaining_tasks_requeued_for_web_research_no_live",
+    "taskIds": [
+      "RWO-08B_L4_FULLFLOW_OFFICIAL_IDENTIFIER_PREFLIGHT",
+      "RWO-06H_FRESH_LOCK_FREE_TARGET_PREFLIGHT",
+      "RWO-06I_SURGERY_V3_ADJUNCT_MASTER_PROOF_PREFLIGHT",
+      "RWO-11_ROLLBACK_OWNER_DECISION",
+      "RWO-06F_OWNER_BUSINESS_CONTEXT"
+    ],
+    "boundary": "Official web research and repo-local no-live/static review only; no live Trial mutation, production ORCA, S3/object storage, raw artifacts, credentials, or RWO-11/RWO-09 release-management execution authorized.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
