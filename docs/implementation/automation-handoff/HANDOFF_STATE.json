@@ -1,8 +1,8 @@
 {
-  "status": "completed",
+  "status": "active",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
-  "sourceWorkOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B",
-  "blockerId": "continuing-official-and-public-research-until-actionable-info-found",
+  "sourceWorkOrder": "RWO-08B",
+  "blockerId": "fullflow-l4-target-readiness-investigation",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-28T18:01:12Z",
+  "lastUpdated": "2026-04-28T20:16:56Z",
   "latestContinuingResearchPlan": {
     "runId": "20260428T123347Z",
     "workOrder": "RWO-06I/RWO-06H/RWO-06F/RWO-08B",
@@ -5331,7 +5331,63 @@
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   },
+  "latestRwo08BFullflowL4TargetReadinessPlan": {
+    "runId": "20260428T201656Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_FULLFLOW_L4_TARGET_READINESS_INVESTIGATION",
+    "result": "ACTIVE_HANDOFF_AND_QUEUE_REOPENED",
+    "prompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "reason": "User clarified that an empty executable queue does not mean Fullflow L4 is complete. Current evidence does not prove ORCA-side fault; repo/local-sync/selector/handoff/harness and Trial test-data state must be separated before any L4 success claim.",
+    "requiredFirstActions": [
+      "read prior RWO-08B evidence",
+      "perform no-live local exact-match/sync and Charts official identifier hydration investigation",
+      "run artifact-free read-only identifier preflight only when approved non-S3 Trial runtime/config is already available",
+      "do not run diagnostic fullflow before exact selected-candidate and identifier preconditions are proven"
+    ],
+    "notOrcaFaultUntilProven": true,
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executed": false,
+      "mutation": false
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "recommendedNextTask": "RWO-08B_FULLFLOW_L4_TARGET_READINESS_INVESTIGATION"
+  },
   "nextExecutableQueue": [
+    {
+      "taskId": "RWO-08B_FULLFLOW_L4_TARGET_READINESS_INVESTIGATION",
+      "lane": "critical_path",
+      "status": "queued",
+      "workOrder": "RWO-08B",
+      "summary": "Investigate and fix Fullflow L4 target readiness by separating repo/local-sync/selector/handoff/harness causes from Trial test-data or ORCA business state before any L4 success claim.",
+      "requiresRuntime": false,
+      "requiresLiveTrialMutation": false,
+      "requiresHumanDecision": false,
+      "requiresS3ObjectStorage": false,
+      "safeToBatchWithNoLiveTasks": true,
+      "sourceEvidence": [
+        "docs/implementation/rwo08b-candidate-00005-diagnostic-fullflow-20260425T144428Z/summary.sanitized.json",
+        "docs/implementation/rwo08b-readonly-candidate-refresh-20260427T121615Z/summary.sanitized.json",
+        "docs/implementation/rwo08b-local-exact-match-diagnostic-20260427T135043Z/summary.sanitized.json",
+        "docs/implementation/rwo08b-artifact-free-identifier-preflight-20260428T140210Z/summary.sanitized.json"
+      ],
+      "skipCondition": "Only skip runtime/read-only/diagnostic portions when approved non-S3 runtime/config or safe artifact containment is unavailable; still perform repo-local no-live investigation and write sanitized blocker evidence.",
+      "successCriteria": "Sanitized evidence exists showing a repo-local fix/test result, an artifact-free read-only identifier preflight classification, a precise target/test-data blocker, or endpoint-specific L4 order-send business success. ORCA-side fault is not asserted unless repo/harness causes are eliminated.",
+      "nextOnSuccess": "RWO-08B_EXACT_SELECTED_CANDIDATE_PREFLIGHT_OR_DIAGNOSTIC_FULLFLOW",
+      "nextOnSkip": "RWO-09_STATIC_PACKAGE_REFRESH_CURRENT_HEAD_AFTER_RWO08B_L4_PLAN",
+      "credentialsCaptured": false,
+      "diagnosticArtifactsCaptured": false,
+      "rawArtifactsCommittedOrPackaged": false,
+      "liveTrialOrca": {
+        "executed": false,
+        "businessAccepted": false
+      }
+    },
     {
       "taskId": "CONTINUING_RESEARCH_UNTIL_ACTIONABLE_INFO_FOUND_NO_LIVE",
       "lane": "critical_path",

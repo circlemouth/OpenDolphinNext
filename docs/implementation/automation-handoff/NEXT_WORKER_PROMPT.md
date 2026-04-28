@@ -1,138 +1,105 @@
 # NEXT_WORKER_PROMPT
 
-status: completed
-created_at: 2026-04-28T12:33:47Z
-updated_at: 2026-04-28T15:01:42Z
-source_work_order: RWO-06I/RWO-06H/RWO-06F/RWO-08B
-blocker_id: continuing-official-and-public-research-until-actionable-info-found
+status: active
+created_at: 2026-04-28T20:16:56Z
+updated_at: 2026-04-28T20:16:56Z
+source_work_order: RWO-08B
+blocker_id: fullflow-l4-target-readiness-investigation
 priority: high
 supersedes:
-- remaining-automation-tasks-web-research-required
+- continuing-official-and-public-research-until-actionable-info-found
 
 ## Context
 
-Owner instruction on 2026-04-28T12:33:47Z: make the plan so subsequent workers also perform additional research until the needed information is found.
+User correction on 2026-04-28T19:52:56Z: an empty `HANDOFF_STATE.json.nextExecutableQueue` does not mean Fullflow L4 is complete. RWO-08B still has release-readiness work. The next worker must not treat the current state as "all validation done".
 
-The previous no-live research pass recorded evidence at `docs/implementation/remaining-task-web-research-20260428T115055Z/summary.sanitized.json`, but some endpoints still lack actionable row-level proof, target-readiness proof, or business-context evidence. A later worker must not treat one unsuccessful research pass as terminal. If the needed information is not found in one run, the worker must record what was checked, what was not found, what search/source set remains, and leave this prompt or a successor prompt active.
+Current evidence does **not** prove an ORCA Trial server-side defect. It shows Fullflow L4 is blocked by unresolved target-readiness and handoff prerequisites that could be repo/local-sync/selector/handoff/harness issues, Trial test-data state, or ORCA business state. Do not blame ORCA unless sanitized evidence eliminates repo and harness causes.
 
-`RWO-11/RWO-09` rollback rehearsal, release-candidate stop, paired restore, restored-target smoke, operator acceptance, and final owner GO/NO-GO/PENDING remain external owner/operator release-management gates. Do not select or execute those release-management actions. Research may only identify repo-local no-live checks that do not replace the external gate.
+Important prior evidence:
+
+- `docs/implementation/rwo08b-candidate-00005-diagnostic-fullflow-20260425T144428Z/summary.sanitized.json`: candidate `00005` reached diagnostic fullflow pre-send but `acceptmodv2` returned duplicate acceptance classification (`apiResult=16`), no canonical acceptance keys, and no order send. Do not repeat `00005` unchanged.
+- `docs/implementation/rwo08b-readonly-candidate-refresh-20260427T121615Z/summary.sanitized.json`: read-only discovery excluding duplicate-blocked `00001` and `00005` found no fresh selected candidate; remaining candidates failed local exact-match/selectability.
+- `docs/implementation/rwo08b-local-exact-match-diagnostic-20260427T135043Z/summary.sanitized.json`: candidates `00002` through `00011` were categorized as `local_absent` / `local_exact_match_missing` despite official ORCA patient/insurance evidence; repo/local sync, facility scope, ID format, or UI selectability remain unproven.
+- `docs/implementation/rwo08b-artifact-free-identifier-preflight-20260428T140210Z/summary.sanitized.json`: `/api/orca/official/visits/identifier-preflight` was implemented as an artifact-free, server-derived read-only preflight route, but it was not yet executed against Trial runtime and is not Fullflow success.
 
 ## Goal
 
-Execute `CONTINUING_RESEARCH_UNTIL_ACTIONABLE_INFO_FOUND_NO_LIVE`.
+Execute `RWO-08B_FULLFLOW_L4_TARGET_READINESS_INVESTIGATION`.
 
-Latest continuation: RUN_ID `20260428T130139Z` recorded sanitized evidence at `docs/implementation/continuing-official-research-20260428T130139Z/summary.sanitized.json`. This run found actionable no-live next tasks for `RWO-06H` and `RWO-08B`, a no-live row-role spec/test path for `RWO-06I`, and preserved the minimized owner/operator question for `RWO-06F`.
+The goal is to make Fullflow L4 actionable again by producing sanitized evidence that either:
 
-Completion update: RUN_ID `20260428T150142Z` completed the queued no-live follow-ups for `RWO-06H_API90_LOCK_CLASSIFICATION_PACKET_NO_LIVE` and `RWO-06I_SURGERY_ROW_ROLE_SPEC_TEST_NO_LIVE`. `RWO-08B_ARTIFACT_FREE_IDENTIFIER_PREFLIGHT_IMPLEMENTATION_NO_LIVE` was already completed by RUN_ID `20260428T140210Z`, and `RWO-06F` remains reduced to the minimized owner/operator business-context question below. This handoff is therefore completed; no live Trial mutation, read-only Trial call, production ORCA, S3/object-storage setup, diagnostic artifact capture, credential capture, or raw artifact packaging was performed by the completion update.
+1. identifies and fixes a repo-local blocker needed for a fresh exact selected candidate and Charts/official identifier handoff;
+2. proves a fresh target/read-only identifier preflight is available and queues the next safe diagnostic fullflow step; or
+3. records a precise blocker with the next concrete safe action, without overclaiming ORCA fault or L4 success.
 
-Continue official-source-first and secondary public-source research until one of the following is found for each remaining research target:
+## Required Task Order
 
-- an official ORCA source or source-confirmed mapping that unlocks a safe repo-local no-live/read-only task;
-- a safe wrapper/parser/test change that can be implemented without live mutation or raw artifacts;
-- an authoritative statement proving the needed information cannot be obtained from official/public sources and naming the exact remaining owner/operator decision.
-
-Do not close this prompt merely because one search pass found no answer. If the answer is not found, leave a successor active with the next concrete source/query set.
-
-## Research Targets
-
-### RWO-06I Surgery
-
-Find row-level evidence for class `500` surgery payloads:
-
-- official `medicalmodv2` class `500` row ordering and role semantics;
-- row-level proof path for procedure/material/comment rows such as `150003110`, `641210099`, `840000042`;
-- whether any official master endpoint beyond `medicationgetv2 Request_Number=02` can prove surgery material/comment applicability, not just code existence or master freshness.
-
-Current narrowed next action: implement or prepare `RWO-06I_SURGERY_ROW_ROLE_SPEC_TEST_NO_LIVE`, using the official `medicalmodv2` class `500` sample as a sanitized row-order fixture while keeping row-code validity separate from row-role applicability. Do not run surgery live unless a future packet proves a source-backed changed identity or records an explicit stop condition.
-
-### RWO-06H Injection
-
-Find target-readiness and retry-state evidence for class `310` injection:
-
-- official explanation or source-confirmed meaning of `medicalmodv2 Api_Result=90`;
-- read-only evidence path for fresh/lock-free or conflict-free target readiness using `acceptlstv2`, `medicalgetv2`, or another official endpoint;
-- whether target freshness can be reduced to sanitized presence/hash checks without raw patient or insurance detail.
-
-Current narrowed next action: implement or prepare `RWO-06H_API90_LOCK_CLASSIFICATION_PACKET_NO_LIVE`. Official `medicalmodv2` maps `Api_Result=90` to other-terminal-in-use, so the prior v3 injection rejection must be treated as a target lock/state rejection. Require same-run target-drift and conflicting-row absence preflight before any changed-precondition retry; unchanged retry remains forbidden.
-
-### RWO-06F Guidance Fee
-
-Find business-context proof or the smallest remaining owner question for class `130`:
-
-- official/read-only proof for disease context, monthly duplicate context, department/physician/insurance-combination readiness, facility context, selectable-comment applicability, and master freshness;
-- source-confirmed guidance-fee prerequisites that decide whether the current class `130` candidate is appropriate;
-- if no source can decide it, preserve only the shortest exact owner/operator question.
-
-Current narrowed owner/operator question: For `RWO-06F` class `130`, which exact Trial patient/context should be used, and must live preflight require no existing monthly class `130` row plus disease/facility context matching the selected guidance-fee code?
-
-### RWO-08B Fullflow Identifiers
-
-Find the smallest artifact-free no-live identifier preflight:
-
-- official identifiers required before Charts handoff and ORCA order send;
-- which identifiers may be represented as presence flags or row hashes;
-- which identifiers must remain non-public and server-derived only;
-- a no-live plan using `acceptlstv2` and `medicalgetv2` that avoids diagnostic artifacts.
-
-Current narrowed next action: implement or prepare `RWO-08B_ARTIFACT_FREE_IDENTIFIER_PREFLIGHT_IMPLEMENTATION_NO_LIVE`: server-derived `acceptlstv2` candidate inventory plus `medicalgetv2` presence/hash checks that emit only target-ready flags, official identifier presence booleans, and row hashes. Do not run `qa-fullflow-weborca` for this task because the current harness can persist request XML/raw diagnostic artifacts.
-
-## Required Research Method
-
-1. Start with official ORCA pages already known in prior evidence.
-2. Discover linked endpoint pages from the official overview and endpoint menus before using public sources.
-3. Use public/non-official sources only as leads; mark them unconfirmed unless matched to official documentation or repo implementation evidence.
-4. Search in Japanese and English terms where relevant, including endpoint names, request numbers, class codes, API result codes, and candidate code values.
-5. Inspect repo wrappers/tests before deciding that a source finding is actionable.
-6. For every not-found result, record the exact URL/query/source family checked and the next query/source family for the successor worker.
+1. Inspect current branch, HEAD, status, worktrees, and this prompt.
+2. Read the four prior evidence files listed above and `docs/runbooks/release-validation.md` Fullflow policy.
+3. Threat-model at least these misuse cases before changes:
+   - Treating official ORCA patient existence as local selectability/readiness.
+   - Reusing duplicate-blocked `00001` or `00005` unchanged.
+   - Treating read-only discovery, HTTP 200, dry-run, or wrapper exit as L4 business success.
+   - Capturing or committing raw diagnostic artifacts, credentials, raw ORCA bodies, patient details, or insurance details.
+4. First perform repo-local/no-live analysis and focused tests for local exact-match/sync and Charts official identifier hydration.
+5. If runtime is available and approved non-S3 Trial config is already available through the documented local path, run the artifact-free read-only identifier preflight before any diagnostic fullflow retry.
+6. Only consider a diagnostic fullflow retry if the same-run evidence proves:
+   - exact selected-candidate preflight accepted for a fresh target;
+   - local exact match/selectability is present;
+   - duplicate-blocked `00001`/`00005` are not reused unchanged;
+   - server-derived official visit identifiers or their absence are proven through sanitized evidence;
+   - diagnostic artifacts can remain local-only/untracked under the Diagnostic Artifact Exception.
 
 ## Allowed Actions
 
-- Web research under the official-source-first policy.
 - Repo inspection under `web-client/`, `server-modernized/`, `docs/`, `ops/`, `tests/`, and `scripts/`.
 - Edit `docs/implementation/automation-handoff/HANDOFF_STATE.json`.
-- Add sanitized evidence under `docs/implementation/continuing-official-research-<RUN_ID>/`.
-- Add or edit narrow no-live wrapper/parser tests only when research identifies a safe repo-local next task.
+- Add sanitized evidence under `docs/implementation/rwo08b-fullflow-l4-target-readiness-<RUN_ID>/`.
+- Add or edit narrow no-live tests/wrappers for local exact-match, local sync classification, selector readiness, Charts handoff, and official identifier hydration.
 - Run focused no-live tests, JSON validation, web guard, doc links, and `git diff --check`.
+- Run artifact-free read-only Trial identifier preflight only if existing approved local Trial runtime/config is available without printing secrets.
+- Run one diagnostic fullflow only after all same-run preconditions above pass and diagnostic artifacts can be contained local-only/untracked.
 - Commit roadmap/handoff-scoped source/doc/evidence changes before reporting.
 
 ## Forbidden Actions
 
-- Any live Trial mutation.
-- Production ORCA, production credentials, production patient data.
-- S3/MinIO/object-storage setup, dummy object storage, or object-storage readiness claims.
-- Raw ORCA bodies, raw patient detail, raw disease detail, raw insurance detail, credentials, cookies, sessions, Authorization headers, CSRF values, HAR, traces, videos, screenshots, or raw network dumps in committed/package evidence.
-- Changes under legacy `client/` or `server/`.
-- Treating official-source research, public-source research, HTTP 200, `Api_Result`, wrapper exit, dry-run pass, read-only preflight, code validity, or master freshness as business success.
-- Selecting or executing `RWO-11/RWO-09` rollback/operator/final owner decision as automation release-management work.
+- Do not assert ORCA-side fault from current evidence alone.
+- Do not claim Fullflow L4 success unless order-send business success is proven by endpoint-specific sanitized evidence, not by HTTP 200/dry-run/read-only/preflight.
+- Do not repeat candidates `00001` or `00005` unchanged.
+- Do not run live Trial mutation without complete endpoint packet, same-run preflight, duplicate checkpoint, runtime readiness, and sanitized evidence policy.
+- Do not use production ORCA, production credentials, production patient data, S3/MinIO/object-storage setup, dummy object storage, or object-storage readiness claims.
+- Do not change legacy `client/` or `server/`.
+- Do not commit or package raw ORCA bodies, raw patient/insurance detail, credentials, cookies, sessions, Authorization headers, CSRF values, HAR, traces, videos, screenshots, request XML, raw network dumps, or credential-bearing URLs.
+- Do not treat browser UI hiding, local storage state, client-provided identifiers, or client-provided facility/patient/owner data as authority.
 
 ## Evidence Requirements
 
 Record sanitized Markdown/JSON only:
 
-- checked URL or search query and checked date;
-- source class: official, repo, public-confirmed, public-unconfirmed, or not-found;
-- endpoint/request-class identity;
-- relevant request number/class/code/result-code mapping;
-- whether the finding creates a safe no-live/read-only next action;
-- parser/sanitizer or wrapper-test requirements if applicable;
-- stop conditions and business-success separation;
-- next source/query set if information was not found;
-- non-claims;
+- current branch/HEAD/status/worktree;
+- task id and RUN_ID;
+- prior evidence files read;
+- candidate set and excluded duplicate-blocked identities using only sanitized IDs/classes already present in prior evidence;
+- local exact-match/sync classification and whether repo-local fix was applied;
+- identifier-preflight status if run: endpoint, mutation=false, request class, row-hash/presence flags only, no raw bodies;
+- diagnostic fullflow status if run: local-only artifact root, artifact containment proof, route coverage/status classes, order-send reached/not reached, targetMutationRequestCount, business-success classification;
+- explicit non-claims;
 - `credentialsCaptured=false`;
-- `diagnosticArtifactsCaptured=false`;
 - `rawArtifactsCommittedOrPackaged=false`;
-- `liveTrialOrca.executed=false`.
+- `productionOrcaAttempted=false`;
+- `s3ObjectStorageUsed=false`.
 
 ## Completion Criteria
 
-This prompt may be marked `completed` only when every research target has one of:
+This prompt may be marked `completed` only when one of these is true:
 
-- actionable source-backed no-live/read-only task queued;
-- focused repo-local no-live wrapper/test work completed;
-- authoritative official/source-confirmed evidence that no further public/official research can answer the question and the exact owner/operator question is minimized.
+- a repo-local blocker is fixed and focused tests plus sanitized evidence show the next exact selected-candidate/identifier preflight step is ready;
+- read-only Trial identifier preflight produces a fresh target-ready or precise target-blocked classification and queues the next safe action;
+- diagnostic fullflow reaches endpoint-specific L4 order-send business success with sanitized evidence; or
+- a precise safety/environment/test-data blocker is recorded with the next concrete safe action.
 
-If any target still lacks that outcome, do not complete this prompt. Update `HANDOFF_STATE.json`, write sanitized evidence, and leave this prompt active or replace it with a narrower active successor listing the next source/query set. After RUN_ID `20260428T130139Z`, prefer implementing the queued no-live tasks before repeating broad web research.
+If the worker cannot safely run runtime/read-only/diagnostic steps, it must still complete repo-local no-live analysis/tests where possible, write a sanitized blocker record, keep this prompt active or replace it with a narrower active successor, and continue to independent safe no-live/static work.
 
-## Same-Run Continuation Requirement
+## Next Recommended First Action
 
-After recording evidence or a narrowed not-found result for one target, continue to the next target unless a global stop condition is reached.
+Start with repo-local no-live investigation of local exact-match/sync and Charts official identifier hydration. Then, if runtime prerequisites exist, run `/api/orca/official/visits/identifier-preflight` in artifact-free read-only mode for a non-duplicate fresh candidate. Do not run `qa-fullflow-weborca` first.
