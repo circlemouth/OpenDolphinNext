@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
+import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightResponse;
 import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
 import open.dolphin.rest.dto.orca.OrcaReceptionSelectorOptionsResponse;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
@@ -143,6 +144,54 @@ class OrcaXmlMapperTypedTextParsingTest {
         assertTrue(response.getRows().get(0).isHasInsuranceCombinationNumber());
         assertTrue(response.getRows().get(0).isRawSensitiveFieldsExcluded());
         assertEquals(64, response.getRows().get(0).getRowHash().length());
+    }
+
+    @Test
+    void parsesMedicalGetIdentifierSnapshotAsPresenceOnlyRows() {
+        String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <xmlio2>
+                  <medicalget01res type="record">
+                    <Api_Result type="string">00</Api_Result>
+                    <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                    <Patient_Information type="record">
+                      <Patient_ID type="string">00012</Patient_ID>
+                      <WholeName type="string">事例 一</WholeName>
+                      <WholeName_inKana type="string">ジレイ イチ</WholeName_inKana>
+                    </Patient_Information>
+                    <Medical_List_Information type="array">
+                      <Medical_List_Information_child type="record">
+                        <Perform_Date type="string">2026-04-28</Perform_Date>
+                        <Department_Code type="string">01</Department_Code>
+                        <Department_Name type="string">内科</Department_Name>
+                        <Sequential_Number type="string">1</Sequential_Number>
+                        <Insurance_Combination_Number type="string">0002</Insurance_Combination_Number>
+                        <Invoice_Number type="string">10001</Invoice_Number>
+                        <HealthInsurance_Information type="record">
+                          <InsuranceProvider_Class type="string">060</InsuranceProvider_Class>
+                          <HealthInsuredPerson_Number type="string">1234567</HealthInsuredPerson_Number>
+                        </HealthInsurance_Information>
+                      </Medical_List_Information_child>
+                    </Medical_List_Information>
+                  </medicalget01res>
+                </xmlio2>
+                """;
+
+        OrcaXmlMapper mapper = new OrcaXmlMapper();
+        MedicalIdentifierPreflightResponse response = mapper.toMedicalIdentifierSnapshot(xml, "01");
+
+        assertNotNull(response);
+        assertEquals("00", response.getApiResult());
+        assertEquals("01", response.getMedicalGetClassCode());
+        assertEquals(1, response.getMedicalRows().size());
+        assertEquals(1, response.getMedicalSourceRowCount());
+        assertTrue(response.isRawSensitiveFieldsExcluded());
+        assertTrue(response.getMedicalRows().get(0).isHasPerformDate());
+        assertTrue(response.getMedicalRows().get(0).isHasDepartmentCode());
+        assertTrue(response.getMedicalRows().get(0).isHasSequentialNumber());
+        assertTrue(response.getMedicalRows().get(0).isHasInsuranceCombinationNumber());
+        assertTrue(response.getMedicalRows().get(0).isHasInvoiceNumber());
+        assertEquals(64, response.getMedicalRows().get(0).getRowHash().length());
     }
 
     @Test

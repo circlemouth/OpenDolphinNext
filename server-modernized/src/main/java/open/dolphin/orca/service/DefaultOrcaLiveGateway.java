@@ -25,6 +25,8 @@ import open.dolphin.rest.dto.orca.FormerNameHistoryResponse;
 import open.dolphin.rest.dto.orca.InsuranceCombination;
 import open.dolphin.rest.dto.orca.InsuranceCombinationRequest;
 import open.dolphin.rest.dto.orca.InsuranceCombinationResponse;
+import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightRequest;
+import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightResponse;
 import open.dolphin.rest.dto.orca.OrcaApiResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListRequest;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse;
@@ -185,6 +187,46 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         response.setRawSensitiveFieldsExcluded(true);
         response.setClientProvidedIdentifiersTrusted(false);
         response.setServerDerivedAuthorityRequired(true);
+        enrich(response, result);
+        return response;
+    }
+
+    public MedicalIdentifierPreflightResponse getMedicalIdentifierPreflight(
+            String facilityId, MedicalIdentifierPreflightRequest request) {
+        facilityId = requireText(facilityId, "facilityId");
+        ensureNotNull(request, "medical identifier preflight request");
+        AcceptanceInventoryRequest inventoryRequest = new AcceptanceInventoryRequest();
+        inventoryRequest.setAcceptanceDate(request.getAcceptanceDate());
+        inventoryRequest.setClassCode(request.getClassCode());
+        AcceptanceInventoryResponse inventory = getAcceptanceInventory(facilityId, inventoryRequest);
+        AcceptanceInventoryResponse.AcceptanceInventoryRow selected =
+                selectMedicalIdentifierTarget(inventory, request.getTargetRowHash());
+
+        String medicalGetClassCode = normalizeMedicalGetClassCode(request.getMedicalGetClassCode());
+        String payload = buildMedicalIdentifierPayload(selected, medicalGetClassCode);
+        OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.MEDICAL_GET, OrcaTransportRequest.post(payload));
+        String xml = result != null ? result.getBody() : null;
+        MedicalIdentifierPreflightResponse response =
+                mapResponse(xml, body -> mapper.toMedicalIdentifierSnapshot(body, medicalGetClassCode));
+        if (response == null) {
+            response = new MedicalIdentifierPreflightResponse();
+        }
+        response.setEndpoint("/api/orca/official/visits/identifier-preflight");
+        response.setAcceptanceEndpoint(OrcaEndpoint.ACCEPTANCE_LIST.getPath());
+        response.setMedicalGetEndpoint(OrcaEndpoint.MEDICAL_GET.getPath());
+        response.setAcceptanceClassCode(inventory.getClassCode());
+        response.setAcceptanceDate(inventory.getAcceptanceDate());
+        response.setSelectedAcceptanceRowHash(selected.getRowHash());
+        response.setSelectedAcceptanceTargetReady(isMedicalIdentifierTargetReady(selected));
+        response.setAcceptanceSourceRowCount(inventory.getSourceRowCount());
+        response.setAcceptanceTargetReadyRowCount(inventory.getTargetReadyRowCount());
+        response.setIdentifierPreflightReady(response.isSelectedAcceptanceTargetReady()
+                && response.getMedicalSanitizedRowCount() > 0
+                && response.getMedicalRows().stream().anyMatch(row ->
+                        row.isHasPerformDate()
+                                && row.isHasDepartmentCode()
+                                && row.isHasSequentialNumber()
+                                && row.isHasInsuranceCombinationNumber()));
         enrich(response, result);
         return response;
     }
@@ -382,6 +424,10 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
     private String buildVisitListPayload(VisitPatientListRequest request, OrcaLiveGatewaySupport.DateRange range) { return support.buildVisitListPayload(request, range); }
     private String buildAcceptanceInventoryPayload(AcceptanceInventoryRequest request) { return support.buildAcceptanceInventoryPayload(request); }
     private String normalizeAcceptanceInventoryClass(String value) { return support.normalizeAcceptanceInventoryClass(value); }
+    private String normalizeMedicalGetClassCode(String value) { return support.normalizeMedicalGetClassCode(value); }
+    private AcceptanceInventoryResponse.AcceptanceInventoryRow selectMedicalIdentifierTarget(AcceptanceInventoryResponse inventory, String targetRowHash) { return support.selectMedicalIdentifierTarget(inventory, targetRowHash); }
+    private boolean isMedicalIdentifierTargetReady(AcceptanceInventoryResponse.AcceptanceInventoryRow row) { return support.isMedicalIdentifierTargetReady(row); }
+    private String buildMedicalIdentifierPayload(AcceptanceInventoryResponse.AcceptanceInventoryRow row, String medicalGetClassCode) { return support.buildMedicalIdentifierPayload(row, medicalGetClassCode); }
     private OrcaLiveGatewaySupport.DateRange resolveVisitRange(VisitPatientListRequest request) { return support.resolveVisitRange(request); }
     private String buildPatientAppointmentListPayload(PatientAppointmentListRequest request) { return support.buildPatientAppointmentListPayload(request); }
     private String buildBillingSimulationPayload(BillingSimulationRequest request, OrcaLiveGatewaySupport.InsuranceSelection selection) { return support.buildBillingSimulationPayload(request, selection); }

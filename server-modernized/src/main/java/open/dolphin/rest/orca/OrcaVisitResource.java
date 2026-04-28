@@ -34,6 +34,8 @@ import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
 import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
 import open.dolphin.rest.dto.orca.AcceptanceOperationRequest;
+import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightRequest;
+import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightResponse;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListRequest;
@@ -53,6 +55,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
     private static final String OPERATION_VISIT_LIST = "visit_list";
     private static final String OPERATION_ACCEPTANCE_INVENTORY = "acceptance_inventory";
     private static final String OPERATION_ACCEPTANCE_SERVER_DERIVED_OPERATION = "acceptance_server_derived_operation";
+    private static final String OPERATION_IDENTIFIER_PREFLIGHT = "identifier_preflight";
     private static final ZoneId TOKYO_ZONE = ZoneId.of("Asia/Tokyo");
     private static final DateTimeFormatter ORCA_TIME_FORMAT = DateTimeFormatter.ofPattern("HHmm").withZone(TOKYO_ZONE);
     private static final String SHA256_PATTERN = "^[a-fA-F0-9]{64}$";
@@ -263,6 +266,69 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.acceptance.inventory.error", ex.getMessage());
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw ex;
+        }
+    }
+
+    @POST
+    @Path("/identifier-preflight")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public MedicalIdentifierPreflightResponse identifierPreflight(@Context HttpServletRequest request,
+            MedicalIdentifierPreflightRequest body) {
+        if (request == null || request.getRemoteUser() == null || request.getRemoteUser().isBlank()) {
+            Map<String, Object> details = newAuditDetails(request);
+            details.put("operation", OPERATION_IDENTIFIER_PREFLIGHT);
+            markFailureDetails(details, Response.Status.UNAUTHORIZED.getStatusCode(),
+                    "remote_user_missing", "Authenticated user is required");
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.UNAUTHORIZED, "remote_user_missing",
+                    "Authenticated user is required");
+        }
+        if (body == null || body.getAcceptanceDate() == null) {
+            rejectIdentifierPreflight(request, Response.Status.BAD_REQUEST,
+                    "orca.identifier.preflight.invalid", "acceptanceDate is required");
+        }
+        String classCode = normalizeAcceptanceInventoryClass(body.getClassCode());
+        if (classCode == null) {
+            rejectIdentifierPreflight(request, Response.Status.BAD_REQUEST,
+                    "orca.identifier.preflight.invalid", "classCode must be one of 01, 02, or 03");
+        }
+        body.setClassCode(classCode);
+        if (body.getTargetRowHash() != null && !body.getTargetRowHash().isBlank()
+                && !body.getTargetRowHash().trim().matches(SHA256_PATTERN)) {
+            rejectIdentifierPreflight(request, Response.Status.BAD_REQUEST,
+                    "orca.identifier.preflight.invalid", "targetRowHash must be a SHA-256 hex row hash");
+        }
+        String medicalGetClassCode = normalizeMedicalGetClassCode(body.getMedicalGetClassCode());
+        if (medicalGetClassCode == null) {
+            rejectIdentifierPreflight(request, Response.Status.BAD_REQUEST,
+                    "orca.identifier.preflight.invalid", "medicalGetClassCode must be one of 01, 02, 03, or 04");
+        }
+        body.setMedicalGetClassCode(medicalGetClassCode);
+
+        String facilityId = requireFacilityId(request);
+        Map<String, Object> details = newAuditDetails(request);
+        details.put("operation", OPERATION_IDENTIFIER_PREFLIGHT);
+        putAuditDetail(details, "acceptanceDate", body.getAcceptanceDate());
+        details.put("classCode", classCode);
+        details.put("medicalGetClassCode", medicalGetClassCode);
+        details.put("targetRowHashProvided", body.getTargetRowHash() != null && !body.getTargetRowHash().isBlank());
+        try {
+            MedicalIdentifierPreflightResponse response = wrapperService.getMedicalIdentifierPreflight(facilityId, body);
+            applyResponseAuditDetails(response, details);
+            applyResponseMetadata(response, details);
+            details.put("identifierPreflightReady", response.isIdentifierPreflightReady());
+            details.put("artifactFree", response.isArtifactFree());
+            details.put("rawSensitiveFieldsExcluded", response.isRawSensitiveFieldsExcluded());
+            details.put("clientProvidedIdentifiersTrusted", response.isClientProvidedIdentifiersTrusted());
+            markSuccessDetails(details);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
+            return response;
+        } catch (RuntimeException ex) {
+            markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
+                    "orca.identifier.preflight.error", ex.getMessage());
             recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
@@ -634,6 +700,37 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             case "all" -> "03";
             default -> null;
         };
+    }
+
+    private String normalizeMedicalGetClassCode(String value) {
+        String normalized = value == null || value.isBlank() ? "01" : value.trim().toLowerCase(Locale.ROOT);
+        if (normalized.startsWith("class=")) {
+            normalized = normalized.substring("class=".length());
+        } else if (normalized.startsWith("?class=")) {
+            normalized = normalized.substring("?class=".length());
+        }
+        if (normalized.matches("\\d")) {
+            normalized = "0" + normalized;
+        }
+        return switch (normalized) {
+            case "01", "02", "03", "04" -> normalized;
+            case "history", "visit-history" -> "01";
+            case "detail", "medical-detail" -> "02";
+            case "monthly", "monthly-codes" -> "03";
+            case "points", "class-points" -> "04";
+            default -> null;
+        };
+    }
+
+    private void rejectIdentifierPreflight(HttpServletRequest request,
+            Response.Status status,
+            String code,
+            String message) {
+        Map<String, Object> details = newAuditDetails(request);
+        details.put("operation", OPERATION_IDENTIFIER_PREFLIGHT);
+        markFailureDetails(details, status.getStatusCode(), code, message);
+        recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+        throw restError(request, status, code, message);
     }
 
     private void validateServerDerivedAcceptanceRequest(HttpServletRequest request, AcceptanceOperationRequest body) {

@@ -7,6 +7,7 @@ import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
+import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
 import open.dolphin.rest.dto.orca.AppointmentMutationRequest;
 import open.dolphin.rest.dto.orca.BillingSimulationRequest;
 import open.dolphin.rest.dto.orca.FormerNameHistoryRequest;
@@ -218,6 +219,88 @@ final class OrcaLiveGatewaySupport {
             throw new OrcaGatewayException("classCode must be one of 01, 02, or 03");
         }
         return normalized;
+    }
+
+    String normalizeMedicalGetClassCode(String value) {
+        String normalized = value == null || value.isBlank() ? "01" : padTwoDigits(requireText(value, "medicalGetClassCode"));
+        if (!"01".equals(normalized) && !"02".equals(normalized) && !"03".equals(normalized)
+                && !"04".equals(normalized)) {
+            throw new OrcaGatewayException("medicalGetClassCode must be one of 01, 02, 03, or 04");
+        }
+        return normalized;
+    }
+
+    AcceptanceInventoryResponse.AcceptanceInventoryRow selectMedicalIdentifierTarget(
+            AcceptanceInventoryResponse inventory,
+            String targetRowHash) {
+        if (inventory == null || inventory.getRows() == null || inventory.getRows().isEmpty()) {
+            throw new OrcaGatewayException("acceptance inventory has no rows");
+        }
+        String normalizedHash = targetRowHash == null ? "" : targetRowHash.trim().toLowerCase(java.util.Locale.ROOT);
+        for (AcceptanceInventoryResponse.AcceptanceInventoryRow row : inventory.getRows()) {
+            if (!isMedicalIdentifierTargetReady(row)) {
+                continue;
+            }
+            if (normalizedHash.isBlank() || normalizedHash.equals(row.getRowHash())) {
+                return row;
+            }
+        }
+        throw new OrcaGatewayException("no target-ready acceptance row matched the requested row hash");
+    }
+
+    boolean isMedicalIdentifierTargetReady(AcceptanceInventoryResponse.AcceptanceInventoryRow row) {
+        return row != null
+                && row.isRawSensitiveFieldsExcluded()
+                && row.isHasPatientId()
+                && row.isHasAcceptanceDate()
+                && row.isHasDepartmentCode()
+                && row.isHasInsuranceCombinationNumber()
+                && row.getServerPatientId() != null && !row.getServerPatientId().isBlank()
+                && row.getServerAcceptanceDate() != null && !row.getServerAcceptanceDate().isBlank()
+                && row.getServerDepartmentCode() != null && !row.getServerDepartmentCode().isBlank()
+                && row.getServerInsuranceCombinationNumber() != null
+                && !row.getServerInsuranceCombinationNumber().isBlank();
+    }
+
+    String buildMedicalIdentifierPayload(
+            AcceptanceInventoryResponse.AcceptanceInventoryRow row,
+            String medicalGetClassCode) {
+        String classCode = normalizeMedicalGetClassCode(medicalGetClassCode);
+        StringBuilder builder = new StringBuilder();
+        builder.append(buildOrcaMeta(OrcaEndpoint.MEDICAL_GET, classCode));
+        builder.append("<data>");
+        builder.append("<medicalgetreq type=\"record\">");
+        builder.append("<Patient_ID type=\"string\">").append(requireIdentifierToken(row.getServerPatientId(), "patientId"))
+                .append("</Patient_ID>");
+        builder.append("<Perform_Date type=\"string\">").append(requireDateToken(row.getServerAcceptanceDate(), "performDate"))
+                .append("</Perform_Date>");
+        builder.append("<Medical_Information type=\"record\">");
+        builder.append("<Department_Code type=\"string\">")
+                .append(requireIdentifierToken(row.getServerDepartmentCode(), "departmentCode"))
+                .append("</Department_Code>");
+        builder.append("<Insurance_Combination_Number type=\"string\">")
+                .append(requireIdentifierToken(row.getServerInsuranceCombinationNumber(), "insuranceCombinationNumber"))
+                .append("</Insurance_Combination_Number>");
+        builder.append("</Medical_Information>");
+        builder.append("</medicalgetreq>");
+        builder.append("</data>");
+        return builder.toString();
+    }
+
+    private String requireIdentifierToken(String value, String label) {
+        String token = requireText(value, label);
+        if (!token.matches("[0-9A-Za-z._:-]+")) {
+            throw new OrcaGatewayException(label + " contains unsupported characters");
+        }
+        return token;
+    }
+
+    private String requireDateToken(String value, String label) {
+        String token = requireText(value, label);
+        if (!token.matches("\\d{4}-\\d{2}-\\d{2}|\\d{8}")) {
+            throw new OrcaGatewayException(label + " must be an ORCA date token");
+        }
+        return token;
     }
 
     DateRange resolveVisitRange(VisitPatientListRequest request) {

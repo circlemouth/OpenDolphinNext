@@ -177,6 +177,7 @@ public class AcceptanceInventoryResponse extends OrcaApiResponse {
         private String serverDepartmentCode;
         private String serverPhysicianCode;
         private String serverMedicalInformation;
+        private String serverInsuranceCombinationNumber;
 
         public String getRowHash() {
             return rowHash;
@@ -319,6 +320,15 @@ public class AcceptanceInventoryResponse extends OrcaApiResponse {
 
         public void setServerMedicalInformation(String serverMedicalInformation) {
             this.serverMedicalInformation = serverMedicalInformation;
+        }
+
+        @JsonIgnore
+        public String getServerInsuranceCombinationNumber() {
+            return serverInsuranceCombinationNumber;
+        }
+
+        public void setServerInsuranceCombinationNumber(String serverInsuranceCombinationNumber) {
+            this.serverInsuranceCombinationNumber = serverInsuranceCombinationNumber;
         }
     }
 }

@@ -10,6 +10,8 @@ import open.dolphin.rest.dto.orca.FormerNameHistoryRequest;
 import open.dolphin.rest.dto.orca.FormerNameHistoryResponse;
 import open.dolphin.rest.dto.orca.InsuranceCombinationRequest;
 import open.dolphin.rest.dto.orca.InsuranceCombinationResponse;
+import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightRequest;
+import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListRequest;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse;
 import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
@@ -40,6 +42,9 @@ public interface OrcaLiveGateway {
     BillingSimulationResponse simulateBilling(String facilityId, BillingSimulationRequest request);
 
     AcceptanceInventoryResponse getAcceptanceInventory(String facilityId, AcceptanceInventoryRequest request);
+
+    MedicalIdentifierPreflightResponse getMedicalIdentifierPreflight(
+            String facilityId, MedicalIdentifierPreflightRequest request);
 
     VisitPatientListResponse getVisitList(String facilityId, VisitPatientListRequest request);
 

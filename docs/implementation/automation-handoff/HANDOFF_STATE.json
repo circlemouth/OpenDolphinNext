@@ -98,6 +98,40 @@
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false
   },
+  "latestRwo08bArtifactFreeIdentifierPreflight": {
+    "runId": "20260428T140210Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_ARTIFACT_FREE_IDENTIFIER_PREFLIGHT_IMPLEMENTATION_NO_LIVE",
+    "result": "ARTIFACT_FREE_IDENTIFIER_PREFLIGHT_ROUTE_AND_PARSER_READY_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "e293e4ca9",
+    "evidence": "docs/implementation/rwo08b-artifact-free-identifier-preflight-20260428T140210Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-artifact-free-identifier-preflight-20260428T140210Z/summary.sanitized.json",
+    "implementedRoute": "/api/orca/official/visits/identifier-preflight",
+    "readOnlyEndpoints": [
+      "/api01rv2/acceptlstv2",
+      "/api01rv2/medicalgetv2"
+    ],
+    "targetIdentityMode": "server_derived_acceptlstv2_row_hash",
+    "clientProvidedIdentifiersTrusted": false,
+    "serverDerivedAuthorityRequired": true,
+    "artifactFree": true,
+    "checks": {
+      "focusedMapperContract": "pass_8_tests_with_pom_server_modernized_reactor"
+    },
+    "liveTrialOrca": {
+      "executed": false,
+      "businessAccepted": false
+    },
+    "readOnlyTrialOrca": {
+      "executed": false,
+      "mutation": false
+    },
+    "recommendedNextTask": "Run RWO-06H Api_Result=90 lock-classification packet no-live work; keep RWO-06F and RWO-06I live stopped.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false
+  },
   "automationResponsibilityBoundary": {
     "rwo11Rwo09RollbackOwnerDecision": "external_owner_operator_release_management_gate_by_current_automation_prompt_20260427T104612Z",
     "automationMustNot": [

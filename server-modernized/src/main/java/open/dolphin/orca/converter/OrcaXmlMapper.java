@@ -25,6 +25,8 @@ import open.dolphin.rest.dto.orca.FormerNameHistoryResponse;
 import open.dolphin.rest.dto.orca.FormerNameHistoryResponse.FormerNameRecord;
 import open.dolphin.rest.dto.orca.InsuranceCombination;
 import open.dolphin.rest.dto.orca.InsuranceCombinationResponse;
+import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightResponse;
+import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightResponse.MedicalIdentifierRow;
 import open.dolphin.rest.dto.orca.OrcaApiResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse.AppointmentSlot;
@@ -225,6 +227,29 @@ public class OrcaXmlMapper {
         response.setSanitizedRowCount(response.getRows().size());
         response.setTargetReady(response.getTargetReadyRowCount() > 0);
         response.setRawSensitiveFieldsExcluded(true);
+        response.setClientProvidedIdentifiersTrusted(false);
+        response.setServerDerivedAuthorityRequired(true);
+        return response;
+    }
+
+    public MedicalIdentifierPreflightResponse toMedicalIdentifierSnapshot(String xml, String medicalGetClassCode) {
+        JsonNode body = resolveMedicalGetBody(read(xml), medicalGetClassCode);
+        MedicalIdentifierPreflightResponse response = new MedicalIdentifierPreflightResponse();
+        populateCommon(body, response);
+        String classCode = normalizeMedicalGetClassCode(medicalGetClassCode);
+        response.setMedicalGetClassCode(classCode);
+        response.setMedicalGetEndpoint("/api01rv2/medicalgetv2");
+        response.setRequestClass("medicalgetv2_class_" + classCode + "_identifier_snapshot_readonly");
+        response.setParser("medicalgetres_allowlisted_identifier_presence_flags_and_hashes_only");
+        response.setSanitizer("drop_patient_names_insurance_numbers_raw_detail_and_raw_orca_body");
+        for (JsonNode node : iterable(body.path("Medical_List_Information"))) {
+            MedicalIdentifierRow row = toMedicalIdentifierRow(node);
+            response.getMedicalRows().add(row);
+        }
+        response.setMedicalSourceRowCount(response.getMedicalRows().size());
+        response.setMedicalSanitizedRowCount(response.getMedicalRows().size());
+        response.setRawSensitiveFieldsExcluded(true);
+        response.setArtifactFree(true);
         response.setClientProvidedIdentifiersTrusted(false);
         response.setServerDerivedAuthorityRequired(true);
         return response;
@@ -437,6 +462,36 @@ public class OrcaXmlMapper {
         row.setServerDepartmentCode(departmentCode);
         row.setServerPhysicianCode(physicianCode);
         row.setServerMedicalInformation(medicalInformation);
+        row.setServerInsuranceCombinationNumber(insuranceCombinationNumber);
+        return row;
+    }
+
+    private MedicalIdentifierRow toMedicalIdentifierRow(JsonNode node) {
+        String performDate = textValue(node, "Perform_Date");
+        String departmentCode = textValue(node, "Department_Code");
+        String sequentialNumber = textValue(node, "Sequential_Number");
+        String insuranceCombinationNumber = firstNonBlankText(
+                textValue(node, "Insurance_Combination_Number"),
+                textValue(node.path("HealthInsurance_Information"), "Insurance_Combination_Number"));
+        String invoiceNumber = textValue(node, "Invoice_Number");
+
+        MedicalIdentifierRow row = new MedicalIdentifierRow();
+        row.setRowHash(sha256(String.join("|",
+                safeHashSeed(performDate),
+                safeHashSeed(departmentCode),
+                safeHashSeed(sequentialNumber),
+                safeHashSeed(insuranceCombinationNumber),
+                safeHashSeed(invoiceNumber))));
+        row.setHasPerformDate(hasText(performDate));
+        row.setHasDepartmentCode(hasText(departmentCode));
+        row.setHasSequentialNumber(hasText(sequentialNumber));
+        row.setHasInsuranceCombinationNumber(hasText(insuranceCombinationNumber));
+        row.setHasInvoiceNumber(hasText(invoiceNumber));
+        row.setRawSensitiveFieldsExcluded(true);
+        row.setServerPerformDate(performDate);
+        row.setServerDepartmentCode(departmentCode);
+        row.setServerSequentialNumber(sequentialNumber);
+        row.setServerInsuranceCombinationNumber(insuranceCombinationNumber);
         return row;
     }
 
@@ -449,6 +504,35 @@ public class OrcaXmlMapper {
                 && row.isHasDepartmentCode()
                 && row.isHasPhysicianCode()
                 && row.isHasInsuranceCombinationNumber();
+    }
+
+    private JsonNode resolveMedicalGetBody(JsonNode root, String medicalGetClassCode) {
+        String classCode = normalizeMedicalGetClassCode(medicalGetClassCode);
+        String[] candidates = {
+            "medicalget" + classCode + "res",
+            "medicalgetres"
+        };
+        for (String candidate : candidates) {
+            JsonNode node = root.path(candidate);
+            if (!node.isMissingNode() && !node.isNull()) {
+                return node;
+            }
+        }
+        return root.path("medicalget01res");
+    }
+
+    private String normalizeMedicalGetClassCode(String value) {
+        if (value == null || value.isBlank()) {
+            return "01";
+        }
+        String normalized = value.trim();
+        if (normalized.matches("\\d")) {
+            return "0" + normalized;
+        }
+        if (normalized.matches("0[1-4]")) {
+            return normalized;
+        }
+        return "01";
     }
 
     private boolean hasText(String value) {
