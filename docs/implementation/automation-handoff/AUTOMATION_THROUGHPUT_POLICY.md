@@ -71,6 +71,8 @@ Research must prefer ORCA official sources first:
 
 Public/non-official sources may be used only as secondary leads and must be confirmed against official ORCA documentation before they influence endpoint semantics. Record sanitized research evidence only: checked URL, checked date, endpoint/request class, relevant request number/class/code mapping, derived no-live next action, and claim boundary. Research may justify payload drafting, parser/sanitizer tests, wrapper dry-runs, read-only probes, or queue reordering, but it is not live Trial acceptance evidence and does not authorize live mutation by itself.
 
+When the owner asks for research to continue until information is found, workers must not close the research task after a single not-found pass. Each run must record the checked source/query set, the sanitized not-found result, and the next concrete official or public lead to check. Leave the handoff active, or replace it with a narrower active successor, until the worker finds actionable source-backed no-live/read-only work or an authoritative minimized owner/operator question.
+
 ## Endpoint Packets
 
 Before a live Trial mutation, the queue item should point to a complete endpoint packet. The packet must include:
