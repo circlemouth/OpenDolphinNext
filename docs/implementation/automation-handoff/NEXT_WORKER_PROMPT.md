@@ -1,19 +1,21 @@
 # NEXT_WORKER_PROMPT
 
-status: blocked_existing_acceptance_target_drift_before_order_panel_validation
+status: blocked_duplicate_acceptance_after_fresh_readiness
 created_at: 2026-04-29T11:43:30Z
-updated_at: 2026-04-29T20:05:00Z
+updated_at: 2026-04-29T20:35:00Z
 source_work_order: RWO-08B
-blocker_id: rwo08b-existing-acceptance-target-drift-before-order-panel-validation
+blocker_id: rwo08b-duplicate-acceptance-after-fresh-readiness-before-order-panel-validation
 priority: high
 supersedes:
 - rwo08b-existing-acceptance-visible-entry-handoff-blocker
 - rwo08b-existing-acceptance-charts-order-panel-blocker
+- rwo08b-existing-acceptance-target-drift-before-order-panel-validation
 
 ## Context
 
 RUN_ID `20260429T113103Z` repaired the narrowed Web/QA existing ORCA acceptance handoff blocker.
 RUN_ID `20260429T194551Z` repaired the diagnostic harness order-editor opening path for the current Charts UI, but the required existing-acceptance target had drifted before the fix could be validated by Fullflow.
+RUN_ID `20260429T201801Z` refreshed read-only target readiness for target `00002` and ran exactly one diagnostic Fullflow attempt, but the live accept step returned duplicate acceptance before canonical Charts handoff keys became available.
 
 Tracked sanitized evidence:
 
@@ -21,11 +23,14 @@ Tracked sanitized evidence:
 - `docs/implementation/rwo08b-existing-acceptance-handoff-20260429T113103Z/FINAL_REPORT.md`
 - `docs/implementation/rwo08b-charts-order-panel-20260429T194551Z/summary.sanitized.json`
 - `docs/implementation/rwo08b-charts-order-panel-20260429T194551Z/FINAL_REPORT.md`
+- `docs/implementation/rwo08b-fullflow-duplicate-acceptance-20260429T201801Z/summary.sanitized.json`
+- `docs/implementation/rwo08b-fullflow-duplicate-acceptance-20260429T201801Z/FINAL_REPORT.md`
 
 Local-only diagnostic artifact root, not reviewer evidence:
 
 - `artifacts/diagnostic-fullflow/20260429T113103Z/fullflow/`
 - `artifacts/diagnostic-fullflow/20260429T194551Z/fullflow/`
+- `artifacts/diagnostic-fullflow/20260429T201801Z/`
 
 Do not commit, package, paste, or reviewer-submit screenshots, HAR, traces, videos, raw network artifacts, raw ORCA request/response bodies, raw patient details, raw insurance details, request XML, cookies, sessions, Authorization headers, CSRF values, credentials, or credential-bearing URLs.
 
@@ -79,11 +84,21 @@ The post-fix diagnostic attempt could not validate the order panel repair becaus
 - send button disabled by `missing_encounter_context`;
 - order-send business success not reached.
 
-The current blocker is target/precondition drift before order-panel validation:
+RUN_ID `20260429T201801Z` completed the requested fresh readiness and Fullflow retry sequence:
 
-`blocked_target_drift_before_order_panel_validation`
+- candidate discovery selected non-excluded target `00002`;
+- exact selected-candidate preflight accepted target `00002` for `2026-04-30` with no mutation requests;
+- acceptlstv2 inventory classified the target row as `readonly_inventory_target_ready`;
+- RWO-08B target-readiness wrapper classified the packet as `target_ready_for_diagnostic_fullflow`;
+- the single diagnostic Fullflow attempt then observed acceptmodv2 Api_Result `16`, classified as `business_rejected_duplicate_acceptance`;
+- canonical Charts handoff keys remained absent after the duplicate acceptance response;
+- order-panel validation, request XML generation, order send, and medicalmodv2 business evidence were not reached.
 
-Do not rerun unchanged diagnostic Fullflow until a fresh read-only target-readiness pass proves a non-duplicate existing-acceptance target with both schedule key and encounter key and `visitRowReadiness=ready`.
+The current blocker is duplicate-acceptance reconciliation before order-panel validation:
+
+`blocked_duplicate_acceptance_before_order_panel_validation`
+
+Do not rerun unchanged diagnostic Fullflow until a concrete changed precondition exists. A valid next precondition is either a reviewed duplicate-acceptance reconciliation path that converts Api_Result `16` into a server-derived existing-acceptance handoff with both `scheduleKey` and `encounterKey`, or a fresh non-duplicate Trial target with same-run read-only readiness.
 
 ## Required Boundary
 
@@ -93,21 +108,21 @@ Do not treat Charts navigation, HTTP 200, wrapper exit 0, diagnostic completion,
 
 ## Next Safe Work
 
-Refresh the RWO-08B existing-acceptance target readiness before any further diagnostic Fullflow attempt.
+Resolve the duplicate-acceptance handoff gap before any further diagnostic Fullflow attempt.
 
 Required next steps:
 
-1. Run a safe read-only target-readiness/candidate discovery path for a non-duplicate WebORCA Trial target.
-2. Proceed to diagnostic Fullflow only if the selected target has current existing-acceptance handoff readiness with schedule key and encounter key present and `visitRowReadiness=ready`.
-3. If readiness is proven, rerun exactly one diagnostic Fullflow attempt under local-only artifact containment to validate the repaired current right-utility drawer order editor path.
-4. If readiness is not proven, record a sanitized target-drift/test-data blocker and continue to independent no-live work.
+1. Inspect the existing server-derived handoff/visit hydration path for duplicate acceptmodv2 Api_Result `16` without trusting patient ID alone or browser state.
+2. If a repo-local safe reconciliation fix is possible, add focused no-live/unit tests proving duplicate acceptance cannot create a handoff unless server-derived `scheduleKey` and `encounterKey` are present.
+3. If no safe reconciliation fix is possible from current evidence, run read-only target discovery for a fresh non-duplicate target and require same-run readiness before one further diagnostic Fullflow attempt.
+4. Record sanitized evidence either way; keep diagnostic artifacts local-only and untracked.
 
 ## Forbidden Actions
 
 - Do not print or commit secret values, ORCA credentials, encrypted credential material, cookies, sessions, Authorization headers, CSRF values, raw ORCA bodies, raw patient details, raw insurance details, HAR, traces, videos, screenshots, request XML, raw network dumps, or credential-bearing URLs.
 - Do not run production ORCA, production credentials, production patient data, S3/MinIO/object-storage setup, dummy object storage, or object-storage readiness claims.
 - Do not change legacy `client/` or `server/`.
-- Do not repeat unchanged live or diagnostic Trial sends, especially while the existing-acceptance target readiness is unproven.
+- Do not repeat unchanged live or diagnostic Trial sends after Api_Result `16` duplicate acceptance unless a concrete changed precondition has been recorded.
 - Do not use patient ID alone, browser UI state, local storage state, or client-provided identifiers as authority.
 
 ## Completion Criteria
@@ -115,4 +130,4 @@ Required next steps:
 This prompt may be marked `completed` only when one of these is true:
 
 - diagnostic Fullflow reaches a sanitized order-send classification after a fresh proven existing-acceptance handoff; or
-- a narrower target-readiness/test-data blocker is recorded with sanitized evidence and no raw artifacts.
+- a narrower duplicate-acceptance reconciliation blocker or test-data blocker is recorded with sanitized evidence and no raw artifacts.

@@ -1,8 +1,8 @@
 {
-  "status": "blocked_existing_acceptance_target_drift_before_order_panel_validation",
+  "status": "blocked_duplicate_acceptance_after_fresh_readiness",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B",
-  "blockerId": "rwo08b-existing-acceptance-target-drift-before-order-panel-validation",
+  "blockerId": "rwo08b-duplicate-acceptance-after-fresh-readiness-before-order-panel-validation",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,72 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-29T20:05:00Z",
+  "lastUpdated": "2026-04-29T20:35:00Z",
+  "latestRwo08bDiagnosticFullflowAfterFreshReadiness": {
+    "runId": "20260429T201801Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_DIAGNOSTIC_FULLFLOW_AFTER_FRESH_READINESS",
+    "result": "FULLFLOW_BLOCKED_BY_DUPLICATE_ACCEPTANCE_BEFORE_CHARTS_HANDOFF",
+    "branch": "master",
+    "headAtSelection": "de14b00ea32b3d7efc788fa8264fff731899c02d",
+    "evidence": "docs/implementation/rwo08b-fullflow-duplicate-acceptance-20260429T201801Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-fullflow-duplicate-acceptance-20260429T201801Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/rwo08b-fullflow-duplicate-acceptance-20260429T201801Z/FINAL_REPORT.md",
+    "activePrompt": {
+      "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+      "statusAfterRun": "blocked_duplicate_acceptance_after_fresh_readiness",
+      "blockerId": "rwo08b-duplicate-acceptance-after-fresh-readiness-before-order-panel-validation"
+    },
+    "selectedTarget": {
+      "target": "WebORCA / ORCA Trial",
+      "patientId": "00002",
+      "acceptanceDate": "2026-04-30",
+      "acceptanceClassCode": "01",
+      "selectedAcceptanceRowHash": "1ee0699f9f902acd73030ce6d9fb0dea9b0ffa690afd6938530f50c9e70687f8",
+      "duplicateBlockedCandidateIdsExcluded": [
+        "00001",
+        "00005"
+      ]
+    },
+    "readOnlyTrialOrca": {
+      "executed": true,
+      "mutation": false,
+      "candidateDiscoveryAcceptedCandidateCount": 3,
+      "exactSelectedCandidatePreflightAccepted": true,
+      "acceptanceInventoryBusinessSuccessClassification": "readonly_inventory_target_ready",
+      "identifierPreflightBusinessSuccessClassification": "readonly_identifier_preflight_target_ready",
+      "targetReadinessBusinessSuccessClassification": "target_ready_for_diagnostic_fullflow",
+      "strictIdentifierPreflightReady": true
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "exitCode": 1,
+      "businessSuccessClassification": "blocked_duplicate_acceptance_before_order_send",
+      "blockerClassification": "test-data-blocker",
+      "blockerReason": "fatal_before_send",
+      "acceptMutationObserved": true,
+      "acceptMutationHttpStatusClass": "2xx",
+      "acceptMutationApiResult": "16",
+      "acceptMutationBusinessSuccessClassification": "business_rejected_duplicate_acceptance",
+      "chartsHandoffReady": false,
+      "chartsHandoffKeyPresence": {
+        "scheduleKey": false,
+        "encounterKey": false
+      },
+      "visitRowReadiness": "unknown",
+      "orderPanelValidationReached": false,
+      "orderSendReached": false,
+      "medicalmodv2Executed": false,
+      "requestXmlCreated": false
+    },
+    "recommendedNextTask": "Do not rerun unchanged diagnostic Fullflow. Add or run duplicate-acceptance reconciliation for Api_Result=16 to server-derived existing-acceptance handoff, or select a fresh non-duplicate target with same-run readiness before another single diagnostic Fullflow attempt.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
   "latestRwo08bExistingAcceptanceHandoffRepair": {
     "runId": "20260429T104910Z",
     "workOrder": "RWO-08B",

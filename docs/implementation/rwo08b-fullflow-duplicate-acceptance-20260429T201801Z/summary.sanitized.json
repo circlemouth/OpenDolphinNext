@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260429T201801Z",
+  "workOrder": "RWO-08B",
+  "taskId": "RWO-08B_DIAGNOSTIC_FULLFLOW_AFTER_FRESH_READINESS",
+  "result": "FULLFLOW_BLOCKED_BY_DUPLICATE_ACCEPTANCE_BEFORE_CHARTS_HANDOFF",
+  "branch": "master",
+  "headAtSelection": "de14b00ea32b3d7efc788fa8264fff731899c02d",
+  "activePrompt": {
+    "path": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
+    "statusAtSelection": "blocked_existing_acceptance_target_drift_before_order_panel_validation",
+    "statusAfterRun": "blocked_duplicate_acceptance_after_fresh_readiness",
+    "blockerId": "rwo08b-duplicate-acceptance-after-fresh-readiness-before-order-panel-validation"
+  },
+  "target": {
+    "system": "WebORCA / ORCA Trial",
+    "patientId": "00002",
+    "acceptanceDate": "2026-04-30",
+    "acceptanceClassCode": "01",
+    "orderEntity": "treatmentOrder",
+    "selectedAcceptanceRowHash": "1ee0699f9f902acd73030ce6d9fb0dea9b0ffa690afd6938530f50c9e70687f8",
+    "duplicateBlockedCandidateIdsExcluded": [
+      "00001",
+      "00005"
+    ]
+  },
+  "readOnlyPreflight": {
+    "candidateDiscoveryExecuted": true,
+    "candidateDiscoveryMutation": false,
+    "acceptedCandidateCount": 3,
+    "selectedCandidatePatientId": "00002",
+    "candidateDiscoveryAloneAuthorizesFullflow": false,
+    "exactSelectedCandidatePreflightExecuted": true,
+    "exactSelectedCandidatePreflightAccepted": true,
+    "exactSelectedCandidateMutation": false,
+    "acceptanceInventoryExecuted": true,
+    "acceptanceInventoryMutation": false,
+    "acceptanceInventoryClassification": "readonly_inventory_target_ready",
+    "acceptanceInventoryTargetReadyRowCount": 1,
+    "identifierPreflightExecuted": true,
+    "identifierPreflightMutation": false,
+    "identifierPreflightHttpStatusClass": "2xx",
+    "identifierPreflightApiResultClass": "zero",
+    "identifierPreflightClassification": "readonly_identifier_preflight_target_ready",
+    "strictIdentifierPreflightReady": true,
+    "provisionalIdentifierPreflightReady": false,
+    "targetReadinessClassification": "target_ready_for_diagnostic_fullflow"
+  },
+  "diagnosticFullflow": {
+    "executed": true,
+    "exitCode": 1,
+    "businessSuccessClassification": "blocked_duplicate_acceptance_before_order_send",
+    "blockerClassification": "test-data-blocker",
+    "blockerReason": "fatal_before_send",
+    "acceptMutationObserved": true,
+    "acceptMutationHttpStatusClass": "2xx",
+    "acceptMutationApiResult": "16",
+    "acceptMutationBusinessClassification": "business_rejected_duplicate_acceptance",
+    "acceptanceEvidencePresent": false,
+    "patientEvidencePresent": true,
+    "canonicalKeyPresence": {
+      "acceptanceId": false,
+      "visitNumber": false,
+      "scheduleKey": false,
+      "encounterKey": false
+    },
+    "chartsHandoffStatus": "error",
+    "chartsHandoffTimeout": true,
+    "chartsHandoffStateAfterTimeout": "disabled_without_schedule_or_encounter_key",
+    "visitRowReadiness": "unknown",
+    "orderPanelValidationReached": false,
+    "orderSendReached": false,
+    "medicalmodv2Executed": false,
+    "requestXmlCreated": false,
+    "sendValidation": {
+      "ok": false,
+      "reason": "no_request_xml"
+    },
+    "pageErrorCount": 0,
+    "consoleMessageCount": 0
+  },
+  "securityAndArtifactPolicy": {
+    "credentialsCaptured": false,
+    "rawOrcaBodiesCapturedInTrackedEvidence": false,
+    "patientInsuranceDetailsCapturedInTrackedEvidence": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false,
+    "clientProvidedIdentifiersTrusted": false,
+    "serverDerivedAuthorityRequired": true,
+    "patientIdAloneAcceptedAsAuthority": false
+  },
+  "evidenceHashes": {
+    "targetReadinessSummarySanitizedSha256": "1af3d8ae73ca36a38afe23e43e40af286b79dc2345c9b575106d7d052ceef5f5",
+    "acceptanceInventorySummarySanitizedSha256": "bbd52c1b33185434df1ebfbadc2248208fbc1d61cbb9bffc7e25bfdae34b3e50",
+    "fullflowSummaryLocalOnlySha256": "ce825e9a9084a132e3483423a0201f46f5670f6e0c495744ee34c27f4c913a06",
+    "fullflowBlockerSummaryLocalOnlySha256": "e04ccfd42889b6e2e4f54bd2359efff78ceb7c4591e3342155161aca506c84fa",
+    "candidateDiscoverySummarySha256": "6bf4d721c92fc3b4a1949432d10b4203bfabe399d7515013b255eaed2d837078",
+    "exactPreflightSummarySha256": "f1506d41404cf06115c9779a590115cbbeb831d06852653e6ae94af6d4f7fbe4",
+    "identifierPreflightSummarySha256": "694ef1f1070205f2c2eade297387d87fa28bbb3bc0cdd8b75de99994a9177078"
+  },
+  "claimBoundary": "Fresh read-only readiness authorized one diagnostic Fullflow attempt, but the live accept step returned duplicate acceptance before canonical Charts handoff keys became available. This is not order-send business success, Trial-backed Fullflow L4 success, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness.",
+  "recommendedNextTask": "Do not rerun the same diagnostic Fullflow unchanged. Add or run a narrower read-only/live-safe duplicate-acceptance reconciliation that proves whether acceptmodv2 Api_Result=16 can be converted into a server-derived existing-acceptance handoff with scheduleKey and encounterKey, or select a fresh non-duplicate target with same-run readiness before another single diagnostic Fullflow attempt."
+}
