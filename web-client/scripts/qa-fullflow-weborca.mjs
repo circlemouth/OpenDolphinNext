@@ -90,6 +90,70 @@ const materialUnit = process.env.QA_MATERIAL_UNIT ?? '';
 const expectedMedicationCode = process.env.QA_EXPECT_MEDICATION_CODE ?? '';
 const expectedMedicationNumber = process.env.QA_EXPECT_MEDICATION_NUMBER ?? '';
 
+const resolveQaOrderGroup = (entity) => {
+  switch (entity) {
+    case 'medOrder':
+      return 'prescription';
+    case 'injectionOrder':
+      return 'injection';
+    case 'treatmentOrder':
+    case 'surgeryOrder':
+    case 'otherOrder':
+      return 'treatment';
+    case 'testOrder':
+    case 'physiologyOrder':
+    case 'bacteriaOrder':
+    case 'radiologyOrder':
+      return 'test';
+    case 'baseChargeOrder':
+    case 'instractionChargeOrder':
+      return 'charge';
+    default:
+      return null;
+  }
+};
+
+const ORDER_GROUP_LABELS = {
+  prescription: '処方',
+  injection: '注射',
+  treatment: '処置',
+  test: '検査',
+  charge: '算定',
+};
+
+const openOrderEditorFromCurrentChartsUi = async (page, entity) => {
+  const orderGroup = resolveQaOrderGroup(entity);
+  if (!orderGroup) {
+    return { opened: false, source: 'unsupported_entity' };
+  }
+
+  const legacyGroupAdd = page.locator(`[data-test-id="order-dock-group-add-${orderGroup}"]`);
+  if (await legacyGroupAdd.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await legacyGroupAdd.click();
+    return { opened: true, source: `legacy_order_dock_group:${orderGroup}` };
+  }
+
+  const groupLabel = ORDER_GROUP_LABELS[orderGroup] ?? orderGroup;
+  const rightDockButton = page.locator(`.soap-note__right-dock-button[data-tool="${orderGroup}"]`);
+  if (await rightDockButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await rightDockButton.click();
+    const drawer = page.locator('.soap-note__right-drawer[data-open="true"]');
+    await drawer.waitFor({ state: 'visible', timeout: 10000 });
+    const subtype = drawer.locator(`button[data-drawer-subtype-entity="${entity}"]`);
+    if (await subtype.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await subtype.click();
+    }
+    const createButton = drawer.getByRole('button', { name: '新規作成を開く' }).last();
+    if (await createButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await createButton.click();
+      return { opened: true, source: `right_utility_drawer:${orderGroup}` };
+    }
+    return { opened: false, source: `right_utility_drawer_create_missing:${orderGroup}` };
+  }
+
+  return { opened: false, source: `no_visible_order_entry:${groupLabel}` };
+};
+
 if (!patientId) {
   throw new Error('QA_PATIENT_ID is required; pass a current local-searchable patient id with a unique active entry.');
 }
@@ -1025,9 +1089,15 @@ const run = async () => {
 
   let orderResult = { status: 'skipped', detail: 'not attempted' };
   try {
-    await page.keyboard.press('Control+Shift+U');
-    const orderShortcut = orderEntity === 'treatmentOrder' ? 'Control+Shift+5' : 'Control+Shift+3';
-    await page.keyboard.press(orderShortcut);
+    const openResult = await openOrderEditorFromCurrentChartsUi(page, orderEntity);
+    if (openResult.opened) {
+      logStep(`order editor opened source=${openResult.source}`);
+    } else {
+      await page.keyboard.press('Control+Shift+U');
+      const orderShortcut = orderEntity === 'treatmentOrder' ? 'Control+Shift+5' : 'Control+Shift+3';
+      await page.keyboard.press(orderShortcut);
+      logStep(`order editor shortcut fallback attempted after=${openResult.source}`);
+    }
     const orderPanel = page.locator(`[data-test-id="${orderEntity}-edit-panel"]`);
     await orderPanel.waitFor({ timeout: 10000 });
     logStep('order panel ready');

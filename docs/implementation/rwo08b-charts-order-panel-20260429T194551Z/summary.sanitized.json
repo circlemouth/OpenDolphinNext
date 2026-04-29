@@ -1,0 +1,63 @@
+{
+  "runId": "20260429T194551Z",
+  "workOrder": "RWO-08B",
+  "taskId": "RWO-08B_CHARTS_ORDER_PANEL_HARNESS_REPAIR",
+  "branch": "master",
+  "headAtSelection": "7ad25eb7d",
+  "result": "HARNESS_REPAIRED_TARGET_DRIFT_BLOCKER_RECORDED",
+  "scope": "Repair the Charts-side order editor opening path used by diagnostic Fullflow after existing-acceptance handoff.",
+  "repoLocalFixes": [
+    "web-client/scripts/qa-fullflow-weborca.mjs"
+  ],
+  "checks": {
+    "scriptSyntax": "pass",
+    "focusedWebTests": "pass_14_tests",
+    "webGuard": "pass"
+  },
+  "diagnosticFullflow": {
+    "executed": true,
+    "attemptRunIds": [
+      "20260429T194551Z"
+    ],
+    "target": "WebORCA / ORCA Trial",
+    "targetPatientId": "00002",
+    "intendedMode": "existing-acceptance",
+    "actualMode": "accept_mutation_after_existing_acceptance_unavailable",
+    "businessSuccessClassification": "blocked_target_drift_before_order_panel_validation",
+    "orderSendReached": false,
+    "acceptMutationObserved": true,
+    "acceptMutationBusinessClassification": "api_result_observed_unclassified",
+    "chartsHandoffReady": true,
+    "chartsHandoffKeyPresence": {
+      "scheduleKey": false,
+      "encounterKey": true
+    },
+    "visitRowReadiness": "missing_official_visit_identifiers",
+    "sendResultStatus": "no-response",
+    "sendButtonDisabled": true,
+    "sendDisabledReason": "missing_encounter_context",
+    "pageErrorCount": 0,
+    "consoleMessageCount": 1
+  },
+  "harnessRepair": {
+    "legacyOrderDockGroupAddSupported": true,
+    "currentRightUtilityDrawerSupported": true,
+    "shortcutFallbackKept": true,
+    "patientIdAloneAcceptedAsAuthority": false,
+    "clientProvidedIdentifiersTrusted": false,
+    "liveRetryConsumedForBusinessSuccess": false
+  },
+  "narrowedBlocker": {
+    "blockerId": "rwo08b-existing-acceptance-target-drift-before-order-panel-validation",
+    "classification": "trial_target_precondition_drift",
+    "summary": "The QA harness now supports both the legacy order dock and the current SoapNote right-utility drawer order editor path, but the single diagnostic attempt did not validate the fix because the previously ready existing-acceptance target was no longer available as a ready existing-acceptance row. The run fell back to accept mutation and then failed closed on missing official visit identifiers.",
+    "recommendedNextTask": "Refresh read-only RWO-08B target readiness for a non-duplicate existing-acceptance target. Only after charts handoff has scheduleKey and encounterKey plus visitRowReadiness=ready, rerun one diagnostic Fullflow attempt to validate the current right-utility drawer order editor path."
+  },
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": true,
+  "diagnosticArtifactsLocalOnlyUntracked": true,
+  "rawArtifactsCommittedOrPackaged": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false,
+  "claimBoundary": "This is a repo-local diagnostic harness repair plus target-drift blocker record only. It is not diagnostic Fullflow success, Trial order-send business acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness."
+}

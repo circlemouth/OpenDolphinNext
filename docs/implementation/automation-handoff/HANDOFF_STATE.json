@@ -1,8 +1,8 @@
 {
-  "status": "blocked_charts_order_panel_after_existing_acceptance_handoff",
+  "status": "blocked_existing_acceptance_target_drift_before_order_panel_validation",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B",
-  "blockerId": "rwo08b-existing-acceptance-charts-order-panel-blocker",
+  "blockerId": "rwo08b-existing-acceptance-target-drift-before-order-panel-validation",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-29T11:43:30Z",
+  "lastUpdated": "2026-04-29T20:05:00Z",
   "latestRwo08bExistingAcceptanceHandoffRepair": {
     "runId": "20260429T104910Z",
     "workOrder": "RWO-08B",
@@ -9882,6 +9882,64 @@
       "classification": "repo_local_charts_order_panel_or_harness_selection",
       "summary": "Existing-acceptance handoff reaches Charts without duplicate accept mutation, but treatmentOrder-edit-panel does not become visible before timeout.",
       "recommendedNextTask": "Inspect and repair the Charts-side order selection/edit-panel path for existing-acceptance handoff tabs, then rerun exactly one diagnostic Fullflow attempt."
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
+  "latestRwo08bChartsOrderPanelHarnessRepair": {
+    "runId": "20260429T194551Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_CHARTS_ORDER_PANEL_HARNESS_REPAIR",
+    "result": "HARNESS_REPAIRED_TARGET_DRIFT_BLOCKER_RECORDED",
+    "branch": "master",
+    "headAtSelection": "7ad25eb7d",
+    "evidence": "docs/implementation/rwo08b-charts-order-panel-20260429T194551Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-charts-order-panel-20260429T194551Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/rwo08b-charts-order-panel-20260429T194551Z/FINAL_REPORT.md",
+    "repoLocalFixes": [
+      "web-client/scripts/qa-fullflow-weborca.mjs"
+    ],
+    "checks": {
+      "scriptSyntax": "pass",
+      "focusedWebTests": "pass_14_tests",
+      "webGuard": "pass"
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "attemptRunIds": [
+        "20260429T194551Z"
+      ],
+      "intendedMode": "existing-acceptance",
+      "actualMode": "accept_mutation_after_existing_acceptance_unavailable",
+      "businessSuccessClassification": "blocked_target_drift_before_order_panel_validation",
+      "orderSendReached": false,
+      "acceptMutationObserved": true,
+      "chartsHandoffReady": true,
+      "chartsHandoffKeyPresence": {
+        "scheduleKey": false,
+        "encounterKey": true
+      },
+      "visitRowReadiness": "missing_official_visit_identifiers",
+      "sendResultStatus": "no-response",
+      "sendButtonDisabled": true,
+      "sendDisabledReason": "missing_encounter_context"
+    },
+    "harnessRepair": {
+      "legacyOrderDockGroupAddSupported": true,
+      "currentRightUtilityDrawerSupported": true,
+      "shortcutFallbackKept": true,
+      "patientIdAloneAcceptedAsAuthority": false,
+      "clientProvidedIdentifiersTrusted": false
+    },
+    "narrowedBlocker": {
+      "blockerId": "rwo08b-existing-acceptance-target-drift-before-order-panel-validation",
+      "classification": "trial_target_precondition_drift",
+      "summary": "QA harness supports the current Charts right-utility drawer order editor path, but the single diagnostic attempt could not validate it because the existing-acceptance target drifted and visitRowReadiness was missing official identifiers.",
+      "recommendedNextTask": "Refresh read-only RWO-08B target readiness for a non-duplicate existing-acceptance target before any further diagnostic Fullflow attempt."
     },
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": true,
