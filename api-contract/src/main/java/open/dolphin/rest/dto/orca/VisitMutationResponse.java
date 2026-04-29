@@ -20,6 +20,9 @@ public class VisitMutationResponse extends OrcaApiResponse {
     private String physicianCode;
     private String physicianName;
     private String medicalInformation;
+    private String insuranceCombinationNumber;
+    private String voucherNumber;
+    private String sequentialNumber;
     private String appointmentDate;
     private String visitNumber;
     private PatientSummary patient;
@@ -119,6 +122,30 @@ public class VisitMutationResponse extends OrcaApiResponse {
 
     public void setMedicalInformation(String medicalInformation) {
         this.medicalInformation = medicalInformation;
+    }
+
+    public String getInsuranceCombinationNumber() {
+        return insuranceCombinationNumber;
+    }
+
+    public void setInsuranceCombinationNumber(String insuranceCombinationNumber) {
+        this.insuranceCombinationNumber = insuranceCombinationNumber;
+    }
+
+    public String getVoucherNumber() {
+        return voucherNumber;
+    }
+
+    public void setVoucherNumber(String voucherNumber) {
+        this.voucherNumber = voucherNumber;
+    }
+
+    public String getSequentialNumber() {
+        return sequentialNumber;
+    }
+
+    public void setSequentialNumber(String sequentialNumber) {
+        this.sequentialNumber = sequentialNumber;
     }
 
     public String getAppointmentDate() {

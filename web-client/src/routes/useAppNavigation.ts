@@ -53,6 +53,11 @@ type NavigationLocationState = {
   scheduleKey?: string;
   encounterKey?: string;
   visitDate?: string;
+  departmentCode?: string;
+  physicianCode?: string;
+  insuranceCombinationNumber?: string;
+  voucherNumber?: string;
+  sequentialNumber?: string;
   chartsScreenId?: string;
   returnTo?: string;
   from?: string;
@@ -86,6 +91,11 @@ const mergeEncounter = (base: OutpatientEncounterContext, override?: OutpatientE
     scheduleKey: override.scheduleKey ?? base.scheduleKey,
     encounterKey: override.encounterKey ?? base.encounterKey,
     visitDate: override.visitDate ?? base.visitDate,
+    departmentCode: override.departmentCode ?? base.departmentCode,
+    physicianCode: override.physicianCode ?? base.physicianCode,
+    insuranceCombinationNumber: override.insuranceCombinationNumber ?? base.insuranceCombinationNumber,
+    voucherNumber: override.voucherNumber ?? base.voucherNumber,
+    sequentialNumber: override.sequentialNumber ?? base.sequentialNumber,
   };
 };
 
@@ -176,6 +186,11 @@ const readStateEncounter = (state: unknown): OutpatientEncounterContext => {
     scheduleKey: encounter.scheduleKey ?? locationState.scheduleKey,
     encounterKey: encounter.encounterKey ?? locationState.encounterKey,
     visitDate: encounter.visitDate ?? locationState.visitDate,
+    departmentCode: encounter.departmentCode ?? locationState.departmentCode,
+    physicianCode: encounter.physicianCode ?? locationState.physicianCode,
+    insuranceCombinationNumber: encounter.insuranceCombinationNumber ?? locationState.insuranceCombinationNumber,
+    voucherNumber: encounter.voucherNumber ?? locationState.voucherNumber,
+    sequentialNumber: encounter.sequentialNumber ?? locationState.sequentialNumber,
   });
 };
 
@@ -371,6 +386,11 @@ export function useAppNavigation(scope: AppNavigationScope) {
           scheduleKey: encounter.scheduleKey,
           encounterKey: encounter.encounterKey,
           visitDate: normalizeVisitDate(encounter.visitDate),
+          departmentCode: encounter.departmentCode,
+          physicianCode: encounter.physicianCode,
+          insuranceCombinationNumber: encounter.insuranceCombinationNumber,
+          voucherNumber: encounter.voucherNumber,
+          sequentialNumber: encounter.sequentialNumber,
         },
       });
     },

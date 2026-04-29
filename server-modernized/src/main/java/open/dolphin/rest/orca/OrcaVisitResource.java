@@ -36,6 +36,7 @@ import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
 import open.dolphin.rest.dto.orca.AcceptanceOperationRequest;
 import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightRequest;
 import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightResponse;
+import open.dolphin.rest.dto.orca.PatientSummary;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListRequest;
@@ -134,6 +135,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         try {
             VisitMutationResponse response = wrapperService.mutateVisit(facilityId, body);
             enrichVisitMutationKeys(facilityId, response);
+            reconcileDuplicateAcceptanceHandoff(facilityId, body, response, details);
             persistEncounterProjectionIfNeeded(request, facilityId, body, response, details);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
@@ -807,6 +809,190 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
                 && hasText(row.getServerAcceptanceTime())
                 && hasText(row.getServerDepartmentCode())
                 && hasText(row.getServerPhysicianCode());
+    }
+
+    private void reconcileDuplicateAcceptanceHandoff(String facilityId,
+            VisitMutationRequest body,
+            VisitMutationResponse response,
+            Map<String, Object> details) {
+        if (body == null || response == null || wrapperService == null) {
+            return;
+        }
+        if (!"01".equals(normalizeRequestNumber(body.getRequestNumber()))
+                || !"16".equals(normalizeApiResult(response.getApiResult()))) {
+            return;
+        }
+        String acceptanceDate = normalizeEventDate(body.getAcceptanceDate());
+        if (acceptanceDate == null
+                || !hasText(body.getPatientId())
+                || !hasText(body.getDepartmentCode())
+                || !hasText(body.getPhysicianCode())) {
+            if (details != null) {
+                details.put("duplicateAcceptanceReconciled", false);
+                details.put("duplicateAcceptanceReconcileReason", "request_identity_incomplete");
+            }
+            return;
+        }
+        AcceptanceInventoryRequest inventoryRequest = new AcceptanceInventoryRequest();
+        inventoryRequest.setAcceptanceDate(LocalDate.parse(acceptanceDate));
+        inventoryRequest.setClassCode("01");
+        AcceptanceInventoryResponse inventory = wrapperService.getAcceptanceInventory(facilityId, inventoryRequest);
+        List<AcceptanceInventoryResponse.AcceptanceInventoryRow> matches = inventory.getRows().stream()
+                .filter(this::isServerDerivedRn02Ready)
+                .filter(row -> normalize(body.getPatientId()).equals(normalize(row.getServerPatientId())))
+                .filter(row -> acceptanceDate.equals(normalizeEventDate(row.getServerAcceptanceDate())))
+                .filter(row -> normalize(body.getDepartmentCode()).equals(normalize(row.getServerDepartmentCode())))
+                .filter(row -> normalize(body.getPhysicianCode()).equals(normalize(row.getServerPhysicianCode())))
+                .toList();
+        if (details != null) {
+            details.put("duplicateAcceptanceReconcileCandidateCount", matches.size());
+        }
+        if (matches.size() != 1) {
+            if (details != null) {
+                details.put("duplicateAcceptanceReconciled", false);
+                details.put("duplicateAcceptanceReconcileReason", matches.isEmpty() ? "no_server_derived_match" : "ambiguous_server_derived_match");
+            }
+            return;
+        }
+        AcceptanceInventoryResponse.AcceptanceInventoryRow row = matches.get(0);
+        response.setAcceptanceId(row.getServerAcceptanceId());
+        response.setAcceptanceDate(row.getServerAcceptanceDate());
+        response.setAcceptanceTime(row.getServerAcceptanceTime());
+        response.setDepartmentCode(row.getServerDepartmentCode());
+        response.setPhysicianCode(row.getServerPhysicianCode());
+        response.setMedicalInformation(row.getServerMedicalInformation());
+        response.setInsuranceCombinationNumber(row.getServerInsuranceCombinationNumber());
+        response.setEncounterKey(CanonicalEncounterKeys.optionalEncounterKey(facilityId, row.getServerAcceptanceId()));
+        reconcileDuplicateAcceptanceOfficialVisitIdentifiers(facilityId, row, response, details);
+        if (response.getPatient() == null) {
+            PatientSummary patient = new PatientSummary();
+            patient.setPatientId(row.getServerPatientId());
+            response.setPatient(patient);
+        }
+        response.getWarnings().add("duplicate_acceptance_reconciled_from_server_derived_acceptlstv2");
+        if (details != null) {
+            details.put("duplicateAcceptanceReconciled", true);
+            details.put("clientProvidedIdentifiersTrusted", false);
+            details.put("serverDerivedAuthorityRequired", true);
+        }
+    }
+
+    private void reconcileDuplicateAcceptanceOfficialVisitIdentifiers(String facilityId,
+            AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
+            VisitMutationResponse response,
+            Map<String, Object> details) {
+        if (facilityId == null || facilityId.isBlank() || selected == null || response == null) {
+            return;
+        }
+        MedicalIdentifierPreflightRequest request = new MedicalIdentifierPreflightRequest();
+        request.setAcceptanceDate(LocalDate.parse(selected.getServerAcceptanceDate()));
+        request.setClassCode("01");
+        request.setMedicalGetClassCode("01");
+        request.setTargetRowHash(selected.getRowHash());
+        try {
+            MedicalIdentifierPreflightResponse preflight =
+                    wrapperService.getMedicalIdentifierPreflight(facilityId, request);
+            List<MedicalIdentifierPreflightResponse.MedicalIdentifierRow> medicalMatches =
+                    preflight.getMedicalRows().stream()
+                            .filter(row -> isExactOfficialMedicalIdentifierRow(selected, row))
+                            .toList();
+            if (medicalMatches.isEmpty()) {
+                medicalMatches = preflight.getMedicalRows().stream()
+                        .filter(row -> isUniqueOfficialMedicalIdentifierFallback(selected, preflight, row))
+                        .toList();
+            }
+            if (details != null) {
+                details.put("duplicateAcceptanceOfficialIdentifierCandidateCount", medicalMatches.size());
+            }
+            if (medicalMatches.size() != 1) {
+                if (details != null) {
+                    details.put("duplicateAcceptanceOfficialIdentifiersReconciled", false);
+                    details.put("duplicateAcceptanceOfficialIdentifierReason",
+                            medicalMatches.isEmpty() ? "no_exact_medical_identifier_match" : "ambiguous_medical_identifier_match");
+                }
+                return;
+            }
+            MedicalIdentifierPreflightResponse.MedicalIdentifierRow row = medicalMatches.get(0);
+            response.setVoucherNumber(row.getServerInvoiceNumber());
+            response.setSequentialNumber(row.getServerSequentialNumber());
+            response.setInsuranceCombinationNumber(row.getServerInsuranceCombinationNumber());
+            response.getWarnings().add("duplicate_acceptance_official_identifiers_reconciled_from_server_readonly_preflight");
+            if (details != null) {
+                details.put("duplicateAcceptanceOfficialIdentifiersReconciled", true);
+            }
+        } catch (RuntimeException ex) {
+            if (details != null) {
+                details.put("duplicateAcceptanceOfficialIdentifiersReconciled", false);
+                details.put("duplicateAcceptanceOfficialIdentifierReason", "identifier_preflight_unavailable");
+            }
+        }
+    }
+
+    private boolean isExactOfficialMedicalIdentifierRow(AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
+            MedicalIdentifierPreflightResponse.MedicalIdentifierRow row) {
+        return row != null
+                && row.isRawSensitiveFieldsExcluded()
+                && row.isHasPerformDate()
+                && row.isHasDepartmentCode()
+                && row.isHasInvoiceNumber()
+                && row.isHasSequentialNumber()
+                && row.isHasInsuranceCombinationNumber()
+                && safeEquals(row.getServerPerformDate(), selected.getServerAcceptanceDate())
+                && safeEquals(row.getServerDepartmentCode(), selected.getServerDepartmentCode())
+                && safeEquals(row.getServerInsuranceCombinationNumber(), selected.getServerInsuranceCombinationNumber());
+    }
+
+    private boolean isUniqueOfficialMedicalIdentifierFallback(AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
+            MedicalIdentifierPreflightResponse preflight,
+            MedicalIdentifierPreflightResponse.MedicalIdentifierRow row) {
+        return preflight != null
+                && preflight.isSelectedAcceptanceTargetReady()
+                && preflight.getMedicalSanitizedRowCount() == 1
+                && row != null
+                && row.isRawSensitiveFieldsExcluded()
+                && row.isHasPerformDate()
+                && row.isHasDepartmentCode()
+                && row.isHasInvoiceNumber()
+                && row.isHasSequentialNumber()
+                && row.isHasInsuranceCombinationNumber()
+                && safeEquals(row.getServerPerformDate(), selected.getServerAcceptanceDate())
+                && safeEquals(row.getServerDepartmentCode(), selected.getServerDepartmentCode());
+    }
+
+    private boolean isExactOfficialVisitIdentifierRow(AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
+            MedicalIdentifierPreflightResponse.VisitIdentifierRow row) {
+        return row != null
+                && row.isRawSensitiveFieldsExcluded()
+                && row.isHasPatientId()
+                && row.isHasVisitDate()
+                && row.isHasDepartmentCode()
+                && row.isHasVoucherNumber()
+                && row.isHasSequentialNumber()
+                && row.isHasInsuranceCombinationNumber()
+                && safeEquals(row.getServerPatientId(), selected.getServerPatientId())
+                && safeEquals(row.getServerVisitDate(), selected.getServerAcceptanceDate())
+                && safeEquals(row.getServerDepartmentCode(), selected.getServerDepartmentCode())
+                && safeEquals(row.getServerInsuranceCombinationNumber(), selected.getServerInsuranceCombinationNumber());
+    }
+
+    private boolean safeEquals(String left, String right) {
+        String normalizedLeft = normalize(left);
+        String normalizedRight = normalize(right);
+        return normalizedLeft != null && normalizedLeft.equals(normalizedRight);
+    }
+
+    private String normalizeApiResult(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        if (trimmed.matches("\\d+")) {
+            return String.valueOf(Integer.parseInt(trimmed));
+        }
+        return trimmed;
     }
 
     private boolean hasText(String value) {

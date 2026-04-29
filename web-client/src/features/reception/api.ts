@@ -66,6 +66,9 @@ export type VisitMutationPayload = OutpatientMeta & {
   physicianCode?: string;
   physicianName?: string;
   medicalInformation?: string;
+  insuranceCombinationNumber?: string;
+  voucherNumber?: string;
+  sequentialNumber?: string;
   appointmentDate?: string;
   visitNumber?: string;
   scheduleKey?: string;
@@ -482,6 +485,13 @@ export async function mutateVisit(
   const physicianCodeRaw = (raw as any).physicianCode ?? (raw as any).Physician_Code ?? (raw as any).physician_code;
   const physicianNameRaw =
     (raw as any).physicianName ?? (raw as any).Physician_WholeName ?? (raw as any).physician_name;
+  const insuranceCombinationNumberRaw =
+    (raw as any).insuranceCombinationNumber ??
+    (raw as any).Insurance_Combination_Number ??
+    (raw as any).insurance_combination_number;
+  const voucherNumberRaw = (raw as any).voucherNumber ?? (raw as any).Voucher_Number ?? (raw as any).voucher_number;
+  const sequentialNumberRaw =
+    (raw as any).sequentialNumber ?? (raw as any).Sequential_Number ?? (raw as any).sequential_number;
   const scheduleKeyRaw = (raw as any).scheduleKey ?? (raw as any).Schedule_Key ?? (raw as any).schedule_key;
   const encounterKeyRaw = (raw as any).encounterKey ?? (raw as any).Encounter_Key ?? (raw as any).encounter_key;
   const fallbackAcceptanceDate = normalizeOptionalString(params.acceptanceDate);
@@ -519,6 +529,9 @@ export async function mutateVisit(
     departmentName: normalizeOptionalString(departmentNameRaw),
     physicianCode: normalizeOptionalString(physicianCodeRaw) ?? (shouldUseRequestFallback ? fallbackPhysicianCode : undefined),
     physicianName: normalizeOptionalString(physicianNameRaw),
+    insuranceCombinationNumber: normalizeOptionalString(insuranceCombinationNumberRaw),
+    voucherNumber: normalizeOptionalString(voucherNumberRaw),
+    sequentialNumber: normalizeOptionalString(sequentialNumberRaw),
     scheduleKey: normalizeOptionalString(scheduleKeyRaw),
     encounterKey: normalizeOptionalString(encounterKeyRaw),
     medicalInformation:

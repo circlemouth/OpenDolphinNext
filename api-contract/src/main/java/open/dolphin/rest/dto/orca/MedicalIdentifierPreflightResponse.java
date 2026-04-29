@@ -300,6 +300,7 @@ public class MedicalIdentifierPreflightResponse extends OrcaApiResponse {
         private boolean rawSensitiveFieldsExcluded = true;
         private String serverPerformDate;
         private String serverDepartmentCode;
+        private String serverInvoiceNumber;
         private String serverSequentialNumber;
         private String serverInsuranceCombinationNumber;
 
@@ -375,6 +376,15 @@ public class MedicalIdentifierPreflightResponse extends OrcaApiResponse {
 
         public void setServerDepartmentCode(String serverDepartmentCode) {
             this.serverDepartmentCode = serverDepartmentCode;
+        }
+
+        @JsonIgnore
+        public String getServerInvoiceNumber() {
+            return serverInvoiceNumber;
+        }
+
+        public void setServerInvoiceNumber(String serverInvoiceNumber) {
+            this.serverInvoiceNumber = serverInvoiceNumber;
         }
 
         @JsonIgnore

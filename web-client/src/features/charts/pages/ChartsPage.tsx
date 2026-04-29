@@ -577,6 +577,21 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const [encounterContext, setEncounterContext] = useState<OutpatientEncounterContext>(() => {
     const urlContext = parseChartsEncounterContext(location.search);
     if (hasEncounterContext(urlContext)) return normalizeEncounterContext(urlContext);
+    const stateContext = normalizeEncounterContext({
+      patientId: typeof navigationState.patientId === 'string' ? navigationState.patientId : undefined,
+      appointmentId: typeof navigationState.appointmentId === 'string' ? navigationState.appointmentId : undefined,
+      receptionId: typeof navigationState.receptionId === 'string' ? navigationState.receptionId : undefined,
+      scheduleKey: typeof navigationState.scheduleKey === 'string' ? navigationState.scheduleKey : undefined,
+      encounterKey: typeof navigationState.encounterKey === 'string' ? navigationState.encounterKey : undefined,
+      visitDate: normalizeVisitDate(typeof navigationState.visitDate === 'string' ? navigationState.visitDate : undefined),
+      departmentCode: typeof navigationState.departmentCode === 'string' ? navigationState.departmentCode : undefined,
+      physicianCode: typeof navigationState.physicianCode === 'string' ? navigationState.physicianCode : undefined,
+      insuranceCombinationNumber:
+        typeof navigationState.insuranceCombinationNumber === 'string' ? navigationState.insuranceCombinationNumber : undefined,
+      voucherNumber: typeof navigationState.voucherNumber === 'string' ? navigationState.voucherNumber : undefined,
+      sequentialNumber: typeof navigationState.sequentialNumber === 'string' ? navigationState.sequentialNumber : undefined,
+    });
+    if (hasEncounterContext(stateContext)) return stateContext;
     const storedTabs = readChartsPatientTabsStorage(storageScope);
     const activeTab =
       (storedTabs?.activeKey
@@ -594,14 +609,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     }
     const stored = loadChartsEncounterContext(storageScope);
     if (hasEncounterContext(stored)) return normalizeEncounterContext(stored);
-    return normalizeEncounterContext({
-      patientId: typeof navigationState.patientId === 'string' ? navigationState.patientId : undefined,
-      appointmentId: typeof navigationState.appointmentId === 'string' ? navigationState.appointmentId : undefined,
-      receptionId: typeof navigationState.receptionId === 'string' ? navigationState.receptionId : undefined,
-      scheduleKey: typeof navigationState.scheduleKey === 'string' ? navigationState.scheduleKey : undefined,
-      encounterKey: typeof navigationState.encounterKey === 'string' ? navigationState.encounterKey : undefined,
-      visitDate: normalizeVisitDate(typeof navigationState.visitDate === 'string' ? navigationState.visitDate : undefined),
-    });
+    return stateContext;
   });
   const hasEncounterHandoffKey = hasHandoffEncounterKey(encounterContext);
   const medicalSummaryEncounterKey = encounterContext.encounterKey?.trim() ?? '';
@@ -1432,7 +1440,12 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       (leftNormalized.patientId ?? '') === (rightNormalized.patientId ?? '') &&
       (leftNormalized.appointmentId ?? '') === (rightNormalized.appointmentId ?? '') &&
       (leftNormalized.receptionId ?? '') === (rightNormalized.receptionId ?? '') &&
-      (normalizeVisitDate(leftNormalized.visitDate) ?? '') === (normalizeVisitDate(rightNormalized.visitDate) ?? '')
+      (normalizeVisitDate(leftNormalized.visitDate) ?? '') === (normalizeVisitDate(rightNormalized.visitDate) ?? '') &&
+      (leftNormalized.departmentCode ?? '') === (rightNormalized.departmentCode ?? '') &&
+      (leftNormalized.physicianCode ?? '') === (rightNormalized.physicianCode ?? '') &&
+      (leftNormalized.insuranceCombinationNumber ?? '') === (rightNormalized.insuranceCombinationNumber ?? '') &&
+      (leftNormalized.voucherNumber ?? '') === (rightNormalized.voucherNumber ?? '') &&
+      (leftNormalized.sequentialNumber ?? '') === (rightNormalized.sequentialNumber ?? '')
     );
   }, []);
 
@@ -3145,6 +3158,11 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       scheduleKey: chosen.scheduleKey ?? encounterContext.scheduleKey,
       encounterKey: chosen.encounterKey ?? encounterContext.encounterKey,
       visitDate: normalizeVisitDate(chosen.visitDate) ?? encounterContext.visitDate,
+      departmentCode: chosen.departmentCode ?? encounterContext.departmentCode,
+      physicianCode: chosen.physicianCode ?? encounterContext.physicianCode,
+      insuranceCombinationNumber: chosen.insuranceCombinationNumber ?? encounterContext.insuranceCombinationNumber,
+      voucherNumber: chosen.voucherNumber ?? encounterContext.voucherNumber,
+      sequentialNumber: chosen.sequentialNumber ?? encounterContext.sequentialNumber,
     });
     if (!sameEncounterContext(nextContext, encounterContext)) {
       suppressUrlContextSyncRef.current = true;

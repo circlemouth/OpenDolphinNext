@@ -15,7 +15,17 @@ const normalizeOptionalString = (value?: string | null) => {
 const normalizeEntryEncounter = (
   entry?: Pick<
     ReceptionEntry,
-    'patientId' | 'appointmentId' | 'receptionId' | 'scheduleKey' | 'encounterKey' | 'visitDate'
+    | 'patientId'
+    | 'appointmentId'
+    | 'receptionId'
+    | 'scheduleKey'
+    | 'encounterKey'
+    | 'visitDate'
+    | 'departmentCode'
+    | 'physicianCode'
+    | 'insuranceCombinationNumber'
+    | 'voucherNumber'
+    | 'sequentialNumber'
   > | null,
 ) =>
   normalizeEncounterContext({
@@ -25,6 +35,17 @@ const normalizeEntryEncounter = (
     scheduleKey: entry?.scheduleKey,
     encounterKey: entry?.encounterKey,
     visitDate: entry?.visitDate,
+    ...(normalizeOptionalString(entry?.voucherNumber) &&
+    normalizeOptionalString(entry?.sequentialNumber) &&
+    normalizeOptionalString(entry?.insuranceCombinationNumber)
+      ? {
+          departmentCode: entry?.departmentCode,
+          physicianCode: entry?.physicianCode,
+          insuranceCombinationNumber: entry?.insuranceCombinationNumber,
+          voucherNumber: entry?.voucherNumber,
+          sequentialNumber: entry?.sequentialNumber,
+        }
+      : {}),
   });
 
 const normalizePayloadEncounter = (payload: VisitMutationPayload, params: VisitMutationParams) =>
@@ -35,6 +56,17 @@ const normalizePayloadEncounter = (payload: VisitMutationPayload, params: VisitM
     scheduleKey: payload.scheduleKey,
     encounterKey: payload.encounterKey,
     visitDate: payload.acceptanceDate ?? params.acceptanceDate,
+    ...(normalizeOptionalString(payload.voucherNumber) &&
+    normalizeOptionalString(payload.sequentialNumber) &&
+    normalizeOptionalString(payload.insuranceCombinationNumber)
+      ? {
+          departmentCode: payload.departmentCode ?? params.departmentCode,
+          physicianCode: payload.physicianCode ?? params.physicianCode,
+          insuranceCombinationNumber: payload.insuranceCombinationNumber,
+          voucherNumber: payload.voucherNumber,
+          sequentialNumber: payload.sequentialNumber,
+        }
+      : {}),
   });
 
 export type PendingReceptionHandoff = {

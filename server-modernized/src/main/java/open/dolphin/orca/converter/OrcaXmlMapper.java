@@ -490,6 +490,7 @@ public class OrcaXmlMapper {
         row.setRawSensitiveFieldsExcluded(true);
         row.setServerPerformDate(performDate);
         row.setServerDepartmentCode(departmentCode);
+        row.setServerInvoiceNumber(invoiceNumber);
         row.setServerSequentialNumber(sequentialNumber);
         row.setServerInsuranceCombinationNumber(insuranceCombinationNumber);
         return row;

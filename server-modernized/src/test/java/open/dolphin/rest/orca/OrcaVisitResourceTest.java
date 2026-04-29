@@ -35,6 +35,8 @@ import open.dolphin.rest.ReceptionRealtimeSseSupport;
 import open.dolphin.rest.dto.orca.AcceptanceInventoryRequest;
 import open.dolphin.rest.dto.orca.AcceptanceInventoryResponse;
 import open.dolphin.rest.dto.orca.AcceptanceOperationRequest;
+import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightRequest;
+import open.dolphin.rest.dto.orca.MedicalIdentifierPreflightResponse;
 import open.dolphin.rest.dto.orca.PatientSummary;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
@@ -622,6 +624,115 @@ class OrcaVisitResourceTest {
     }
 
     @Test
+    void visitMutationReconcilesDuplicateAcceptanceFromServerDerivedInventory() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        VisitMutationResponse duplicate = new VisitMutationResponse();
+        duplicate.setApiResult("16");
+        duplicate.setApiResultMessage("診療科・保険組合せで既に受付済みです");
+        when(wrapperService.mutateVisit(anyString(), any(VisitMutationRequest.class))).thenReturn(duplicate);
+
+        AcceptanceInventoryResponse inventory = new AcceptanceInventoryResponse();
+        AcceptanceInventoryResponse.AcceptanceInventoryRow unrelated = acceptanceInventoryRow(
+                "hash-other", "A-999", "000999", "2025-11-16", "09:10:00", "02", "10001");
+        AcceptanceInventoryResponse.AcceptanceInventoryRow selected = acceptanceInventoryRow(
+                "hash-selected", "A-016", "000016", "2025-11-16", "09:05:00", "01", "10001");
+        inventory.getRows().add(unrelated);
+        inventory.getRows().add(selected);
+        when(wrapperService.getAcceptanceInventory(anyString(), any(AcceptanceInventoryRequest.class))).thenReturn(inventory);
+        MedicalIdentifierPreflightResponse identifierPreflight = new MedicalIdentifierPreflightResponse();
+        identifierPreflight.setSelectedAcceptanceTargetReady(true);
+        identifierPreflight.setMedicalSanitizedRowCount(1);
+        MedicalIdentifierPreflightResponse.MedicalIdentifierRow medicalRow =
+                new MedicalIdentifierPreflightResponse.MedicalIdentifierRow();
+        medicalRow.setHasPerformDate(true);
+        medicalRow.setHasDepartmentCode(true);
+        medicalRow.setHasInvoiceNumber(true);
+        medicalRow.setHasSequentialNumber(true);
+        medicalRow.setHasInsuranceCombinationNumber(true);
+        medicalRow.setRawSensitiveFieldsExcluded(true);
+        medicalRow.setServerPerformDate("2025-11-16");
+        medicalRow.setServerDepartmentCode("01");
+        medicalRow.setServerInvoiceNumber("INV-016");
+        medicalRow.setServerSequentialNumber("1");
+        medicalRow.setServerInsuranceCombinationNumber("MED-0001");
+        identifierPreflight.getMedicalRows().add(medicalRow);
+        when(wrapperService.getMedicalIdentifierPreflight(anyString(), any(MedicalIdentifierPreflightRequest.class)))
+                .thenReturn(identifierPreflight);
+
+        EncounterProjectionRepository encounterProjectionRepository = mock(EncounterProjectionRepository.class);
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        resource.encounterProjectionRepository = encounterProjectionRepository;
+
+        VisitMutationRequest request = new VisitMutationRequest();
+        request.setRequestNumber("01");
+        request.setPatientId("000016");
+        request.setAcceptanceDate("2025-11-16");
+        request.setAcceptanceTime("09:00:00");
+        request.setDepartmentCode("01");
+        request.setPhysicianCode("10001");
+
+        VisitMutationResponse response = resource.mutateVisit(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals("16", response.getApiResult());
+        assertEquals("A-016", response.getAcceptanceId());
+        assertEquals("F001:A-016", response.getEncounterKey());
+        assertEquals("INV-016", response.getVoucherNumber());
+        assertEquals("1", response.getSequentialNumber());
+        assertEquals("MED-0001", response.getInsuranceCombinationNumber());
+        assertEquals("000016", response.getPatient().getPatientId());
+        assertTrue(response.getWarnings().contains("duplicate_acceptance_reconciled_from_server_derived_acceptlstv2"));
+        assertTrue(response.getWarnings().contains(
+                "duplicate_acceptance_official_identifiers_reconciled_from_server_readonly_preflight"));
+        verify(wrapperService).getAcceptanceInventory(eq("F001"), argThat(candidate ->
+                LocalDate.of(2025, 11, 16).equals(candidate.getAcceptanceDate())
+                        && "01".equals(candidate.getClassCode())));
+        verify(wrapperService).getMedicalIdentifierPreflight(eq("F001"), argThat(candidate ->
+                LocalDate.of(2025, 11, 16).equals(candidate.getAcceptanceDate())
+                        && "01".equals(candidate.getClassCode())
+                        && "01".equals(candidate.getMedicalGetClassCode())
+                        && "hash-selected".equals(candidate.getTargetRowHash())));
+        verify(encounterProjectionRepository).upsertCheckedIn(argThat(command ->
+                "F001:A-016".equals(command.encounterKey())
+                        && "F001".equals(command.facilityId())
+                        && "000016".equals(command.patientId())
+                        && "A-016".equals(command.orcaAcceptanceId())));
+    }
+
+    @Test
+    void visitMutationDuplicateAcceptanceDoesNotReconcileAmbiguousInventory() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        VisitMutationResponse duplicate = new VisitMutationResponse();
+        duplicate.setApiResult("16");
+        when(wrapperService.mutateVisit(anyString(), any(VisitMutationRequest.class))).thenReturn(duplicate);
+
+        AcceptanceInventoryResponse inventory = new AcceptanceInventoryResponse();
+        inventory.getRows().add(acceptanceInventoryRow("hash-1", "A-016-A", "000016", "2025-11-16", "09:05:00", "01", "10001"));
+        inventory.getRows().add(acceptanceInventoryRow("hash-2", "A-016-B", "000016", "2025-11-16", "09:15:00", "01", "10001"));
+        when(wrapperService.getAcceptanceInventory(anyString(), any(AcceptanceInventoryRequest.class))).thenReturn(inventory);
+
+        EncounterProjectionRepository encounterProjectionRepository = mock(EncounterProjectionRepository.class);
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        resource.encounterProjectionRepository = encounterProjectionRepository;
+
+        VisitMutationRequest request = new VisitMutationRequest();
+        request.setRequestNumber("01");
+        request.setPatientId("000016");
+        request.setAcceptanceDate("2025-11-16");
+        request.setAcceptanceTime("09:00:00");
+        request.setDepartmentCode("01");
+        request.setPhysicianCode("10001");
+
+        VisitMutationResponse response = resource.mutateVisit(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals("16", response.getApiResult());
+        assertNull(response.getAcceptanceId());
+        assertNull(response.getEncounterKey());
+        verify(encounterProjectionRepository, never()).upsertCheckedIn(any());
+    }
+
+    @Test
     void visitMutationRejectsClaimSendInfoRequestWithoutClaimSendInfo() {
         OrcaVisitResource resource = new OrcaVisitResource();
         resource.setWrapperService(createService());
@@ -707,6 +818,33 @@ class OrcaVisitResourceTest {
         assertEquals("受付は存在しません", response.getApiResultMessage());
         assertGeneratedRunId(response.getRunId());
         verify(wrapperService).mutateVisit("F001", request);
+    }
+
+    private AcceptanceInventoryResponse.AcceptanceInventoryRow acceptanceInventoryRow(String rowHash,
+            String acceptanceId,
+            String patientId,
+            String acceptanceDate,
+            String acceptanceTime,
+            String departmentCode,
+            String physicianCode) {
+        AcceptanceInventoryResponse.AcceptanceInventoryRow row = new AcceptanceInventoryResponse.AcceptanceInventoryRow();
+        row.setRowHash(rowHash);
+        row.setHasAcceptanceId(true);
+        row.setHasPatientId(true);
+        row.setHasAcceptanceDate(true);
+        row.setHasAcceptanceTime(true);
+        row.setHasDepartmentCode(true);
+        row.setHasPhysicianCode(true);
+        row.setHasInsuranceCombinationNumber(true);
+        row.setRawSensitiveFieldsExcluded(true);
+        row.setServerAcceptanceId(acceptanceId);
+        row.setServerPatientId(patientId);
+        row.setServerAcceptanceDate(acceptanceDate);
+        row.setServerAcceptanceTime(acceptanceTime);
+        row.setServerDepartmentCode(departmentCode);
+        row.setServerPhysicianCode(physicianCode);
+        row.setServerInsuranceCombinationNumber("0001");
+        return row;
     }
 
     private HttpServletRequest createRequest(String remoteUser, Map<String, String> headers) {

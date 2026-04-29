@@ -2111,7 +2111,20 @@ export function ReceptionPage({
     (
       encounter: OutpatientEncounterContext,
       source: 'list_action' | 'row_double_click' | 'patient_search',
-      entry?: Pick<ReceptionEntry, 'patientId' | 'appointmentId' | 'receptionId' | 'scheduleKey' | 'encounterKey' | 'visitDate'>,
+      entry?: Pick<
+        ReceptionEntry,
+        | 'patientId'
+        | 'appointmentId'
+        | 'receptionId'
+        | 'scheduleKey'
+        | 'encounterKey'
+        | 'visitDate'
+        | 'departmentCode'
+        | 'physicianCode'
+        | 'insuranceCombinationNumber'
+        | 'voucherNumber'
+        | 'sequentialNumber'
+      >,
     ) => {
       const guardRunId = mergedMeta.runId ?? initialRunId ?? flags.runId;
       const normalizedEncounter = buildReceptionEncounterFromEntry({
@@ -2121,6 +2134,11 @@ export function ReceptionPage({
         scheduleKey: encounter.scheduleKey ?? entry?.scheduleKey,
         encounterKey: encounter.encounterKey ?? entry?.encounterKey,
         visitDate: encounter.visitDate ?? entry?.visitDate,
+        departmentCode: encounter.departmentCode ?? entry?.departmentCode,
+        physicianCode: encounter.physicianCode ?? entry?.physicianCode,
+        insuranceCombinationNumber: encounter.insuranceCombinationNumber ?? entry?.insuranceCombinationNumber,
+        voucherNumber: encounter.voucherNumber ?? entry?.voucherNumber,
+        sequentialNumber: encounter.sequentialNumber ?? entry?.sequentialNumber,
       });
       const controlId =
         source === 'row_double_click'
@@ -2189,6 +2207,11 @@ export function ReceptionPage({
             scheduleKey: normalizedEncounter.scheduleKey,
             encounterKey: normalizedEncounter.encounterKey,
             visitDate: normalizedEncounter.visitDate,
+            departmentCode: normalizedEncounter.departmentCode,
+            physicianCode: normalizedEncounter.physicianCode,
+            insuranceCombinationNumber: normalizedEncounter.insuranceCombinationNumber,
+            voucherNumber: normalizedEncounter.voucherNumber,
+            sequentialNumber: normalizedEncounter.sequentialNumber,
           },
         },
       });
@@ -2914,7 +2937,17 @@ export function ReceptionPage({
             void refetchClaim();
           }
         } else if (isAlreadyAccepted) {
-          void refetchAppointment();
+          const mutationHandoff = resolveAcceptMutationHandoff(payload, params);
+          if (mutationHandoff) {
+            setAcceptedChartsHandoff(mutationHandoff);
+            setPendingAcceptedChartsHandoff(null);
+          } else {
+            const pendingHandoff = buildPendingAcceptHandoff(payload, params);
+            const refreshedEntryHandoff = resolvePendingAcceptHandoffFromEntries(visibleAppointmentEntries, pendingHandoff);
+            setAcceptedChartsHandoff(refreshedEntryHandoff);
+            setPendingAcceptedChartsHandoff(refreshedEntryHandoff ? null : pendingHandoff);
+          }
+          await refetchAppointment();
         }
 
         const toneResult: 'info' | 'warning' | 'error' = isSuccess
@@ -2994,6 +3027,7 @@ export function ReceptionPage({
       resolvedDepartmentCode,
       resolvedPhysicianCode,
       selectedDate,
+      visibleAppointmentEntries,
       physicianNameMap,
       patientSearchSelected?.patientId,
       visitMutation,

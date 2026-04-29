@@ -69,11 +69,11 @@ export const buildCanonicalOrcaEncounterContext = ({
   buildOrcaEncounterContext({
     patientId: selectedEntry?.patientId ?? encounterContext?.patientId,
     visitDate: selectedEntry?.visitDate ?? encounterContext?.visitDate,
-    departmentCode: selectedEntry?.departmentCode,
-    physicianCode: selectedEntry?.physicianCode,
-    insuranceCombinationNumber: selectedEntry?.insuranceCombinationNumber,
-    voucherNumber: selectedEntry?.voucherNumber,
-    sequentialNumber: selectedEntry?.sequentialNumber,
+    departmentCode: selectedEntry?.departmentCode ?? encounterContext?.departmentCode,
+    physicianCode: selectedEntry?.physicianCode ?? encounterContext?.physicianCode,
+    insuranceCombinationNumber: selectedEntry?.insuranceCombinationNumber ?? encounterContext?.insuranceCombinationNumber,
+    voucherNumber: selectedEntry?.voucherNumber ?? encounterContext?.voucherNumber,
+    sequentialNumber: selectedEntry?.sequentialNumber ?? encounterContext?.sequentialNumber,
   });
 
 export const resolveMissingOrcaEncounterContextFields = (

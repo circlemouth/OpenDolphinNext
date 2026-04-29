@@ -186,6 +186,105 @@ describe('receptionHandoff', () => {
     });
   });
 
+  it('duplicate acceptance 後の pending handoff は request 条件と server-derived canonical key が揃う行だけで補完する', () => {
+    const pending = buildPendingAcceptHandoff(
+      {
+        apiResult: '16',
+        patient: { patientId: 'P-001' },
+      },
+      baseParams,
+    );
+
+    const resolved = resolvePendingAcceptHandoffFromEntries(
+      [
+        {
+          id: 'patient-only',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S099',
+          encounterKey: 'F001:E099',
+          visitDate: '2026-04-13',
+          status: '受付中',
+          source: 'visits',
+        },
+        {
+          id: 'wrong-department',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S098',
+          encounterKey: 'F001:E098',
+          visitDate: '2026-04-13',
+          departmentCode: '02',
+          physicianCode: '10001',
+          status: '受付中',
+          source: 'visits',
+        },
+        {
+          id: 'official-refreshed',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S100',
+          encounterKey: 'F001:E100',
+          visitDate: '2026-04-13',
+          departmentCode: '01',
+          physicianCode: '10001',
+          status: '予約',
+          source: 'visits',
+        },
+      ],
+      pending,
+    );
+
+    expect(resolved).toEqual({
+      source: 'refreshed-entry',
+      encounter: {
+        patientId: 'P-001',
+        appointmentId: undefined,
+        receptionId: undefined,
+        scheduleKey: 'F001:S100',
+        encounterKey: 'F001:E100',
+        visitDate: '2026-04-13',
+      },
+    });
+  });
+
+  it('duplicate acceptance 後の pending handoff は request 条件に合う canonical 行が複数なら fail-close する', () => {
+    const pending = buildPendingAcceptHandoff(
+      {
+        apiResult: '16',
+        patient: { patientId: 'P-001' },
+      },
+      baseParams,
+    );
+
+    const resolved = resolvePendingAcceptHandoffFromEntries(
+      [
+        {
+          id: 'official-1',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S100',
+          encounterKey: 'F001:E100',
+          visitDate: '2026-04-13',
+          departmentCode: '01',
+          physicianCode: '10001',
+          status: '受付中',
+          source: 'visits',
+        },
+        {
+          id: 'official-2',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S101',
+          encounterKey: 'F001:E101',
+          visitDate: '2026-04-13',
+          departmentCode: '01',
+          physicianCode: '10001',
+          status: '診療中',
+          source: 'visits',
+        },
+      ],
+      pending,
+    );
+
+    expect(resolved).toBeNull();
+  });
+
   it('patient search charts handoff は accepted handoff を優先する', () => {
     const candidate = resolvePatientChartsHandoff({
       patientId: 'P-001',
@@ -291,6 +390,11 @@ describe('receptionHandoff', () => {
         scheduleKey: 'F001:S100',
         encounterKey: 'F001:E100',
         visitDate: '2026-04-13',
+        departmentCode: '01',
+        physicianCode: undefined,
+        voucherNumber: 'server-derived-voucher',
+        sequentialNumber: 'server-derived-seq',
+        insuranceCombinationNumber: 'server-derived-insurance',
       },
     });
   });
@@ -334,6 +438,11 @@ describe('receptionHandoff', () => {
         scheduleKey: 'F001:S100',
         encounterKey: 'F001:E100',
         visitDate: '2026-04-13',
+        departmentCode: '01',
+        physicianCode: undefined,
+        voucherNumber: 'server-derived-voucher',
+        sequentialNumber: 'server-derived-seq',
+        insuranceCombinationNumber: 'server-derived-insurance',
       },
     });
   });
