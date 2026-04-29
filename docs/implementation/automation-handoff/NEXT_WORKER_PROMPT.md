@@ -1,87 +1,87 @@
 # NEXT_WORKER_PROMPT
 
-status: blocked_web_existing_acceptance_visible_entry_handoff
-created_at: 2026-04-29T11:04:10Z
-updated_at: 2026-04-29T11:04:10Z
+status: blocked_charts_order_panel_after_existing_acceptance_handoff
+created_at: 2026-04-29T11:43:30Z
+updated_at: 2026-04-29T11:43:30Z
 source_work_order: RWO-08B
-blocker_id: rwo08b-existing-acceptance-visible-entry-handoff-blocker
+blocker_id: rwo08b-existing-acceptance-charts-order-panel-blocker
 priority: high
 supersedes:
-- rwo08b-existing-orca-acceptance-web-handoff-blocker
+- rwo08b-existing-acceptance-visible-entry-handoff-blocker
 
 ## Context
 
-RUN_ID `20260429T104910Z` implemented a partial repo-local fix for the existing ORCA GUI-created acceptance handoff path:
+RUN_ID `20260429T113103Z` repaired the narrowed Web/QA existing ORCA acceptance handoff blocker.
 
-- `web-client/src/features/reception/receptionHandoff.ts`
-- `web-client/src/features/reception/__tests__/receptionHandoff.test.ts`
-- `web-client/scripts/qa-fullflow-weborca.mjs`
-- `web-client/scripts/qa-lib/medical-information-gate.mjs`
+Tracked sanitized evidence:
 
-Sanitized tracked evidence:
+- `docs/implementation/rwo08b-existing-acceptance-handoff-20260429T113103Z/summary.sanitized.json`
+- `docs/implementation/rwo08b-existing-acceptance-handoff-20260429T113103Z/FINAL_REPORT.md`
 
-- `docs/implementation/rwo08b-existing-acceptance-handoff-20260429T104910Z/summary.sanitized.json`
-- `docs/implementation/rwo08b-existing-acceptance-handoff-20260429T104910Z/FINAL_REPORT.md`
+Local-only diagnostic artifact root, not reviewer evidence:
 
-Local-only diagnostic artifact roots, not reviewer evidence:
-
-- `artifacts/diagnostic-fullflow/20260429T104910Z/fullflow/`
-- `artifacts/diagnostic-fullflow/20260429T110100Z/fullflow/`
+- `artifacts/diagnostic-fullflow/20260429T113103Z/fullflow/`
 
 Do not commit, package, paste, or reviewer-submit screenshots, HAR, traces, videos, raw network artifacts, raw ORCA request/response bodies, raw patient details, raw insurance details, request XML, cookies, sessions, Authorization headers, CSRF values, credentials, or credential-bearing URLs.
 
 ## Current State
 
-The previous ORCA-side identifier/readiness blocker remains cleared for target patient `00002` based on prior same-run sanitized read-only target-readiness evidence. The latest repair added fail-closed logic for choosing exactly one complete server-derived official visit row when multiple active keyed entries exist.
+The patient-search existing-acceptance handoff candidate now resolves from a complete server-derived `visits` row for target patient `00002`, even when the rendered status is `予約`.
+
+The fix preserves fail-closed authority boundaries:
+
+- patient ID alone is not authority;
+- client-provided identifiers are not authority;
+- `source=visits` and complete official visit identifiers are required;
+- multiple complete official visit rows fail closed;
+- reservation/snapshot rows are not promoted to official visit authority.
 
 Focused checks passed:
 
 - `node --check scripts/qa-fullflow-weborca.mjs`
 - `node --check scripts/qa-lib/medical-information-gate.mjs`
-- `cd web-client && npm test -- --run src/features/reception/__tests__/receptionHandoff.test.ts scripts/__tests__/medicalInformationGate.test.ts`
-  - 38 tests passed, including web guard pretest.
+- `cd web-client && npm test -- --run src/features/reception/__tests__/receptionHandoff.test.ts src/features/reception/__tests__/ReceptionPage.test.tsx scripts/__tests__/medicalInformationGate.test.ts`
+  - 89 tests passed, including web guard pretest.
 
 Runtime was restarted with:
 
 - `OPENDOLPHIN_RUNTIME_PROFILE=orca-trial-no-object-storage WEB_CLIENT_MODE=npm ./setup-modernized-env.sh`
 
+The diagnostic Fullflow attempt for target `00002` showed:
+
+- `handoffMode=existing-acceptance`;
+- Charts handoff ready with schedule key and encounter key present;
+- accept mutation was not observed;
+- medical information gate passed with 0 violations and 0 target mutation requests;
+- `visitRowReadiness=ready`;
+- Charts opened, but `treatmentOrder-edit-panel` did not become visible before timeout;
+- order send did not reach a sanitized business-success classification.
+
 ## Remaining Blocker
 
-Diagnostic Fullflow still blocks before order send. The newer retry RUN_ID `20260429T110100Z` showed:
+The current blocker is Charts-side or harness-side after successful existing-acceptance navigation:
 
-- patient-search existing handoff candidate stayed disabled;
-- sanitized title classification: `no_active_entry`;
-- accept mutation was still observed with sanitized `apiResult=90`;
-- order send did not run;
-- request XML was not created.
+`blocked_before_order_send_charts_order_panel`
 
-However, sanitized `visits/list` shape from the same diagnostic run showed:
-
-- `recordsReturned=3`;
-- target patient rows for `00002`: `2`;
-- complete target rows with server-derived official identifiers: `1`;
-- the complete target row had patientId, visitDate, departmentCode, voucherNumber, sequentialNumber, insuranceCombinationNumber, scheduleKey, and encounterKey.
-
-Therefore the narrowed repo-local blocker is: the complete server-derived `visits/list` target row exists, but the patient-search modal handoff candidate still receives no active entry and falls back to duplicate accept mutation.
+The diagnostic reached Charts through canonical handoff, but the order edit panel for `treatmentOrder` did not become visible before timeout. Do not rerun unchanged diagnostic Fullflow until a concrete repo-local fix or changed precondition exists.
 
 ## Required Boundary
 
-Do not trust patientId alone. The next fix must use server-derived row fields from the reception/visits result or a server-derived hydration path. If multiple complete official target rows exist, fail closed.
+Do not trust patient ID alone, browser UI state alone, local storage state, or client-provided identifiers as authority.
 
-Do not rerun unchanged diagnostic Fullflow. A changed repo-local precondition or code fix is required first.
-
-Do not treat target-readiness, HTTP 200, wrapper exit 0, accept mutation transport success, dry-run, UI state, or local browser state as Fullflow L4 success. Fullflow success still requires endpoint-specific sanitized business evidence after the order-send path reaches the intended ORCA endpoint.
+Do not treat Charts navigation, HTTP 200, wrapper exit 0, diagnostic completion, a visible send button, or local browser state as Fullflow L4 success. Fullflow success still requires endpoint-specific sanitized business evidence after the order-send path reaches the intended ORCA endpoint.
 
 ## Next Safe Work
 
-Inspect why `resolvePatientChartsHandoff({ entries: displayedEntries })` is not seeing the complete target row even though `visits/list` contains one. Likely areas:
+Inspect the Charts-side order selection/edit-panel path used by `web-client/scripts/qa-fullflow-weborca.mjs` after existing-acceptance handoff. Likely areas:
 
-- `fetchAppointmentOutpatients` / `parseAppointmentEntries` to `visibleAppointmentEntries` propagation;
-- `filterEntries` / payment/status/date filters before `displayedEntries`;
-- patient-search modal result selection timing and state dependencies;
-- any snapshot/live-entry replacement that drops visits rows before the modal candidate resolves.
+- order entity selection for `treatmentOrder`;
+- opening or rendering `[data-test-id="treatmentOrder-edit-panel"]`;
+- existing-acceptance handoff tab initialization and active patient context;
+- whether a selected bundle/master row prerequisite is missing;
+- whether the diagnostic script needs a server-derived, non-secret precondition before opening the edit panel.
 
-Implement the smallest repo-local fix so the complete server-derived target row is bridged into the patient-search handoff candidate, or add a QA-only server-derived handoff hydration path that uses the same server-derived complete-row criteria and does not trust patientId alone.
+Implement the smallest repo-local fix in `web-client/` so the diagnostic can reach a sanitized order-send classification, or record a narrower repo-local blocker if another specific gate is found.
 
 After a concrete fix:
 
@@ -102,5 +102,5 @@ After a concrete fix:
 
 This prompt may be marked `completed` only when one of these is true:
 
-- the complete server-derived existing ORCA acceptance row is safely handed off into active local reception/charts state, and diagnostic Fullflow reaches a sanitized order-send classification; or
+- diagnostic Fullflow reaches a sanitized order-send classification after existing-acceptance handoff; or
 - a narrower repo-local blocker is recorded after a concrete code fix or changed precondition, with sanitized evidence explaining the next repair.

@@ -1173,6 +1173,74 @@ describe('ReceptionPage accept UX', () => {
       }),
     );
   });
+
+  it('patient search は server-derived 公式 visit 行から既存受付 handoff を開く', async () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-orca-reservation',
+        patientId: 'P-016',
+        scheduleKey: 'F001:S159',
+        encounterKey: 'F001:E159',
+        visitDate: '2026-01-29',
+        departmentCode: '01',
+        status: '予約',
+        source: 'reservations',
+      },
+      {
+        id: 'row-orca-existing-acceptance',
+        patientId: 'P-016',
+        scheduleKey: 'F001:S160',
+        encounterKey: 'F001:E160',
+        visitDate: '2026-01-29',
+        departmentCode: '01',
+        physicianCode: '10001',
+        voucherNumber: 'server-derived-voucher',
+        sequentialNumber: 'server-derived-seq',
+        insuranceCombinationNumber: 'server-derived-insurance',
+        name: '既存受付患者',
+        department: '01 内科',
+        physician: '10001 担当医A',
+        status: '予約',
+        insurance: '保険',
+        source: 'visits',
+      },
+    ];
+    mockMutationQueue.push({
+      patients: [{ patientId: 'P-016', name: '既存受付患者', insurance: '保険' }],
+      recordsReturned: 1,
+      runId: 'RUN-SEARCH-EXISTING-HANDOFF',
+    });
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    await user.click(within(patientSearch).getByRole('button', { name: '検索' }));
+
+    const resultPanel = within(workflowModal).getByRole('region', { name: '患者検索結果モーダル' });
+    const selectedItem = within(resultPanel).getAllByRole('listitem')[0];
+    await user.click(selectedItem);
+
+    const chartsButton = within(selectedItem).getByRole('button', { name: 'カルテを開く' });
+    expect(chartsButton).toBeEnabled();
+    expect(chartsButton).toHaveAttribute('data-schedule-key', 'F001:S160');
+    expect(chartsButton).toHaveAttribute('data-encounter-key', 'F001:E160');
+
+    await user.click(chartsButton);
+
+    expect(mockOpenCharts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        encounter: expect.objectContaining({
+          patientId: 'P-016',
+          scheduleKey: 'F001:S160',
+          encounterKey: 'F001:E160',
+          visitDate: '2026-01-29',
+        }),
+      }),
+    );
+    expect(mockMutationCalls).toHaveLength(1);
+  });
 });
 
 describe('ReceptionPage official master search', () => {

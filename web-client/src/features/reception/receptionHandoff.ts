@@ -136,7 +136,8 @@ const entryMatchesPendingHandoff = (entry: ReceptionEntry, pending: PendingRecep
 
 const hasCompleteOfficialVisitIdentifiers = (entry: ReceptionEntry) =>
   Boolean(
-    normalizeOptionalString(entry.patientId) &&
+    entry.source === 'visits' &&
+      normalizeOptionalString(entry.patientId) &&
       normalizeOptionalString(entry.visitDate) &&
       normalizeOptionalString(entry.departmentCode) &&
       normalizeOptionalString(entry.voucherNumber) &&
@@ -186,9 +187,23 @@ export const resolvePatientChartsHandoff = (params: {
     };
   }
 
-  const activeEntries = params.entries.filter(
-    (entry) => normalizeOptionalString(entry.patientId) === patientId && entry.status !== '予約',
-  );
+  const patientEntries = params.entries.filter((entry) => normalizeOptionalString(entry.patientId) === patientId);
+  const officialVisitEntries = patientEntries.filter(hasCompleteOfficialVisitIdentifiers);
+  if (officialVisitEntries.length === 1) {
+    return {
+      kind: 'ready',
+      source: 'patient-entry',
+      encounter: normalizeEntryEncounter(officialVisitEntries[0]),
+    };
+  }
+  if (officialVisitEntries.length > 1) {
+    return {
+      kind: 'blocked',
+      reason: 'ambiguous_active_entries',
+    };
+  }
+
+  const activeEntries = patientEntries.filter((entry) => entry.status !== '予約');
   const keyedEntries = activeEntries
     .map((entry) => normalizeEntryEncounter(entry))
     .filter((encounter) => hasHandoffEncounterKey(encounter));
@@ -199,16 +214,6 @@ export const resolvePatientChartsHandoff = (params: {
       source: 'patient-entry',
       encounter: keyedEntries[0],
     };
-  }
-  if (keyedEntries.length > 1) {
-    const officialVisitEntries = activeEntries.filter(hasCompleteOfficialVisitIdentifiers);
-    if (officialVisitEntries.length === 1) {
-      return {
-        kind: 'ready',
-        source: 'patient-entry',
-        encounter: normalizeEntryEncounter(officialVisitEntries[0]),
-      };
-    }
   }
   if (keyedEntries.length > 1) {
     return {

@@ -295,6 +295,49 @@ describe('receptionHandoff', () => {
     });
   });
 
+  it('patient search charts handoff は server-derived 公式 visit 行なら予約表示でも一意に選ぶ', () => {
+    const candidate = resolvePatientChartsHandoff({
+      patientId: 'P-001',
+      entries: [
+        {
+          id: 'row-reservation',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S099',
+          encounterKey: 'F001:E099',
+          visitDate: '2026-04-13',
+          status: '予約',
+          source: 'reservations',
+        },
+        {
+          id: 'row-official-visit',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S100',
+          encounterKey: 'F001:E100',
+          visitDate: '2026-04-13',
+          departmentCode: '01',
+          voucherNumber: 'server-derived-voucher',
+          sequentialNumber: 'server-derived-seq',
+          insuranceCombinationNumber: 'server-derived-insurance',
+          status: '予約',
+          source: 'visits',
+        },
+      ],
+    });
+
+    expect(candidate).toEqual({
+      kind: 'ready',
+      source: 'patient-entry',
+      encounter: {
+        patientId: 'P-001',
+        appointmentId: undefined,
+        receptionId: undefined,
+        scheduleKey: 'F001:S100',
+        encounterKey: 'F001:E100',
+        visitDate: '2026-04-13',
+      },
+    });
+  });
+
   it('patient search charts handoff は公式 visit 識別子を満たす行が複数なら fail-close する', () => {
     const candidate = resolvePatientChartsHandoff({
       patientId: 'P-001',

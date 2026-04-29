@@ -5987,7 +5987,7 @@ export function ReceptionPage({
                                 patientId: resolvedPatientId,
                                 acceptedHandoff:
                                   acceptedChartsHandoff?.encounter.patientId === resolvedPatientId ? acceptedChartsHandoff : null,
-                                entries: displayedEntries,
+                                entries: visibleAppointmentEntries,
                               });
                               const canOpenCharts = chartsHandoffCandidate.kind === 'ready';
                               const patientSearchOpenChartsTitle =

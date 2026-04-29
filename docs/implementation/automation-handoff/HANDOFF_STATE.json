@@ -1,8 +1,8 @@
 {
-  "status": "blocked_web_existing_acceptance_handoff",
+  "status": "blocked_charts_order_panel_after_existing_acceptance_handoff",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B",
-  "blockerId": "rwo08b-existing-orca-acceptance-web-handoff-blocker",
+  "blockerId": "rwo08b-existing-acceptance-charts-order-panel-blocker",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,7 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-29T11:04:10Z",
+  "lastUpdated": "2026-04-29T11:43:30Z",
   "latestRwo08bExistingAcceptanceHandoffRepair": {
     "runId": "20260429T104910Z",
     "workOrder": "RWO-08B",
@@ -9835,5 +9835,59 @@
     "productionOrcaAttempted": false,
     "s3ObjectStorageUsed": false,
     "recommendedNextTask": "Investigate whether medicalgetv2 class 01 needs a different safe read-only request shape, prerequisite billing/order state, or another official read-only endpoint before diagnostic Fullflow can safely run."
+  },
+  "latestRwo08bExistingAcceptanceChartsOrderPanelBlocker": {
+    "runId": "20260429T113103Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_EXISTING_ACCEPTANCE_VISIBLE_ENTRY_HANDOFF_REPAIR",
+    "result": "EXISTING_ACCEPTANCE_HANDOFF_REPAIRED_ORDER_PANEL_BLOCKER_RECORDED",
+    "branch": "master",
+    "headAtSelection": "5597b4759",
+    "evidence": "docs/implementation/rwo08b-existing-acceptance-handoff-20260429T113103Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-existing-acceptance-handoff-20260429T113103Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/rwo08b-existing-acceptance-handoff-20260429T113103Z/FINAL_REPORT.md",
+    "repoLocalFixes": [
+      "web-client/src/features/reception/receptionHandoff.ts",
+      "web-client/src/features/reception/pages/ReceptionPage.tsx",
+      "web-client/src/features/reception/__tests__/receptionHandoff.test.ts",
+      "web-client/src/features/reception/__tests__/ReceptionPage.test.tsx"
+    ],
+    "checks": {
+      "scriptSyntax": "pass",
+      "focusedWebTests": "pass_89_tests",
+      "webGuard": "pass",
+      "trialNoObjectStorageRuntimeRestarted": true
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "attemptRunIds": [
+        "20260429T113103Z"
+      ],
+      "handoffMode": "existing-acceptance",
+      "businessSuccessClassification": "blocked_before_order_send_charts_order_panel",
+      "orderSendReached": false,
+      "acceptMutationObserved": false,
+      "chartsHandoffReady": true,
+      "chartsHandoffKeyPresence": {
+        "scheduleKey": true,
+        "encounterKey": true
+      },
+      "visitRowReadiness": "ready",
+      "medicalInformationGateOk": true,
+      "orderResultStatus": "error",
+      "sendResultStatus": "no-response"
+    },
+    "narrowedBlocker": {
+      "blockerId": "rwo08b-existing-acceptance-charts-order-panel-blocker",
+      "classification": "repo_local_charts_order_panel_or_harness_selection",
+      "summary": "Existing-acceptance handoff reaches Charts without duplicate accept mutation, but treatmentOrder-edit-panel does not become visible before timeout.",
+      "recommendedNextTask": "Inspect and repair the Charts-side order selection/edit-panel path for existing-acceptance handoff tabs, then rerun exactly one diagnostic Fullflow attempt."
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
   }
 }
