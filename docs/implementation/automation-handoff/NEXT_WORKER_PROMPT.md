@@ -2,7 +2,7 @@
 
 status: blocked_trial_business_state
 created_at: 2026-04-28T23:29:46Z
-updated_at: 2026-04-28T23:29:46Z
+updated_at: 2026-04-29T00:14:57Z
 source_work_order: RWO-08B
 blocker_id: rwo08b-current-trial-target-missing-official-identifier-proof
 priority: high
@@ -18,6 +18,8 @@ Evidence:
 - `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/summary.sanitized.json`
 - `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/FINAL_REPORT.md`
 - `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/NEXT_INVESTIGATION_PLAYBOOK.md`
+- `docs/implementation/rwo08b-official-identifier-proof-research-20260429T001457Z/summary.sanitized.json`
+- `docs/implementation/rwo08b-official-identifier-proof-research-20260429T001457Z/FINAL_REPORT.md`
 
 The dev/Trial runtime now passes `OPENDOLPHIN_ENVIRONMENT=trial-local` into `server-modernized-dev`, allowing the Trial-only runtime fallback to resolve WebORCA Trial settings when an old local encrypted ORCA connection record cannot be decrypted. No secret values were printed, replaced, or committed.
 
@@ -31,6 +33,8 @@ Fresh read-only evidence:
 - `medicalgetv2` class `01` returned `apiResult=15`, `medicalReadyRowCount=0`;
 - `visitptlstv2` `Request_Number=01` returned one sanitized row, but `visitReadyRowCount=0`;
 - `identifierPreflightReady=false`.
+
+RUN_ID `20260429T001457Z` performed official-source no-live research against the ORCA API overview, `medicalgetv2`, the official `medicalgetv2` PDF, `medicaltemp`, and PushAPI. It did not find a new official artifact-free current-state read-only source that can prove the missing voucher / sequential / insurance tuple for the current target. `medicaltemp` lacks the complete proof tuple, and PushAPI is event notification rather than a current-state read-only lookup.
 
 Diagnostic Fullflow remains not authorized for the current Trial target.
 
@@ -50,7 +54,7 @@ Do not reuse `00001` or `00005` unchanged. They remain duplicate-blocked candida
 
 Before selecting more RWO-08B work, read `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/NEXT_INVESTIGATION_PLAYBOOK.md`.
 
-External research is useful only if it identifies another official, read-only ORCA source for the missing voucher / sequential / insurance identifier proof or official semantics that change the current proof rule. If research does not find that, the blocker remains Trial business/test-data state.
+External research is useful only if it identifies another official, read-only ORCA source for the missing voucher / sequential / insurance identifier proof or official semantics that change the current proof rule. The 2026-04-29 research pass did not find such a source in the checked source set, so the blocker remains Trial business/test-data state.
 
 Select the next independent roadmap item, or prepare a new complete endpoint packet for a non-duplicate Trial target setup path if one is explicitly allowed by the current roadmap/handoff and has:
 
