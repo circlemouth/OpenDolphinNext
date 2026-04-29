@@ -1,84 +1,93 @@
 # NEXT_WORKER_PROMPT
 
-status: blocked_trial_business_state
+status: blocked_web_existing_acceptance_handoff
 created_at: 2026-04-28T23:29:46Z
-updated_at: 2026-04-29T00:14:57Z
+updated_at: 2026-04-29T10:34:32Z
 source_work_order: RWO-08B
-blocker_id: rwo08b-current-trial-target-missing-official-identifier-proof
+blocker_id: rwo08b-existing-orca-acceptance-web-handoff-blocker
 priority: high
 supersedes:
 - rwo08b-visitptlstv2-identifier-preflight-runtime-orca-config-decrypt-blocker
+- rwo08b-current-trial-target-missing-official-identifier-proof
 
 ## Context
 
-RUN_ID `20260428T232946Z` resolved the local Trial runtime decrypt blocker and refreshed read-only WebORCA / ORCA Trial evidence.
+RUN_ID `20260429T014800Z` supersedes the prior Trial business-state blocker. The owner/operator re-created the WebORCA Trial GUI reception for patient `00002`, and the rebuilt local runtime at HEAD `b5187fa7c` proved same-run target readiness using only sanitized read-only evidence.
 
-Evidence:
+Sanitized local-only diagnostic evidence from that run:
 
-- `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/summary.sanitized.json`
-- `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/FINAL_REPORT.md`
-- `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/NEXT_INVESTIGATION_PLAYBOOK.md`
-- `docs/implementation/rwo08b-official-identifier-proof-research-20260429T001457Z/summary.sanitized.json`
-- `docs/implementation/rwo08b-official-identifier-proof-research-20260429T001457Z/FINAL_REPORT.md`
+- `artifacts/diagnostic-fullflow/20260429T014800Z/rwo08b-target-readiness/summary.sanitized.json`
+- `artifacts/diagnostic-fullflow/20260429T014800Z/rwo08b-acceptance-inventory/phase4-acceptmodv2-target-inventory-summary.sanitized.json`
+- `artifacts/diagnostic-fullflow/20260429T014800Z/fullflow/blocker-summary.json`
+- `artifacts/diagnostic-fullflow/20260429T014800Z/fullflow/summary.json`
 
-The dev/Trial runtime now passes `OPENDOLPHIN_ENVIRONMENT=trial-local` into `server-modernized-dev`, allowing the Trial-only runtime fallback to resolve WebORCA Trial settings when an old local encrypted ORCA connection record cannot be decrypted. No secret values were printed, replaced, or committed.
+These diagnostic artifact paths are local-only and ignored. Do not commit, package, paste, or reviewer-submit screenshots, HAR, traces, videos, raw network artifacts, raw ORCA request/response bodies, raw patient details, raw insurance details, request XML, cookies, sessions, Authorization headers, CSRF values, credentials, or credential-bearing URLs.
 
-Fresh read-only evidence:
+Read-only target readiness result:
 
-- duplicate-blocked candidates `00001` and `00005` were excluded;
-- fresh candidate discovery selected only non-duplicate candidate `00002`;
-- exact read-only preflight for `00002` passed;
-- target-readiness reached `/api/orca/official/visits/identifier-preflight` with HTTP `200`;
-- `acceptlstv2` selected target row remains target-ready;
-- `medicalgetv2` class `01` returned `apiResult=15`, `medicalReadyRowCount=0`;
-- `visitptlstv2` `Request_Number=01` returned one sanitized row, but `visitReadyRowCount=0`;
-- `identifierPreflightReady=false`.
+- selected patient: `00002`
+- target: WebORCA / ORCA Trial only
+- candidate discovery selected `00002`
+- exact preflight accepted
+- acceptance inventory classification: `readonly_inventory_target_ready`
+- server-derived row hash: `89b7157986cd853ad568c291163c492e20763d0a1ebb723a05f45cbd9dbe2995`
+- target-readiness classification: `target_ready_for_diagnostic_fullflow`
+- strict gate passed: `identifierPreflightReady=true`
+- provisional gate was not needed: `provisionalIdentifierPreflightReady=false`
+- `medicalReadyRowCount=1`
+- `visitReadyRowCount=1`
+- HTTP status `200`, sanitized `apiResult=00`
 
-RUN_ID `20260429T001457Z` performed official-source no-live research against the ORCA API overview, `medicalgetv2`, the official `medicalgetv2` PDF, `medicaltemp`, and PushAPI. It did not find a new official artifact-free current-state read-only source that can prove the missing voucher / sequential / insurance tuple for the current target. `medicaltemp` lacks the complete proof tuple, and PushAPI is event notification rather than a current-state read-only lookup.
+Diagnostic Fullflow was then run under the Diagnostic Artifact Exception with `QA_PATIENT_ID=00002`. It exited `1` before order send. The result was not a Trial identifier problem and not an ORCA order-send business result.
 
-RUN_ID `20260429T003500Z` added a constrained provisional visit-context gate. Strict `identifierPreflightReady` still requires voucher / sequential / insurance proof. New `provisionalIdentifierPreflightReady` may only be used when server-derived `acceptlstv2` target readiness is true and exactly one `visitptlstv2` row matches patient, visit date, department, and insurance combination without raw sensitive field exposure. Patient ID alone, UI state, or client-provided identifiers are not sufficient.
+Observed Fullflow blocker:
 
-Diagnostic Fullflow remains not authorized for the current Trial target.
+- blocker classification: `test-data-blocker`
+- blocker reason: `fatal_before_send`
+- accept mutation observed HTTP 2xx with sanitized `apiResult=90`
+- active rows: `0`
+- keyed active rows: `0`
+- matching rows: `2`
+- matching statuses: `予約`
+- charts handoff disabled because there was no active keyed local reception entry
+- request XML was not created: `no_request_xml`
+- `medicalmodv2` / order send did not run
 
 ## Current Blocker
 
-The blocker is now Trial business/test-data state, not repo-local runtime configuration.
+The previous ORCA-side identifier/readiness blocker is cleared for the current target. The remaining blocker is repo-local Web client / QA Fullflow handoff behavior.
 
-The current non-duplicate Trial target `00002`, date `2026-04-29`, class `01`, row hash `b3b3d7c1416f047abb6450023e575fa39f53ed1d8f804aef8cf3551d945a5ddb` lacks official read-only voucher / sequential / insurance identifier proof.
+The Fullflow harness cannot reuse the existing ORCA GUI-created accepted target as an active local reception/charts handoff. Instead it attempts a Web accept mutation again, receives sanitized `apiResult=90`, then stops before chart handoff and before order-send XML creation.
 
 ## Required Boundary
 
-Do not run diagnostic Fullflow for this current target unless a same-run artifact-free read-only target-readiness wrapper proves either `identifierPreflightReady=true` or the new separated `provisionalIdentifierPreflightReady=true` with `strictIdentifierPreflightReady=false`, an explicit provisional claim boundary, and a fresh target-drift check.
+Do not rerun the unchanged diagnostic Fullflow path. A changed repo-local precondition or code fix is required first.
 
-Do not reuse `00001` or `00005` unchanged. They remain duplicate-blocked candidates for this RWO-08B path.
+Do not treat target-readiness, HTTP 200, wrapper exit 0, accept mutation transport success, dry-run, UI state, or local browser state as Fullflow L4 success. Fullflow success still requires endpoint-specific sanitized business evidence after the order-send path reaches the intended ORCA endpoint.
+
+Do not loosen authority to client-provided patient ID alone. Patient ID may be used only to select a candidate scope when the server derives and validates the corresponding ORCA acceptance row and local active reception/charts handoff state. Server-side authority, target-drift checks, and duplicate-live controls must remain enforced.
 
 ## Next Safe Work
 
-Before selecting more RWO-08B work, read `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/NEXT_INVESTIGATION_PLAYBOOK.md`.
+Inspect and repair the existing-acceptance handoff path in `web-client/scripts/qa-fullflow-weborca.mjs` and the related Web reception/charts handoff flow. The safe fix should allow the diagnostic Fullflow harness to use a server-derived existing ORCA acceptance target row, or to hydrate the active local reception/charts handoff from that target, without trusting client-supplied identifiers as authority.
 
-External research is useful only if it identifies another official, read-only ORCA source for the missing voucher / sequential / insurance identifier proof or official semantics that change the current proof rule. The 2026-04-29 research pass did not find such a source in the checked source set, so the blocker remains Trial business/test-data state.
+Expected implementation shape:
 
-Select the next independent roadmap item, or prepare a new complete endpoint packet for a non-duplicate Trial target setup path if one is explicitly allowed by the current roadmap/handoff and has:
-
-- endpoint/request class;
-- target identity;
-- payload hash/identity;
-- duplicate-live checkpoint;
-- no-live wrapper result;
-- parser/sanitizer result;
-- runtime readiness;
-- endpoint-specific business success criteria;
-- stop conditions;
-- sanitized evidence policy.
+- read the sanitized target-readiness and Fullflow blocker summaries first;
+- keep WebORCA Trial as the only ORCA target;
+- keep production ORCA and S3/object-storage out of scope;
+- avoid legacy `client/` and `server/` edits;
+- add focused tests or script-level checks for the existing-acceptance handoff path;
+- after a concrete repo-local fix or changed precondition, rerun one diagnostic Fullflow attempt under local-only artifact containment;
+- if the retry still fails, record the new narrower blocker with sanitized evidence.
 
 ## Forbidden Actions
 
 - Do not print or commit secret values, ORCA credentials, encrypted credential material, cookies, sessions, Authorization headers, CSRF values, raw ORCA bodies, raw patient details, raw insurance details, HAR, traces, videos, screenshots, request XML, raw network dumps, or credential-bearing URLs.
-- Do not run diagnostic Fullflow unless identifier-preflight readiness is proven in the same run.
-- Do not use production ORCA, production credentials, production patient data, S3/MinIO/object-storage setup, dummy object storage, or object-storage readiness claims.
+- Do not run production ORCA, production credentials, production patient data, S3/MinIO/object-storage setup, dummy object storage, or object-storage readiness claims.
 - Do not change legacy `client/` or `server/`.
-- Do not treat HTTP 200, wrapper exit 0, read-only discovery, dry-run, or identifier-preflight metadata as Fullflow L4 success.
-- Do not treat browser UI hiding, local storage state, client-provided identifiers, or client-provided facility/patient/owner data as authority.
+- Do not repeat unchanged live or diagnostic Trial sends.
+- Do not use patient ID alone, browser UI state, local storage state, or client-provided identifiers as authority.
 
 ## Evidence Requirements
 
@@ -89,9 +98,11 @@ Record sanitized Markdown/JSON only:
 - prior evidence files read;
 - selected target continuity or replacement target identity;
 - runtime configuration availability classification without values;
-- read-only wrapper result, if rerun;
+- changed precondition or repo-local fix before retry;
+- diagnostic Fullflow classification, if rerun;
 - explicit non-claims;
 - `credentialsCaptured=false`;
+- `diagnosticArtifactsCaptured=true` only when contained local/untracked;
 - `rawArtifactsCommittedOrPackaged=false`;
 - `productionOrcaAttempted=false`;
 - `s3ObjectStorageUsed=false`.
@@ -100,9 +111,9 @@ Record sanitized Markdown/JSON only:
 
 This prompt may be marked `completed` only when one of these is true:
 
-- identifier-preflight becomes target-ready for a non-duplicate accepted Trial target and queues or executes an authorized diagnostic Fullflow retry packet; or
-- another independent safe roadmap item is selected and completed/skipped under the throughput policy.
+- the existing ORCA GUI-created acceptance can be safely handed off into active local reception/charts state, and diagnostic Fullflow reaches a sanitized order-send classification; or
+- a narrower repo-local blocker is recorded after a concrete code fix or changed precondition, with sanitized evidence explaining the next repair.
 
 ## Next Recommended First Action
 
-Read `NEXT_INVESTIGATION_PLAYBOOK.md`, then either perform official-source no-live research for an additional read-only identifier proof source or continue to the next independent safe roadmap item. Return to diagnostic Fullflow only when a non-duplicate Trial target can provide official voucher / sequential / insurance identifier proof through artifact-free read-only evidence.
+Read the target-readiness and Fullflow blocker summaries from RUN_ID `20260429T014800Z`, then fix the Web/QA existing-acceptance handoff path before any further diagnostic Fullflow retry.

@@ -1,8 +1,8 @@
 {
-  "status": "blocked_trial_business_state",
+  "status": "blocked_web_existing_acceptance_handoff",
   "currentPrompt": "docs/implementation/automation-handoff/NEXT_WORKER_PROMPT.md",
   "sourceWorkOrder": "RWO-08B",
-  "blockerId": "rwo08b-current-trial-target-missing-official-identifier-proof",
+  "blockerId": "rwo08b-existing-orca-acceptance-web-handoff-blocker",
   "priority": "high",
   "standingTrialOrcaApproval": true,
   "productionOrcaApproval": false,
@@ -30,7 +30,78 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-29T00:35:00Z",
+  "lastUpdated": "2026-04-29T10:34:32Z",
+  "latestRwo08bStrictReadinessAndFullflowHandoffBlocker": {
+    "runId": "20260429T014800Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_STRICT_READINESS_AND_DIAGNOSTIC_FULLFLOW_RETRY",
+    "result": "STRICT_IDENTIFIER_READINESS_PROVEN_FULLFLOW_BLOCKED_BEFORE_SEND_WEB_HANDOFF",
+    "branch": "master",
+    "headAtExecution": "b5187fa7c",
+    "evidence": {
+      "targetReadinessSummary": "artifacts/diagnostic-fullflow/20260429T014800Z/rwo08b-target-readiness/summary.sanitized.json",
+      "acceptanceInventorySummary": "artifacts/diagnostic-fullflow/20260429T014800Z/rwo08b-acceptance-inventory/phase4-acceptmodv2-target-inventory-summary.sanitized.json",
+      "fullflowBlockerSummary": "artifacts/diagnostic-fullflow/20260429T014800Z/fullflow/blocker-summary.json",
+      "fullflowSummary": "artifacts/diagnostic-fullflow/20260429T014800Z/fullflow/summary.json",
+      "artifactPolicy": "local_only_untracked_diagnostic_artifacts_not_reviewer_evidence"
+    },
+    "selectedTarget": {
+      "patientId": "00002",
+      "target": "WebORCA / ORCA Trial",
+      "candidateDiscoverySelected": true,
+      "exactPreflightAccepted": true,
+      "selectedAcceptanceRowHash": "89b7157986cd853ad568c291163c492e20763d0a1ebb723a05f45cbd9dbe2995",
+      "replacementTargetSelected": false
+    },
+    "targetReadiness": {
+      "businessSuccessClassification": "target_ready_for_diagnostic_fullflow",
+      "acceptanceInventoryClassification": "readonly_inventory_target_ready",
+      "identifierPreflightReady": true,
+      "provisionalIdentifierPreflightReady": false,
+      "medicalReadyRowCount": 1,
+      "visitReadyRowCount": 1,
+      "httpStatus": 200,
+      "apiResult": "00",
+      "previousIdentifierProofBlockerCleared": true
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "qaPatientId": "00002",
+      "exitCode": 1,
+      "businessSuccessClassification": "blocked_before_order_send_web_existing_acceptance_handoff",
+      "blockerClassification": "test-data-blocker",
+      "blockerReason": "fatal_before_send",
+      "acceptMutationObserved": true,
+      "acceptMutationHttpStatusClass": "2xx",
+      "acceptMutationApiResult": "90",
+      "activeRows": 0,
+      "keyedActiveRows": 0,
+      "matchingRows": 2,
+      "matchingStatuses": [
+        "予約"
+      ],
+      "chartsHandoffDisabled": true,
+      "chartsHandoffReason": "no_active_keyed_local_reception_entry",
+      "requestXmlCreated": false,
+      "requestXmlStatus": "no_request_xml",
+      "orderSendExecuted": false,
+      "medicalmodv2Executed": false
+    },
+    "conclusion": {
+      "orcaSideIdentifierReadinessCleared": true,
+      "remainingBlockerDomain": "repo_local_web_client_qa_harness_handoff",
+      "unchangedFullflowRerunAllowed": false,
+      "patientIdAloneAcceptedAsAuthority": false,
+      "serverDerivedAcceptanceRequired": true
+    },
+    "recommendedNextTask": "Repair the Web/QA existing-acceptance handoff path so a server-derived acceptlstv2 target row or local active reception/charts handoff can be used without retrying accept mutation, then rerun one diagnostic Fullflow attempt under local-only artifact containment.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
   "latestRwo08bProvisionalVisitContextGate": {
     "runId": "20260429T003500Z",
     "workOrder": "RWO-08B",
