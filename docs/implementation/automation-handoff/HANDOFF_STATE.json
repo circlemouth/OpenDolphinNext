@@ -41,6 +41,7 @@
     "evidence": "docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/summary.sanitized.json",
     "summary": "docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/summary.sanitized.json",
     "finalReport": "docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/FINAL_REPORT.md",
+    "nextInvestigationPlaybook": "docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/NEXT_INVESTIGATION_PLAYBOOK.md",
     "trialScope": {
       "target": "WebORCA / ORCA Trial",
       "productionOrcaAttempted": false,
@@ -76,7 +77,7 @@
       "executed": false,
       "businessSuccessClassification": "not_run_identifier_preflight_target_blocked"
     },
-    "recommendedNextTask": "Do not run diagnostic Fullflow for the current Trial target. Provide or create a non-duplicate Trial target with official medicalgetv2 or visitptlstv2 voucher/sequential/insurance identifier proof, then rerun artifact-free target-readiness.",
+    "recommendedNextTask": "Read the RWO-08B next investigation playbook. Do not run diagnostic Fullflow for the current Trial target. Either find another official read-only identifier proof source by no-live research, or provide/create a non-duplicate Trial target with official medicalgetv2 or visitptlstv2 voucher/sequential/insurance identifier proof, then rerun artifact-free target-readiness.",
     "credentialsCaptured": false,
     "diagnosticArtifactsCaptured": false,
     "rawArtifactsCommittedOrPackaged": false,

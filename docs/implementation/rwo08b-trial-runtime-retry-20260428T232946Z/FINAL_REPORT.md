@@ -32,6 +32,10 @@ Diagnostic Fullflow was not run.
 
 The remaining blocker is no longer local runtime configuration. It is Trial business/test-data state for the current target: the official read-only identifier sources still do not provide the required voucher / sequential / insurance identifier proof for `00002`.
 
+## Next Worker Playbook
+
+Use `NEXT_INVESTIGATION_PLAYBOOK.md` in this directory before doing more RWO-08B work. It records the exact decision tree for further official-source research, fresh read-only evidence, non-duplicate target setup, and the stop condition that keeps diagnostic Fullflow blocked until `identifierPreflightReady=true`.
+
 ## Non-claims
 
 This is not diagnostic Fullflow success, Trial order-send business acceptance, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO/PENDING, or final release readiness.

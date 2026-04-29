@@ -17,6 +17,7 @@ Evidence:
 
 - `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/summary.sanitized.json`
 - `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/FINAL_REPORT.md`
+- `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/NEXT_INVESTIGATION_PLAYBOOK.md`
 
 The dev/Trial runtime now passes `OPENDOLPHIN_ENVIRONMENT=trial-local` into `server-modernized-dev`, allowing the Trial-only runtime fallback to resolve WebORCA Trial settings when an old local encrypted ORCA connection record cannot be decrypted. No secret values were printed, replaced, or committed.
 
@@ -46,6 +47,10 @@ Do not run diagnostic Fullflow for this current target unless a same-run artifac
 Do not reuse `00001` or `00005` unchanged. They remain duplicate-blocked candidates for this RWO-08B path.
 
 ## Next Safe Work
+
+Before selecting more RWO-08B work, read `docs/implementation/rwo08b-trial-runtime-retry-20260428T232946Z/NEXT_INVESTIGATION_PLAYBOOK.md`.
+
+External research is useful only if it identifies another official, read-only ORCA source for the missing voucher / sequential / insurance identifier proof or official semantics that change the current proof rule. If research does not find that, the blocker remains Trial business/test-data state.
 
 Select the next independent roadmap item, or prepare a new complete endpoint packet for a non-duplicate Trial target setup path if one is explicitly allowed by the current roadmap/handoff and has:
 
@@ -94,4 +99,4 @@ This prompt may be marked `completed` only when one of these is true:
 
 ## Next Recommended First Action
 
-Continue to the next independent safe roadmap item. Return to RWO-08B only when a non-duplicate Trial target can provide official `medicalgetv2` or `visitptlstv2` voucher / sequential / insurance identifier proof through artifact-free read-only evidence.
+Read `NEXT_INVESTIGATION_PLAYBOOK.md`, then either perform official-source no-live research for an additional read-only identifier proof source or continue to the next independent safe roadmap item. Return to diagnostic Fullflow only when a non-duplicate Trial target can provide official voucher / sequential / insurance identifier proof through artifact-free read-only evidence.
