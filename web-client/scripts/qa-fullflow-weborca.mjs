@@ -472,6 +472,7 @@ let lastMedicalmodv2RequestXml = '';
 let lastSummary = null;
 let lastHandoffState = { status: 'not-started' };
 let lastSelectedVisitRow = null;
+let allowExistingAcceptanceHandoffGate = false;
 
 const readSelectedVisitRow = async (page) =>
   await page
@@ -534,6 +535,7 @@ const evaluateFullflowMedicalInformationGate = () =>
     medicalInformation,
     expectedPatientId: patientId,
     expectedCandidateId: patientId,
+    requireMutation: !allowExistingAcceptanceHandoffGate,
   });
 
 const classifyMedicalInformationGateFailure = (gate) => {
@@ -719,156 +721,228 @@ const run = async () => {
   await resultListItem.click();
   logStep('selected patient search result');
 
-  const acceptForm = workflowModal.locator('[data-test-id="reception-accept-detail-modal"]');
-  await acceptForm.waitFor({ timeout: 20000 });
-  logStep('accept detail ready');
-  const departmentSelection = await selectOptionWithGate(
-    acceptForm.locator('#reception-accept-department'),
-    'departmentCode',
-    departmentCode,
-  );
-  logStep(`department selected=${departmentSelection.resolved}`);
-  const paymentModeSelection = await selectOptionWithGate(
-    acceptForm.locator('#reception-accept-payment-mode'),
-    'paymentMode',
-    paymentMode,
-  );
-  logStep(`payment mode selected=${paymentModeSelection.resolved}`);
-  const physicianSelection = await selectOptionWithGate(
-    acceptForm.locator('#reception-accept-physician'),
-    'physicianCode',
-    physicianCode,
-  );
-  logStep(`physician selected=${physicianSelection.resolved}`);
-  const visitKindSelection = await selectOptionWithGate(
-    acceptForm.locator('#reception-accept-visit-kind'),
-    'visitKind',
-    visitKind,
-  );
-  logStep(`visit kind selected=${visitKindSelection.resolved}`);
-  const medicalInformationSelection = await selectOptionWithGate(
-    acceptForm.locator('#reception-accept-medical-information'),
-    'medicalInformation',
-    medicalInformation,
-  );
-  logStep(`medical information selected=${medicalInformationSelection.resolved || 'unselected'}`);
-  const selectorGate = summarizeSelectorGate({
-    department: departmentSelection,
-    paymentMode: paymentModeSelection,
-    physician: physicianSelection,
-    visitKind: visitKindSelection,
-    medicalInformation: medicalInformationSelection,
-  });
-  if (!selectorGate.ok) {
-    lastSummary = {
-      runId,
-      traceId,
-      executedAt: new Date().toISOString(),
-      baseURL,
-      facilityId,
-      sessionRole,
-      patientId,
-      departmentCode,
-      physicianCode,
-      paymentMode,
-      visitKind,
-      medicalInformation: medicalInformation || undefined,
-      medicalInformationProbe,
-      medicalInformationGate: evaluateFullflowMedicalInformationGate(),
-      selection: {
-        department: departmentSelection,
-        paymentMode: paymentModeSelection,
-        physician: physicianSelection,
-        visitKind: visitKindSelection,
-        medicalInformation: medicalInformationSelection,
-        selectorGate,
-        patientSearchInputMethod,
-      },
-      acceptResult: {},
-      receptionRowStatus: 'not-run-selector-option-missing',
-      chartsHandoff: { status: 'not-run' },
-      visitRowReadiness: 'not-run',
-      orderResult: { status: 'not-run' },
-      sendResult: {
-        status: 'not-run',
-        validation: { ok: false, reason: 'selector_option_missing' },
-      },
-      billingResult: { status: 'not-run' },
-      harPath: recordHar ? harPath : undefined,
-      consoleMessages,
-      pageErrors,
-      blockerReason: `selector_missing:${selectorGate.missingFields.join(',') || 'unknown'}`,
-      blockerClassification: SELECTOR_OPTION_MISSING_BLOCKER,
-      evidencePaths: {
-        summaryJson: 'summary.json',
-        summaryMd: 'summary.md',
-        blockerSummary: 'blocker-summary.json',
-        handoffState: 'handoff-state.json',
-        selectedVisitRow: 'selected-visit-row.json',
-        stepsLog: 'steps.log',
-        network: 'network/network.json',
-        requests: 'network/requests.json',
-        console: 'console.json',
-        pageErrors: 'page-errors.json',
-        screenshots: 'screenshots',
-        har: recordHar ? 'har/network.har' : undefined,
-      },
-    };
-    throw new Error(lastSummary.blockerReason);
-  }
-
-  const beforeShot = await writeScreenshot(page, '01-reception-before-accept');
-
-  const acceptResponsePromise = page
-    .waitForResponse((response) => response.url().includes('/api/orca/official/visits/mutation'), { timeout: 20000 })
-    .catch(() => null);
-
-  await workflowModal.locator('[data-test-id="reception-accept-register"]').click();
-  logStep('clicked reception send');
-  const acceptResponse = await acceptResponsePromise;
-  logStep('accept response observed');
-  const acceptMutationSummary = await summarizeAcceptMutationResponse(acceptResponse);
-  logStep(`accept response classification=${JSON.stringify(acceptMutationSummary)}`);
-  await page.waitForTimeout(2000);
-
-  const afterShot = await writeScreenshot(page, '02-reception-after-accept');
-  const toneBanner = page.locator('.reception-accept .tone-banner');
-  const toneText = await safeText(toneBanner.first());
-  const apiResultText = await safeInnerText(page.locator('[data-test-id="accept-api-result"]'), 3000);
-  const durationText = await safeInnerText(page.locator('[data-test-id="accept-duration-ms"]'), 3000);
-  const xhrDebugText = await safeInnerText(page.locator('[data-test-id="accept-xhr-debug"]'), 3000);
-
-  let receptionRowStatus = 'found';
-  const receptionRow = page.locator('.reception-table tbody tr', { hasText: patientId }).first();
-  const retryButton = page.getByRole('button', { name: '再取得' }).first();
-  try {
-    await receptionRow.waitFor({ timeout: 15000 });
-  } catch {
-    if (await retryButton.isVisible().catch(() => false)) {
-      await retryButton.click({ force: true }).catch((error) => {
-        logStep(`retry click error=${String(error)}`);
-      });
-    }
-    try {
-      await receptionRow.waitFor({ timeout: 15000 });
-    } catch {
-      receptionRowStatus = 'not-found';
-    }
-  }
-
-  await writeScreenshot(page, '03-reception-list');
-  logStep(`reception row status=${receptionRowStatus}`);
-  const receptionEntryDiagnostics = await readReceptionEntryDiagnostics(page, patientId);
-  logStep(`reception active diagnostics=${JSON.stringify(receptionEntryDiagnostics)}`);
-
-  const patientSearchOpenChartsButton = workflowModal.locator('[data-test-id="reception-patient-search-open-charts"]').first();
+  let handoffMode = 'accept-mutation';
+  let departmentSelection = { ok: true, resolved: '', skipped: 'existing-acceptance-handoff-not-used' };
+  let paymentModeSelection = { ok: true, resolved: '', skipped: 'existing-acceptance-handoff-not-used' };
+  let physicianSelection = { ok: true, resolved: '', skipped: 'existing-acceptance-handoff-not-used' };
+  let visitKindSelection = { ok: true, resolved: '', skipped: 'existing-acceptance-handoff-not-used' };
+  let medicalInformationSelection = { ok: true, resolved: '', skipped: 'existing-acceptance-handoff-not-used' };
+  let selectorGate = {
+    ok: true,
+    missingFields: [],
+    skipped: 'existing-acceptance-handoff-not-used',
+  };
+  let beforeShot = null;
+  let afterShot = null;
+  let toneText = '';
+  let apiResultText = '';
+  let durationText = '';
+  let xhrDebugText = '';
+  let acceptMutationSummary = {
+    observed: false,
+    httpStatusClass: 'not_run',
+    businessSuccessClassification: 'not_run_existing_acceptance_handoff',
+  };
+  let receptionRowStatus = 'not-run-existing-acceptance-handoff';
+  let receptionEntryDiagnostics = await readReceptionEntryDiagnostics(page, patientId);
   let chartsHandoff = {
     status: 'pending',
     scheduleKey: null,
     encounterKey: null,
     title: null,
   };
-  try {
+  const acceptForm = workflowModal.locator('[data-test-id="reception-accept-detail-modal"]');
+  const patientSearchOpenChartsButton = workflowModal.locator('[data-test-id="reception-patient-search-open-charts"]').first();
+
+  await patientSearchOpenChartsButton.waitFor({ timeout: 5000 }).catch(() => null);
+  await page
+    .waitForFunction(() => {
+      const button = document.querySelector('[data-test-id="reception-patient-search-open-charts"]');
+      if (!(button instanceof HTMLButtonElement)) return false;
+      return !button.disabled && Boolean(button.dataset.scheduleKey || button.dataset.encounterKey);
+    }, { timeout: 5000 })
+    .catch(() => null);
+  const existingChartsHandoff = await patientSearchOpenChartsButton
+    .evaluate((button) => ({
+      disabled: button.disabled,
+      scheduleKey: button.getAttribute('data-schedule-key'),
+      encounterKey: button.getAttribute('data-encounter-key'),
+      title: button.getAttribute('title'),
+    }))
+    .catch(() => null);
+  logStep(`existing acceptance charts handoff candidate=${JSON.stringify(existingChartsHandoff)}`);
+  if (
+    existingChartsHandoff &&
+    existingChartsHandoff.disabled === false &&
+    (existingChartsHandoff.scheduleKey || existingChartsHandoff.encounterKey)
+  ) {
+    handoffMode = 'existing-acceptance';
+    allowExistingAcceptanceHandoffGate = true;
+    chartsHandoff = {
+      status: 'ready',
+      scheduleKey: existingChartsHandoff.scheduleKey,
+      encounterKey: existingChartsHandoff.encounterKey,
+      title: existingChartsHandoff.title,
+    };
+    lastHandoffState = {
+      status: 'ready',
+      source: 'patient-search-existing-acceptance',
+      acceptMutation: acceptMutationSummary,
+      receptionEntryDiagnostics,
+      ...chartsHandoff,
+    };
+    logStep(
+      `existing acceptance charts handoff ready scheduleKey=${chartsHandoff.scheduleKey ?? '—'} encounterKey=${
+        chartsHandoff.encounterKey ?? '—'
+      }`,
+    );
+    await patientSearchOpenChartsButton.click();
+    await page.waitForURL('**/charts**');
+  }
+
+  if (handoffMode !== 'existing-acceptance') {
+    await acceptForm.waitFor({ timeout: 20000 });
+    logStep('accept detail ready');
+    departmentSelection = await selectOptionWithGate(
+      acceptForm.locator('#reception-accept-department'),
+      'departmentCode',
+      departmentCode,
+    );
+    logStep(`department selected=${departmentSelection.resolved}`);
+    paymentModeSelection = await selectOptionWithGate(
+      acceptForm.locator('#reception-accept-payment-mode'),
+      'paymentMode',
+      paymentMode,
+    );
+    logStep(`payment mode selected=${paymentModeSelection.resolved}`);
+    physicianSelection = await selectOptionWithGate(
+      acceptForm.locator('#reception-accept-physician'),
+      'physicianCode',
+      physicianCode,
+    );
+    logStep(`physician selected=${physicianSelection.resolved}`);
+    visitKindSelection = await selectOptionWithGate(
+      acceptForm.locator('#reception-accept-visit-kind'),
+      'visitKind',
+      visitKind,
+    );
+    logStep(`visit kind selected=${visitKindSelection.resolved}`);
+    medicalInformationSelection = await selectOptionWithGate(
+      acceptForm.locator('#reception-accept-medical-information'),
+      'medicalInformation',
+      medicalInformation,
+    );
+    logStep(`medical information selected=${medicalInformationSelection.resolved || 'unselected'}`);
+    selectorGate = summarizeSelectorGate({
+      department: departmentSelection,
+      paymentMode: paymentModeSelection,
+      physician: physicianSelection,
+      visitKind: visitKindSelection,
+      medicalInformation: medicalInformationSelection,
+    });
+    if (!selectorGate.ok) {
+      lastSummary = {
+        runId,
+        traceId,
+        executedAt: new Date().toISOString(),
+        baseURL,
+        facilityId,
+        sessionRole,
+        patientId,
+        departmentCode,
+        physicianCode,
+        paymentMode,
+        visitKind,
+        medicalInformation: medicalInformation || undefined,
+        medicalInformationProbe,
+        medicalInformationGate: evaluateFullflowMedicalInformationGate(),
+        selection: {
+          department: departmentSelection,
+          paymentMode: paymentModeSelection,
+          physician: physicianSelection,
+          visitKind: visitKindSelection,
+          medicalInformation: medicalInformationSelection,
+          selectorGate,
+          patientSearchInputMethod,
+        },
+        acceptResult: {},
+        receptionRowStatus: 'not-run-selector-option-missing',
+        chartsHandoff: { status: 'not-run' },
+        visitRowReadiness: 'not-run',
+        orderResult: { status: 'not-run' },
+        sendResult: {
+          status: 'not-run',
+          validation: { ok: false, reason: 'selector_option_missing' },
+        },
+        billingResult: { status: 'not-run' },
+        harPath: recordHar ? harPath : undefined,
+        consoleMessages,
+        pageErrors,
+        blockerReason: `selector_missing:${selectorGate.missingFields.join(',') || 'unknown'}`,
+        blockerClassification: SELECTOR_OPTION_MISSING_BLOCKER,
+        evidencePaths: {
+          summaryJson: 'summary.json',
+          summaryMd: 'summary.md',
+          blockerSummary: 'blocker-summary.json',
+          handoffState: 'handoff-state.json',
+          selectedVisitRow: 'selected-visit-row.json',
+          stepsLog: 'steps.log',
+          network: 'network/network.json',
+          requests: 'network/requests.json',
+          console: 'console.json',
+          pageErrors: 'page-errors.json',
+          screenshots: 'screenshots',
+          har: recordHar ? 'har/network.har' : undefined,
+        },
+      };
+      throw new Error(lastSummary.blockerReason);
+    }
+
+    beforeShot = await writeScreenshot(page, '01-reception-before-accept');
+
+    const acceptResponsePromise = page
+      .waitForResponse((response) => response.url().includes('/api/orca/official/visits/mutation'), { timeout: 20000 })
+      .catch(() => null);
+
+    await workflowModal.locator('[data-test-id="reception-accept-register"]').click();
+    logStep('clicked reception send');
+    const acceptResponse = await acceptResponsePromise;
+    logStep('accept response observed');
+    acceptMutationSummary = await summarizeAcceptMutationResponse(acceptResponse);
+    logStep(`accept response classification=${JSON.stringify(acceptMutationSummary)}`);
+    await page.waitForTimeout(2000);
+
+    afterShot = await writeScreenshot(page, '02-reception-after-accept');
+    const toneBanner = page.locator('.reception-accept .tone-banner');
+    toneText = await safeText(toneBanner.first());
+    apiResultText = await safeInnerText(page.locator('[data-test-id="accept-api-result"]'), 3000);
+    durationText = await safeInnerText(page.locator('[data-test-id="accept-duration-ms"]'), 3000);
+    xhrDebugText = await safeInnerText(page.locator('[data-test-id="accept-xhr-debug"]'), 3000);
+
+    receptionRowStatus = 'found';
+    const receptionRow = page.locator('.reception-table tbody tr', { hasText: patientId }).first();
+    const retryButton = page.getByRole('button', { name: '再取得' }).first();
+    try {
+      await receptionRow.waitFor({ timeout: 15000 });
+    } catch {
+      if (await retryButton.isVisible().catch(() => false)) {
+        await retryButton.click({ force: true }).catch((error) => {
+          logStep(`retry click error=${String(error)}`);
+        });
+      }
+      try {
+        await receptionRow.waitFor({ timeout: 15000 });
+      } catch {
+        receptionRowStatus = 'not-found';
+      }
+    }
+
+    await writeScreenshot(page, '03-reception-list');
+    logStep(`reception row status=${receptionRowStatus}`);
+    receptionEntryDiagnostics = await readReceptionEntryDiagnostics(page, patientId);
+    logStep(`reception active diagnostics=${JSON.stringify(receptionEntryDiagnostics)}`);
+
+    try {
     await patientSearchOpenChartsButton.waitFor({ timeout: 10000 });
     await page.waitForFunction(() => {
       const button = document.querySelector('[data-test-id="reception-patient-search-open-charts"]');
@@ -915,6 +989,7 @@ const run = async () => {
     };
     logStep(`charts handoff error=${String(error)} state=${JSON.stringify(buttonState)}`);
     throw new Error(`canonical charts handoff did not become available after accept: ${String(error)}`);
+  }
   }
   logStep('navigated to charts');
   await page.locator('.charts-page').waitFor({ timeout: 20000 });
@@ -1269,6 +1344,7 @@ const run = async () => {
     medicalInformation: medicalInformation || undefined,
     medicalInformationProbe,
     medicalInformationGate: evaluateFullflowMedicalInformationGate(),
+    handoffMode,
     selection: {
       department: departmentSelection,
       paymentMode: paymentModeSelection,

@@ -134,6 +134,17 @@ const entryMatchesPendingHandoff = (entry: ReceptionEntry, pending: PendingRecep
   return true;
 };
 
+const hasCompleteOfficialVisitIdentifiers = (entry: ReceptionEntry) =>
+  Boolean(
+    normalizeOptionalString(entry.patientId) &&
+      normalizeOptionalString(entry.visitDate) &&
+      normalizeOptionalString(entry.departmentCode) &&
+      normalizeOptionalString(entry.voucherNumber) &&
+      normalizeOptionalString(entry.sequentialNumber) &&
+      normalizeOptionalString(entry.insuranceCombinationNumber) &&
+      hasHandoffEncounterKey(normalizeEntryEncounter(entry)),
+  );
+
 export const resolvePendingAcceptHandoffFromEntries = (
   entries: ReceptionEntry[],
   pending: PendingReceptionHandoff | null | undefined,
@@ -188,6 +199,16 @@ export const resolvePatientChartsHandoff = (params: {
       source: 'patient-entry',
       encounter: keyedEntries[0],
     };
+  }
+  if (keyedEntries.length > 1) {
+    const officialVisitEntries = activeEntries.filter(hasCompleteOfficialVisitIdentifiers);
+    if (officialVisitEntries.length === 1) {
+      return {
+        kind: 'ready',
+        source: 'patient-entry',
+        encounter: normalizeEntryEncounter(officialVisitEntries[0]),
+      };
+    }
   }
   if (keyedEntries.length > 1) {
     return {

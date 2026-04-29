@@ -30,7 +30,56 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-29T10:34:32Z",
+  "lastUpdated": "2026-04-29T11:04:10Z",
+  "latestRwo08bExistingAcceptanceHandoffRepair": {
+    "runId": "20260429T104910Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_EXISTING_ACCEPTANCE_HANDOFF_REPAIR",
+    "result": "PARTIAL_FIX_NARROWER_UI_HANDOFF_BLOCKER_RECORDED",
+    "branch": "master",
+    "headAtSelection": "4794d0f71",
+    "evidence": "docs/implementation/rwo08b-existing-acceptance-handoff-20260429T104910Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-existing-acceptance-handoff-20260429T104910Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/rwo08b-existing-acceptance-handoff-20260429T104910Z/FINAL_REPORT.md",
+    "repoLocalFixes": [
+      "web-client/src/features/reception/receptionHandoff.ts",
+      "web-client/src/features/reception/__tests__/receptionHandoff.test.ts",
+      "web-client/scripts/qa-fullflow-weborca.mjs",
+      "web-client/scripts/qa-lib/medical-information-gate.mjs"
+    ],
+    "checks": {
+      "scriptSyntax": "pass",
+      "focusedWebTests": "pass_38_tests",
+      "webGuard": "pass",
+      "trialNoObjectStorageRuntimeRestarted": true
+    },
+    "diagnosticFullflow": {
+      "executed": true,
+      "attemptRunIds": [
+        "20260429T104910Z",
+        "20260429T110100Z"
+      ],
+      "businessSuccessClassification": "blocked_before_order_send_web_existing_acceptance_handoff",
+      "orderSendReached": false,
+      "acceptMutationObserved": true,
+      "acceptMutationApiResult": "90",
+      "existingAcceptanceCandidateState": "disabled_no_active_entry",
+      "sanitizedVisitListTargetRows": 2,
+      "sanitizedVisitListCompleteTargetRows": 1
+    },
+    "narrowedBlocker": {
+      "blockerId": "rwo08b-existing-acceptance-visible-entry-handoff-blocker",
+      "classification": "repo_local_web_client_qa_harness_handoff",
+      "summary": "Complete server-derived target visit row is present in sanitized visits/list shape, but patient-search modal handoff candidate still resolves to no_active_entry and falls back to duplicate accept mutation.",
+      "recommendedNextTask": "Bridge the complete server-derived visits/list row into the patient-search handoff candidate, or add a QA-only server-derived handoff hydration path that does not trust patientId alone, then rerun exactly one diagnostic Fullflow attempt."
+    },
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": true,
+    "diagnosticArtifactsLocalOnlyUntracked": true,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
   "latestRwo08bStrictReadinessAndFullflowHandoffBlocker": {
     "runId": "20260429T014800Z",
     "workOrder": "RWO-08B",

@@ -203,6 +203,7 @@ export const evaluateMedicalInformationGate = ({
   expectedPatientId = '00001',
   expectedCandidateId = '00001',
   targetPath = TARGET_MUTATION_PATH,
+  requireMutation = true,
 }) => {
   const normalizedSelection = typeof medicalInformation === 'string' ? medicalInformation.trim() : '';
   const mutationRequests = Array.isArray(requestRecords)
@@ -273,6 +274,17 @@ export const evaluateMedicalInformationGate = ({
   };
 
   if (mutationRequests.length === 0) {
+    if (!requireMutation) {
+      return {
+        ...baseResult,
+        ok: true,
+        checkedRequests: 0,
+        violationCount: 0,
+        violatedKeys: [],
+        violatingUrls: [],
+        reason: 'no_mutation_existing_acceptance_handoff',
+      };
+    }
     return {
       ...baseResult,
       ok: false,

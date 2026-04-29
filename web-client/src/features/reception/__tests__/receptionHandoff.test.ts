@@ -244,6 +244,96 @@ describe('receptionHandoff', () => {
     });
   });
 
+  it('patient search charts handoff は複数 active entry のうち公式 visit 識別子が一意な行を選ぶ', () => {
+    const candidate = resolvePatientChartsHandoff({
+      patientId: 'P-001',
+      entries: [
+        {
+          id: 'row-weak-1',
+          patientId: 'P-001',
+          encounterKey: 'F001:E101',
+          visitDate: '2026-04-13',
+          status: '受付中',
+          source: 'visits',
+        },
+        {
+          id: 'row-official',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S100',
+          encounterKey: 'F001:E100',
+          visitDate: '2026-04-13',
+          departmentCode: '01',
+          voucherNumber: 'server-derived-voucher',
+          sequentialNumber: 'server-derived-seq',
+          insuranceCombinationNumber: 'server-derived-insurance',
+          status: '診療中',
+          source: 'visits',
+        },
+        {
+          id: 'row-weak-2',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S102',
+          encounterKey: 'F001:E102',
+          visitDate: '2026-04-13',
+          status: '受付中',
+          source: 'visits',
+        },
+      ],
+    });
+
+    expect(candidate).toEqual({
+      kind: 'ready',
+      source: 'patient-entry',
+      encounter: {
+        patientId: 'P-001',
+        appointmentId: undefined,
+        receptionId: undefined,
+        scheduleKey: 'F001:S100',
+        encounterKey: 'F001:E100',
+        visitDate: '2026-04-13',
+      },
+    });
+  });
+
+  it('patient search charts handoff は公式 visit 識別子を満たす行が複数なら fail-close する', () => {
+    const candidate = resolvePatientChartsHandoff({
+      patientId: 'P-001',
+      entries: [
+        {
+          id: 'row-official-1',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S100',
+          encounterKey: 'F001:E100',
+          visitDate: '2026-04-13',
+          departmentCode: '01',
+          voucherNumber: 'server-derived-voucher-1',
+          sequentialNumber: 'server-derived-seq-1',
+          insuranceCombinationNumber: 'server-derived-insurance-1',
+          status: '受付中',
+          source: 'visits',
+        },
+        {
+          id: 'row-official-2',
+          patientId: 'P-001',
+          scheduleKey: 'F001:S101',
+          encounterKey: 'F001:E101',
+          visitDate: '2026-04-13',
+          departmentCode: '01',
+          voucherNumber: 'server-derived-voucher-2',
+          sequentialNumber: 'server-derived-seq-2',
+          insuranceCombinationNumber: 'server-derived-insurance-2',
+          status: '診療中',
+          source: 'visits',
+        },
+      ],
+    });
+
+    expect(candidate).toEqual({
+      kind: 'blocked',
+      reason: 'ambiguous_active_entries',
+    });
+  });
+
   it('patient search charts handoff は canonical key が無い active entry を block する', () => {
     const candidate = resolvePatientChartsHandoff({
       patientId: 'P-001',
