@@ -237,6 +237,7 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         attachVisitListIdentifierProof(facilityId, selected, response);
         response.setIdentifierPreflightReady(response.isSelectedAcceptanceTargetReady()
                 && (hasReadyMedicalIdentifierRow(response) || response.getVisitReadyRowCount() > 0));
+        applyProvisionalIdentifierPreflight(selected, response);
         enrich(response, result);
         return response;
     }
@@ -337,6 +338,47 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
                 && hasText(row.getServerDepartmentCode())
                 && hasText(row.getServerVoucherNumber())
                 && hasText(row.getServerSequentialNumber())
+                && hasText(row.getServerInsuranceCombinationNumber())
+                && safeHashSeed(row.getServerPatientId()).equals(safeHashSeed(selected.getServerPatientId()))
+                && safeHashSeed(row.getServerVisitDate()).equals(safeHashSeed(selected.getServerAcceptanceDate()))
+                && safeHashSeed(row.getServerDepartmentCode()).equals(safeHashSeed(selected.getServerDepartmentCode()))
+                && safeHashSeed(row.getServerInsuranceCombinationNumber())
+                        .equals(safeHashSeed(selected.getServerInsuranceCombinationNumber()));
+    }
+
+    private void applyProvisionalIdentifierPreflight(
+            AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
+            MedicalIdentifierPreflightResponse response) {
+        if (response == null || response.isIdentifierPreflightReady() || !response.isSelectedAcceptanceTargetReady()) {
+            return;
+        }
+        long matchingVisitContextCount = response.getVisitRows().stream()
+                .filter(row -> isProvisionalVisitContextRow(selected, row))
+                .count();
+        response.setProvisionalVisitContextRowCount((int) matchingVisitContextCount);
+        if (matchingVisitContextCount == 1) {
+            response.setProvisionalIdentifierPreflightReady(true);
+            response.setProvisionalIdentifierPreflightReason(
+                    "server_derived_unique_visit_context_without_complete_voucher_sequential");
+        } else if (matchingVisitContextCount > 1) {
+            response.setProvisionalIdentifierPreflightReason("ambiguous_multiple_matching_visit_context_rows");
+        } else if (response.getVisitSanitizedRowCount() > 0) {
+            response.setProvisionalIdentifierPreflightReason("no_matching_visit_context_row");
+        }
+    }
+
+    private boolean isProvisionalVisitContextRow(
+            AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
+            MedicalIdentifierPreflightResponse.VisitIdentifierRow row) {
+        return row != null
+                && row.isRawSensitiveFieldsExcluded()
+                && row.isHasPatientId()
+                && row.isHasVisitDate()
+                && row.isHasDepartmentCode()
+                && row.isHasInsuranceCombinationNumber()
+                && hasText(row.getServerPatientId())
+                && hasText(row.getServerVisitDate())
+                && hasText(row.getServerDepartmentCode())
                 && hasText(row.getServerInsuranceCombinationNumber())
                 && safeHashSeed(row.getServerPatientId()).equals(safeHashSeed(selected.getServerPatientId()))
                 && safeHashSeed(row.getServerVisitDate()).equals(safeHashSeed(selected.getServerAcceptanceDate()))

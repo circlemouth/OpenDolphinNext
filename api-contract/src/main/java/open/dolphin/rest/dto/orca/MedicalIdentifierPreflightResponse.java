@@ -34,6 +34,9 @@ public class MedicalIdentifierPreflightResponse extends OrcaApiResponse {
     private boolean clientProvidedIdentifiersTrusted;
     private boolean serverDerivedAuthorityRequired = true;
     private boolean identifierPreflightReady;
+    private boolean provisionalIdentifierPreflightReady;
+    private String provisionalIdentifierPreflightReason;
+    private int provisionalVisitContextRowCount;
     private String sanitizedErrorCode;
     private String sanitizedValidationError;
     private final List<MedicalIdentifierRow> medicalRows = new ArrayList<>();
@@ -237,6 +240,30 @@ public class MedicalIdentifierPreflightResponse extends OrcaApiResponse {
 
     public void setIdentifierPreflightReady(boolean identifierPreflightReady) {
         this.identifierPreflightReady = identifierPreflightReady;
+    }
+
+    public boolean isProvisionalIdentifierPreflightReady() {
+        return provisionalIdentifierPreflightReady;
+    }
+
+    public void setProvisionalIdentifierPreflightReady(boolean provisionalIdentifierPreflightReady) {
+        this.provisionalIdentifierPreflightReady = provisionalIdentifierPreflightReady;
+    }
+
+    public String getProvisionalIdentifierPreflightReason() {
+        return provisionalIdentifierPreflightReason;
+    }
+
+    public void setProvisionalIdentifierPreflightReason(String provisionalIdentifierPreflightReason) {
+        this.provisionalIdentifierPreflightReason = provisionalIdentifierPreflightReason;
+    }
+
+    public int getProvisionalVisitContextRowCount() {
+        return provisionalVisitContextRowCount;
+    }
+
+    public void setProvisionalVisitContextRowCount(int provisionalVisitContextRowCount) {
+        this.provisionalVisitContextRowCount = provisionalVisitContextRowCount;
     }
 
     public String getSanitizedErrorCode() {

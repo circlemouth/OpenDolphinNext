@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260429T003500Z",
+  "workOrder": "RWO-08B",
+  "taskId": "RWO-08B_PROVISIONAL_VISIT_CONTEXT_GATE",
+  "result": "PROVISIONAL_VISIT_CONTEXT_GATE_IMPLEMENTED_NO_LIVE",
+  "branch": "master",
+  "headAtSelection": "1238ff93f",
+  "changedBehavior": {
+    "strictIdentifierPreflightReadyUnchanged": true,
+    "provisionalIdentifierPreflightReadyAdded": true,
+    "patientIdAloneAccepted": false,
+    "clientProvidedIdentifiersTrusted": false,
+    "serverDerivedAuthorityRequired": true
+  },
+  "provisionalRule": {
+    "requiresSelectedAcceptanceTargetReady": true,
+    "requiresExactlyOneMatchingVisitContextRow": true,
+    "matchingFields": [
+      "patientId",
+      "visitDate",
+      "departmentCode",
+      "insuranceCombinationNumber"
+    ],
+    "strictProofStillRequires": [
+      "voucherNumber",
+      "sequentialNumber",
+      "insuranceCombinationNumber"
+    ],
+    "rawSensitiveFieldsExcluded": true
+  },
+  "checks": {
+    "webTargetReadinessEvidenceTest": "pass_12_tests",
+    "serverDefaultOrcaLiveGatewayTest": "pass_10_tests",
+    "apiContractInstallForServerTest": "pass",
+    "diffCheck": "pass"
+  },
+  "claimBoundary": "Provisional visit-context readiness is not strict voucher/sequential identifier proof and is not diagnostic Fullflow success. It only allows a distinct provisional diagnostic queue decision when same-run target-drift and artifact-free evidence requirements are recorded.",
+  "liveTrialOrca": {
+    "executed": false,
+    "businessAccepted": false
+  },
+  "readOnlyTrialOrca": {
+    "executed": false,
+    "mutation": false
+  },
+  "credentialsCaptured": false,
+  "diagnosticArtifactsCaptured": false,
+  "rawArtifactsCommittedOrPackaged": false,
+  "rawOrcaBodiesCaptured": false,
+  "patientInsuranceDetailsCaptured": false,
+  "productionOrcaAttempted": false,
+  "s3ObjectStorageUsed": false
+}

@@ -2,7 +2,11 @@ import crypto from 'node:crypto';
 
 export const RWO08B_TARGET_READINESS_CONTRACT = 'rwo08b-fullflow-target-readiness-artifact-free-readonly';
 export const RWO08B_IDENTIFIER_PREFLIGHT_ENDPOINT = '/api/orca/official/visits/identifier-preflight';
-export const RWO08B_IDENTIFIER_PREFLIGHT_ORCA_ENDPOINTS = ['/api01rv2/acceptlstv2', '/api01rv2/medicalgetv2'];
+export const RWO08B_IDENTIFIER_PREFLIGHT_ORCA_ENDPOINTS = [
+  '/api01rv2/acceptlstv2',
+  '/api01rv2/medicalgetv2',
+  '/api01rv2/visitptlstv2',
+];
 
 const DUPLICATE_BLOCKED_PATIENT_IDS = new Set(['00001', '00005']);
 const SHA256_HEX_RE = /^[a-f0-9]{64}$/i;
@@ -209,6 +213,9 @@ export const sanitizeIdentifierPreflightRouteResponse = ({ httpStatus = 0, respo
     row.hasSequentialNumber &&
     row.hasInsuranceCombinationNumber &&
     row.rawSensitiveFieldsExcluded);
+  const provisionalVisitContextRowCount = Number(responseJson?.provisionalVisitContextRowCount ?? 0) || 0;
+  const provisionalIdentifierPreflightReady =
+    bool(responseJson?.provisionalIdentifierPreflightReady) && provisionalVisitContextRowCount === 1;
   return {
     endpoint: RWO08B_IDENTIFIER_PREFLIGHT_ENDPOINT,
     mutation: false,
@@ -237,6 +244,9 @@ export const sanitizeIdentifierPreflightRouteResponse = ({ httpStatus = 0, respo
     visitSanitizedRowCount: Number(responseJson?.visitSanitizedRowCount ?? sanitizedVisitRows.length) || 0,
     visitReadyRowCount: readyVisitRows.length,
     identifierPreflightReady: bool(responseJson?.identifierPreflightReady) && (readyRows.length > 0 || readyVisitRows.length > 0),
+    provisionalIdentifierPreflightReady,
+    provisionalIdentifierPreflightReason: normalize(responseJson?.provisionalIdentifierPreflightReason),
+    provisionalVisitContextRowCount,
     artifactFree: responseJson?.artifactFree !== false,
     rawSensitiveFieldsExcluded: responseJson?.rawSensitiveFieldsExcluded !== false,
     clientProvidedIdentifiersTrusted: bool(responseJson?.clientProvidedIdentifiersTrusted),
@@ -283,7 +293,12 @@ const classifyTargetReadiness = ({ commandGate, candidateDiscoverySummary, exact
   if (identifierPreflight.rawSensitiveFieldsExcluded !== true || identifierPreflight.artifactFree !== true) {
     return 'identifier_preflight_sanitizer_not_proven';
   }
-  if (identifierPreflight.identifierPreflightReady !== true) return 'identifier_preflight_target_blocked';
+  if (identifierPreflight.identifierPreflightReady !== true) {
+    if (identifierPreflight.provisionalIdentifierPreflightReady === true) {
+      return 'target_provisionally_ready_for_diagnostic_fullflow';
+    }
+    return 'identifier_preflight_target_blocked';
+  }
   return 'target_ready_for_diagnostic_fullflow';
 };
 
@@ -291,6 +306,8 @@ const nextActionFor = (classification) => {
   switch (classification) {
     case 'target_ready_for_diagnostic_fullflow':
       return 'Queue one diagnostic Fullflow retry for the same non-duplicate target only after artifact containment and endpoint packet checks are recorded.';
+    case 'target_provisionally_ready_for_diagnostic_fullflow':
+      return 'Queue one diagnostic Fullflow retry only with the provisional server-derived visit-context packet, target-drift check, and explicit non-strict identifier proof claim boundary recorded.';
     case 'identifier_preflight_not_run':
       return 'Run /api/orca/official/visits/identifier-preflight in artifact-free read-only mode for the accepted non-duplicate local-exact target row hash.';
     case 'identifier_preflight_target_blocked':
@@ -323,7 +340,9 @@ export const buildRwo08bTargetReadinessSummary = ({
     exactPreflightSummary,
     identifierPreflight: sanitizedIdentifierPreflight,
   });
-  const targetReady = classification === 'target_ready_for_diagnostic_fullflow';
+  const targetReady =
+    classification === 'target_ready_for_diagnostic_fullflow' ||
+    classification === 'target_provisionally_ready_for_diagnostic_fullflow';
   const discoveryCandidateId = selectedCandidateIdFromDiscovery(candidateDiscoverySummary);
   const exactPatientId = exactPreflightPatientId(exactPreflightSummary);
   return {
@@ -379,6 +398,8 @@ export const buildRwo08bTargetReadinessSummary = ({
     },
     targetReadiness: {
       readyForDiagnosticFullflow: targetReady,
+      strictIdentifierPreflightReady: sanitizedIdentifierPreflight?.identifierPreflightReady === true,
+      provisionalIdentifierPreflightReady: sanitizedIdentifierPreflight?.provisionalIdentifierPreflightReady === true,
       businessSuccessClassification: classification,
       nextConcreteSafeAction: nextActionFor(classification),
     },
@@ -395,7 +416,11 @@ export const buildRwo08bTargetReadinessSummary = ({
       executed: commandGate?.options?.executeReadonly === true && commandGate?.ok === true && Boolean(sanitizedIdentifierPreflight),
       mutation: false,
       businessSuccessClassification: sanitizedIdentifierPreflight
-        ? (sanitizedIdentifierPreflight.identifierPreflightReady ? 'readonly_identifier_preflight_target_ready' : 'readonly_identifier_preflight_target_blocked')
+        ? (sanitizedIdentifierPreflight.identifierPreflightReady
+          ? 'readonly_identifier_preflight_target_ready'
+          : (sanitizedIdentifierPreflight.provisionalIdentifierPreflightReady
+            ? 'readonly_identifier_preflight_target_provisionally_ready'
+            : 'readonly_identifier_preflight_target_blocked'))
         : 'not_run',
     },
     checks: {
@@ -403,6 +428,7 @@ export const buildRwo08bTargetReadinessSummary = ({
       readOnlyDiscoveryAloneIsNotSuccess: true,
       identifierPreflightAloneIsNotFullflowSuccess: true,
       diagnosticFullflowRequiresTargetReady: true,
+      provisionalIdentifierPreflightIsNotStrictIdentifierProof: true,
     },
     evidenceHashes: {
       candidateDiscoverySummaryHash: candidateDiscoverySummary ? sha256(JSON.stringify(candidateDiscoverySummary)) : '',

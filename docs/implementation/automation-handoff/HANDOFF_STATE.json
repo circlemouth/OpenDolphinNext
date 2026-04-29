@@ -30,7 +30,46 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-29T00:14:57Z",
+  "lastUpdated": "2026-04-29T00:35:00Z",
+  "latestRwo08bProvisionalVisitContextGate": {
+    "runId": "20260429T003500Z",
+    "workOrder": "RWO-08B",
+    "taskId": "RWO-08B_PROVISIONAL_VISIT_CONTEXT_GATE",
+    "result": "PROVISIONAL_VISIT_CONTEXT_GATE_IMPLEMENTED_NO_LIVE",
+    "branch": "master",
+    "headAtSelection": "1238ff93f",
+    "evidence": "docs/implementation/rwo08b-provisional-visit-context-gate-20260429T003500Z/summary.sanitized.json",
+    "summary": "docs/implementation/rwo08b-provisional-visit-context-gate-20260429T003500Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/rwo08b-provisional-visit-context-gate-20260429T003500Z/FINAL_REPORT.md",
+    "behavior": {
+      "strictIdentifierPreflightReadyUnchanged": true,
+      "provisionalIdentifierPreflightReadyAdded": true,
+      "patientIdAloneAccepted": false,
+      "serverDerivedAuthorityRequired": true,
+      "clientProvidedIdentifiersTrusted": false
+    },
+    "provisionalRule": {
+      "requiresSelectedAcceptanceTargetReady": true,
+      "requiresExactlyOneMatchingVisitContextRow": true,
+      "matchingFields": [
+        "patientId",
+        "visitDate",
+        "departmentCode",
+        "insuranceCombinationNumber"
+      ],
+      "strictProofStillRequiresVoucherSequential": true
+    },
+    "checks": {
+      "webTargetReadinessEvidenceTest": "pass_12_tests",
+      "serverDefaultOrcaLiveGatewayTest": "pass_10_tests"
+    },
+    "recommendedNextTask": "Rebuild/restart server-modernized with this change, rerun fresh candidate discovery/exact readonly preflight, select the current acceptance row hash, then rerun target-readiness. Proceed only if strict or provisional readiness is proven in the same run with explicit claim boundary.",
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  },
   "latestRwo08bOfficialIdentifierProofResearch": {
     "runId": "20260429T001457Z",
     "workOrder": "RWO-08B",

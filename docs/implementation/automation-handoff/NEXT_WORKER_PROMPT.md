@@ -36,6 +36,8 @@ Fresh read-only evidence:
 
 RUN_ID `20260429T001457Z` performed official-source no-live research against the ORCA API overview, `medicalgetv2`, the official `medicalgetv2` PDF, `medicaltemp`, and PushAPI. It did not find a new official artifact-free current-state read-only source that can prove the missing voucher / sequential / insurance tuple for the current target. `medicaltemp` lacks the complete proof tuple, and PushAPI is event notification rather than a current-state read-only lookup.
 
+RUN_ID `20260429T003500Z` added a constrained provisional visit-context gate. Strict `identifierPreflightReady` still requires voucher / sequential / insurance proof. New `provisionalIdentifierPreflightReady` may only be used when server-derived `acceptlstv2` target readiness is true and exactly one `visitptlstv2` row matches patient, visit date, department, and insurance combination without raw sensitive field exposure. Patient ID alone, UI state, or client-provided identifiers are not sufficient.
+
 Diagnostic Fullflow remains not authorized for the current Trial target.
 
 ## Current Blocker
@@ -46,7 +48,7 @@ The current non-duplicate Trial target `00002`, date `2026-04-29`, class `01`, r
 
 ## Required Boundary
 
-Do not run diagnostic Fullflow for this current target unless a same-run artifact-free read-only target-readiness wrapper proves `identifierPreflightReady=true`.
+Do not run diagnostic Fullflow for this current target unless a same-run artifact-free read-only target-readiness wrapper proves either `identifierPreflightReady=true` or the new separated `provisionalIdentifierPreflightReady=true` with `strictIdentifierPreflightReady=false`, an explicit provisional claim boundary, and a fresh target-drift check.
 
 Do not reuse `00001` or `00005` unchanged. They remain duplicate-blocked candidates for this RWO-08B path.
 

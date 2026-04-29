@@ -320,6 +320,8 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             details.put("identifierPreflightReady", response.isIdentifierPreflightReady());
+            details.put("provisionalIdentifierPreflightReady", response.isProvisionalIdentifierPreflightReady());
+            details.put("provisionalVisitContextRowCount", response.getProvisionalVisitContextRowCount());
             details.put("artifactFree", response.isArtifactFree());
             details.put("rawSensitiveFieldsExcluded", response.isRawSensitiveFieldsExcluded());
             details.put("clientProvidedIdentifiersTrusted", response.isClientProvidedIdentifiersTrusted());

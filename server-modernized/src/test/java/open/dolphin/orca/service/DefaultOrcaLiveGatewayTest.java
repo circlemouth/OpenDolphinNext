@@ -135,6 +135,34 @@ class DefaultOrcaLiveGatewayTest {
         assertTrue(response.getVisitRows().get(0).isHasSequentialNumber());
         assertTrue(response.getVisitRows().get(0).isHasInsuranceCombinationNumber());
         assertTrue(response.isIdentifierPreflightReady());
+        assertFalse(response.isProvisionalIdentifierPreflightReady());
+        assertFalse(response.isClientProvidedIdentifiersTrusted());
+    }
+
+    @Test
+    void identifierPreflightMarksUniqueServerDerivedVisitContextAsProvisionalOnly() {
+        OrcaLiveGateway gateway = new DefaultOrcaLiveGateway(new AcceptanceMedicalGetApi15ThenVisitProvisionalTransport(),
+                new OrcaXmlMapper());
+        MedicalIdentifierPreflightRequest request = new MedicalIdentifierPreflightRequest();
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 29));
+        request.setClassCode("01");
+        request.setMedicalGetClassCode("01");
+
+        MedicalIdentifierPreflightResponse response = gateway.getMedicalIdentifierPreflight("F001", request);
+
+        assertFalse(response.isIdentifierPreflightReady());
+        assertTrue(response.isProvisionalIdentifierPreflightReady());
+        assertEquals("server_derived_unique_visit_context_without_complete_voucher_sequential",
+                response.getProvisionalIdentifierPreflightReason());
+        assertEquals(1, response.getProvisionalVisitContextRowCount());
+        assertEquals(0, response.getVisitReadyRowCount());
+        assertTrue(response.getVisitRows().get(0).isHasPatientId());
+        assertTrue(response.getVisitRows().get(0).isHasVisitDate());
+        assertTrue(response.getVisitRows().get(0).isHasDepartmentCode());
+        assertFalse(response.getVisitRows().get(0).isHasVoucherNumber());
+        assertFalse(response.getVisitRows().get(0).isHasSequentialNumber());
+        assertTrue(response.getVisitRows().get(0).isHasInsuranceCombinationNumber());
+        assertTrue(response.isRawSensitiveFieldsExcluded());
         assertFalse(response.isClientProvidedIdentifiersTrusted());
     }
 
@@ -153,6 +181,7 @@ class DefaultOrcaLiveGatewayTest {
         assertEquals(1, response.getVisitSanitizedRowCount());
         assertEquals(0, response.getVisitReadyRowCount());
         assertFalse(response.isIdentifierPreflightReady());
+        assertFalse(response.isProvisionalIdentifierPreflightReady());
     }
 
     private static final class AlwaysFailTransport implements OrcaTransport {
@@ -294,6 +323,37 @@ class DefaultOrcaLiveGatewayTest {
                             <Insurance_Combination_Number type="string">0001</Insurance_Combination_Number>
                             <Patient_Information type="record">
                               <Patient_ID type="string">99999</Patient_ID>
+                              <WholeName type="string">must not leak</WholeName>
+                            </Patient_Information>
+                          </Visit_List_Information_child>
+                        </Visit_List_Information>
+                      </visitptlst01res>
+                    </xmlio2>
+                    """, "application/xml", Collections.emptyMap());
+        }
+    }
+
+    private static final class AcceptanceMedicalGetApi15ThenVisitProvisionalTransport implements OrcaTransport {
+
+        private final AcceptanceMedicalGetApi15ThenVisitReadyTransport delegate =
+                new AcceptanceMedicalGetApi15ThenVisitReadyTransport();
+
+        @Override
+        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
+            if (endpoint != OrcaEndpoint.VISIT_LIST) {
+                return delegate.invoke(facilityId, endpoint, request);
+            }
+            return new OrcaTransportResult(null, "POST", 200, """
+                    <xmlio2>
+                      <visitptlst01res type="record">
+                        <Api_Result type="string">00</Api_Result>
+                        <Visit_Date type="string">2026-04-29</Visit_Date>
+                        <Visit_List_Information type="array">
+                          <Visit_List_Information_child type="record">
+                            <Department_Code type="string">01</Department_Code>
+                            <Insurance_Combination_Number type="string">0001</Insurance_Combination_Number>
+                            <Patient_Information type="record">
+                              <Patient_ID type="string">00002</Patient_ID>
                               <WholeName type="string">must not leak</WholeName>
                             </Patient_Information>
                           </Visit_List_Information_child>

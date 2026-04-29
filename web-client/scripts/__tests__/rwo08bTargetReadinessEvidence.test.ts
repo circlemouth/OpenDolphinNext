@@ -144,10 +144,48 @@ describe('RWO-08B target-readiness evidence wrapper', () => {
     });
 
     expect(summary.targetReadiness.readyForDiagnosticFullflow).toBe(true);
+    expect(summary.targetReadiness.strictIdentifierPreflightReady).toBe(true);
+    expect(summary.targetReadiness.provisionalIdentifierPreflightReady).toBe(false);
     expect(summary.targetReadiness.businessSuccessClassification).toBe('target_ready_for_diagnostic_fullflow');
     expect(summary.diagnosticFullflow.executed).toBe(false);
     expect(summary.liveTrialOrca.executed).toBe(false);
     expect(JSON.stringify(summary)).not.toMatch(/Authorization|Cookie|JSESSIONID|CSRF|WholeName|Insurance_/);
+  });
+
+  it('separates provisional visit-context readiness from strict identifier proof', () => {
+    const summary = buildRwo08bTargetReadinessSummary({
+      runId: '20260429T003500Z',
+      commandGate,
+      candidateDiscoverySummary: candidateDiscovery(),
+      exactPreflightSummary: exactPreflight(),
+      identifierPreflight: identifierPreflight({
+        identifierPreflightReady: false,
+        medicalRows: [],
+        visitReadyRowCount: 0,
+        provisionalIdentifierPreflightReady: true,
+        provisionalIdentifierPreflightReason: 'server_derived_unique_visit_context_without_complete_voucher_sequential',
+        provisionalVisitContextRowCount: 1,
+        visitRows: [
+          {
+            rowHash: 'f'.repeat(64),
+            hasPatientId: true,
+            hasVisitDate: true,
+            hasDepartmentCode: true,
+            hasVoucherNumber: false,
+            hasSequentialNumber: false,
+            hasInsuranceCombinationNumber: true,
+            rawSensitiveFieldsExcluded: true,
+          },
+        ],
+      }),
+    });
+
+    expect(summary.targetReadiness.readyForDiagnosticFullflow).toBe(true);
+    expect(summary.targetReadiness.strictIdentifierPreflightReady).toBe(false);
+    expect(summary.targetReadiness.provisionalIdentifierPreflightReady).toBe(true);
+    expect(summary.targetReadiness.businessSuccessClassification).toBe('target_provisionally_ready_for_diagnostic_fullflow');
+    expect(summary.checks.provisionalIdentifierPreflightIsNotStrictIdentifierProof).toBe(true);
+    expect(JSON.stringify(summary)).not.toMatch(/serverVoucherNumber|serverSequentialNumber|Insurance_/);
   });
 
   it('sanitizes identifier-preflight rows to presence flags and hashes only', () => {
@@ -169,6 +207,7 @@ describe('RWO-08B target-readiness evidence wrapper', () => {
     });
 
     expect(sanitized.identifierPreflightReady).toBe(true);
+    expect(sanitized.provisionalIdentifierPreflightReady).toBe(false);
     expect(sanitized.apiResultClass).toBe('blank');
     expect(sanitized.medicalRows[0]).toEqual({
       rowHash: 'c'.repeat(64),
@@ -179,6 +218,40 @@ describe('RWO-08B target-readiness evidence wrapper', () => {
       hasInvoiceNumber: false,
       rawSensitiveFieldsExcluded: true,
     });
+  });
+
+  it('sanitizes provisional visit-context readiness without leaking identifiers', () => {
+    const sanitized = sanitizeIdentifierPreflightRouteResponse({
+      httpStatus: 200,
+      responseJson: identifierPreflight({
+        identifierPreflightReady: false,
+        provisionalIdentifierPreflightReady: true,
+        provisionalIdentifierPreflightReason: 'server_derived_unique_visit_context_without_complete_voucher_sequential',
+        provisionalVisitContextRowCount: 1,
+        visitRows: [
+          {
+            rowHash: 'f'.repeat(64),
+            hasPatientId: true,
+            hasVisitDate: true,
+            hasDepartmentCode: true,
+            hasVoucherNumber: false,
+            hasSequentialNumber: false,
+            hasInsuranceCombinationNumber: true,
+            serverPatientId: 'must-not-leak',
+            serverInsuranceCombinationNumber: 'must-not-leak',
+          },
+        ],
+      }),
+    });
+
+    expect(sanitized.identifierPreflightReady).toBe(false);
+    expect(sanitized.visitReadyRowCount).toBe(0);
+    expect(sanitized.provisionalIdentifierPreflightReady).toBe(true);
+    expect(sanitized.provisionalVisitContextRowCount).toBe(1);
+    expect(sanitized.provisionalIdentifierPreflightReason).toBe(
+      'server_derived_unique_visit_context_without_complete_voucher_sequential',
+    );
+    expect(JSON.stringify(sanitized)).not.toContain('must-not-leak');
   });
 
   it('keeps allowlisted medicalgetv2 apiResult classification without raw messages', () => {
