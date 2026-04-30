@@ -1,0 +1,164 @@
+{
+  "runId": "20260430T055712Z",
+  "traceId": "trace-20260430T055712Z",
+  "contract": "phase4-injection-master-validity-sanitized-readonly",
+  "verdict": "readonly_master_validity_not_validated",
+  "liveTrialMutation": "not_run",
+  "readOnlyTrialAction": "executed_readonly_once",
+  "payload": {
+    "sha256": "6878f9a087dc029cd9f6a28b9863ab69fa68515913f009575c8006e67e40ab5d",
+    "bytes": 1022,
+    "rawPayloadStored": false
+  },
+  "masterValidity": {
+    "plan": {
+      "ok": true,
+      "blockers": [],
+      "candidateCodes": {
+        "procedure": "130000510",
+        "medication": "641210099",
+        "material": "700000031",
+        "comment": "0085001"
+      },
+      "readOnlyChecksRequiredBeforeLive": [
+        {
+          "role": "medication",
+          "endpoint": "medicationgetv2",
+          "code": "641210099",
+          "expectedSanitizedEvidence": [
+            "httpStatusClass",
+            "apiResultClass",
+            "masterFoundBoolean",
+            "effectiveDateClass",
+            "evidenceHash"
+          ]
+        },
+        {
+          "role": "procedure",
+          "endpoint": "masterlastupdatev3",
+          "code": "130000510",
+          "expectedSanitizedEvidence": [
+            "httpStatusClass",
+            "apiResultClass",
+            "masterFoundBoolean",
+            "lastUpdateDateClass",
+            "evidenceHash"
+          ]
+        },
+        {
+          "role": "material",
+          "endpoint": "masterlastupdatev3",
+          "code": "700000031",
+          "expectedSanitizedEvidence": [
+            "httpStatusClass",
+            "apiResultClass",
+            "masterFoundBoolean",
+            "lastUpdateDateClass",
+            "evidenceHash"
+          ]
+        },
+        {
+          "role": "comment",
+          "endpoint": "masterlastupdatev3",
+          "code": "0085001",
+          "expectedSanitizedEvidence": [
+            "httpStatusClass",
+            "apiResultClass",
+            "masterFoundBoolean",
+            "lastUpdateDateClass",
+            "evidenceHash"
+          ]
+        }
+      ],
+      "stopBeforeLiveIfAnyMasterUnverified": true,
+      "runtimeMasterLookupExecuted": false,
+      "liveTrialAction": "not_run",
+      "rawPayloadStored": false,
+      "rawOrcaBodyStored": false,
+      "rawPatientOrInsuranceDetailStored": false,
+      "selectedReadonlyCandidate": {
+        "role": "medication",
+        "endpoint": "medicationgetv2",
+        "requestNumber": "02",
+        "code": "641210099",
+        "source": "command_line_readonly_candidate_override",
+        "payloadMedicationCodeOverridden": true
+      }
+    },
+    "readonlyChecks": [
+      {
+        "role": "medication",
+        "endpoint": "medicationgetv2",
+        "code": "641210099",
+        "requestNumber": "02",
+        "requestSemantics": "row_level_selectable_comment_lookup",
+        "httpStatusClass": "2xx",
+        "apiResultClass": "official_error",
+        "masterFound": false,
+        "request02ResultClass": "official_error_no_row_proof",
+        "selectableCommentProof": true,
+        "effectiveDateClass": "present",
+        "endDateClass": "present",
+        "lastUpdateDateClass": "missing",
+        "rawOrcaBodyStored": false,
+        "rawPatientOrInsuranceDetailStored": false,
+        "evidenceHash": "b039ab0683a86fd3aa910cd453ee0dce4a09e5cf404dc80e6b2aea82f6e5c28d"
+      },
+      {
+        "role": "procedure",
+        "endpoint": "masterlastupdatev3",
+        "code": "130000510",
+        "httpStatusClass": "2xx",
+        "apiResultClass": "success_zero",
+        "masterFound": true,
+        "effectiveDateClass": "missing",
+        "endDateClass": "missing",
+        "lastUpdateDateClass": "present",
+        "rawOrcaBodyStored": false,
+        "rawPatientOrInsuranceDetailStored": false,
+        "evidenceHash": "86aa2692da8c62609782449abed3120b75972a467d4ec7ee21cdac0206597a43"
+      },
+      {
+        "role": "material",
+        "endpoint": "masterlastupdatev3",
+        "code": "700000031",
+        "httpStatusClass": "2xx",
+        "apiResultClass": "success_zero",
+        "masterFound": true,
+        "effectiveDateClass": "missing",
+        "endDateClass": "missing",
+        "lastUpdateDateClass": "present",
+        "rawOrcaBodyStored": false,
+        "rawPatientOrInsuranceDetailStored": false,
+        "evidenceHash": "517cfbe75b00c11c338dfe6c2e346ab66da83b8a91531e8773f4c1f1f3a5d167"
+      },
+      {
+        "role": "comment",
+        "endpoint": "masterlastupdatev3",
+        "code": "0085001",
+        "httpStatusClass": "2xx",
+        "apiResultClass": "success_zero",
+        "masterFound": true,
+        "effectiveDateClass": "missing",
+        "endDateClass": "missing",
+        "lastUpdateDateClass": "present",
+        "rawOrcaBodyStored": false,
+        "rawPatientOrInsuranceDetailStored": false,
+        "evidenceHash": "e7ed309951cf84705b56ecdb8e86e90b6a410a2ba4e38d6c282abbed25019b08"
+      }
+    ],
+    "allMasterVerified": false,
+    "businessSuccessClassification": "not_applicable_or_readonly_master_validity_not_validated"
+  },
+  "security": {
+    "trialHostAllowlist": "weborca-trial.orca.med.or.jp",
+    "credentialsCaptured": false,
+    "rawArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "rawOrcaBodyStored": false,
+    "rawPatientOrInsuranceDetailStored": false,
+    "diagnosticArtifactsCaptured": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false
+  }
+}
