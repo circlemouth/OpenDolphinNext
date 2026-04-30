@@ -269,17 +269,17 @@ body {
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 100%;
+  height: auto;
 }
 
 .login-brand__badge {
   width: 100%;
-  height: 100%;
+  height: clamp(150px, 26vh, 260px);
   max-width: none;
   /* Allow full expansion */
   background: transparent;
   border: none;
-  padding: 2rem;
+  padding: 1.5rem;
   /* Keep a little padding so logo doesn't touch the absolute edge, or make it 0 for full bleed? "全体を表示" usually implies safe area or full. Let's give it slight breathing room (2rem) inside the full container. */
   box-shadow: none;
   display: flex;
@@ -292,6 +292,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  transform: scale(1.2);
   /* Shows the whole image respecting aspect ratio */
 }
 
@@ -353,7 +354,8 @@ body {
   gap: 0.5rem;
 }
 
-.field span {
+.field span,
+.field > label {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--ui-text-muted);
@@ -387,6 +389,45 @@ body {
   color: #94a3b8;
 }
 
+.field__password-control {
+  position: relative;
+  width: 100%;
+}
+
+.field__password-control input {
+  padding-right: 4.5rem;
+}
+
+.field__password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  min-width: 3.25rem;
+  min-height: 30px;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  font-family: var(--ui-font-sans);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.field__password-toggle:hover:not(:disabled),
+.field__password-toggle:focus-visible {
+  border-color: var(--ui-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+  outline: none;
+}
+
+.field__password-toggle:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
 .field-error {
   color: #ef4444;
   font-size: 0.85rem;
@@ -396,6 +437,15 @@ body {
 
 .login-form__actions {
   margin-top: 1.5rem;
+}
+
+.login-form__hint {
+  margin: 0 0 0.55rem;
+  color: var(--ui-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .login-form__actions button {

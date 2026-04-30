@@ -18,7 +18,6 @@ import { ApiFailureBanner } from '../shared/ApiFailureBanner';
 import { AdminBroadcastBanner } from '../shared/AdminBroadcastBanner';
 import { MissingMasterRecoveryGuide } from '../shared/MissingMasterRecoveryGuide';
 import { PatientIdentityBar } from '../shared/PatientIdentityBar';
-import { ReturnToBar } from '../shared/ReturnToBar';
 import { RunIdBadge } from '../shared/RunIdBadge';
 import { StatusPill } from '../shared/StatusPill';
 import { AuditSummaryInline } from '../shared/AuditSummaryInline';
@@ -34,7 +33,6 @@ import { ToneBanner } from '../reception/components/ToneBanner';
 import { applyAuthServicePatch, useAuthService, type AuthServiceFlags, type DataSourceTransition } from '../charts/authService';
 import { loadChartsEncounterContext, normalizeVisitDate } from '../charts/encounterContext';
 import { useSession } from '../../AppRouter';
-import { buildFacilityPath } from '../../routes/facilityRoutes';
 import { applyExternalParams, isSafeReturnTo, pickExternalParams } from '../../routes/appNavigation';
 import { useNavigationGuard } from '../../routes/NavigationGuardProvider';
 import { useAppNavigation } from '../../routes/useAppNavigation';
@@ -145,7 +143,7 @@ const buildPatientsOrcaStatus = (options: {
   lastSaveWriteAcceptedWithoutReadback?: boolean;
   lastErrorCategory?: string;
 }) => {
-  const actionLabel = options.action === 'import' ? 'ORCA既存患者取込' : 'official create/update';
+  const actionLabel = options.action === 'import' ? 'ORCA既存患者取込' : '患者情報の登録・更新';
   if (options.missingMaster) {
     return {
       state: '反映停止',
@@ -161,7 +159,7 @@ const buildPatientsOrcaStatus = (options: {
   if (options.dataSourceTransition === 'local') {
     return {
       state: '院内ローカル',
-      detail: '院内ローカル患者情報を編集中です。official ORCA 契約ではなく local contract を使います。',
+      detail: '院内ローカル患者情報を編集中です。',
     };
   }
   if ((options.dataSourceTransition ?? 'server') !== 'server') {
@@ -173,34 +171,37 @@ const buildPatientsOrcaStatus = (options: {
   if (options.lastSaveFailed) {
     return {
       state: '反映失敗',
-      detail: `${actionLabel}に失敗したため canonical/local 同期は完了していません。時間をおいて再試行してください。`,
+      detail: `${actionLabel}に失敗しました。時間をおいて再試行してください。`,
     };
   }
   if (options.lastSaveWriteAcceptedWithoutReadback) {
     if (options.lastErrorCategory === 'business_partial') {
       return {
         state: '一部処理',
-        detail: `${actionLabel}は full-success 条件を満たしていないため canonical/local 同期完了は確認できていません。`,
+        detail: `${actionLabel}は一部のみ処理されました。結果を確認してください。`,
       };
     }
     return {
       state: '同期確認失敗',
-      detail: `${actionLabel}は受け付けられましたが canonical readback に失敗したため、canonical/local 同期完了は確認できていません。`,
+      detail: `${actionLabel}は受け付けられましたが、反映結果を確認できていません。`,
     };
   }
   if (options.lastSaveSucceeded) {
     return {
       state: '反映完了',
-      detail: `${actionLabel}後の canonical/local 同期が完了しました。必要なら監査ログで結果を確認してください。`,
+      detail: `${actionLabel}が完了しました。必要なら監査ログで結果を確認してください。`,
     };
   }
   return {
     state: '反映可能',
-    detail: options.action === 'import' ? 'ORCA既存患者取込を実行できます。' : 'official create/update を実行できます。',
+    detail: options.action === 'import' ? 'ORCA既存患者取込を実行できます。' : '患者情報を登録・更新できます。',
   };
 };
 
 const buildImportAuditEvent = (patientId: string, result: OrcaPatientImportResult) => {
+  const fallbackMessage = result.writeAccepted
+    ? 'ORCA既存患者取込は受け付けられましたが、反映結果を確認できませんでした。'
+    : 'ORCA既存患者取込に失敗しました。';
   return {
     action: 'ORCA_OFFICIAL_IMPORT_PATIENT',
     outcome: result.ok ? 'success' : result.writeAccepted ? 'warning' : 'error',
@@ -227,12 +228,23 @@ const buildImportAuditEvent = (patientId: string, result: OrcaPatientImportResul
       canonicalRefetchExpectedPatientIds: result.canonicalRefetch?.expectedPatientIds,
       canonicalRefetchMatchedPatientIds: result.canonicalRefetch?.matchedPatientIds,
       canonicalRefetchMissingPatientIds: result.canonicalRefetch?.missingPatientIds,
-      message: result.ok ? 'ORCA既存患者取込と canonical/local 同期が完了しました。' : result.error,
+      message: result.ok ? 'ORCA既存患者取込が完了しました。' : toSafePatientFeedbackMessage(result.error, fallbackMessage),
     },
   } satisfies Record<string, unknown>;
 };
 
+const INTERNAL_PATIENT_COPY_PATTERN =
+  /\b(?:canonical|patientmodv2|full-success)\b|canonical\/local|local sync|official write|official ORCA|readback/i;
+
+const toSafePatientFeedbackMessage = (message: string | undefined, fallback: string): string => {
+  if (!message) return fallback;
+  return INTERNAL_PATIENT_COPY_PATTERN.test(message) ? fallback : message;
+};
+
 const toImportSaveResult = (result: OrcaPatientImportResult): PatientMutationResult => {
+  const fallbackMessage = result.writeAccepted
+    ? 'ORCA既存患者取込は受け付けられましたが、反映結果を確認できませんでした。'
+    : 'ORCA既存患者取込に失敗しました。';
   return {
     ok: result.ok,
     writeAccepted: result.writeAccepted,
@@ -241,8 +253,8 @@ const toImportSaveResult = (result: OrcaPatientImportResult): PatientMutationRes
     status: result.status,
     message:
       result.ok
-        ? 'ORCA既存患者取込と canonical/local 同期が完了しました。'
-        : result.error ?? 'ORCA既存患者取込に失敗しました。',
+        ? 'ORCA既存患者取込が完了しました。'
+        : toSafePatientFeedbackMessage(result.error, fallbackMessage),
     canonicalRefetch: result.canonicalRefetch,
   };
 };
@@ -255,7 +267,7 @@ const buildPatientsToneMessage = (payload: ChartTonePayload) => {
     return '前回取得した参照情報を表示しています。必要なら再取得してください。';
   }
   if (payload.dataSourceTransition === 'local') {
-    return '院内ローカル患者情報を表示中です。official ORCA bridge ではなく local contract を使います。';
+    return '院内ローカル患者情報を表示中です。';
   }
   if (payload.dataSourceTransition !== 'server') {
     return '最新データ確認前の参照状態です。必要なら再取得してください。';
@@ -325,7 +337,7 @@ const buildImportDisabledReason = (pending: boolean, patientId: string) => {
     return '取込中は再実行できません。完了メッセージを待ってから再試行してください。';
   }
   if (!patientId.trim()) {
-    return 'ORCA患者番号（数字のみ）を入力すると取込を実行できます。';
+    return '患者ID（数字のみ）を入力すると取込を実行できます。';
   }
   return undefined;
 };
@@ -477,11 +489,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     normalizeVisitDate(storedEncounter?.visitDate);
   const fromCandidate = appNav.fromCandidate ?? undefined;
   const fromCharts = fromCandidate === 'charts';
-  const effectiveReturnTo = appNav.safeReturnToCandidate;
-  const fallbackUrl = useMemo(() => {
-    if (fromCandidate === 'reception') return buildFacilityPath(session.facilityId, '/reception');
-    return buildFacilityPath(session.facilityId, '/charts');
-  }, [fromCandidate, session.facilityId]);
   const initialFilters = useMemo(
     () => readFilters(searchParams, locationState?.carryover),
     [locationState?.carryover, searchParams],
@@ -691,7 +698,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       if (result.ok) {
         enqueue({
           tone: 'success',
-          message: 'ORCA既存患者取込が完了し canonical/local 同期を更新しました',
+          message: 'ORCA既存患者取込が完了しました',
           detail: `患者番号=${patientId}`,
         });
         const refreshed = await refetchPatients();
@@ -708,7 +715,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
         } else {
           setSelectionNotice({
             tone: 'warning',
-            message: `ORCA既存患者取込は完了しましたが、現在の local search 条件では患者番号 ${patientId} が一覧に見つかりません。`,
+            message: `ORCA既存患者取込は完了しましたが、現在の検索条件では患者番号 ${patientId} が一覧に見つかりません。`,
           });
         }
       } else if (result.writeAccepted && result.errorCategory === 'business_partial') {
@@ -724,12 +731,12 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       } else if (result.writeAccepted) {
         enqueue({
           tone: 'warning',
-          message: 'ORCA既存患者取込は受け付けられましたが canonical/local 同期を確認できませんでした',
+          message: 'ORCA既存患者取込は受け付けられましたが、反映結果を確認できませんでした',
           detail: `患者番号=${patientId}`,
         });
         setSelectionNotice({
           tone: 'warning',
-          message: `ORCA既存患者取込は受け付けられましたが、患者番号 ${patientId} の canonical readback に失敗したため同期完了を確認できませんでした。`,
+          message: `ORCA既存患者取込は受け付けられましたが、患者番号 ${patientId} の反映結果を確認できませんでした。`,
         });
       } else {
         enqueue({
@@ -861,7 +868,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       return {
         title: '入力不備（422）',
         body: '検索条件が不正のため取得できません。',
-        hint: 'local search キーワードを見直して再検索してください。',
+        hint: '検索キーワードを見直して再検索してください。',
         showReception: false,
       };
     }
@@ -1296,25 +1303,21 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     onSuccess: async (result: PatientMutationResult, variables: PatientsMutationAttempt) => {
       const writeAccepted = result.writeAccepted ?? false;
       const fullSuccess = result.ok;
+      const defaultMutationMessage = fullSuccess
+        ? '保存しました'
+        : writeAccepted
+          ? '保存は受け付けられましたが、反映結果を確認できませんでした。'
+          : '保存に失敗しました。内容を確認して再試行してください。';
+      const resultDisplayMessage = toSafePatientFeedbackMessage(result.message, defaultMutationMessage);
       setLastAuditEvent(result.auditEvent);
       setLastSaveResult({
         ...result,
-        message:
-          result.message
-          ?? (writeAccepted
-            ? 'official write は受け付けられましたが canonical 再取得を確認できませんでした。'
-            : '保存に失敗しました。内容を確認して再試行してください。'),
+        message: resultDisplayMessage,
       });
       setLastOfficialAction(variables.operation);
       setToast({
         tone: fullSuccess ? 'success' : writeAccepted ? 'warning' : 'error',
-        message:
-          result.message
-          ?? (fullSuccess
-            ? '保存しました'
-            : writeAccepted
-              ? 'official write は受け付けられましたが canonical 再取得を確認できませんでした。'
-              : '保存に失敗しました。内容を確認して再試行してください。'),
+        message: resultDisplayMessage,
       });
       appliedMeta.current = applyAuthServicePatch(
         {
@@ -1352,8 +1355,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             tone: 'info',
             message:
               variables.operation === 'create'
-                ? `新患登録が完了し、canonical/local 同期済み患者 ${syncedPatientId ?? '—'} を選択しました。`
-                : `既存患者更新が完了し、canonical/local 同期済み患者 ${syncedPatientId ?? '—'} を再読込しました。`,
+                ? `新患登録が完了し、患者 ${syncedPatientId ?? '—'} を選択しました。`
+                : `既存患者更新が完了し、患者 ${syncedPatientId ?? '—'} を再読込しました。`,
           });
         } else if (canonicalOrSyncedPatient) {
           setEditorMode('update');
@@ -1365,8 +1368,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             tone: 'warning',
             message:
               variables.operation === 'create'
-                ? '新患登録は完了しましたが、現在の local search 条件では一覧に見つかりません。canonical patient を詳細表示しています。'
-                : '既存患者更新は完了しましたが、現在の local search 条件では一覧に見つかりません。canonical patient を詳細表示しています。',
+                ? '新患登録は完了しましたが、現在の検索条件では一覧に見つかりません。登録した患者を詳細表示しています。'
+                : '既存患者更新は完了しましたが、現在の検索条件では一覧に見つかりません。更新した患者を詳細表示しています。',
           });
         }
         setValidationErrors([]);
@@ -1376,8 +1379,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           tone: 'warning',
           message:
             variables.operation === 'create'
-              ? '新患登録は受け付けられましたが、canonical readback に失敗したため canonical/local 同期完了を確認できませんでした。'
-              : '既存患者更新は受け付けられましたが、canonical readback に失敗したため canonical/local 同期完了を確認できませんでした。',
+              ? '新患登録は受け付けられましたが、反映結果を確認できませんでした。'
+              : '既存患者更新は受け付けられましたが、反映結果を確認できませんでした。',
         });
         setLastAttempt(null);
       } else {
@@ -1905,18 +1908,12 @@ export function PatientsPage({ runId }: PatientsPageProps) {
         本文へスキップ
       </a>
       <main className="patients-page" data-run-id={resolvedRunId} id="patients-main" tabIndex={-1}>
-      <ReturnToBar
-        scope={{ facilityId: session.facilityId, userId: session.userId }}
-        returnTo={effectiveReturnTo}
-        from={fromCandidate}
-        fallbackUrl={fallbackUrl}
-      />
       <header className="patients-page__header">
         <div>
           <p className="patients-page__kicker">患者管理 検索・管理</p>
           <h1>患者管理</h1>
           <p className="patients-page__hint" role="status" aria-live={infoLive}>
-            患者一覧から対象を選択し、右ペインのタブで目的別に操作してください。患者基本情報の official ORCA 更新は「基本情報」タブのみです。
+            患者一覧から対象を選択し、右ペインのタブで目的別に操作してください。患者基本情報の登録・更新は「基本情報」タブで行います。
           </p>
         </div>
         <div className="patients-page__ops-metrics" role="status" aria-live={infoLive}>
@@ -2010,14 +2007,13 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       <section className="patients-page__content patients-page__split" style={splitLayoutStyle}>
         <aside className="patients-page__sidebar" aria-label="local 患者検索と一覧" id="patients-sidebar-pane">
 
-          {/* 左上：local search */}
-          <section className="patients-search" id="patients-search" tabIndex={-1} aria-label="local search" aria-live={infoLive}>
+          <section className="patients-search" id="patients-search" tabIndex={-1} aria-label="患者検索" aria-live={infoLive}>
             <form className="patients-search__form" onSubmit={handleFilterSubmit}>
 
               {/* 基本：キーワード + 更新/クリア（同一ブロック） */}
               <div className="patients-search__primary">
                 <label className="patients-search__field patients-search__field--keyword">
-                  <span>local search キーワード</span>
+                  <span>検索キーワード</span>
                   <input
                     id="patients-filter-keyword"
                     name="patientsFilterKeyword"
@@ -2025,7 +2021,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                     value={draftFilters.keyword}
                     onChange={(event) => onFilterChange('keyword', event.target.value)}
                     aria-describedby="patients-filter-keyword-help"
-                    aria-label="local search キーワード"
+                    aria-label="検索キーワード"
                   />
                   <small id="patients-filter-keyword-help" className="patients-page__field-help">
                     氏名、カナ、患者番号、電話、郵便番号のいずれかを入力してください。
@@ -2034,7 +2030,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
 
                 <div className="patients-search__primary-actions">
                   <button type="submit" className="patients-search__button primary">
-                    local search を更新
+                    検索
                   </button>
                   <button type="button" className="patients-search__button ghost" onClick={handleClearFilters}>
                     クリア
@@ -2243,7 +2239,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                       className="ghost"
                       disabled={importMutation.isPending}
                       onClick={handleImportByPatientId}
-                      title="ORCA患者番号（Patient_ID）を指定して取り込み、canonical/local 同期を行います"
+                      title="患者IDを指定して既存患者情報を取り込みます"
                       aria-describedby={selectedImportDisabledReason ? 'patients-empty-import-disabled-reason' : undefined}
                     >
                       {importMutation.isPending ? 'ORCA既存患者取込中…' : 'ORCA既存患者取込'}
@@ -2277,8 +2273,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                   onClick={() => handleSelect(patient)}
                   aria-pressed={selected}
                 >
-                  <span className="patients-page__row-id" aria-label={`ORCA患者番号（Patient_ID） ${patient.patientId ?? '—'}`}>
-                    <span className="patients-page__row-id-label">ORCA患者番号</span>
+                  <span className="patients-page__row-id" aria-label={`患者ID ${patient.patientId ?? '—'}`}>
+                    <span className="patients-page__row-id-label">患者ID</span>
                     <span className="patients-page__row-id-value">{patient.patientId ?? '—'}</span>
                   </span>
 
@@ -2406,18 +2402,13 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           <div className="patients-page__form-header patients-page__sticky-bar">
             <div>
               <p className="patients-page__pill">
-                {editorMode === 'create' ? 'official ORCA create' : 'official ORCA update'}
+                {editorMode === 'create' ? '新患登録' : '既存患者更新'}
               </p>
               <div className="patients-page__form-title">
                 <h3 className="patients-page__section-title">
                   {editorMode === 'create' ? '患者情報（新患登録）' : '患者情報（既存患者更新）'}
                 </h3>
               </div>
-              <p className="patients-page__sub">
-                {editorMode === 'create'
-                  ? 'official ORCA create は patientmodv2 class=01 を使い、成功後に canonical re-fetch と local sync を行います。患者番号は空欄時に * 自動採番を既定にします。'
-                  : 'official ORCA update は patientmodv2 class=02 を使い、成功後に canonical re-fetch と local sync を行います。'}
-              </p>
               {blocking ? <p className="patients-page__block-summary">編集ブロック中（詳細は下部）</p> : null}
             </div>
             <div className="patients-page__form-actions">
@@ -2457,7 +2448,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 className="ghost"
                 disabled={!importSelectedPatientId || importMutation.isPending || mutation.isPending}
                 onClick={() => importSelectedPatientId && importMutation.mutate(importSelectedPatientId)}
-                title={importSelectedPatientId ? 'ORCA既存患者取込後に canonical/local 同期を再実行します' : 'ORCA患者番号（Patient_ID）が必要です'}
+                title={importSelectedPatientId ? 'ORCA既存患者の情報を再取得します' : '患者IDが必要です'}
               >
                 {importMutation.isPending ? 'ORCA既存患者取込中…' : 'ORCA既存患者取込'}
               </button>
@@ -2524,7 +2515,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 </ul>
               </div>
               <small>
-                現在の official ORCA 更新状態: {currentOrcaStatus.state}（{currentOrcaStatus.detail}）
+                現在の患者情報反映状態: {currentOrcaStatus.state}（{currentOrcaStatus.detail}）
               </small>
             </div>
           )}
@@ -2533,7 +2524,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
 
           <fieldset className="patients-page__grid" disabled={blocking}>
             <label>
-              <span>ORCA患者番号（Patient_ID）</span>
+              <span>患者ID</span>
               <input
                 id="patients-form-patientId"
                 value={form.patientId ?? ''}
@@ -2548,7 +2539,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 disabled={blocking || editorMode === 'update'}
               />
               <small id="patients-form-help-patientId" className="patients-page__field-help">
-                {editorMode === 'create' ? '空欄時は ORCA 側で `*` 自動採番します。手入力する場合のみ数字を指定してください。' : '更新時は既存の ORCA患者番号を固定で使用します。'}
+                {editorMode === 'create' ? '空欄時は自動採番します。手入力する場合のみ数字を指定してください。' : '更新時は既存の患者IDを固定で使用します。'}
               </small>
               {fieldErrorMap.has('patientId') ? (
                 <small id="patients-form-error-patientId" className="patients-page__field-error" role="alert">
@@ -2593,7 +2584,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 disabled={blocking}
               />
               <small id="patients-form-help-kana" className="patients-page__field-help">
-                全角カタカナ（長音・空白可）で入力してください。
+                全角カタカナで入力してください。
               </small>
               {fieldErrorMap.has('kana') ? (
                 <small id="patients-form-error-kana" className="patients-page__field-error" role="alert">
@@ -2632,7 +2623,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 onChange={(event) => setForm((prev) => ({ ...prev, sex: event.target.value }))}
                 aria-invalid={fieldErrorMap.has('sex')}
                 aria-describedby={buildAriaDescribedBy(
-                  'patients-form-help-sex',
                   fieldErrorMap.has('sex') ? 'patients-form-error-sex' : undefined,
                 )}
                 disabled={blocking}
@@ -2641,9 +2631,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 <option value="M">男性</option>
                 <option value="F">女性</option>
               </select>
-              <small id="patients-form-help-sex" className="patients-page__field-help">
-                M/F から選択します（未選択可）。
-              </small>
               {fieldErrorMap.has('sex') ? (
                 <small id="patients-form-error-sex" className="patients-page__field-error" role="alert">
                   {fieldErrorMap.get('sex')?.message}
@@ -2717,19 +2704,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 住所補完後に不足分だけを追記してください（例: 東京都千代田区千代田1-1）。
               </small>
             </label>
-            <label>
-              <span>保険/自費</span>
-              <input
-                id="patients-form-insurance"
-                value={form.insurance ?? ''}
-                readOnly
-                disabled={blocking}
-                aria-describedby="patients-form-help-insurance"
-              />
-              <small id="patients-form-help-insurance" className="patients-page__field-help">
-                この画面では表示のみです。official patient create/update には含めません。
-              </small>
-            </label>
             <label className="span-2">
               <span>メモ</span>
               <textarea
@@ -2741,7 +2715,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 aria-describedby="patients-form-help-memo"
               />
               <small id="patients-form-help-memo" className="patients-page__field-help">
-                院内ローカルの補助表示です。official patient create/update には含めません。
+                院内メモとして保存します。
               </small>
             </label>
           </fieldset>
@@ -2932,14 +2906,14 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                         : '保存処理は完了しました。'
                       : lastSaveResult.writeAccepted
                         ? lastSaveResult.errorCategory === 'business_partial'
-                          ? 'full-success 条件を満たさないため完了扱いにしていません。'
-                          : 'official write は受け付けられましたが canonical readback を確認できていません。'
+                          ? '一部のみ処理されたため完了扱いにしていません。'
+                          : '保存は受け付けられましたが、反映結果を確認できていません。'
                         : '保存に失敗しました。時間をおいて再試行してください。'}
                   </small>
                 ) : null}
               </div>
               <div className="patients-page__audit-card">
-                <span>{lastOfficialAction === 'import' ? 'official ORCA 取込' : 'official ORCA 更新'}</span>
+                <span>{lastOfficialAction === 'import' ? 'ORCA既存患者取込' : '患者情報更新'}</span>
                 <strong>{lastSaveOrcaStatus.state}</strong>
                 <small>{lastSaveOrcaStatus.detail}</small>
               </div>
@@ -2949,7 +2923,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 <small>患者画面から ORCA 原本/保険/メモの XML 補助 UI を撤去しました。</small>
               </div>
               <div className="patients-page__audit-card">
-                <span>現在の official ORCA 更新可否</span>
+                <span>現在の患者情報反映可否</span>
                 <strong>{currentOrcaStatus.state}</strong>
                 <small>{currentOrcaStatus.detail}</small>
               </div>

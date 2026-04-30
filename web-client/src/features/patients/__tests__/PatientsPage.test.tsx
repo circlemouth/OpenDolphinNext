@@ -631,7 +631,7 @@ describe('PatientsPage official patient flows', () => {
     expect(mockMutationCalls.at(-1)).toBe('00001234');
   });
 
-  it('create success keeps canonical patient visible when local search list does not include it', async () => {
+  it('create success keeps created patient visible when current search list does not include it', async () => {
     mockMutationResult = {
       ok: true,
       writeAccepted: true,
@@ -649,12 +649,12 @@ describe('PatientsPage official patient flows', () => {
     await user.type(getInputById('patients-form-name'), '新規患者');
     await user.click(screen.getByRole('button', { name: '新患登録を実行' }));
 
-    expect(screen.getByText('新患登録は完了しましたが、現在の local search 条件では一覧に見つかりません。canonical patient を詳細表示しています。')).toBeInTheDocument();
+    expect(screen.getByText('新患登録は完了しましたが、現在の検索条件では一覧に見つかりません。登録した患者を詳細表示しています。')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: '患者識別帯' })).toHaveTextContent('000099');
     expect(screen.getByRole('region', { name: '患者識別帯' })).toHaveTextContent('新規患者');
   });
 
-  it('write accepted でも canonical readback failure なら sync 完了 copy を出さない', async () => {
+  it('write accepted でも反映確認失敗なら完了 copy を出さない', async () => {
     mockMutationResult = {
       ok: false,
       writeAccepted: true,
@@ -675,11 +675,11 @@ describe('PatientsPage official patient flows', () => {
     await clickPatientRowByName(user, '山田 花子');
     await user.click(screen.getByRole('button', { name: '既存患者更新を実行' }));
 
-    expect(screen.queryByText(/canonical\/local 同期済み患者/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/同期済み患者/)).not.toBeInTheDocument();
     expect(screen.queryByText('保存を再試行できます')).not.toBeInTheDocument();
   });
 
-  it('create 200 + canonical readback failure でも full success copy を出さない', async () => {
+  it('create 200 + 反映確認失敗でも完了 copy を出さない', async () => {
     mockMutationResult = {
       ok: false,
       writeAccepted: true,
@@ -702,11 +702,11 @@ describe('PatientsPage official patient flows', () => {
     await user.type(getInputById('patients-form-name'), '新規患者');
     await user.click(screen.getByRole('button', { name: '新患登録を実行' }));
 
-    expect(screen.queryByText(/canonical\/local 同期済み患者/)).not.toBeInTheDocument();
-    expect(screen.getByText('新患登録は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。')).toBeInTheDocument();
+    expect(screen.queryByText(/同期済み患者/)).not.toBeInTheDocument();
+    expect(screen.getByText('保存は受け付けられましたが、反映結果を確認できませんでした。')).toBeInTheDocument();
   });
 
-  it('import flow も canonical readback failure を success 扱いしない', async () => {
+  it('import flow も反映確認失敗を success 扱いしない', async () => {
     mockMutationResult = {
       ok: false,
       writeAccepted: true,
@@ -724,8 +724,8 @@ describe('PatientsPage official patient flows', () => {
     await user.type(getInputById('patients-orca-import-patient-id'), '00001234');
     await user.click(screen.getAllByRole('button', { name: 'ORCA既存患者取込' })[0]);
 
-    expect(await screen.findByText('ORCA既存患者取込は受け付けられましたが、患者番号 00001234 の canonical readback に失敗したため同期完了を確認できませんでした。')).toBeInTheDocument();
-    expect(screen.queryByText('ORCA既存患者取込が完了し canonical/local 同期を更新しました')).not.toBeInTheDocument();
+    expect(await screen.findByText('ORCA既存患者取込は受け付けられましたが、患者番号 00001234 の反映結果を確認できませんでした。')).toBeInTheDocument();
+    expect(screen.queryByText('ORCA既存患者取込が完了しました')).not.toBeInTheDocument();
   });
 
   it('import 200 + skipped-only partial は full success にせず audit summary も warning にする', async () => {
@@ -755,12 +755,12 @@ describe('PatientsPage official patient flows', () => {
     await user.click(screen.getAllByRole('button', { name: 'ORCA既存患者取込' })[0]);
 
     expect(await screen.findAllByText('ORCA既存患者取込は skippedCount=1 が返されたため完了扱いにできません（入力 1 / requested 1 / fetched 1 / imported 1 / skipped 1 / errors 0）。')).toHaveLength(2);
-    expect(screen.queryByText('ORCA既存患者取込が完了し canonical/local 同期を更新しました')).not.toBeInTheDocument();
+    expect(screen.queryByText('ORCA既存患者取込が完了しました')).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: '監査/ログ' }));
     expect(screen.getByText('取込結果')).toBeInTheDocument();
     expect(screen.getByText('要確認')).toBeInTheDocument();
-    expect(screen.getByText('full-success 条件を満たさないため完了扱いにしていません。')).toBeInTheDocument();
-    expect(screen.getByText('official ORCA 取込')).toBeInTheDocument();
+    expect(screen.getByText('一部のみ処理されたため完了扱いにしていません。')).toBeInTheDocument();
+    expect(screen.getAllByText('ORCA既存患者取込').length).toBeGreaterThan(0);
     expect(screen.getByText('一部処理')).toBeInTheDocument();
   });
 });
@@ -1022,15 +1022,14 @@ describe('PatientsPage return flow', () => {
     mockAuthFlags.fallbackUsed = false;
   });
 
-  it('returnTo 指定がある場合は surface-aware な戻り導線を表示する', () => {
+  it('returnTo 指定がある場合も患者管理の戻り導線は表示しない', () => {
     mockPatients();
     setRouterSearch('?from=charts&returnTo=/f/FAC-TEST/charts?patientId=000001');
 
     renderPatientsPage();
 
-    expect(screen.getByRole('region', { name: '戻り導線' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'カルテへ戻る' })).toHaveAttribute('href', '/f/FAC-TEST/charts');
-    expect(screen.getByText('患者文脈は引き継がれていません。戻ったあとに患者と受診を選び直してください。')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: '戻り導線' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'カルテへ戻る' })).not.toBeInTheDocument();
     expect(mockGuardedNavigate).not.toHaveBeenCalled();
   });
 
@@ -1086,7 +1085,7 @@ describe('PatientsPage search summary', () => {
     expect(networkScope.queryByText('OK')).not.toBeInTheDocument();
   });
 
-  it('local search 文言は local を明示し未使用詳細条件を案内しない', () => {
+  it('検索文言は利用できる条件だけを案内する', () => {
     mockPatients({
       patients: [],
       recordsReturned: 0,
@@ -1097,11 +1096,11 @@ describe('PatientsPage search summary', () => {
 
     renderPatientsPage();
 
-    expect(screen.getByRole('region', { name: 'local search' })).toHaveTextContent(
+    expect(screen.getByRole('region', { name: '患者検索' })).toHaveTextContent(
       'local search は氏名・カナ・患者番号・電話・郵便番号のみを使います。未使用の詳細条件はこの画面から外しています。',
     );
     expect(screen.getByText('氏名、カナ、患者番号、電話、郵便番号のいずれかを入力してください。')).toBeInTheDocument();
-    expect(screen.getByText('local search キーワードを見直して再検索してください。')).toBeInTheDocument();
+    expect(screen.getByText('検索キーワードを見直して再検索してください。')).toBeInTheDocument();
     expect(screen.getByText('ヒント: local search は ID/氏名/カナ/電話/郵便番号で絞れます。')).toBeInTheDocument();
   });
 

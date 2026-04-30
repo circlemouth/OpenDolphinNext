@@ -88,12 +88,6 @@ type PendingSecondFactorState = {
   runId: string;
 };
 
-type LoginStepMeta = {
-  badge: string;
-  title: string;
-  body: string;
-};
-
 class LoginFailureError extends Error {
   constructor(message: string) {
     super(message);
@@ -184,7 +178,7 @@ type LoginScreenProps = {
   lockFacilityId?: boolean;
   initialNotice?: { message: string; tone: LoginFeedbackTone };
   destinationSummary?: {
-    title: string;
+    title?: string;
     body: string;
   };
 };
@@ -194,7 +188,6 @@ export const LoginScreen = ({
   initialFacilityId,
   lockFacilityId = false,
   initialNotice,
-  destinationSummary,
 }: LoginScreenProps) => {
   const [values, setValues] = useState<CredentialsFormValues>(() => ({
     facilityId: initialFacilityId ?? '',
@@ -211,6 +204,7 @@ export const LoginScreen = ({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [feedbackTone, setFeedbackTone] = useState<LoginFeedbackTone>('error');
   const [profile, setProfile] = useState<LoginResult | null>(null);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const secondFactorInputRef = useRef<HTMLInputElement | null>(null);
 
   const isLoading = status === 'loading';
@@ -223,21 +217,6 @@ export const LoginScreen = ({
   const canSubmitCredentials = Boolean(normalizedResolvedFacilityId && normalizedUserId && values.password && !isLoading);
   const normalizedFactor2Code = secondFactorCode.replace(/\D/g, '');
   const canSubmitFactor2 = Boolean(normalizedFactor2Code.length === 6 && !isLoading);
-  const stepMeta: LoginStepMeta = useMemo(() => {
-    if (step === 'factor2') {
-      return {
-        badge: 'ステップ 2/2',
-        title: '二要素認証',
-        body: 'ログイン情報の確認が終わったため、続けて認証アプリの6桁コードで本人確認を行います。',
-      };
-    }
-    return {
-      badge: 'ステップ 1/2',
-      title: '認証情報の入力',
-      body: '施設ID・ユーザーID・パスワードを確認してサインインします。',
-    };
-  }, [step]);
-
   useEffect(() => {
     const notice = resolveLoginSurfaceNotice({
       sessionExpiryNotice: consumeSessionExpiredNotice(),
@@ -299,6 +278,7 @@ export const LoginScreen = ({
     setPendingSecondFactor(null);
     setSecondFactorCode('');
     setSecondFactorError(null);
+    setPasswordVisible(false);
     setValues((prev) => ({ ...prev, password: '', clientUuid: prev.clientUuid || '' }));
     if (message) {
       setFeedback(message);
@@ -351,6 +331,7 @@ export const LoginScreen = ({
       });
       const outcome = await performLogin(normalizedValues, runId);
       if (outcome.kind === 'factor2_required') {
+        setPasswordVisible(false);
         setValues((prev) => ({ ...prev, password: '', clientUuid: outcome.clientUuid }));
         setPendingSecondFactor({
           facilityId: normalizedValues.facilityId,
@@ -550,17 +531,6 @@ export const LoginScreen = ({
               <img src={SYSTEM_ICON_URL} alt="OpenDolphin システムアイコン" />
             </div>
           </div>
-          <div className="status-message status-message--step" role="status" aria-live="polite">
-            <p style={{ margin: 0, fontWeight: 700 }}>{stepMeta.badge}</p>
-            <p style={{ margin: '0.25rem 0 0', fontWeight: 700 }}>{stepMeta.title}</p>
-            <p className="status-message__detail">{stepMeta.body}</p>
-          </div>
-          {destinationSummary ? (
-            <div className="status-message status-message--destination" role="status" aria-live="polite">
-              <p style={{ margin: 0, fontWeight: 700 }}>{destinationSummary.title}</p>
-              <p className="status-message__detail">{destinationSummary.body}</p>
-            </div>
-          ) : null}
         </header>
 
         <form className="login-form" onSubmit={handleSubmit} noValidate>
@@ -608,26 +578,39 @@ export const LoginScreen = ({
                 ) : null}
               </label>
 
-              <label className="field" htmlFor="login-password">
-                <span>パスワード</span>
-                <input
-                  id="login-password"
-                  name="loginPassword"
-                  type="password"
-                  autoComplete="current-password"
-                  value={values.password}
-                  onChange={handleChange('password')}
-                  placeholder="パスワード"
-                  disabled={isLoading}
-                  aria-invalid={errors.password ? 'true' : undefined}
-                  aria-describedby={resolveFieldDescribedBy('login-password', errors.password)}
-                />
+              <div className="field">
+                <label htmlFor="login-password">パスワード</label>
+                <div className="field__password-control">
+                  <input
+                    id="login-password"
+                    name="loginPassword"
+                    type={passwordVisible ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={values.password}
+                    onChange={handleChange('password')}
+                    placeholder="パスワード"
+                    disabled={isLoading}
+                    aria-invalid={errors.password ? 'true' : undefined}
+                    aria-describedby={resolveFieldDescribedBy('login-password', errors.password)}
+                  />
+                  <button
+                    type="button"
+                    className="field__password-toggle"
+                    onClick={() => setPasswordVisible((current) => !current)}
+                    disabled={isLoading}
+                    aria-label={passwordVisible ? 'パスワードを隠す' : 'パスワードを表示'}
+                    aria-pressed={passwordVisible}
+                    title={passwordVisible ? 'パスワードを隠す' : 'パスワードを表示'}
+                  >
+                    {passwordVisible ? '隠す' : '表示'}
+                  </button>
+                </div>
                 {errors.password ? (
                   <span id={resolveFieldErrorId('login-password')} className="field-error">
                     {errors.password}
                   </span>
                 ) : null}
-              </label>
+              </div>
             </>
           ) : (
             <>
@@ -682,6 +665,7 @@ export const LoginScreen = ({
 
           {step === 'credentials' ? (
             <div className="login-form__actions">
+              <p className="login-form__hint">ユーザーIDとパスワードを入力してください。</p>
               <button type="submit" disabled={!canSubmitCredentials}>
                 {buttonLabel}
               </button>

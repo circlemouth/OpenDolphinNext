@@ -264,13 +264,14 @@ describe('AppRouter login redirect', () => {
     });
   });
 
-  it('logout notice がある場合は login surface に理由を表示する', async () => {
+  it('logout notice がある場合も login surface にサインアウト理由を表示しない', async () => {
     globalThis.__mockAutoLogin = false;
     const router = buildRouter([{ pathname: '/f/123/login', state: { loginNotice: { reason: 'logout' } } }]);
 
     render(<RouterProvider router={router} />);
 
-    expect(await screen.findByText('サインアウトしました。安全のため、この端末の作業状態を消去してログイン画面へ戻りました。')).toBeInTheDocument();
+    expect(await screen.findByTestId('login-screen')).toBeInTheDocument();
+    expect(screen.queryByText('サインアウトしました。安全のため、この端末の作業状態を消去してログイン画面へ戻りました。')).not.toBeInTheDocument();
   });
 
   it('scrub される deep link return では landing explanation を表示する', async () => {

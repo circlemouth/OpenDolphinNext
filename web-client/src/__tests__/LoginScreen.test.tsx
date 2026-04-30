@@ -58,20 +58,36 @@ describe('LoginScreen', () => {
     expect(heading).toHaveAttribute('id', 'login-heading');
   });
 
-  it('initialNotice と destinationSummary を login surface 上に表示する', () => {
+  it('initialNotice は表示し、destinationSummary は login surface 上に表示しない', () => {
     render(
       <LoginScreen
         initialNotice={{ message: 'セッションの有効期限が切れました。作業を続けるには、もう一度ログインしてください。', tone: 'error' }}
         destinationSummary={{
-          title: 'ログイン後の移動先',
-          body: '元の移動先は安全に開けなかったため、/f/0001/reception を既定の着地点として開きます。',
+          body: '利用する実際の施設IDを入力してください。',
         }}
       />,
     );
 
     expect(screen.getByText('セッションの有効期限が切れました。作業を続けるには、もう一度ログインしてください。')).toBeInTheDocument();
-    expect(screen.getByText('ログイン後の移動先')).toBeInTheDocument();
-    expect(screen.getByText('元の移動先は安全に開けなかったため、/f/0001/reception を既定の着地点として開きます。')).toBeInTheDocument();
+    expect(screen.queryByText('利用する実際の施設IDを入力してください。')).not.toBeInTheDocument();
+  });
+
+  it('パスワード表示ボタンで mask を切り替える', async () => {
+    const user = userEvent.setup();
+    render(<LoginScreen />);
+
+    const passwordInput = screen.getByLabelText('パスワード');
+    expect(passwordInput).toHaveAttribute('type', 'password');
+
+    await user.type(passwordInput, 'Secret123!');
+    await user.click(screen.getByRole('button', { name: 'パスワードを表示' }));
+
+    expect(passwordInput).toHaveAttribute('type', 'text');
+    expect(screen.getByRole('button', { name: 'パスワードを隠す' })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'パスワードを隠す' }));
+
+    expect(passwordInput).toHaveAttribute('type', 'password');
   });
 
   it('入力不足時は field error を aria-invalid と aria-describedby で結びつける', async () => {
@@ -157,9 +173,6 @@ describe('LoginScreen', () => {
 
     expect(await screen.findByLabelText('認証コード')).toBeInTheDocument();
     expect(screen.queryByLabelText('パスワード')).not.toBeInTheDocument();
-    expect(screen.getByText('ステップ 2/2')).toBeInTheDocument();
-    expect(screen.getByText('二要素認証')).toBeInTheDocument();
-    expect(screen.getByText('ログイン情報の確認が終わったため、続けて認証アプリの6桁コードで本人確認を行います。')).toBeInTheDocument();
     expect(screen.getByText(AUTH_COPY.factor2Required)).toBeInTheDocument();
     expect(screen.getByText('パスワードは保持していません。認証コードのみ入力してください。')).toBeInTheDocument();
     expect(screen.getByLabelText('認証コード')).toHaveFocus();
@@ -298,7 +311,6 @@ describe('LoginScreen', () => {
     await user.click(screen.getByRole('button', { name: '認証コードを確認' }));
 
     expect(await screen.findByText('ログイン試行回数が上限に達しました。しばらく待ってから再試行してください。 45秒後に再試行してください。')).toBeInTheDocument();
-    expect(screen.getByText('ステップ 2/2')).toBeInTheDocument();
     expect(screen.getByLabelText('認証コード')).toBeInTheDocument();
   });
 
@@ -379,7 +391,7 @@ describe('LoginScreen', () => {
     await user.click(await screen.findByRole('button', { name: '二要素認証を中止' }));
 
     expect(await screen.findByLabelText('パスワード')).toBeInTheDocument();
-    expect(screen.getByText('ステップ 1/2')).toBeInTheDocument();
+    expect(screen.getByText('ユーザーIDとパスワードを入力してください。')).toBeInTheDocument();
     expect(screen.getByText(AUTH_COPY.factor2Cancelled)).toBeInTheDocument();
   });
 
@@ -398,7 +410,7 @@ describe('LoginScreen', () => {
     expect(screen.queryByText(/backend-node-3/)).not.toBeInTheDocument();
   });
 
-  it('initialNotice と destinationSummary を login 画面に表示する', () => {
+  it('initialNotice を login 画面に表示し、destinationSummary は表示しない', () => {
     render(
       <LoginScreen
         initialFacilityId="0001"
@@ -408,15 +420,13 @@ describe('LoginScreen', () => {
           tone: 'info',
         }}
         destinationSummary={{
-          title: 'ログイン後の移動先',
-          body: 'ログイン後は /f/0001/reception を既定の着地点として開きます。',
+          body: '利用する実際の施設IDを入力してください。',
         }}
       />,
     );
 
     expect(screen.getAllByText('サインアウトしました。続けて別の施設やユーザーでログインできます。').length).toBeGreaterThan(0);
-    expect(screen.getByText('ログイン後の移動先')).toBeInTheDocument();
-    expect(screen.getByText('ログイン後は /f/0001/reception を既定の着地点として開きます。')).toBeInTheDocument();
+    expect(screen.queryByText('利用する実際の施設IDを入力してください。')).not.toBeInTheDocument();
   });
 
   it('normalizeSessionResult は server の userPk を保持する', () => {

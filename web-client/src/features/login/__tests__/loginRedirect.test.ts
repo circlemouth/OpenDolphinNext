@@ -47,8 +47,8 @@ describe('loginRedirect helpers', () => {
   it('returns default landing summary when from state is missing', () => {
     const summary = resolveLoginDestinationSummary({}, '0001');
 
-    expect(summary?.body).toContain('移動先が指定されていなかったため');
-    expect(summary?.body).toContain('/f/0001/reception');
+    expect(summary?.title).toBeUndefined();
+    expect(summary?.body).toBe('利用する実際の施設IDを入力してください。');
   });
 
   it('returns invalid landing summary when from state is not facility scoped', () => {
@@ -95,15 +95,24 @@ describe('loginRedirect helpers', () => {
     });
   });
 
-  it('login surface notice は loginNotice を initialNotice より優先する', () => {
+  it('login surface notice は logout notice を表示しない', () => {
     const notice = resolveLoginSurfaceNotice({
       loginNotice: { reason: 'logout' },
       initialNotice: { message: 'fallback', tone: 'error' },
     });
 
+    expect(notice).toBeUndefined();
+  });
+
+  it('login surface notice は non-logout loginNotice を initialNotice より優先する', () => {
+    const notice = resolveLoginSurfaceNotice({
+      loginNotice: { reason: 'timeout' },
+      initialNotice: { message: 'fallback', tone: 'error' },
+    });
+
     expect(notice).toEqual({
-      message: 'サインアウトしました。安全のため、この端末の作業状態を消去してログイン画面へ戻りました。',
-      tone: 'info',
+      message: 'セッションの有効期限が切れました。作業を続けるには、もう一度ログインしてください。',
+      tone: 'error',
     });
   });
 });

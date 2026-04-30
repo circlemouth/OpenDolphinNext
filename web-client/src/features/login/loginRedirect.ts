@@ -28,7 +28,7 @@ export type LoginSurfaceNotice = {
 };
 
 export type LoginDestinationSummary = {
-  title: string;
+  title?: string;
   body: string;
 };
 
@@ -111,11 +111,15 @@ export const resolveLoginSurfaceNotice = (params: {
     };
   }
 
+  if (params.loginNotice?.reason === 'logout') {
+    return undefined;
+  }
+
   const loginNoticeMessage = resolveLoginNoticeMessage(params.loginNotice);
   if (loginNoticeMessage) {
     return {
       message: loginNoticeMessage,
-      tone: params.loginNotice?.reason === 'logout' ? 'info' : 'error',
+      tone: 'error',
     };
   }
 
@@ -135,7 +139,7 @@ const buildDefaultLandingBody = (fallbackFacilityId?: string, reason?: 'missing'
     return `元の移動先は安全に開けなかったため、${fallback}`;
   }
   if (reason === 'missing') {
-    return `移動先が指定されていなかったため、${fallback}`;
+    return '利用する実際の施設IDを入力してください。';
   }
   return `ログイン後は ${fallback}`;
 };
@@ -190,7 +194,6 @@ export const resolveLoginDestinationSummary = (
     };
   }
   return {
-    title: 'ログイン後の移動先',
     body: buildDefaultLandingBody(fallbackFacilityId, 'missing'),
   };
 };
