@@ -212,6 +212,27 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
       candidateCodeReferenceCountClass: 'one',
     }));
 
+    const noSelectableCommentCode = sanitizeInstructionChargeReadonlyXmlResult({
+      role: 'candidateCodeValidity',
+      endpoint: 'medicationgetv2',
+      httpStatus: 200,
+      xml: [
+        '<xmlio2><medicationgetres><Api_Result>E23</Api_Result>',
+        '<Medication_Code>113001810</Medication_Code><Medication_Name>raw master name</Medication_Name>',
+        '<StartDate>20260401</StartDate><EndDate>99999999</EndDate>',
+        '</medicationgetres></xmlio2>',
+      ].join(''),
+      context: { candidateCode: '113001810' },
+    });
+    expect(noSelectableCommentCode).toEqual(expect.objectContaining({
+      apiResultClass: 'official_error',
+      officialErrorCode: 'E23',
+      candidateCodeValid: true,
+      candidateCodeValidityStatus: 'readonly_code_present_without_selectable_comment_sanitized',
+      rawMasterRowsStored: false,
+    }));
+    expect(JSON.stringify(noSelectableCommentCode)).not.toContain('raw master name');
+
     const selectable = sanitizeInstructionChargeReadonlyXmlResult({
       role: 'selectableCommentStatus',
       endpoint: 'medicationgetv2',
@@ -222,6 +243,20 @@ describe('phase4 instruction charge precondition readonly evidence', () => {
     expect(selectable).toEqual(expect.objectContaining({
       status: 'readonly_selectable_comment_valid_sanitized',
       selectableCommentValid: true,
+      selectableCommentProof: true,
+    }));
+
+    const noSelectableComment = sanitizeInstructionChargeReadonlyXmlResult({
+      role: 'selectableCommentStatus',
+      endpoint: 'medicationgetv2',
+      httpStatus: 200,
+      xml: '<xmlio2><medicationgetres><Api_Result>E23</Api_Result><Medication_Code>113001810</Medication_Code></medicationgetres></xmlio2>',
+      context: { candidateCode: '113001810' },
+    });
+    expect(noSelectableComment).toEqual(expect.objectContaining({
+      officialErrorCode: 'E23',
+      status: 'not_applicable_candidate_has_no_selectable_comment_sanitized',
+      selectableCommentValid: false,
       selectableCommentProof: true,
     }));
 

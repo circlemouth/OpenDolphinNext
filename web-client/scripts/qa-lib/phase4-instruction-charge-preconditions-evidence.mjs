@@ -318,12 +318,14 @@ const countClass = (count) => {
 };
 
 export const sanitizeInstructionChargeReadonlyXmlResult = ({ role, endpoint, httpStatus, xml, context }) => {
-  const apiResultClass = classifyApiResult(tagText(xml, 'Api_Result'));
+  const apiResultCode = normalize(tagText(xml, 'Api_Result')).toUpperCase();
+  const apiResultClass = classifyApiResult(apiResultCode);
   const base = {
     role,
     endpoint,
     httpStatusClass: classifyHttpStatus(httpStatus),
     apiResultClass,
+    officialErrorCode: /^E\d{2}$/i.test(apiResultCode) ? apiResultCode : undefined,
     rawOrcaBodyStored: false,
     rawPatientOrInsuranceDetailStored: false,
   };
@@ -367,16 +369,31 @@ export const sanitizeInstructionChargeReadonlyXmlResult = ({ role, endpoint, htt
     const startDate = tagText(xml, 'StartDate');
     const endDate = tagText(xml, 'EndDate');
     const candidateCode = context.candidateCode;
+    const noSelectableComment = apiResultCode === 'E23';
+    const candidateCodeReferenceCount = medicationCodes.filter((code) => code === candidateCode).length;
+    const noSelectableCommentWithCodeEvidence =
+      noSelectableComment &&
+      Boolean(candidateCode) &&
+      candidateCodeReferenceCount > 0 &&
+      Boolean(startDate || endDate);
     const candidateCodeValid =
-      apiResultClass === 'success_zero' && Boolean(candidateCode && medicationCodes.includes(candidateCode));
+      (apiResultClass === 'success_zero' && Boolean(candidateCode && medicationCodes.includes(candidateCode))) ||
+      noSelectableCommentWithCodeEvidence;
     const sanitized = {
       ...base,
       requestNumber: '02',
       candidateCodeValid,
-      candidateCodeReferenceCountClass: countClass(medicationCodes.filter((code) => code === candidateCode).length),
+      candidateCodeValidityStatus: noSelectableCommentWithCodeEvidence
+        ? 'readonly_code_present_without_selectable_comment_sanitized'
+        : candidateCodeValid
+          ? 'readonly_code_valid_sanitized'
+          : 'static_shape_valid_readonly_probe_required',
+      candidateCodeReferenceCountClass: countClass(candidateCodeReferenceCount),
       effectiveStartDatePresence: classForPresence(startDate),
       effectiveEndDatePresence: classForPresence(endDate),
-      requestSemantics: 'medicationgetv2_request_02_code_lookup_sanitized',
+      requestSemantics: noSelectableCommentWithCodeEvidence
+        ? 'medicationgetv2_request_02_no_selectable_comment_code_presence_sanitized'
+        : 'medicationgetv2_request_02_code_lookup_sanitized',
       rawMasterRowsStored: false,
     };
     return { ...sanitized, evidenceHash: sha256Text(JSON.stringify(sanitized)) };
@@ -385,6 +402,7 @@ export const sanitizeInstructionChargeReadonlyXmlResult = ({ role, endpoint, htt
   if (role === 'selectableCommentStatus') {
     const medicationCodes = allTagText(xml, 'Medication_Code');
     const candidateCode = context.candidateCode;
+    const noSelectableComment = apiResultCode === 'E23';
     const selectableCommentValid =
       apiResultClass === 'success_zero' && Boolean(candidateCode && medicationCodes.includes(candidateCode));
     const sanitized = {
@@ -392,6 +410,8 @@ export const sanitizeInstructionChargeReadonlyXmlResult = ({ role, endpoint, htt
       requestNumber: '02',
       status: selectableCommentValid
         ? 'readonly_selectable_comment_valid_sanitized'
+        : noSelectableComment
+          ? 'not_applicable_candidate_has_no_selectable_comment_sanitized'
         : 'readonly_selectable_comment_invalid_stop_before_live',
       selectableCommentValid,
       selectableCommentProof: true,
@@ -558,9 +578,8 @@ const classifyPreconditionStatus = (readonlyChecks) => {
   const readonlyProbeRan = readonlyChecks.length > 0;
   return {
     candidateCodeValidity:
-      candidateCode?.httpStatusClass === '2xx' && candidateCode?.apiResultClass === 'success_zero' &&
-      candidateCode?.candidateCodeValid === true
-        ? 'readonly_code_valid_sanitized'
+      candidateCode?.httpStatusClass === '2xx' && candidateCode?.candidateCodeValid === true
+        ? candidateCode.candidateCodeValidityStatus ?? 'readonly_code_valid_sanitized'
         : 'static_shape_valid_readonly_probe_required',
     selectableCommentStatus:
       selectableComment?.status ?? 'not_applicable_candidate_is_not_selectable_comment',
@@ -620,7 +639,8 @@ export const buildInstructionChargePreconditionSummary = ({
   };
   const preconditionStatus = classifyPreconditionStatus(readonlyChecks);
   const allProven =
-    preconditionStatus.candidateCodeValidity === 'readonly_code_valid_sanitized' &&
+    (preconditionStatus.candidateCodeValidity === 'readonly_code_valid_sanitized' ||
+      preconditionStatus.candidateCodeValidity === 'readonly_code_present_without_selectable_comment_sanitized') &&
     preconditionStatus.selectableCommentStatus !== 'not_proven' &&
     preconditionStatus.selectableCommentStatus !== 'readonly_selectable_comment_invalid_stop_before_live' &&
     preconditionStatus.diseaseContext === 'proven_sanitized' &&

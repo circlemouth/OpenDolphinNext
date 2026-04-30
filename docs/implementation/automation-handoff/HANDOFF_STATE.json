@@ -30,7 +30,40 @@
   },
   "continueAfterSkips": true,
   "environmentUnavailablePolicy": "skip_task_and_continue_same_run",
-  "lastUpdated": "2026-04-30T05:57:12Z",
+  "lastUpdated": "2026-04-30T07:22:50Z",
+  "latestResidualReadonlyProbeClosure": {
+    "runId": "20260430T072250Z",
+    "workOrder": "RWO-06/RWO-07",
+    "taskId": "RESIDUAL_READONLY_PROBE_AND_CLASSIFICATION_REDUCTION",
+    "result": "RESIDUAL_AUTOMATION_PROBES_EXHAUSTED_WITH_ONE_CLASSIFICATION_FIX",
+    "branch": "master",
+    "headAtStart": "eabcb196d",
+    "evidence": "docs/implementation/residual-readonly-probes-20260430T072250Z/summary.sanitized.json",
+    "finalReport": "docs/implementation/residual-readonly-probes-20260430T072250Z/FINAL_REPORT.md",
+    "checks": {
+      "focusedInstructionChargeAndMedicalmodv2Tests": "pass_40_tests",
+      "baseChargeExpandedReadOnlyScan": "330_rows_zero_first_visit_compatible_hits",
+      "instructionChargeE23Reclassification": "code_present_without_selectable_comment",
+      "acceptmodv2TargetInventoryRefresh": "class_01_02_03_target_ready_rows_found"
+    },
+    "remainingNonRepoOrLiveBlockers": [
+      "baseChargeOrder/110 needs changed Trial precondition or owner stop decision after 00001-00011 / 20260401-20260430 read-only scan found no first-visit-compatible hit",
+      "surgeryOrder/500 needs changed source-backed row identity or owner stop decision",
+      "instractionChargeOrder/130 needs disease/monthly/department/insurance business context before live",
+      "subjectivesv2 prior live HTTP 502 needs changed live/runtime precondition",
+      "diseasev3 prior live HTTP 400 needs changed Trial/business precondition",
+      "acceptmodv2 RN02/RN03/RN04 need exact operation scope, duplicate checkpoint, and endpoint success criteria before live"
+    ],
+    "liveTrialMutationExecuted": false,
+    "readOnlyTrialOrcaExecuted": true,
+    "credentialsCaptured": false,
+    "diagnosticArtifactsCaptured": false,
+    "rawArtifactsCommittedOrPackaged": false,
+    "productionOrcaAttempted": false,
+    "s3ObjectStorageUsed": false,
+    "claimBoundary": "Residual no-live/read-only automation-owned probes exhausted or narrowed only; no Trial mutation success, broad clinical coverage, production ORCA readiness, S3/object-storage readiness, rollback rehearsal, owner final GO/NO-GO, or final release readiness is claimed.",
+    "recommendedNextTask": "Proceed only after changed Trial/business preconditions or explicit owner/operator decisions for remaining live/blocker gates."
+  },
   "latestNoLiveReadonlyClosure": {
     "runId": "20260430T055712Z",
     "workOrder": "RWO-06/RWO-07/RWO-09",

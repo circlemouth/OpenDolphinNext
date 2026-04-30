@@ -536,11 +536,13 @@ export const summarizeInstructionChargePreconditionNoLivePlan = (payload) => {
       candidateCodeValidity: [
         'static_shape_valid_readonly_probe_required',
         'readonly_code_valid_sanitized',
+        'readonly_code_present_without_selectable_comment_sanitized',
         'readonly_code_invalid_stop_before_live',
         'not_proven',
       ],
       selectableCommentStatus: [
         'not_applicable_candidate_is_not_selectable_comment',
+        'not_applicable_candidate_has_no_selectable_comment_sanitized',
         'readonly_selectable_comment_valid_sanitized',
         'readonly_selectable_comment_invalid_stop_before_live',
         'not_proven',
