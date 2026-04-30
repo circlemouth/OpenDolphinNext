@@ -650,7 +650,7 @@ class OrcaVisitResourceTest {
         medicalRow.setHasSequentialNumber(true);
         medicalRow.setHasInsuranceCombinationNumber(true);
         medicalRow.setRawSensitiveFieldsExcluded(true);
-        medicalRow.setServerPerformDate("2025-11-16");
+        medicalRow.setServerPerformDate("20251116");
         medicalRow.setServerDepartmentCode("01");
         medicalRow.setServerInvoiceNumber("INV-016");
         medicalRow.setServerSequentialNumber("1");

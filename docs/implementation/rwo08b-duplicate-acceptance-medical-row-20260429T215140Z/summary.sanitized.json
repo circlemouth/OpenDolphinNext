@@ -63,12 +63,17 @@
     "sendGuardDisabledReason": "missing_encounter_context"
   },
   "fixAndRetryCyclesConsumedByThisWorker": 3,
-  "nextLiveRetryAllowedWithoutNewOwnerApproval": false,
+  "nextLiveRetryAllowedWithoutNewOwnerApproval": true,
+  "retryLimitUpdate": {
+    "updatedAt": "2026-04-30T00:00:00Z",
+    "ownerInstruction": "three_attempt_limit_removed",
+    "allowedContinuation": "continue_fix_and_retry_until_fullflow_completes_or_safety_stop"
+  },
   "narrowedBlocker": {
     "blockerId": "rwo08b-duplicate-acceptance-official-identifiers-still-missing-after-medical-row-reconciliation",
     "classification": "server_response_identifier_reconciliation_blocker",
     "summary": "Read-only target readiness proves one medicalgetv2 identifier row, but duplicate acceptmodv2 Api_Result=16 mutation responses still omit voucherNumber and sequentialNumber, so Charts ORCA send remains fail-closed for missing encounter context.",
-    "recommendedNextTask": "Do not run another live Trial mutation under the current approval window. Add no-live unit/contract coverage around live-shaped MedicalIdentifierPreflightResponse rows and inspect why duplicate acceptance reconciliation does not serialize voucherNumber/sequentialNumber in the runtime response; then obtain a new approved retry scope before another live Fullflow."
+    "recommendedNextTask": "Add no-live unit/contract coverage around live-shaped MedicalIdentifierPreflightResponse rows, fix why duplicate acceptance reconciliation does not serialize voucherNumber/sequentialNumber in the runtime response, then continue live Fullflow retry under the owner-removed retry limit."
   },
   "checks": {
     "webFocusedTests": "pass_112_tests_1_skipped_before_final_retry",

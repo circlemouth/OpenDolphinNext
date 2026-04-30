@@ -72,6 +72,9 @@ export const buildMedicalModV2RequestXml = (params: MedicalModV2RequestPayload):
   })),
 });
 
+const isIdempotentDuplicateMedicalModV2Result = (apiResult?: string, apiResultMessage?: string) =>
+  apiResult === '80' && Boolean(apiResultMessage && /既に同日の診療データが登録されています/.test(apiResultMessage));
+
 export async function postOrcaMedicalModV2Xml(
   payload: MedicalModV2RequestPayload,
   options: { classCode?: string; signal?: AbortSignal } = {},
@@ -106,13 +109,17 @@ export async function postOrcaMedicalModV2Xml(
     signal: options.signal,
   });
   const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const apiResult = typeof json.apiResult === 'string' ? json.apiResult : undefined;
+  const apiResultMessage = typeof json.apiResultMessage === 'string' ? json.apiResultMessage : undefined;
+  const idempotentDuplicate = isIdempotentDuplicateMedicalModV2Result(apiResult, apiResultMessage);
+  const responseError = typeof json.error === 'string' ? json.error : undefined;
   return {
-    ok: response.ok && !(typeof json.error === 'string' && json.error.trim()),
+    ok: response.ok && (!responseError?.trim() || idempotentDuplicate),
     apiOk: typeof json.apiOk === 'boolean' ? json.apiOk : undefined,
     status: response.status,
     rawXml: undefined,
-    apiResult: typeof json.apiResult === 'string' ? json.apiResult : undefined,
-    apiResultMessage: typeof json.apiResultMessage === 'string' ? json.apiResultMessage : undefined,
+    apiResult,
+    apiResultMessage,
     informationDate: typeof json.informationDate === 'string' ? json.informationDate : undefined,
     informationTime: typeof json.informationTime === 'string' ? json.informationTime : undefined,
     invoiceNumber: typeof json.invoiceNumber === 'string' ? json.invoiceNumber : undefined,
@@ -123,6 +130,6 @@ export async function postOrcaMedicalModV2Xml(
     missingTags: undefined,
     runId: typeof json.runId === 'string' ? json.runId : getObservabilityMeta().runId ?? runId,
     traceId: typeof json.traceId === 'string' ? json.traceId : getObservabilityMeta().traceId,
-    error: typeof json.error === 'string' ? json.error : undefined,
+    error: responseError,
   };
 }

@@ -1518,6 +1518,124 @@ describe('order send smoke', () => {
     expect(requestUrls.filter((url) => url === '/api/local/prescription-orders')).toHaveLength(2);
   });
 
+  it('postOrcaMedicalModV2Xml treats same-day duplicate as idempotent success', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          apiResult: '80',
+          apiResultMessage: '既に同日の診療データが登録されています',
+          apiOk: false,
+          error: '既に同日の診療データが登録されています',
+          runId: 'RUN-DUPLICATE',
+          traceId: 'TRACE-DUPLICATE',
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await postOrcaMedicalModV2Xml(
+      {
+        encounterContext: {
+          patientId: '000001',
+          visitDate: '2026-03-09',
+          departmentCode: '01',
+          physicianCode: '10001',
+          insuranceCombinationNumber: '0001',
+          voucherNumber: '1234',
+          sequentialNumber: '1',
+        },
+        medicalInformation: [
+          {
+            entity: 'treatmentOrder',
+            medicalClass: '400',
+            medicalClassNumber: '1',
+            medications: [{ code: '140000610', number: '1' }],
+          },
+        ],
+      },
+      { classCode: '01' },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.apiResult).toBe('80');
+    expect(result.apiResultMessage).toBe('既に同日の診療データが登録されています');
+  });
+
+  it('fetchMedicalModV2OrderBundles ignores empty prescription placeholders when other coded orders are sendable', async () => {
+    vi.mocked(httpFetch).mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.startsWith('/api/local/prescription-orders?')) {
+        return new Response(
+          JSON.stringify({
+            found: false,
+            runId: 'RUN-PRESCRIPTION-NOT-FOUND',
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }
+      if (url.includes('/api/local/order/bundles?') && url.includes('entity=treatmentOrder')) {
+        return new Response(
+          JSON.stringify({
+            runId: 'RUN-FETCH-TREATMENT',
+            patientId: '000001',
+            bundles: [
+              {
+                entity: 'treatmentOrder',
+                bundleName: 'wound-care',
+                bundleNumber: '1',
+                classCode: '400',
+                classCodeSystem: 'Claim007',
+                className: '処置',
+                items: [{ code: '140000610', name: '創傷処置', quantity: '1', unit: '回', rowRole: 'main' }],
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }
+      if (url.includes('/api/local/order/bundles?')) {
+        return new Response(
+          JSON.stringify({
+            runId: 'RUN-FETCH-EMPTY',
+            patientId: '000001',
+            bundles: [],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    const fetched = await fetchMedicalModV2OrderBundles('000001', '2026-03-09', 'F001:E900');
+    expect(fetched.errors).toEqual([]);
+    expect(fetched.bundles.some((bundle) => bundle.entity === 'medOrder')).toBe(false);
+    expect(fetched.bundles.some((bundle) => bundle.entity === 'treatmentOrder')).toBe(true);
+
+    const prepared = prepareMedicalModV2SendData(fetched.bundles);
+    expect(prepared.requiredIssues).toEqual([]);
+    expect(prepared.bundleIssues).toEqual([]);
+    expect(prepared.medicalInformation).toEqual([
+      expect.objectContaining({
+        entity: 'treatmentOrder',
+        medicalClass: '400',
+        medicalClassNumber: '1',
+        medications: [expect.objectContaining({ code: '140000610' })],
+      }),
+    ]);
+  });
+
   it('stale selection comment parameters block medicalmodv2 send before payload generation', () => {
     const prepared = prepareMedicalModV2SendData([
       {

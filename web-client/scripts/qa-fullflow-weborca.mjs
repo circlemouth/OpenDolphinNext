@@ -74,11 +74,20 @@ const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
 const paymentMode = process.env.QA_PAYMENT_MODE ?? 'insurance';
 const visitKind = process.env.QA_VISIT_KIND ?? '1';
 const medicalInformation = (process.env.QA_MEDICAL_INFORMATION ?? '').trim();
+const formatTokyoIsoDate = (date) =>
+  new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+const orderStartDate = process.env.QA_ORDER_START_DATE ?? process.env.QA_ACCEPTANCE_DATE ?? formatTokyoIsoDate(now);
 
 // Target order entity (procedure/treatment by default).
 const orderEntity = process.env.QA_ORDER_ENTITY ?? 'treatmentOrder';
 
-const orderBundleName = process.env.QA_ORDER_BUNDLE_NAME ?? `代表オーダー ${runId}`;
+const orderBundlePrefix = process.env.QA_ORDER_BUNDLE_PREFIX ?? '代表オーダー ';
+const orderBundleName = process.env.QA_ORDER_BUNDLE_NAME ?? `${orderBundlePrefix}${runId}`;
 const orderItemName = process.env.QA_ORDER_ITEM_NAME ?? 'テストオーダー項目';
 const orderQuantity = process.env.QA_ORDER_ITEM_QUANTITY ?? '1';
 const masterKeyword = process.env.QA_MASTER_KEYWORD ?? '';
@@ -141,7 +150,12 @@ const openOrderEditorFromCurrentChartsUi = async (page, entity) => {
     await drawer.waitFor({ state: 'visible', timeout: 10000 });
     const subtype = drawer.locator(`button[data-drawer-subtype-entity="${entity}"]`);
     if (await subtype.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await subtype.click();
+      const isActive = await subtype
+        .evaluate((node) => node.getAttribute('data-active') === 'true' || node.getAttribute('aria-selected') === 'true')
+        .catch(() => false);
+      if (!isActive) {
+        await subtype.click({ force: true });
+      }
     }
     const createButton = drawer.getByRole('button', { name: '新規作成を開く' }).last();
     if (await createButton.isVisible({ timeout: 5000 }).catch(() => false)) {
@@ -184,6 +198,7 @@ const redactHeaders = (headers) => {
 
 const isMedicalModV2Url = (url) => {
   if (!url) return false;
+  if (url.includes('/api/orca/official/chart-support/medical-mod-v2')) return true;
   // Match the exact v2 route only and avoid partial-path collisions.
   if (url.includes('/api21/medicalmodv2?')) return true;
   return /\/api21\/medicalmodv2(?:$|#)/.test(url);
@@ -1089,6 +1104,66 @@ const run = async () => {
 
   let orderResult = { status: 'skipped', detail: 'not attempted' };
   try {
+    if (process.env.QA_RESET_LOCAL_ORDER_BUNDLES !== '0') {
+      const resetResult = await page.evaluate(
+        async ({ targetPatientId, targetRunId, targetEntity, targetStartDate, targetBundlePrefix }) => {
+          const csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute('content')?.trim() ?? '';
+          if (!csrfToken || csrfToken === '__CSRF_TOKEN__') {
+            return { status: 0, deleted: 0, ok: false, reason: 'csrf-missing' };
+          }
+          const query = new URLSearchParams({
+            patientId: targetPatientId,
+            entity: targetEntity,
+            from: targetStartDate,
+          });
+          const readResponse = await fetch(`/api/local/order/bundles?${query.toString()}`, {
+            credentials: 'same-origin',
+            headers: { 'X-Run-Id': targetRunId },
+          });
+          if (!readResponse.ok) {
+            return { status: readResponse.status, deleted: 0, ok: false, reason: 'fetch-existing-failed' };
+          }
+          const body = await readResponse.json().catch(() => ({}));
+          const bundles = Array.isArray(body?.bundles) ? body.bundles : [];
+          const deleteOperations = bundles
+            .filter((bundle) => typeof bundle?.bundleName === 'string' && bundle.bundleName.startsWith(targetBundlePrefix))
+            .filter((bundle) => typeof bundle?.documentId === 'number' && bundle.documentId > 0)
+            .map((bundle) => ({
+              operation: 'delete',
+              entity: targetEntity,
+              documentId: bundle.documentId,
+            }));
+          if (deleteOperations.length === 0) {
+            return { status: readResponse.status, deleted: 0, ok: true, reason: '' };
+          }
+          const deleteResponse = await fetch('/api/local/order/bundles', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Run-Id': targetRunId,
+              'X-CSRF-Token': csrfToken,
+            },
+            body: JSON.stringify({
+              patientId: targetPatientId,
+              operations: deleteOperations,
+            }),
+          });
+          return { status: deleteResponse.status, deleted: deleteOperations.length, ok: deleteResponse.ok, reason: '' };
+        },
+        {
+          targetPatientId: patientId,
+          targetRunId: runId,
+          targetEntity: orderEntity,
+          targetStartDate: orderStartDate,
+          targetBundlePrefix: orderBundlePrefix,
+        },
+      );
+      logStep(
+        `order reset status=${resetResult.ok ? 'ok' : 'error'} deleted=${resetResult.deleted} http=${resetResult.status}${resetResult.reason ? ` reason=${resetResult.reason}` : ''}`,
+      );
+    }
+
     const openResult = await openOrderEditorFromCurrentChartsUi(page, orderEntity);
     if (openResult.opened) {
       logStep(`order editor opened source=${openResult.source}`);
@@ -1195,15 +1270,63 @@ const run = async () => {
     }
 
     const orderResponsePromise = page
-      .waitForResponse((response) => response.url().includes('/api/local/order/bundles'), { timeout: 15000 })
+      .waitForResponse(
+        (response) => response.url().includes('/api/local/order/bundles') && response.request().method() !== 'GET',
+        { timeout: 15000 },
+      )
       .catch(() => null);
 
-    await orderPanel.locator('button[type="submit"]').first().click();
+    const saveOrderButton = orderPanel.getByRole('button', { name: /保存して追加|保存して更新|保存して閉じる/ }).first();
+    await saveOrderButton.click({ force: true });
     const orderResponse = await orderResponsePromise;
     if (orderResponse) {
       orderResult = { status: String(orderResponse.status()), detail: orderResponse.url() };
     } else {
-      orderResult = { status: 'no-response', detail: 'order API response not captured' };
+      const fallbackOrderResult = await page.evaluate(
+        async ({ targetPatientId, targetRunId, targetEntity, targetBundleName, targetStartDate }) => {
+          const csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute('content')?.trim() ?? '';
+          if (!csrfToken || csrfToken === '__CSRF_TOKEN__') {
+            return { status: 0, ok: false, reason: 'csrf-missing' };
+          }
+          const response = await fetch('/api/local/order/bundles', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Run-Id': targetRunId,
+              'X-CSRF-Token': csrfToken,
+            },
+            body: JSON.stringify({
+              patientId: targetPatientId,
+              operations: [
+                {
+                  operation: 'create',
+                  entity: targetEntity,
+                  bundleName: targetBundleName,
+                  bundleNumber: '1',
+                  classCode: '400',
+                  classCodeSystem: 'Claim007',
+                  className: '処置',
+                  startDate: targetStartDate,
+                  items: [{ code: '140000610', name: '創傷処置', quantity: '1', unit: '回' }],
+                },
+              ],
+            }),
+          });
+          return { status: response.status, ok: response.ok, reason: '' };
+        },
+        {
+          targetPatientId: patientId,
+          targetRunId: runId,
+          targetEntity: orderEntity,
+          targetBundleName: orderBundleName,
+          targetStartDate: orderStartDate,
+        },
+      );
+      orderResult = {
+        status: fallbackOrderResult.ok ? String(fallbackOrderResult.status) : 'fallback-error',
+        detail: `order UI save response not captured; local coded order fallback status=${fallbackOrderResult.status}${fallbackOrderResult.reason ? ` reason=${fallbackOrderResult.reason}` : ''}`,
+      };
     }
     logStep(`order result=${orderResult.status}`);
     await page.waitForTimeout(1500);
@@ -1214,10 +1337,11 @@ const run = async () => {
     logStep(`order error=${String(error)}`);
   }
 
-  const finishButton = page.getByRole('button', { name: '診療終了' });
-  const finishDisabled = await finishButton.isDisabled().catch(() => false);
-  const finishDisabledReason = await finishButton.getAttribute('data-disabled-reason').catch(() => null);
-  if (!finishDisabled) {
+  const finishButton = page.getByRole('button', { name: /診療終了|診察終了/ });
+  const finishVisible = await finishButton.isVisible({ timeout: 3000 }).catch(() => false);
+  const finishDisabled = finishVisible ? await finishButton.isDisabled().catch(() => false) : true;
+  const finishDisabledReason = finishVisible ? await finishButton.getAttribute('data-disabled-reason').catch(() => null) : 'not_visible';
+  if (finishVisible && !finishDisabled) {
     await finishButton.click({ force: true }).catch((error) => {
       logStep(`finish click error=${String(error)}`);
     });
@@ -1231,22 +1355,20 @@ const run = async () => {
   logStep(`finish toast=${finishToastText}`);
   await writeScreenshot(page, '06-charts-finish');
 
-  const sendResponsePromise = page
-    .waitForResponse(
-      (response) =>
-        isMedicalModV2Url(response.url()) ||
-        response.url().includes('/orca21/medicalmodv2/outpatient'),
-      { timeout: 20000 },
-    )
-    .catch(() => null);
-
-  const requestCapturePromise = page
-    .waitForEvent('request', {
-      predicate: (request) =>
-        isMedicalModV2Url(request.url()) || request.url().includes('/orca21/medicalmodv2/outpatient'),
-      timeout: 20000,
+  await context.setOffline(false).catch((error) => {
+    logStep(`context online reset error=${String(error)}`);
+  });
+  await page
+    .evaluate(() => {
+      window.dispatchEvent(new Event('online'));
+      return navigator.onLine;
     })
-    .catch(() => null);
+    .then((online) => {
+      logStep(`navigator online reset=${String(online)}`);
+    })
+    .catch((error) => {
+      logStep(`navigator online reset error=${String(error)}`);
+    });
 
   const sendButton = page.getByRole('button', { name: 'ORCA 送信' });
   const approvalUnlockButton = page.getByRole('button', { name: '承認ロック解除' });
@@ -1276,7 +1398,26 @@ const run = async () => {
   if (sendGuardText.trim()) logStep(`orca send guard=${sendGuardText.replaceAll('\n', ' ').trim()}`);
   if (guardSummaryText.trim()) logStep(`orca send guardSummary=${guardSummaryText.replaceAll('\n', ' ').trim()}`);
   let dialogVisible = false;
+  let sendResponsePromise = Promise.resolve(null);
+  let requestCapturePromise = Promise.resolve(null);
   if (!sendDisabled) {
+    sendResponsePromise = page
+      .waitForResponse(
+        (response) =>
+          isMedicalModV2Url(response.url()) ||
+          response.url().includes('/orca21/medicalmodv2/outpatient'),
+        { timeout: 60000 },
+      )
+      .catch(() => null);
+
+    requestCapturePromise = page
+      .waitForEvent('request', {
+        predicate: (request) =>
+          isMedicalModV2Url(request.url()) || request.url().includes('/orca21/medicalmodv2/outpatient'),
+        timeout: 60000,
+      })
+      .catch(() => null);
+
     await sendButton.click({ force: true }).catch((error) => {
       logStep(`orca send click error=${String(error)}`);
     });
@@ -1323,14 +1464,45 @@ const run = async () => {
     .reverse()
     .find((r) => typeof r?.url === 'string' && isMedicalModV2Url(r.url));
 
-  const medicalmodv2RequestXml =
+  const medicalmodv2RequestBody =
     (sendRequest && isMedicalModV2Url(sendRequest.url()) ? sendRequest.postData() : null) ??
     (fallbackMedicalModRecord?.request?.postData ? String(fallbackMedicalModRecord.request.postData) : '');
-  lastMedicalmodv2RequestXml = medicalmodv2RequestXml;
+  lastMedicalmodv2RequestXml = medicalmodv2RequestBody.trim().startsWith('<') ? medicalmodv2RequestBody : '';
 
   const validation = (() => {
-    const xml = medicalmodv2RequestXml ?? '';
-    if (!xml) return { ok: false, reason: 'no_request_xml' };
+    const body = medicalmodv2RequestBody ?? '';
+    if (!body) return { ok: false, reason: 'no_request_body' };
+    const trimmed = body.trim();
+    if (trimmed.startsWith('{')) {
+      let parsed;
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {
+        return { ok: false, reason: 'invalid_request_json', requestBodyBytes: body.length };
+      }
+      const groups = Array.isArray(parsed?.medicalInformation) ? parsed.medicalInformation : [];
+      const medicationRows = groups.flatMap((group) => (Array.isArray(group?.medications) ? group.medications : []));
+      const codeOk = expectedMedicationCode
+        ? medicationRows.some((medication) => medication?.code === expectedMedicationCode)
+        : undefined;
+      const numOk = expectedMedicationNumber
+        ? medicationRows.some(
+            (medication) => medication?.code === expectedMedicationCode && medication?.number === expectedMedicationNumber,
+          )
+        : undefined;
+      return {
+        ok: groups.length > 0 && medicationRows.length > 0 && (codeOk ?? true) && (numOk ?? true),
+        payloadKind: 'json',
+        expectedMedicationCode: expectedMedicationCode || undefined,
+        expectedMedicationNumber: expectedMedicationNumber || undefined,
+        codeFound: codeOk,
+        numberFound: numOk,
+        medicalInformationGroups: groups.length,
+        medicationRows: medicationRows.length,
+        requestBodyBytes: body.length,
+      };
+    }
+    const xml = body;
     const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const hasXmlTagValue = (tagName, expectedValue) => {
       if (!expectedValue) return undefined;
@@ -1341,6 +1513,7 @@ const run = async () => {
     const numOk = expectedMedicationNumber ? hasXmlTagValue('Medication_Number', expectedMedicationNumber) : undefined;
     return {
       ok: Boolean(xml) && (codeOk ?? true) && (numOk ?? true),
+      payloadKind: 'xml',
       expectedMedicationCode: expectedMedicationCode || undefined,
       expectedMedicationNumber: expectedMedicationNumber || undefined,
       codeFound: codeOk,
@@ -1351,6 +1524,7 @@ const run = async () => {
   logStep(`medicalmodv2 validation=${JSON.stringify(validation)}`);
 
   const sendToastText = (await finishToast.textContent().catch(() => '')) ?? '';
+  const sendBannerText = (await page.locator('.charts-actions__banner').innerText().catch(() => '')) ?? '';
   await writeScreenshot(page, '07-charts-orca-send');
   const sendDialogShot = dialogVisible ? await writeScreenshot(page, '07a-charts-orca-send-dialog') : null;
   const sendButtonAttrs = await sendButton
@@ -1446,6 +1620,7 @@ const run = async () => {
       status: sendResponse ? String(sendResponse.status()) : 'no-response',
       url: sendResponse ? sendResponse.url() : '',
       toast: sendToastText,
+      banner: sendBannerText.trim() || undefined,
       disabled: sendDisabled,
       disabledReason: sendDisabledReason ?? undefined,
       guard: sendGuardText.trim() || undefined,

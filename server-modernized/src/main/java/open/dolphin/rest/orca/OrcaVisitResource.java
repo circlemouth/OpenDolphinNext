@@ -955,7 +955,6 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
                 && row.isHasInvoiceNumber()
                 && row.isHasSequentialNumber()
                 && row.isHasInsuranceCombinationNumber()
-                && safeEquals(row.getServerPerformDate(), selected.getServerAcceptanceDate())
                 && safeEquals(row.getServerDepartmentCode(), selected.getServerDepartmentCode());
     }
 

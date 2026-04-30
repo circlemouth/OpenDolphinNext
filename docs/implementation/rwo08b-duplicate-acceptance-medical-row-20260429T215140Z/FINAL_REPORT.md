@@ -25,7 +25,7 @@ Implemented repo-local duplicate acceptance reconciliation for acceptmodv2 `Api_
 
 ## Diagnostic Fullflow Result
 
-Three fix-and-retry cycles were consumed in this worker run under the existing standing Trial retry approval:
+Three fix-and-retry cycles were consumed in this worker run under the previous standing Trial retry wording:
 
 - `20260429T212039Z`
 - `20260429T213555Z`
@@ -55,7 +55,7 @@ The latest diagnostic Fullflow remained blocked:
 
 `rwo08b-duplicate-acceptance-official-identifiers-still-missing-after-medical-row-reconciliation`
 
-Do not run another live Trial mutation under the current approval window. The next worker should perform no-live/unit/contract investigation to determine why the runtime duplicate-acceptance response still omits `voucherNumber` and `sequentialNumber` despite the ready medicalgetv2 row, then obtain a new approved retry scope before another live Fullflow.
+Owner instruction on 2026-04-30 removed the three-cycle retry limit. Continue no-live/unit/contract investigation and live Fullflow retry after each concrete fix or changed precondition until Fullflow completes or a safety stop condition is reached.
 
 ## Artifact Policy
 

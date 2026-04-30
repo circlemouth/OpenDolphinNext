@@ -572,12 +572,14 @@ export const fetchMedicalModV2OrderBundles = async (patientId: string, from: str
             bundles: [] as OrderBundle[],
           };
         }
+        const hasStoredPrescriptionSource =
+          (prescriptionOrder.recordsReturned ?? prescriptionOrder.sourceBundles?.length ?? 0) > 0;
         return {
           ok: true,
           message: prescriptionOrder.message,
           status: prescriptionOrder.status,
           errorCode: undefined,
-          bundles: buildPrescriptionOrderSendBundles(prescriptionOrder.order),
+          bundles: hasStoredPrescriptionSource ? buildPrescriptionOrderSendBundles(prescriptionOrder.order) : [],
         };
       }
       return fetchOrderBundles({ patientId, entity, from });
