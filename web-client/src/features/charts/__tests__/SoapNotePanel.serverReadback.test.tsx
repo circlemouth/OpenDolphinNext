@@ -52,6 +52,14 @@ const sectionCases = [
   ['Plan を記載してください。', '内服と再診案内', 'plan', 'P'],
 ] as const;
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((innerResolve) => {
+    resolve = innerResolve;
+  });
+  return { promise, resolve };
+};
+
 describe('SoapNotePanel local readback contract', () => {
   it('saves S/O/A/P/free from SOAP server response and remounts from canonical readback history', async () => {
     const user = userEvent.setup();
@@ -130,6 +138,78 @@ describe('SoapNotePanel local readback contract', () => {
     });
     expect(screen.getByText('Free は院内ローカル保存時に S として記録し、保存応答から再読込した場合も Free 欄へ戻します。')).toBeInTheDocument();
     expect(screen.getAllByText(/最終更新:/).length).toBeGreaterThan(0);
+  });
+
+  it('serializes SOAP section saves so one chart write finishes before the next starts', async () => {
+    const user = userEvent.setup();
+    const first = createDeferred<Awaited<ReturnType<typeof postChartSubjectiveEntry>>>();
+    const second = createDeferred<Awaited<ReturnType<typeof postChartSubjectiveEntry>>>();
+    vi.mocked(postChartSubjectiveEntry)
+      .mockImplementationOnce(async (payload) => ({
+        ...(await first.promise),
+        entry: {
+          ...(await first.promise).entry,
+          patientId: payload.patientId,
+          performDate: payload.performDate,
+          soapCategory: payload.soapCategory,
+          displaySection: payload.displaySection,
+          body: payload.body,
+        },
+      }))
+      .mockImplementationOnce(async (payload) => ({
+        ...(await second.promise),
+        entry: {
+          ...(await second.promise).entry,
+          patientId: payload.patientId,
+          performDate: payload.performDate,
+          soapCategory: payload.soapCategory,
+          displaySection: payload.displaySection,
+          body: payload.body,
+        },
+      }));
+
+    renderWithQueryClient(
+      <SoapNotePanel
+        history={[]}
+        meta={{
+          runId: 'RUN-SOAP-SERIAL',
+          patientId: 'P-SOAP-002',
+          appointmentId: 'APT-SOAP-002',
+          receptionId: 'RCP-SOAP-002',
+          visitDate: '2026-04-11',
+        }}
+        author={{ role: 'doctor', displayName: 'Dr. Soap', userId: 'doctor01' }}
+      />,
+    );
+
+    await user.type(screen.getByPlaceholderText('Subjective を記載してください。'), '頭痛');
+    await user.type(screen.getByPlaceholderText('Objective を記載してください。'), '発熱なし');
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => expect(postChartSubjectiveEntry).toHaveBeenCalledTimes(1));
+    await Promise.resolve();
+    expect(postChartSubjectiveEntry).toHaveBeenCalledTimes(1);
+
+    first.resolve({
+      ok: true,
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: '処理終了',
+      recordedAt: '2026-04-11T00:00:01Z',
+      entry: { documentId: 9101, recordedAt: '2026-04-11T00:00:01Z', authorName: 'Server Doctor' },
+    });
+
+    await waitFor(() => expect(postChartSubjectiveEntry).toHaveBeenCalledTimes(2));
+    second.resolve({
+      ok: true,
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: '処理終了',
+      recordedAt: '2026-04-11T00:00:02Z',
+      entry: { documentId: 9102, recordedAt: '2026-04-11T00:00:02Z', authorName: 'Server Doctor' },
+    });
+
+    await waitFor(() => expect(screen.getByText('SOAP保存完了（ローカル下書き + ローカルカルテ 2 件）')).toBeInTheDocument());
   });
 });
 

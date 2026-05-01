@@ -699,6 +699,35 @@
   flex-wrap: wrap;
 }
 
+.app-shell__route-notice {
+  max-width: 720px;
+  margin: 1rem auto;
+  padding: 1.25rem;
+  border: 1px solid var(--ui-border, #d4d7dd);
+  border-radius: 8px;
+  background: var(--ui-surface, #fff);
+  box-shadow: var(--ui-shadow-soft, 0 8px 24px rgba(15, 23, 42, 0.12));
+  display: grid;
+  gap: 0.75rem;
+}
+
+.app-shell__route-notice h1,
+.app-shell__route-notice p {
+  margin: 0;
+}
+
+.app-shell__route-eyebrow {
+  color: var(--ui-text-muted, #64748b);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.app-shell__route-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .app-shell__notice-stack {
   position: fixed;
   right: 16px;

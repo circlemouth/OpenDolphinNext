@@ -541,6 +541,15 @@ describe('ChartsPage patient tab dirty indicator', () => {
     expect(document.querySelector('.charts-patient-tabs__dirty-dot')).toBeNull();
   });
 
+  it('Charts 表示時に document title をカルテ画面へ更新する', async () => {
+    seedChartsContext();
+
+    renderChartsPage();
+
+    await screen.findByRole('button', { name: '診察終了（モック）' });
+    expect(document.title).toBe('外来カルテ | 患者ID=P-001 | 施設ID=facility');
+  });
+
   it('未保存状態で診察終了すると保存/破棄/キャンセルの3択ダイアログを表示する', async () => {
     seedPatientTabStorage();
     seedChartsContext();

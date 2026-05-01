@@ -630,6 +630,12 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const showPatientTabs = patientTabs.length >= 2;
 
   useEffect(() => {
+    const patientId = normalizeEncounterId(encounterContext.patientId);
+    const patientPart = patientId ? ` | 患者ID=${patientId}` : '';
+    document.title = `外来カルテ${patientPart} | 施設ID=${session.facilityId ?? 'unknown'}`;
+  }, [encounterContext.patientId, session.facilityId]);
+
+  useEffect(() => {
     writeChartsPatientTabsStorage(
       {
         ...patientTabsState,

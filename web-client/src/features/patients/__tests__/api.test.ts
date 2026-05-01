@@ -521,4 +521,36 @@ describe('patients api official mutation', () => {
       name: '山田 太郎',
     });
   });
+
+  it('local search treats zero-padded numeric ids as patient-id instead of zipcode', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-SEARCH',
+          traceId: 'TRACE-SEARCH',
+          routeNamespace: 'local',
+          dataSourceTransition: 'local',
+          apiResult: '00',
+          apiResultMessage: 'OK',
+          recordsReturned: 0,
+          patients: [],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    await searchLocalPatients({
+      keyword: '0000001',
+    });
+
+    const searchInit = vi.mocked(httpFetch).mock.calls[0]?.[1] as RequestInit | undefined;
+    const searchBody = JSON.parse(String(searchInit?.body));
+    expect(searchBody).toMatchObject({
+      keyword: '0000001',
+      searchType: 'patient-id',
+    });
+  });
 });

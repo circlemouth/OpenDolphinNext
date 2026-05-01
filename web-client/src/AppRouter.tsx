@@ -796,7 +796,10 @@ function FacilityShell({ session }: { session: Session | null }) {
       <Route path="charts/order-sets" element={<OrderSetEditorPage />} />
       <Route path="charts/print/outpatient" element={<ChartsOutpatientPrintPage />} />
       <Route path="charts/print/document" element={<ChartsDocumentPrintPage />} />
-      {isMobileImagesUiEnabled() ? <Route path="m/images" element={<MobileImagesUploadPage />} /> : null}
+      <Route
+        path="m/images"
+        element={isMobileImagesUiEnabled() ? <MobileImagesUploadPage /> : <MobileImagesDisabledNotice session={session} />}
+      />
       <Route path="patients" element={<ConnectedPatients />} />
       <Route path="administration" element={<AdministrationGate session={session} />} />
       {DEBUG_PAGES_ENABLED ? <Route path="debug" element={<DebugHubGate session={session} />} /> : null}
@@ -809,6 +812,26 @@ function FacilityShell({ session }: { session: Session | null }) {
       {DEBUG_PAGES_ENABLED ? <Route path="debug/orca-api" element={<DebugOrcaApiGate session={session} />} /> : null}
       <Route path="*" element={<Navigate to={buildFacilityPath(session.facilityId, '/reception')} replace />} />
     </Routes>
+  );
+}
+
+function MobileImagesDisabledNotice({ session }: { session: Session }) {
+  useEffect(() => {
+    document.title = `患者画像アップロード | 施設ID=${session.facilityId}`;
+  }, [session.facilityId]);
+
+  return (
+    <main className="app-shell__body" id="app-shell-main">
+      <section className="app-shell__route-notice" aria-labelledby="mobile-images-disabled-title">
+        <p className="app-shell__route-eyebrow">Mobile Images</p>
+        <h1 id="mobile-images-disabled-title">患者画像アップロード</h1>
+        <p>患者画像機能は現在無効化されています。サーバー設定を有効化してから再度開いてください。</p>
+        <div className="app-shell__route-actions" role="group" aria-label="戻り先">
+          <NavLink to={buildFacilityPath(session.facilityId, '/patients')}>患者管理へ戻る</NavLink>
+          <NavLink to={buildFacilityPath(session.facilityId, '/reception')}>受付へ戻る</NavLink>
+        </div>
+      </section>
+    </main>
   );
 }
 
@@ -828,6 +851,12 @@ function SessionBootstrapScreen() {
 function AdministrationGate({ session }: { session: Session }) {
   const navigate = useNavigate();
   const isAllowed = isSystemAdminRole(session.role);
+
+  useEffect(() => {
+    document.title = isAllowed
+      ? `管理画面 | 施設ID=${session.facilityId}`
+      : `管理画面（権限不足） | 施設ID=${session.facilityId}`;
+  }, [isAllowed, session.facilityId]);
 
   useEffect(() => {
     if (isAllowed) return;

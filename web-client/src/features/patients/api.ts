@@ -163,7 +163,7 @@ const inferPatientSearchType = (
 ): LocalPatientSearchParams['searchType'] | undefined => {
   const normalized = keyword?.trim();
   if (!normalized) return undefined;
-  if (/^\d{7}$/.test(normalized)) return 'zipcode';
+  if (/^\d{3}-\d{4}$/.test(normalized)) return 'zipcode';
   if (/^\d[\d-]{8,}$/.test(normalized)) return 'telephone';
   if (/^\d+$/.test(normalized)) return 'patient-id';
   if (/^[ぁ-んァ-ヶー]+$/.test(normalized)) return 'kana';

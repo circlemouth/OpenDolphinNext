@@ -631,6 +631,21 @@ describe('PatientsPage official patient flows', () => {
     expect(mockMutationCalls.at(-1)).toBe('00001234');
   });
 
+  it('empty local search can import by numeric patient keyword without opening advanced import', async () => {
+    mockPatients({ patients: [], recordsReturned: 0 });
+    mockMutationResult = { ok: true };
+    renderPatientsPage();
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText('検索キーワード'), '00001234');
+    await user.click(screen.getByRole('button', { name: '検索' }));
+
+    const emptyActions = screen.getByRole('group', { name: '次アクション' });
+    await user.click(within(emptyActions).getByRole('button', { name: 'ORCA既存患者取込' }));
+
+    expect(mockMutationCalls.at(-1)).toBe('00001234');
+  });
+
   it('create success keeps created patient visible when current search list does not include it', async () => {
     mockMutationResult = {
       ok: true,

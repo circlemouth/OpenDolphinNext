@@ -254,6 +254,48 @@ describe('AppRouter login redirect', () => {
     });
   });
 
+  it('mobile images UI disabled 時も /m/images route で feature-disabled surface を表示する', async () => {
+    sessionStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        facilityId: '123',
+        userId: 'user-1',
+        role: 'doctor',
+        runId: 'run-mobile-images',
+      }),
+    );
+
+    const router = buildRouter(['/f/123/m/images?patientId=0000001&from=patients']);
+
+    render(<RouterProvider router={router} />);
+
+    await screen.findByRole('heading', { name: '患者画像アップロード' });
+    expect(router.state.location.pathname).toBe('/f/123/m/images');
+    expect(screen.getByText('患者画像機能は現在無効化されています。サーバー設定を有効化してから再度開いてください。')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '患者管理へ戻る' })).toHaveAttribute('href', '/f/123/patients');
+  });
+
+  it('管理画面の権限不足 surface は title を更新して受付へ戻す導線を出す', async () => {
+    sessionStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        facilityId: '123',
+        userId: 'user-1',
+        role: 'doctor',
+        runId: 'run-admin-denied',
+      }),
+    );
+
+    const router = buildRouter(['/f/123/administration']);
+
+    render(<RouterProvider router={router} />);
+
+    await screen.findByText('管理画面はシステム管理者のみ利用できます。');
+    expect(router.state.location.pathname).toBe('/f/123/administration');
+    expect(document.title).toBe('管理画面（権限不足） | 施設ID=123');
+    expect(screen.getByRole('button', { name: '受付へ戻る' })).toBeInTheDocument();
+  });
+
   it('state.from が login の場合は reception にフォールバックする', async () => {
     const router = buildRouter([{ pathname: '/login', state: { from: '/login' } }]);
 

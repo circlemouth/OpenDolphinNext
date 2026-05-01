@@ -99,7 +99,7 @@ const resolvePatientSearchType = (keyword: string | undefined): LocalPatientSear
   if (!keyword) return undefined;
   const normalized = keyword.trim();
   if (!normalized) return undefined;
-  if (/^\d{7}$/.test(normalized)) return 'zipcode';
+  if (/^\d{3}-\d{4}$/.test(normalized)) return 'zipcode';
   if (/^\d[\d-]{8,}$/.test(normalized)) return 'telephone';
   if (/^\d+$/.test(normalized)) return 'patient-id';
   if (/^[ぁ-んァ-ヶー]+$/.test(normalized)) return 'kana';
@@ -340,6 +340,11 @@ const buildImportDisabledReason = (pending: boolean, patientId: string) => {
     return '患者ID（数字のみ）を入力すると取込を実行できます。';
   }
   return undefined;
+};
+
+const isImportablePatientId = (value: string | undefined | null): value is string => {
+  const normalized = value?.trim();
+  return Boolean(normalized && /^\d{1,16}$/.test(normalized));
 };
 
 const buildAddressLookupDisabledReason = (blocking: boolean, zip: string, pending: boolean) => {
@@ -918,7 +923,12 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     && !resolvedFallbackUsed
     && ((resolvedTransition ?? 'server') === 'server' || resolvedTransition === 'local');
   const importPatientIdDraft = orcaImportPatientId.trim();
-  const canImportByPatientId = Boolean(importPatientIdDraft && /^\d{1,16}$/.test(importPatientIdDraft));
+  const emptyStateImportPatientId = useMemo(() => {
+    const explicit = importPatientIdDraft;
+    if (isImportablePatientId(explicit)) return explicit;
+    const keyword = appliedFilters.keyword.trim();
+    return resolvePatientSearchType(keyword) === 'patient-id' && isImportablePatientId(keyword) ? keyword : undefined;
+  }, [appliedFilters.keyword, importPatientIdDraft]);
   const importSelectedPatientId = useMemo(() => {
     const pid = (form.patientId ?? '').trim();
     if (pid && /^[0-9]{1,16}$/.test(pid)) return pid;
@@ -1031,7 +1041,10 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   }, [blocking, enqueue, form.zip, orcaAddressPending, today]);
   const canLookupAddress = normalizeZipCode(form.zip).length === 7 && !blocking && !orcaAddressPending;
   const importDisabledReason = buildImportDisabledReason(importMutation.isPending, importPatientIdDraft);
-  const selectedImportDisabledReason = buildImportDisabledReason(importMutation.isPending, importSelectedPatientId ?? '');
+  const selectedImportDisabledReason = buildImportDisabledReason(
+    importMutation.isPending,
+    emptyStateImportPatientId ?? importSelectedPatientId ?? '',
+  );
   const addressLookupDisabledReason = buildAddressLookupDisabledReason(blocking, form.zip ?? '', orcaAddressPending);
   const missingMasterFlag = resolvedMissingMaster;
   const fallbackUsedFlag = resolvedFallbackUsed;
@@ -1788,12 +1801,13 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     setDraftFilters(DEFAULT_FILTER);
   };
 
-  const handleImportByPatientId = () => {
-    if (!canImportByPatientId) {
+  const handleImportByPatientId = (patientIdOverride?: string) => {
+    const targetPatientId = patientIdOverride?.trim() || importPatientIdDraft;
+    if (!isImportablePatientId(targetPatientId)) {
       setSelectionNotice({ tone: 'warning', message: 'ORCA患者番号を数字（最大16桁）で入力してください。' });
       return;
     }
-    importMutation.mutate(importPatientIdDraft);
+    importMutation.mutate(targetPatientId);
   };
 
   const handleCancelSelectionSwitch = () => {
@@ -2075,7 +2089,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                   <button
                     type="button"
                     className="patients-search__button primary"
-                    onClick={handleImportByPatientId}
+                    onClick={() => handleImportByPatientId()}
                     disabled={importMutation.isPending || !importPatientIdDraft}
                     aria-describedby={importDisabledReason ? 'patients-orca-import-disabled-reason' : undefined}
                   >
@@ -2233,13 +2247,13 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                   <button type="button" className="ghost" onClick={() => void refetchPatients()}>
                     再取得
                   </button>
-                  {canImportByPatientId ? (
+                  {emptyStateImportPatientId ? (
                     <button
                       type="button"
                       className="ghost"
                       disabled={importMutation.isPending}
-                      onClick={handleImportByPatientId}
-                      title="患者IDを指定して既存患者情報を取り込みます"
+                      onClick={() => handleImportByPatientId(emptyStateImportPatientId)}
+                      title={`患者ID ${emptyStateImportPatientId} の既存患者情報を取り込みます`}
                       aria-describedby={selectedImportDisabledReason ? 'patients-empty-import-disabled-reason' : undefined}
                     >
                       {importMutation.isPending ? 'ORCA既存患者取込中…' : 'ORCA既存患者取込'}

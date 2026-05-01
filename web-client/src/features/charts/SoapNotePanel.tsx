@@ -1346,17 +1346,16 @@ export function SoapNotePanel({
     }
 
     try {
-      const results = await Promise.all(
-        requests.map(async ({ entry, payload }) => {
-          try {
-            const result = await postChartSubjectiveEntry(payload);
-            return { entry, result };
-          } catch (error) {
-            const result: ChartSubjectiveEntryResponse = { ok: false, status: 0, apiResultMessage: String(error) };
-            return { entry, result };
-          }
-        }),
-      );
+      const results: Array<{ entry: SoapEntry; result: ChartSubjectiveEntryResponse }> = [];
+      for (const { entry, payload } of requests) {
+        try {
+          const result = await postChartSubjectiveEntry(payload);
+          results.push({ entry, result });
+        } catch (error) {
+          const result: ChartSubjectiveEntryResponse = { ok: false, status: 0, apiResultMessage: String(error) };
+          results.push({ entry, result });
+        }
+      }
       const failures = results.filter(({ result }) => !result.ok || (result.apiResult && result.apiResult !== '00'));
       const successfulEntries = results
         .filter(({ result }) => result.ok && (!result.apiResult || result.apiResult === '00'))
