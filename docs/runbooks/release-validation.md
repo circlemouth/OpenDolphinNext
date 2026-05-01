@@ -240,7 +240,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 ### Document integrity
 - [ ] active key を切り替えても旧文書が verify できる。
 - [ ] `mode=enforce` で検証失敗時に 409 を返す。
-- [ ] `mode=permissive` で検証失敗時に読み取り継続する。
+- [ ] `mode=off` / `mode=permissive` / keyring 欠落は起動 validation で fail closed になる。
 
 ### Patient images
 - [ ] 一覧の `downloadUrl` が context-root 非依存である。

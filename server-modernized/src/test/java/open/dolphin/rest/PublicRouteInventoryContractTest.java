@@ -39,6 +39,9 @@ class PublicRouteInventoryContractTest {
             "POST /api/orca/official/patients/name-search",
             "POST /api/orca/official/patients/sync/run",
             "POST /api/orca/official/reports/{*}",
+            "POST /api/orca/official/visits/acceptance-list",
+            "POST /api/orca/official/visits/acceptance-operation",
+            "POST /api/orca/official/visits/identifier-preflight",
             "POST /api/orca/official/visits/list",
             "POST /api/orca/official/visits/mutation");
 

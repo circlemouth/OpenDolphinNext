@@ -630,6 +630,68 @@ describe('ReceptionPage accept UX', () => {
     expect(registerButton).toBeEnabled();
   });
 
+  it('does not enable ORCA受付 for a local-only patient search result', async () => {
+    mockReceptionSelectorOptions = {
+      departments: [{ code: '01', name: '内科' }],
+      physicians: [{ code: '10001', name: '担当医A' }],
+    };
+    mockMutationQueue.push({
+      patients: [
+        {
+          patientId: 'LOCAL-001',
+          name: 'ローカル患者',
+          insurance: '保険',
+        },
+      ],
+      recordsReturned: 1,
+      runId: 'RUN-LOCAL-ONLY',
+    });
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    const form = within(patientSearch);
+    const patientInput = form.getByLabelText('患者ID');
+    await user.clear(patientInput);
+    await user.type(patientInput, 'LOCAL-001');
+    await user.click(form.getByRole('button', { name: '検索' }));
+
+    const resultPanel = within(workflowModal).getByRole('region', { name: '患者検索結果モーダル' });
+    await user.click(within(resultPanel).getAllByRole('listitem')[0]);
+
+    const acceptPanel = getAcceptRegisterPanel(workflowModal);
+    await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
+    await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
+    await user.selectOptions(within(acceptPanel).getByLabelText(/来院区分/), '1');
+
+    expect(within(acceptPanel).getByRole('button', { name: '受付する' })).toBeDisabled();
+    expect(within(acceptPanel).getByText(/ORCA 受付対象として未確認です/)).toBeInTheDocument();
+    expect(mockMutationCalls).toHaveLength(1);
+  });
+
+  it('clears stale name/kana filters when reopening the accept workflow', async () => {
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    let workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    await user.type(within(patientSearch).getByLabelText('氏名（姓）'), '山田');
+    await user.type(within(patientSearch).getByLabelText('氏名（名）'), '太郎');
+    await user.type(within(patientSearch).getByLabelText('カナ（セイ）'), 'ヤマダ');
+    await user.type(within(patientSearch).getByLabelText('カナ（メイ）'), 'タロウ');
+
+    await user.click(within(workflowModal).getByRole('button', { name: '閉じる' }));
+    workflowModal = await openAcceptWorkflowModal(user);
+    const reopenedPatientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+
+    expect(within(reopenedPatientSearch).getByLabelText('氏名（姓）')).toHaveValue('');
+    expect(within(reopenedPatientSearch).getByLabelText('氏名（名）')).toHaveValue('');
+    expect(within(reopenedPatientSearch).getByLabelText('カナ（セイ）')).toHaveValue('');
+    expect(within(reopenedPatientSearch).getByLabelText('カナ（メイ）')).toHaveValue('');
+  });
+
   it('keeps 受付する disabled until 保険/自費 and 来院区分 are selected', async () => {
     mockAppointmentData.entries = [
       {

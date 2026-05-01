@@ -57,7 +57,7 @@ describe('SoapNotePanel dirty state', () => {
     await user.click(screen.getByRole('button', { name: '保存' }));
 
     await waitFor(() => expect(postChartSubjectiveEntry).toHaveBeenCalled());
-    expect(screen.getByText(/SOAPローカルカルテ保存に失敗しました/)).toBeInTheDocument();
+    expect(screen.getByText(/SOAPのみ未保存: SOAPのみの保存に失敗しました/)).toBeInTheDocument();
     expect(onDraftDirtyChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
         dirty: true,
@@ -123,7 +123,7 @@ describe('SoapNotePanel dirty state', () => {
     await user.click(screen.getByRole('button', { name: '保存' }));
 
     await waitFor(() => expect(postChartSubjectiveEntry).toHaveBeenCalledTimes(2));
-    expect(screen.getByText(/SOAPローカルカルテ保存は一部失敗しました/)).toBeInTheDocument();
+    expect(screen.getByText(/SOAPのみ未保存: 成功 1 件 \/ 未保存 1 件/)).toBeInTheDocument();
     expect(onDraftDirtyChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
         dirty: true,

@@ -118,6 +118,8 @@ export type KarteDocumentSendResult = {
   runId?: string;
   traceId?: string;
   error?: string;
+  reasonCode?: string;
+  messageDetail?: string;
   validationErrors?: AttachmentValidationError[];
 };
 
@@ -504,6 +506,13 @@ export async function sendKarteDocumentWithAttachments(
   const metaAfter = getObservabilityMeta();
   const resolvedDocPk = response.ok ? extractDocPk(parsed.json, parsed.text) : null;
   const ok = response.ok && resolvedDocPk !== null;
+  const responsePayload = parsed.json && typeof parsed.json === 'object' ? (parsed.json as Record<string, unknown>) : {};
+  const responseMessage =
+    typeof responsePayload.apiResultMessage === 'string'
+      ? responsePayload.apiResultMessage
+      : typeof responsePayload.message === 'string'
+        ? responsePayload.message
+        : undefined;
   const result: KarteDocumentSendResult = {
     ok,
     status: response.status,
@@ -513,7 +522,14 @@ export async function sendKarteDocumentWithAttachments(
     rawText: parsed.text,
     runId: metaAfter.runId ?? metaBefore.runId,
     traceId: metaAfter.traceId ?? metaBefore.traceId,
-    error: !response.ok ? `HTTP ${response.status}` : resolvedDocPk === null ? 'invalid_doc_pk' : undefined,
+    error: !response.ok ? responseMessage ?? `HTTP ${response.status}` : resolvedDocPk === null ? 'invalid_doc_pk' : undefined,
+    reasonCode:
+      typeof responsePayload.reasonCode === 'string'
+        ? responsePayload.reasonCode
+        : typeof responsePayload.errorCode === 'string'
+          ? responsePayload.errorCode
+          : undefined,
+    messageDetail: typeof responsePayload.messageDetail === 'string' ? responsePayload.messageDetail : undefined,
   };
 
   logImageApiAudit({

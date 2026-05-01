@@ -168,6 +168,39 @@ class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void postSubjectiveReturnsSafeConfigurationRequiredWhenDocumentIntegrityConfigIsMissing() {
+        fakeKarteServiceBean.setFailure(new IllegalStateException("document.integrity.mode must be enforce"));
+        SubjectiveEntryRequest payload = validSubjectiveRequest();
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.postSubjective(servletRequest, payload));
+
+        assertSafePersistenceError(ex, "configuration_required", false);
+    }
+
+    @Test
+    void postSubjectiveReturnsSafeDocumentIntegrityUnavailableForIntegrityRuntimeFailure() {
+        fakeKarteServiceBean.setFailure(new IllegalStateException("document integrity active key is not configured"));
+        SubjectiveEntryRequest payload = validSubjectiveRequest();
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.postSubjective(servletRequest, payload));
+
+        assertSafePersistenceError(ex, "document_integrity_unavailable", false);
+    }
+
+    @Test
+    void postSubjectiveReturnsSafeRetryableServerErrorForUnexpectedPersistenceFailure() {
+        fakeKarteServiceBean.setFailure(new IllegalStateException("database temporarily unavailable"));
+        SubjectiveEntryRequest payload = validSubjectiveRequest();
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.postSubjective(servletRequest, payload));
+
+        assertSafePersistenceError(ex, "retryable_server_error", true);
+    }
+
+    @Test
     void postSubjectiveInvalidPerformDateReturns400WithoutPersisting() {
         SubjectiveEntryRequest payload = new SubjectiveEntryRequest();
         payload.setPatientId("00001");
@@ -263,6 +296,34 @@ class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
         assertEquals(Boolean.TRUE, body.get("validationError"));
     }
 
+    @SuppressWarnings("unchecked")
+    private static void assertSafePersistenceError(WebApplicationException ex, String classification,
+            boolean retryable) {
+        assertNotNull(ex);
+        assertEquals(503, ex.getResponse().getStatus());
+        Map<String, Object> body = (Map<String, Object>) ex.getResponse().getEntity();
+        assertNotNull(body);
+        assertEquals(classification, body.get("error"));
+        assertEquals(classification, body.get("code"));
+        assertEquals(classification, body.get("classification"));
+        assertEquals(Boolean.valueOf(retryable), body.get("retryable"));
+        assertEquals("20260302T132537Z", body.get("runId"));
+        String serialized = body.toString();
+        assertTrue(!serialized.contains("document.integrity.mode"));
+        assertTrue(!serialized.contains("database temporarily unavailable"));
+        assertTrue(!serialized.contains("active key"));
+    }
+
+    private static SubjectiveEntryRequest validSubjectiveRequest() {
+        SubjectiveEntryRequest payload = new SubjectiveEntryRequest();
+        payload.setPatientId("00001");
+        payload.setSoapCategory("S");
+        payload.setDisplaySection("free");
+        payload.setPerformDate("2026-04-10");
+        payload.setBody("咽頭痛あり");
+        return payload;
+    }
+
     private static void injectField(Object target, String fieldName, Object value) throws Exception {
         Class<?> type = target.getClass();
         Field field = null;
@@ -327,6 +388,7 @@ class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
     private static final class FakeKarteServiceBean extends KarteServiceBean {
         private int addDocumentCalls;
         private DocumentModel lastAddedDocument;
+        private RuntimeException failure;
 
         int getAddDocumentCalls() {
             return addDocumentCalls;
@@ -336,9 +398,16 @@ class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
             return lastAddedDocument;
         }
 
+        void setFailure(RuntimeException failure) {
+            this.failure = failure;
+        }
+
         @Override
         public long addDocument(DocumentModel document) {
             addDocumentCalls++;
+            if (failure != null) {
+                throw failure;
+            }
             lastAddedDocument = document;
             return 9000L + addDocumentCalls;
         }

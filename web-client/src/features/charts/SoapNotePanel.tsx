@@ -61,6 +61,7 @@ import {
 import { resolveAriaLive } from '../../libs/observability/observability';
 import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import { logAuditEvent } from '../../libs/audit/auditLogger';
+import { resolveUserSafeSaveFailure } from './userSafeErrorCopy';
 
 export type SoapNoteMeta = {
   runId?: string;
@@ -177,6 +178,9 @@ const resolveSoapCategory = (section: SoapSectionKey): 'S' | 'O' | 'A' | 'P' | n
       return null;
   }
 };
+
+const resolveSoapSaveErrorCopy = (detail?: string | null): string =>
+  `${resolveUserSafeSaveFailure('SOAPのみ', detail)} 病名・オーダー・文書など他領域の保存状態とは別です。未保存のSOAP欄を再試行してください。`;
 
 const SOAP_SECTION_SUPPORT_TEXT: Record<SoapSectionKey, string> = {
   free: 'Free は院内ローカル保存時に S として記録し、保存応答から再読込した場合も Free 欄へ戻します。',
@@ -635,6 +639,10 @@ export function SoapNotePanel({
       const groupKey = resolveOrderGroupKeyByEntity(entity);
       if (!groupKey) return;
       setActiveTool(groupKey);
+      setDrawerPeek(false);
+      if (request.kind === 'new') {
+        setDrawerMinimized(true);
+      }
       setActiveOrderEntity(entity);
       setActiveOrderRequest(request);
       setActiveOrderSource('right-panel');
@@ -698,6 +706,10 @@ export function SoapNotePanel({
         const latestBundle = resolveLatestBundle(entityBundles);
         setActiveTool(groupKey);
         setDrawerOpen(true);
+        setDrawerPeek(false);
+        if (!latestBundle) {
+          setDrawerMinimized(true);
+        }
         setActiveOrderEntity(orderDockOpenRequest.entity);
         setActiveOrderRequest(
           latestBundle
@@ -1358,16 +1370,17 @@ export function SoapNotePanel({
           onAuditLogged?.();
         }
         const detail = failures[0]?.result.apiResultMessage ?? failures[0]?.result.apiResult ?? 'unknown';
+        const safeMessage = resolveSoapSaveErrorCopy(detail);
         const message =
           successfulEntries.length > 0
-            ? `SOAPローカルカルテ保存は一部失敗しました: 成功 ${successfulEntries.length} 件 / 失敗 ${failures.length} 件。${detail}（未保存欄を再試行してください）`
-            : `SOAPローカルカルテ保存に失敗しました: ${detail}（再試行してください）`;
+            ? `SOAPのみ未保存: 成功 ${successfulEntries.length} 件 / 未保存 ${failures.length} 件。${safeMessage}`
+            : `SOAPのみ未保存: ${safeMessage}`;
         setFeedback(message);
         setSyncState({
           localSaved: successfulEntries.length > 0,
           serverSynced: false,
           isSaving: false,
-          error: detail,
+          error: safeMessage,
           savedAt: authoredAt,
         });
         onDraftDirtyChange?.({
@@ -1378,7 +1391,7 @@ export function SoapNotePanel({
           visitDate: meta.visitDate,
           dirtySources: ['soap'],
         });
-        return { ok: false, message, serverSynced: false, localSaved: successfulEntries.length > 0, error: detail };
+        return { ok: false, message, serverSynced: false, localSaved: successfulEntries.length > 0, error: safeMessage };
       }
 
       const successfulSections = successfulEntries.map((entry) => entry.section);
@@ -1406,13 +1419,14 @@ export function SoapNotePanel({
       return { ok: true, message, serverSynced: true, localSaved: true };
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      const message = `SOAPローカルカルテ保存に失敗しました: ${detail}（再試行してください）`;
+      const safeMessage = resolveSoapSaveErrorCopy(detail);
+      const message = `SOAPのみ未保存: ${safeMessage}`;
       setFeedback(message);
       setSyncState({
         localSaved: false,
         serverSynced: false,
         isSaving: false,
-        error: detail,
+        error: safeMessage,
         savedAt: authoredAt,
       });
       onDraftDirtyChange?.({
@@ -1423,7 +1437,7 @@ export function SoapNotePanel({
         visitDate: meta.visitDate,
         dirtySources: ['soap'],
       });
-      return { ok: false, message, serverSynced: false, localSaved: false, error: detail };
+      return { ok: false, message, serverSynced: false, localSaved: false, error: safeMessage };
     }
   }, [
     author,

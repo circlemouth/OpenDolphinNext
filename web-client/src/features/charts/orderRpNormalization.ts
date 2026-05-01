@@ -558,6 +558,19 @@ export const toMedicalModV2InformationWithSource = (
 export const toMedicalModV2Information = (bundle: OrderBundle): MedicalModV2Information | null =>
   toMedicalModV2InformationWithSource(bundle)?.info ?? null;
 
+const hasMeaningfulPrescriptionSendContent = (bundle: OrderBundle) =>
+  (bundle.items ?? []).some((item) =>
+    [
+      item.code,
+      item.name,
+      item.quantity,
+      item.unit,
+      item.memo,
+      item.userComment,
+      item.structuredCommentValue,
+    ].some((value) => (value ?? '').trim().length > 0),
+  );
+
 export const fetchMedicalModV2OrderBundles = async (patientId: string, from: string, encounterId?: string) => {
   const results = await Promise.allSettled(
     ORCA_SEND_PREFLIGHT_ORDER_ENTITIES.map(async (entity) => {
@@ -572,14 +585,12 @@ export const fetchMedicalModV2OrderBundles = async (patientId: string, from: str
             bundles: [] as OrderBundle[],
           };
         }
-        const hasStoredPrescriptionSource =
-          (prescriptionOrder.recordsReturned ?? prescriptionOrder.sourceBundles?.length ?? 0) > 0;
         return {
           ok: true,
           message: prescriptionOrder.message,
           status: prescriptionOrder.status,
           errorCode: undefined,
-          bundles: hasStoredPrescriptionSource ? buildPrescriptionOrderSendBundles(prescriptionOrder.order) : [],
+          bundles: buildPrescriptionOrderSendBundles(prescriptionOrder.order).filter(hasMeaningfulPrescriptionSendContent),
         };
       }
       return fetchOrderBundles({ patientId, entity, from });

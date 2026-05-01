@@ -1,10 +1,16 @@
 import type { ReactNode } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { SoapNotePanel } from '../SoapNotePanel';
 import type { SoapEntry } from '../soapNote';
+import { postChartSubjectiveEntry } from '../soap/subjectiveChartApi';
+
+vi.mock('../soap/subjectiveChartApi', () => ({
+  postChartSubjectiveEntry: vi.fn(),
+}));
 
 const renderWithQueryClient = (ui: ReactNode) => {
   const client = new QueryClient({
@@ -69,5 +75,36 @@ describe('SoapNotePanel UI regression', () => {
     expect(screen.queryByText(/template=/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Free履歴/)).not.toBeInTheDocument();
     expect(screen.getByLabelText('右ドック')).toBeInTheDocument();
+  });
+
+  it('SOAP保存失敗はSOAPのみ未保存として安全文言で表示する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(postChartSubjectiveEntry).mockResolvedValue({
+      ok: false,
+      status: 500,
+      apiResultMessage: 'java.lang.IllegalStateException: jdbc://internal-host failed',
+    });
+
+    renderWithQueryClient(
+      <SoapNotePanel
+        history={[]}
+        meta={{
+          runId: 'RUN-SOAP-SAFE-ERROR',
+          patientId: 'P-001',
+          appointmentId: 'APT-001',
+          receptionId: 'RCP-001',
+          visitDate: '2026-03-01',
+        }}
+        author={{ role: 'doctor', displayName: 'Dr. Test', userId: 'doctor01' }}
+        orderBundles={[]}
+      />,
+    );
+
+    await user.type(screen.getByPlaceholderText('Subjective を記載してください。'), '頭痛あり');
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    expect(await screen.findByText(/SOAPのみ未保存/)).toBeInTheDocument();
+    expect(screen.getByText(/病名・オーダー・文書など他領域の保存状態とは別です/)).toBeInTheDocument();
+    expect(screen.queryByText(/java\.lang|jdbc:\/\/internal-host/)).not.toBeInTheDocument();
   });
 });

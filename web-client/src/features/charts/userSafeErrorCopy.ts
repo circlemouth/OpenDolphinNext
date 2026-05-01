@@ -24,3 +24,14 @@ export const resolveUserSafeOperationFailure = (detail?: string | null): string 
   }
   return '状態を確認してからやり直してください。';
 };
+
+export const resolveUserSafeSaveFailure = (subject: string, detail?: string | null): string => {
+  const normalized = normalize(detail);
+  if (AUTH_HINT_RE.test(normalized)) {
+    return `${subject}の保存に失敗しました。再ログインしてからやり直してください。`;
+  }
+  if (NETWORK_HINT_RE.test(normalized)) {
+    return `${subject}の保存に失敗しました。通信状態を確認してから再試行してください。`;
+  }
+  return `${subject}の保存に失敗しました。時間をおいて再試行してください。`;
+};

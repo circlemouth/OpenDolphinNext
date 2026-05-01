@@ -193,6 +193,8 @@ const CHARGE_CONSISTENCY_ISSUE_KEYS = new Set([
 ]);
 
 const isChargeConsistencyIssueKey = (key: string) => CHARGE_CONSISTENCY_ISSUE_KEYS.has(key);
+const INJECTION_UNCODED_MAIN_ROW_MESSAGE = 'マスタ候補から薬剤/手技を選択してください。';
+const INJECTION_UNCODED_MATERIAL_ROW_MESSAGE = 'マスタ候補から材料を選択してください。';
 
 type UsageMasterMeta = {
   code?: string;
@@ -3543,6 +3545,12 @@ export function OrderBundleEditPanel({
     if (normalizedForm !== form) {
       setForm(normalizedForm);
     }
+    const validationIssuesBeforeRp = validateBundleForm({
+      form: normalizedForm,
+      entity,
+      bundleLabel,
+      usageDaysLimit: selectedUsageDaysLimit,
+    });
     const rpRequiredIssue = resolveRpRequiredIssue({
       entity,
       bundleName: normalizedForm.bundleName,
@@ -3554,17 +3562,21 @@ export function OrderBundleEditPanel({
     });
     if (rpRequiredIssue) {
       const message = buildRpRequiredEditorMessage(rpRequiredIssue);
+      const uncodedInjectionIssues = validationIssuesBeforeRp.filter(
+        (issue) => issue.key === 'uncoded_row' || issue.key === 'mixed_coded_uncoded',
+      );
+      if (uncodedInjectionIssues.length > 0) {
+        setNotice({ tone: 'error', message: uncodedInjectionIssues[0]?.message ?? message });
+        setValidationIssues(validationIssuesBeforeRp);
+        focusFirstValidationIssue(validationIssuesBeforeRp, normalizedForm);
+        return;
+      }
       setNotice({ tone: 'error', message });
       setValidationIssues([{ key: 'rp_required', message }]);
       focusFirstValidationIssue([{ key: 'rp_required', message }], normalizedForm);
       return;
     }
-    const validationIssues = validateBundleForm({
-      form: normalizedForm,
-      entity,
-      bundleLabel,
-      usageDaysLimit: selectedUsageDaysLimit,
-    });
+    const validationIssues = validationIssuesBeforeRp;
     if (validationIssues.length > 0) {
       setNotice({ tone: 'error', message: validationIssues[0].message });
       setValidationIssues(validationIssues);
@@ -3699,6 +3711,26 @@ export function OrderBundleEditPanel({
     validationByKey.get('missing_body_part_code');
   const commentError =
     validationByKey.get('invalid_comment_item') ?? validationByKey.get('invalid_comment_code');
+  const hasInjectionUncodedValidation =
+    isInjectionOrder && (validationByKey.has('uncoded_row') || validationByKey.has('mixed_coded_uncoded'));
+  const injectionUncodedMainRows = useMemo(() => {
+    if (!hasInjectionUncodedValidation) return new Set<number>();
+    return new Set(
+      form.items
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => hasOrderBundleItemValue(item) && !item.code?.trim())
+        .map(({ index }) => index),
+    );
+  }, [form.items, hasInjectionUncodedValidation]);
+  const injectionUncodedMaterialRows = useMemo(() => {
+    if (!hasInjectionUncodedValidation) return new Set<number>();
+    return new Set(
+      form.materialItems
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => hasOrderBundleItemValue(item) && !item.code?.trim())
+        .map(({ index }) => index),
+    );
+  }, [form.materialItems, hasInjectionUncodedValidation]);
 
   const invalidCommentIndices = useMemo(() => {
     if (!commentError) return new Set<number>();
@@ -4730,6 +4762,7 @@ export function OrderBundleEditPanel({
                 : []),
             ].join(' / ');
             const shouldShowRowSummary = hasRowValue;
+            const injectionRowError = injectionUncodedMainRows.has(index) ? INJECTION_UNCODED_MAIN_ROW_MESSAGE : null;
             return (
               <div key={rowId ?? `${entityId}-item-${index}`}>
                 <div
@@ -4740,11 +4773,13 @@ export function OrderBundleEditPanel({
                   }${
                     itemsError && index === 0 ? ' charts-side-panel__item-row--invalid' : ''
                   }${
+                    injectionRowError ? ' charts-side-panel__item-row--invalid' : ''
+                  }${
                     dragOverIndex === index ? ' charts-side-panel__item-row--drag-over' : ''
                   }${draggingIndex === index ? ' charts-side-panel__item-row--dragging' : ''}${
                     selectedItemRowId === rowId ? ' charts-side-panel__item-row--selected' : ''
                   }`}
-                  data-invalid={itemsError && index === 0 ? 'true' : undefined}
+                  data-invalid={itemsError && index === 0 || Boolean(injectionRowError) ? 'true' : undefined}
                   data-testid="order-bundle-item-row"
                   onClick={() => setSelectedItemRowId(rowId ?? null)}
                   onDragOver={(event) => {
@@ -4793,7 +4828,7 @@ export function OrderBundleEditPanel({
                     id={`${entityId}-item-name-${index}`}
                     name={`${entityId}-item-name-${index}`}
                     value={item.name}
-                    aria-invalid={itemsError && index === 0 ? 'true' : undefined}
+                    aria-invalid={itemsError && index === 0 || Boolean(injectionRowError) ? 'true' : undefined}
                     list={
                       rowId === selectedItemRowId && itemPredictiveCandidates.length > 0
                         ? `${entityId}-item-predictive-list`
@@ -4908,6 +4943,11 @@ export function OrderBundleEditPanel({
                     />
                   </div>
                 ) : null}
+                {injectionRowError ? (
+                  <p className="charts-side-panel__field-error" role="alert">
+                    行 {index + 1}: {injectionRowError}
+                  </p>
+                ) : null}
                 {shouldShowRowSummary ? (
                   <p className="charts-side-panel__help" data-testid={`order-bundle-item-summary-${index}`}>
                     {rowSummary}
@@ -4948,18 +4988,21 @@ export function OrderBundleEditPanel({
                   `コード: ${item.code?.trim() || '未設定'}`,
                   formatItemQuantitySummary(item, itemQuantityLabel),
                 ].join(' / ');
+                const materialRowError = injectionUncodedMaterialRows.has(index) ? INJECTION_UNCODED_MATERIAL_ROW_MESSAGE : null;
                 return (
                   <div key={rowId ?? `${entityId}-material-${index}`}>
                     <div
                       className={`charts-side-panel__item-row charts-side-panel__item-row--comment${
                         selectedItemRowId === rowId ? ' charts-side-panel__item-row--selected' : ''
-                      }`}
+                      }${materialRowError ? ' charts-side-panel__item-row--invalid' : ''}`}
+                      data-invalid={materialRowError ? 'true' : undefined}
                       onClick={() => setSelectedItemRowId(rowId ?? null)}
                     >
                       <input
                         id={`${entityId}-material-name-${index}`}
                         name={`${entityId}-material-name-${index}`}
                         value={item.name}
+                        aria-invalid={materialRowError ? 'true' : undefined}
                         list={
                           rowId === selectedItemRowId && itemPredictiveCandidates.length > 0
                             ? `${entityId}-item-predictive-list`
@@ -5022,6 +5065,11 @@ export function OrderBundleEditPanel({
                         ✕
                       </button>
                     </div>
+                    {materialRowError ? (
+                      <p className="charts-side-panel__field-error" role="alert">
+                        材料行 {index + 1}: {materialRowError}
+                      </p>
+                    ) : null}
                     {hasRowValue ? <p className="charts-side-panel__help">{rowSummary}</p> : null}
                   </div>
                 );

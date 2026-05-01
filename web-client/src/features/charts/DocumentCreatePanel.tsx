@@ -40,7 +40,7 @@ import {
   type LetterModulePayload,
   type LetterTextPayload,
 } from './letterApi';
-import { resolveUserSafeFetchFailure } from './userSafeErrorCopy';
+import { resolveUserSafeFetchFailure, resolveUserSafeSaveFailure } from './userSafeErrorCopy';
 
 export type DocumentCreatePanelMeta = {
   runId?: string;
@@ -220,7 +220,19 @@ const buildAttachmentDocumentFingerprint = (params: {
   });
 
 const TWO_PHASE_LETTER_FAILURE_NOTICE =
-  '/karte/document への画像参照保存は完了しましたが、/odletter/letter の文書履歴参照保存に失敗しました。入力内容と画像選択は残しています。再送では成功済みの documentId を再利用し、画像参照を二重作成しません。';
+  'カルテ文書保存は完了しましたが、紹介状モジュール保存失敗のため文書履歴へ反映できませんでした。入力内容と画像選択は残しています。再送では成功済みの文書IDを再利用し、画像参照を二重作成しません。';
+
+const resolveDocumentSavePhaseFailure = (
+  phase: 'karte-document' | 'letter-module',
+  detail?: string | null,
+  reasonCode?: string | null,
+): string => {
+  if (reasonCode === 'configuration_required' || reasonCode === 'document_integrity_unavailable') {
+    return `設定不足: ${resolveUserSafeSaveFailure('文書', detail)}`;
+  }
+  const subject = phase === 'karte-document' ? 'カルテ文書' : '紹介状モジュール';
+  return `${subject}保存失敗: ${resolveUserSafeSaveFailure(subject, detail)}`;
+};
 
 const buildEmptyForms = (today: string): DocumentFormState => ({
   referral: {
@@ -1354,17 +1366,17 @@ export function DocumentCreatePanel({
     const issuedAt = forms[activeType].issuedAt;
     const templateLabel = activeTemplate?.label ?? '未選択';
     if (!userPk) {
-      setNotice({ tone: 'error', message: 'ユーザー情報が取得できないため文書を保存できません。' });
+      setNotice({ tone: 'error', message: '設定不足: ユーザー情報が取得できないため文書を保存できません。' });
       setSaveRetryable(false);
       return;
     }
     if (!karteId) {
-      setNotice({ tone: 'error', message: 'カルテ情報が取得できないため文書を保存できません。' });
+      setNotice({ tone: 'error', message: '設定不足: カルテ情報が取得できないため文書を保存できません。' });
       setSaveRetryable(false);
       return;
     }
     if (editingDocId && !editingDoc?.letterId) {
-      setNotice({ tone: 'error', message: '編集中の文書IDが取得できないため更新できません。' });
+      setNotice({ tone: 'error', message: '設定不足: 編集中の文書IDが取得できないため更新できません。' });
       setSaveRetryable(false);
       return;
     }
@@ -1459,7 +1471,19 @@ export function DocumentCreatePanel({
         documentType: activeType,
       });
       const startedAt = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
-      const result = await sendKarteDocumentWithAttachments(payload, { method: 'POST', validate: true });
+      let result;
+      try {
+        result = await sendKarteDocumentWithAttachments(payload, { method: 'POST', validate: true });
+      } catch (error) {
+        clearPendingAttachmentDocument();
+        setIsSaving(false);
+        setNotice({
+          tone: 'error',
+          message: resolveDocumentSavePhaseFailure('karte-document', error instanceof Error ? error.message : String(error)),
+        });
+        setSaveRetryable(true);
+        return;
+      }
       const finishedAt = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
       documentDurationMs = Math.max(0, finishedAt - startedAt);
       documentEndpoint = result.endpoint;
@@ -1471,7 +1495,7 @@ export function DocumentCreatePanel({
         setIsSaving(false);
         setNotice({
           tone: 'error',
-          message: `文書保存に失敗しました: ${result.error ?? `HTTP ${result.status}`}`,
+          message: resolveDocumentSavePhaseFailure('karte-document', result.error ?? `HTTP ${result.status}`, result.reasonCode),
         });
         setSaveRetryable(true);
         attachmentsForDocument.forEach((attachment) => {
@@ -1527,7 +1551,33 @@ export function DocumentCreatePanel({
       attachmentIds: attachmentsForDocument.map((attachment) => attachment.id),
       linkId: editingDoc?.letterId,
     });
-    const letterResult = await saveLetterModule({ payload: letterPayload });
+    let letterResult;
+    try {
+      letterResult = await saveLetterModule({ payload: letterPayload });
+    } catch (error) {
+      setIsSaving(false);
+      const safeMessage = resolveDocumentSavePhaseFailure('letter-module', error instanceof Error ? error.message : String(error));
+      if (hasAttachments && documentId && attachmentDocumentFingerprint) {
+        pendingAttachmentDocumentRef.current = {
+          fingerprint: attachmentDocumentFingerprint,
+          documentId,
+          endpoint: documentEndpoint,
+          status: documentStatus,
+          durationMs: documentDurationMs,
+          attachmentIds: attachmentsForDocument.map((attachment) => attachment.id),
+          createdAt: pendingAttachmentDocument?.createdAt ?? new Date().toISOString(),
+        };
+        setSaveRetryable(true);
+        setDraftDirty(true);
+      } else {
+        setSaveRetryable(false);
+      }
+      setNotice({
+        tone: 'error',
+        message: hasAttachments && documentId ? `${TWO_PHASE_LETTER_FAILURE_NOTICE} ${safeMessage}` : safeMessage,
+      });
+      return;
+    }
     setIsSaving(false);
     if (!letterResult.ok) {
       if (hasAttachments && documentId && attachmentDocumentFingerprint) {
@@ -1549,8 +1599,8 @@ export function DocumentCreatePanel({
         tone: 'error',
         message:
           hasAttachments && documentId
-            ? `${TWO_PHASE_LETTER_FAILURE_NOTICE} 失敗理由: ${letterResult.error ?? `HTTP ${letterResult.status}`}`
-            : `文書保存に失敗しました: ${letterResult.error ?? `HTTP ${letterResult.status}`}`,
+            ? `${TWO_PHASE_LETTER_FAILURE_NOTICE} ${resolveDocumentSavePhaseFailure('letter-module', letterResult.error ?? `HTTP ${letterResult.status}`, letterResult.reasonCode)}`
+            : resolveDocumentSavePhaseFailure('letter-module', letterResult.error ?? `HTTP ${letterResult.status}`, letterResult.reasonCode),
       });
       return;
     }

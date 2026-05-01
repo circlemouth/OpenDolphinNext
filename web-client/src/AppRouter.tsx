@@ -598,6 +598,9 @@ export function AppRouterWithNavigation() {
       scheduleKey: removed.scheduleKey,
       encounterKey: removed.encounterKey,
       visitDate: normalizeVisitDate(removed.visitDate),
+      departmentCode: removed.departmentCode,
+      physicianCode: removed.physicianCode,
+      insuranceCombinationNumber: removed.insuranceCombinationNumber,
     };
     if (
       encounterContext.patientId ||
@@ -605,7 +608,10 @@ export function AppRouterWithNavigation() {
       encounterContext.receptionId ||
       encounterContext.scheduleKey ||
       encounterContext.encounterKey ||
-      encounterContext.visitDate
+      encounterContext.visitDate ||
+      encounterContext.departmentCode ||
+      encounterContext.physicianCode ||
+      encounterContext.insuranceCombinationNumber
     ) {
       storeChartsEncounterContext(
         encounterContext,
@@ -635,6 +641,9 @@ export function AppRouterWithNavigation() {
       ...(encounterContext.scheduleKey ? { scheduleKey: encounterContext.scheduleKey } : {}),
       ...(encounterContext.encounterKey ? { encounterKey: encounterContext.encounterKey } : {}),
       ...(encounterContext.visitDate ? { visitDate: encounterContext.visitDate } : {}),
+      ...(encounterContext.departmentCode ? { departmentCode: encounterContext.departmentCode } : {}),
+      ...(encounterContext.physicianCode ? { physicianCode: encounterContext.physicianCode } : {}),
+      ...(encounterContext.insuranceCombinationNumber ? { insuranceCombinationNumber: encounterContext.insuranceCombinationNumber } : {}),
     };
 
     navigate(
@@ -655,6 +664,9 @@ export function AppRouterWithNavigation() {
           ...(encounterContext.scheduleKey ? { scheduleKey: encounterContext.scheduleKey } : {}),
           ...(encounterContext.encounterKey ? { encounterKey: encounterContext.encounterKey } : {}),
           ...(encounterContext.visitDate ? { visitDate: encounterContext.visitDate } : {}),
+          ...(encounterContext.departmentCode ? { departmentCode: encounterContext.departmentCode } : {}),
+          ...(encounterContext.physicianCode ? { physicianCode: encounterContext.physicianCode } : {}),
+          ...(encounterContext.insuranceCombinationNumber ? { insuranceCombinationNumber: encounterContext.insuranceCombinationNumber } : {}),
           ...(removed.kw || removed.keyword ? { kw: removed.kw ?? removed.keyword, keyword: removed.kw ?? removed.keyword } : {}),
         },
       },

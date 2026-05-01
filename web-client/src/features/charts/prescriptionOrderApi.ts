@@ -173,6 +173,7 @@ type ServerPrescriptionRp = {
   documentId?: number;
   moduleId?: number;
   rpNumber?: string;
+  name?: string;
   bundleName?: string;
   medicalClass?: string;
   medicalClassNumber?: string;
@@ -1153,7 +1154,7 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
       documentId: rp.documentId,
       moduleId: rp.moduleId,
       entity: 'medOrder',
-      bundleName: rp.bundleName?.trim() || `処方RP${index + 1}`,
+      bundleName: rp.bundleName?.trim() || rp.name?.trim() || `処方RP${index + 1}`,
       bundleNumber: rp.medicalClassNumber?.trim() || rp.rpNumber?.trim() || '1',
       classCode: rp.medicalClass?.trim() || undefined,
       classCodeSystem: 'Claim007',

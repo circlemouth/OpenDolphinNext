@@ -112,6 +112,9 @@ OPENDOLPHIN_SCHEMA_ACTION="${OPENDOLPHIN_SCHEMA_ACTION:-create}"
 export OPENDOLPHIN_SCHEMA_ACTION
 SCHEMA_INITIALIZED=0
 FLYWAY_APPLIED=0
+DOCUMENT_INTEGRITY_KEYRING_HOST_PATH="${DOCUMENT_INTEGRITY_KEYRING_PATH:-}"
+DOCUMENT_INTEGRITY_KEYRING_CONTAINER_PATH="/opt/jboss/wildfly/document-integrity-keyring.json"
+DOCUMENT_INTEGRITY_KEYRING_SOURCE="env:DOCUMENT_INTEGRITY_KEYRING_PATH"
 
 SMOKE_USER_ID="${DEV_SMOKE_USER_ID:-doctor1}"
 SMOKE_USER_PASS="${DEV_SMOKE_USER_PASS:-doctor2025}"
@@ -327,6 +330,36 @@ resolve_object_storage_runtime_profile() {
   fi
 
   log "RUNTIME_PROFILE object_storage=s3 profile=${OPENDOLPHIN_RUNTIME_PROFILE_EFFECTIVE:-default} environment=${OPENDOLPHIN_ENVIRONMENT_EFFECTIVE}"
+}
+
+generate_local_secret_b64() {
+  openssl rand -base64 32 | tr -d '\n'
+}
+
+resolve_dev_object_storage_credentials() {
+  if [[ "$OBJECT_STORAGE_FREE_RUNTIME" == "1" ]]; then
+    return
+  fi
+
+  local minio_secret_source="env"
+  if [[ -z "${MINIO_ROOT_PASSWORD:-}" ]]; then
+    MINIO_ROOT_PASSWORD="$(generate_local_secret_b64)"
+    minio_secret_source="generated-local-process"
+  fi
+  MINIO_ROOT_USER="${MINIO_ROOT_USER:-opendolphin}"
+  ATTACHMENT_STORAGE_S3_ACCESS_KEY="${ATTACHMENT_STORAGE_S3_ACCESS_KEY:-$MINIO_ROOT_USER}"
+  ATTACHMENT_STORAGE_S3_SECRET_KEY="${ATTACHMENT_STORAGE_S3_SECRET_KEY:-$MINIO_ROOT_PASSWORD}"
+  PHR_EXPORT_S3_ACCESS_KEY="${PHR_EXPORT_S3_ACCESS_KEY:-$MINIO_ROOT_USER}"
+  PHR_EXPORT_S3_SECRET_KEY="${PHR_EXPORT_S3_SECRET_KEY:-$MINIO_ROOT_PASSWORD}"
+
+  export MINIO_ROOT_USER
+  export MINIO_ROOT_PASSWORD
+  export ATTACHMENT_STORAGE_S3_ACCESS_KEY
+  export ATTACHMENT_STORAGE_S3_SECRET_KEY
+  export PHR_EXPORT_S3_ACCESS_KEY
+  export PHR_EXPORT_S3_SECRET_KEY
+
+  log "Object storage credentials source=${minio_secret_source} minio_root=$(mask_state "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD") attachment_s3=$(mask_state "$ATTACHMENT_STORAGE_S3_ACCESS_KEY" "$ATTACHMENT_STORAGE_S3_SECRET_KEY") phr_s3=$(mask_state "$PHR_EXPORT_S3_ACCESS_KEY" "$PHR_EXPORT_S3_SECRET_KEY")"
 }
 
 resolve_proxy_auth_env() {
@@ -599,6 +632,51 @@ resolve_dev_admin_credentials() {
   log "SMOKE_USER account=${SMOKE_USER_ID} facility=${FACILITY_ID} pass_source=${SMOKE_USER_PASS_SOURCE}"
 }
 
+generate_document_integrity_keyring() {
+  if [[ -z "$DOCUMENT_INTEGRITY_KEYRING_HOST_PATH" ]]; then
+    DOCUMENT_INTEGRITY_KEYRING_HOST_PATH="$SCRIPT_DIR/tmp/document-integrity-keyring.local.json"
+    DOCUMENT_INTEGRITY_KEYRING_SOURCE="generated-local-ignored"
+  fi
+  if [[ "$DOCUMENT_INTEGRITY_KEYRING_HOST_PATH" != /* ]]; then
+    DOCUMENT_INTEGRITY_KEYRING_HOST_PATH="$SCRIPT_DIR/$DOCUMENT_INTEGRITY_KEYRING_HOST_PATH"
+  fi
+  if [[ ! -d "$(dirname "$DOCUMENT_INTEGRITY_KEYRING_HOST_PATH")" ]]; then
+    if [[ "$DOCUMENT_INTEGRITY_KEYRING_SOURCE" == "generated-local-ignored" ]]; then
+      mkdir -p "$(dirname "$DOCUMENT_INTEGRITY_KEYRING_HOST_PATH")"
+    else
+      echo "DOCUMENT_INTEGRITY_KEYRING_PATH parent directory is not readable." >&2
+      exit 1
+    fi
+  fi
+  DOCUMENT_INTEGRITY_KEYRING_HOST_PATH="$(cd "$(dirname "$DOCUMENT_INTEGRITY_KEYRING_HOST_PATH")" && pwd)/$(basename "$DOCUMENT_INTEGRITY_KEYRING_HOST_PATH")"
+
+  if [[ -f "$DOCUMENT_INTEGRITY_KEYRING_HOST_PATH" ]]; then
+    chmod 600 "$DOCUMENT_INTEGRITY_KEYRING_HOST_PATH" 2>/dev/null || true
+    log "Document integrity keyring source=${DOCUMENT_INTEGRITY_KEYRING_SOURCE} path_class=local-file"
+    return 0
+  fi
+
+  if [[ "$DOCUMENT_INTEGRITY_KEYRING_SOURCE" != "generated-local-ignored" ]]; then
+    echo "DOCUMENT_INTEGRITY_KEYRING_PATH is set but does not point to a readable file." >&2
+    exit 1
+  fi
+
+  local raw_key_b64
+  if command -v openssl >/dev/null 2>&1; then
+    raw_key_b64="$(openssl rand -base64 32)"
+  else
+    raw_key_b64="$(LC_ALL=C head -c 32 /dev/urandom | base64)"
+  fi
+  local old_umask
+  old_umask="$(umask)"
+  umask 077
+  printf '{\n  "algorithm": "HMAC-SHA256",\n  "keys": [\n    {"keyId": "dev-local-%s", "status": "active", "hmacKeyB64": "%s"}\n  ]\n}\n' \
+    "$DB_INIT_RUN_ID" "$raw_key_b64" > "$DOCUMENT_INTEGRITY_KEYRING_HOST_PATH"
+  umask "$old_umask"
+  unset raw_key_b64
+  log "Document integrity keyring source=${DOCUMENT_INTEGRITY_KEYRING_SOURCE} path_class=local-ignored-file"
+}
+
 generate_custom_properties() {
   log "Generating $CUSTOM_PROP_OUTPUT from $CUSTOM_PROP_TEMPLATE..."
   if [[ ! -f "$CUSTOM_PROP_TEMPLATE" ]]; then
@@ -678,10 +756,13 @@ ${storage_env_block}
       ORCA_DB_PASSWORD: ${ORCA_DB_PASSWORD}
       ORCA_DB_SSLMODE: ${ORCA_DB_SSLMODE}
       ORCA_DB_SSLROOTCERT: ${ORCA_DB_SSLROOTCERT}
+      DOCUMENT_INTEGRITY_MODE: enforce
+      DOCUMENT_INTEGRITY_KEYRING_PATH: ${DOCUMENT_INTEGRITY_KEYRING_CONTAINER_PATH}
       OPENDOLPHIN_SCHEMA_ACTION: ${OPENDOLPHIN_SCHEMA_ACTION}
       JAVA_OPTS_APPEND: \${JAVA_OPTS_APPEND:-} -Dhibernate.hbm2ddl.auto=${OPENDOLPHIN_SCHEMA_ACTION} -Djakarta.persistence.schema-generation.database.action=${OPENDOLPHIN_SCHEMA_ACTION} -Dmicrometer.export.otlp.enabled=false -Dio.micrometer.export.otlp.enabled=false -Dotlp.enabled=false -Dotel.metrics.exporter=none -Dotel.sdk.disabled=true
     volumes:
       - ./$(basename "$CUSTOM_PROP_OUTPUT"):/opt/jboss/wildfly/custom.properties
+      - ${DOCUMENT_INTEGRITY_KEYRING_HOST_PATH}:${DOCUMENT_INTEGRITY_KEYRING_CONTAINER_PATH}:ro
     healthcheck:
       test: ["CMD-SHELL", "/opt/jboss/healthcheck-session.sh"]
       interval: 30s
@@ -1477,7 +1558,9 @@ wait_for_web_client_dev_server() {
 main() {
   read_orca_info
   resolve_object_storage_runtime_profile
+  resolve_dev_object_storage_credentials
   resolve_dev_admin_credentials
+  generate_document_integrity_keyring
   if [[ "${ORCA_CONFIG_ONLY:-0}" == "1" ]]; then
     log "ORCA_CONFIG_ONLY=1: skipping docker startup."
     return 0

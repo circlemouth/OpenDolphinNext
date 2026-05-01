@@ -385,6 +385,39 @@ describe('OrderBundleEditPanel item actions', () => {
     expect(screen.getAllByRole('group', { name: '後発情報' })).toHaveLength(1);
   });
 
+  it('injectionOrder のコード未設定自由入力行は保存前に行単位エラーを表示する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...injectionProps}
+        request={{
+          requestId: 'REQ-INJECTION-UNCODED-ROW',
+          kind: 'edit',
+          bundle: {
+            entity: 'injectionOrder',
+            bundleName: '注射自由入力',
+            bundleNumber: '1',
+            classCode: '310',
+            classCodeSystem: 'Claim007',
+            className: '注射',
+            admin: '静注',
+            adminCode: '4101',
+            items: [{ name: '手入力した注射薬', quantity: '1', unit: '本', memo: '', rowRole: 'main' }],
+          },
+        }}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
+
+    expect(await screen.findByText('行 1: マスタ候補から薬剤/手技を選択してください。')).toBeInTheDocument();
+    const row = screen.getAllByTestId('order-bundle-item-row')[0];
+    expect(row).toHaveAttribute('data-invalid', 'true');
+    expect(vi.mocked(mutateOrderBundles)).not.toHaveBeenCalled();
+  });
+
   it('injectionOrder keeps rowRole=material when predictive search is used on a material row', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockImplementation(async ({ keyword }) => {

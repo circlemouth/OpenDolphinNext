@@ -91,6 +91,9 @@ function NavigationHarness() {
               scheduleKey: 'F001:S100',
               encounterKey: 'F001:E100',
               visitDate: '2026-03-26',
+              departmentCode: '01',
+              physicianCode: '10001',
+              insuranceCombinationNumber: '0001',
             },
           })
         }
@@ -262,14 +265,23 @@ describe('useAppNavigation print routing', () => {
         scheduleKey: 'F001:S100',
         encounterKey: 'F001:E100',
         visitDate: '2026-03-26',
+        departmentCode: '01',
+        physicianCode: '10001',
+        insuranceCombinationNumber: '0001',
       }),
     );
+    expect(parsed.searchParams.has('departmentCode')).toBe(false);
+    expect(parsed.searchParams.has('physicianCode')).toBe(false);
+    expect(parsed.searchParams.has('insuranceCombinationNumber')).toBe(false);
     expect(loadChartsEncounterContext({ facilityId: '0001', userId: 'user01' })).toEqual(
       expect.objectContaining({
         patientId: 'P-001',
         scheduleKey: 'F001:S100',
         encounterKey: 'F001:E100',
         visitDate: '2026-03-26',
+        departmentCode: '01',
+        physicianCode: '10001',
+        insuranceCombinationNumber: '0001',
       }),
     );
   });

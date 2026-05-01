@@ -113,9 +113,9 @@ const buildInjectionContractDetail = (code: InjectionBundleContractIssueCode, mo
     case 'invalid_injection_class_code':
       return `注射 bundle は exact allowlist（310/311/312/320/321/330/331/334/340/350）のみ${mode === 'save' ? '保存' : '送信'}できます。`;
     case 'mixed_coded_uncoded':
-      return 'コードあり行とコードなし行が混在しています。コードなし行を削除するか、すべてマスタ選択してください。';
+      return 'コードあり行とコードなし行が混在しています。対象行はマスタ候補から薬剤/手技を選択してください。';
     case 'uncoded_row':
-      return 'コードなし行が含まれています。注射は材料行を含めて ORCA に送れないため、すべてマスタ選択してください。';
+      return 'コードなし行が含まれています。対象行はマスタ候補から薬剤/手技を選択してください。';
     case 'missing_main_row':
       return '注射は送信可能な本体行（薬剤または手技）を1件以上含める必要があります。材料・コメント・部位・ローカルメモだけでは保存/送信できません。';
     case 'unsupported_selection_comment_parameter':

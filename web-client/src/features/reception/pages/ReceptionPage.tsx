@@ -760,12 +760,14 @@ const groupByStatus = (entries: ReceptionEntry[]) =>
   }));
 
 type AcceptTargetSource = 'none' | 'manual' | 'patient-search' | 'master-search' | 'selection';
+type AcceptTargetOfficialReadiness = 'unknown' | 'ready' | 'not_found' | 'unverified';
 type AcceptTarget = {
   source: AcceptTargetSource;
   patientId: string;
   name: string;
   birthDate: string;
   sex: string;
+  officialReadiness: AcceptTargetOfficialReadiness;
 };
 
 type ReceptionPageProps = {
@@ -2817,6 +2819,10 @@ export function ReceptionPage({
   const resolveAcceptTarget = useCallback((): AcceptTarget => {
     const resolveFromVisibleEntries = (targetPatientId: string) =>
       visibleAppointmentEntries.find((entry) => entry.patientId?.trim() === targetPatientId);
+    const resolveEntryOfficialReadiness = (entry?: ReceptionEntry): AcceptTargetOfficialReadiness => {
+      if (!entry) return 'unknown';
+      return entry.source === 'unknown' ? 'unverified' : 'ready';
+    };
 
     const direct = acceptPatientId.trim();
     if (direct) {
@@ -2845,17 +2851,26 @@ export function ReceptionPage({
           fromSelection?.sex?.trim() ||
           fromVisibleEntries?.sex?.trim() ||
           '',
+        officialReadiness: fromMaster
+          ? 'ready'
+          : fromVisibleEntries || fromSelection
+            ? resolveEntryOfficialReadiness(fromVisibleEntries ?? fromSelection)
+            : fromSearch
+              ? 'unverified'
+              : 'unknown',
       };
     }
 
     const fromSearch = patientSearchSelected?.patientId?.trim();
     if (fromSearch) {
+      const fromVisibleEntries = resolveFromVisibleEntries(fromSearch);
       return {
         source: 'patient-search',
         patientId: fromSearch,
         name: patientSearchSelected?.name?.trim() ?? '',
         birthDate: patientSearchSelected?.birthDate?.trim() ?? '',
         sex: patientSearchSelected?.sex?.trim() ?? '',
+        officialReadiness: fromVisibleEntries ? resolveEntryOfficialReadiness(fromVisibleEntries) : 'unverified',
       };
     }
 
@@ -2867,6 +2882,7 @@ export function ReceptionPage({
         name: masterSelected?.name?.trim() ?? '',
         birthDate: masterSelected?.birthDate?.trim() ?? '',
         sex: masterSelected?.sex?.trim() ?? '',
+        officialReadiness: 'ready',
       };
     }
 
@@ -2878,6 +2894,7 @@ export function ReceptionPage({
         name: selectedEntry?.name?.trim() ?? '',
         birthDate: selectedEntry?.birthDate?.trim() ?? '',
         sex: selectedEntry?.sex?.trim() ?? '',
+        officialReadiness: resolveEntryOfficialReadiness(selectedEntry),
       };
     }
 
@@ -2887,6 +2904,7 @@ export function ReceptionPage({
       name: '',
       birthDate: '',
       sex: '',
+      officialReadiness: 'unknown',
     };
   }, [acceptPatientId, masterSelected, patientSearchSelected, selectedEntry, visibleAppointmentEntries]);
 
@@ -2924,6 +2942,12 @@ export function ReceptionPage({
       }
       if (mismatchNotConfirmed) {
         errors.patientId = '手入力患者IDと選択中患者が不一致です。当日受付モーダルの確認導線を完了してください。';
+      }
+      if (currentAcceptTarget.officialReadiness !== 'ready') {
+        errors.patientId =
+          currentAcceptTarget.officialReadiness === 'not_found'
+            ? 'ローカル患者は存在しますが、ORCA 受付対象として未登録です。Patients で ORCA 取込/同期を行ってください。'
+            : 'ローカル患者は存在しますが、ORCA 受付対象として未確認です。Patients で ORCA 取込/同期を行ってください。';
       }
       if (!resolvedPaymentMode) errors.paymentMode = '保険/自費を選択してください';
       if (!resolvedVisitKind) errors.visitKind = '来院区分を選択してください';
@@ -2996,8 +3020,11 @@ export function ReceptionPage({
             ? 'warning'
             : 'error';
         const fallbackMessage = resolveAcceptmodFallbackMessage(apiResult);
+        const patientNotFound = payload.businessReason === 'patient_not_found' || apiResult === '10';
         const message = isSuccess
           ? '受付登録が完了しました'
+          : patientNotFound
+            ? 'ローカル患者は存在しますが、ORCA 受付対象として未確認/未登録です'
           : payload.apiResultMessage
             ? payload.apiResultMessage
           : isAlreadyAccepted
@@ -3009,7 +3036,9 @@ export function ReceptionPage({
         setAcceptResult({
           tone: toneResult,
           message,
-          detail: buildReceptionAcceptResultDetail(),
+          detail: patientNotFound
+            ? 'Patients で ORCA 取込/同期を行い、official 患者として確認してから受付してください。'
+            : buildReceptionAcceptResultDetail(),
           runId: payload.runId ?? mergedMeta.runId,
           apiResult: payload.apiResult,
         });
@@ -3030,9 +3059,8 @@ export function ReceptionPage({
               traceId: payload.traceId,
               requestNumber: params.requestNumber,
               apiResult: payload.apiResult,
-              apiResultMessage: payload.apiResultMessage,
-              acceptanceId: payload.acceptanceId,
-              patientId: payload.patient?.patientId ?? params.patientId,
+              hasApiResultMessage: Boolean(payload.apiResultMessage),
+              hasAcceptanceId: Boolean(payload.acceptanceId),
               durationMs,
             },
             null,
@@ -3040,7 +3068,6 @@ export function ReceptionPage({
           ),
         );
       } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error);
         setAcceptResult({
           tone: 'error',
           message: '受付処理に失敗しました',
@@ -3048,8 +3075,7 @@ export function ReceptionPage({
           runId: mergedMeta.runId,
         });
         enqueue({ tone: 'error', message: '受付処理に失敗しました', detail: RECEPTION_SUPPORT_GUIDE });
-        // eslint-disable-next-line no-console
-        console.error('[acceptmodv2]', detail);
+        console.error('[acceptmodv2]', { outcome: 'error', runId: mergedMeta.runId, hasError: Boolean(error) });
       }
     },
     [
@@ -3175,7 +3201,6 @@ export function ReceptionPage({
           },
         });
       } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error);
         setAcceptResult({
           tone: 'error',
           message: '受付取消に失敗しました',
@@ -3183,8 +3208,7 @@ export function ReceptionPage({
           runId: mergedMeta.runId,
         });
         enqueue({ tone: 'error', message: '受付取消に失敗しました', detail: RECEPTION_SUPPORT_GUIDE });
-        // eslint-disable-next-line no-console
-        console.error('[acceptmodv2]', detail);
+        console.error('[acceptmodv2]', { outcome: 'cancel_error', runId: mergedMeta.runId, hasError: Boolean(error) });
       }
     },
     [
@@ -3211,6 +3235,15 @@ export function ReceptionPage({
   }, [cancelConfirmState, executeCancelEntry]);
 
   const openAcceptWorkflowModal = useCallback(() => {
+    setPatientSearchNameSei('');
+    setPatientSearchNameMei('');
+    setPatientSearchKanaSei('');
+    setPatientSearchKanaMei('');
+    setPatientSearchResults([]);
+    setPatientSearchMeta(null);
+    setPatientSearchError(null);
+    setPatientSearchSelected(null);
+    patientSearchFilterRef.current = null;
     setAcceptWorkflowModalOpen(true);
     setDailyCalendarOpen(false);
     setAcceptResult(null);
@@ -3220,6 +3253,15 @@ export function ReceptionPage({
     setAcceptWorkflowModalOpen((prev) => {
       const next = !prev;
       if (next) {
+        setPatientSearchNameSei('');
+        setPatientSearchNameMei('');
+        setPatientSearchKanaSei('');
+        setPatientSearchKanaMei('');
+        setPatientSearchResults([]);
+        setPatientSearchMeta(null);
+        setPatientSearchError(null);
+        setPatientSearchSelected(null);
+        patientSearchFilterRef.current = null;
         setDailyCalendarOpen(false);
         setAcceptResult(null);
       }
@@ -3402,6 +3444,16 @@ export function ReceptionPage({
     if (!acceptTargetPatientId) {
       return { disabled: true, label: '受付する', reason: '患者を選択してください。' };
     }
+    if (acceptTarget.officialReadiness !== 'ready') {
+      return {
+        disabled: true,
+        label: '受付する',
+        reason:
+          acceptTarget.officialReadiness === 'not_found'
+            ? 'ORCA 受付対象として未登録です。Patients で ORCA 取込/同期を行ってください。'
+            : 'ORCA 受付対象として未確認です。Patients で ORCA 取込/同期を行ってください。',
+      };
+    }
     if (isManualPatientMismatch && !isManualMismatchConfirmed) {
       return {
         disabled: true,
@@ -3441,6 +3493,7 @@ export function ReceptionPage({
     return { disabled: false, label: '受付する', reason: undefined };
   }, [
     acceptTargetPatientId,
+    acceptTarget.officialReadiness,
     acceptPaymentMode,
     isManualMismatchConfirmed,
     isManualPatientMismatch,
@@ -4209,6 +4262,16 @@ export function ReceptionPage({
         <small className="reception-accept__optional">
           手入力IDから患者同定情報（生年月日/性別）を取得できません。患者選択結果を確認してください。
         </small>
+      ) : null}
+      {acceptTarget.patientId && acceptTarget.officialReadiness !== 'ready' ? (
+        <ToneBanner
+          tone="warning"
+          message="ローカル患者は存在しますが、ORCA 受付対象として未確認/未登録です。"
+          destination="受付"
+          nextAction="Patients で ORCA 取込/同期"
+          runId={resolvedRunId}
+          ariaLive="polite"
+        />
       ) : null}
       {isManualPatientMismatch ? (
         <div>

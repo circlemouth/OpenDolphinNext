@@ -10,6 +10,7 @@ public class SubjectiveEntryResponse extends OrcaApiResponse {
 
     private String recordedAt;
     private String messageDetail;
+    private String reasonCode;
     private Entry entry;
 
     public String getRecordedAt() {
@@ -26,6 +27,14 @@ public class SubjectiveEntryResponse extends OrcaApiResponse {
 
     public void setMessageDetail(String messageDetail) {
         this.messageDetail = messageDetail;
+    }
+
+    public String getReasonCode() {
+        return reasonCode;
+    }
+
+    public void setReasonCode(String reasonCode) {
+        this.reasonCode = reasonCode;
     }
 
     public Entry getEntry() {

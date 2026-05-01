@@ -11,9 +11,11 @@
 - active key と stored keyId の一致を要求しない。
 
 ## Config 契約
-- `document.integrity.mode` = `off|permissive|enforce`
+- `document.integrity.mode` = `enforce`
 - `document.integrity.keyring-path` = keyring JSON の絶対パス
-- `mode != off` の場合は keyring path 必須
+- runtime は `enforce` 固定。`off` / `permissive` は旧契約の値であり、現行 runtime では起動 validation が拒否する。
+- keyring path は常に必須。欠落・相対パス・不正 JSON・active key 不備は fail closed で起動失敗にする。
+- dev 起動 (`WEB_CLIENT_MODE=npm ./setup-modernized-env.sh`) は、`DOCUMENT_INTEGRITY_KEYRING_PATH` 未設定時だけ ignored な `tmp/document-integrity-keyring.local.json` を生成し、コンテナ内の read-only path を `DOCUMENT_INTEGRITY_KEYRING_PATH` に設定する。raw key material は stdout / log / tracked file / sample config に出さない。
 
 ## Keyring JSON 契約
 ```json
@@ -50,8 +52,7 @@
 - 保存済み `keyId` で keyring を引く。
 - key が見つからなければ `key_not_found`。
 - hash / seal / algorithm / version の不一致は fixed reasonCode を返す。
-- `mode=enforce` の場合のみ 409 を返す。
-- `mode=permissive` は監査記録のみで読み取り自体は継続する。
+- `mode=enforce` 固定のため、検証失敗時は 409 を返す。
 - attachment canonicalization には `linkId` / `linkRelation` も含め、asset owner と reference row を同一視しない。
 
 ## reasonCode 一覧
@@ -75,9 +76,9 @@
 - [x] `DocumentIntegrityService.verifyDocumentOnRead()` から active key との一致判定を削除する。
 - [x] `ServerConfigurationValidator` に keyring validation を追加する。
 - [x] 監査 payload から raw secret と不要な差分情報を除く。
-- [x] key rotation / missing key / permissive / enforce のテストを追加する。
+- [x] key rotation / missing key / enforce のテストを追加する。
 
 ## 受け入れ条件
 - [x] active key を変更しても旧文書が verify できる。
-- [x] `mode=enforce` で only 409 を返し、`mode=permissive` は読み取り継続する。
+- [x] `mode=enforce` で only 409 を返す。
 - [x] malformed keyring / active key 複数 / keyId 重複で起動失敗する。

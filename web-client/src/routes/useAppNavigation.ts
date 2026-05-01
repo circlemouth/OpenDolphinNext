@@ -439,6 +439,11 @@ export function useAppNavigation(scope: AppNavigationScope) {
           scheduleKey: encounter.scheduleKey,
           encounterKey: encounter.encounterKey,
           visitDate: normalizeVisitDate(encounter.visitDate),
+          departmentCode: encounter.departmentCode,
+          physicianCode: encounter.physicianCode,
+          insuranceCombinationNumber: encounter.insuranceCombinationNumber,
+          voucherNumber: encounter.voucherNumber,
+          sequentialNumber: encounter.sequentialNumber,
         },
       });
     },
