@@ -50,7 +50,11 @@ $NewUserSirName = if ($env:DEV_ADMIN_SIR_NAME) { $env:DEV_ADMIN_SIR_NAME } else 
 $NewUserGivenName = if ($env:DEV_ADMIN_GIVEN_NAME) { $env:DEV_ADMIN_GIVEN_NAME } else { "Master" }
 $NewUserEmail = if ($env:DEV_ADMIN_EMAIL) { $env:DEV_ADMIN_EMAIL } else { "ormaster@example.com" }
 $NewUserPassSource = if ($env:DEV_ADMIN_USER_PASS) { "env:DEV_ADMIN_USER_PASS" } else { "unset" }
-$FacilityId = "1.3.6.1.4.1.9414.10.1"
+$FacilityId = if ($env:OPENDOLPHIN_FACILITY_ID) { $env:OPENDOLPHIN_FACILITY_ID } else { "1.3.6.1.4.1.9414.10.1" }
+$SingleFacilityMode = if ($env:OPENDOLPHIN_SINGLE_FACILITY_MODE) { $env:OPENDOLPHIN_SINGLE_FACILITY_MODE } else { "false" }
+$SingleFacilityModeEnabled = $SingleFacilityMode.ToLowerInvariant() -in @("1", "true", "yes", "y", "on")
+$ViteSingleFacilityLogin = if ($env:VITE_SINGLE_FACILITY_LOGIN) { $env:VITE_SINGLE_FACILITY_LOGIN } elseif ($SingleFacilityModeEnabled) { "1" } else { "0" }
+$ViteDefaultFacilityId = if ($env:VITE_DEFAULT_FACILITY_ID) { $env:VITE_DEFAULT_FACILITY_ID } elseif ($SingleFacilityModeEnabled) { $FacilityId } else { "" }
 
 # Web クライアント設定
 $WebClientMode = if ($env:WEB_CLIENT_MODE) { $env:WEB_CLIENT_MODE } else { "docker" }
@@ -455,6 +459,8 @@ services:
       ORCA_API_WEBORCA: $env:ORCA_API_WEBORCA
       ORCA_API_RETRY_MAX: $env:ORCA_API_RETRY_MAX
       ORCA_API_RETRY_BACKOFF_MS: $env:ORCA_API_RETRY_BACKOFF_MS
+      OPENDOLPHIN_FACILITY_ID: $FacilityId
+      OPENDOLPHIN_SINGLE_FACILITY_MODE: $SingleFacilityMode
       OPENDOLPHIN_SCHEMA_ACTION: $OpenDolphinSchemaAction
       JAVA_OPTS_APPEND: \${JAVA_OPTS_APPEND:-} -Dhibernate.hbm2ddl.auto=$OpenDolphinSchemaAction -Djakarta.persistence.schema-generation.database.action=$OpenDolphinSchemaAction -Dmicrometer.export.otlp.enabled=false -Dio.micrometer.export.otlp.enabled=false -Dotlp.enabled=false -Dotel.metrics.exporter=none -Dotel.sdk.disabled=true
     volumes:
@@ -755,6 +761,8 @@ VITE_DISABLE_MSW=$devDisableMsw
 VITE_ENABLE_TELEMETRY=$devEnableTelemetry
 VITE_DISABLE_SECURITY=$devDisableSecurity
 VITE_DISABLE_AUDIT=$devDisableAudit
+VITE_SINGLE_FACILITY_LOGIN=$ViteSingleFacilityLogin
+VITE_DEFAULT_FACILITY_ID=$ViteDefaultFacilityId
 VITE_ORCA_MODE=$devOrcaMode
 VITE_ORCA_API_PATH_PREFIX=$devOrcaPathPrefix
 "@
@@ -771,6 +779,8 @@ VITE_ORCA_API_PATH_PREFIX=$devOrcaPathPrefix
     $env:VITE_DISABLE_SECURITY = $devDisableSecurity
     $env:VITE_DISABLE_AUDIT = $devDisableAudit
     $env:VITE_API_BASE_URL = $devApiBaseUrl
+    $env:VITE_SINGLE_FACILITY_LOGIN = $ViteSingleFacilityLogin
+    $env:VITE_DEFAULT_FACILITY_ID = $ViteDefaultFacilityId
     $env:VITE_ORCA_MODE = $devOrcaMode
     $env:VITE_ORCA_API_PATH_PREFIX = $devOrcaPathPrefix
 
@@ -801,7 +811,7 @@ VITE_ORCA_API_PATH_PREFIX=$devOrcaPathPrefix
     
     # Windows PowerShell 5.1 では Start-Process の -RedirectStandard* と -WindowStyle/-NoNewWindow が排他的
     # cmd.exe 経由でリダイレクトを行うことで回避
-    $cmdArgs = "/c `"cd /d `"$webClientDir`" && set VITE_DEV_PROXY_TARGET=$devProxyTarget && set VITE_DEV_USE_HTTPS=$devUseHttps && set VITE_DISABLE_MSW=$devDisableMsw && set VITE_ENABLE_TELEMETRY=$devEnableTelemetry && set VITE_DISABLE_SECURITY=$devDisableSecurity && set VITE_DISABLE_AUDIT=$devDisableAudit && set VITE_API_BASE_URL=$devApiBaseUrl && set VITE_ORCA_MODE=$devOrcaMode && set VITE_ORCA_API_PATH_PREFIX=$devOrcaPathPrefix && $npmCmd $npmArgsStr > `"$WebClientDevLogPath`" 2>&1`""
+    $cmdArgs = "/c `"cd /d `"$webClientDir`" && set VITE_DEV_PROXY_TARGET=$devProxyTarget && set VITE_DEV_USE_HTTPS=$devUseHttps && set VITE_DISABLE_MSW=$devDisableMsw && set VITE_ENABLE_TELEMETRY=$devEnableTelemetry && set VITE_DISABLE_SECURITY=$devDisableSecurity && set VITE_DISABLE_AUDIT=$devDisableAudit && set VITE_API_BASE_URL=$devApiBaseUrl && set VITE_SINGLE_FACILITY_LOGIN=$ViteSingleFacilityLogin && set VITE_DEFAULT_FACILITY_ID=$ViteDefaultFacilityId && set VITE_ORCA_MODE=$devOrcaMode && set VITE_ORCA_API_PATH_PREFIX=$devOrcaPathPrefix && $npmCmd $npmArgsStr > `"$WebClientDevLogPath`" 2>&1`""
     
     $proc = Start-Process -FilePath "cmd.exe" -ArgumentList $cmdArgs -WindowStyle Hidden -PassThru
     
@@ -816,6 +826,8 @@ function Start-WebClient-Docker {
     $dockerProxyTarget = if ($WebClientDevProxyTargetOverride) { $WebClientDevProxyTargetOverride } else { $WebClientDockerProxyTargetDefault }
     $env:VITE_DEV_PROXY_TARGET = $dockerProxyTarget
     $env:VITE_API_BASE_URL = $WebClientDevApiBase
+    $env:VITE_SINGLE_FACILITY_LOGIN = $ViteSingleFacilityLogin
+    $env:VITE_DEFAULT_FACILITY_ID = $ViteDefaultFacilityId
     $env:VITE_ORCA_MODE = if ($env:ORCA_MODE) { $env:ORCA_MODE } elseif ($global:ORN_ORCA_MODE) { $global:ORN_ORCA_MODE } else { "" }
     $env:VITE_ORCA_API_PATH_PREFIX = if ($env:ORCA_API_PATH_PREFIX) { $env:ORCA_API_PATH_PREFIX } else { "" }
     docker compose -f docker-compose.web-client.yml up -d --build --force-recreate

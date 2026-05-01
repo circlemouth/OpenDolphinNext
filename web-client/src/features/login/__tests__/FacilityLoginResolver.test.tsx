@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 
@@ -23,6 +23,7 @@ beforeEach(() => {
 
 afterEach(() => {
   localStorage.clear();
+  vi.unstubAllEnvs();
 });
 
 describe('FacilityLoginResolver', () => {
@@ -71,6 +72,19 @@ describe('FacilityLoginResolver', () => {
       expect(screen.getByText('OpenDolphin Web 施設選択')).toBeInTheDocument();
     });
     expect(router.state.location.pathname).toBe('/login');
+  });
+
+  it('single facility login では複数の recentFacilities より VITE_DEFAULT_FACILITY_ID を優先する', async () => {
+    vi.stubEnv('VITE_SINGLE_FACILITY_LOGIN', '1');
+    vi.stubEnv('VITE_DEFAULT_FACILITY_ID', 'F001');
+    localStorage.setItem('opendolphin:web-client:recentFacilities', JSON.stringify(['0001', '0002']));
+    const router = buildRouter();
+
+    render(<RouterProvider router={router} />);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/f/F001/login');
+    });
   });
 
   it('補完候補が無い場合は施設選択を表示する', async () => {

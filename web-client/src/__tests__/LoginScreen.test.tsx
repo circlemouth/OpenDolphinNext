@@ -44,6 +44,7 @@ describe('LoginScreen', () => {
   afterEach(() => {
     localStorage.clear();
     sessionStorage.clear();
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -104,6 +105,36 @@ describe('LoginScreen', () => {
     expect(screen.getByText('施設IDを入力してください。')).toHaveAttribute('id', 'login-facility-id-error');
     expect(screen.getByText('ユーザーIDを入力してください。')).toHaveAttribute('id', 'login-user-id-error');
     expect(screen.getByText('パスワードを入力してください。')).toHaveAttribute('id', 'login-password-error');
+  });
+
+  it('single facility login では施設ID入力欄を表示せず login payload から facilityId を省略する', async () => {
+    vi.stubEnv('VITE_SINGLE_FACILITY_LOGIN', '1');
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      jsonResponse({
+        facilityId: 'F001',
+        userId: 'doctor01',
+        displayName: 'Doctor One',
+        roles: ['doctor'],
+        runId: 'server-run-1',
+      }),
+    );
+    const onLoginSuccess = vi.fn();
+    const user = userEvent.setup();
+
+    render(<LoginScreen initialFacilityId="F001" lockFacilityId onLoginSuccess={onLoginSuccess} />);
+
+    expect(screen.queryByLabelText('施設ID')).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('ユーザーID'), 'doctor01');
+    await user.type(screen.getByLabelText('パスワード'), 'Secret123!');
+    await user.click(screen.getByRole('button', { name: 'ログイン' }));
+
+    await waitFor(() => expect(onLoginSuccess).toHaveBeenCalled());
+    const requestBody = JSON.parse(String(vi.mocked(httpFetch).mock.calls[0]?.[1]?.body ?? '{}')) as {
+      facilityId?: string;
+      userId?: string;
+    };
+    expect(requestBody.facilityId).toBeUndefined();
+    expect(requestBody.userId).toBe('doctor01');
   });
 
   it.each([

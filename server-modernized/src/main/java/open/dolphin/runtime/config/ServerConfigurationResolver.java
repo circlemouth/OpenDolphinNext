@@ -26,6 +26,7 @@ public class ServerConfigurationResolver {
     public static final String KEY_ENVIRONMENT = "opendolphin.environment";
     public static final String KEY_TIMEZONE = "opendolphin.timezone";
     public static final String KEY_SERVER_DATA_DIR = "jboss.server.data.dir";
+    public static final String KEY_SINGLE_FACILITY_MODE = "opendolphin.single-facility-mode";
     public static final String KEY_FACILITY_ID = "opendolphin.facility-id";
     public static final String KEY_CLOUD_ZERO = "opendolphin.cloud.zero";
     public static final String KEY_PVT_LIST_CLEAR = "opendolphin.pvt.list-clear";
@@ -184,6 +185,12 @@ public class ServerConfigurationResolver {
                 .orElse(null);
         String serverDataDirectory = optional(KEY_SERVER_DATA_DIR).orElse(null);
         return new ServerRuntimeConfiguration.RuntimeSettings(environment, timezone, serverDataDirectory);
+    }
+
+    public ServerRuntimeConfiguration.LoginSettings login() {
+        return new ServerRuntimeConfiguration.LoginSettings(
+                optionalBoolean(KEY_SINGLE_FACILITY_MODE).orElse(false)
+        );
     }
 
     public ServerRuntimeConfiguration.OrcaRuntimeSettings orcaRuntime() {

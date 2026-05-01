@@ -25,6 +25,8 @@ import open.dolphin.security.auth.AuthSessionRegistryService;
 import open.dolphin.security.auth.StepUpSessionService;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import open.dolphin.testsupport.RuntimeDelegateTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,6 +60,7 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
         setField(resource, "stepUpSessionService", stepUpSessionService);
         setField(resource, "sessionAuditDispatcher", sessionAuditDispatcher);
         setField(resource, "entityManager", entityManager);
+        setField(resource, "serverConfigurationResolver", TestServerConfigurationResolvers.resolver());
     }
 
     @Test
@@ -103,6 +106,62 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
 
         assertThat(response.getStatus()).isEqualTo(429);
         assertThat(response.getHeaderString("Retry-After")).isEqualTo("90");
+    }
+
+    @Test
+    void loginSingleFacilityModeUsesConfiguredFacilityWhenRequestOmitsFacilityId() throws Exception {
+        setField(resource, "serverConfigurationResolver", TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_SINGLE_FACILITY_MODE, "true",
+                ServerConfigurationResolver.KEY_FACILITY_ID, "F001"));
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpSession session = mock(HttpSession.class);
+        when(request.getSession(true)).thenReturn(session);
+        when(request.getSession(false)).thenReturn(session);
+        when(request.getRemoteAddr()).thenReturn("192.0.2.21");
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/session/login");
+        when(userServiceBean.authenticateWithPolicy(USER_ID, "plain-password", "192.0.2.21"))
+                .thenReturn(UserServiceBean.AuthenticationResult.success());
+        when(userServiceBean.getUser(USER_ID)).thenReturn(userWithRole(USER_ID, "doctor"));
+
+        Response response = resource.login(request,
+                new SessionAuthResource.LoginRequest(null, "user01", "plain-password", "client-single"));
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        AuthSessionSupport.SessionUserResponse entity = (AuthSessionSupport.SessionUserResponse) response.getEntity();
+        assertThat(entity.facilityId()).isEqualTo("F001");
+        verify(session).setAttribute(AuthSessionSupport.AUTH_FACILITY_ID, "F001");
+        verify(userServiceBean).authenticateWithPolicy(USER_ID, "plain-password", "192.0.2.21");
+    }
+
+    @Test
+    void loginSingleFacilityModeRejectsMismatchedFacilityIdBeforeAuthentication() throws Exception {
+        setField(resource, "serverConfigurationResolver", TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_SINGLE_FACILITY_MODE, "true",
+                ServerConfigurationResolver.KEY_FACILITY_ID, "F001"));
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/session/login");
+
+        assertThatThrownBy(() -> resource.login(request,
+                new SessionAuthResource.LoginRequest("F999", "user01", "plain-password", "client-single")))
+                .isInstanceOf(WebApplicationException.class)
+                .satisfies(ex -> assertThat(((WebApplicationException) ex).getResponse().getStatus()).isEqualTo(400));
+        verify(userServiceBean, never()).authenticateWithPolicy("F999:user01", "plain-password", null);
+        verify(request, never()).getSession(true);
+    }
+
+    @Test
+    void loginSingleFacilityModeRejectsMissingConfiguredFacilityIdBeforeAuthentication() throws Exception {
+        setField(resource, "serverConfigurationResolver", TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_SINGLE_FACILITY_MODE, "true"));
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/session/login");
+
+        assertThatThrownBy(() -> resource.login(request,
+                new SessionAuthResource.LoginRequest(null, "user01", "plain-password", "client-single")))
+                .isInstanceOf(WebApplicationException.class)
+                .satisfies(ex -> assertThat(((WebApplicationException) ex).getResponse().getStatus()).isEqualTo(400));
+        verify(userServiceBean, never()).authenticateWithPolicy(USER_ID, "plain-password", null);
+        verify(request, never()).getSession(true);
     }
 
     @Test

@@ -20,6 +20,11 @@ public final class ServerRuntimeConfiguration {
     ) {
     }
 
+    public record LoginSettings(
+            boolean singleFacilityMode
+    ) {
+    }
+
     public record OrcaRuntimeSettings(
             String facilityId,
             boolean cloudZero,

@@ -41,6 +41,11 @@ const resolveLoginTimeoutMs = () => {
   return parsed;
 };
 
+const isSingleFacilityLoginEnabled = () => {
+  const raw = import.meta.env.VITE_SINGLE_FACILITY_LOGIN ?? '';
+  return ['1', 'true', 'yes', 'on'].includes(raw.trim().toLowerCase());
+};
+
 const waitMs = (duration: number) => new Promise<void>((resolve) => setTimeout(resolve, duration));
 const normalize = (value: string) => value.trim();
 
@@ -214,6 +219,8 @@ export const LoginScreen = ({
   const shouldLockFacility = lockFacilityId && Boolean(normalizedFacilityId);
   const resolvedFacilityId = shouldLockFacility ? (initialFacilityId ?? values.facilityId) : values.facilityId;
   const normalizedResolvedFacilityId = normalize(resolvedFacilityId);
+  const singleFacilityLogin = isSingleFacilityLoginEnabled() && Boolean(normalizedResolvedFacilityId);
+  const shouldShowFacilityField = !singleFacilityLogin;
   const canSubmitCredentials = Boolean(normalizedResolvedFacilityId && normalizedUserId && values.password && !isLoading);
   const normalizedFactor2Code = secondFactorCode.replace(/\D/g, '');
   const canSubmitFactor2 = Boolean(normalizedFactor2Code.length === 6 && !isLoading);
@@ -329,7 +336,7 @@ export const LoginScreen = ({
           userId: normalizedValues.userId,
         },
       });
-      const outcome = await performLogin(normalizedValues, runId);
+      const outcome = await performLogin(normalizedValues, runId, { omitFacilityId: singleFacilityLogin });
       if (outcome.kind === 'factor2_required') {
         setPasswordVisible(false);
         setValues((prev) => ({ ...prev, password: '', clientUuid: outcome.clientUuid }));
@@ -536,26 +543,28 @@ export const LoginScreen = ({
         <form className="login-form" onSubmit={handleSubmit} noValidate>
           {step === 'credentials' ? (
             <>
-              <label className="field" htmlFor="login-facility-id">
-                <span>施設ID</span>
-                <input
-                  id="login-facility-id"
-                  name="loginFacilityId"
-                  type="text"
-                  autoComplete="organization"
-                  value={resolvedFacilityId}
-                  onChange={handleFacilityChange}
-                  placeholder="例: 0001"
-                  disabled={isLoading}
-                  aria-invalid={errors.facilityId ? 'true' : undefined}
-                  aria-describedby={resolveFieldDescribedBy('login-facility-id', errors.facilityId)}
-                />
-                {errors.facilityId ? (
-                  <span id={resolveFieldErrorId('login-facility-id')} className="field-error">
-                    {errors.facilityId}
-                  </span>
-                ) : null}
-              </label>
+              {shouldShowFacilityField ? (
+                <label className="field" htmlFor="login-facility-id">
+                  <span>施設ID</span>
+                  <input
+                    id="login-facility-id"
+                    name="loginFacilityId"
+                    type="text"
+                    autoComplete="organization"
+                    value={resolvedFacilityId}
+                    onChange={handleFacilityChange}
+                    placeholder="例: 0001"
+                    disabled={isLoading}
+                    aria-invalid={errors.facilityId ? 'true' : undefined}
+                    aria-describedby={resolveFieldDescribedBy('login-facility-id', errors.facilityId)}
+                  />
+                  {errors.facilityId ? (
+                    <span id={resolveFieldErrorId('login-facility-id')} className="field-error">
+                      {errors.facilityId}
+                    </span>
+                  ) : null}
+                </label>
+              ) : null}
 
               <label className="field" htmlFor="login-user-id">
                 <span>ユーザーID</span>
@@ -755,10 +764,14 @@ const executeSessionPost = async (endpoint: string, body: Record<string, unknown
   return response;
 };
 
-const performLogin = async (payload: CredentialsFormValues, runId: string): Promise<LoginAttemptResult> => {
+const performLogin = async (
+  payload: CredentialsFormValues,
+  runId: string,
+  options: { omitFacilityId?: boolean } = {},
+): Promise<LoginAttemptResult> => {
   const clientUuid = createClientUuid(payload.clientUuid);
   const response = await executeSessionPost(SESSION_LOGIN_ENDPOINT, {
-    facilityId: payload.facilityId,
+    ...(options.omitFacilityId ? {} : { facilityId: payload.facilityId }),
     userId: payload.userId,
     password: payload.password,
     clientUuid,

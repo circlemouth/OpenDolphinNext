@@ -69,6 +69,23 @@ class ServerConfigurationResolverTest {
     }
 
     @Test
+    void resolvesSingleFacilityLoginModeAsDisabledByDefault() {
+        ServerRuntimeConfiguration.LoginSettings settings = TestServerConfigurationResolvers.resolver()
+                .login();
+
+        assertEquals(false, settings.singleFacilityMode());
+    }
+
+    @Test
+    void resolvesSingleFacilityLoginModeAsTypedBoolean() {
+        ServerRuntimeConfiguration.LoginSettings settings = TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_SINGLE_FACILITY_MODE, "true")
+                .login();
+
+        assertEquals(true, settings.singleFacilityMode());
+    }
+
+    @Test
     void resolvesLegacyRuntimeCleanupSettings() {
         ServerConfigurationResolver resolver = TestServerConfigurationResolvers.resolver(
                 ServerConfigurationResolver.KEY_ORCA_FACILITY_JMARI_CODE, "012345678901",

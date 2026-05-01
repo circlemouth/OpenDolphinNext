@@ -39,6 +39,7 @@
 
 ### 2. ORCA Runtime
 - `opendolphin.facility-id` / `OPENDOLPHIN_FACILITY_ID` 必須
+- `opendolphin.single-facility-mode` / `OPENDOLPHIN_SINGLE_FACILITY_MODE` は任意。`true` の場合、ログイン時の施設ID入力を省略でき、サーバーは `OPENDOLPHIN_FACILITY_ID` を権威として使う。不一致の client-provided `facilityId` は拒否する。
 - `opendolphin.cloud.zero` / `OPENDOLPHIN_CLOUD_ZERO` 必須
 - `opendolphin.pvt.list-clear` / `OPENDOLPHIN_PVT_LIST_CLEAR` は `true|false`。受付一覧の 0 時リニューアルを有効化する場合のみ `true`。
 - PVT を使う場合は以下も必須

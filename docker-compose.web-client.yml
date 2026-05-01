@@ -13,6 +13,8 @@ services:
       VITE_DISABLE_AUDIT: ${VITE_DISABLE_AUDIT:-0}
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
       VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
+      VITE_SINGLE_FACILITY_LOGIN: ${VITE_SINGLE_FACILITY_LOGIN:-0}
+      VITE_DEFAULT_FACILITY_ID: ${VITE_DEFAULT_FACILITY_ID:-}
     volumes:
       - ./web-client:/app
       - web-client-node_modules:/app/node_modules

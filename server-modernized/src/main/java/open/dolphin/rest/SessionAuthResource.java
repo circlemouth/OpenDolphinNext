@@ -22,6 +22,7 @@ import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.UserModel;
 import open.dolphin.rest.dto.CurrentUserResponse;
 import open.dolphin.rest.support.CurrentUserResponseMapper;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.security.auth.AuthSessionRegistryService;
@@ -46,6 +47,9 @@ public class SessionAuthResource extends AbstractResource {
     @Inject
     private SessionAuditDispatcher sessionAuditDispatcher;
 
+    @Inject
+    private ServerConfigurationResolver serverConfigurationResolver;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -68,10 +72,10 @@ public class SessionAuthResource extends AbstractResource {
                     "ログイン情報が必要です。", AuditEventEnvelope.Outcome.FAILURE, Map.of("status", "failed"));
             throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "ログイン情報が必要です。");
         }
-        String facilityId = trimToNull(body.facilityId());
         String loginId = trimToNull(body.userId());
         String password = body.password();
         String clientUuid = trimToNull(body.clientUuid());
+        String facilityId = resolveLoginFacilityId(request, body.facilityId());
         if (facilityId == null || loginId == null || password == null || password.isBlank()) {
             recordLifecycleAudit(request, "LOGIN_PASSWORD_FAIL", facilityId, null,
                     Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request",
@@ -516,5 +520,34 @@ public class SessionAuthResource extends AbstractResource {
     }
 
     public record LoginFactor2Request(String code) {
+    }
+
+    private String resolveLoginFacilityId(HttpServletRequest request, String requestedFacilityId) {
+        String normalizedRequested = trimToNull(requestedFacilityId);
+        ServerConfigurationResolver resolver = serverConfigurationResolver != null
+                ? serverConfigurationResolver
+                : new ServerConfigurationResolver();
+        if (!resolver.login().singleFacilityMode()) {
+            return normalizedRequested;
+        }
+
+        String configuredFacilityId = trimToNull(resolver.orcaRuntime().facilityId());
+        if (configuredFacilityId == null) {
+            recordLifecycleAudit(request, "LOGIN_PASSWORD_FAIL", null, null,
+                    Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request",
+                    "single facility mode requires configured facility", AuditEventEnvelope.Outcome.FAILURE,
+                    Map.of("status", "failed", "singleFacilityMode", true));
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request",
+                    "施設ID設定が未完了です。");
+        }
+        if (normalizedRequested != null && !configuredFacilityId.equals(normalizedRequested)) {
+            recordLifecycleAudit(request, "LOGIN_PASSWORD_FAIL", configuredFacilityId, null,
+                    Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request",
+                    "facility mismatch in single facility mode", AuditEventEnvelope.Outcome.FAILURE,
+                    Map.of("status", "failed", "singleFacilityMode", true));
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request",
+                    "施設IDが現在の単一施設設定と一致しません。");
+        }
+        return configuredFacilityId;
     }
 }

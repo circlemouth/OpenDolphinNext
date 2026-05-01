@@ -12,6 +12,10 @@ type FacilityJson = {
 };
 
 const readDefaultFacilityId = () => normalizeFacilityId(import.meta.env.VITE_DEFAULT_FACILITY_ID ?? '');
+const isSingleFacilityLoginEnabled = () => {
+  const raw = import.meta.env.VITE_SINGLE_FACILITY_LOGIN ?? '';
+  return ['1', 'true', 'yes', 'on'].includes(raw.trim().toLowerCase());
+};
 
 const loadFacilityIdFromJson = async (): Promise<string | undefined> => {
   if (typeof fetch === 'undefined') return undefined;
@@ -42,6 +46,9 @@ const resolveFacilityId = async (fromState?: string | Location): Promise<string 
   const fromFacilityId = resolveFacilityIdFromFromState(fromState);
   if (fromFacilityId) return fromFacilityId;
 
+  const envFacilityId = readDefaultFacilityId();
+  if (isSingleFacilityLoginEnabled() && envFacilityId) return envFacilityId;
+
   const recentFacilities = loadRecentFacilities();
   if (recentFacilities.length === 1) {
     return recentFacilities[0];
@@ -50,7 +57,6 @@ const resolveFacilityId = async (fromState?: string | Location): Promise<string 
     return undefined;
   }
 
-  const envFacilityId = readDefaultFacilityId();
   if (envFacilityId) return envFacilityId;
 
   return loadFacilityIdFromJson();
