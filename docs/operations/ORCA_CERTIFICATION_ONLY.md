@@ -55,6 +55,7 @@
 - `ORCA_TARGET_ENV=preprod`（または `prod`）を明示し、**必ずホスト/ベースURLを指定する**。
 - 開発中は `ORCA_BASE_URL=https://weborca-trial.orca.med.or.jp/` または `ORCA_API_HOST=weborca-trial.orca.med.or.jp` / `ORCA_API_PORT=443` / `ORCA_API_SCHEME=https` を設定する。
 - Basic 認証が必要な場合は `ORCA_API_USER` / `ORCA_API_PASSWORD` を設定する。
+- ORCA が `401` / `403` を返した場合は、外部接続資格情報の設定不備として扱い、API 応答は内部詳細を出さず `503` / `orca_gateway_error` / `ORCA upstream authentication failed` に正規化する。raw Basic 値や Authorization はログ・画面・成果物に残さない。
 - WebORCA 接続時は `ORCA_MODE=weborca`（オンプレは `ORCA_MODE=onprem`）を **明示**する。
 - ローカルでは `./orca.env.local` を自動読込し、見つからない場合は `~/.config/opendolphin/orca.env` を読む。`ORCA_ENV_FILE` を指定した場合はそれを優先する。
 

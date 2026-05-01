@@ -146,11 +146,12 @@ services:
     entrypoint:
       - /bin/sh
       - -lc
-    command: >
-      mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
-      mc mb -p local/"$$ATTACHMENT_STORAGE_S3_BUCKET" >/dev/null 2>&1 || true;
-      mc anonymous set none local/"$$ATTACHMENT_STORAGE_S3_BUCKET" >/dev/null 2>&1 || true;
-      tail -f /dev/null
+    command:
+      - >
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
+        mc mb -p local/"$$ATTACHMENT_STORAGE_S3_BUCKET" >/dev/null 2>&1 || true;
+        mc anonymous set none local/"$$ATTACHMENT_STORAGE_S3_BUCKET" >/dev/null 2>&1 || true;
+        tail -f /dev/null
 
   helper:
     image: mcr.microsoft.com/devcontainers/base:jammy

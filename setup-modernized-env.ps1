@@ -37,6 +37,10 @@ $FlywayRunId = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
 $ModernizedAppHttpPort = if ($env:MODERNIZED_APP_HTTP_PORT) { $env:MODERNIZED_APP_HTTP_PORT } else { "9080" }
 $ServerHealthUrl = "http://localhost:$ModernizedAppHttpPort/openDolphin/api/health"
 $WorktreeContainerSuffix = if ($env:WORKTREE_CONTAINER_SUFFIX) { $env:WORKTREE_CONTAINER_SUFFIX } else { "" }
+$OpenDolphinRuntimeProfileEffective = if ($env:OPENDOLPHIN_RUNTIME_PROFILE) { $env:OPENDOLPHIN_RUNTIME_PROFILE } else { "" }
+$OpenDolphinEnvironmentEffective = if ($env:OPENDOLPHIN_ENVIRONMENT) { $env:OPENDOLPHIN_ENVIRONMENT } else { "trial-local" }
+$AttachmentStorageModeEffective = if ($env:ATTACHMENT_STORAGE_MODE) { $env:ATTACHMENT_STORAGE_MODE } else { "s3" }
+$ObjectStorageFreeRuntime = $false
 
 # 管理者認証 (システムアカウント)
 $AdminUser = "1.3.6.1.4.1.9414.10.1:dolphin"
@@ -55,6 +59,41 @@ $SingleFacilityMode = if ($env:OPENDOLPHIN_SINGLE_FACILITY_MODE) { $env:OPENDOLP
 $SingleFacilityModeEnabled = $SingleFacilityMode.ToLowerInvariant() -in @("1", "true", "yes", "y", "on")
 $ViteSingleFacilityLogin = if ($env:VITE_SINGLE_FACILITY_LOGIN) { $env:VITE_SINGLE_FACILITY_LOGIN } elseif ($SingleFacilityModeEnabled) { "1" } else { "0" }
 $ViteDefaultFacilityId = if ($env:VITE_DEFAULT_FACILITY_ID) { $env:VITE_DEFAULT_FACILITY_ID } elseif ($SingleFacilityModeEnabled) { $FacilityId } else { "" }
+
+if ($OpenDolphinRuntimeProfileEffective.ToLowerInvariant() -eq "orca-trial-no-object-storage") {
+    $AttachmentStorageModeEffective = "disabled"
+}
+if ($AttachmentStorageModeEffective.ToLowerInvariant() -eq "disabled") {
+    $ObjectStorageFreeRuntime = $true
+    if (-not $OpenDolphinRuntimeProfileEffective) {
+        $OpenDolphinRuntimeProfileEffective = "orca-trial-no-object-storage"
+    }
+    if (-not $env:OPENDOLPHIN_ENVIRONMENT) {
+        $OpenDolphinEnvironmentEffective = "trial-local"
+    }
+} elseif (-not $env:MINIO_ROOT_PASSWORD) {
+    if (-not $env:MINIO_ROOT_USER) {
+        $env:MINIO_ROOT_USER = "opendolphin"
+    }
+    $env:MINIO_ROOT_PASSWORD = [Guid]::NewGuid().ToString("N")
+}
+if (-not $ObjectStorageFreeRuntime) {
+    if (-not $env:MINIO_ROOT_USER) {
+        $env:MINIO_ROOT_USER = "opendolphin"
+    }
+    if (-not $env:ATTACHMENT_STORAGE_S3_ACCESS_KEY) {
+        $env:ATTACHMENT_STORAGE_S3_ACCESS_KEY = $env:MINIO_ROOT_USER
+    }
+    if (-not $env:ATTACHMENT_STORAGE_S3_SECRET_KEY) {
+        $env:ATTACHMENT_STORAGE_S3_SECRET_KEY = $env:MINIO_ROOT_PASSWORD
+    }
+    if (-not $env:PHR_EXPORT_S3_ACCESS_KEY) {
+        $env:PHR_EXPORT_S3_ACCESS_KEY = $env:MINIO_ROOT_USER
+    }
+    if (-not $env:PHR_EXPORT_S3_SECRET_KEY) {
+        $env:PHR_EXPORT_S3_SECRET_KEY = $env:MINIO_ROOT_PASSWORD
+    }
+}
 
 # Web クライアント設定
 $WebClientMode = if ($env:WEB_CLIENT_MODE) { $env:WEB_CLIENT_MODE } else { "docker" }
@@ -443,11 +482,38 @@ function Generate-CustomProperties {
 function Generate-ComposeOverride {
     Log "Generating $ComposeOverrideFile..." -Color Cyan
     $propBaseName = Split-Path $CustomPropOutput -Leaf
+    $storageEnvBlock = ""
+    if ($ObjectStorageFreeRuntime) {
+        $storageEnvBlock = @"
+      OPENDOLPHIN_RUNTIME_PROFILE: $OpenDolphinRuntimeProfileEffective
+      ATTACHMENT_STORAGE_MODE: disabled
+      ATTACHMENT_STORAGE_S3_BUCKET: ''
+      ATTACHMENT_STORAGE_S3_REGION: ''
+      ATTACHMENT_STORAGE_S3_ENDPOINT: ''
+      ATTACHMENT_STORAGE_S3_BASE_PATH: ''
+      ATTACHMENT_STORAGE_S3_FORCE_PATH_STYLE: ''
+      ATTACHMENT_STORAGE_S3_SERVER_SIDE_ENCRYPTION: ''
+      ATTACHMENT_STORAGE_S3_KMS_KEY_ID: ''
+      ATTACHMENT_STORAGE_S3_MULTIPART_THRESHOLD_MB: ''
+      ATTACHMENT_STORAGE_S3_ACCESS_KEY: ''
+      ATTACHMENT_STORAGE_S3_SECRET_KEY: ''
+      PHR_EXPORT_STORAGE_TYPE: disabled
+      PHR_EXPORT_SIGNING_SECRET: ''
+      PHR_EXPORT_S3_BUCKET: ''
+      PHR_EXPORT_S3_REGION: ''
+      PHR_EXPORT_S3_PREFIX: ''
+      PHR_EXPORT_S3_ENDPOINT: ''
+      PHR_EXPORT_S3_FORCE_PATH_STYLE: ''
+      PHR_EXPORT_S3_ACCESS_KEY: ''
+      PHR_EXPORT_S3_SECRET_KEY: ''
+"@
+    }
     $content = @"
 services:
   server-modernized-dev:
     container_name: $ServerContainerName
     environment:
+      OPENDOLPHIN_ENVIRONMENT: $OpenDolphinEnvironmentEffective
       ORCA_API_HOST: $ORN_ORCA_API_HOST
       ORCA_API_PORT: $ORN_ORCA_API_PORT
       ORCA_API_SCHEME: $ORN_ORCA_API_SCHEME
@@ -462,6 +528,7 @@ services:
       OPENDOLPHIN_FACILITY_ID: $FacilityId
       OPENDOLPHIN_SINGLE_FACILITY_MODE: $SingleFacilityMode
       OPENDOLPHIN_SCHEMA_ACTION: $OpenDolphinSchemaAction
+$storageEnvBlock
       JAVA_OPTS_APPEND: \${JAVA_OPTS_APPEND:-} -Dhibernate.hbm2ddl.auto=$OpenDolphinSchemaAction -Djakarta.persistence.schema-generation.database.action=$OpenDolphinSchemaAction -Dmicrometer.export.otlp.enabled=false -Dio.micrometer.export.otlp.enabled=false -Dotlp.enabled=false -Dotel.metrics.exporter=none -Dotel.sdk.disabled=true
     volumes:
       - ./${propBaseName}:/opt/jboss/wildfly/custom.properties
@@ -476,7 +543,21 @@ services:
 
 function Start-ModernizedServer {
     Log "Starting Modernized Server..." -Color Cyan
-    docker compose -f docker-compose.modernized.dev.yml -f $ComposeOverrideFile up -d --build --force-recreate
+    $env:ORCA_API_HOST = $ORN_ORCA_API_HOST
+    $env:ORCA_API_PORT = $ORN_ORCA_API_PORT
+    $env:ORCA_API_SCHEME = $ORN_ORCA_API_SCHEME
+    $env:ORCA_API_USER = $ORN_ORCA_API_USER
+    $env:ORCA_API_PASSWORD = $ORN_ORCA_API_PASSWORD
+    $env:ORCA_BASE_URL = $ORN_ORCA_BASE_URL
+    $env:ORCA_MODE = $ORN_ORCA_MODE
+    if ($ObjectStorageFreeRuntime) {
+        docker compose -f docker-compose.modernized.dev.yml -f $ComposeOverrideFile up -d --build --force-recreate
+    } else {
+        docker compose -f docker-compose.modernized.dev.yml -f $ComposeOverrideFile --profile object-storage up -d --build --force-recreate
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "docker compose failed to start Modernized Server."
+    }
 }
 
 function Wait-ForPostgresReady {

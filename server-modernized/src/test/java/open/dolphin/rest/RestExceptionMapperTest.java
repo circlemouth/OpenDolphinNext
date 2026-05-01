@@ -50,6 +50,21 @@ class RestExceptionMapperTest {
         assertFalse(rendered.contains("private-prefix"));
     }
 
+    @Test
+    void mapsWrappedOrcaAuthenticationFailureToSanitized503() throws Exception {
+        RestExceptionMapper mapper = mapperWithRequest("/api/orca/official/visits/list");
+
+        Response response = mapper.toResponse(new RuntimeException("Session layer failure",
+                new OrcaGatewayException("[http_status] ORCA HTTP response status 401")));
+
+        assertEquals(503, response.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) response.getEntity();
+        assertEquals("orca_gateway_error", body.get("error"));
+        assertEquals("ORCA upstream authentication failed", body.get("message"));
+        assertFalse(String.valueOf(body.get("message")).contains("401"));
+    }
+
     private static RestExceptionMapper mapperWithRequest(String uri) throws Exception {
         RestExceptionMapper mapper = new RestExceptionMapper();
         HttpServletRequest request = mock(HttpServletRequest.class);

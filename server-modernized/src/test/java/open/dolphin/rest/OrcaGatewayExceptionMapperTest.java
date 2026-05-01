@@ -54,6 +54,25 @@ class OrcaGatewayExceptionMapperTest {
     }
 
     @Test
+    void mapperReturns503ForUpstreamAuthenticationFailure() throws Exception {
+        OrcaGatewayExceptionMapper mapper = new OrcaGatewayExceptionMapper();
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/api/orca/official/visits/list");
+
+        Field field = OrcaGatewayExceptionMapper.class.getDeclaredField("request");
+        field.setAccessible(true);
+        field.set(mapper, request);
+
+        Response response = mapper.toResponse(new OrcaGatewayException("[http_status] ORCA HTTP response status 401"));
+        assertEquals(503, response.getStatus());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) response.getEntity();
+        assertEquals("ORCA upstream authentication failed", body.get("message"));
+        assertFalse(String.valueOf(body.get("message")).contains("401"));
+    }
+
+    @Test
     void mapperSanitizesInvalidUrlMessage() throws Exception {
         OrcaGatewayExceptionMapper mapper = new OrcaGatewayExceptionMapper();
         HttpServletRequest request = mock(HttpServletRequest.class);

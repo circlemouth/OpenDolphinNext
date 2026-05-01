@@ -23,7 +23,7 @@ public class OrcaGatewayExceptionMapper implements ExceptionMapper<OrcaGatewayEx
             resolvedStatus = Response.Status.BAD_GATEWAY;
         }
         String message = exception != null
-                ? AbstractResource.sanitizeOrcaTransportMessage(exception.getMessage())
+                ? sanitizeMessage(exception.getMessage())
                 : "Orca gateway error";
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("source", "orca_gateway");
@@ -43,11 +43,32 @@ public class OrcaGatewayExceptionMapper implements ExceptionMapper<OrcaGatewayEx
         String message = exception.getMessage();
         if (message != null) {
             String normalized = message.trim().toLowerCase();
+            if (isUpstreamAuthFailure(normalized)) {
+                return Response.Status.SERVICE_UNAVAILABLE.getStatusCode();
+            }
             if (normalized.contains("settings") || normalized.contains("not available")
                     || normalized.contains("incomplete")) {
                 return Response.Status.SERVICE_UNAVAILABLE.getStatusCode();
             }
         }
         return Response.Status.BAD_GATEWAY.getStatusCode();
+    }
+
+    private String sanitizeMessage(String message) {
+        String sanitized = AbstractResource.sanitizeOrcaTransportMessage(message);
+        if (sanitized != null && isUpstreamAuthFailure(sanitized.trim().toLowerCase())) {
+            return "ORCA upstream authentication failed";
+        }
+        return sanitized;
+    }
+
+    private boolean isUpstreamAuthFailure(String normalizedMessage) {
+        if (normalizedMessage == null || normalizedMessage.isBlank()) {
+            return false;
+        }
+        return normalizedMessage.contains("orca http response status 401")
+                || normalizedMessage.contains("orca http response status 403")
+                || normalizedMessage.contains("[http_status]") && normalizedMessage.contains(" status 401")
+                || normalizedMessage.contains("[http_status]") && normalizedMessage.contains(" status 403");
     }
 }

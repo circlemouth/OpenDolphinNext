@@ -70,6 +70,9 @@ public class RestExceptionMapper implements ExceptionMapper<Throwable> {
         }
         if (orcaCause != null) {
             message = AbstractResource.sanitizeOrcaTransportMessage(message);
+            if (isOrcaUpstreamAuthFailure(message)) {
+                message = "ORCA upstream authentication failed";
+            }
         }
         OrcaConnectionPolicyException policyCause = findOrcaConnectionPolicyCause(exception);
         if (policyCause != null) {
@@ -273,6 +276,9 @@ public class RestExceptionMapper implements ExceptionMapper<Throwable> {
         String message = exception.getMessage();
         if (message != null) {
             String normalized = message.trim().toLowerCase(Locale.ROOT);
+            if (isOrcaUpstreamAuthFailure(normalized)) {
+                return Response.Status.SERVICE_UNAVAILABLE.getStatusCode();
+            }
             if (normalized.contains("settings") || normalized.contains("not available")
                     || normalized.contains("incomplete")) {
                 return Response.Status.SERVICE_UNAVAILABLE.getStatusCode();
@@ -283,6 +289,17 @@ public class RestExceptionMapper implements ExceptionMapper<Throwable> {
             }
         }
         return Response.Status.BAD_GATEWAY.getStatusCode();
+    }
+
+    private boolean isOrcaUpstreamAuthFailure(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+        String normalized = message.trim().toLowerCase(Locale.ROOT);
+        return normalized.contains("orca http response status 401")
+                || normalized.contains("orca http response status 403")
+                || (normalized.contains("[http_status]") && normalized.contains(" status 401"))
+                || (normalized.contains("[http_status]") && normalized.contains(" status 403"));
     }
 
     private String resolveMessage(int status, String message) {
