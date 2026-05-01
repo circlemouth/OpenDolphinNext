@@ -39,6 +39,19 @@ describe('resolveLoginFailureMessage', () => {
     expect(message).toContain('アクセス権限');
   });
 
+  it('maps CSRF 403 to reload guidance instead of account permission guidance', () => {
+    const message = resolveLoginFailureMessage({
+      status: 403,
+      bodyText: JSON.stringify({
+        error: 'csrf_validation_failed',
+        reason: 'csrf_validation_failed',
+      }),
+    });
+
+    expect(message).toContain('再読み込み');
+    expect(message).not.toContain('アクセス権限');
+  });
+
   it('maps 404 to endpoint guidance', () => {
     const message = resolveLoginFailureMessage({
       status: 404,

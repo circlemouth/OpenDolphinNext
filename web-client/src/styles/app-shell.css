@@ -18,19 +18,14 @@
 
 .app-shell__brand {
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  align-items: center;
+  min-width: max-content;
 }
 
 .app-shell__title {
   font-weight: 800;
-  letter-spacing: 0.02em;
-  font-size: 1.2rem;
-}
-
-.app-shell__subtitle {
-  margin: 0;
-  color: var(--ui-text-muted);
+  letter-spacing: 0;
+  font-size: 1.35rem;
 }
 
 .app-shell__session {
@@ -62,25 +57,21 @@
   box-shadow: 0 10px 24px rgba(29, 78, 216, 0.16);
 }
 
-.app-shell__debug-copy {
-  border: 1px solid var(--ui-border);
-  background: var(--ui-surface);
-  color: var(--ui-text-muted);
-  padding: 0.35rem 0.7rem;
-  min-height: 32px;
-  border-radius: 8px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+.app-shell__session-status-slot {
+  display: inline-flex;
+  align-items: center;
 }
 
-.app-shell__debug-copy:hover,
-.app-shell__debug-copy:focus-visible {
-  background: var(--ui-surface-muted);
-  border-color: var(--ui-border-strong);
-  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
-  outline: none;
+.app-shell__session-status-slot:empty {
+  display: none;
+}
+
+.app-shell__session-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .app-shell__logout {
@@ -400,12 +391,11 @@
 }
 
 .workspace-tabs__tab--shortcut.is-active {
-  border-color: var(--ui-selected-border);
-  background: var(--ui-selected-bg);
-  box-shadow:
-    inset 3px 0 0 var(--ui-selected-rail),
-    0 10px 20px rgba(15, 23, 42, 0.1);
-  font-weight: 700;
+  border-color: var(--ui-primary);
+  background: var(--ui-primary);
+  color: var(--ui-primary-contrast);
+  box-shadow: 0 10px 20px rgba(29, 78, 216, 0.22);
+  font-weight: 800;
 }
 
 .workspace-tabs__tab--reception {
@@ -430,6 +420,10 @@
 
 .workspace-tabs__tab--patients .workspace-tabs__tab-icon {
   color: var(--ui-module-patients);
+}
+
+.workspace-tabs__tab--shortcut.is-active .workspace-tabs__tab-icon {
+  color: currentColor;
 }
 
 .workspace-tabs__tab-icon {

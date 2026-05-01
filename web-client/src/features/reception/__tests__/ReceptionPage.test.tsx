@@ -1369,6 +1369,44 @@ describe('ReceptionPage list and side pane guidance', () => {
     expect(row2).toHaveClass('reception-table__row--selected');
   });
 
+  it('keeps list controls and patient summary compact for reception work', () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-compact',
+        patientId: 'P-100',
+        appointmentId: 'A-100',
+        name: '表示患者',
+        kana: 'ヒョウジ',
+        birthDate: '1957-12-10 +09',
+        sex: 'M',
+        appointmentTime: '09:15',
+        department: '01 内科',
+        status: '受付中',
+        insurance: '保険',
+        source: 'slots',
+      },
+    ];
+
+    renderReceptionPage();
+
+    const statusTabs = screen.getByRole('region', { name: 'ステータスタブ' });
+    expect(within(statusTabs).getByRole('group', { name: '表示形式' })).toBeInTheDocument();
+    expect(within(statusTabs).getByRole('button', { name: '表' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(statusTabs).getByRole('button', { name: 'カード' })).toHaveAttribute('aria-pressed', 'false');
+
+    const table = screen.getByRole('table');
+    expect(within(table).queryByRole('columnheader', { name: '支払' })).toBeNull();
+    expect(within(table).queryByRole('columnheader', { name: '請求' })).toBeNull();
+    expect(within(table).queryByRole('columnheader', { name: '直近' })).toBeNull();
+
+    const row = screen.getByRole('row', { name: /表示患者/ });
+    expect(row).toHaveAttribute('data-sex-tone', 'male');
+    expect(within(row).getByText('1957年12月10日生')).toBeInTheDocument();
+    expect(within(row).queryByText(/予約ID/)).toBeNull();
+    expect(within(row).queryByText(/DOB:/)).toBeNull();
+    expect(within(row).queryByText(/性別/)).toBeNull();
+  });
+
   it('opens accept workflow modal and shows patient search/result panes; medical record preview opens in a modal (debug panels hidden by default)', async () => {
     mockAppointmentData.entries = [
       {

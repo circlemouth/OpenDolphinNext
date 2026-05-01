@@ -134,14 +134,10 @@ vi.mock('./features/workspaceTabs/WorkspaceTabBar', async () => {
     facilityId,
     role,
     orcaStatus,
-    onRequestLogout,
-    onRequestSwitchAccount,
   }: {
     facilityId?: string;
     role?: string;
     orcaStatus?: { label: string };
-    onRequestLogout?: () => void;
-    onRequestSwitchAccount?: () => void;
   }) => {
     const navigate = useNavigate();
     const basePath = `/f/${facilityId ?? '0001'}`;
@@ -161,12 +157,6 @@ vi.mock('./features/workspaceTabs/WorkspaceTabBar', async () => {
             管理画面を開く
           </button>
         ) : null}
-        <button type="button" onClick={() => onRequestSwitchAccount?.()}>
-          switch-account
-        </button>
-        <button type="button" onClick={() => onRequestLogout?.()}>
-          logout
-        </button>
       </div>
     );
   };
@@ -337,7 +327,7 @@ describe('AppRouter navigation guard', () => {
     render(<AppRouter />);
 
     await screen.findByTestId('reception-page');
-    await user.click(screen.getByRole('button', { name: 'logout' }));
+    await user.click(screen.getByRole('button', { name: 'ログアウト' }));
 
     expect(await screen.findByRole('alertdialog', { name: '未保存の変更があります' })).toBeInTheDocument();
     expect(screen.getByText('SOAPドラフトが未保存')).toBeInTheDocument();
@@ -358,7 +348,7 @@ describe('AppRouter navigation guard', () => {
 
     await screen.findByTestId('reception-page');
 
-    await user.click(screen.getByRole('button', { name: 'logout' }));
+    await user.click(screen.getByRole('button', { name: 'ログアウト' }));
     await user.click(await screen.findByRole('button', { name: '破棄してログアウト' }));
     expect(window.location.pathname).toBe('/f/0001/login');
 
@@ -371,7 +361,7 @@ describe('AppRouter navigation guard', () => {
     render(<AppRouter />);
 
     await screen.findByTestId('reception-page');
-    await user.click(screen.getByRole('button', { name: 'switch-account' }));
+    await user.click(screen.getByRole('button', { name: 'ユーザー切替' }));
     await user.click(await screen.findByRole('button', { name: '破棄して切替' }));
     expect(window.location.pathname).toBe('/f/0001/login');
   });

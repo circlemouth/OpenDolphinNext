@@ -60,6 +60,13 @@
 - `AdministrationGate`
 - `NavigationGuardProvider`
 
+## App Shell Surface
+### Current Fact
+- App shell の brand 表示は `OpenDolphinNext` です。
+- 通常トップバーには session 操作として `ユーザー切替` と `ログアウト` を置きます。
+- 通常トップバーには施設IDと RUN_ID copy CTA を常時表示しません。RUN_ID / traceId は障害時や support surface の safe support ID として扱います。
+- `受付` / `患者管理` は workspace tab の固定導線で、現在画面は active tab の強調表示で示します。
+
 ### Guard Behavior Minimum
 - `FacilityGate` は未認証の非 login route を `/login` へ `replace` し、`state.from` を保持します。
 - `FacilityShell` は facility-scoped route で session 不在なら facility-scoped path を `state.from` に積み直して `/login` へ戻します。
@@ -121,10 +128,18 @@
 - 会計送信や受付後続で使う visit context は `departmentCode` / `physicianCode` / `visitDate` の canonical 値だけを使い、display string 再解析・patientId first-match・`today` fallback を current contract に戻しません。
 - accept 成功後に charts を開く handoff は、mutation response の `scheduleKey` / `encounterKey` を優先し、未返却時だけ同一受付を指す refreshed entry で補完します。`patientId` 単独一致では handoff を解決しません。
 - patient search 結果から charts を開く導線は、直前 accept で確立した canonical handoff か、当日の active entry を一意に解決できる場合に限って有効化します。複数 active entry がある場合は fail-close します。
+- Reception surface は常時表示の戻り導線を持たず、Charts 再開は受付行または受付/患者検索の canonical handoff が成立した場合の操作として出します。
+- 受付ツールバーは正常時の `RT同期 接続済み` と `最終更新` を表示しません。自動更新停止や予約/来院データ不整合など、ユーザー対応が必要な状態だけを `エラー` 導線に集約します。
+- `エラー` 導線は受付ツールバーではなく app shell のセッション領域に表示し、通常の検索・絞り込み操作から分離します。
+- 予約/来院データ不整合は常時バナーではなく、`エラー` 導線を開いた詳細内に表示します。患者単位の送信エラー・遅延・未承認とは件数を分けて扱います。
+- 受付一覧の `表` / `カード` 表示切替はステータスタブの右端に置き、検索条件操作とは別の list view 操作として扱います。
+- 受付一覧の通常表示では予約IDを患者ID列に出さず、生年月日は `1957年12月10日生` 形式で表示します。性別は文字列ではなく、男性は青、女性は赤の左端ラインで区別します。
+- 受付一覧の表表示は `支払` / `請求` / `直近` 列を通常列から外し、会計送信・ORCA状態・補正メモなど必要な操作情報だけを残します。
 - 受付一覧の workflow state は `受付中 / 診療中 / 会計待ち / 再計待 / 会計済み / 予約` で扱い、`送信済` は transmission signal として別表示します。会計送信成功だけで `会計済み` へ遷移させません。
 - `再計待` は会計済み後の編集を示す workflow state です。補足文は correction note として扱い、generic memo と混在させません。
 - row-local key (`encounterKey` / `scheduleKey` / `receptionId` / `appointmentId`) を一意に解決できない場合、受付一覧に positive な `送信済` 表示を重ねません。
 - Charts の transmission evidence / invoice / warning も同じ row-local key で解決し、`patientId` latest cache を positive source に戻しません。
+- Reception の visible page title は workspace tab の active 表示へ統合し、重複する page header card は表示しません。screen reader 向け heading / description は維持します。
 
 ### Verification
 - test: reception accept/cancel の `Api_Result=21` を保険不一致、`Api_Result=60` を受付なしとして統一

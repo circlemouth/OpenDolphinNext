@@ -107,6 +107,9 @@ const resolveAuthFailureMessage = (reason: string | undefined, status: number): 
   if (normalizedReason === 'header_auth_disabled' || normalizedReason === 'header_authentication_disabled') {
     return AUTH_COPY.securityFailure;
   }
+  if (normalizedReason?.startsWith('csrf_')) {
+    return 'ログイン画面の安全確認情報が古くなりました。画面を再読み込みしてからもう一度ログインしてください。';
+  }
   if (status === 403) {
     return 'ログインに失敗しました。このアカウントにはアクセス権限がありません。';
   }

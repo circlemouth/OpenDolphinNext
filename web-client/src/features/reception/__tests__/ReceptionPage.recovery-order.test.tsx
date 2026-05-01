@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { ReceptionPage } from '../pages/ReceptionPage';
 
@@ -50,7 +51,7 @@ vi.mock('../components/ReceptionExceptionList', () => ({
 vi.mock('../../shared/autoRefreshNotice', () => ({
   OUTPATIENT_AUTO_REFRESH_INTERVAL_MS: 90_000,
   resolveAutoRefreshIntervalMs: (value: number) => value,
-  useAutoRefreshNotice: () => ({ tone: 'warning', message: 'AUTO_REFRESH_NOTICE', nextAction: '再取得' }),
+  useAutoRefreshNotice: () => null,
 }));
 
 vi.mock('../../charts/authService', () => ({
@@ -190,27 +191,34 @@ vi.mock('../../outpatient/orcaQueueStatus', () => ({
 }));
 
 vi.mock('../../outpatient/appointmentDataBanner', () => ({
-  getAppointmentDataBanner: () => null,
+  getAppointmentDataBanner: () => ({ tone: 'warning', message: '予約/来院データに不整合があります（受付ID欠損: 1）' }),
   countAppointmentDataIntegrity: () => ({
     missingPatientId: 0,
     missingAppointmentId: 0,
-    missingReceptionId: 0,
+    missingReceptionId: 1,
   }),
 }));
 
 describe('ReceptionPage recovery order', () => {
-  it('renders banner -> recovery -> details in order', () => {
+  it('renders data warning behind toolbar error -> recovery -> details in order', async () => {
+    const user = userEvent.setup();
     render(
       <MemoryRouter initialEntries={['/reception']}>
         <ReceptionPage runId="RUN-INIT" />
       </MemoryRouter>,
     );
 
-    const adminBanner = screen.getByTestId('admin-broadcast');
+    const toolbarError = screen.getByRole('button', { name: 'エラー一覧を開く（1件）' });
     const recoveryConsole = screen.getByTestId('order-console');
     const details = screen.getByTestId('reception-audit');
 
-    expect(adminBanner.compareDocumentPosition(recoveryConsole) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(toolbarError.compareDocumentPosition(recoveryConsole) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(recoveryConsole.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText(/予約\/来院データに不整合があります/)).toBeNull();
+
+    await user.click(toolbarError);
+
+    expect(screen.getByRole('dialog', { name: 'エラー一覧（1件）' })).toBeInTheDocument();
+    expect(screen.getByText(/予約\/来院データに不整合があります/)).toBeInTheDocument();
   });
 });

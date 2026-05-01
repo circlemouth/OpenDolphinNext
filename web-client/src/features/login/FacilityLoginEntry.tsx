@@ -64,7 +64,7 @@ export const FacilityLoginEntry = ({ heading = 'OpenDolphin Web 施設選択' }:
         </header>
         {switchContext ? (
           <div className="status-message is-error" role="status">
-            <p>施設/ユーザー切替を開始しました。権限境界を明示するため、再ログインが必要です。</p>
+            <p>ユーザー切替を開始しました。権限境界を明示するため、再ログインが必要です。</p>
             {switchActor ? (
               <p className="status-message__detail">
                 直前のログイン: {switchActor.facilityId}:{switchActor.userId}

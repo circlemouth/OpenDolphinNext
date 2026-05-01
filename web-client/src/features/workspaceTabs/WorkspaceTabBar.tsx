@@ -28,8 +28,6 @@ type WorkspaceTabBarProps = {
   facilityId?: string;
   userId?: string;
   role?: string;
-  onRequestSwitchAccount?: () => void;
-  onRequestLogout?: () => void;
   orcaStatus?: {
     tone: 'info' | 'success' | 'warning' | 'error';
     label: string;
@@ -86,8 +84,6 @@ export function WorkspaceTabBar({
   facilityId,
   userId,
   role,
-  onRequestSwitchAccount,
-  onRequestLogout,
   orcaStatus,
 }: WorkspaceTabBarProps) {
   const location = useLocation();
@@ -500,29 +496,23 @@ export function WorkspaceTabBar({
           ) : null}
         </div>
 
-        <div className="workspace-tabs__actions" role="group" aria-label="ワークスペース操作">
-          {isSystemAdmin && orcaStatus ? (
-            <span
-              className={`status-pill status-pill--xs status-pill--${orcaStatus.tone}`}
-              role="status"
-              aria-live="polite"
-              title={orcaStatus.tooltip}
-            >
-              {orcaStatus.label}
-            </span>
-          ) : null}
-          {isSystemAdmin ? (
+        {isSystemAdmin ? (
+          <div className="workspace-tabs__actions" role="group" aria-label="ワークスペース操作">
+            {orcaStatus ? (
+              <span
+                className={`status-pill status-pill--xs status-pill--${orcaStatus.tone}`}
+                role="status"
+                aria-live="polite"
+                title={orcaStatus.tooltip}
+              >
+                {orcaStatus.label}
+              </span>
+            ) : null}
             <button type="button" className="app-shell__admin" onClick={handleOpenAdministration} aria-label="管理画面を開く">
               管理画面
             </button>
-          ) : null}
-          <button type="button" className="app-shell__switch" onClick={onRequestSwitchAccount}>
-            施設/ユーザー切替
-          </button>
-          <button type="button" className="app-shell__logout" onClick={onRequestLogout}>
-            ログアウト
-          </button>
-        </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

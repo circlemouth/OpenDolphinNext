@@ -47,7 +47,7 @@
 - factor2 cancel: user が中止したことを示し、再開時は login からやり直す
 
 ## Auth Copy Minimum
-- login/factor2 は `ステップ 1/2` と `ステップ 2/2` を user-visible に区別します。
+- login の credentials surface はユーザーIDとパスワード入力を簡潔に案内し、factor2 surface は `ステップ 2/2` として user-visible に区別します。
 - factor2 では「なぜ追加確認が出たか」を目的レベルで説明し、内部実装詳細は出しません。
 - cancel / expired / retry は同一失敗文言に潰さず、再入力・再ログイン・待機の違いが分かる copy を使います。
 - factor2 step では password を保持しない前提を明示します。
@@ -63,6 +63,9 @@
 - safe な `returnTo` がある場合だけ direct return を出し、fallback shortcut は補助導線として出します。
 - canonical copy は「戻ったあと何を選び直すか」を 1 文で説明し、 raw backend/internal detail は使いません。
 - `ReturnToBar` の direct return は safe return candidate のみを使います。
+- Reception は通常業務画面として常時の `ReturnToBar` を出しません。患者文脈が成立した Charts 再開は行操作または受付/患者検索の handoff から行います。
+- Reception の正常状態はツールバーに逐次表示せず、ユーザー対応が必要な状態だけ `エラー` 導線へ集約します。
+- Reception の `エラー` 導線は app shell のセッション領域に置き、画面固有の検索・絞り込み操作と混在させません。
 
 ## Accessibility Minimum
 - 色だけに依存して状態を伝えないことを最小契約とします。

@@ -33,7 +33,7 @@ import { ReceptionPage } from './features/reception/pages/ReceptionPage';
 import { MobileImagesUploadPage } from './features/images/pages/MobileImagesUploadPage';
 import './styles/app-shell.css';
 import { getObservabilityMeta, resolveAriaLive, updateObservabilityMeta } from './libs/observability/observability';
-import { copyRunIdToClipboard, copyTextToClipboard } from './libs/observability/runIdCopy';
+import { copyTextToClipboard } from './libs/observability/runIdCopy';
 import { AuthServiceProvider, clearStoredAuthFlags, useAuthService } from './features/charts/authService';
 import { PatientsPage } from './features/patients/PatientsPage';
 import { AdministrationPage } from './features/administration/AdministrationPage';
@@ -891,7 +891,7 @@ function FacilityMismatchNotice({
         <p>
           要求された施設: {describeFacilityId(requestedFacilityId)} / 現在の施設: {describeFacilityId(session.facilityId)}
         </p>
-        <p>施設/ユーザー切替は上部の「施設/ユーザー切替」からログアウト後に実施してください。</p>
+        <p>ユーザー切替またはログアウト後に、利用する施設のログイン画面から入り直してください。</p>
         <details>
           <summary>補助情報を表示</summary>
           <p>ユーザー: {session.userId}</p>
@@ -1491,29 +1491,6 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
     return `${orcaTopStatus.detail} / 最終確認: ${checkedAt}`;
   }, [orcaTopStatus.checkedAt, orcaTopStatus.detail]);
 
-  const handleCopyRunId = async () => {
-    const runId = resolvedRunId;
-    if (!runId) {
-      enqueueToast({ tone: 'error', message: 'RUN_ID が未取得です', detail: 'ログイン情報を確認してください。' });
-      return;
-    }
-    try {
-      const method = await copyRunIdToClipboard(runId);
-      if (method === 'prompt') {
-        enqueueToast({ tone: 'info', message: '手動コピーを開きました', detail: runId, durationMs: 3600 });
-      } else {
-        enqueueToast({ tone: 'success', message: 'RUN_ID をコピーしました', detail: runId, durationMs: 2400 });
-      }
-    } catch {
-      enqueueToast({
-        tone: 'error',
-        message: 'RUN_ID のコピーに失敗しました',
-        detail: 'クリップボード権限を確認してください。',
-        durationMs: 2400,
-      });
-    }
-  };
-
   const executeSwitchAccount = useCallback(() => {
     const switchContext = buildSwitchContext(session, 'manual');
     logAuditEvent({
@@ -1592,26 +1569,24 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
       <div className="app-shell">
         <header className="app-shell__topbar" data-run-id={resolvedRunId}>
           <div className="app-shell__brand">
-            <span className="app-shell__title">OpenDolphin Web</span>
-            <small className="app-shell__subtitle">臨床業務ワークスペース</small>
+            <span className="app-shell__title">OpenDolphinNext</span>
           </div>
           <div className="app-shell__session" data-run-id={resolvedRunId}>
-            <span className="app-shell__pill app-shell__pill--fixed">施設ID: {session.facilityId}</span>
             <span className="app-shell__pill app-shell__pill--fixed">
               ユーザー: {session.displayName ?? session.commonName ?? session.userId}
             </span>
-          <span className="app-shell__pill app-shell__pill--fixed" data-tooltip="補助情報: 認可ロール">
-            権限: {session.role}
-          </span>
-            <button
-              type="button"
-              className="app-shell__debug-copy"
-              onClick={handleCopyRunId}
-              aria-label="RUN_ID をコピー"
-              title={resolvedRunId ? `RUN_ID をコピー: ${resolvedRunId}` : 'RUN_ID をコピー'}
-            >
-              RUN_ID コピー
-            </button>
+            <span className="app-shell__pill app-shell__pill--fixed" data-tooltip="補助情報: 認可ロール">
+              権限: {session.role}
+            </span>
+            <span id="app-shell-session-status-slot" className="app-shell__session-status-slot" aria-live="polite" />
+            <div className="app-shell__session-actions" role="group" aria-label="セッション操作">
+              <button type="button" className="app-shell__switch" onClick={requestSwitchAccount}>
+                ユーザー切替
+              </button>
+              <button type="button" className="app-shell__logout" onClick={requestLogout}>
+                ログアウト
+              </button>
+            </div>
           </div>
         </header>
 
@@ -1621,8 +1596,6 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
           facilityId={session.facilityId}
           userId={session.userId}
           role={session.role}
-          onRequestSwitchAccount={requestSwitchAccount}
-          onRequestLogout={requestLogout}
           orcaStatus={
             isSystemAdmin
               ? {
@@ -1737,7 +1710,7 @@ function ConnectedReception() {
       runId={flags.runId ?? session.runId}
       destination="ORCA queue"
       title="受付"
-      description="受付一覧の確認、例外対応、当日受付、カルテ起動を行う画面。"
+      description="受付一覧の確認、エラー対応、当日受付、カルテ起動を行う画面。"
     />
   );
 }

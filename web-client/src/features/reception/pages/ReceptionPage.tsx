@@ -1,5 +1,6 @@
 import { Global } from '@emotion/react';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 
@@ -43,7 +44,6 @@ import { AdminBroadcastBanner } from '../../shared/AdminBroadcastBanner';
 import { ApiFailureBanner } from '../../shared/ApiFailureBanner';
 import { AuditSummaryInline } from '../../shared/AuditSummaryInline';
 import { PatientIdentityBar } from '../../shared/PatientIdentityBar';
-import { ReturnToBar } from '../../shared/ReturnToBar';
 import { RunIdBadge } from '../../shared/RunIdBadge';
 import { StatusPill } from '../../shared/StatusPill';
 import { resolveCacheHitTone, resolveMetaFlagTone, resolveTransitionTone } from '../../shared/metaPillRules';
@@ -161,6 +161,35 @@ const formatLocalYmd = (date: Date) =>
   `${date.getFullYear().toString().padStart(4, '0')}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 const formatLocalHms = (date: Date) => `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
 const todayString = () => formatLocalYmd(new Date());
+
+type PatientSexTone = 'male' | 'female' | 'unknown';
+
+const formatBirthDateJa = (value?: string | null) => {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '生年月日未登録';
+  const compactMatch = raw.match(/^(\d{4})(\d{2})(\d{2})$/);
+  const hyphenMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const match = compactMatch ?? hyphenMatch;
+  if (!match) return raw;
+  return `${Number(match[1])}年${Number(match[2])}月${Number(match[3])}日生`;
+};
+
+const resolvePatientSexTone = (value?: string | null): PatientSexTone => {
+  const normalized = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  if (normalized === 'M' || normalized === 'MALE' || normalized === '1' || normalized === '男' || normalized === '男性') {
+    return 'male';
+  }
+  if (normalized === 'F' || normalized === 'FEMALE' || normalized === '2' || normalized === '女' || normalized === '女性') {
+    return 'female';
+  }
+  return 'unknown';
+};
+
+const resolvePatientSexAriaLabel = (tone: PatientSexTone) => {
+  if (tone === 'male') return '男性';
+  if (tone === 'female') return '女性';
+  return undefined;
+};
 
 const receptionStatusMvpPhase = (() => {
   const raw = import.meta.env.VITE_RECEPTION_STATUS_MVP ?? '';
@@ -284,25 +313,6 @@ const paymentModeLabel = (insurance?: string | null) => {
   if (mode === 'insurance') return '保険';
   if (mode === 'self') return '自費';
   return '不明';
-};
-
-const RECEPTION_REALTIME_STATUS_LABEL: Record<ReceptionRealtimeConnectionStatus, string> = {
-  connecting: '接続中',
-  open: '接続済み',
-  reconnecting: '再接続中',
-  closed: '停止',
-  unavailable: '未対応',
-};
-
-const RECEPTION_REALTIME_STATUS_TONE: Record<
-  ReceptionRealtimeConnectionStatus,
-  'neutral' | 'info' | 'warning' | 'success' | 'error'
-> = {
-  connecting: 'info',
-  open: 'success',
-  reconnecting: 'warning',
-  closed: 'neutral',
-  unavailable: 'warning',
 };
 
 const ACCEPT_SUCCESS_RESULTS = new Set(['00', '0000', 'K3']);
@@ -793,11 +803,6 @@ export function ReceptionPage({
     () => ({ facilityId: session.facilityId, userId: session.userId }),
     [session.facilityId, session.userId],
   );
-  const fallbackUrl = useMemo(() => {
-    if (appNav.fromCandidate === 'patients') return buildFacilityPath(session.facilityId, '/patients');
-    if (appNav.fromCandidate === 'reception') return buildFacilityPath(session.facilityId, '/reception');
-    return buildFacilityPath(session.facilityId, '/charts');
-  }, [appNav.fromCandidate, session.facilityId]);
   const stateVisitDate = useMemo(
     () => normalizeVisitDate(navigationLocationState.visitDate ?? navigationLocationState.encounter?.visitDate),
     [navigationLocationState.encounter?.visitDate, navigationLocationState.visitDate],
@@ -973,8 +978,7 @@ export function ReceptionPage({
   const [claimSendingPatientId, setClaimSendingPatientId] = useState<string | null>(null);
   const [dailyStateRevision, setDailyStateRevision] = useState(0);
   const [openCardActionMenuKey, setOpenCardActionMenuKey] = useState<string | null>(null);
-  const [receptionRealtimeStatus, setReceptionRealtimeStatus] =
-    useState<ReceptionRealtimeConnectionStatus>('connecting');
+  const [, setReceptionRealtimeStatus] = useState<ReceptionRealtimeConnectionStatus>('connecting');
   const [acceptedChartsHandoff, setAcceptedChartsHandoff] = useState<ResolvedReceptionHandoff | null>(null);
   const [pendingAcceptedChartsHandoff, setPendingAcceptedChartsHandoff] = useState<PendingReceptionHandoff | null>(null);
   const selectedDateRef = useRef(selectedDate);
@@ -1052,11 +1056,6 @@ export function ReceptionPage({
     isError: appointmentQuery.isError,
     intervalMs: OUTPATIENT_AUTO_REFRESH_INTERVAL_MS,
   });
-  const appointmentUpdatedAtLabel = useMemo(() => {
-    if (!appointmentQuery.dataUpdatedAt) return '—';
-    return formatAutoRefreshTimestamp(appointmentQuery.dataUpdatedAt);
-  }, [appointmentQuery.dataUpdatedAt]);
-
   useEffect(() => {
     selectedDateRef.current = selectedDate;
   }, [selectedDate]);
@@ -1846,7 +1845,13 @@ export function ReceptionPage({
       scope: storageScope,
     });
   }, [selectedDate, storageScope, visibleAppointmentEntries]);
-  const tableColCount = 9;
+  const tableColCount = 6;
+  const [sessionStatusSlot, setSessionStatusSlot] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    setSessionStatusSlot(document.getElementById('app-shell-session-status-slot'));
+  }, []);
 
   const claimBundles = claimOutpatientEnabled ? claimQuery.data?.bundles ?? [] : [];
   const claimQueueEntries = claimOutpatientEnabled ? claimQuery.data?.queueEntries ?? [] : [];
@@ -2308,14 +2313,6 @@ export function ReceptionPage({
     return counts;
   }, [exceptionItems]);
 
-  const exceptionIndicatorTone =
-    exceptionCounts.sendError > 0
-      ? 'error'
-      : exceptionCounts.delayed > 0
-        ? 'warning'
-        : exceptionCounts.unapproved > 0
-          ? 'info'
-          : 'neutral';
   const statusExceptionTone = useMemo(() => {
     const byStatus = new Map<ReceptionStatus, 'error' | 'warning' | 'info'>();
     SECTION_ORDER.forEach((status) => {
@@ -2608,6 +2605,49 @@ export function ReceptionPage({
     unlinkedCounts.missingReceptionId,
     visibleAppointmentEntries,
   ]);
+
+  const receptionErrorNotices = useMemo(() => {
+    const notices: Array<{
+      key: string;
+      tone: 'error' | 'warning' | 'info';
+      message: string;
+      nextAction: string;
+      runId?: string;
+    }> = [];
+
+    if (unlinkedWarning) {
+      notices.push({
+        key: `appointment-integrity-${unlinkedWarning.key}`,
+        tone: 'warning',
+        message: unlinkedWarning.message,
+        nextAction: '一覧を確認',
+        runId: mergedMeta.runId,
+      });
+    }
+
+    if (appointmentAutoRefreshNotice) {
+      notices.push({
+        key: 'appointment-auto-refresh-stale',
+        tone: appointmentAutoRefreshNotice.tone,
+        message: appointmentAutoRefreshNotice.message,
+        nextAction: appointmentAutoRefreshNotice.nextAction,
+        runId: resolvedRunId,
+      });
+    }
+
+    return notices;
+  }, [appointmentAutoRefreshNotice, mergedMeta.runId, resolvedRunId, unlinkedWarning]);
+
+  const receptionErrorCount = exceptionCounts.total + receptionErrorNotices.length;
+
+  const exceptionIndicatorTone =
+    exceptionCounts.sendError > 0 || receptionErrorNotices.some((notice) => notice.tone === 'error')
+      ? 'error'
+      : receptionErrorNotices.length > 0 || exceptionCounts.delayed > 0
+        ? 'warning'
+        : exceptionCounts.unapproved > 0
+          ? 'info'
+          : 'neutral';
 
   useEffect(() => {
     if (!unlinkedWarning) {
@@ -3420,13 +3460,14 @@ export function ReceptionPage({
       controlId: 'exceptions-modal',
       runId: mergedMeta.runId ?? flags.runId,
       details: {
-        total: exceptionCounts.total,
+        total: receptionErrorCount,
+        screenError: receptionErrorNotices.length,
         sendError: exceptionCounts.sendError,
         delayed: exceptionCounts.delayed,
         unapproved: exceptionCounts.unapproved,
       },
     });
-  }, [exceptionCounts, flags.runId, mergedMeta.runId]);
+  }, [exceptionCounts, flags.runId, mergedMeta.runId, receptionErrorCount, receptionErrorNotices.length]);
 
   const closeExceptionsModal = useCallback(() => {
     setExceptionsModalOpen(false);
@@ -4390,27 +4431,34 @@ export function ReceptionPage({
     </div>
   );
 
+  const receptionErrorIndicator =
+    receptionErrorCount > 0 ? (
+      <button
+        type="button"
+        className="reception-exception-indicator is-active"
+        data-tone={exceptionIndicatorTone}
+        onClick={openExceptionsModal}
+        aria-label={`エラー一覧を開く（${receptionErrorCount}件）`}
+        title={`画面エラー:${receptionErrorNotices.length} / 送信エラー:${exceptionCounts.sendError} / 遅延:${exceptionCounts.delayed} / 未承認:${exceptionCounts.unapproved}`}
+      >
+        <span className="reception-exception-indicator__icon" aria-hidden="true">
+          !
+        </span>
+        <span className="reception-exception-indicator__label">エラー</span>
+        <span className="reception-exception-indicator__count">{receptionErrorCount}</span>
+      </button>
+    ) : null;
+
   return (
     <>
       <Global styles={receptionStyles} />
+      {sessionStatusSlot && receptionErrorIndicator ? createPortal(receptionErrorIndicator, sessionStatusSlot) : null}
       <main className="reception-page" data-run-id={resolvedRunId}>
         <a className="skip-link" href="#reception-results">
           検索結果へスキップ
         </a>
-      <ReturnToBar
-        scope={{ facilityId: session.facilityId, userId: session.userId }}
-        returnTo={appNav.safeReturnToCandidate}
-        from={appNav.fromCandidate}
-        fallbackUrl={fallbackUrl}
-      />
-        <section className="reception-page__header">
-          <div className="reception-page__title">
-            <div className="reception-page__title-main">
-              <h1>{title}</h1>
-              <p className="sr-only">{description}</p>
-            </div>
-          </div>
-        </section>
+        <h1 className="sr-only">{title}</h1>
+        <p className="sr-only">{description}</p>
         <section className="reception-toolbar" role="region" aria-label="受付ツールバー" data-run-id={resolvedRunId}>
           <form className="reception-toolbar__group" onSubmit={handleSearchSubmit}>
             <div className="reception-toolbar__group" role="group" aria-label="日付操作">
@@ -4592,36 +4640,11 @@ export function ReceptionPage({
                 </select>
               </label>
             </div>
-            <div className="reception-toolbar__group" role="status" aria-live={infoLive}>
-              <button
-                type="button"
-                className={`reception-exception-indicator${exceptionCounts.total > 0 ? ' is-active' : ''}`}
-                data-tone={exceptionIndicatorTone}
-                onClick={openExceptionsModal}
-                aria-label={`例外一覧を開く（${exceptionCounts.total}件）`}
-                title={`送信エラー:${exceptionCounts.sendError} / 遅延:${exceptionCounts.delayed} / 未承認:${exceptionCounts.unapproved}`}
-              >
-                <span className="reception-exception-indicator__icon" aria-hidden="true">
-                  !
-                </span>
-                <span className="reception-exception-indicator__label">例外</span>
-                <span className="reception-exception-indicator__count">{exceptionCounts.total}</span>
-              </button>
-              <StatusPill
-                className="reception-pill"
-                label="最終更新"
-                value={appointmentUpdatedAtLabel}
-                tone="neutral"
-                runId={resolvedRunId}
-              />
-              <StatusPill
-                className="reception-pill"
-                label="RT同期"
-                value={RECEPTION_REALTIME_STATUS_LABEL[receptionRealtimeStatus]}
-                tone={RECEPTION_REALTIME_STATUS_TONE[receptionRealtimeStatus]}
-                runId={resolvedRunId}
-              />
-            </div>
+            {receptionErrorIndicator && !sessionStatusSlot ? (
+              <div className="reception-toolbar__group" role="status" aria-live={infoLive}>
+                {receptionErrorIndicator}
+              </div>
+            ) : null}
             <div className="reception-toolbar__group" role="group" aria-label="操作">
               <button
                 type="button"
@@ -4647,22 +4670,6 @@ export function ReceptionPage({
                 data-test-id="reception-open-accept-workflow"
               >
                 既存患者受付/患者検索
-              </button>
-              <button
-                type="button"
-                className="reception-results-toolbar__toggle"
-                onClick={() => setStatusListLayout('table')}
-                aria-pressed={statusListLayout === 'table'}
-              >
-                表
-              </button>
-              <button
-                type="button"
-                className="reception-results-toolbar__toggle"
-                onClick={() => setStatusListLayout('cards')}
-                aria-pressed={statusListLayout === 'cards'}
-              >
-                カード
               </button>
             </div>
           </form>
@@ -4799,12 +4806,7 @@ export function ReceptionPage({
             </div>
           </section>
         ) : null}
-		          {(appointmentErrorContext ||
-		            unlinkedWarning ||
-		            intentBanner ||
-		            broadcast ||
-	            appointmentAutoRefreshNotice ||
-	            appointmentQuery.data?.hasNextPage) && (
+          {(appointmentErrorContext || intentBanner || broadcast || appointmentQuery.data?.hasNextPage) && (
             <div className="reception-page__alerts" role="region" aria-label="警告/通知">
               {appointmentErrorContext && (
                 <ApiFailureBanner
@@ -4818,16 +4820,6 @@ export function ReceptionPage({
                   {...appointmentErrorContext}
                 />
               )}
-              {unlinkedWarning && (
-                <ToneBanner
-                  tone="warning"
-                  message={unlinkedWarning.message}
-                  destination="受付"
-                  nextAction="一覧を確認"
-                  runId={mergedMeta.runId}
-                  ariaLive="assertive"
-                />
-              )}
               <AdminBroadcastBanner broadcast={broadcast} surface="reception" runId={resolvedRunId} />
               {intentBanner && (
                 <ToneBanner
@@ -4838,15 +4830,6 @@ export function ReceptionPage({
                   nextAction={intentBanner.nextAction}
                   runId={flags.runId}
                   ariaLive={intentBanner.tone === 'info' ? 'polite' : 'assertive'}
-                />
-              )}
-              {appointmentAutoRefreshNotice && (
-                <ToneBanner
-                  tone={appointmentAutoRefreshNotice.tone}
-                  message={appointmentAutoRefreshNotice.message}
-                  destination="受付"
-                  nextAction={appointmentAutoRefreshNotice.nextAction}
-                  runId={resolvedRunId}
                 />
               )}
               {appointmentQuery.data?.hasNextPage ? (
@@ -5071,6 +5054,24 @@ export function ReceptionPage({
                     <span className="reception-results-toolbar__loading">更新中…</span>
                   ) : null}
                 </div>
+                <div className="reception-status-tabs__layout-actions" role="group" aria-label="表示形式">
+                  <button
+                    type="button"
+                    className="reception-results-toolbar__toggle"
+                    onClick={() => setStatusListLayout('table')}
+                    aria-pressed={statusListLayout === 'table'}
+                  >
+                    表
+                  </button>
+                  <button
+                    type="button"
+                    className="reception-results-toolbar__toggle"
+                    onClick={() => setStatusListLayout('cards')}
+                    aria-pressed={statusListLayout === 'cards'}
+                  >
+                    カード
+                  </button>
+                </div>
               </div>
               <div className="reception-status-tabs__list" role="tablist" aria-label="受付ステータス">
                 {STATUS_TAB_ORDER.map((status) => {
@@ -5145,6 +5146,8 @@ export function ReceptionPage({
                             : null;
                           const cached = resolveClaimSendCacheForEntry(entry);
                           const isSelected = selectedEntryKey === entryKey(entry);
+                          const sexTone = resolvePatientSexTone(entry.sex);
+                          const sexAriaLabel = resolvePatientSexAriaLabel(sexTone);
                           const rowKey =
                             entryKey(entry) ??
                             `${entry.patientId ?? 'unknown'}-${entry.appointmentTime ?? entry.department ?? 'card'}`;
@@ -5208,9 +5211,10 @@ export function ReceptionPage({
                               data-reception-id={entry.receptionId ?? ''}
                               data-appointment-id={entry.appointmentId ?? ''}
                               data-reception-status={status}
+                              data-sex-tone={sexTone}
                               data-visit-kind={visitKind ?? undefined}
                               data-elapsed-severity={elapsedSeverity ?? undefined}
-                              aria-label={`${entry.name ?? '患者'} ${entry.patientId ?? ''}`}
+                              aria-label={`${entry.name ?? '患者'} ${entry.patientId ?? ''}${sexAriaLabel ? ` ${sexAriaLabel}` : ''}`}
                               onClick={() => handleSelectRow(entry)}
                               onDoubleClick={() => handleRowDoubleClick(entry)}
                               onKeyDown={(event) => {
@@ -5233,9 +5237,7 @@ export function ReceptionPage({
                                   <span className="reception-card__patient-id" aria-label={`患者ID: ${entry.patientId ?? '未登録'}`}>
                                     {entry.patientId ?? '—'}
                                   </span>
-                                  <small className="reception-table__sub">
-                                    DOB: {entry.birthDate ?? '—'} / 性別: {entry.sex ?? '—'}
-                                  </small>
+                                  <small className="reception-table__sub">{formatBirthDateJa(entry.birthDate)}</small>
                                 </div>
                                 {billingProjection ? (
                                   <div className="reception-card__billing-summary">
@@ -5519,10 +5521,7 @@ export function ReceptionPage({
                             <th scope="col">ID</th>
                             <th scope="col">氏名</th>
                             <th scope="col">来院/科</th>
-                            <th scope="col">支払</th>
-                            <th scope="col">請求</th>
                             <th scope="col">メモ/参照</th>
-                            <th scope="col">直近</th>
                             <th scope="col">ORCA</th>
                             <th scope="col">操作</th>
                           </tr>
@@ -5537,14 +5536,12 @@ export function ReceptionPage({
                           ) : null}
                           {activeStatusItems.map((entry) => {
                             const queueStatus = resolveQueueStatusForEntry(entry);
-                            const bundle = resolveBundleForEntry(entry);
                             const billingProjection =
                               entry.billingProjection ??
                               (activeStatusTab === '会計待ち' || activeStatusTab === '会計済み' || activeStatusTab === '再計待'
                                 ? resolveBillingProjectionForEntry(entry)
                                 : undefined);
                             const correctionNote = formatCorrectionNote(billingProjection?.correction);
-                            const paymentLabel = paymentModeLabel(entry.insurance);
                             const canOpenCharts = hasHandoffEncounterKey(entry);
                             const orcaQueueEntry = entry.patientId ? orcaQueueByPatientId.get(entry.patientId) : undefined;
                             const orcaQueueStatus = orcaQueueErrorStatus ?? resolveOrcaQueueStatus(orcaQueueEntry);
@@ -5562,9 +5559,9 @@ export function ReceptionPage({
                                   retrySupported: orcaQueueQuery.data?.retrySupported === true,
                                 })
                               : null;
-                            const fallbackAppointmentId =
-                              entry.receptionId ? undefined : entry.appointmentId ?? (entry.id ? String(entry.id) : undefined);
                             const isSelected = selectedEntryKey === entryKey(entry);
+                            const sexTone = resolvePatientSexTone(entry.sex);
+                            const sexAriaLabel = resolvePatientSexAriaLabel(sexTone);
                             const rowKey =
                               entryKey(entry) ??
                               `${entry.patientId ?? 'unknown'}-${entry.appointmentTime ?? entry.department ?? 'row'}`;
@@ -5596,7 +5593,7 @@ export function ReceptionPage({
                                   handleRowDoubleClick(entry);
                                 }}
                                 aria-selected={isSelected}
-                                aria-label={`${entry.name ?? '患者'} ${entry.appointmentTime ?? ''} ${entry.department ?? ''}`}
+                                aria-label={`${entry.name ?? '患者'} ${entry.appointmentTime ?? ''} ${entry.department ?? ''}${sexAriaLabel ? ` ${sexAriaLabel}` : ''}`}
                                 data-test-id="reception-entry-row"
                                 data-patient-id={entry.patientId ?? ''}
                                 data-encounter-key={entry.encounterKey ?? ''}
@@ -5604,6 +5601,7 @@ export function ReceptionPage({
                                 data-reception-id={entry.receptionId ?? ''}
                                 data-appointment-id={entry.appointmentId ?? ''}
                                 data-reception-status={activeStatusTab}
+                                data-sex-tone={sexTone}
                               >
                                 <td>
                                   <PatientMetaRow
@@ -5611,7 +5609,7 @@ export function ReceptionPage({
                                     className="reception-table__id"
                                     patientId={entry.patientId ?? '未登録'}
                                     receptionId={entry.receptionId}
-                                    appointmentId={fallbackAppointmentId}
+                                    appointmentId={undefined}
                                     showLabels
                                     separator="slash"
                                     runId={resolvedRunId}
@@ -5624,43 +5622,12 @@ export function ReceptionPage({
                                   <div className="reception-table__patient">
                                     <strong>{entry.name ?? '未登録'}</strong>
                                     <small className="reception-table__sub">{entry.kana ?? '—'}</small>
-                                    <small className="reception-table__sub">
-                                      DOB: {entry.birthDate ?? '—'} / 性別: {entry.sex ?? '—'}
-                                    </small>
+                                    <small className="reception-table__sub">{formatBirthDateJa(entry.birthDate)}</small>
                                   </div>
                                 </td>
                                 <td>
                                   <div className="reception-table__time">{entry.appointmentTime ?? '-'}</div>
                                   <small className="reception-table__sub">{entry.department ?? '-'}</small>
-                                </td>
-                                <td className="reception-table__insurance">
-                                  <StatusPill className="reception-pill" ariaLabel={`支払区分: ${paymentLabel}`} runId={resolvedRunId}>
-                                    {paymentLabel}
-                                  </StatusPill>
-                                  <small className="reception-table__sub">{entry.insurance ?? '—'}</small>
-                                </td>
-                                <td className="reception-table__claim">
-                                  <div>{billingProjection?.workflow ?? bundle?.claimStatus ?? bundle?.claimStatusText ?? '未確認'}</div>
-                                  <small className="reception-table__sub" data-test-id="reception-billing-transmission">
-                                    送信: {billingProjection?.transmission ?? '未送信'}
-                                  </small>
-                                  {bundle?.bundleNumber && debugUiEnabled ? (
-                                    <small className="reception-table__sub">B: {bundle.bundleNumber}</small>
-                                  ) : null}
-                                  {(() => {
-                                    const cached = resolveClaimSendCacheForEntry(entry);
-                                    if (!cached) return null;
-                                    return (
-                                      <>
-                                        {debugUiEnabled && cached.invoiceNumber ? (
-                                          <small className="reception-table__sub">I: {cached.invoiceNumber}</small>
-                                        ) : null}
-                                        {debugUiEnabled && cached.dataId ? (
-                                          <small className="reception-table__sub">D: {cached.dataId}</small>
-                                        ) : null}
-                                      </>
-                                    );
-                                  })()}
                                 </td>
                                 <td className="reception-table__note">
                                   {correctionNote ? (
@@ -5668,9 +5635,13 @@ export function ReceptionPage({
                                       {correctionNote}
                                     </small>
                                   ) : null}
+                                  {billingProjection ? (
+                                    <small className="reception-table__sub" data-test-id="reception-billing-transmission">
+                                      送信: {billingProjection.transmission}
+                                    </small>
+                                  ) : null}
                                   <div>{entry.note ? truncateText(entry.note, 36) : '—'}</div>
                                 </td>
-                                <td className="reception-table__last">{resolveLastVisitForEntry(entry)}</td>
                                 <td className="reception-table__queue">
                                   <span
                                     className={`reception-queue reception-queue--${displayedQueueStatus.tone}`}
@@ -6207,8 +6178,8 @@ export function ReceptionPage({
 
         <FocusTrapDialog
           open={exceptionsModalOpen}
-          title={`例外一覧（${exceptionCounts.total}件）`}
-          description="送信エラー・遅延・未承認の詳細を確認します。"
+          title={`エラー一覧（${receptionErrorCount}件）`}
+          description="受付画面で対応が必要なエラーを確認します。"
           onClose={closeExceptionsModal}
           testId="reception-exceptions-modal"
         >
@@ -6217,20 +6188,37 @@ export function ReceptionPage({
               閉じる
             </button>
           </div>
-          <ReceptionExceptionList
-            variant="modal"
-            items={exceptionItems}
-            counts={exceptionCounts}
-            runId={mergedMeta.runId}
-            claimEnabled={claimOutpatientEnabled}
-            onSelectEntry={(entry) => {
-              handleSelectEntry(entry);
-              closeExceptionsModal();
-            }}
-            onOpenCharts={handleOpenCharts}
-            onRetryQueue={handleRetryQueue}
-            retryingPatientId={retryingPatientId}
-          />
+          {receptionErrorNotices.length > 0 ? (
+            <div className="reception-error-notices" role="list" aria-label="画面エラー">
+              {receptionErrorNotices.map((notice) => (
+                <ToneBanner
+                  key={notice.key}
+                  tone={notice.tone}
+                  message={notice.message}
+                  destination="受付"
+                  nextAction={notice.nextAction}
+                  runId={notice.runId}
+                  ariaLive={notice.tone === 'info' ? 'polite' : 'assertive'}
+                />
+              ))}
+            </div>
+          ) : null}
+          {exceptionItems.length > 0 || receptionErrorNotices.length === 0 ? (
+            <ReceptionExceptionList
+              variant="modal"
+              items={exceptionItems}
+              counts={exceptionCounts}
+              runId={mergedMeta.runId}
+              claimEnabled={claimOutpatientEnabled}
+              onSelectEntry={(entry) => {
+                handleSelectEntry(entry);
+                closeExceptionsModal();
+              }}
+              onOpenCharts={handleOpenCharts}
+              onRetryQueue={handleRetryQueue}
+              retryingPatientId={retryingPatientId}
+            />
+          ) : null}
         </FocusTrapDialog>
 
         <FocusTrapDialog

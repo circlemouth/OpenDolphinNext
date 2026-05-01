@@ -46,11 +46,7 @@ vi.mock('../features/shared/MockModeBanner', () => ({
   MockModeBanner: () => null,
 }));
 vi.mock('../features/workspaceTabs/WorkspaceTabBar', () => ({
-  WorkspaceTabBar: ({ onRequestLogout }: { onRequestLogout?: () => void }) => (
-    <button type="button" data-testid="logout-trigger" onClick={() => onRequestLogout?.()}>
-      logout
-    </button>
-  ),
+  WorkspaceTabBar: () => null,
 }));
 vi.mock('../features/charts/authService', async () => {
   const ReactModule = await import('react');
@@ -280,9 +276,9 @@ describe('AppRouter charts query scrub', () => {
     render(<RouterProvider router={router} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('logout-trigger')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument();
     });
-    await user.click(screen.getByTestId('logout-trigger'));
+    await user.click(screen.getByRole('button', { name: 'ログアウト' }));
 
     await waitFor(() => {
       expect(router.state.location.pathname).toMatch(/\/login$/);

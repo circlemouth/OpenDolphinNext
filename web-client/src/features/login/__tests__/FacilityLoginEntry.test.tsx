@@ -71,7 +71,7 @@ describe('FacilityLoginEntry', () => {
 
     render(<RouterProvider router={router} />);
 
-    expect(screen.getByText(/施設\/ユーザー切替を開始しました/)).toBeInTheDocument();
+    expect(screen.getByText(/ユーザー切替を開始しました/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '0001' }));
 
     expect(router.state.location.pathname).toBe('/f/0001/login');

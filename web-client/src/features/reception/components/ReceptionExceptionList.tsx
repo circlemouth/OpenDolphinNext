@@ -69,12 +69,12 @@ export function ReceptionExceptionList({
   claimEnabled = true,
 }: ReceptionExceptionListProps) {
   return (
-    <section className="reception-exceptions" aria-label="例外一覧" data-run-id={runId}>
+    <section className="reception-exceptions" aria-label="エラー一覧" data-run-id={runId}>
       <header className="reception-exceptions__header">
         <div className="reception-exceptions__title">
           {variant === 'panel' ? (
             <>
-              <h2>例外一覧</h2>
+              <h2>エラー一覧</h2>
               <p>未承認・送信エラー・遅延の対象を優先順に表示します。</p>
               <p className="reception-exceptions__note">
                 判定は ORCA queue 情報を主に使用し、送信キャッシュは補助確認として表示します。
@@ -85,7 +85,7 @@ export function ReceptionExceptionList({
             <p className="reception-exceptions__modal-lead">未承認・送信エラー・遅延の対象を優先順に表示します。</p>
           )}
         </div>
-        <div className="reception-exceptions__counts" aria-label="例外件数">
+        <div className="reception-exceptions__counts" aria-label="エラー件数">
           <div className="reception-exceptions__count">
             <StatusPill className="reception-pill" label="送信エラー" value={`${counts.sendError}件`} runId={runId} tone="error" />
             <span className="reception-exceptions__count-note">再送・原因確認が最優先</span>
@@ -106,7 +106,7 @@ export function ReceptionExceptionList({
       </header>
       {items.length === 0 ? (
         <p className="reception-exceptions__empty" role="status" aria-live={resolveAriaLive('info')}>
-          現在の条件では例外は検出されていません。
+          現在の条件ではエラーは検出されていません。
         </p>
       ) : (
         <div className="reception-exceptions__list" role="list">
@@ -161,7 +161,7 @@ export function ReceptionExceptionList({
                     <span>請求: {item.bundle?.claimStatus ?? item.bundle?.claimStatusText ?? '未取得'}</span>
                   )}
                 </div>
-                <div className="reception-exception__signals" aria-label="例外差分">
+                <div className="reception-exception__signals" aria-label="エラー差分">
                   {reasonItems.map((reason) => (
                     <div
                       key={reason.key}
@@ -199,7 +199,7 @@ export function ReceptionExceptionList({
                   <strong>理由サマリ</strong>
                   <p title={item.detail}>{item.detail}</p>
                 </div>
-                <div className="reception-exception__actions" role="group" aria-label="例外対応">
+                <div className="reception-exception__actions" role="group" aria-label="エラー対応">
                   <div className="reception-exception__next">
                     <span className="reception-exception__next-label">次アクション</span>
                     <strong>{item.nextAction}</strong>

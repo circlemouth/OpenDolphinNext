@@ -896,6 +896,13 @@ export const receptionStyles = css`
     color: var(--ui-info-text);
   }
 
+  .reception-error-notices {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
   .reception-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -2462,6 +2469,14 @@ export const receptionStyles = css`
     margin-bottom: 0.65rem;
   }
 
+  .reception-status-tabs__layout-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    margin-left: auto;
+  }
+
   .reception-status-tabs__summary {
     display: inline-flex;
     align-items: baseline;
@@ -2679,6 +2694,22 @@ export const receptionStyles = css`
     border-color: rgba(37, 99, 235, 0.75);
     box-shadow: 0 14px 30px rgba(37, 99, 235, 0.16);
     background: #ffffff;
+  }
+
+  .reception-card[data-sex-tone='male'] {
+    border-left: 6px solid #2563eb;
+  }
+
+  .reception-card[data-sex-tone='female'] {
+    border-left: 6px solid #e11d48;
+  }
+
+  .reception-card.is-selected[data-sex-tone='male'] {
+    border-left-color: #2563eb;
+  }
+
+  .reception-card.is-selected[data-sex-tone='female'] {
+    border-left-color: #e11d48;
   }
 
   .reception-card[data-elapsed-severity='1']:not(:hover):not(.is-selected) {
@@ -3590,7 +3621,7 @@ export const receptionStyles = css`
   .reception-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 1120px;
+    min-width: 820px;
   }
 
   .reception-table th,
@@ -3620,12 +3651,26 @@ export const receptionStyles = css`
   }
 
   .reception-table__row {
+    --reception-sex-rail: transparent;
     transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: inset 4px 0 0 var(--reception-sex-rail);
+  }
+
+  .reception-table__row[data-sex-tone='male'] {
+    --reception-sex-rail: #2563eb;
+  }
+
+  .reception-table__row[data-sex-tone='female'] {
+    --reception-sex-rail: #e11d48;
   }
 
   .reception-table__row--selected {
     background: var(--ui-selected-bg);
-    box-shadow: inset 0 0 0 1px var(--ui-selected-border), inset 3px 0 0 var(--ui-selected-rail);
+    box-shadow: inset 0 0 0 1px var(--ui-selected-border), inset 4px 0 0 var(--reception-sex-rail);
+  }
+
+  .reception-table__row--selected[data-sex-tone='unknown'] {
+    --reception-sex-rail: var(--ui-selected-rail);
   }
 
   .reception-table__row--selected:hover {
