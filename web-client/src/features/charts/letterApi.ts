@@ -71,6 +71,8 @@ type ApiResultBase = {
   status?: number;
   endpoint?: string;
   error?: string;
+  reasonCode?: string;
+  messageDetail?: string;
 };
 
 export type KarteIdResult = ApiResultBase & {
@@ -110,10 +112,20 @@ const parseJson = async (response: Response): Promise<unknown> => {
   }
 };
 
-const resolveErrorMessage = (status: number): string => {
+const pickString = (source: Record<string, unknown>, keys: string[]) => {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return undefined;
+};
+
+const resolveErrorMessage = (status: number, json?: Record<string, unknown>): string => {
+  const safeMessage = json ? pickString(json, ['apiResultMessage', 'message', 'error']) : undefined;
+  if (safeMessage && !/exception|stack trace|\/Users\/|\/opt\/|java\./i.test(safeMessage)) return safeMessage;
   if (status >= 500) return 'サーバーエラーが発生しました。時間をおいて再試行してください。';
   if (status === 401 || status === 403) return '権限がありません。再ログインしてください。';
-  if (status >= 400) return 'リクエストに失敗しました。入力内容を確認してください。';
+  if (status >= 400) return '文書保存リクエストを処理できませんでした。テンプレートと必須項目を確認してください。';
   return '通信に失敗しました。';
 };
 
@@ -144,7 +156,9 @@ export async function fetchKarteIdByPatientId({
     status: response.status,
     endpoint,
     karteId: response.ok ? parseNumeric(json.id) : undefined,
-    error: response.ok ? undefined : resolveErrorMessage(response.status),
+    error: response.ok ? undefined : resolveErrorMessage(response.status, json as Record<string, unknown>),
+    reasonCode: response.ok ? undefined : pickString(json as Record<string, unknown>, ['reasonCode', 'errorCode']),
+    messageDetail: response.ok ? undefined : pickString(json as Record<string, unknown>, ['messageDetail']),
   };
 }
 
@@ -160,7 +174,9 @@ export async function fetchLetterList({ karteId }: { karteId: number }): Promise
     status: response.status,
     endpoint,
     letters: response.ok ? list : [],
-    error: response.ok ? undefined : resolveErrorMessage(response.status),
+    error: response.ok ? undefined : resolveErrorMessage(response.status, json as Record<string, unknown>),
+    reasonCode: response.ok ? undefined : pickString(json as Record<string, unknown>, ['reasonCode', 'errorCode']),
+    messageDetail: response.ok ? undefined : pickString(json as Record<string, unknown>, ['messageDetail']),
   };
 }
 
@@ -175,7 +191,9 @@ export async function fetchLetterDetail({ letterId }: { letterId: number }): Pro
     status: response.status,
     endpoint,
     letter: response.ok ? (json as LetterModulePayload) : undefined,
-    error: response.ok ? undefined : resolveErrorMessage(response.status),
+    error: response.ok ? undefined : resolveErrorMessage(response.status, json as Record<string, unknown>),
+    reasonCode: response.ok ? undefined : pickString(json as Record<string, unknown>, ['reasonCode', 'errorCode']),
+    messageDetail: response.ok ? undefined : pickString(json as Record<string, unknown>, ['messageDetail']),
   };
 }
 
@@ -190,13 +208,23 @@ export async function saveLetterModule({ payload }: { payload: LetterModulePaylo
     body: JSON.stringify(payload),
   });
   const raw = await response.text();
+  let json: Record<string, unknown> = {};
+  if (!response.ok && raw.trim().startsWith('{')) {
+    try {
+      json = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      json = {};
+    }
+  }
   return {
     ok: response.ok,
     runId,
     status: response.status,
     endpoint,
     letterId: response.ok ? parseNumeric(raw) : undefined,
-    error: response.ok ? undefined : resolveErrorMessage(response.status),
+    error: response.ok ? undefined : resolveErrorMessage(response.status, json),
+    reasonCode: response.ok ? undefined : pickString(json, ['reasonCode', 'errorCode']),
+    messageDetail: response.ok ? undefined : pickString(json, ['messageDetail']),
   };
 }
 
@@ -206,7 +234,8 @@ export async function deleteLetter({ letterId }: { letterId: number }): Promise<
   const response = await httpFetch(endpoint, { method: 'DELETE' });
   let error: string | undefined;
   if (!response.ok) {
-    error = resolveErrorMessage(response.status);
+    const json = (await parseJson(response)) as Record<string, unknown>;
+    error = resolveErrorMessage(response.status, json);
   }
   return {
     ok: response.ok,

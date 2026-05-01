@@ -30,6 +30,7 @@ export type ChartSubjectiveEntryResponse = {
   runId?: string;
   recordedAt?: string;
   messageDetail?: string;
+  reasonCode?: string;
   error?: string;
   entry?: ChartSubjectiveEntryReadback;
 };
@@ -74,6 +75,7 @@ export async function postChartSubjectiveEntry(
     runId: typeof json.runId === 'string' ? json.runId : runId,
     recordedAt: typeof json.recordedAt === 'string' ? json.recordedAt : undefined,
     messageDetail: typeof json.messageDetail === 'string' ? json.messageDetail : undefined,
+    reasonCode: typeof json.reasonCode === 'string' ? json.reasonCode : undefined,
     entry: parseReadbackEntry(json.entry),
   };
 }

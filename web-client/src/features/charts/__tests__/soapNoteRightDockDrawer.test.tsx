@@ -646,6 +646,44 @@ describe('SoapNotePanel right dock drawer', () => {
     expect(drawer.style.getPropertyValue('--soap-right-drawer-width')).toBe(initialWidth);
   });
 
+  it('右ドック表示中に新規入力を開始すると中央編集面を表示し候補ドックを最小化する', async () => {
+    const user = userEvent.setup();
+    const previousInnerWidth = window.innerWidth;
+    setViewportWidth(1920);
+    try {
+      renderWithQueryClient(
+        <SoapNotePanel
+          history={[]}
+          meta={{
+            runId: 'RUN-RIGHT-DOCK-NEW-MINIMIZE',
+            patientId: 'P-010',
+            appointmentId: 'APT-010',
+            receptionId: 'RCP-010',
+            visitDate: '2026-02-27',
+          }}
+          author={{ role: 'doctor', displayName: 'Dr. Dock', userId: 'doctor10' }}
+          orderBundles={[]}
+        />,
+      );
+
+      const drawer = requireElement<HTMLElement>(document.body.querySelector('.soap-note__right-drawer'));
+      await user.click(screen.getByRole('button', { name: '注射候補を開く' }));
+      await waitFor(() => {
+        expect(drawer.getAttribute('data-open')).toBe('true');
+      });
+
+      await user.click(within(drawer).getAllByRole('button', { name: '新規作成を開く' })[0]);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('注射名')).toBeInTheDocument();
+        expect(drawer.getAttribute('data-minimized')).toBe('true');
+      });
+      expect(drawer.style.getPropertyValue('--soap-right-drawer-width')).toBe('56px');
+    } finally {
+      setViewportWidth(previousInnerWidth);
+    }
+  });
+
   it('一時隠す押下中のみ最小化扱いとなり、解除で元幅へ戻る', async () => {
     const user = userEvent.setup();
     const { container } = renderWithQueryClient(

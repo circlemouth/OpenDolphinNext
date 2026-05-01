@@ -15,13 +15,14 @@
 - 揮発メモリは補助であり、永続化や復元の根拠にしません。
 
 ## Minimal Encounter Context
-- docs に置いてよい最小項目は `patientId`, `appointmentId`, `receptionId`, `scheduleKey`, `encounterKey`, `visitDate` です。
+- docs に置いてよい最小項目は `patientId`, `appointmentId`, `receptionId`, `scheduleKey`, `encounterKey`, `visitDate`, `departmentCode`, `physicianCode`, `insuranceCombinationNumber` です。
 - ORCA chart send で authoritative に使う canonical context は別扱いで、`patientId`, `visitDate`, `departmentCode`, `physicianCode`, `insuranceCombinationNumber`, `voucherNumber`, `sequentialNumber` の 7 項目です。
 - canonical context は display string や row id から再推測しません。Patients / Charts の選択結果に含まれる structured field だけを採用し、不足時は fail-close します。
 - route ごとの minimal schema は次です。
   - Charts:
     - handoff には `scheduleKey` または `encounterKey` が必要です。
-    - `patientId`, `appointmentId`, `receptionId`, `visitDate` は補助的に carry します。
+    - `patientId`, `appointmentId`, `receptionId`, `visitDate`, `departmentCode`, `physicianCode`, `insuranceCombinationNumber` は location state と揮発 encounter context で補助的に carry します。
+    - `scheduleKey`, `encounterKey`, `departmentCode`, `physicianCode`, `insuranceCombinationNumber` は URL query に戻しません。
     - ORCA 送信は canonical context が全項目揃った時だけ有効化します。
   - Patients:
     - 読み取り対象は `patientId`, `appointmentId`, `receptionId`, `visitDate` です。
@@ -37,6 +38,7 @@
     - `visitDate` は handoff 時に正規化して carry することがありますが、単独では権威入力にしません。
     - charts handoff や row overlay の確定には `scheduleKey` / `encounterKey` を優先し、無い場合も `receptionId` / `appointmentId` を含む row-local key が一意な時だけ補助的に使います。
     - `patientId` 単独では handoff も transmission overlay も確定しません。
+    - 既存患者受付は ORCA official 患者として確認できた対象だけを受付可能に表示します。local search の結果だけでは `officialReadiness=unverified` とし、Patients の ORCA 取込/同期へ誘導します。
 
 ## App-Wide Navigation / Handoff Minimum
 - app-wide に docs 化してよい handoff key は `from` と sanitize 済み `returnTo` です。

@@ -944,6 +944,23 @@ describe('PatientsPage form safety', () => {
 });
 
 describe('PatientsPage ORCA helpers', () => {
+  it('患者フォームの入力欄は補足文を含まない短いアクセシブル名で参照できる', async () => {
+    mockPatients();
+    const user = userEvent.setup();
+
+    renderPatientsPage();
+    await clickPatientRowByName(user, '山田 花子');
+    await user.click(screen.getByRole('button', { name: '新患登録' }));
+
+    for (const name of ['患者ID', '氏名', 'カナ', '電話', '郵便番号', '住所', 'メモ']) {
+      expect(screen.getByRole('textbox', { name })).toBeInTheDocument();
+    }
+    expect(screen.getByLabelText('生年月日')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: '性別' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '住所補完' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /必須項目です/ })).not.toBeInTheDocument();
+  });
+
   it('郵便番号から住所補完できる', async () => {
     mockPatients({
       patients: [

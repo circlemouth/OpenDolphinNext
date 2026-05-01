@@ -628,8 +628,9 @@ describe('DocumentCreatePanel', () => {
     await fillRequiredFields(user);
     await user.click(screen.getByRole('button', { name: '保存' }));
 
-    expect(await screen.findByText(/\/karte\/document への画像参照保存は完了しました/)).toBeInTheDocument();
-    expect(screen.getByText(/\/odletter\/letter の文書履歴参照保存に失敗しました/)).toBeInTheDocument();
+    expect(await screen.findByText(/カルテ文書保存は完了しました/)).toBeInTheDocument();
+    expect(screen.getByText(/紹介状モジュール保存失敗/)).toBeInTheDocument();
+    expect(screen.queryByText(/\/karte\/document|\/odletter\/letter/)).not.toBeInTheDocument();
     expect(screen.getByLabelText('宛先医療機関 *')).toHaveValue('東京クリニック');
     expect(screen.getByLabelText('紹介内容 *')).toHaveValue('既往歴と検査結果を記載');
     expect(screen.getByText(/letter-xray\.png/)).toBeInTheDocument();
@@ -646,6 +647,54 @@ describe('DocumentCreatePanel', () => {
     expect(retryPayload.payload?.letterItems?.find((item) => item.name === 'webAttachmentIds')?.value).toBe('[904]');
     expect(await screen.findByText(/画像参照 1 件を関連付けました/)).toBeInTheDocument();
     expect(onImageAttachmentsClear).toHaveBeenCalledTimes(1);
+  }, 15000);
+
+  it('カルテ文書保存失敗は phase と safe copy を表示し raw detail を出さない', async () => {
+    const user = userEvent.setup();
+    const attachment = {
+      id: 905,
+      fileName: 'unsafe-detail.png',
+      contentType: 'image/png',
+      contentSize: 1024,
+    };
+    vi.mocked(sendKarteDocumentWithAttachments).mockResolvedValue({
+      ok: false,
+      status: 500,
+      endpoint: '/karte/document',
+      docPk: -1,
+      error: 'java.lang.IllegalStateException: s3://internal-bucket failed',
+    });
+
+    render(
+      <MemoryRouter>
+        <DocumentCreatePanel {...baseProps} imageAttachments={[attachment]} />
+      </MemoryRouter>,
+    );
+
+    await fillRequiredFields(user);
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    expect(await screen.findByText(/カルテ文書保存失敗/)).toBeInTheDocument();
+    expect(screen.getByText(/カルテ文書の保存に失敗しました。時間をおいて再試行してください。/)).toBeInTheDocument();
+    expect(screen.queryByText(/java\.lang|s3:\/\/internal-bucket/)).not.toBeInTheDocument();
+    expect(screen.queryByText('入力内容を確認してください')).not.toBeInTheDocument();
+  }, 15000);
+
+  it('設定不足は入力不備と分けて表示する', async () => {
+    sessionStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <DocumentCreatePanel {...baseProps} />
+      </MemoryRouter>,
+    );
+
+    await fillRequiredFields(user);
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    expect(screen.getByText(/設定不足: ユーザー情報が取得できないため文書を保存できません。/)).toBeInTheDocument();
+    expect(screen.queryByText('入力内容を確認してください')).not.toBeInTheDocument();
   }, 15000);
 
   it('編集と削除の導線が表示される', async () => {

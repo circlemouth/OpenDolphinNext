@@ -188,7 +188,9 @@ describe('AppRouter charts query scrub', () => {
   });
 
   it('charts queryから encounter パラメータを除去し、context を保存する', async () => {
-    const router = buildRouter(['/f/0001/charts?patientId=00001&visitDate=2026-01-01']);
+    const router = buildRouter([
+      '/f/0001/charts?patientId=00001&visitDate=2026-01-01&departmentCode=01&physicianCode=10001&insuranceCombinationNumber=0001',
+    ]);
     render(<RouterProvider router={router} />);
 
     await waitFor(() => {
@@ -204,6 +206,11 @@ describe('AppRouter charts query scrub', () => {
       scheduleKey: undefined,
       encounterKey: undefined,
       visitDate: '2026-01-01',
+      departmentCode: '01',
+      physicianCode: '10001',
+      insuranceCombinationNumber: '0001',
+      voucherNumber: undefined,
+      sequentialNumber: undefined,
     });
     expect(sessionStorage.getItem('opendolphin:web-client:charts:encounter-context:v2:0001:user-1')).toBeNull();
   });

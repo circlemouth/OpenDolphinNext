@@ -6,6 +6,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -19,6 +20,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.DocumentModel;
 import open.dolphin.infomodel.IInfoModel;
@@ -40,9 +43,13 @@ import open.dolphin.session.UserServiceBean;
 @Path("/local/charts")
 public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
 
+    private static final Logger LOGGER = Logger.getLogger(LocalChartSubjectiveResource.class.getName());
     private static final int MAX_BODY_LENGTH = 1000;
     private static final String ROUTE_NAMESPACE = "local";
     private static final String AUDIT_ACTION = "LOCAL_CHART_SUBJECTIVES_MUTATION";
+    private static final String REASON_DOCUMENT_INTEGRITY_UNAVAILABLE = "document_integrity_unavailable";
+    private static final String REASON_CONFIGURATION_REQUIRED = "configuration_required";
+    private static final String REASON_RETRYABLE_SERVER_ERROR = "retryable_server_error";
 
     @Inject
     private PatientServiceBean patientServiceBean;
@@ -73,7 +80,8 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
         KarteBean karte = requireKarte(request, facilityId, patientId, runId, patient);
 
         DocumentModel document = buildSubjectiveDocument(karte, user, payload, performDate, body, soapCategory);
-        long documentId = karteServiceBean.addDocument(document);
+        long documentId = persistSubjectiveDocument(request, document, facilityId, patientId, runId, soapCategory,
+                displaySection);
         String recordedAt = Instant.now().toString();
 
         SubjectiveEntryResponse response = new SubjectiveEntryResponse();
@@ -95,6 +103,22 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
         markSuccessDetails(audit);
         recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
+    }
+
+    private long persistSubjectiveDocument(HttpServletRequest request, DocumentModel document, String facilityId,
+            String patientId, String runId, String soapCategory, String displaySection) {
+        try {
+            return karteServiceBean.addDocument(document);
+        } catch (WebApplicationException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            String reasonCode = classifySubjectivePersistenceFailure(ex);
+            LOGGER.log(Level.WARNING,
+                    "Local SOAP persistence failed reasonCode={0} runId={1}",
+                    new Object[]{reasonCode, runId});
+            failSubjectivePersistence(request, facilityId, patientId, runId, soapCategory, displaySection, reasonCode);
+            return -1L;
+        }
     }
 
     private String requirePatientId(HttpServletRequest request, SubjectiveEntryRequest payload, String facilityId, String runId) {
@@ -221,6 +245,67 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
         markFailureDetails(audit, status.getStatusCode(), errorCode, message);
         recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
         throw restError(request, status, errorCode, message);
+    }
+
+    private void failSubjectivePersistence(HttpServletRequest request, String facilityId, String patientId,
+            String runId, String soapCategory, String displaySection, String reasonCode) {
+        Response.Status status = Response.Status.SERVICE_UNAVAILABLE;
+        String message = switch (reasonCode) {
+            case REASON_CONFIGURATION_REQUIRED -> "文書整合性設定が未完了のため SOAP を保存できません。";
+            case REASON_DOCUMENT_INTEGRITY_UNAVAILABLE -> "文書整合性の検証準備ができないため SOAP を保存できません。";
+            default -> "SOAP 保存処理を完了できませんでした。時間をおいて再試行してください。";
+        };
+
+        Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
+        audit.put("soapCategory", soapCategory);
+        audit.put("displaySection", displaySection);
+        audit.put("reasonCode", reasonCode);
+        markFailureDetails(audit, status.getStatusCode(), reasonCode, message);
+        recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
+
+        Map<String, Object> details = new HashMap<>();
+        details.put("classification", reasonCode);
+        details.put("reasonCode", reasonCode);
+        details.put("retryable", Boolean.valueOf(REASON_RETRYABLE_SERVER_ERROR.equals(reasonCode)));
+        details.put("apiResult", "90");
+        details.put("apiResultMessage", message);
+        details.put("messageDetail", "SOAPのみ未保存です。病名・オーダーなど他領域の保存状態とは分けて確認してください。");
+        throw restError(request, status, reasonCode, message, details, null);
+    }
+
+    private String classifySubjectivePersistenceFailure(RuntimeException failure) {
+        if (failure instanceof IllegalStateException && hasDocumentIntegritySignal(failure)) {
+            String message = failure.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase(Locale.ROOT);
+                if (normalized.contains("document.integrity") || normalized.contains("keyring")) {
+                    return REASON_CONFIGURATION_REQUIRED;
+                }
+            }
+            return REASON_DOCUMENT_INTEGRITY_UNAVAILABLE;
+        }
+        return REASON_RETRYABLE_SERVER_ERROR;
+    }
+
+    private boolean hasDocumentIntegritySignal(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase(Locale.ROOT);
+                if (normalized.contains("document.integrity")
+                        || normalized.contains("document integrity")
+                        || normalized.contains("keyring")) {
+                    return true;
+                }
+            }
+            String className = current.getClass().getName().toLowerCase(Locale.ROOT);
+            if (className.contains("documentintegrity")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private DocumentModel buildSubjectiveDocument(KarteBean karte, UserModel user, SubjectiveEntryRequest payload,

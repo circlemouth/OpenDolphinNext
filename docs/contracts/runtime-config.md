@@ -187,6 +187,11 @@
 ### 9. Document Integrity
 - `document.integrity.mode` は `enforce` 固定。
 - `document.integrity.keyring-path` は絶対パスで、`algorithm=HMAC-SHA256` / active ちょうど 1 件 / `keyId` 重複不可 / `hmacKeyB64` 32 bytes 以上を満たす keyring JSON を指す。
+- `setup-modernized-env.sh` の dev 起動は `DOCUMENT_INTEGRITY_KEYRING_PATH` 未設定時だけ ignored な local keyring を生成する。本番相当起動では `DOCUMENT_INTEGRITY_MODE=enforce` と明示 keyring を必須とする。
+
+### 10. Dev Object Storage
+- `setup-modernized-env.sh` の dev 起動で S3 attachment storage を使う場合、`MINIO_ROOT_PASSWORD` 未設定時だけプロセス内でランダム値を生成し、MinIO root / attachment S3 / PHR export S3 の secret として同一実行内に export する。
+- 生成値は stdout / log / tracked file / sample config / QA summary に出さない。object-storage-free profile では引き続き `ATTACHMENT_STORAGE_S3_*` / `PHR_EXPORT_S3_*` / `MINIO_*` が設定済みなら fail closed する。
 
 ### 11. Secret Protector 分離
 - `factor2.aes-key-b64` は 2FA 専用。
@@ -212,7 +217,7 @@
 - [x] `attachment.storage.mode=s3` のとき bucket / region / access-key / secret-key を必須とする。
 - [x] `attachment.storage.s3.endpoint` / `attachment.storage.s3.force-path-style` を resolver で解決し、S3 互換 object storage 接続に使えることを検証する。
 - [x] `patient-images.enabled=true` のとき max-bytes / max-width / max-height を必須とする。
-- [x] `document.integrity.mode != off` のとき keyring-path を必須とする。
+- [x] `document.integrity.mode=enforce` と keyring-path を必須とする。
 - [x] `orca.mode` / `orca.base-url` / `orca.api.*` / ORCA secret protector を検証する。
 - [x] ORCA HTTP transport の retry / timeout / log mode / insecure HTTP / cache TTL を検証する。
 - [x] ORCA legacy 補助設定 / trusted proxy / template path / license path / chart event history 閾値の型変換を resolver に集約する。
