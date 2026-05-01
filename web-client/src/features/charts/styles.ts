@@ -3936,7 +3936,7 @@ export const chartsStyles = css`
     grid-template-columns: 1fr 2fr 1fr 1fr 0.8fr 1.8fr;
   }
 
-  .charts-side-panel__search-row:nth-child(even) {
+  .charts-side-panel__search-row:nth-of-type(even) {
     background: #f9fafb;
   }
 

@@ -2527,6 +2527,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               <span>患者ID</span>
               <input
                 id="patients-form-patientId"
+                aria-label="患者ID"
                 value={form.patientId ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, patientId: event.target.value }))}
                 inputMode="numeric"
@@ -2551,6 +2552,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               <span>氏名</span>
               <input
                 id="patients-form-name"
+                aria-label="氏名"
                 required
                 value={form.name ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
@@ -2574,6 +2576,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               <span>カナ</span>
               <input
                 id="patients-form-kana"
+                aria-label="カナ"
                 value={form.kana ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, kana: event.target.value }))}
                 aria-invalid={fieldErrorMap.has('kana')}
@@ -2596,6 +2599,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               <span>生年月日</span>
               <input
                 id="patients-form-birthDate"
+                aria-label="生年月日"
                 type="date"
                 value={form.birthDate ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, birthDate: event.target.value }))}
@@ -2619,6 +2623,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               <span>性別</span>
               <select
                 id="patients-form-sex"
+                aria-label="性別"
                 value={form.sex ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, sex: event.target.value }))}
                 aria-invalid={fieldErrorMap.has('sex')}
@@ -2641,6 +2646,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               <span>電話</span>
               <input
                 id="patients-form-phone"
+                aria-label="電話"
                 value={form.phone ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
                 inputMode="tel"
@@ -2663,12 +2669,19 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             <label>
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                 <span>郵便番号</span>
-                <button type="button" className="ghost" onClick={handleOrcaAddressLookup} disabled={!canLookupAddress}>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={handleOrcaAddressLookup}
+                  disabled={!canLookupAddress}
+                  aria-label="住所補完"
+                >
                   {orcaAddressPending ? '住所補完中…' : '住所補完'}
                 </button>
               </span>
               <input
                 id="patients-form-zip"
+                aria-label="郵便番号"
                 value={form.zip ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, zip: event.target.value }))}
                 inputMode="numeric"
@@ -2695,6 +2708,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               <span>住所</span>
               <input
                 id="patients-form-address"
+                aria-label="住所"
                 value={form.address ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
                 disabled={blocking}
@@ -2708,6 +2722,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               <span>メモ</span>
               <textarea
                 id="patients-form-memo"
+                aria-label="メモ"
                 rows={3}
                 value={form.memo ?? ''}
                 readOnly

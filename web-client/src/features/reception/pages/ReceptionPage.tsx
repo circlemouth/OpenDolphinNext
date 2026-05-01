@@ -5264,8 +5264,8 @@ export function ReceptionPage({
                             <div
                               key={rowKey}
                               tabIndex={0}
-                              role="button"
-                              aria-pressed={isSelected}
+                              role="listitem"
+                              aria-current={isSelected ? 'true' : undefined}
                               className={`reception-card${isSelected ? ' is-selected' : ''}`}
                               data-test-id="reception-entry-card"
                               data-patient-id={entry.patientId ?? ''}

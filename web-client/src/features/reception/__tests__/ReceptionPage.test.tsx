@@ -2037,7 +2037,11 @@ describe('ReceptionPage status/date/card action UX', () => {
       '[data-test-id="reception-entry-card"][data-patient-id="P-501"][data-reception-status="会計待ち"]',
     );
     expect(card).not.toBeNull();
+    expect(card).toHaveAttribute('role', 'listitem');
+    expect(card).not.toHaveAttribute('role', 'button');
     expect(within(card as HTMLElement).getByText(/請求:\s*会計待ち/)).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByRole('button', { name: 'カルテを開く（カード）' })).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByRole('button', { name: 'カード操作を開く' })).toBeInTheDocument();
     const transmission = (card as HTMLElement).querySelector('[data-test-id="reception-billing-transmission"]');
     expect(transmission).not.toBeNull();
     expect(transmission).toHaveTextContent('送信: 送信済');
