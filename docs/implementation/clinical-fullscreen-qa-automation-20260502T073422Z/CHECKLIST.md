@@ -28,7 +28,7 @@ RUN_ID: `20260502T073422Z`
 
 | ID | Scenario | Expected | Evidence | Status |
 | --- | --- | --- | --- | --- |
-| R-01 | 受付一覧 | 予約、受付済み、会計待ち、再計待ちが該当 tab で表示される | Browser | todo |
+| R-01 | 受付一覧 | 予約、受付済み、会計待ち、再計待ちが該当 tab で表示される | Browser DOM `20260502T121456Z`: status tabs visible; current seed has reservation only | test-data-blocker |
 | R-02 | 患者検索受付 | 患者検索後、明示選択まで受付設定を出さない | Browser DOM `20260502T104853Z` + `ReceptionPage.test.tsx` | pass |
 | R-03 | 必須項目制御 | 診療科、医師、来院区分、保険/自費が揃うまで受付できない | `ReceptionPage.test.tsx` `20260502T111805Z` | pass |
 | R-04 | `Medical_Information` 未選択 | request body に field 自体を送らない | `ReceptionPage.test.tsx` `20260502T111805Z` | pass |
@@ -36,7 +36,7 @@ RUN_ID: `20260502T073422Z`
 | R-06 | local-only patient | ORCA 受付を fail closed で不可にする | `ReceptionPage.test.tsx` `20260502T111805Z` | pass |
 | R-07 | duplicate acceptance | active 受付が filter 外でも重複受付を block する | `ReceptionPage.test.tsx` `20260502T111805Z` | pass |
 | R-08 | canonical handoff | accept success 後に canonical handoff で charts を開く | Browser DOM `20260502T104853Z` + focused test | pass |
-| R-09 | cancel / accounting | cancel、会計送信、再計待ち projection が表示される | Browser + focused test | todo |
+| R-09 | cancel / accounting | cancel、会計送信、再計待ち projection が表示される | Browser DOM `20260502T121456Z`: cancel is fail-closed without acceptance ID; accounting/recalc rows absent in seed | test-data-blocker |
 
 ## Charts Core
 
@@ -44,7 +44,7 @@ RUN_ID: `20260502T073422Z`
 | --- | --- | --- | --- | --- |
 | C-01 | context missing | 最小文脈喪失時は fail closed し受付へ戻せる | safe e2e `20260502T111805Z` | pass |
 | C-02 | reception to charts | 受付行から volatile encounter context だけで charts を開く | Browser DOM `20260502T104853Z` + safe e2e | pass |
-| C-03 | patient summary | 患者情報、受付情報、ORCA summary が過剰情報なしで表示される | Browser | todo |
+| C-03 | patient summary | 患者情報、受付情報、ORCA summary が過剰情報なしで表示される | Browser DOM `20260502T121456Z`; ORCA send/print fail closed on missing visit context | pass |
 | C-04 | SOAP S/O/A/P | 保存、再読込、dirty indicator、監査メタが機能する | Browser DOM `20260502T104853Z` + safe e2e | pass |
 | C-05 | disease | local disease create/update/delete、ORCA mirror read-only が成立する | Browser DOM `20260502T104853Z` + safe e2e | pass |
 | C-06 | patient info edit | official update route と canonical refresh が成立する | `PatientInfoEditDialog.test.tsx` `20260502T113104Z` | pass |
@@ -88,7 +88,7 @@ RUN_ID: `20260502T073422Z`
 | B-03 | outpatient print | 外来印刷 preview と audit が機能する | `chartsOutpatientPrintPage.test.tsx` `20260502T113104Z` | pass |
 | B-04 | document print | 文書印刷 preview と storage boundary が機能する | `chartsDocumentPrintPage.test.tsx` `20260502T113104Z` | pass |
 | B-05 | report print | prescription/report preview が required fields を fail closed する | print focused tests `20260502T113104Z` | pass |
-| B-06 | mobile images disabled | feature flag off では安全な案内だけを表示する | Browser | todo |
+| B-06 | mobile images disabled | feature flag off では安全な案内だけを表示する | Browser DOM `20260502T121456Z` | pass |
 | B-07 | mobile images enabled | upload size/MIME/permission error を安全に処理する | image focused tests `20260502T113104Z` | pass |
 | B-08 | administration access | 非 admin は拒否、admin は必要 panel だけ表示 | Browser DOM `20260502T104853Z` + admin focused tests | pass |
 | B-09 | ORCA connection admin | 任意 URL 接続を許容せず sanitized result だけ表示 | `AdministrationPage.connection.test.tsx` `20260502T113104Z` | pass |

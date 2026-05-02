@@ -137,11 +137,13 @@ PLAYWRIGHT_DISABLE_MSW=1 npm run --prefix web-client test:e2e:no-artifacts -- --
 
 live mutation は次の順でのみ進める。
 
+現在の Vite dev server が HTTP で起動している場合は、WebORCA QA scripts の既定 `https://localhost:5173` を使わず、必ず `QA_BASE_URL=http://localhost:5173` を明示する。`ERR_SSL_PROTOCOL_ERROR` が出た場合は repo defect とせず `environment-blocker` として記録し、同じ iteration では HTTP base URL を明示して readonly discovery / exact preflight を 1 回だけ再試行する。
+
 ```bash
-cd web-client && node scripts/qa-weborca-candidate-discovery.mjs
-cd web-client && QA_PATIENT_ID=<accepted-candidate> node scripts/qa-weborca-readonly-preflight.mjs
-cd web-client && QA_PATIENT_ID=<phase3AttemptPatientId> node scripts/qa-acceptmodv2-weborca.mjs
-cd web-client && QA_PATIENT_ID=<phase3AttemptPatientId> node scripts/qa-fullflow-weborca.mjs
+cd web-client && QA_BASE_URL=http://localhost:5173 node scripts/qa-weborca-candidate-discovery.mjs
+cd web-client && QA_BASE_URL=http://localhost:5173 QA_PATIENT_ID=<accepted-candidate> node scripts/qa-weborca-readonly-preflight.mjs
+cd web-client && QA_BASE_URL=http://localhost:5173 QA_PATIENT_ID=<phase3AttemptPatientId> node scripts/qa-acceptmodv2-weborca.mjs
+cd web-client && QA_BASE_URL=http://localhost:5173 QA_PATIENT_ID=<phase3AttemptPatientId> node scripts/qa-fullflow-weborca.mjs
 ```
 
 Rules:

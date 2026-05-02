@@ -58,6 +58,8 @@ Codexブラウザ接続は次の順で扱う。
 
 WebORCA Trialで確認可能なものは、local/MSW/no-artifacts の安全確認後に live preflight、acceptmodv2、可能なら medicalmodv2/fullflow へ進める。Trial のデータ不足や資格情報未投入は repo defect と混同しない。
 
+現在の Vite dev server が HTTP の場合、WebORCA QA scripts は `QA_BASE_URL=http://localhost:5173` を明示して実行する。既定 HTTPS による `ERR_SSL_PROTOCOL_ERROR` は `environment-blocker` として記録し、同じ iteration では HTTP base URL を明示して readonly discovery / exact preflight を 1 回だけ再試行する。
+
 raw 資格情報、Cookie、Authorization、JSESSIONID、CSRF、raw ORCA body、患者氏名、住所、電話番号、保険詳細、HAR、trace、video、screenshot を tracked evidence へ保存しない。証跡は `artifacts/clinical-fullscreen-qa/<RUN_ID>/` に sanitized summary として残す。
 
 各回の最後に日本語でこのスレッドへ報告する。

@@ -814,6 +814,58 @@ const buildEmptyForm = (today: string): BundleFormState => ({
   bodyPart: null,
 });
 
+const normalizeOptimisticText = (value?: string | null) => value?.trim() ?? '';
+
+const normalizeOptimisticItems = (items?: OrderBundleItem[]) =>
+  (items ?? []).map((item) => ({
+    code: normalizeOptimisticText(item.code),
+    name: normalizeOptimisticText(item.name),
+    quantity: normalizeOptimisticText(item.quantity),
+    unit: normalizeOptimisticText(item.unit),
+    memo: normalizeOptimisticText(item.memo),
+    rowRole: normalizeOptimisticText(item.rowRole),
+    rowSubtype: normalizeOptimisticText(item.rowSubtype),
+    category: normalizeOptimisticText(item.category),
+    masterCategory: normalizeOptimisticText(item.masterCategory),
+  }));
+
+const normalizeOptimisticBodyPart = (bodyPart?: OrderBundleBodyPart) =>
+  bodyPart
+    ? {
+        code: normalizeOptimisticText(bodyPart.code),
+        name: normalizeOptimisticText(bodyPart.name),
+        quantity: normalizeOptimisticText(bodyPart.quantity),
+        unit: normalizeOptimisticText(bodyPart.unit),
+        memo: normalizeOptimisticText(bodyPart.memo),
+      }
+    : null;
+
+const buildOptimisticBundleKey = (bundle: OrderBundle) =>
+  JSON.stringify({
+    documentId: bundle.documentId ?? null,
+    moduleId: bundle.moduleId ?? null,
+    entity: normalizeOptimisticText(bundle.entity),
+    bundleName: normalizeOptimisticText(bundle.bundleName),
+    bundleNumber: normalizeOptimisticText(bundle.bundleNumber),
+    subtype: normalizeOptimisticText(bundle.subtype),
+    classCode: normalizeOptimisticText(bundle.classCode),
+    classCodeSystem: normalizeOptimisticText(bundle.classCodeSystem),
+    className: normalizeOptimisticText(bundle.className),
+    admin: normalizeOptimisticText(bundle.admin),
+    adminCode: normalizeOptimisticText(bundle.adminCode),
+    adminCodeSystem: normalizeOptimisticText(bundle.adminCodeSystem),
+    adminMemo: normalizeOptimisticText(bundle.adminMemo),
+    memo: normalizeOptimisticText(bundle.memo),
+    started: normalizeOptimisticText(bundle.started),
+    items: normalizeOptimisticItems(bundle.items),
+    materialItems: normalizeOptimisticItems(bundle.materialItems),
+    commentItems: normalizeOptimisticItems(bundle.commentItems),
+    bodyPart: normalizeOptimisticBodyPart(bundle.bodyPart),
+  });
+
+const isOptimisticBundleSynced = (fetched: OrderBundle, optimistic: OrderBundle) =>
+  fetched.documentId === optimistic.documentId && buildOptimisticBundleKey(fetched) === buildOptimisticBundleKey(optimistic);
+
 const applyDefaultClassMeta = (entity: string, form: BundleFormState): BundleFormState => {
   if (entity === 'medOrder') return form;
   if (form.classCode?.trim()) return form;
@@ -3334,18 +3386,32 @@ export function OrderBundleEditPanel({
         .filter((id): id is number => typeof id === 'number' && id > 0),
     );
     if (fetchedIds.size === 0) return;
-    setOptimisticBundles((prev) => prev.filter((bundle) => !bundle.documentId || !fetchedIds.has(bundle.documentId)));
+    setOptimisticBundles((prev) =>
+      prev.filter((bundle) => {
+        if (!bundle.documentId || !fetchedIds.has(bundle.documentId)) return true;
+        const fetched = fetchedBundles.find((entry) => entry.documentId === bundle.documentId);
+        return fetched ? !isOptimisticBundleSynced(fetched, bundle) : true;
+      }),
+    );
   }, [fetchedBundles, optimisticBundles.length]);
   const bundles = useMemo(() => {
     if (optimisticBundles.length === 0) return fetchedBundles;
+    const optimisticById = new Map(
+      optimisticBundles
+        .filter((bundle) => typeof bundle.documentId === 'number' && bundle.documentId > 0)
+        .map((bundle) => [bundle.documentId as number, bundle]),
+    );
     const fetchedIds = new Set(
       fetchedBundles
         .map((bundle) => bundle.documentId)
         .filter((id): id is number => typeof id === 'number' && id > 0),
     );
     const pending = optimisticBundles.filter((bundle) => !bundle.documentId || !fetchedIds.has(bundle.documentId));
-    if (pending.length === 0) return fetchedBundles;
-    return [...pending, ...fetchedBundles];
+    const mergedFetched = fetchedBundles.map((bundle) => {
+      const optimistic = typeof bundle.documentId === 'number' ? optimisticById.get(bundle.documentId) : undefined;
+      return optimistic ?? bundle;
+    });
+    return [...pending, ...mergedFetched];
   }, [fetchedBundles, optimisticBundles]);
 
   const orcaWarningsForActiveBundle = useMemo(() => {
