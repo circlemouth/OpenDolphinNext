@@ -33,6 +33,7 @@ public final class OpenDolphinRestApplication extends Application {
                 open.dolphin.rest.AdminAccessResource.class,
                 open.dolphin.rest.AdminMasterUpdateResource.class,
                 open.dolphin.rest.AdminOrcaConnectionResource.class,
+                open.dolphin.rest.AdminOrcaCapabilitiesResource.class,
                 open.dolphin.rest.AdminOrcaUserResource.class,
                 open.dolphin.rest.AdminOrcaUserLinkResource.class,
                 open.dolphin.rest.ReceptionRealtimeStreamResource.class,

@@ -1351,6 +1351,20 @@ export function ReceptionPage({
           if (entry.scheduleKey && nextEntry.scheduleKey && entry.scheduleKey === nextEntry.scheduleKey) return false;
           if (entry.receptionId && nextEntry.receptionId && entry.receptionId === nextEntry.receptionId) return false;
           if (entry.id && nextEntry.id && entry.id === nextEntry.id) return false;
+          const samePatient = entry.patientId?.trim() && nextEntry.patientId?.trim() && entry.patientId.trim() === nextEntry.patientId.trim();
+          const departmentMatches =
+            !entry.departmentCode || !nextEntry.departmentCode || entry.departmentCode === nextEntry.departmentCode;
+          const physicianMatches =
+            !entry.physicianCode || !nextEntry.physicianCode || entry.physicianCode === nextEntry.physicianCode;
+          const reservationWasAccepted =
+            params.requestNumber === '01' &&
+            Boolean(nextEntry.receptionId) &&
+            Boolean(samePatient) &&
+            entry.status === '予約' &&
+            departmentMatches &&
+            physicianMatches &&
+            (!entry.receptionId || entry.receptionId === nextEntry.receptionId);
+          if (reservationWasAccepted) return false;
           return true;
         });
         const nextEntries = [nextEntry, ...deduped];

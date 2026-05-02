@@ -20,13 +20,14 @@ const deriveStatus = (payload: {
   updateTime?: string;
   appointmentDate?: string;
   appointmentTime?: string;
+  scheduledFallback?: boolean;
 }): ReceptionStatus => {
   const info = payload.visitInformation ?? '';
   if (info.includes('会計済')) return '会計済み';
   if (info.includes('会計') || info.includes('精算')) return '会計待ち';
   if (info.includes('診察') || info.includes('診療') || info.includes('処置')) return '診療中';
   if (info.includes('予約')) return '予約';
-  if (payload.appointmentDate && payload.appointmentTime) {
+  if (payload.scheduledFallback !== false && payload.appointmentDate && payload.appointmentTime) {
     return '予約';
   }
   return '受付中';
@@ -325,6 +326,7 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
         visitInformation: visit.visitInformation,
         appointmentDate: json?.visitDate,
         appointmentTime: visit.updateTime,
+        scheduledFallback: false,
       }),
       insurance: visit.insuranceCombinationNumber,
       source: 'visits',

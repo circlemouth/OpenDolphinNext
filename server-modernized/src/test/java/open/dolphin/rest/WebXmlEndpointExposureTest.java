@@ -40,6 +40,7 @@ class WebXmlEndpointExposureTest {
                 .contains("open.dolphin.rest.LocalMedicalSummaryResource")
                 .contains("open.dolphin.rest.LocalDiagnosisResource")
                 .contains("open.dolphin.rest.OperationsHealthResource")
+                .contains("open.dolphin.rest.AdminOrcaCapabilitiesResource")
                 .contains("open.dolphin.rest.AdminOrcaUserLinkResource")
                 .contains("open.dolphin.rest.PvtWorkerHealthResource")
                 .contains("open.dolphin.rest.PatientModV2OutpatientResource")

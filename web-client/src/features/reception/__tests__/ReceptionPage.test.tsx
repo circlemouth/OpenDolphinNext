@@ -866,6 +866,72 @@ describe('ReceptionPage accept UX', () => {
     });
   });
 
+  it('受付成功後は同一患者の予約行を受付中に置換し取消を有効化する', async () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-accept-reservation',
+        patientId: 'P-220',
+        appointmentId: 'A-220',
+        departmentCode: '01',
+        physicianCode: '10001',
+        name: '予約登録患者',
+        appointmentTime: '09:20',
+        department: '01 内科',
+        physician: '10001 担当医A',
+        status: '予約',
+        insurance: '保険',
+        source: 'reservations',
+      },
+    ];
+    mockMutationQueue.push(
+      {
+        patients: [{ patientId: 'P-220', name: '予約登録患者', insurance: '保険' }],
+        recordsReturned: 1,
+        runId: 'RUN-SEARCH-ACCEPT-REPLACE',
+      },
+      {
+        runId: 'RUN-VISIT-ACCEPT-REPLACE',
+        traceId: 'TRACE-VISIT-ACCEPT-REPLACE',
+        apiResult: '00',
+        apiResultMessage: 'OK',
+        requestNumber: '01',
+        businessStatus: 'businessAccepted',
+        acceptanceId: 'R-220',
+        acceptanceDate: '2026-01-29',
+        acceptanceTime: '09:21:00',
+        departmentCode: '01',
+        physicianCode: '10001',
+        patient: { patientId: 'P-220', name: '予約登録患者' },
+      },
+    );
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    await user.click(within(patientSearch).getByRole('button', { name: '検索' }));
+    const resultPanel = within(workflowModal).getByRole('region', { name: '患者検索結果モーダル' });
+    await user.click(within(resultPanel).getAllByRole('listitem')[0]);
+
+    const acceptPanel = getAcceptRegisterPanel(workflowModal);
+    await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
+    await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
+    await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
+
+    const row = await screen.findByRole('row', { name: /予約登録患者/ });
+    expect(row).toHaveAttribute('data-reception-status', '受付中');
+    await openRowActionMenu(user, row);
+    expect(getRowMenuAction(row, /受付取消/)).toBeEnabled();
+    expect(mockAppointmentData.entries.filter((entry) => entry.patientId === 'P-220')).toHaveLength(1);
+    expect(mockAppointmentData.entries[0]).toMatchObject({
+      patientId: 'P-220',
+      receptionId: 'R-220',
+      status: '受付中',
+      source: 'visits',
+    });
+  });
+
   it('shows Api_Result and duration in the result area after submit', async () => {
     mockAppointmentData.entries = [
       {
