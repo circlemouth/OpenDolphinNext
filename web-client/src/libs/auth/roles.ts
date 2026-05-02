@@ -11,3 +11,10 @@ export const isSystemAdminRole = (role?: string) => {
   if (!role) return false;
   return SYSTEM_ADMIN_ROLES.has(role);
 };
+
+export const resolveSystemAdminRole = (role?: string, roles?: string[]) => {
+  if (isSystemAdminRole(role)) return role;
+  return roles?.find((entry) => isSystemAdminRole(entry));
+};
+
+export const hasSystemAdminRole = (role?: string, roles?: string[]) => Boolean(resolveSystemAdminRole(role, roles));

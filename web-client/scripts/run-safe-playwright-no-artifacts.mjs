@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -126,6 +127,30 @@ const validateConfig = () => {
   }
 };
 
+const canListenOnPort = (port) =>
+  new Promise((resolve) => {
+    const server = net.createServer();
+    server.once('error', () => resolve(false));
+    server.once('listening', () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, '127.0.0.1');
+  });
+
+const resolvePlaywrightWebPort = async () => {
+  if (process.env.PLAYWRIGHT_BASE_URL || process.env.PLAYWRIGHT_WEB_PORT) {
+    return undefined;
+  }
+
+  const basePort = 4173;
+  for (let port = basePort; port < basePort + 50; port += 1) {
+    if (await canListenOnPort(port)) {
+      return String(port);
+    }
+  }
+  throw new Error('No free PLAYWRIGHT_WEB_PORT found in 4173-4222');
+};
+
 const scanSpec = ({ absolutePath, relativePath }) => {
   const source = readFileSync(absolutePath, 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -202,6 +227,11 @@ const main = async () => {
     return;
   }
 
+  const resolvedWebPort = await resolvePlaywrightWebPort();
+  if (resolvedWebPort) {
+    console.log(`safe_playwright_no_artifacts=port port=${resolvedWebPort}`);
+  }
+
   const commandArgs = [
     'playwright',
     'test',
@@ -214,6 +244,7 @@ const main = async () => {
     env: {
       ...process.env,
       ...(runId ? { RUN_ID: runId } : {}),
+      ...(resolvedWebPort ? { PLAYWRIGHT_WEB_PORT: resolvedWebPort } : {}),
       PLAYWRIGHT_NO_ARTIFACTS: '1',
       PLAYWRIGHT_NO_COPY_PROMPT: '1',
       PLAYWRIGHT_HTML_OPEN: 'never',

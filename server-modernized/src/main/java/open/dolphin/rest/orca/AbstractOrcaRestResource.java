@@ -9,6 +9,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.rest.AbstractResource;
@@ -50,6 +51,40 @@ public abstract class AbstractOrcaRestResource extends AbstractResource {
      */
     protected String resolveRunId(HttpServletRequest request) {
         return resolveRunIdValue((Object) request);
+    }
+
+    protected String safeRequestValue(HttpServletRequest request, Function<HttpServletRequest, String> resolver) {
+        if (request == null || resolver == null) {
+            return null;
+        }
+        try {
+            return resolver.apply(request);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    protected String safeRequestHeader(HttpServletRequest request, String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        return safeRequestValue(request, candidate -> candidate.getHeader(name));
+    }
+
+    protected String safeResolveTraceId(HttpServletRequest request) {
+        try {
+            return resolveTraceId(request);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    protected String safeRequestClientIp(HttpServletRequest request) {
+        try {
+            return request != null ? resolveClientIp(request) : null;
+        } catch (RuntimeException ex) {
+            return null;
+        }
     }
 
     public static String resolveRunIdValue(Object requestOrHeader) {
@@ -101,7 +136,7 @@ public abstract class AbstractOrcaRestResource extends AbstractResource {
         Map<String, Object> enriched = details != null ? new HashMap<>(details) : new HashMap<>();
         String resourcePath = extractDetailText(enriched, "resource");
         if (resourcePath == null || resourcePath.isBlank()) {
-            resourcePath = request != null ? request.getRequestURI() : null;
+            resourcePath = safeRequestValue(request, HttpServletRequest::getRequestURI);
         }
         String scope = extractDetailText(enriched, "scope");
         if ((scope == null || scope.isBlank()) && resourcePath != null && !resourcePath.isBlank()) {
@@ -117,11 +152,12 @@ public abstract class AbstractOrcaRestResource extends AbstractResource {
         AuditEventPayload payload = new AuditEventPayload();
         payload.setAction(action);
         payload.setResource(resourcePath != null && !resourcePath.isBlank() ? resourcePath : "/orca");
-        payload.setActorId(request != null ? request.getRemoteUser() : null);
-        payload.setIpAddress(resolveClientIp(request));
-        payload.setUserAgent(request != null ? request.getHeader("User-Agent") : null);
-        String traceId = resolveTraceId(request);
-        String requestId = request != null ? request.getHeader("X-Request-Id") : null;
+        String actorId = firstNonBlank(safeRequestValue(request, HttpServletRequest::getRemoteUser), extractDetailText(enriched, "actorId"));
+        payload.setActorId(actorId);
+        payload.setIpAddress(firstNonBlank(safeRequestClientIp(request), extractDetailText(enriched, "ipAddress"), "unknown"));
+        payload.setUserAgent(firstNonBlank(safeRequestHeader(request, "User-Agent"), extractDetailText(enriched, "userAgent")));
+        String traceId = safeResolveTraceId(request);
+        String requestId = safeRequestHeader(request, "X-Request-Id");
         if (requestId != null && !requestId.isBlank()) {
             requestId = requestId.trim();
         } else {
@@ -178,13 +214,13 @@ public abstract class AbstractOrcaRestResource extends AbstractResource {
         if (request == null) {
             return null;
         }
-        String remoteUser = request.getRemoteUser();
+        String remoteUser = safeRequestValue(request, HttpServletRequest::getRemoteUser);
         String facility = null;
         if (remoteUser != null && remoteUser.indexOf(IInfoModel.COMPOSITE_KEY_MAKER) >= 0) {
             facility = getRemoteFacility(remoteUser);
         }
         if (facility == null || facility.isBlank()) {
-            String header = request.getHeader(FACILITY_HEADER);
+            String header = safeRequestHeader(request, FACILITY_HEADER);
             if (header != null && !header.trim().isEmpty()) {
                 return header.trim();
             }
@@ -199,6 +235,18 @@ public abstract class AbstractOrcaRestResource extends AbstractResource {
         Object value = details.get(key);
         if (value instanceof String text && !text.isBlank()) {
             return text;
+        }
+        return null;
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
         }
         return null;
     }

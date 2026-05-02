@@ -518,6 +518,37 @@ const setTextInputValue = async (locator, value) => {
   }
 };
 
+const findExactPatientSearchResult = async (workflowModal, targetPatientId) => {
+  const normalizedTarget = String(targetPatientId ?? '').trim();
+  const resultItems = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]');
+  const deadline = Date.now() + 20000;
+  let lastRendered = [];
+  while (Date.now() < deadline) {
+    const count = await resultItems.count().catch(() => 0);
+    lastRendered = [];
+    for (let index = 0; index < count; index += 1) {
+      const item = resultItems.nth(index);
+      const text = (await item.innerText().catch(() => '')) ?? '';
+      const normalizedText = text.replace(/\s+/g, ' ').trim();
+      if (normalizedText) {
+        lastRendered.push(normalizedText);
+      }
+      if (new RegExp(`\\bID:\\s*${normalizedTarget}\\b`).test(text)) {
+        return { item, count, index, matched: true };
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  if (lastRendered.length === 0) {
+    throw new Error(
+      `patient search returned no selectable result for QA_PATIENT_ID=${normalizedTarget}; set QA_PATIENT_ID to an ORCA-searchable patient in the current environment`,
+    );
+  }
+  throw new Error(
+    `patient search did not render exact QA_PATIENT_ID=${normalizedTarget}; rendered=${JSON.stringify(lastRendered)}`,
+  );
+};
+
 const selectOptionWithGate = async (selectLocator, field, desiredValue) => {
   const options = await selectLocator.locator('option').evaluateAll((nodes) =>
     nodes.map((node) => node.value ?? ''),
@@ -770,6 +801,11 @@ const run = async () => {
   await patientSearchForm.waitFor({ timeout: 20000 });
   logStep('patient search form ready');
   logStep('accept form ready');
+  const clearPatientSearchButton = workflowModal.locator('.reception-patient-search__header-actions').getByRole('button', { name: 'クリア' });
+  if (await clearPatientSearchButton.isVisible().catch(() => false)) {
+    await clearPatientSearchButton.click();
+    logStep('cleared prefilled patient search');
+  }
 
   await page
     .waitForFunction(() => {
@@ -791,14 +827,11 @@ const run = async () => {
   logStep(`filled patient search id method=${patientSearchInputMethod}`);
   await patientSearchForm.locator('[data-test-id="reception-patient-search-submit"]').click();
   logStep('submitted patient search');
-  const resultListItem = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]').first();
-  await resultListItem.waitFor({ timeout: 20000 }).catch(() => {
-    throw new Error(
-      `patient search returned no selectable result for QA_PATIENT_ID=${patientId}; set QA_PATIENT_ID to an ORCA-searchable patient in the current environment`,
-    );
-  });
-  await resultListItem.click();
-  logStep('selected patient search result');
+  const exactPatientSearchResult = await findExactPatientSearchResult(workflowModal, patientId);
+  await exactPatientSearchResult.item.click();
+  logStep(
+    `selected exact patient search result patientId=${patientId} resultCount=${exactPatientSearchResult.count} index=${exactPatientSearchResult.index}`,
+  );
 
   let handoffMode = 'accept-mutation';
   let departmentSelection = { ok: true, resolved: '', skipped: 'existing-acceptance-handoff-not-used' };
@@ -1180,16 +1213,25 @@ const run = async () => {
     await orderPanel.locator(`#${orderEntity}-bundle-name`).fill(orderBundleName);
     if (masterKeyword) {
       try {
-        await orderPanel.locator(`#${orderEntity}-master-type`).selectOption(masterType);
-        await orderPanel.locator(`#${orderEntity}-master-keyword`).fill(masterKeyword);
+        const masterTypeSelect = orderPanel.locator(`#${orderEntity}-master-type`);
+        if ((await masterTypeSelect.count().catch(() => 0)) > 0) {
+          await masterTypeSelect.selectOption(masterType, { timeout: 3000 });
+        } else {
+          logStep(`master type select not present; using current entity default for keyword=${masterKeyword}`);
+        }
         const masterKeywordInput = orderPanel.locator(`#${orderEntity}-master-keyword`);
-        const masterSection = masterKeywordInput.locator(
-          'xpath=ancestor::div[contains(@class,"charts-side-panel__subsection--search")]',
-        );
-        const masterResult = masterSection.locator('button.charts-side-panel__search-row').first();
-        await masterResult.waitFor({ state: 'visible', timeout: 20000 });
-        await masterResult.click();
-        logStep(`master selected type=${masterType} keyword=${masterKeyword}`);
+        if ((await masterKeywordInput.count().catch(() => 0)) > 0) {
+          await masterKeywordInput.fill(masterKeyword, { timeout: 3000 });
+          const masterSection = masterKeywordInput.locator(
+            'xpath=ancestor::div[contains(@class,"charts-side-panel__subsection--search")]',
+          );
+          const masterResult = masterSection.locator('button.charts-side-panel__search-row').first();
+          await masterResult.waitFor({ state: 'visible', timeout: 20000 });
+          await masterResult.click();
+          logStep(`master selected type=${masterType} keyword=${masterKeyword}`);
+        } else {
+          logStep(`master keyword input not present; coded fallback may be used keyword=${masterKeyword}`);
+        }
       } catch (error) {
         logStep(`master selection error=${String(error)}`);
       }

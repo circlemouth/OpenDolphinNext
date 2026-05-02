@@ -134,6 +134,67 @@ class OrcaVisitResourceTest {
     }
 
     @Test
+    void visitListProjectedFallbackUsesPersistedServerDerivedOfficialIdentifiers() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        VisitPatientListResponse stub = new VisitPatientListResponse();
+        stub.setApiResult("00");
+        stub.setApiResultMessage("OK");
+        stub.setVisitDate("2026-04-13");
+        when(wrapperService.getVisitList(anyString(), any(VisitPatientListRequest.class))).thenReturn(stub);
+
+        EncounterProjectionRepository encounterProjectionRepository = mock(EncounterProjectionRepository.class);
+        when(encounterProjectionRepository.findByFacilityAndAcceptanceRange(anyString(), any(Instant.class), any(Instant.class)))
+                .thenReturn(List.of(new EncounterProjectionRepository.EncounterRow(
+                        "F001:ACCEPT-200",
+                        "F001",
+                        "000200",
+                        20L,
+                        "F001:ACCEPT-S",
+                        "ACCEPT-200",
+                        Instant.parse("2026-04-13T00:00:00Z"),
+                        "checked_in",
+                        null,
+                        null,
+                        null,
+                        "doctor01",
+                        null,
+                        """
+                        {"rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true,"officialVisitIdentifiers":{"departmentCode":"01","physicianCode":"10001","insuranceCombinationNumber":"0001","voucherNumber":"V-200","sequentialNumber":"S-200"}}
+                        """,
+                        null,
+                        1L,
+                        Instant.parse("2026-04-13T00:00:01Z"))));
+
+        ProjectionPatientSummaryRepository projectionPatientSummaryRepository = mock(ProjectionPatientSummaryRepository.class);
+        PatientSummary patient = new PatientSummary();
+        patient.setPatientId("000200");
+        when(projectionPatientSummaryRepository.findByFacilityAndPatientId("F001", "000200")).thenReturn(patient);
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        resource.encounterProjectionRepository = encounterProjectionRepository;
+        resource.projectionPatientSummaryRepository = projectionPatientSummaryRepository;
+
+        VisitPatientListRequest request = new VisitPatientListRequest();
+        request.setRequestNumber("01");
+        request.setVisitDate(LocalDate.of(2026, 4, 13));
+
+        VisitPatientListResponse response = resource.visitList(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals(1, response.getVisits().size());
+        VisitPatientListResponse.VisitEntry merged = response.getVisits().get(0);
+        assertEquals("F001:S-200", merged.getScheduleKey());
+        assertEquals("F001:V-200", merged.getEncounterKey());
+        assertEquals("01", merged.getDepartmentCode());
+        assertEquals("10001", merged.getPhysicianCode());
+        assertEquals("0001", merged.getInsuranceCombinationNumber());
+        assertEquals("V-200", merged.getVoucherNumber());
+        assertEquals("S-200", merged.getSequentialNumber());
+        assertEquals("000200", merged.getPatient().getPatientId());
+        assertTrue(response.isFallbackUsed());
+    }
+
+    @Test
     void visitListProjectsEncounterRowsForAcceptedVisitsWhenMissing() {
         OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
         VisitPatientListResponse stub = new VisitPatientListResponse();
@@ -624,6 +685,133 @@ class OrcaVisitResourceTest {
     }
 
     @Test
+    void visitMutationReconcilesAndProjectsServerDerivedOfficialIdentifiers() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        VisitMutationResponse stub = new VisitMutationResponse();
+        stub.setApiResult("K3");
+        stub.setApiResultMessage("受付登録終了");
+        stub.setAcceptanceId("A-100");
+        stub.setAcceptanceDate("2025-11-16");
+        stub.setAcceptanceTime("09:00:00");
+        PatientSummary patient = new PatientSummary();
+        patient.setPatientId("000100");
+        stub.setPatient(patient);
+        when(wrapperService.mutateVisit(anyString(), any(VisitMutationRequest.class))).thenReturn(stub);
+
+        AcceptanceInventoryResponse inventory = new AcceptanceInventoryResponse();
+        AcceptanceInventoryResponse.AcceptanceInventoryRow selected = acceptanceInventoryRow(
+                "hash-selected", "A-100", "000100", "2025-11-16", "09:00:00", "01", "10001");
+        inventory.getRows().add(selected);
+        when(wrapperService.getAcceptanceInventory(anyString(), any(AcceptanceInventoryRequest.class))).thenReturn(inventory);
+
+        MedicalIdentifierPreflightResponse identifierPreflight = new MedicalIdentifierPreflightResponse();
+        identifierPreflight.setSelectedAcceptanceTargetReady(true);
+        identifierPreflight.setMedicalSanitizedRowCount(1);
+        MedicalIdentifierPreflightResponse.MedicalIdentifierRow medicalRow =
+                new MedicalIdentifierPreflightResponse.MedicalIdentifierRow();
+        medicalRow.setHasPerformDate(true);
+        medicalRow.setHasDepartmentCode(true);
+        medicalRow.setHasInvoiceNumber(true);
+        medicalRow.setHasSequentialNumber(true);
+        medicalRow.setHasInsuranceCombinationNumber(true);
+        medicalRow.setRawSensitiveFieldsExcluded(true);
+        medicalRow.setServerPerformDate("2025-11-16");
+        medicalRow.setServerDepartmentCode("01");
+        medicalRow.setServerInvoiceNumber("INV-100");
+        medicalRow.setServerSequentialNumber("S-100");
+        medicalRow.setServerInsuranceCombinationNumber("0001");
+        identifierPreflight.getMedicalRows().add(medicalRow);
+        when(wrapperService.getMedicalIdentifierPreflight(anyString(), any(MedicalIdentifierPreflightRequest.class)))
+                .thenReturn(identifierPreflight);
+
+        EncounterProjectionRepository encounterProjectionRepository = mock(EncounterProjectionRepository.class);
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        resource.encounterProjectionRepository = encounterProjectionRepository;
+
+        VisitMutationRequest request = new VisitMutationRequest();
+        request.setRequestNumber("01");
+        request.setPatientId("000100");
+        request.setAcceptanceDate("2025-11-16");
+        request.setAcceptanceTime("09:00:00");
+        request.setDepartmentCode("01");
+        request.setPhysicianCode("10001");
+
+        VisitMutationResponse response = resource.mutateVisit(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals("K3", response.getApiResult());
+        assertEquals("A-100", response.getAcceptanceId());
+        assertEquals("INV-100", response.getVoucherNumber());
+        assertEquals("S-100", response.getSequentialNumber());
+        assertEquals("0001", response.getInsuranceCombinationNumber());
+        assertTrue(response.getWarnings().contains(
+                "acceptance_official_identifiers_reconciled_from_server_readonly_preflight"));
+        verify(encounterProjectionRepository).upsertCheckedIn(argThat(command ->
+                "F001:A-100".equals(command.encounterKey())
+                        && "F001".equals(command.facilityId())
+                        && "000100".equals(command.patientId())
+                        && "A-100".equals(command.orcaAcceptanceId())
+                        && command.worklistFlagsJson().contains("\"clientProvidedIdentifiersTrusted\":false")
+                        && command.worklistFlagsJson().contains("\"serverDerivedAuthorityRequired\":true")
+                        && command.worklistFlagsJson().contains("\"voucherNumber\":\"INV-100\"")
+                        && command.worklistFlagsJson().contains("\"sequentialNumber\":\"S-100\"")
+                        && command.worklistFlagsJson().contains("\"insuranceCombinationNumber\":\"0001\"")));
+    }
+
+    @Test
+    void visitMutationProjectsProvisionalMedicalModContextFromServerDerivedAcceptance() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        VisitMutationResponse stub = new VisitMutationResponse();
+        stub.setApiResult("K3");
+        stub.setApiResultMessage("受付登録終了");
+        stub.setAcceptanceId("A-300");
+        stub.setAcceptanceDate("2025-11-16");
+        stub.setAcceptanceTime("09:00:00");
+        PatientSummary patient = new PatientSummary();
+        patient.setPatientId("000300");
+        stub.setPatient(patient);
+        when(wrapperService.mutateVisit(anyString(), any(VisitMutationRequest.class))).thenReturn(stub);
+
+        AcceptanceInventoryResponse inventory = new AcceptanceInventoryResponse();
+        AcceptanceInventoryResponse.AcceptanceInventoryRow selected = acceptanceInventoryRow(
+                "hash-provisional", "A-300", "000300", "2025-11-16", "09:00:00", "01", "10001");
+        inventory.getRows().add(selected);
+        when(wrapperService.getAcceptanceInventory(anyString(), any(AcceptanceInventoryRequest.class))).thenReturn(inventory);
+
+        MedicalIdentifierPreflightResponse identifierPreflight = new MedicalIdentifierPreflightResponse();
+        identifierPreflight.setSelectedAcceptanceTargetReady(true);
+        when(wrapperService.getMedicalIdentifierPreflight(anyString(), any(MedicalIdentifierPreflightRequest.class)))
+                .thenReturn(identifierPreflight);
+
+        EncounterProjectionRepository encounterProjectionRepository = mock(EncounterProjectionRepository.class);
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        resource.encounterProjectionRepository = encounterProjectionRepository;
+
+        VisitMutationRequest request = new VisitMutationRequest();
+        request.setRequestNumber("01");
+        request.setPatientId("000300");
+        request.setAcceptanceDate("2025-11-16");
+        request.setAcceptanceTime("09:00:00");
+        request.setDepartmentCode("01");
+        request.setPhysicianCode("10001");
+
+        VisitMutationResponse response = resource.mutateVisit(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals("A-300", response.getVoucherNumber());
+        assertEquals("1", response.getSequentialNumber());
+        assertEquals("0001", response.getInsuranceCombinationNumber());
+        assertTrue(response.getWarnings().contains(
+                "acceptance_provisional_medicalmodv2_context_server_derived_from_acceptlstv2"));
+        verify(encounterProjectionRepository).upsertCheckedIn(argThat(command ->
+                "F001:A-300".equals(command.encounterKey())
+                        && command.worklistFlagsJson().contains("\"provisionalMedicalModV2Context\":true")
+                        && command.worklistFlagsJson().contains("\"voucherNumber\":\"A-300\"")
+                        && command.worklistFlagsJson().contains("\"sequentialNumber\":\"1\"")
+                        && command.worklistFlagsJson().contains("\"clientProvidedIdentifiersTrusted\":false")));
+    }
+
+    @Test
     void visitMutationReconcilesDuplicateAcceptanceFromServerDerivedInventory() {
         OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
         VisitMutationResponse duplicate = new VisitMutationResponse();
@@ -696,7 +884,11 @@ class OrcaVisitResourceTest {
                 "F001:A-016".equals(command.encounterKey())
                         && "F001".equals(command.facilityId())
                         && "000016".equals(command.patientId())
-                        && "A-016".equals(command.orcaAcceptanceId())));
+                        && "A-016".equals(command.orcaAcceptanceId())
+                        && command.worklistFlagsJson().contains("\"clientProvidedIdentifiersTrusted\":false")
+                        && command.worklistFlagsJson().contains("\"voucherNumber\":\"INV-016\"")
+                        && command.worklistFlagsJson().contains("\"sequentialNumber\":\"1\"")
+                        && command.worklistFlagsJson().contains("\"insuranceCombinationNumber\":\"MED-0001\"")));
     }
 
     @Test

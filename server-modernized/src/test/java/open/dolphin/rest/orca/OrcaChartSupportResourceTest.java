@@ -5,12 +5,19 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
 import java.lang.reflect.Proxy;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
@@ -275,6 +282,7 @@ class OrcaChartSupportResourceTest {
                 "ORCA facility configuration is not available"));
         OrcaChartSupportResource resource = new OrcaChartSupportResource();
         injectField(resource, "orcaTransport", transport);
+        injectMedicalModAuthority(resource);
 
         OrcaConnectionPolicyException exception = assertThrows(
                 OrcaConnectionPolicyException.class,
@@ -284,6 +292,28 @@ class OrcaChartSupportResourceTest {
         assertEquals(OrcaEndpoint.MEDICAL_MOD, transport.endpoint());
         assertTrue(transport.requestXml().contains("<Patient_ID type=\"string\">12345</Patient_ID>"));
         assertTrue(transport.requestXml().contains("<Request_Number type=\"string\">01</Request_Number>"));
+    }
+
+    @Test
+    void medicalModV2RejectsTamperedEncounterContextBeforeTransport() {
+        CapturingTransport transport = new CapturingTransport();
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        injectMedicalModAuthority(resource);
+
+        ChartSupportMedicalModV2Request payload = newMedicalModPayload();
+        payload.setVoucherNumber("tampered");
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> resource.medicalModV2(buildRequest(), payload));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        assertNull(transport.endpoint());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
+        assertEquals("encounterContext", body.get("field"));
+        assertEquals("server-derived encounter context was not found", body.get("message"));
     }
 
     @Test
@@ -447,6 +477,32 @@ class OrcaChartSupportResourceTest {
         information.setMedications(List.of(medication));
         payload.setMedicalInformation(List.of(information));
         return payload;
+    }
+
+    private static void injectMedicalModAuthority(OrcaChartSupportResource resource) {
+        EncounterProjectionRepository repository = mock(EncounterProjectionRepository.class);
+        when(repository.findByFacilityAndAcceptanceRange(eq("F001"), any(Instant.class), any(Instant.class)))
+                .thenReturn(List.of(new EncounterProjectionRepository.EncounterRow(
+                        "F001:1234",
+                        "F001",
+                        "12345",
+                        10L,
+                        "F001:1",
+                        "1234",
+                        Instant.parse("2026-03-21T23:00:00Z"),
+                        "checked_in",
+                        null,
+                        null,
+                        null,
+                        "doctor01",
+                        null,
+                        """
+                        {"rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true,"officialVisitIdentifiers":{"departmentCode":"01","physicianCode":"10001","insuranceCombinationNumber":"0001","voucherNumber":"1234","sequentialNumber":"1"}}
+                        """,
+                        null,
+                        1L,
+                        Instant.parse("2026-03-21T23:00:01Z"))));
+        injectField(resource, "encounterProjectionRepository", repository);
     }
 
     private static ChartSupportSubjectivesModV2Request newSubjectivesPayload() {

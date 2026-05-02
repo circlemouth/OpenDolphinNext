@@ -1,5 +1,8 @@
 package open.dolphin.rest.orca;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.Consumes;
@@ -18,6 +21,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -60,6 +64,9 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
     private static final ZoneId TOKYO_ZONE = ZoneId.of("Asia/Tokyo");
     private static final DateTimeFormatter ORCA_TIME_FORMAT = DateTimeFormatter.ofPattern("HHmm").withZone(TOKYO_ZONE);
     private static final String SHA256_PATTERN = "^[a-fA-F0-9]{64}$";
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+    private static final String WARNING_PROVISIONAL_MEDICAL_MOD_CONTEXT =
+            "acceptance_provisional_medicalmodv2_context_server_derived_from_acceptlstv2";
 
     private OrcaLiveGateway wrapperService;
     private ReceptionRealtimeSseSupport receptionRealtimeSseSupport;
@@ -136,6 +143,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             VisitMutationResponse response = wrapperService.mutateVisit(facilityId, body);
             enrichVisitMutationKeys(facilityId, response);
             reconcileDuplicateAcceptanceHandoff(facilityId, body, response, details);
+            reconcileAcceptanceOfficialIdentifiers(facilityId, body, response, details);
             persistEncounterProjectionIfNeeded(request, facilityId, body, response, details);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
@@ -510,7 +518,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
                 null,
                 ownerUserId,
                 null,
-                "{}",
+                buildProjectionWorklistFlags(body, response),
                 null,
                 1L,
                 Instant.now()));
@@ -569,7 +577,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
                     null,
                     ownerUserId,
                     null,
-                    "{}",
+                    buildProjectionWorklistFlags(visit),
                     projectedAt,
                     1L,
                     projectedAt));
@@ -863,7 +871,12 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         response.setMedicalInformation(row.getServerMedicalInformation());
         response.setInsuranceCombinationNumber(row.getServerInsuranceCombinationNumber());
         response.setEncounterKey(CanonicalEncounterKeys.optionalEncounterKey(facilityId, row.getServerAcceptanceId()));
-        reconcileDuplicateAcceptanceOfficialVisitIdentifiers(facilityId, row, response, details);
+        reconcileAcceptanceOfficialVisitIdentifiers(
+                facilityId,
+                row,
+                response,
+                details,
+                "duplicate_acceptance_official_identifiers_reconciled_from_server_readonly_preflight");
         if (response.getPatient() == null) {
             PatientSummary patient = new PatientSummary();
             patient.setPatientId(row.getServerPatientId());
@@ -877,10 +890,125 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         }
     }
 
-    private void reconcileDuplicateAcceptanceOfficialVisitIdentifiers(String facilityId,
-            AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
+    private void reconcileAcceptanceOfficialIdentifiers(String facilityId,
+            VisitMutationRequest body,
             VisitMutationResponse response,
             Map<String, Object> details) {
+        if (body == null || response == null || wrapperService == null) {
+            return;
+        }
+        if (!"01".equals(normalizeRequestNumber(body.getRequestNumber())) || !hasCanonicalAcceptance(response)) {
+            return;
+        }
+        if (hasCompleteOfficialIdentifiers(response)) {
+            return;
+        }
+        String acceptanceDate = normalizeEventDate(firstText(response.getAcceptanceDate(), body.getAcceptanceDate()));
+        if (acceptanceDate == null) {
+            return;
+        }
+        try {
+            AcceptanceInventoryRequest inventoryRequest = new AcceptanceInventoryRequest();
+            inventoryRequest.setAcceptanceDate(LocalDate.parse(acceptanceDate));
+            inventoryRequest.setClassCode("01");
+            AcceptanceInventoryResponse inventory = wrapperService.getAcceptanceInventory(facilityId, inventoryRequest);
+            AcceptanceInventoryResponse.AcceptanceInventoryRow row =
+                    selectAcceptanceInventoryRowForMutation(body, response, inventory, acceptanceDate, details);
+            if (row == null) {
+                return;
+            }
+            applyAcceptanceInventoryRowToResponse(row, response);
+            reconcileAcceptanceOfficialVisitIdentifiers(
+                    facilityId,
+                    row,
+                    response,
+                    details,
+                    "acceptance_official_identifiers_reconciled_from_server_readonly_preflight");
+        } catch (RuntimeException ex) {
+            if (details != null) {
+                details.put("acceptanceOfficialIdentifierReconciled", false);
+                details.put("acceptanceOfficialIdentifierReason", "acceptance_inventory_unavailable");
+            }
+        }
+    }
+
+    private AcceptanceInventoryResponse.AcceptanceInventoryRow selectAcceptanceInventoryRowForMutation(
+            VisitMutationRequest body,
+            VisitMutationResponse response,
+            AcceptanceInventoryResponse inventory,
+            String acceptanceDate,
+            Map<String, Object> details) {
+        if (inventory == null || inventory.getRows() == null) {
+            return null;
+        }
+        String acceptanceId = normalize(response.getAcceptanceId());
+        List<AcceptanceInventoryResponse.AcceptanceInventoryRow> readyRows = inventory.getRows().stream()
+                .filter(this::isServerDerivedRn02Ready)
+                .toList();
+        if (acceptanceId != null) {
+            List<AcceptanceInventoryResponse.AcceptanceInventoryRow> exactAcceptanceId = readyRows.stream()
+                    .filter(row -> acceptanceId.equals(normalize(row.getServerAcceptanceId())))
+                    .toList();
+            if (exactAcceptanceId.size() == 1) {
+                if (details != null) {
+                    details.put("acceptanceOfficialIdentifierSelection", "acceptance_id");
+                }
+                return exactAcceptanceId.get(0);
+            }
+        }
+
+        String patientId = normalize(resolvePatientId(body, response));
+        String departmentCode = normalize(firstText(response.getDepartmentCode(), body.getDepartmentCode()));
+        String physicianCode = normalize(firstText(response.getPhysicianCode(), body.getPhysicianCode()));
+        List<AcceptanceInventoryResponse.AcceptanceInventoryRow> identityMatches = readyRows.stream()
+                .filter(row -> patientId != null && patientId.equals(normalize(row.getServerPatientId())))
+                .filter(row -> acceptanceDate.equals(normalizeEventDate(row.getServerAcceptanceDate())))
+                .filter(row -> departmentCode == null || departmentCode.equals(normalize(row.getServerDepartmentCode())))
+                .filter(row -> physicianCode == null || physicianCode.equals(normalize(row.getServerPhysicianCode())))
+                .toList();
+        if (details != null) {
+            details.put("acceptanceOfficialIdentifierCandidateCount", identityMatches.size());
+        }
+        if (identityMatches.size() == 1) {
+            if (details != null) {
+                details.put("acceptanceOfficialIdentifierSelection", "patient_date_department_physician");
+            }
+            return identityMatches.get(0);
+        }
+        if (details != null) {
+            details.put("acceptanceOfficialIdentifierReconciled", false);
+            details.put("acceptanceOfficialIdentifierReason",
+                    identityMatches.isEmpty() ? "no_server_derived_match" : "ambiguous_server_derived_match");
+        }
+        return null;
+    }
+
+    private void applyAcceptanceInventoryRowToResponse(
+            AcceptanceInventoryResponse.AcceptanceInventoryRow row,
+            VisitMutationResponse response) {
+        if (row == null || response == null) {
+            return;
+        }
+        response.setAcceptanceId(firstText(response.getAcceptanceId(), row.getServerAcceptanceId()));
+        response.setAcceptanceDate(firstText(response.getAcceptanceDate(), row.getServerAcceptanceDate()));
+        response.setAcceptanceTime(firstText(response.getAcceptanceTime(), row.getServerAcceptanceTime()));
+        response.setDepartmentCode(firstText(response.getDepartmentCode(), row.getServerDepartmentCode()));
+        response.setPhysicianCode(firstText(response.getPhysicianCode(), row.getServerPhysicianCode()));
+        response.setMedicalInformation(firstText(response.getMedicalInformation(), row.getServerMedicalInformation()));
+        response.setInsuranceCombinationNumber(firstText(response.getInsuranceCombinationNumber(),
+                row.getServerInsuranceCombinationNumber()));
+        if (response.getPatient() == null && hasText(row.getServerPatientId())) {
+            PatientSummary patient = new PatientSummary();
+            patient.setPatientId(row.getServerPatientId());
+            response.setPatient(patient);
+        }
+    }
+
+    private void reconcileAcceptanceOfficialVisitIdentifiers(String facilityId,
+            AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
+            VisitMutationResponse response,
+            Map<String, Object> details,
+            String successWarning) {
         if (facilityId == null || facilityId.isBlank() || selected == null || response == null) {
             return;
         }
@@ -905,10 +1033,45 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
                 details.put("duplicateAcceptanceOfficialIdentifierCandidateCount", medicalMatches.size());
             }
             if (medicalMatches.size() != 1) {
+                List<MedicalIdentifierPreflightResponse.VisitIdentifierRow> visitMatches =
+                        preflight.getVisitRows().stream()
+                                .filter(row -> isExactOfficialVisitIdentifierRow(selected, row))
+                                .toList();
                 if (details != null) {
-                    details.put("duplicateAcceptanceOfficialIdentifiersReconciled", false);
-                    details.put("duplicateAcceptanceOfficialIdentifierReason",
-                            medicalMatches.isEmpty() ? "no_exact_medical_identifier_match" : "ambiguous_medical_identifier_match");
+                    details.put("duplicateAcceptanceOfficialVisitIdentifierCandidateCount", visitMatches.size());
+                }
+                if (visitMatches.size() != 1) {
+                    if (canUseProvisionalMedicalModV2Context(selected, preflight)) {
+                        response.setVoucherNumber(selected.getServerAcceptanceId());
+                        response.setSequentialNumber("1");
+                        response.setInsuranceCombinationNumber(selected.getServerInsuranceCombinationNumber());
+                        addWarningOnce(response, successWarning);
+                        addWarningOnce(response, WARNING_PROVISIONAL_MEDICAL_MOD_CONTEXT);
+                        if (details != null) {
+                            details.put("duplicateAcceptanceOfficialIdentifiersReconciled", true);
+                            details.put("duplicateAcceptanceOfficialIdentifierReason",
+                                    "provisional_medicalmodv2_context_from_server_derived_acceptlstv2");
+                            details.put("clientProvidedIdentifiersTrusted", false);
+                            details.put("serverDerivedAuthorityRequired", true);
+                        }
+                        return;
+                    }
+                    if (details != null) {
+                        details.put("duplicateAcceptanceOfficialIdentifiersReconciled", false);
+                        details.put("duplicateAcceptanceOfficialIdentifierReason",
+                                !medicalMatches.isEmpty() ? "ambiguous_medical_identifier_match"
+                                        : visitMatches.isEmpty() ? "no_exact_medical_or_visit_identifier_match"
+                                                : "ambiguous_visit_identifier_match");
+                    }
+                    return;
+                }
+                MedicalIdentifierPreflightResponse.VisitIdentifierRow row = visitMatches.get(0);
+                response.setVoucherNumber(row.getServerVoucherNumber());
+                response.setSequentialNumber(row.getServerSequentialNumber());
+                response.setInsuranceCombinationNumber(row.getServerInsuranceCombinationNumber());
+                addWarningOnce(response, successWarning);
+                if (details != null) {
+                    details.put("duplicateAcceptanceOfficialIdentifiersReconciled", true);
                 }
                 return;
             }
@@ -916,7 +1079,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             response.setVoucherNumber(row.getServerInvoiceNumber());
             response.setSequentialNumber(row.getServerSequentialNumber());
             response.setInsuranceCombinationNumber(row.getServerInsuranceCombinationNumber());
-            response.getWarnings().add("duplicate_acceptance_official_identifiers_reconciled_from_server_readonly_preflight");
+            addWarningOnce(response, successWarning);
             if (details != null) {
                 details.put("duplicateAcceptanceOfficialIdentifiersReconciled", true);
             }
@@ -926,6 +1089,25 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
                 details.put("duplicateAcceptanceOfficialIdentifierReason", "identifier_preflight_unavailable");
             }
         }
+    }
+
+    private boolean canUseProvisionalMedicalModV2Context(
+            AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
+            MedicalIdentifierPreflightResponse preflight) {
+        return selected != null
+                && preflight != null
+                && preflight.isSelectedAcceptanceTargetReady()
+                && selected.isRawSensitiveFieldsExcluded()
+                && selected.isHasAcceptanceId()
+                && selected.isHasPatientId()
+                && selected.isHasAcceptanceDate()
+                && selected.isHasDepartmentCode()
+                && selected.isHasInsuranceCombinationNumber()
+                && hasText(selected.getServerAcceptanceId())
+                && hasText(selected.getServerPatientId())
+                && hasText(selected.getServerAcceptanceDate())
+                && hasText(selected.getServerDepartmentCode())
+                && hasText(selected.getServerInsuranceCombinationNumber());
     }
 
     private boolean isExactOfficialMedicalIdentifierRow(AcceptanceInventoryResponse.AcceptanceInventoryRow selected,
@@ -1180,9 +1362,19 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             if (alreadyPresent) {
                 continue;
             }
+            ProjectionOfficialIdentifiers identifiers = readProjectionOfficialIdentifiers(row.worklistFlagsJson());
             VisitPatientListResponse.VisitEntry visit = new VisitPatientListResponse.VisitEntry();
-            visit.setScheduleKey(row.scheduleKey());
-            visit.setEncounterKey(row.encounterKey());
+            visit.setScheduleKey(firstText(
+                    CanonicalEncounterKeys.optionalScheduleKey(facilityId, identifiers.sequentialNumber()),
+                    row.scheduleKey()));
+            visit.setEncounterKey(firstText(
+                    CanonicalEncounterKeys.optionalEncounterKey(facilityId, identifiers.voucherNumber()),
+                    row.encounterKey()));
+            visit.setDepartmentCode(identifiers.departmentCode());
+            visit.setPhysicianCode(identifiers.physicianCode());
+            visit.setVoucherNumber(identifiers.voucherNumber());
+            visit.setSequentialNumber(identifiers.sequentialNumber());
+            visit.setInsuranceCombinationNumber(identifiers.insuranceCombinationNumber());
             visit.setUpdateDate(fromDate.toString());
             visit.setUpdateTime(ORCA_TIME_FORMAT.format(row.acceptanceDatetime()));
             visit.setPatient(projectionPatientSummaryRepository != null
@@ -1198,6 +1390,124 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             response.setRecordsReturned(response.getVisits().size());
             response.setFallbackUsed(true);
         }
+    }
+
+    private String buildProjectionWorklistFlags(VisitMutationRequest body, VisitMutationResponse response) {
+        Map<String, Object> flags = baseProjectionFlags();
+        Map<String, String> identifiers = new LinkedHashMap<>();
+        putText(identifiers, "departmentCode", firstText(response != null ? response.getDepartmentCode() : null,
+                body != null ? body.getDepartmentCode() : null));
+        putText(identifiers, "physicianCode", firstText(response != null ? response.getPhysicianCode() : null,
+                body != null ? body.getPhysicianCode() : null));
+        putText(identifiers, "insuranceCombinationNumber", response != null ? response.getInsuranceCombinationNumber() : null);
+        putText(identifiers, "voucherNumber", response != null ? response.getVoucherNumber() : null);
+        putText(identifiers, "sequentialNumber", response != null ? response.getSequentialNumber() : null);
+        if (!identifiers.isEmpty()) {
+            flags.put("officialVisitIdentifiers", identifiers);
+        }
+        if (response != null && response.getWarnings().contains(WARNING_PROVISIONAL_MEDICAL_MOD_CONTEXT)) {
+            flags.put("provisionalMedicalModV2Context", true);
+            flags.put("provisionalMedicalModV2ContextSource", "acceptlstv2_server_derived_unique_acceptance");
+        }
+        return writeProjectionFlags(flags);
+    }
+
+    private String buildProjectionWorklistFlags(VisitPatientListResponse.VisitEntry visit) {
+        Map<String, Object> flags = baseProjectionFlags();
+        Map<String, String> identifiers = new LinkedHashMap<>();
+        putText(identifiers, "departmentCode", visit != null ? visit.getDepartmentCode() : null);
+        putText(identifiers, "physicianCode", visit != null ? visit.getPhysicianCode() : null);
+        putText(identifiers, "insuranceCombinationNumber", visit != null ? visit.getInsuranceCombinationNumber() : null);
+        putText(identifiers, "voucherNumber", visit != null ? visit.getVoucherNumber() : null);
+        putText(identifiers, "sequentialNumber", visit != null ? visit.getSequentialNumber() : null);
+        if (!identifiers.isEmpty()) {
+            flags.put("officialVisitIdentifiers", identifiers);
+        }
+        return writeProjectionFlags(flags);
+    }
+
+    private Map<String, Object> baseProjectionFlags() {
+        Map<String, Object> flags = new LinkedHashMap<>();
+        flags.put("rawSensitiveFieldsExcluded", true);
+        flags.put("clientProvidedIdentifiersTrusted", false);
+        flags.put("serverDerivedAuthorityRequired", true);
+        return flags;
+    }
+
+    private String writeProjectionFlags(Map<String, Object> flags) {
+        try {
+            return JSON_MAPPER.writeValueAsString(flags);
+        } catch (JsonProcessingException ex) {
+            return "{}";
+        }
+    }
+
+    private ProjectionOfficialIdentifiers readProjectionOfficialIdentifiers(String worklistFlagsJson) {
+        if (worklistFlagsJson == null || worklistFlagsJson.isBlank()) {
+            return ProjectionOfficialIdentifiers.EMPTY;
+        }
+        try {
+            JsonNode identifiers = JSON_MAPPER.readTree(worklistFlagsJson).path("officialVisitIdentifiers");
+            if (identifiers.isMissingNode() || identifiers.isNull()) {
+                return ProjectionOfficialIdentifiers.EMPTY;
+            }
+            return new ProjectionOfficialIdentifiers(
+                    textNode(identifiers, "departmentCode"),
+                    textNode(identifiers, "physicianCode"),
+                    textNode(identifiers, "insuranceCombinationNumber"),
+                    textNode(identifiers, "voucherNumber"),
+                    textNode(identifiers, "sequentialNumber"));
+        } catch (JsonProcessingException | RuntimeException ex) {
+            return ProjectionOfficialIdentifiers.EMPTY;
+        }
+    }
+
+    private String textNode(JsonNode node, String fieldName) {
+        if (node == null || fieldName == null) {
+            return null;
+        }
+        JsonNode value = node.path(fieldName);
+        if (value.isMissingNode() || value.isNull()) {
+            return null;
+        }
+        return normalize(value.asText());
+    }
+
+    private boolean hasCompleteOfficialIdentifiers(VisitMutationResponse response) {
+        return response != null
+                && hasText(response.getVoucherNumber())
+                && hasText(response.getSequentialNumber())
+                && hasText(response.getInsuranceCombinationNumber());
+    }
+
+    private String firstText(String primary, String fallback) {
+        String normalized = normalize(primary);
+        return normalized != null ? normalized : normalize(fallback);
+    }
+
+    private void putText(Map<String, String> values, String key, String value) {
+        String normalized = normalize(value);
+        if (normalized != null) {
+            values.put(key, normalized);
+        }
+    }
+
+    private void addWarningOnce(VisitMutationResponse response, String warning) {
+        if (response == null || warning == null || warning.isBlank() || response.getWarnings().contains(warning)) {
+            return;
+        }
+        response.getWarnings().add(warning);
+    }
+
+    private record ProjectionOfficialIdentifiers(
+            String departmentCode,
+            String physicianCode,
+            String insuranceCombinationNumber,
+            String voucherNumber,
+            String sequentialNumber
+    ) {
+        private static final ProjectionOfficialIdentifiers EMPTY =
+                new ProjectionOfficialIdentifiers(null, null, null, null, null);
     }
 
     private void collectKey(HashSet<String> sink, String value) {

@@ -99,7 +99,7 @@ RUN_ID: `20260502T073422Z`
 | ID | Command | Expected | Status |
 | --- | --- | --- | --- |
 | G-01 | `cd web-client && npm run verify:web-guard` | blocked route / secret / auth drift なし | pass |
-| G-02 | `cd web-client && npm run ci` | verify, typecheck, test, build 成功 | todo |
-| G-03 | `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` | server static-analysis verify 成功 | todo |
-| G-04 | `cd web-client && node scripts/runtime-ready-smoke.mjs` | sanitized runtime smoke 成功 | todo |
-| G-05 | `git status --short` | 期待する docs/code 差分だけ | todo |
+| G-02 | `cd web-client && npm run ci` | verify, typecheck, test, build 成功 | pass |
+| G-03 | `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` | server static-analysis verify 成功 | pass |
+| G-04 | `cd web-client && node scripts/runtime-ready-smoke.mjs` | sanitized runtime smoke 成功 | pass |
+| G-05 | `git status --short` | 期待する docs/code 差分だけ | pass |

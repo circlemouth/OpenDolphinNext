@@ -63,6 +63,16 @@ let mockSessionRole = 'staff';
 const mockInvalidateQueries = vi.fn(async () => undefined);
 const mockEnqueue = vi.fn();
 const mockOpenCharts = vi.fn();
+const mockVerifyOfficialPatientExactExistence = vi.hoisted(() =>
+  vi.fn(async ({ patientId }: { patientId: string }) => ({
+    ok: patientId !== 'LOCAL-001',
+    patientId,
+    status: 200,
+    apiResult: patientId !== 'LOCAL-001' ? '00' : '10',
+    exactMatchedPatientIds: patientId !== 'LOCAL-001' ? [patientId] : [],
+    missingPatientIds: patientId !== 'LOCAL-001' ? [] : [patientId],
+  })),
+);
 
 const mockAuthFlags = {
   runId: 'RUN-AUTH',
@@ -166,6 +176,14 @@ vi.mock('../../../libs/audit/auditLogger', () => ({
   logAuditEvent: () => ({ timestamp: new Date().toISOString() }),
   logUiState: () => ({ timestamp: new Date().toISOString() }),
 }));
+
+vi.mock('../../patients/api', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    verifyOfficialPatientExactExistence: mockVerifyOfficialPatientExactExistence,
+  };
+});
 
 vi.mock('../../outpatient/savedViews', () => ({
   loadOutpatientSavedViews: () => [],
@@ -497,6 +515,15 @@ beforeEach(() => {
   mockInvalidateQueries.mockClear();
   mockEnqueue.mockReset();
   mockOpenCharts.mockReset();
+  mockVerifyOfficialPatientExactExistence.mockClear();
+  mockVerifyOfficialPatientExactExistence.mockImplementation(async ({ patientId }: { patientId: string }) => ({
+    ok: patientId !== 'LOCAL-001',
+    patientId,
+    status: 200,
+    apiResult: patientId !== 'LOCAL-001' ? '00' : '10',
+    exactMatchedPatientIds: patientId !== 'LOCAL-001' ? [patientId] : [],
+    missingPatientIds: patientId !== 'LOCAL-001' ? [] : [patientId],
+  }));
   vi.mocked(buildMedicalModV2RequestXml).mockClear();
   vi.mocked(postOrcaMedicalModV2Xml).mockClear();
   localStorage.clear();
@@ -627,7 +654,8 @@ describe('ReceptionPage accept UX', () => {
     expect(paymentSelect).toHaveValue('insurance');
     await user.selectOptions(departmentSelect, departmentSelect.options[1]?.value ?? '01');
     await user.selectOptions(physicianSelect, physicianSelect.options[1]?.value ?? '10001');
-    expect(registerButton).toBeEnabled();
+    await waitFor(() => expect(registerButton).toBeEnabled());
+    expect(mockVerifyOfficialPatientExactExistence).toHaveBeenCalledWith(expect.objectContaining({ patientId: 'P-010' }));
   });
 
   it('does not enable ORCA受付 for a local-only patient search result', async () => {
@@ -666,8 +694,11 @@ describe('ReceptionPage accept UX', () => {
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
     await user.selectOptions(within(acceptPanel).getByLabelText(/来院区分/), '1');
 
-    expect(within(acceptPanel).getByRole('button', { name: '受付する' })).toBeDisabled();
-    expect(within(acceptPanel).getByText(/ORCA 受付対象として未確認です/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(acceptPanel).getByRole('button', { name: '受付する' })).toBeDisabled();
+      expect(within(acceptPanel).getByText(/ORCA 受付対象として未登録です/)).toBeInTheDocument();
+    });
+    expect(mockVerifyOfficialPatientExactExistence).toHaveBeenCalledWith(expect.objectContaining({ patientId: 'LOCAL-001' }));
     expect(mockMutationCalls).toHaveLength(1);
   });
 

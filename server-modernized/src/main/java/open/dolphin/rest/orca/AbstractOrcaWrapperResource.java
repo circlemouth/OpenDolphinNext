@@ -22,8 +22,11 @@ public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResour
     private static final String TRACE_HEADER = "X-Request-Id";
     protected Map<String, Object> newAuditDetails(HttpServletRequest request) {
         Map<String, Object> details = new LinkedHashMap<>();
-        String resourcePath = request != null ? request.getRequestURI() : null;
+        String resourcePath = safeRequestValue(request, HttpServletRequest::getRequestURI);
         String scope = resolveAuditScope(resourcePath);
+        if (resourcePath != null && !resourcePath.isBlank()) {
+            details.put("resource", resourcePath);
+        }
         details.put("runId", resolveRunId(request));
         details.put("dataSource", DATA_SOURCE_SERVER);
         details.put("dataSourceTransition", DATA_SOURCE_SERVER);
@@ -31,6 +34,18 @@ public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResour
         details.put("missingMaster", false);
         details.put("fallbackUsed", false);
         details.put("fetchedAt", Instant.now().toString());
+        String actorId = safeRequestValue(request, HttpServletRequest::getRemoteUser);
+        if (actorId != null && !actorId.isBlank()) {
+            details.put("actorId", actorId);
+        }
+        String userAgent = safeRequestHeader(request, "User-Agent");
+        if (userAgent != null && !userAgent.isBlank()) {
+            details.put("userAgent", userAgent);
+        }
+        String ipAddress = safeRequestClientIp(request);
+        if (ipAddress != null && !ipAddress.isBlank()) {
+            details.put("ipAddress", ipAddress);
+        }
         if (scope != null && !scope.isBlank()) {
             details.put("scope", scope);
         }
@@ -40,8 +55,8 @@ public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResour
             details.put("facilityId", facilityId);
         }
 
-        String traceId = resolveTraceId(request);
-        String requestId = request != null ? request.getHeader(TRACE_HEADER) : null;
+        String traceId = safeResolveTraceId(request);
+        String requestId = safeRequestHeader(request, TRACE_HEADER);
         if (requestId != null && !requestId.isBlank()) {
             requestId = requestId.trim();
             details.put("requestId", requestId);

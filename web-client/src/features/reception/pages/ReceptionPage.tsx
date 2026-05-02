@@ -94,6 +94,7 @@ import { findOrcaClaimSendEntryForMatch, loadOrcaClaimSendCache } from '../../ch
 import { postMedicalRecords, type MedicalRecordEntry } from '../../administration/orcaInternalWrapperApi';
 import {
   searchLocalPatients,
+  verifyOfficialPatientExactExistence,
   type LocalPatientSearchParams,
   type PatientListResponse,
   type PatientRecord,
@@ -760,7 +761,7 @@ const groupByStatus = (entries: ReceptionEntry[]) =>
   }));
 
 type AcceptTargetSource = 'none' | 'manual' | 'patient-search' | 'master-search' | 'selection';
-type AcceptTargetOfficialReadiness = 'unknown' | 'ready' | 'not_found' | 'unverified';
+type AcceptTargetOfficialReadiness = 'unknown' | 'ready' | 'not_found' | 'unverified' | 'checking';
 type AcceptTarget = {
   source: AcceptTargetSource;
   patientId: string;
@@ -768,6 +769,13 @@ type AcceptTarget = {
   birthDate: string;
   sex: string;
   officialReadiness: AcceptTargetOfficialReadiness;
+};
+type AcceptOfficialReadinessProbe = {
+  status: AcceptTargetOfficialReadiness;
+  checkedAt?: string;
+  statusCode?: number;
+  apiResult?: string;
+  error?: string;
 };
 
 type ReceptionPageProps = {
@@ -939,6 +947,9 @@ export function ReceptionPage({
   const [patientSearchError, setPatientSearchError] = useState<string | null>(null);
   const [patientSearchSelected, setPatientSearchSelected] = useState<PatientRecord | null>(null);
   const [patientSearchPage, setPatientSearchPage] = useState(1);
+  const [acceptOfficialReadinessByPatientId, setAcceptOfficialReadinessByPatientId] = useState<
+    Record<string, AcceptOfficialReadinessProbe>
+  >({});
   const patientSearchFilterRef = useRef<{
     patientId: string;
     nameSei: string;
@@ -2823,6 +2834,9 @@ export function ReceptionPage({
       if (!entry) return 'unknown';
       return entry.source === 'unknown' ? 'unverified' : 'ready';
     };
+    const resolveVerifiedLocalReadiness = (targetPatientId: string): AcceptTargetOfficialReadiness => {
+      return acceptOfficialReadinessByPatientId[targetPatientId]?.status ?? 'unverified';
+    };
 
     const direct = acceptPatientId.trim();
     if (direct) {
@@ -2856,7 +2870,7 @@ export function ReceptionPage({
           : fromVisibleEntries || fromSelection
             ? resolveEntryOfficialReadiness(fromVisibleEntries ?? fromSelection)
             : fromSearch
-              ? 'unverified'
+              ? resolveVerifiedLocalReadiness(direct)
               : 'unknown',
       };
     }
@@ -2870,7 +2884,9 @@ export function ReceptionPage({
         name: patientSearchSelected?.name?.trim() ?? '',
         birthDate: patientSearchSelected?.birthDate?.trim() ?? '',
         sex: patientSearchSelected?.sex?.trim() ?? '',
-        officialReadiness: fromVisibleEntries ? resolveEntryOfficialReadiness(fromVisibleEntries) : 'unverified',
+        officialReadiness: fromVisibleEntries
+          ? resolveEntryOfficialReadiness(fromVisibleEntries)
+          : resolveVerifiedLocalReadiness(fromSearch),
       };
     }
 
@@ -2906,7 +2922,7 @@ export function ReceptionPage({
       sex: '',
       officialReadiness: 'unknown',
     };
-  }, [acceptPatientId, masterSelected, patientSearchSelected, selectedEntry, visibleAppointmentEntries]);
+  }, [acceptOfficialReadinessByPatientId, acceptPatientId, masterSelected, patientSearchSelected, selectedEntry, visibleAppointmentEntries]);
 
   const handleAcceptRegister = useCallback(
     async (event?: MouseEvent<HTMLButtonElement>) => {
@@ -2945,7 +2961,9 @@ export function ReceptionPage({
       }
       if (currentAcceptTarget.officialReadiness !== 'ready') {
         errors.patientId =
-          currentAcceptTarget.officialReadiness === 'not_found'
+          currentAcceptTarget.officialReadiness === 'checking'
+            ? 'ORCA 受付対象を確認中です。確認完了後に再実行してください。'
+            : currentAcceptTarget.officialReadiness === 'not_found'
             ? 'ローカル患者は存在しますが、ORCA 受付対象として未登録です。Patients で ORCA 取込/同期を行ってください。'
             : 'ローカル患者は存在しますが、ORCA 受付対象として未確認です。Patients で ORCA 取込/同期を行ってください。';
       }
@@ -3335,6 +3353,56 @@ export function ReceptionPage({
     setPendingAcceptedChartsHandoff(null);
   }, []);
 
+  const verifyAcceptPatientOfficialReadiness = useCallback(
+    (patientId: string) => {
+      const normalizedPatientId = patientId.trim();
+      if (!normalizedPatientId) return;
+      const currentStatus = acceptOfficialReadinessByPatientId[normalizedPatientId]?.status;
+      if (currentStatus === 'ready' || currentStatus === 'checking') return;
+
+      setAcceptOfficialReadinessByPatientId((prev) => {
+        return {
+          ...prev,
+          [normalizedPatientId]: {
+            status: 'checking',
+            checkedAt: new Date().toISOString(),
+          },
+        };
+      });
+
+      void verifyOfficialPatientExactExistence({
+        patientId: normalizedPatientId,
+        runId: mergedMeta.runId ?? flags.runId,
+      })
+        .then((result) => {
+          setAcceptOfficialReadinessByPatientId((prev) => ({
+            ...prev,
+            [normalizedPatientId]: {
+              status: result.ok ? 'ready' : 'not_found',
+              checkedAt: new Date().toISOString(),
+              statusCode: result.status,
+              apiResult: result.apiResult,
+              error: result.ok ? undefined : result.error ?? result.apiResultMessage,
+            },
+          }));
+          if (result.ok) {
+            setAcceptErrors((prev) => ({ ...prev, patientId: undefined }));
+          }
+        })
+        .catch((error) => {
+          setAcceptOfficialReadinessByPatientId((prev) => ({
+            ...prev,
+            [normalizedPatientId]: {
+              status: 'unverified',
+              checkedAt: new Date().toISOString(),
+              error: error instanceof Error ? error.message : String(error),
+            },
+          }));
+        });
+    },
+    [acceptOfficialReadinessByPatientId, flags.runId, mergedMeta.runId],
+  );
+
   const handleSelectPatientSearchResult = useCallback(
     (patient: PatientRecord) => {
       const nextPatientId = patient.patientId?.trim() ?? '';
@@ -3359,6 +3427,7 @@ export function ReceptionPage({
         } else {
           setSelectedEntryKey(null);
         }
+        verifyAcceptPatientOfficialReadiness(resolvedPatientId);
       }
       const resolvedPaymentMode = resolvePaymentMode(patient.insurance ?? undefined);
       if (resolvedPaymentMode && resolvedPaymentMode !== 'all') {
@@ -3394,6 +3463,7 @@ export function ReceptionPage({
       mergedMeta.runId,
       pendingAcceptedChartsHandoff?.patientId,
       displayedEntries,
+      verifyAcceptPatientOfficialReadiness,
     ],
   );
 
@@ -3449,7 +3519,9 @@ export function ReceptionPage({
         disabled: true,
         label: '受付する',
         reason:
-          acceptTarget.officialReadiness === 'not_found'
+          acceptTarget.officialReadiness === 'checking'
+            ? 'ORCA 受付対象を確認中です。'
+            : acceptTarget.officialReadiness === 'not_found'
             ? 'ORCA 受付対象として未登録です。Patients で ORCA 取込/同期を行ってください。'
             : 'ORCA 受付対象として未確認です。Patients で ORCA 取込/同期を行ってください。',
       };
@@ -4265,10 +4337,14 @@ export function ReceptionPage({
       ) : null}
       {acceptTarget.patientId && acceptTarget.officialReadiness !== 'ready' ? (
         <ToneBanner
-          tone="warning"
-          message="ローカル患者は存在しますが、ORCA 受付対象として未確認/未登録です。"
+          tone={acceptTarget.officialReadiness === 'checking' ? 'info' : 'warning'}
+          message={
+            acceptTarget.officialReadiness === 'checking'
+              ? 'ORCA 受付対象を確認中です。'
+              : 'ローカル患者は存在しますが、ORCA 受付対象として未確認/未登録です。'
+          }
           destination="受付"
-          nextAction="Patients で ORCA 取込/同期"
+          nextAction={acceptTarget.officialReadiness === 'checking' ? '確認完了を待つ' : 'Patients で ORCA 取込/同期'}
           runId={resolvedRunId}
           ariaLive="polite"
         />

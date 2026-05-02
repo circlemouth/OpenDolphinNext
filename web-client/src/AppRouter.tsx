@@ -73,8 +73,8 @@ import {
   resolveLoginSurfaceNotice,
   resolveLoginRedirect,
 } from './features/login/loginRedirect';
-import { isSystemAdminRole } from './libs/auth/roles';
-import { testOrcaConnection, type OrcaConnectionTestResponse } from './features/administration/orcaConnectionApi';
+import { hasSystemAdminRole, resolveSystemAdminRole } from './libs/auth/roles';
+import { fetchOperationsReadiness, type OperationsReadinessResponse } from './features/administration/api';
 import { FocusTrapDialog } from './components/modals/FocusTrapDialog';
 import { NavigationGuardProvider, resolveScreenKey, useNavigationGuard } from './routes/NavigationGuardProvider';
 import {
@@ -277,14 +277,14 @@ type OrcaTopStatus = {
 const ORCA_TOP_STATUS_CHECKING: OrcaTopStatus = {
   tone: 'info',
   label: 'ORCA: 確認中',
-  detail: 'ORCA 接続テストを実行しています。',
+  detail: 'readiness を確認しています。',
   checkedAt: null,
 };
 
 const ORCA_TOP_STATUS_FETCH_ERROR: OrcaTopStatus = {
   tone: 'error',
   label: 'ORCA: 確認失敗',
-  detail: 'ORCA 接続テスト API の呼び出しに失敗しました。',
+  detail: 'readiness API の呼び出しに失敗しました。',
   checkedAt: null,
 };
 
@@ -295,13 +295,14 @@ const formatOrcaTopStatusTimestamp = (value: string | null): string | null => {
   return date.toLocaleString('ja-JP', { hour12: false });
 };
 
-const resolveOrcaTopStatus = (result: OrcaConnectionTestResponse): OrcaTopStatus => {
-  const checkedAt = result.testedAt ?? null;
-  if (result.ok) {
+const resolveOrcaTopStatus = (result: OperationsReadinessResponse): OrcaTopStatus => {
+  const checkedAt = result.runId ? new Date().toISOString() : null;
+  const orcaStatus = typeof result.checks?.orca?.status === 'string' ? result.checks.orca.status : undefined;
+  if (result.ok && orcaStatus === 'UP') {
     return {
       tone: 'success',
-      label: 'ORCA: 接続OK',
-      detail: `HTTP ${result.orcaHttpStatus ?? '—'} / Api_Result ${result.apiResult ?? '—'}`,
+      label: 'ORCA: readiness OK',
+      detail: 'readiness status=UP',
       checkedAt,
     };
   }
@@ -313,18 +314,18 @@ const resolveOrcaTopStatus = (result: OrcaConnectionTestResponse): OrcaTopStatus
       checkedAt,
     };
   }
-  if (result.errorCategory === 'config_incomplete') {
+  if (orcaStatus === 'DISABLED' || orcaStatus === 'UNKNOWN') {
     return {
       tone: 'warning',
       label: 'ORCA: 設定要確認',
-      detail: result.error ?? 'ORCA 接続設定が未完了です。',
+      detail: `readiness status=${orcaStatus}`,
       checkedAt,
     };
   }
   return {
     tone: 'error',
     label: 'ORCA: 接続NG',
-    detail: result.error ?? `HTTP ${result.status}`,
+    detail: `readiness status=${orcaStatus ?? result.summaryStatus ?? `HTTP ${result.status}`}`,
     checkedAt,
   };
 };
@@ -850,7 +851,7 @@ function SessionBootstrapScreen() {
 
 function AdministrationGate({ session }: { session: Session }) {
   const navigate = useNavigate();
-  const isAllowed = isSystemAdminRole(session.role);
+  const isAllowed = hasSystemAdminRole(session.role, session.roles);
 
   useEffect(() => {
     document.title = isAllowed
@@ -870,10 +871,11 @@ function AdministrationGate({ session }: { session: Session }) {
         outcome: 'blocked',
         requiredRole: 'system_admin',
         role: session.role,
+        roles: session.roles,
         actor: `${session.facilityId}:${session.userId}`,
       },
     });
-  }, [isAllowed, session.facilityId, session.role, session.runId, session.userId]);
+  }, [isAllowed, session.facilityId, session.role, session.roles, session.runId, session.userId]);
 
   if (isAllowed) {
     return <ConnectedAdministration />;
@@ -998,7 +1000,7 @@ function LegacyOutpatientMockNotFound() {
 function DebugOutpatientMockGate({ session }: { session: Session }) {
   const navigate = useNavigate();
   const hasEnvAccess = DEBUG_PAGES_ENABLED;
-  const hasRoleAccess = isSystemAdminRole(session.role);
+  const hasRoleAccess = hasSystemAdminRole(session.role, session.roles);
   const isAllowed = hasEnvAccess && hasRoleAccess;
   const envFlagValue = DEBUG_PAGES_ENABLED ? '1' : '0';
 
@@ -1018,6 +1020,7 @@ function DebugOutpatientMockGate({ session }: { session: Session }) {
         debugFeature: 'outpatient-mock',
         requiredRole: 'system_admin',
         role: session.role,
+        roles: session.roles,
         envFlags: { VITE_ENABLE_DEBUG_PAGES: envFlagValue },
         denialReasons,
         actor: `${session.facilityId}:${session.userId}`,
@@ -1030,6 +1033,7 @@ function DebugOutpatientMockGate({ session }: { session: Session }) {
     isAllowed,
     session.facilityId,
     session.role,
+    session.roles,
     session.runId,
     session.userId,
   ]);
@@ -1074,7 +1078,7 @@ function DebugOutpatientMockGate({ session }: { session: Session }) {
 function DebugMobilePatientPickerGate({ session }: { session: Session }) {
   const navigate = useNavigate();
   const hasEnvAccess = DEBUG_PAGES_ENABLED;
-  const hasRoleAccess = isSystemAdminRole(session.role);
+  const hasRoleAccess = hasSystemAdminRole(session.role, session.roles);
   const isAllowed = hasEnvAccess && hasRoleAccess;
   const envFlagValue = DEBUG_PAGES_ENABLED ? '1' : '0';
 
@@ -1094,6 +1098,7 @@ function DebugMobilePatientPickerGate({ session }: { session: Session }) {
         debugFeature: 'mobile-patient-picker',
         requiredRole: 'system_admin',
         role: session.role,
+        roles: session.roles,
         envFlags: { VITE_ENABLE_DEBUG_PAGES: envFlagValue },
         denialReasons,
         actor: `${session.facilityId}:${session.userId}`,
@@ -1106,6 +1111,7 @@ function DebugMobilePatientPickerGate({ session }: { session: Session }) {
     isAllowed,
     session.facilityId,
     session.role,
+    session.roles,
     session.runId,
     session.userId,
   ]);
@@ -1148,7 +1154,7 @@ function DebugMobilePatientPickerGate({ session }: { session: Session }) {
 function DebugHubGate({ session }: { session: Session }) {
   const navigate = useNavigate();
   const hasEnvAccess = DEBUG_PAGES_ENABLED;
-  const hasRoleAccess = isSystemAdminRole(session.role);
+  const hasRoleAccess = hasSystemAdminRole(session.role, session.roles);
   const isAllowed = hasEnvAccess && hasRoleAccess;
   const envFlagValue = DEBUG_PAGES_ENABLED ? '1' : '0';
 
@@ -1168,6 +1174,7 @@ function DebugHubGate({ session }: { session: Session }) {
         debugFeature: 'hub',
         requiredRole: 'system_admin',
         role: session.role,
+        roles: session.roles,
         envFlags: { VITE_ENABLE_DEBUG_PAGES: envFlagValue },
         denialReasons,
         actor: `${session.facilityId}:${session.userId}`,
@@ -1180,6 +1187,7 @@ function DebugHubGate({ session }: { session: Session }) {
     isAllowed,
     session.facilityId,
     session.role,
+    session.roles,
     session.runId,
     session.userId,
   ]);
@@ -1222,7 +1230,7 @@ function DebugHubGate({ session }: { session: Session }) {
 function DebugOrcaApiGate({ session }: { session: Session }) {
   const navigate = useNavigate();
   const hasEnvAccess = DEBUG_PAGES_ENABLED;
-  const hasRoleAccess = isSystemAdminRole(session.role);
+  const hasRoleAccess = hasSystemAdminRole(session.role, session.roles);
   const isAllowed = hasEnvAccess && hasRoleAccess;
   const envFlagValue = DEBUG_PAGES_ENABLED ? '1' : '0';
 
@@ -1242,6 +1250,7 @@ function DebugOrcaApiGate({ session }: { session: Session }) {
         debugFeature: 'orca-api-console',
         requiredRole: 'system_admin',
         role: session.role,
+        roles: session.roles,
         envFlags: { VITE_ENABLE_DEBUG_PAGES: envFlagValue },
         denialReasons,
         actor: `${session.facilityId}:${session.userId}`,
@@ -1254,6 +1263,7 @@ function DebugOrcaApiGate({ session }: { session: Session }) {
     isAllowed,
     session.facilityId,
     session.role,
+    session.roles,
     session.runId,
     session.userId,
   ]);
@@ -1391,7 +1401,9 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   const session = useSession();
   const { flags } = useAuthService();
   const { isDirty, dirtySources } = useNavigationGuard();
-  const isSystemAdmin = isSystemAdminRole(session.role);
+  const effectiveSystemAdminRole = resolveSystemAdminRole(session.role, session.roles);
+  const displayedRole = effectiveSystemAdminRole ?? session.role;
+  const isSystemAdmin = Boolean(effectiveSystemAdminRole);
   const resolvedRunId = flags.runId || session.runId;
   const traceId = getObservabilityMeta().traceId;
   const outletScreenKey = useMemo(
@@ -1494,7 +1506,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
         setOrcaTopStatus(ORCA_TOP_STATUS_CHECKING);
       }
       try {
-        const result = await testOrcaConnection();
+        const result = await fetchOperationsReadiness();
         if (cancelled) return;
         setOrcaTopStatus(resolveOrcaTopStatus(result));
       } catch {
@@ -1617,7 +1629,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
               ユーザー: {session.displayName ?? session.commonName ?? session.userId}
             </span>
             <span className="app-shell__pill app-shell__pill--fixed" data-tooltip="補助情報: 認可ロール">
-              権限: {session.role}
+              権限: {displayedRole}
             </span>
             <span id="app-shell-session-status-slot" className="app-shell__session-status-slot" aria-live="polite" />
             <div className="app-shell__session-actions" role="group" aria-label="セッション操作">
@@ -1636,7 +1648,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
         <WorkspaceTabBar
           facilityId={session.facilityId}
           userId={session.userId}
-          role={session.role}
+          role={effectiveSystemAdminRole ?? session.role}
           orcaStatus={
             isSystemAdmin
               ? {
@@ -1769,5 +1781,5 @@ function ConnectedPatients() {
 function ConnectedAdministration() {
   const session = useSession();
   const { flags } = useAuthService();
-  return <AdministrationPage runId={flags.runId ?? session.runId} role={session.role} />;
+  return <AdministrationPage runId={flags.runId ?? session.runId} role={resolveSystemAdminRole(session.role, session.roles) ?? session.role} />;
 }

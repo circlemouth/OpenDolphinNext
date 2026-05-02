@@ -1,0 +1,824 @@
+[
+  {
+    "url": "/api/orca/official/appointments/medical-information",
+    "method": "GET",
+    "headers": {},
+    "postData": {
+      "bodyChars": 0
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00001&class=01&format=json",
+    "method": "GET",
+    "headers": {},
+    "postData": {
+      "bodyChars": 0
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 45,
+      "keys": [
+        "patientId",
+        "baseDate"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/patient",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 67,
+      "keys": [
+        "patientId",
+        "baseDate",
+        "departmentCode"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "<<redacted>>",
+      "origin": "http://localhost:5173",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "x-cache-hit": "false",
+      "x-csrf-token": "<<redacted>>",
+      "x-datasource-transition": "server",
+      "x-fallback-used": "true",
+      "x-missing-master": "false",
+      "x-run-id": "20260502T132134Z",
+      "x-trace-id": "c1f76c2d-c42c-40cb-bcf0-511b78eca0fa"
+    },
+    "postData": {
+      "bodyChars": 74,
+      "keys": [
+        "keyword",
+        "searchType",
+        "runId"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 0,
+      "patientIdCount": 0,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00002&class=01&format=json",
+    "method": "GET",
+    "headers": {},
+    "postData": {
+      "bodyChars": 0
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 45,
+      "keys": [
+        "patientId",
+        "baseDate"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/patient",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 67,
+      "keys": [
+        "patientId",
+        "baseDate",
+        "departmentCode"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "<<redacted>>",
+      "origin": "http://localhost:5173",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "x-cache-hit": "false",
+      "x-csrf-token": "<<redacted>>",
+      "x-datasource-transition": "snapshot",
+      "x-fallback-used": "false",
+      "x-missing-master": "true",
+      "x-run-id": "20260502T132134Z",
+      "x-trace-id": "04a4c223-c4e2-4ec1-8ae0-e5a5d8681aa9"
+    },
+    "postData": {
+      "bodyChars": 72,
+      "keys": [
+        "keyword",
+        "searchType",
+        "runId"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 0,
+      "patientIdCount": 0,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00003&class=01&format=json",
+    "method": "GET",
+    "headers": {},
+    "postData": {
+      "bodyChars": 0
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 45,
+      "keys": [
+        "patientId",
+        "baseDate"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/patient",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 67,
+      "keys": [
+        "patientId",
+        "baseDate",
+        "departmentCode"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "<<redacted>>",
+      "origin": "http://localhost:5173",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "x-cache-hit": "false",
+      "x-csrf-token": "<<redacted>>",
+      "x-datasource-transition": "server",
+      "x-fallback-used": "true",
+      "x-missing-master": "false",
+      "x-run-id": "20260502T132134Z",
+      "x-trace-id": "93654b07-a64a-41be-bc5a-6cacfcebe48d"
+    },
+    "postData": {
+      "bodyChars": 74,
+      "keys": [
+        "keyword",
+        "searchType",
+        "runId"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 0,
+      "patientIdCount": 0,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00004&class=01&format=json",
+    "method": "GET",
+    "headers": {},
+    "postData": {
+      "bodyChars": 0
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 45,
+      "keys": [
+        "patientId",
+        "baseDate"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/patient",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 67,
+      "keys": [
+        "patientId",
+        "baseDate",
+        "departmentCode"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "<<redacted>>",
+      "origin": "http://localhost:5173",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "x-cache-hit": "false",
+      "x-csrf-token": "<<redacted>>",
+      "x-datasource-transition": "server",
+      "x-fallback-used": "true",
+      "x-missing-master": "false",
+      "x-run-id": "20260502T132134Z",
+      "x-trace-id": "1bbc2d52-ed83-4de2-8667-9dc1954c3159"
+    },
+    "postData": {
+      "bodyChars": 74,
+      "keys": [
+        "keyword",
+        "searchType",
+        "runId"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 0,
+      "patientIdCount": 0,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00005&class=01&format=json",
+    "method": "GET",
+    "headers": {},
+    "postData": {
+      "bodyChars": 0
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 45,
+      "keys": [
+        "patientId",
+        "baseDate"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/patient",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 67,
+      "keys": [
+        "patientId",
+        "baseDate",
+        "departmentCode"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "<<redacted>>",
+      "origin": "http://localhost:5173",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "x-cache-hit": "false",
+      "x-csrf-token": "<<redacted>>",
+      "x-datasource-transition": "snapshot",
+      "x-fallback-used": "false",
+      "x-missing-master": "true",
+      "x-run-id": "20260502T132134Z",
+      "x-trace-id": "6be9be4b-ac6a-4e83-8dd5-c6ef6c9dd088"
+    },
+    "postData": {
+      "bodyChars": 72,
+      "keys": [
+        "keyword",
+        "searchType",
+        "runId"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 0,
+      "patientIdCount": 0,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00006&class=01&format=json",
+    "method": "GET",
+    "headers": {},
+    "postData": {
+      "bodyChars": 0
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 45,
+      "keys": [
+        "patientId",
+        "baseDate"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/patient",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 67,
+      "keys": [
+        "patientId",
+        "baseDate",
+        "departmentCode"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "<<redacted>>",
+      "origin": "http://localhost:5173",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "x-cache-hit": "false",
+      "x-csrf-token": "<<redacted>>",
+      "x-datasource-transition": "server",
+      "x-fallback-used": "true",
+      "x-missing-master": "false",
+      "x-run-id": "20260502T132134Z",
+      "x-trace-id": "b9c5b074-5b2a-4022-b880-a542d5ee65d8"
+    },
+    "postData": {
+      "bodyChars": 74,
+      "keys": [
+        "keyword",
+        "searchType",
+        "runId"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 0,
+      "patientIdCount": 0,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00007&class=01&format=json",
+    "method": "GET",
+    "headers": {},
+    "postData": {
+      "bodyChars": 0
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 45,
+      "keys": [
+        "patientId",
+        "baseDate"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/patient",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 67,
+      "keys": [
+        "patientId",
+        "baseDate",
+        "departmentCode"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "<<redacted>>",
+      "origin": "http://localhost:5173",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "x-cache-hit": "false",
+      "x-csrf-token": "<<redacted>>",
+      "x-datasource-transition": "snapshot",
+      "x-fallback-used": "false",
+      "x-missing-master": "true",
+      "x-run-id": "20260502T132134Z",
+      "x-trace-id": "87df9989-ec2b-4256-87e0-a4ec659882d0"
+    },
+    "postData": {
+      "bodyChars": 72,
+      "keys": [
+        "keyword",
+        "searchType",
+        "runId"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 0,
+      "patientIdCount": 0,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00008&class=01&format=json",
+    "method": "GET",
+    "headers": {},
+    "postData": {
+      "bodyChars": 0
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 45,
+      "keys": [
+        "patientId",
+        "baseDate"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/patient",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 67,
+      "keys": [
+        "patientId",
+        "baseDate",
+        "departmentCode"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "<<redacted>>",
+      "origin": "http://localhost:5173",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "x-cache-hit": "false",
+      "x-csrf-token": "<<redacted>>",
+      "x-datasource-transition": "server",
+      "x-fallback-used": "true",
+      "x-missing-master": "false",
+      "x-run-id": "20260502T132134Z",
+      "x-trace-id": "4a493781-585a-4455-853a-8fda54dc900f"
+    },
+    "postData": {
+      "bodyChars": 72,
+      "keys": [
+        "keyword",
+        "searchType",
+        "runId"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 0,
+      "patientIdCount": 0,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00009&class=01&format=json",
+    "method": "GET",
+    "headers": {},
+    "postData": {
+      "bodyChars": 0
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 45,
+      "keys": [
+        "patientId",
+        "baseDate"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/patient",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 67,
+      "keys": [
+        "patientId",
+        "baseDate",
+        "departmentCode"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "<<redacted>>",
+      "origin": "http://localhost:5173",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "x-cache-hit": "false",
+      "x-csrf-token": "<<redacted>>",
+      "x-datasource-transition": "server",
+      "x-fallback-used": "true",
+      "x-missing-master": "false",
+      "x-run-id": "20260502T132134Z",
+      "x-trace-id": "026e9e7b-c14f-4e56-959e-20eacc7a04aa"
+    },
+    "postData": {
+      "bodyChars": 74,
+      "keys": [
+        "keyword",
+        "searchType",
+        "runId"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 0,
+      "patientIdCount": 0,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00010&class=01&format=json",
+    "method": "GET",
+    "headers": {},
+    "postData": {
+      "bodyChars": 0
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 45,
+      "keys": [
+        "patientId",
+        "baseDate"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/patient",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 67,
+      "keys": [
+        "patientId",
+        "baseDate",
+        "departmentCode"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "<<redacted>>",
+      "origin": "http://localhost:5173",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "x-cache-hit": "false",
+      "x-csrf-token": "<<redacted>>",
+      "x-datasource-transition": "server",
+      "x-fallback-used": "true",
+      "x-missing-master": "false",
+      "x-run-id": "20260502T132134Z",
+      "x-trace-id": "f9003f63-f8ee-4248-a999-4edd30135254"
+    },
+    "postData": {
+      "bodyChars": 74,
+      "keys": [
+        "keyword",
+        "searchType",
+        "runId"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 0,
+      "patientIdCount": 0,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00011&class=01&format=json",
+    "method": "GET",
+    "headers": {},
+    "postData": {
+      "bodyChars": 0
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 45,
+      "keys": [
+        "patientId",
+        "baseDate"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/patient",
+    "method": "POST",
+    "headers": {},
+    "postData": {
+      "bodyChars": 67,
+      "keys": [
+        "patientId",
+        "baseDate",
+        "departmentCode"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 1,
+      "patientIdCount": 1,
+      "patientNotFound": false
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "<<redacted>>",
+      "origin": "http://localhost:5173",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "x-cache-hit": "false",
+      "x-csrf-token": "<<redacted>>",
+      "x-datasource-transition": "server",
+      "x-fallback-used": "true",
+      "x-missing-master": "false",
+      "x-run-id": "20260502T132134Z",
+      "x-trace-id": "d018d708-305f-489a-a213-579433d93d5a"
+    },
+    "postData": {
+      "bodyChars": 74,
+      "keys": [
+        "keyword",
+        "searchType",
+        "runId"
+      ],
+      "apiResultMessageCategory": "none",
+      "patientLikeCount": 0,
+      "patientIdCount": 0,
+      "patientNotFound": false
+    }
+  }
+]

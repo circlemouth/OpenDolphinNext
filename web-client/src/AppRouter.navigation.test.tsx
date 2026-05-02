@@ -152,7 +152,7 @@ vi.mock('./features/workspaceTabs/WorkspaceTabBar', async () => {
           </button>
         </div>
         {orcaStatus ? <div>{orcaStatus.label}</div> : null}
-        {role === 'system_admin' ? (
+        {role === 'system_admin' || role === 'admin' ? (
           <button type="button" aria-label="管理画面を開く" onClick={() => navigate(`${basePath}/administration`)}>
             管理画面を開く
           </button>
@@ -163,27 +163,30 @@ vi.mock('./features/workspaceTabs/WorkspaceTabBar', async () => {
 
   return { WorkspaceTabBar };
 });
-vi.mock('./features/administration/orcaConnectionApi', () => ({
-  testOrcaConnection: vi.fn(async () => ({
+vi.mock('./features/administration/api', () => ({
+  fetchOperationsReadiness: vi.fn(async () => ({
     ok: true,
     status: 200,
-    orcaHttpStatus: 200,
-    apiResult: '00',
-    testedAt: '2026-03-07T00:00:00Z',
+    summaryStatus: 'UP',
+    checks: { orca: { status: 'UP' } },
+    runId: '20260307T000000Z',
+    traceId: 'trace-router',
+    raw: {},
   })),
 }));
 
 const AUTH_KEY = 'opendolphin:web-client:auth';
-let currentRole = 'doctor';
+let currentRoles = ['doctor'];
 
-const setSession = (role: string) => {
-  currentRole = role;
+const setSession = (role: string, roles = [role]) => {
+  currentRoles = roles;
   sessionStorage.setItem(
     AUTH_KEY,
     JSON.stringify({
       facilityId: '0001',
       userId: 'user01',
       role,
+      roles,
       runId: 'RUN-NAV',
       displayName: 'user01',
       clientUuid: 'client-001',
@@ -191,10 +194,10 @@ const setSession = (role: string) => {
   );
 };
 
-const prepareSession = (role: string) => {
+const prepareSession = (role: string, roles = [role]) => {
   localStorage.clear();
   sessionStorage.clear();
-  setSession(role);
+  setSession(role, roles);
 };
 
 describe('AppRouter navigation guard', () => {
@@ -212,7 +215,7 @@ describe('AppRouter navigation guard', () => {
             displayName: 'user01',
             clientUuid: 'client-001',
             runId: 'RUN-NAV',
-            roles: [currentRole],
+            roles: currentRoles,
           }),
           {
             status: 200,
@@ -275,6 +278,19 @@ describe('AppRouter navigation guard', () => {
 
   it('system_admin は管理画面ボタンが表示され遷移できる', async () => {
     prepareSession('system_admin');
+    const user = userEvent.setup();
+
+    render(<AppRouter />);
+
+    await screen.findByTestId('reception-page');
+    expect(await screen.findByText(/^ORCA:/)).toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: '管理画面を開く' }));
+    expect(window.location.pathname).toBe('/f/0001/administration');
+  });
+
+  it('primary role が doctor でも roles に admin があれば管理画面へ遷移できる', async () => {
+    prepareSession('doctor', ['doctor', 'admin', 'user']);
     const user = userEvent.setup();
 
     render(<AppRouter />);

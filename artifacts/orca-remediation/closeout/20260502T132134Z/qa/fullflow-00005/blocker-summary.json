@@ -1,0 +1,83 @@
+{
+  "runId": "20260502T132134Z",
+  "traceId": "trace-20260502T132134Z",
+  "blockerClassification": "official-visit-row-blocker",
+  "blockerReason": "visit_row_official_identifiers_missing",
+  "medicalInformationProbe": {
+    "status": 200,
+    "ok": true,
+    "url": "http://localhost:5173/api/orca/official/appointments/medical-information"
+  },
+  "acceptMutation": {
+    "observed": true,
+    "httpStatus": 200,
+    "httpStatusClass": "2xx",
+    "apiResult": "16",
+    "businessSuccessClassification": "business_rejected_duplicate_acceptance",
+    "acceptanceEvidencePresent": true,
+    "patientEvidencePresent": true,
+    "canonicalKeyPresence": {
+      "acceptanceId": true,
+      "visitNumber": false,
+      "scheduleKey": false,
+      "encounterKey": true
+    },
+    "rawSensitiveFieldsExcluded": true
+  },
+  "receptionEntryDiagnostics": {
+    "totalRenderedRows": 5,
+    "matchingRows": 1,
+    "activeRows": 0,
+    "keyedActiveRows": 0,
+    "statuses": [
+      "予約"
+    ],
+    "anyReceptionIdPresent": false,
+    "anyAppointmentIdPresent": false,
+    "anyScheduleKeyPresent": false,
+    "anyEncounterKeyPresent": false,
+    "rawSensitiveFieldsExcluded": true
+  },
+  "chartsHandoff": {
+    "status": "ready",
+    "scheduleKey": "",
+    "encounterKey": "1.3.6.1.4.1.9414.72.103:00004",
+    "title": "直前に確立した canonical handoff でカルテを開く"
+  },
+  "visitRowReadiness": "missing_official_visit_identifiers",
+  "sendResult": {
+    "status": "no-response",
+    "disabled": true,
+    "disabledReason": "missing_encounter_context",
+    "guard": "送信不可（1件）来院文脈不足: 正式送信条件を満たさず送信不可: Voucher_Number, Sequential_Number が不足しているため送信できません。（次にやること: 受付一覧を再取得 / 対象来院を開き直して文脈を再同期）",
+    "guardSummary": "ガード理由（短文）ORCA送信: 来院文脈不足: 正式送信条件を満たさず送信不可 / 次: 受付一覧を再取得 / 対象来院を開き直して文脈を再同期印刷: 来院文脈不足: 正式出力条件を満たさず印刷不可 / 次: 受付一覧を再取得 / 対象来院を開き直して文脈を再同期",
+    "dialog": "not-shown",
+    "validation": {
+      "ok": false,
+      "reason": "no_request_body"
+    }
+  },
+  "orderResult": {
+    "status": "200",
+    "detail": "order UI save response not captured; local coded order fallback status=200"
+  },
+  "billingResult": {
+    "status": "clicked",
+    "detail": "http://localhost:5173/f/1.3.6.1.4.1.9414.72.103/reception?sort=time&date=2026-05-02&intent=billing&from=charts&runId=20260502T132134Z&section=billing&returnTo=%2Ff%2F1.3.6.1.4.1.9414.72.103%2Fcharts%3FrunId%3D20260502T132134Z%26sort%3Dtime%26date%3D2026-05-02"
+  },
+  "handoffStatePath": "handoff-state.json",
+  "selectedVisitRowPath": "selected-visit-row.json",
+  "evidencePaths": {
+    "summaryJson": "summary.json",
+    "summaryMd": "summary.md",
+    "blockerSummary": "blocker-summary.json",
+    "handoffState": "handoff-state.json",
+    "selectedVisitRow": "selected-visit-row.json",
+    "stepsLog": "steps.log",
+    "network": "network/network.json",
+    "requests": "network/requests.json",
+    "console": "console.json",
+    "pageErrors": "page-errors.json",
+    "screenshots": "screenshots"
+  }
+}

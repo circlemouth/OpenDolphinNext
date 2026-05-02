@@ -1,0 +1,99 @@
+{
+  "runId": "20260502T132134Z",
+  "executedAt": "2026-05-02T15:18:08.739Z",
+  "baseURL": "/",
+  "facilityId": "1.3.6.1.4.1.9414.72.103",
+  "sessionRole": "admin",
+  "patientId": "00005",
+  "departmentCode": "01",
+  "physicianCode": "10001",
+  "paymentMode": "insurance",
+  "visitKind": "1",
+  "inputIdentity": {
+    "runId": "20260502T132134Z",
+    "candidate": {
+      "candidateId": "00005",
+      "facilityId": "1.3.6.1.4.1.9414.72.103",
+      "patientId": "00005"
+    },
+    "input": {
+      "patientId": "00005",
+      "departmentCode": "01",
+      "physicianCode": "10001",
+      "paymentMode": "insurance",
+      "visitKind": "1",
+      "medicalInformation": {
+        "state": "omitted"
+      }
+    },
+    "hash": "f3d8b30ac41b767648c73f8a2236e7b35a5647f539d12e461fe62fcdb0fd6d3b"
+  },
+  "preflightGate": {
+    "ok": false,
+    "mutationAllowed": false,
+    "blockerClassification": "candidate_discovery_only",
+    "expectedIdentity": {
+      "runId": "20260502T132134Z",
+      "candidate": {
+        "candidateId": "00005",
+        "facilityId": "1.3.6.1.4.1.9414.72.103",
+        "patientId": "00005"
+      },
+      "input": {
+        "patientId": "00005",
+        "departmentCode": "01",
+        "physicianCode": "10001",
+        "paymentMode": "insurance",
+        "visitKind": "1",
+        "medicalInformation": {
+          "state": "omitted"
+        }
+      },
+      "hash": "f3d8b30ac41b767648c73f8a2236e7b35a5647f539d12e461fe62fcdb0fd6d3b"
+    },
+    "preflightIdentity": null,
+    "mismatches": [],
+    "error": "candidate discovery output is only a proposal and cannot authorize Phase 3 mutation",
+    "summaryPath": "/Users/Hayato/Documents/GitHub/artifacts/orca-remediation/closeout/20260502T132134Z/qa/weborca-readonly-preflight/summary.json"
+  },
+  "optionInjection": {
+    "mode": "live",
+    "allowLocalOptionInjection": false,
+    "envFlag": "QA_ALLOW_LOCAL_OPTION_INJECTION"
+  },
+  "acceptedLiveEvidence": false,
+  "selection": {},
+  "medicalInformationGate": {
+    "enforced": true,
+    "targetMutationRequestCount": 0,
+    "checkedRequests": 0,
+    "bodyKeysObserved": [],
+    "medicalInformationFieldPresent": false,
+    "intendedRequestNumber01": true,
+    "requestNumberKeyPresent": false,
+    "requestNumberKeysObserved": [],
+    "requestNumber01ValueVerified": false,
+    "requestNumber02_03_04Absent": true,
+    "targetPatientIdVerified": false,
+    "targetCandidateOnly": false,
+    "targetPatientId00001Verified": false,
+    "targetCandidateOnly00001": false,
+    "patientIdKeysObserved": [],
+    "candidateIdKeysObserved": [],
+    "unspecifiedRun": true,
+    "ok": false,
+    "violation": "C7",
+    "violationCount": 1,
+    "violatedKeys": [
+      "targetMutationRequest"
+    ],
+    "violatingUrls": [],
+    "error": "visits mutation browser request body を 1 件も捕捉できませんでした。target mutation request は必須です。"
+  },
+  "acceptResult": {},
+  "acceptResponse": null,
+  "consoleMessages": [],
+  "pageErrors": [],
+  "fatalError": "candidate discovery output is only a proposal and cannot authorize Phase 3 mutation",
+  "blockerClassification": "candidate_discovery_only"
+}

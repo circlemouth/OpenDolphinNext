@@ -11,6 +11,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { buildFacilityPath } from '../../routes/facilityRoutes';
 import { useAppNavigation } from '../../routes/useAppNavigation';
+import { isSystemAdminRole } from '../../libs/auth/roles';
 import { hasHandoffEncounterKey } from '../charts/encounterContext';
 import {
   readChartsPatientTabsStorage,
@@ -107,7 +108,7 @@ export function WorkspaceTabBar({
   const isChartsScreen = /\/charts\/?$/.test(location.pathname);
   const isChartsArea = ['charts', 'print', 'orderSets'].includes(appNav.currentScreen);
   const activeDynamicKey = isChartsArea ? patientTabsState.activeKey : undefined;
-  const isSystemAdmin = role === 'system_admin';
+  const isSystemAdmin = isSystemAdminRole(role);
 
   const activeFixedKey = useMemo(() => {
     if (appNav.currentScreen === 'reception') return 'reception';

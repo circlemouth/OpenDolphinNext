@@ -1,5 +1,8 @@
 package open.dolphin.rest.orca;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.Consumes;
@@ -9,9 +12,13 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
@@ -34,6 +41,8 @@ import open.dolphin.rest.dto.orca.OrcaEncounterContext;
 @Path("/orca/official/chart-support")
 public class OrcaChartSupportResource extends AbstractOrcaRestResource {
     private static final String ROUTE_NAMESPACE = "official";
+    private static final ZoneId TOKYO_ZONE = ZoneId.of("Asia/Tokyo");
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
     private static final String AUDIT_MEDICAL_MOD_ACTION = "ORCA_OFFICIAL_MEDICAL_MOD_V2";
     private static final String AUDIT_MEDICATION_GET_ACTION = "ORCA_OFFICIAL_MEDICATION_GET";
     private static final String AUDIT_CONTRAINDICATION_CHECK_ACTION = "ORCA_OFFICIAL_CONTRAINDICATION_CHECK";
@@ -46,6 +55,9 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
 
     @Inject
     private ServerConfigurationResolver configurationResolver;
+
+    @Inject
+    EncounterProjectionRepository encounterProjectionRepository;
 
     @POST
     @Path("/medical-mod-v2")
@@ -79,9 +91,11 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             payload.setMedicalPush("Yes");
         }
 
+        String facilityId = requireFacilityId(request);
+        MedicalModContextAuthority contextAuthority =
+                requireServerDerivedMedicalModV2Context(request, facilityId, encounterContext);
         String runId = resolveRunId(request);
         String traceId = resolveTraceId(request);
-        String facilityId = requireFacilityId(request);
         String requestXml;
         try {
             support().validateMedicalModV2Request(payload);
@@ -104,6 +118,9 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("insuranceCombinationNumber", payload.getInsuranceCombinationNumber());
         details.put("voucherNumber", encounterContext.getVoucherNumber());
         details.put("sequentialNumber", encounterContext.getSequentialNumber());
+        details.put("serverDerivedEncounterContextVerified", true);
+        details.put("serverDerivedEncounterContextSource", contextAuthority.source());
+        details.put("serverDerivedEncounterContextProvisional", contextAuthority.provisional());
         details.put("classCode", classCode);
         details.put("medicalInformationCount",
                 payload.getMedicalInformation() != null ? payload.getMedicalInformation().size() : 0);
@@ -115,6 +132,136 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         recordAudit(request, AUDIT_MEDICAL_MOD_ACTION, details,
                 response.isOk() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
+    }
+
+    private MedicalModContextAuthority requireServerDerivedMedicalModV2Context(
+            HttpServletRequest request,
+            String facilityId,
+            OrcaEncounterContext encounterContext) {
+        if (encounterProjectionRepository == null) {
+            throw validationError(request, "encounterContext", "server-derived encounter context is required");
+        }
+        LocalDate visitDate = parseEncounterVisitDate(encounterContext != null ? encounterContext.getVisitDate() : null);
+        if (visitDate == null) {
+            throw validationError(request, "encounterContext.visitDate", "visitDate must be yyyy-MM-dd");
+        }
+        List<EncounterProjectionRepository.EncounterRow> rows =
+                encounterProjectionRepository.findByFacilityAndAcceptanceRange(
+                        facilityId,
+                        visitDate.atStartOfDay(TOKYO_ZONE).toInstant(),
+                        visitDate.plusDays(1).atStartOfDay(TOKYO_ZONE).toInstant());
+        List<MedicalModContextAuthority> matches = rows.stream()
+                .map(row -> resolveMedicalModContextAuthority(row, encounterContext, visitDate))
+                .filter(MedicalModContextAuthority::accepted)
+                .toList();
+        if (matches.size() != 1) {
+            throw validationError(request, "encounterContext",
+                    matches.isEmpty()
+                            ? "server-derived encounter context was not found"
+                            : "server-derived encounter context is ambiguous");
+        }
+        return matches.get(0);
+    }
+
+    private MedicalModContextAuthority resolveMedicalModContextAuthority(
+            EncounterProjectionRepository.EncounterRow row,
+            OrcaEncounterContext context,
+            LocalDate visitDate) {
+        if (row == null || context == null || "cancelled".equalsIgnoreCase(normalize(row.businessState()))) {
+            return MedicalModContextAuthority.rejected();
+        }
+        if (!safeEquals(row.patientId(), context.getPatientId())) {
+            return MedicalModContextAuthority.rejected();
+        }
+        if (row.acceptanceDatetime() == null
+                || !row.acceptanceDatetime().atZone(TOKYO_ZONE).toLocalDate().equals(visitDate)) {
+            return MedicalModContextAuthority.rejected();
+        }
+        JsonNode flags = readProjectionFlags(row.worklistFlagsJson());
+        if (!isServerDerivedProjection(flags)) {
+            return MedicalModContextAuthority.rejected();
+        }
+        JsonNode identifiers = flags.path("officialVisitIdentifiers");
+        if (!safeEquals(textNode(identifiers, "departmentCode"), context.getDepartmentCode())
+                || !safeEquals(textNode(identifiers, "physicianCode"), context.getPhysicianCode())
+                || !safeEquals(textNode(identifiers, "insuranceCombinationNumber"),
+                        context.getInsuranceCombinationNumber())) {
+            return MedicalModContextAuthority.rejected();
+        }
+        boolean officialIdentifiersMatch = safeEquals(textNode(identifiers, "voucherNumber"), context.getVoucherNumber())
+                && safeEquals(textNode(identifiers, "sequentialNumber"), context.getSequentialNumber());
+        if (officialIdentifiersMatch) {
+            return new MedicalModContextAuthority(true, false, "encounter_projection_official_identifiers");
+        }
+        boolean provisionalAllowed = flags.path("provisionalMedicalModV2Context").asBoolean(false)
+                && safeEquals(row.orcaAcceptanceId(), context.getVoucherNumber())
+                && "1".equals(normalize(context.getSequentialNumber()));
+        if (provisionalAllowed) {
+            return new MedicalModContextAuthority(true, true, "encounter_projection_acceptlstv2_provisional");
+        }
+        return MedicalModContextAuthority.rejected();
+    }
+
+    private boolean isServerDerivedProjection(JsonNode flags) {
+        return flags != null
+                && flags.path("rawSensitiveFieldsExcluded").asBoolean(false)
+                && !flags.path("clientProvidedIdentifiersTrusted").asBoolean(true)
+                && flags.path("serverDerivedAuthorityRequired").asBoolean(false);
+    }
+
+    private JsonNode readProjectionFlags(String json) {
+        if (json == null || json.isBlank()) {
+            return JSON_MAPPER.createObjectNode();
+        }
+        try {
+            return JSON_MAPPER.readTree(json);
+        } catch (JsonProcessingException | RuntimeException ex) {
+            return JSON_MAPPER.createObjectNode();
+        }
+    }
+
+    private String textNode(JsonNode node, String fieldName) {
+        if (node == null || fieldName == null) {
+            return null;
+        }
+        JsonNode value = node.path(fieldName);
+        if (value.isMissingNode() || value.isNull()) {
+            return null;
+        }
+        return normalize(value.asText());
+    }
+
+    private LocalDate parseEncounterVisitDate(String value) {
+        String normalized = normalize(value);
+        if (normalized == null) {
+            return null;
+        }
+        String datePart = normalized.length() >= 10 ? normalized.substring(0, 10) : normalized;
+        try {
+            return LocalDate.parse(datePart);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private boolean safeEquals(String left, String right) {
+        String normalizedLeft = normalize(left);
+        String normalizedRight = normalize(right);
+        return normalizedLeft != null && normalizedLeft.equals(normalizedRight);
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private record MedicalModContextAuthority(boolean accepted, boolean provisional, String source) {
+        private static MedicalModContextAuthority rejected() {
+            return new MedicalModContextAuthority(false, false, null);
+        }
     }
 
     @POST

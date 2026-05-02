@@ -1,0 +1,2190 @@
+[
+  {
+    "url": "/api/orca/official/appointments/medical-information",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "c8d8f870-a619-434c-9f81-5a79e94feb18",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "c8d8f870-a619-434c-9f81-5a79e94feb18",
+        "date": "Sat, 02 May 2026 12:54:29 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125429Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "660"
+      },
+      "body": {
+        "bodyChars": 584,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "traceId",
+          "requestId",
+          "dataSource",
+          "dataSourceTransition",
+          "recordsReturned",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "items"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 8,
+        "itemsCount": 8
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260502T123712Z",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "<<redacted>>",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "2cf6136d-746a-49b6-8a44-7672188e5934",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": {
+        "bodyChars": 47,
+        "keys": [
+          "visitDate",
+          "requestNumber"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260502T123712Z",
+        "x-request-id": "2cf6136d-746a-49b6-8a44-7672188e5934",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "2cf6136d-746a-49b6-8a44-7672188e5934",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "679",
+        "date": "Sat, 02 May 2026 12:54:29 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": {
+        "bodyChars": 635,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "traceId",
+          "requestId",
+          "dataSource",
+          "dataSourceTransition",
+          "recordsReturned",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "visitDate",
+          "visits"
+        ],
+        "apiResult": "13",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 1,
+        "visitsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260502T123712Z",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "<<redacted>>",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "2cf6136d-746a-49b6-8a44-7672188e5934",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": {
+        "bodyChars": 75,
+        "keys": [
+          "appointmentDate",
+          "medicalInformation",
+          "page",
+          "size"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260502T123712Z",
+        "x-request-id": "2cf6136d-746a-49b6-8a44-7672188e5934",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "2cf6136d-746a-49b6-8a44-7672188e5934",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "759",
+        "date": "Sat, 02 May 2026 12:54:29 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": {
+        "bodyChars": 697,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "traceId",
+          "requestId",
+          "dataSource",
+          "dataSourceTransition",
+          "recordsReturned",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "appointmentDate",
+          "slots"
+        ],
+        "apiResult": "21",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 1,
+        "slotsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/medical-information",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260502T123712Z",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "2cf6136d-746a-49b6-8a44-7672188e5934"
+      },
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260502T123712Z",
+        "x-request-id": "2cf6136d-746a-49b6-8a44-7672188e5934",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "2cf6136d-746a-49b6-8a44-7672188e5934",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "660",
+        "date": "Sat, 02 May 2026 12:54:29 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": {
+        "bodyChars": 584,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "traceId",
+          "requestId",
+          "dataSource",
+          "dataSourceTransition",
+          "recordsReturned",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "items"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 8,
+        "itemsCount": 8
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00001&class=01&format=json",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "30c7050e-c591-4127-a1c0-b470e7862a6a",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "30c7050e-c591-4127-a1c0-b470e7862a6a",
+        "date": "Sat, 02 May 2026 12:54:29 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125429Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "2065"
+      },
+      "body": {
+        "bodyChars": 1935,
+        "keys": [
+          "patientinfores"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00002&class=01&format=json",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "726dbdfc-554a-431d-b133-7c937d7aa73a",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "726dbdfc-554a-431d-b133-7c937d7aa73a",
+        "date": "Sat, 02 May 2026 12:54:29 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125429Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1596"
+      },
+      "body": {
+        "bodyChars": 1484,
+        "keys": [
+          "patientinfores"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00003&class=01&format=json",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "50a919e2-1a2a-4d8a-8c9c-ce7536e42d36",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "50a919e2-1a2a-4d8a-8c9c-ce7536e42d36",
+        "date": "Sat, 02 May 2026 12:54:29 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125429Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1476"
+      },
+      "body": {
+        "bodyChars": 1370,
+        "keys": [
+          "patientinfores"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00004&class=01&format=json",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "5e99441e-21f6-4fd3-9490-919be5853dc1",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "5e99441e-21f6-4fd3-9490-919be5853dc1",
+        "date": "Sat, 02 May 2026 12:54:29 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125429Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1479"
+      },
+      "body": {
+        "bodyChars": 1371,
+        "keys": [
+          "patientinfores"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00005&class=01&format=json",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "5025c4d6-1efa-4d41-9058-0daa4bd85000",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "5025c4d6-1efa-4d41-9058-0daa4bd85000",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1523"
+      },
+      "body": {
+        "bodyChars": 1409,
+        "keys": [
+          "patientinfores"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00006&class=01&format=json",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "9a268703-2b1d-40b1-8dae-8f6764f8b50a",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "9a268703-2b1d-40b1-8dae-8f6764f8b50a",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1677"
+      },
+      "body": {
+        "bodyChars": 1535,
+        "keys": [
+          "patientinfores"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00007&class=01&format=json",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "551312f6-57bd-4c6d-914c-69628dc2a7cf",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "551312f6-57bd-4c6d-914c-69628dc2a7cf",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1446"
+      },
+      "body": {
+        "bodyChars": 1358,
+        "keys": [
+          "patientinfores"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00008&class=01&format=json",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "6e2f8ba2-eeb9-40e0-b960-12d7c4772074",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "6e2f8ba2-eeb9-40e0-b960-12d7c4772074",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1452"
+      },
+      "body": {
+        "bodyChars": 1322,
+        "keys": [
+          "patientinfores"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00009&class=01&format=json",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "cb2ca25b-78ac-485a-b0fb-f1104d542170",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "cb2ca25b-78ac-485a-b0fb-f1104d542170",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1743"
+      },
+      "body": {
+        "bodyChars": 1585,
+        "keys": [
+          "patientinfores"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00010&class=01&format=json",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "91c538a3-bcf2-444f-9d0b-1e8255ebffc8",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "91c538a3-bcf2-444f-9d0b-1e8255ebffc8",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1399"
+      },
+      "body": {
+        "bodyChars": 1301,
+        "keys": [
+          "patientinfores"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/patientgetv2?id=00011&class=01&format=json",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "019cd449-00b0-48ba-b610-7059c5692a0d",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "019cd449-00b0-48ba-b610-7059c5692a0d",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1517"
+      },
+      "body": {
+        "bodyChars": 1387,
+        "keys": [
+          "patientinfores"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 45,
+        "keys": [
+          "patientId",
+          "baseDate"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "a74ab099-6724-4d1f-a417-3205ef50efe3",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "a74ab099-6724-4d1f-a417-3205ef50efe3",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1122"
+      },
+      "body": {
+        "bodyChars": 1054,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "dataSource",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "patient",
+          "combinations"
+        ],
+        "apiResult": "000",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 2
+      }
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 72,
+        "keys": [
+          "keyword",
+          "searchType",
+          "runId"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "c34fdd4c-11c2-4595-96f5-0f93544d0c15",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "c34fdd4c-11c2-4595-96f5-0f93544d0c15",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1190"
+      },
+      "body": {
+        "bodyChars": 1190,
+        "keys": [
+          "runId",
+          "traceId",
+          "requestId",
+          "routeNamespace",
+          "dataSource",
+          "dataSourceTransition",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "recordsReturned",
+          "apiResult",
+          "apiResultMessage",
+          "patients",
+          "auditEvent"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 1,
+        "patientsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 45,
+        "keys": [
+          "patientId",
+          "baseDate"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "dcf590f1-9c5a-4693-967f-7e50d50c21b3",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "dcf590f1-9c5a-4693-967f-7e50d50c21b3",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "783"
+      },
+      "body": {
+        "bodyChars": 729,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "dataSource",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "patient",
+          "combinations"
+        ],
+        "apiResult": "000",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 72,
+        "keys": [
+          "keyword",
+          "searchType",
+          "runId"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "5f49af3c-c043-4d85-b800-e38ff93fd170",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "5f49af3c-c043-4d85-b800-e38ff93fd170",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1203"
+      },
+      "body": {
+        "bodyChars": 1185,
+        "keys": [
+          "runId",
+          "traceId",
+          "requestId",
+          "routeNamespace",
+          "dataSource",
+          "dataSourceTransition",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "recordsReturned",
+          "apiResult",
+          "apiResultMessage",
+          "patients",
+          "auditEvent"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 1,
+        "patientsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 45,
+        "keys": [
+          "patientId",
+          "baseDate"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "465df6d0-9273-4116-a601-adcbeb5558a8",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "465df6d0-9273-4116-a601-adcbeb5558a8",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "752"
+      },
+      "body": {
+        "bodyChars": 700,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "dataSource",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "patient",
+          "combinations"
+        ],
+        "apiResult": "000",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 72,
+        "keys": [
+          "keyword",
+          "searchType",
+          "runId"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "5aca5203-3a30-465a-9326-d1fe539c72b2",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "5aca5203-3a30-465a-9326-d1fe539c72b2",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1015"
+      },
+      "body": {
+        "bodyChars": 1015,
+        "keys": [
+          "runId",
+          "traceId",
+          "requestId",
+          "routeNamespace",
+          "dataSource",
+          "dataSourceTransition",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "recordsReturned",
+          "apiResult",
+          "apiResultMessage",
+          "patients",
+          "auditEvent"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 0,
+        "patientsCount": 0
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 45,
+        "keys": [
+          "patientId",
+          "baseDate"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "a07c4901-63d4-450c-ba3a-afaaa6456a3d",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "a07c4901-63d4-450c-ba3a-afaaa6456a3d",
+        "date": "Sat, 02 May 2026 12:54:30 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125430Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "758"
+      },
+      "body": {
+        "bodyChars": 702,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "dataSource",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "patient",
+          "combinations"
+        ],
+        "apiResult": "000",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 72,
+        "keys": [
+          "keyword",
+          "searchType",
+          "runId"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "4d8ea98b-7ae6-4dc5-b19a-89a982b57fbf",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "4d8ea98b-7ae6-4dc5-b19a-89a982b57fbf",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1015"
+      },
+      "body": {
+        "bodyChars": 1015,
+        "keys": [
+          "runId",
+          "traceId",
+          "requestId",
+          "routeNamespace",
+          "dataSource",
+          "dataSourceTransition",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "recordsReturned",
+          "apiResult",
+          "apiResultMessage",
+          "patients",
+          "auditEvent"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 0,
+        "patientsCount": 0
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 45,
+        "keys": [
+          "patientId",
+          "baseDate"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "47b04089-03a9-4063-a018-367bf7c704be",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "47b04089-03a9-4063-a018-367bf7c704be",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "756"
+      },
+      "body": {
+        "bodyChars": 698,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "dataSource",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "patient",
+          "combinations"
+        ],
+        "apiResult": "000",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 72,
+        "keys": [
+          "keyword",
+          "searchType",
+          "runId"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "41952d22-eeec-44bc-b918-eb11e3c6eb73",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "41952d22-eeec-44bc-b918-eb11e3c6eb73",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1197"
+      },
+      "body": {
+        "bodyChars": 1185,
+        "keys": [
+          "runId",
+          "traceId",
+          "requestId",
+          "routeNamespace",
+          "dataSource",
+          "dataSourceTransition",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "recordsReturned",
+          "apiResult",
+          "apiResultMessage",
+          "patients",
+          "auditEvent"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 1,
+        "patientsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 45,
+        "keys": [
+          "patientId",
+          "baseDate"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "0ea05ba1-9e6e-4afd-ab37-d351d9eaefd3",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "0ea05ba1-9e6e-4afd-ab37-d351d9eaefd3",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "739"
+      },
+      "body": {
+        "bodyChars": 677,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "dataSource",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "patient",
+          "combinations"
+        ],
+        "apiResult": "000",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 72,
+        "keys": [
+          "keyword",
+          "searchType",
+          "runId"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "4c1b800c-a9af-4358-a70d-c91c63a0a787",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "4c1b800c-a9af-4358-a70d-c91c63a0a787",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1015"
+      },
+      "body": {
+        "bodyChars": 1015,
+        "keys": [
+          "runId",
+          "traceId",
+          "requestId",
+          "routeNamespace",
+          "dataSource",
+          "dataSourceTransition",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "recordsReturned",
+          "apiResult",
+          "apiResultMessage",
+          "patients",
+          "auditEvent"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 0,
+        "patientsCount": 0
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 45,
+        "keys": [
+          "patientId",
+          "baseDate"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "ac74e806-db57-4751-a5b8-3c5dd9ecccec",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "ac74e806-db57-4751-a5b8-3c5dd9ecccec",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "666"
+      },
+      "body": {
+        "bodyChars": 630,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "dataSource",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "patient",
+          "combinations"
+        ],
+        "apiResult": "000",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 72,
+        "keys": [
+          "keyword",
+          "searchType",
+          "runId"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "b0ac51df-bbad-4bee-8722-2392503ce961",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "b0ac51df-bbad-4bee-8722-2392503ce961",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1015"
+      },
+      "body": {
+        "bodyChars": 1015,
+        "keys": [
+          "runId",
+          "traceId",
+          "requestId",
+          "routeNamespace",
+          "dataSource",
+          "dataSourceTransition",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "recordsReturned",
+          "apiResult",
+          "apiResultMessage",
+          "patients",
+          "auditEvent"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 0,
+        "patientsCount": 0
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 45,
+        "keys": [
+          "patientId",
+          "baseDate"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "118d9e5d-4fbe-4fc3-be1e-6b949c30ddc9",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "118d9e5d-4fbe-4fc3-be1e-6b949c30ddc9",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "633"
+      },
+      "body": {
+        "bodyChars": 575,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "dataSource",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "patient",
+          "combinations"
+        ],
+        "apiResult": "000",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 72,
+        "keys": [
+          "keyword",
+          "searchType",
+          "runId"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "2a05bf58-4e8d-474d-b89e-af256a9dd656",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "2a05bf58-4e8d-474d-b89e-af256a9dd656",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1015"
+      },
+      "body": {
+        "bodyChars": 1015,
+        "keys": [
+          "runId",
+          "traceId",
+          "requestId",
+          "routeNamespace",
+          "dataSource",
+          "dataSourceTransition",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "recordsReturned",
+          "apiResult",
+          "apiResultMessage",
+          "patients",
+          "auditEvent"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 0,
+        "patientsCount": 0
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 45,
+        "keys": [
+          "patientId",
+          "baseDate"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "73c850c2-15ef-4571-b04a-c783e150901a",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "73c850c2-15ef-4571-b04a-c783e150901a",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "630"
+      },
+      "body": {
+        "bodyChars": 574,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "dataSource",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "patient",
+          "combinations"
+        ],
+        "apiResult": "000",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 72,
+        "keys": [
+          "keyword",
+          "searchType",
+          "runId"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "ea84c5c5-f7ba-4fd6-9425-dec3d593c758",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "ea84c5c5-f7ba-4fd6-9425-dec3d593c758",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1015"
+      },
+      "body": {
+        "bodyChars": 1015,
+        "keys": [
+          "runId",
+          "traceId",
+          "requestId",
+          "routeNamespace",
+          "dataSource",
+          "dataSourceTransition",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "recordsReturned",
+          "apiResult",
+          "apiResultMessage",
+          "patients",
+          "auditEvent"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 0,
+        "patientsCount": 0
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 45,
+        "keys": [
+          "patientId",
+          "baseDate"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "5aa0ad7b-acc9-4586-8661-00b494363397",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "5aa0ad7b-acc9-4586-8661-00b494363397",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "647"
+      },
+      "body": {
+        "bodyChars": 605,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "dataSource",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "patient",
+          "combinations"
+        ],
+        "apiResult": "000",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 72,
+        "keys": [
+          "keyword",
+          "searchType",
+          "runId"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "1558c90f-5eb7-4894-a336-1a6247948380",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "1558c90f-5eb7-4894-a336-1a6247948380",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1015"
+      },
+      "body": {
+        "bodyChars": 1015,
+        "keys": [
+          "runId",
+          "traceId",
+          "requestId",
+          "routeNamespace",
+          "dataSource",
+          "dataSourceTransition",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "recordsReturned",
+          "apiResult",
+          "apiResultMessage",
+          "patients",
+          "auditEvent"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 0,
+        "patientsCount": 0
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/insurance/combinations",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 45,
+        "keys": [
+          "patientId",
+          "baseDate"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "e1d3f142-bcc6-47bf-82e9-7474215a090a",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "e1d3f142-bcc6-47bf-82e9-7474215a090a",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "754"
+      },
+      "body": {
+        "bodyChars": 682,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "dataSource",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "patient",
+          "combinations"
+        ],
+        "apiResult": "000",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {},
+      "postData": {
+        "bodyChars": 72,
+        "keys": [
+          "keyword",
+          "searchType",
+          "runId"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "access-control-allow-origin": "http://localhost:5173",
+        "vary": "Origin",
+        "x-request-id": "e4eaad67-6aa7-46d4-9b1a-1529448c9876",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "e4eaad67-6aa7-46d4-9b1a-1529448c9876",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "connection": "close",
+        "x-run-id": "20260502T125431Z",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "1015"
+      },
+      "body": {
+        "bodyChars": 1015,
+        "keys": [
+          "runId",
+          "traceId",
+          "requestId",
+          "routeNamespace",
+          "dataSource",
+          "dataSourceTransition",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "recordsReturned",
+          "apiResult",
+          "apiResultMessage",
+          "patients",
+          "auditEvent"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 0,
+        "patientsCount": 0
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/medical-information",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260502T123712Z",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "ff57ac1e-dc52-41d8-bcbe-e1d5c6c3f7d5"
+      },
+      "postData": {
+        "bodyChars": 0
+      }
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260502T123712Z",
+        "x-request-id": "ff57ac1e-dc52-41d8-bcbe-e1d5c6c3f7d5",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "ff57ac1e-dc52-41d8-bcbe-e1d5c6c3f7d5",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "660",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": {
+        "bodyChars": 584,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "traceId",
+          "requestId",
+          "dataSource",
+          "dataSourceTransition",
+          "recordsReturned",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "items"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 8,
+        "itemsCount": 8
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260502T123712Z",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "<<redacted>>",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "ff57ac1e-dc52-41d8-bcbe-e1d5c6c3f7d5",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": {
+        "bodyChars": 75,
+        "keys": [
+          "appointmentDate",
+          "medicalInformation",
+          "page",
+          "size"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260502T123712Z",
+        "x-request-id": "ff57ac1e-dc52-41d8-bcbe-e1d5c6c3f7d5",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "ff57ac1e-dc52-41d8-bcbe-e1d5c6c3f7d5",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "759",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": {
+        "bodyChars": 697,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "traceId",
+          "requestId",
+          "dataSource",
+          "dataSourceTransition",
+          "recordsReturned",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "appointmentDate",
+          "slots"
+        ],
+        "apiResult": "21",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 1,
+        "slotsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260502T123712Z",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "<<redacted>>",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "ff57ac1e-dc52-41d8-bcbe-e1d5c6c3f7d5",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": {
+        "bodyChars": 47,
+        "keys": [
+          "visitDate",
+          "requestNumber"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260502T123712Z",
+        "x-request-id": "ff57ac1e-dc52-41d8-bcbe-e1d5c6c3f7d5",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "ff57ac1e-dc52-41d8-bcbe-e1d5c6c3f7d5",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "679",
+        "date": "Sat, 02 May 2026 12:54:31 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": {
+        "bodyChars": 635,
+        "keys": [
+          "apiResult",
+          "apiResultMessage",
+          "runId",
+          "traceId",
+          "requestId",
+          "dataSource",
+          "dataSourceTransition",
+          "recordsReturned",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "visitDate",
+          "visits"
+        ],
+        "apiResult": "13",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 1,
+        "visitsCount": 1
+      }
+    }
+  },
+  {
+    "url": "/api/local/patients/search",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260502T123712Z",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "<<redacted>>",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "ff57ac1e-dc52-41d8-bcbe-e1d5c6c3f7d5",
+        "x-cache-hit": "false",
+        "x-fallback-used": "true",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": {
+        "bodyChars": 74,
+        "keys": [
+          "keyword",
+          "searchType",
+          "runId"
+        ],
+        "apiResultMessageCategory": "none"
+      }
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260502T123712Z",
+        "x-request-id": "ff57ac1e-dc52-41d8-bcbe-e1d5c6c3f7d5",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "ff57ac1e-dc52-41d8-bcbe-e1d5c6c3f7d5",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "1216",
+        "date": "Sat, 02 May 2026 12:54:32 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": {
+        "bodyChars": 1188,
+        "keys": [
+          "runId",
+          "traceId",
+          "requestId",
+          "routeNamespace",
+          "dataSource",
+          "dataSourceTransition",
+          "cacheHit",
+          "missingMaster",
+          "fallbackUsed",
+          "fetchedAt",
+          "recordsReturned",
+          "apiResult",
+          "apiResultMessage",
+          "patients",
+          "auditEvent"
+        ],
+        "apiResult": "00",
+        "apiResultMessageCategory": "other",
+        "recordsReturned": 1,
+        "patientsCount": 1
+      }
+    }
+  }
+]

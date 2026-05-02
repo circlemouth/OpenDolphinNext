@@ -324,6 +324,37 @@ const setTextInputValue = async (locator, value) => {
   }
 };
 
+const findExactPatientSearchResult = async (workflowModal, targetPatientId) => {
+  const normalizedTarget = String(targetPatientId ?? '').trim();
+  const resultItems = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]');
+  const deadline = Date.now() + 20000;
+  let lastRendered = [];
+  while (Date.now() < deadline) {
+    const count = await resultItems.count().catch(() => 0);
+    lastRendered = [];
+    for (let index = 0; index < count; index += 1) {
+      const item = resultItems.nth(index);
+      const text = (await item.innerText().catch(() => '')) ?? '';
+      const normalizedText = text.replace(/\s+/g, ' ').trim();
+      if (normalizedText) {
+        lastRendered.push(normalizedText);
+      }
+      if (new RegExp(`\\bID:\\s*${normalizedTarget}\\b`).test(text)) {
+        return { item, count, index, matched: true };
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  if (lastRendered.length === 0) {
+    throw new Error(
+      `patient search returned no selectable result for QA_PATIENT_ID=${normalizedTarget}; classify as PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER. Do not conclude WebORCA Trial initial patients 00001-00011 are nonexistent; verify harness/API/auth/ID normalization/parser/readiness evidence.`,
+    );
+  }
+  throw new Error(
+    `patient search did not render exact QA_PATIENT_ID=${normalizedTarget}; rendered=${JSON.stringify(lastRendered)}`,
+  );
+};
+
 const injectLocalOption = async (selectLocator, desiredValue) => {
   try {
     await selectLocator.evaluate((select, value) => {
@@ -789,6 +820,11 @@ const run = async () => {
   const patientSearchForm = workflowModal.locator('[data-test-id="reception-patient-search-form"]');
   await patientSearchForm.waitFor({ timeout: 20000 });
   logStep('patient search form ready');
+  const clearPatientSearchButton = workflowModal.locator('.reception-patient-search__header-actions').getByRole('button', { name: 'クリア' });
+  if (await clearPatientSearchButton.isVisible().catch(() => false)) {
+    await clearPatientSearchButton.click();
+    logStep('cleared prefilled patient search');
+  }
 
   const patientSearchInputMethod = await setTextInputValue(
     patientSearchForm.locator('#reception-patient-search-patient-id'),
@@ -797,14 +833,11 @@ const run = async () => {
   logStep(`filled patient search id method=${patientSearchInputMethod}`);
   await patientSearchForm.locator('[data-test-id="reception-patient-search-submit"]').click();
   logStep('submitted patient search');
-  const resultListItem = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]').first();
-  await resultListItem.waitFor({ timeout: 20000 }).catch(() => {
-    throw new Error(
-      `patient search returned no selectable result for QA_PATIENT_ID=${patientId}; classify as PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER. Do not conclude WebORCA Trial initial patients 00001-00011 are nonexistent; verify harness/API/auth/ID normalization/parser/readiness evidence.`,
-    );
-  });
-  await resultListItem.click();
-  logStep('selected patient result');
+  const exactPatientSearchResult = await findExactPatientSearchResult(workflowModal, patientId);
+  await exactPatientSearchResult.item.click();
+  logStep(
+    `selected exact patient result patientId=${patientId} resultCount=${exactPatientSearchResult.count} index=${exactPatientSearchResult.index}`,
+  );
 
   const acceptForm = workflowModal.locator('[data-test-id="reception-accept-detail-modal"]');
   await acceptForm.waitFor({ timeout: 20000 });

@@ -92,8 +92,14 @@ vi.mock('../features/images/pages/MobileImagesUploadPage', () => ({
 vi.mock('../features/debug/MobilePatientPickerDemoPage', () => ({
   MobilePatientPickerDemoPage: () => <div data-testid="mobile-picker-page">mobile-picker</div>,
 }));
-vi.mock('../features/administration/orcaConnectionApi', () => ({
-  testOrcaConnection: vi.fn(),
+vi.mock('../features/administration/api', () => ({
+  fetchOperationsReadiness: vi.fn(async () => ({
+    ok: true,
+    status: 200,
+    summaryStatus: 'UP',
+    checks: { orca: { status: 'UP' } },
+    raw: {},
+  })),
 }));
 vi.mock('../features/login/loginRouteState', () => ({
   normalizeFromState: () => undefined,
