@@ -75,11 +75,35 @@ if (!loadedPath) {
 }
 
 const [command, ...commandArgs] = args;
-const child = spawn(command, commandArgs, {
-  env: process.env,
-  stdio: 'inherit',
-  shell: false,
-});
+const resolveCommand = (rawCommand) => {
+  if (process.platform !== 'win32' || path.extname(rawCommand)) {
+    return rawCommand;
+  }
+
+  const localCmd = path.join(process.cwd(), 'node_modules', '.bin', `${rawCommand}.cmd`);
+  if (fs.existsSync(localCmd)) {
+    return localCmd;
+  }
+
+  const repoCmd = path.join(repoRoot, 'node_modules', '.bin', `${rawCommand}.cmd`);
+  if (fs.existsSync(repoCmd)) {
+    return repoCmd;
+  }
+
+  return `${rawCommand}.cmd`;
+};
+
+const resolvedCommand = resolveCommand(command);
+const isWindowsCmd = process.platform === 'win32' && resolvedCommand.toLowerCase().endsWith('.cmd');
+const child = spawn(
+  isWindowsCmd ? process.env.ComSpec || 'cmd.exe' : resolvedCommand,
+  isWindowsCmd ? ['/d', '/s', '/c', resolvedCommand, ...commandArgs] : commandArgs,
+  {
+    env: process.env,
+    stdio: 'inherit',
+    shell: false,
+  },
+);
 
 child.on('error', (error) => {
   console.error(error.message);

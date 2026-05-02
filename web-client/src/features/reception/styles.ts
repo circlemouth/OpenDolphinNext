@@ -295,20 +295,63 @@ export const receptionStyles = css`
     padding: 0.9rem;
   }
 
-  .reception-toolbar > form {
-    display: flex;
-    flex-wrap: wrap;
+  .reception-toolbar__form {
+    display: grid;
+    grid-template-columns: minmax(360px, 1.15fr) minmax(280px, 0.9fr) minmax(260px, 0.75fr) minmax(250px, auto);
     gap: 0.75rem;
-    align-items: flex-end;
+    align-items: stretch;
   }
 
-  .reception-toolbar__group {
+  .reception-toolbar__cluster,
+  .reception-toolbar__status {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
     gap: 0.55rem;
-    padding-right: 0.85rem;
-    border-right: 1px solid rgba(226, 232, 240, 0.9);
+    min-width: 0;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 0.65rem;
+  }
+
+  .reception-toolbar__cluster-title {
+    flex: 0 0 100%;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #334155;
+    line-height: 1;
+  }
+
+  .reception-toolbar__cluster--search {
+    background: #ffffff;
+  }
+
+  .reception-toolbar__cluster--actions {
+    justify-content: flex-end;
+    align-content: flex-end;
+  }
+
+  .reception-toolbar__date-field {
+    flex: 0 0 9.6rem;
+  }
+
+  .reception-toolbar__keyword-field {
+    flex: 1 1 13.5rem;
+    min-width: 12rem;
+  }
+
+  .reception-toolbar__status {
+    grid-column: 1 / -1;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  @media (max-width: 1180px) {
+    .reception-toolbar__form {
+      grid-template-columns: minmax(340px, 1fr) minmax(280px, 1fr);
+    }
   }
 
   .reception-toolbar__advanced {
@@ -342,22 +385,21 @@ export const receptionStyles = css`
   }
 
   .reception-daily-calendar__trigger {
-    border-radius: 16px;
+    border-radius: 8px;
     border: 1px solid rgba(148, 163, 184, 0.35);
     background: rgba(255, 255, 255, 0.92);
     color: #1e293b;
-    min-height: 3.05rem;
-    width: 100%;
-    padding: 0.6rem 0.82rem;
-    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.1);
-    backdrop-filter: blur(4px);
+    min-height: 2.5rem;
+    width: auto;
+    padding: 0.45rem 0.68rem;
+    box-shadow: none;
     cursor: pointer;
     text-align: left;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
     justify-content: center;
-    gap: 0.2rem;
+    gap: 0.45rem;
   }
 
   .reception-daily-calendar__trigger:focus-visible {
@@ -385,27 +427,25 @@ export const receptionStyles = css`
   }
 
   .reception-daily-calendar__trigger {
-    min-width: 8.4rem;
+    min-width: 9.4rem;
   }
 
   .reception-daily-calendar__trigger-label {
-    font-size: 0.78rem;
-    letter-spacing: 0.04em;
+    font-size: 0.8rem;
     font-weight: 800;
     color: #475569;
-    text-transform: uppercase;
   }
 
   .reception-daily-calendar__trigger-date {
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-    font-size: 0.95rem;
-    font-weight: 900;
-    color: #0f172a;
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: #334155;
   }
 
   .reception-daily-calendar.is-open .reception-daily-calendar__trigger {
     border-color: rgba(100, 116, 139, 0.6);
-    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   }
 
   .reception-daily-calendar__popover {
@@ -4045,6 +4085,27 @@ export const receptionStyles = css`
       --reception-floating-offset-right: max(0.65rem, calc(env(safe-area-inset-right) + 0.45rem));
       --reception-floating-offset-bottom: max(0.65rem, calc(env(safe-area-inset-bottom) + 0.45rem));
       --reception-floating-stack-height: 0rem;
+    }
+
+    .reception-toolbar {
+      padding: 0.7rem;
+    }
+
+    .reception-toolbar__form {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .reception-toolbar__cluster,
+    .reception-toolbar__status {
+      align-items: stretch;
+    }
+
+    .reception-toolbar__date-field,
+    .reception-toolbar__keyword-field,
+    .reception-daily-calendar,
+    .reception-daily-calendar__trigger {
+      flex: 1 1 100%;
+      width: 100%;
     }
 
     .order-console__action {

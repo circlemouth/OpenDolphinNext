@@ -4523,8 +4523,9 @@ export function ReceptionPage({
         <h1 className="sr-only">{title}</h1>
         <p className="sr-only">{description}</p>
         <section className="reception-toolbar" role="region" aria-label="受付ツールバー" data-run-id={resolvedRunId}>
-          <form className="reception-toolbar__group" onSubmit={handleSearchSubmit}>
-            <div className="reception-toolbar__group" role="group" aria-label="日付操作">
+          <form className="reception-toolbar__form" onSubmit={handleSearchSubmit}>
+            <div className="reception-toolbar__cluster reception-toolbar__cluster--date" role="group" aria-label="日付操作">
+              <span className="reception-toolbar__cluster-title">受付日</span>
               <div className="reception-search__date-nav" role="group" aria-label="日付操作">
                 <button
                   type="button"
@@ -4563,7 +4564,7 @@ export function ReceptionPage({
                   </button>
                 ) : null}
               </div>
-              <label className="reception-search__field">
+              <label className="reception-search__field reception-toolbar__date-field">
                 <span className="sr-only">日付</span>
                 <input
                   id="reception-search-date"
@@ -4653,8 +4654,8 @@ export function ReceptionPage({
                 ) : null}
               </div>
             </div>
-            <div className="reception-toolbar__group" role="group" aria-label="検索">
-              <label className="reception-search__field">
+            <div className="reception-toolbar__cluster reception-toolbar__cluster--search" role="group" aria-label="検索">
+              <label className="reception-search__field reception-toolbar__keyword-field">
                 <span>検索（患者ID/氏名/カナ）</span>
                 <input
                   id="reception-search-keyword"
@@ -4669,7 +4670,7 @@ export function ReceptionPage({
                 検索
               </button>
             </div>
-            <div className="reception-toolbar__group" role="group" aria-label="絞り込み">
+            <div className="reception-toolbar__cluster reception-toolbar__cluster--filters" role="group" aria-label="絞り込み">
               <label className="reception-search__field">
                 <span>診療科</span>
                 <select
@@ -4704,11 +4705,11 @@ export function ReceptionPage({
               </label>
             </div>
             {receptionErrorIndicator && !sessionStatusSlot ? (
-              <div className="reception-toolbar__group" role="status" aria-live={infoLive}>
+              <div className="reception-toolbar__status" role="status" aria-live={infoLive}>
                 {receptionErrorIndicator}
               </div>
             ) : null}
-            <div className="reception-toolbar__group" role="group" aria-label="操作">
+            <div className="reception-toolbar__cluster reception-toolbar__cluster--actions" role="group" aria-label="操作">
               <button
                 type="button"
                 className="reception-search__button ghost"
