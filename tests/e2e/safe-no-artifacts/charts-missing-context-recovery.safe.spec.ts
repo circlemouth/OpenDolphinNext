@@ -261,6 +261,16 @@ const stubChartsShell = async (page: Page, options: { includeSafeVisit?: boolean
         }),
       );
     }
+    if (pathname === '/api/orca/official/appointments/selector-options') {
+      readOnlyOrcaPaths.push(pathname);
+      return route.fulfill(
+        jsonResponse({
+          runId,
+          departments: [{ code: safeVisit.departmentCode, name: safeVisit.departmentName }],
+          physicians: [{ code: safeVisit.physicianCode, name: safeVisit.physicianName }],
+        }),
+      );
+    }
     if (pathname === '/api/orca/official/visits/list') {
       readOnlyOrcaPaths.push(pathname);
       const visits = options.includeSafeVisit ? [safeVisit] : [];
@@ -420,9 +430,10 @@ const stubChartsShell = async (page: Page, options: { includeSafeVisit?: boolean
         }
         if (operation.operation === 'update' && typeof operation.documentId === 'number') {
           updatedDocumentIds.push(operation.documentId);
+          const patch = Object.fromEntries(Object.entries(operation).filter(([, value]) => value !== undefined));
           storedOrderBundles = storedOrderBundles.map((bundle) =>
             bundle.documentId === operation.documentId
-              ? { ...bundle, ...operation, operation: undefined, patientId: SAFE_PATIENT_ID }
+              ? { ...bundle, ...patch, operation: undefined, patientId: SAFE_PATIENT_ID }
               : bundle,
           );
           continue;

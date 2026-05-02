@@ -212,6 +212,10 @@ export const LoginScreen = ({
   const [passwordVisible, setPasswordVisible] = useState(false);
   const secondFactorInputRef = useRef<HTMLInputElement | null>(null);
 
+  useEffect(() => {
+    document.title = 'OpenDolphin Web ログイン';
+  }, []);
+
   const isLoading = status === 'loading';
   const isSuccess = status === 'success';
   const normalizedFacilityId = normalize(values.facilityId);

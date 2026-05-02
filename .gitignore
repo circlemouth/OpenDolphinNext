@@ -68,6 +68,7 @@ artifacts/review-*.zip.*
 # may be committed under docs/implementation, but raw screenshots/HAR/traces/
 # videos/network dumps/request XML from diagnostic harnesses must remain ignored.
 artifacts/diagnostic-fullflow/
+artifacts/clinical-fullscreen-qa/
 artifacts/orca-remediation/closeout/*/qa/fullflow/
 artifacts/orca-remediation/closeout/*/qa/diagnostic-fullflow/
 artifacts/webclient/runtime-gate-ready/

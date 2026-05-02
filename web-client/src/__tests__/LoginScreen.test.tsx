@@ -49,6 +49,8 @@ describe('LoginScreen', () => {
   });
 
   it('aria-labelledby が見出しIDと一致している', () => {
+    document.title = '管理画面（権限不足） | 施設ID=F001';
+
     const { container } = render(<LoginScreen />);
 
     const section = container.querySelector('section.login-card');
@@ -57,6 +59,7 @@ describe('LoginScreen', () => {
     expect(section).not.toBeNull();
     expect(section).toHaveAttribute('aria-labelledby', 'login-heading');
     expect(heading).toHaveAttribute('id', 'login-heading');
+    expect(document.title).toBe('OpenDolphin Web ログイン');
   });
 
   it('initialNotice は表示し、destinationSummary は login surface 上に表示しない', () => {
