@@ -331,9 +331,9 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const readOnly = editLock?.readOnly === true;
   const readOnlyReason = editLock?.reason ?? '並行編集を検知したため、このタブは閲覧専用です。';
   const approvalLocked = approvalLock?.locked === true;
-  const approvalReason = approvalLocked ? '署名確定済みのため編集できません。' : undefined;
+  const approvalReason = approvalLocked ? '署名確定済みです。編集内容は履歴として追記されます。' : undefined;
   const actionLocked = uiLocked || isRunning || readOnly;
-  const isLocked = actionLocked || approvalLocked;
+  const isLocked = actionLocked;
   const resolvedTraceId = traceId ?? getObservabilityMeta().traceId;
   const resolvedPatientId = patientId ?? selectedEntry?.patientId;
   const resolvedAppointmentId = queueEntry?.appointmentId ?? selectedEntry?.appointmentId;
@@ -507,15 +507,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       });
     }
 
-    if (approvalLocked) {
-      reasons.push({
-        key: 'approval_locked',
-        summary: '承認済み: 編集不可で送信不可',
-        detail: approvalReason ?? '署名確定済みのため編集できません。',
-        next: ['必要なら新規受付で再作成', '承認内容の確認（監査ログ）'],
-      });
-    }
-
     if (requirePatientForSend && !resolvedPatientId) {
       reasons.push({
         key: 'patient_not_selected',
@@ -614,8 +605,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     networkDegradedReason,
     patientId,
     permissionDenied,
-    approvalLocked,
-    approvalReason,
     readOnly,
     readOnlyReason,
     missingOrcaEncounterContextFields,
@@ -659,15 +648,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       });
     }
 
-    if (approvalLocked) {
-      reasons.push({
-        key: 'approval_locked',
-        summary: '承認済み: 編集不可で診察終了不可',
-        detail: approvalReason ?? '署名確定済みのため編集できません。',
-        next: ['必要なら新規受付で再作成', '承認内容の確認（監査ログ）'],
-      });
-    }
-
     if (!resolvedPatientId) {
       reasons.push({
         key: 'patient_not_selected',
@@ -678,9 +658,9 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     }
 
     return reasons;
-  }, [approvalLocked, approvalReason, isRunning, readOnly, readOnlyReason, resolvedLockReason, uiLocked, resolvedPatientId]);
+  }, [isRunning, readOnly, readOnlyReason, resolvedLockReason, uiLocked, resolvedPatientId]);
 
-  const sendDisabled = isRunning || approvalLocked || sendPrecheckReasons.length > 0;
+  const sendDisabled = isRunning || sendPrecheckReasons.length > 0;
   const primaryAction = useMemo<ChartAction | 'sending'>(() => {
     if (isRunning && runningAction === 'send') return 'sending';
     const status = (selectedEntry?.status ?? '').trim();
@@ -718,15 +698,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         summary: '並行編集: 閲覧専用で印刷不可',
         detail: readOnlyReason,
         next: ['最新を再読込', '別タブを閉じる', '必要ならロック引き継ぎ（強制）'],
-      });
-    }
-
-    if (approvalLocked) {
-      reasons.push({
-        key: 'approval_locked',
-        summary: '承認済み: 編集不可で印刷不可',
-        detail: approvalReason ?? '署名確定済みのため編集できません。',
-        next: ['必要なら新規受付で再作成', '承認内容の確認（監査ログ）'],
       });
     }
 
@@ -780,8 +751,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
 
     return reasons;
   }, [
-    approvalLocked,
-    approvalReason,
     fallbackUsed,
     hasPermission,
     isRunning,
@@ -843,7 +812,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       return `${ACTION_LABEL[runningAction]}を実行中… dataSourceTransition=${dataSourceTransition}`;
     }
     if (approvalLocked) {
-      return '承認済み（署名確定）: 編集不可';
+      return '承認済み（署名確定）: 編集は履歴として追記';
     }
     if (resolvedLockReason) return resolvedLockReason;
     if (readOnly) return readOnlyReason;
@@ -883,7 +852,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
 
   const statusTone = useMemo<'ready' | 'busy' | 'guarded' | 'locked'>(() => {
     if (isRunning) return 'busy';
-    if (approvalLocked || readOnly || Boolean(resolvedLockReason)) return 'locked';
+    if (readOnly || Boolean(resolvedLockReason)) return 'locked';
+    if (approvalLocked) return 'ready';
     if (sendPrecheckReasons.length > 0 || printPrecheckReasons.length > 0 || finishPrecheckReasons.length > 0) return 'guarded';
     return 'ready';
   }, [
@@ -1076,43 +1046,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
 
   const handleAction = async (action: ChartAction) => {
     if (isRunning) return;
-
-    if (approvalLocked) {
-      const blockedReason = approvalReason ?? '署名確定済みのため編集できません。';
-      setToast({
-        tone: 'warning',
-        message: `${ACTION_LABEL[action]}を停止`,
-        detail: blockedReason,
-      });
-      setRetryAction(null);
-      logTelemetry(action, 'blocked', undefined, blockedReason, blockedReason);
-      logUiState({
-        action,
-        screen: 'charts/action-bar',
-        controlId: `action-${action}`,
-        runId,
-        cacheHit,
-        missingMaster,
-        dataSourceTransition,
-        fallbackUsed,
-        details: {
-          operationPhase: 'lock',
-          blocked: true,
-          reasons: ['approval_locked'],
-          traceId: resolvedTraceId,
-          approval: approvalLock ?? null,
-        },
-      });
-      logAudit(action, 'blocked', blockedReason, undefined, {
-        phase: 'lock',
-        details: {
-          trigger: 'approval_locked',
-          blockedReasons: ['approval_locked'],
-          approvalState: 'confirmed',
-        },
-      });
-      return;
-    }
 
     if (readOnly) {
       const blockedReason = readOnlyReason;
@@ -2531,12 +2464,12 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       <FocusTrapDialog
         open={approvalUnlockDialogStep !== null}
         role="alertdialog"
-        title={approvalUnlockDialogStep === 'final' ? '承認ロック解除: 最終確認' : '承認ロック解除'}
-        description="署名確定を取り消し、編集可能状態に戻します。監査対象の危険操作です。"
+        title={approvalUnlockDialogStep === 'final' ? '署名確定解除: 最終確認' : '署名確定解除'}
+        description="署名確定を取り消します。編集自体は署名確定中でも履歴追記として実行できます。"
         onClose={() => setApprovalUnlockDialogStep(null)}
         testId="charts-approval-unlock-dialog"
       >
-        <section className="charts-actions__send-confirm" aria-label="承認ロック解除確認">
+        <section className="charts-actions__send-confirm" aria-label="署名確定解除確認">
           <dl className="charts-actions__send-confirm-list">
             <div>
               <dt>患者名</dt>
@@ -2556,10 +2489,10 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             </div>
             <div>
               <dt>影響範囲</dt>
-              <dd>署名確定が解除され、編集・送信が再開可能になります。</dd>
+              <dd>署名確定状態を解除します。履歴追記済みの編集内容は維持されます。</dd>
             </div>
           </dl>
-          <div className="charts-tab-guard__actions" role="group" aria-label="承認ロック解除操作">
+          <div className="charts-tab-guard__actions" role="group" aria-label="署名確定解除操作">
             <button type="button" onClick={() => setApprovalUnlockDialogStep(null)}>
               キャンセル
             </button>
@@ -2576,7 +2509,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                   onApprovalUnlock?.();
                   setBanner({
                     tone: 'warning',
-                    message: '承認ロックを解除しました。署名確定が取り消され、編集が再開できます。',
+                    message: '署名確定を解除しました。',
                     nextAction: '編集前に内容確認と再署名が必要か確認してください。',
                   });
                   setToast(null);
@@ -2705,7 +2638,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         </div>
       )}
       {approvalLocked ? (
-        <div className="charts-actions__conflict" role="group" aria-label="承認済み（署名確定）のため編集不可">
+        <div className="charts-actions__conflict" role="group" aria-label="承認済み（署名確定）">
           <div className="charts-actions__conflict-title">
             <strong>承認済み（署名確定）</strong>
             <span className="charts-actions__conflict-meta">
@@ -2723,7 +2656,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               onClick={handleApprovalUnlock}
               disabled={!onApprovalUnlock}
             >
-              承認ロック解除
+              署名確定解除
             </button>
           </div>
         </div>

@@ -1425,6 +1425,8 @@ start_web_client_docker() {
   local dev_orca_basic_user="${ORCA_PROXY_BASIC_USER:-${ORCA_BASIC_USER:-${ORCA_API_USER:-${ORCA_TRIAL_USER:-}}}}"
   local dev_orca_basic_password="${ORCA_PROXY_BASIC_PASSWORD:-${ORCA_BASIC_PASSWORD:-${ORCA_API_PASSWORD:-${ORCA_TRIAL_PASS:-}}}}"
   local base_path="$VITE_BASE_PATH_NORMALIZED"
+  local dev_charts_revision_history="${VITE_CHARTS_REVISION_HISTORY:-1}"
+  local dev_charts_revision_edit="${VITE_CHARTS_REVISION_EDIT:-1}"
   VITE_DEV_PROXY_TARGET="$dev_proxy_target" \
     VITE_ENABLE_FACILITY_HEADER="$dev_enable_facility_header" \
     VITE_SINGLE_FACILITY_LOGIN="$VITE_SINGLE_FACILITY_LOGIN_EFFECTIVE" \
@@ -1433,6 +1435,8 @@ start_web_client_docker() {
     VITE_ORCA_API_PATH_PREFIX="$dev_orca_path_prefix" \
     VITE_API_BASE_URL="$WEB_CLIENT_DEV_API_BASE" \
     VITE_BASE_PATH="$base_path" \
+    VITE_CHARTS_REVISION_HISTORY="$dev_charts_revision_history" \
+    VITE_CHARTS_REVISION_EDIT="$dev_charts_revision_edit" \
     ORCA_BASIC_USER="$dev_orca_basic_user" \
     ORCA_BASIC_PASSWORD="$dev_orca_basic_password" \
     docker compose -f docker-compose.web-client.yml up -d --build --force-recreate
@@ -1459,6 +1463,8 @@ start_web_client_npm() {
   local dev_orca_basic_user="${ORCA_PROXY_BASIC_USER:-${ORCA_BASIC_USER:-${ORCA_API_USER:-${ORCA_TRIAL_USER:-}}}}"
   local dev_orca_basic_password="${ORCA_PROXY_BASIC_PASSWORD:-${ORCA_BASIC_PASSWORD:-${ORCA_API_PASSWORD:-${ORCA_TRIAL_PASS:-}}}}"
   local base_path="$VITE_BASE_PATH_NORMALIZED"
+  local dev_charts_revision_history="${VITE_CHARTS_REVISION_HISTORY:-1}"
+  local dev_charts_revision_edit="${VITE_CHARTS_REVISION_EDIT:-1}"
 
   local npm_env_dir="tmp/web-client-vite-env"
   rm -rf "$npm_env_dir"
@@ -1481,6 +1487,8 @@ VITE_ORCA_MASTER_PASSWORD=$dev_orca_master_password
 VITE_ORCA_MODE=$dev_orca_mode
 VITE_ORCA_API_PATH_PREFIX=$dev_orca_path_prefix
 VITE_BASE_PATH=$base_path
+VITE_CHARTS_REVISION_HISTORY=$dev_charts_revision_history
+VITE_CHARTS_REVISION_EDIT=$dev_charts_revision_edit
 EOF
   mkdir -p "$(dirname "$WEB_CLIENT_ENV_LOCAL")"
   cp "$npm_env_dir/.env" "$WEB_CLIENT_ENV_LOCAL"

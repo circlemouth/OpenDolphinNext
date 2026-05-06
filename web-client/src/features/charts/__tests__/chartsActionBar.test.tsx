@@ -413,22 +413,41 @@ describe('ChartsActionBar', () => {
     expect(onAfterStart).not.toHaveBeenCalled();
   });
 
-  it('承認ロック中は印刷がガードされる', () => {
+  it('署名確定中でも履歴追記前提で印刷操作はガードしない', () => {
     render(
       <MemoryRouter>
         <ChartsActionBar
           {...baseProps}
           patientId="P-300"
           visitDate="2026-01-05"
-          selectedEntry={{ patientId: 'P-300', appointmentId: 'APT-1', visitDate: '2026-01-05' } as any}
+          orcaEncounterContext={{
+            patientId: 'P-300',
+            visitDate: '2026-01-05',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          }}
+          selectedEntry={{
+            patientId: 'P-300',
+            appointmentId: 'APT-1',
+            visitDate: '2026-01-05',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          } as any}
           approvalLock={{ locked: true, runId: 'RUN-LOCK', action: 'send' }}
         />
       </MemoryRouter>,
     );
 
     const printButton = screen.getByRole('button', { name: '印刷/エクスポート' });
-    expect(printButton).toBeDisabled();
+    expect(printButton).not.toBeDisabled();
     expect(screen.getAllByText(/承認済み（署名確定）/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/編集内容は履歴として追記/).length).toBeGreaterThan(0);
   });
 
   it('閲覧専用時は印刷がガードされる', () => {

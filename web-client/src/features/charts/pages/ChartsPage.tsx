@@ -748,7 +748,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const approvalLockLogRef = useRef<string | null>(null);
   const approvalUnlockLogRef = useRef<string | null>(null);
   const approvalLocked = approvalState.status === 'approved';
-  const approvalReason = approvalLocked ? '署名確定済みのため編集できません。' : undefined;
+  const approvalReason = approvalLocked ? '署名確定済みです。編集内容は履歴として追記されます。' : undefined;
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   const [contextAlert, setContextAlert] = useState<{ tone: 'info' | 'warning'; message: string } | null>(null);
   const [editLockAlert, setEditLockAlert] = useState<{
@@ -2879,17 +2879,12 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       receptionId: encounterContext.receptionId,
       visitDate: encounterContext.visitDate,
       actorRole: session.role,
-      readOnly: lockState.locked || tabLock.isReadOnly || approvalLocked || encounterFailClosed,
-      readOnlyReason:
-        approvalLocked
-          ? approvalReason
-          : lockState.reason ?? tabLock.readOnlyReason ?? encounterFailCloseReason ?? undefined,
+      readOnly: lockState.locked || tabLock.isReadOnly || encounterFailClosed,
+      readOnlyReason: lockState.reason ?? tabLock.readOnlyReason ?? encounterFailCloseReason ?? undefined,
     }),
     [
-      approvalLocked,
       encounterFailCloseReason,
       encounterFailClosed,
-      approvalReason,
       encounterContext.appointmentId,
       encounterContext.encounterKey,
       encounterContext.patientId,
@@ -3103,7 +3098,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const editStateMeta = tabLock.isReadOnly
     ? { value: editStatusValue, tone: 'warning' as const }
     : approvalLocked
-      ? { value: approvalReason ?? '承認ロック中', tone: 'warning' as const }
+      ? { value: approvalReason ?? '署名確定済み（編集履歴追記）', tone: 'warning' as const }
       : null;
   const lastUpdatedSummary = useMemo(
     () => ({
@@ -4881,8 +4876,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                   </div>
                   <PatientSummaryPanel
                     patientId={encounterContext.patientId}
-                    readOnly={tabLock.isReadOnly || approvalLocked}
-                    readOnlyReason={approvalLocked ? approvalReason : tabLock.readOnlyReason}
+                    readOnly={tabLock.isReadOnly}
+                    readOnlyReason={tabLock.readOnlyReason}
                   />
                   <div className="charts-card" id="charts-past-hub" tabIndex={-1} data-focus-anchor="true">
                     <PastHubPanel

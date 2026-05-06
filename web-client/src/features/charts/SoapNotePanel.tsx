@@ -337,7 +337,7 @@ export function SoapNotePanel({
   onClearHistory,
   onAuditLogged,
 }: SoapNotePanelProps) {
-  const isRevisionHistoryEnabled = import.meta.env.VITE_CHARTS_REVISION_HISTORY === '1';
+  const isRevisionHistoryEnabled = import.meta.env.VITE_CHARTS_REVISION_HISTORY !== '0';
   const queryClient = useQueryClient();
   type SoapNoteViewMode = 'both' | 'soap' | 'free';
   const SOAP_VIEW_MODE_STORAGE_KEY = 'opendolphin:web-client:charts:soap-view-mode:v1';

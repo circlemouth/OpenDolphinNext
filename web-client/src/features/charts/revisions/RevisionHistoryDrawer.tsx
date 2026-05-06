@@ -36,7 +36,7 @@ const formatDelta = (entry: RevisionHistoryEntry) => {
 };
 
 export function RevisionHistoryDrawer({ open, onClose, meta, soapHistory }: RevisionHistoryDrawerProps) {
-  const isRevisionEditEnabled = import.meta.env.VITE_CHARTS_REVISION_EDIT === '1';
+  const isRevisionEditEnabled = import.meta.env.VITE_CHARTS_REVISION_EDIT !== '0';
   const isRevisionConflictTestEnabled = import.meta.env.VITE_CHARTS_REVISION_CONFLICT === '1';
   const localResult = useMemo(() => buildSoapRevisionHistory(soapHistory), [soapHistory]);
   const [remote, setRemote] = useState<RevisionHistoryResult | null>(null);
@@ -169,10 +169,10 @@ export function RevisionHistoryDrawer({ open, onClose, meta, soapHistory }: Revi
   };
 
   return (
-    <aside className="revision-drawer" data-open={String(open)} aria-label="版履歴（閲覧のみ）">
+    <aside className="revision-drawer" data-open={String(open)} aria-label={isRevisionEditEnabled ? '版履歴（履歴追記）' : '版履歴（閲覧のみ）'}>
       <div className="revision-drawer__header">
         <div>
-          <p className="revision-drawer__eyebrow">閲覧のみ</p>
+          <p className="revision-drawer__eyebrow">{isRevisionEditEnabled ? '履歴追記' : '閲覧のみ'}</p>
           <h3 className="revision-drawer__title">版履歴</h3>
           <p className="revision-drawer__desc">
             {isRevisionEditEnabled
