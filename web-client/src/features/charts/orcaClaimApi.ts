@@ -72,9 +72,6 @@ export const buildMedicalModV2RequestXml = (params: MedicalModV2RequestPayload):
   })),
 });
 
-const isIdempotentDuplicateMedicalModV2Result = (apiResult?: string, apiResultMessage?: string) =>
-  apiResult === '80' && Boolean(apiResultMessage && /既に同日の診療データが登録されています/.test(apiResultMessage));
-
 export async function postOrcaMedicalModV2Xml(
   payload: MedicalModV2RequestPayload,
   options: { classCode?: string; signal?: AbortSignal } = {},
@@ -111,10 +108,9 @@ export async function postOrcaMedicalModV2Xml(
   const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   const apiResult = typeof json.apiResult === 'string' ? json.apiResult : undefined;
   const apiResultMessage = typeof json.apiResultMessage === 'string' ? json.apiResultMessage : undefined;
-  const idempotentDuplicate = isIdempotentDuplicateMedicalModV2Result(apiResult, apiResultMessage);
   const responseError = typeof json.error === 'string' ? json.error : undefined;
   return {
-    ok: response.ok && (!responseError?.trim() || idempotentDuplicate),
+    ok: response.ok && !responseError?.trim(),
     apiOk: typeof json.apiOk === 'boolean' ? json.apiOk : undefined,
     status: response.status,
     rawXml: undefined,

@@ -7,11 +7,9 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
-import { buildFacilityPath } from '../../routes/facilityRoutes';
 import { useAppNavigation } from '../../routes/useAppNavigation';
-import { isSystemAdminRole } from '../../libs/auth/roles';
 import { hasHandoffEncounterKey } from '../charts/encounterContext';
 import {
   readChartsPatientTabsStorage,
@@ -28,12 +26,6 @@ import {
 type WorkspaceTabBarProps = {
   facilityId?: string;
   userId?: string;
-  role?: string;
-  orcaStatus?: {
-    tone: 'info' | 'success' | 'warning' | 'error';
-    label: string;
-    tooltip?: string;
-  };
 };
 
 const normalizeText = (value: unknown): string | undefined => {
@@ -84,11 +76,8 @@ const resolveTabListTabs = (target: EventTarget | null) => {
 export function WorkspaceTabBar({
   facilityId,
   userId,
-  role,
-  orcaStatus,
 }: WorkspaceTabBarProps) {
   const location = useLocation();
-  const navigate = useNavigate();
   const appNav = useAppNavigation({ facilityId, userId });
   const dynamicListRef = useRef<HTMLDivElement | null>(null);
   const overflowRootRef = useRef<HTMLDivElement | null>(null);
@@ -108,7 +97,6 @@ export function WorkspaceTabBar({
   const isChartsScreen = /\/charts\/?$/.test(location.pathname);
   const isChartsArea = ['charts', 'print', 'orderSets'].includes(appNav.currentScreen);
   const activeDynamicKey = isChartsArea ? patientTabsState.activeKey : undefined;
-  const isSystemAdmin = isSystemAdminRole(role);
 
   const activeFixedKey = useMemo(() => {
     if (appNav.currentScreen === 'reception') return 'reception';
@@ -268,10 +256,6 @@ export function WorkspaceTabBar({
     },
     [closeDynamicTab],
   );
-
-  const handleOpenAdministration = useCallback(() => {
-    navigate(buildFacilityPath(facilityId, '/administration'));
-  }, [facilityId, navigate]);
 
   const scrollDynamicTabs = useCallback((direction: 'left' | 'right') => {
     const list = dynamicListRef.current;
@@ -496,24 +480,6 @@ export function WorkspaceTabBar({
             </div>
           ) : null}
         </div>
-
-        {isSystemAdmin ? (
-          <div className="workspace-tabs__actions" role="group" aria-label="ワークスペース操作">
-            {orcaStatus ? (
-              <span
-                className={`status-pill status-pill--xs status-pill--${orcaStatus.tone}`}
-                role="status"
-                aria-live="polite"
-                title={orcaStatus.tooltip}
-              >
-                {orcaStatus.label}
-              </span>
-            ) : null}
-            <button type="button" className="app-shell__admin" onClick={handleOpenAdministration} aria-label="管理画面を開く">
-              管理画面
-            </button>
-          </div>
-        ) : null}
       </div>
     </div>
   );

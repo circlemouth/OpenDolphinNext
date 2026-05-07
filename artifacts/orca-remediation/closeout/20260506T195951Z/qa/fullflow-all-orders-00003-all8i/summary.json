@@ -1,0 +1,179 @@
+{
+  "runId": "20260506T195951Z-ALL8I",
+  "traceId": "trace-20260506T195951Z-ALL8I",
+  "executedAt": "2026-05-06T21:39:36.650Z",
+  "baseURL": "https://localhost:5173",
+  "facilityId": "1.3.6.1.4.1.9414.72.103",
+  "sessionRole": "admin",
+  "patientId": "00003",
+  "departmentCode": "01",
+  "physicianCode": "10001",
+  "paymentMode": "insurance",
+  "visitKind": "1",
+  "medicalInformationProbe": {
+    "status": 200,
+    "ok": true,
+    "url": "https://localhost:5173/api/orca/official/appointments/medical-information"
+  },
+  "medicalInformationGate": {
+    "enforced": true,
+    "targetMutationRequestCount": 0,
+    "checkedRequests": 0,
+    "bodyKeysObserved": [],
+    "medicalInformationFieldPresent": false,
+    "intendedRequestNumber01": true,
+    "requestNumberKeyPresent": false,
+    "requestNumberKeysObserved": [],
+    "requestNumber01ValueVerified": false,
+    "requestNumber02_03_04Absent": true,
+    "targetPatientIdVerified": false,
+    "targetCandidateOnly": false,
+    "targetPatientId00001Verified": false,
+    "targetCandidateOnly00001": false,
+    "patientIdKeysObserved": [],
+    "candidateIdKeysObserved": [],
+    "unspecifiedRun": true,
+    "ok": true,
+    "violationCount": 0,
+    "violatedKeys": [],
+    "violatingUrls": [],
+    "reason": "no_mutation_existing_acceptance_handoff"
+  },
+  "handoffMode": "existing-acceptance",
+  "selection": {
+    "department": {
+      "ok": true,
+      "resolved": "",
+      "skipped": "existing-acceptance-handoff-not-used"
+    },
+    "paymentMode": {
+      "ok": true,
+      "resolved": "",
+      "skipped": "existing-acceptance-handoff-not-used"
+    },
+    "physician": {
+      "ok": true,
+      "resolved": "",
+      "skipped": "existing-acceptance-handoff-not-used"
+    },
+    "visitKind": {
+      "ok": true,
+      "resolved": "",
+      "skipped": "existing-acceptance-handoff-not-used"
+    },
+    "medicalInformation": {
+      "ok": true,
+      "resolved": "",
+      "skipped": "existing-acceptance-handoff-not-used"
+    },
+    "selectorGate": {
+      "ok": true,
+      "missingFields": [],
+      "skipped": "existing-acceptance-handoff-not-used"
+    },
+    "patientSearchInputMethod": "fill"
+  },
+  "acceptResult": {
+    "toneText": "",
+    "apiResultText": "",
+    "durationText": "",
+    "xhrDebugText": "",
+    "acceptMutation": {
+      "observed": false,
+      "httpStatusClass": "not_run",
+      "businessSuccessClassification": "not_run_existing_acceptance_handoff"
+    }
+  },
+  "receptionRowStatus": "not-run-existing-acceptance-handoff",
+  "receptionEntryDiagnostics": {
+    "totalRenderedRows": 5,
+    "matchingRows": 1,
+    "activeRows": 1,
+    "keyedActiveRows": 1,
+    "statuses": [
+      "受付中"
+    ],
+    "anyReceptionIdPresent": true,
+    "anyAppointmentIdPresent": true,
+    "anyScheduleKeyPresent": true,
+    "anyEncounterKeyPresent": true,
+    "rawSensitiveFieldsExcluded": true
+  },
+  "chartsHandoff": {
+    "status": "ready",
+    "scheduleKey": "1.3.6.1.4.1.9414.72.103:1",
+    "encounterKey": "1.3.6.1.4.1.9414.72.103:00001",
+    "title": "当日の受付から一意に解決した canonical handoff でカルテを開く"
+  },
+  "visitRowReadiness": "ready",
+  "charts": {
+    "chartsRunId": null,
+    "chartsTraceId": null,
+    "chartsShot": "screenshots/04-charts-open.png"
+  },
+  "orderResult": {
+    "status": "200",
+    "detail": "order editor skipped; local coded order fallback status=200 operations=7"
+  },
+  "prescriptionResult": {
+    "status": "200",
+    "detail": "prescription fallback status=200 rps=1 saved=3"
+  },
+  "finishToastText": "",
+  "sendResult": {
+    "status": "200",
+    "url": "https://localhost:5173/api/orca/official/chart-support/medical-mod-v2",
+    "ok": false,
+    "apiOk": false,
+    "apiResult": "80",
+    "apiResultMessage": "既に同日の診療データが登録されています",
+    "toast": "ORCA送信に失敗必要に応じて RUN_ID コピーで実行IDを共有してください。閉じる",
+    "banner": "エラー\n\nORCA送信に失敗しました。 ｜ 次アクション: ORCA 応答を確認し再送してください。 ｜ RUN_ID: 20260506T195951Z-ALL8I ｜ traceId: 9bad068a-0a2a-48e8-b1e3-8ea950a02248\n\n閉じる",
+    "disabled": false,
+    "dialog": "shown",
+    "dialogShot": "screenshots/07a-charts-orca-send-dialog.png",
+    "buttonAttrs": {
+      "className": "charts-actions__button charts-actions__button--send",
+      "ariaDisabled": "true",
+      "ariaDescribedBy": "charts-actions-send-guard",
+      "dataDisabledReason": "approval_locked"
+    },
+    "requestUrl": "https://localhost:5173/api/orca/official/chart-support/medical-mod-v2",
+    "requestBodyBytes": 1753,
+    "validation": {
+      "ok": true,
+      "payloadKind": "json",
+      "expectedMedicationCode": "620000001",
+      "codeFound": true,
+      "medicalInformationGroups": 8,
+      "medicationRows": 12,
+      "requestBodyBytes": 1753
+    }
+  },
+  "billingResult": {
+    "status": "clicked",
+    "detail": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/reception?sort=time&date=2026-05-07&intent=billing&from=charts&runId=20260506T195951Z-ALL8I&section=billing&returnTo=%2Ff%2F1.3.6.1.4.1.9414.72.103%2Fcharts%3Fsort%3Dtime%26date%3D2026-05-07"
+  },
+  "consoleMessages": [],
+  "pageErrors": [],
+  "screenshots": {
+    "beforeReception": null,
+    "afterReception": null,
+    "charts": "screenshots/04-charts-open.png"
+  },
+  "blockerReason": "orca_business_rejected:80",
+  "blockerClassification": "orca-business-rejected",
+  "evidencePaths": {
+    "summaryJson": "summary.json",
+    "summaryMd": "summary.md",
+    "blockerSummary": "blocker-summary.json",
+    "handoffState": "handoff-state.json",
+    "selectedVisitRow": "selected-visit-row.json",
+    "stepsLog": "steps.log",
+    "network": "network/network.json",
+    "requests": "network/requests.json",
+    "console": "console.json",
+    "pageErrors": "page-errors.json",
+    "screenshots": "screenshots"
+  }
+}

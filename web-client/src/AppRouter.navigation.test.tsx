@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { AppRouter } from './AppRouter';
 import { httpFetch } from './libs/http/httpClient';
+import { fetchOperationsReadiness } from './features/administration/api';
 
 let mockPatientsPageShouldThrow = false;
 const { mockNavigationGuardState } = vi.hoisted(() => ({
@@ -132,12 +133,8 @@ vi.mock('./features/workspaceTabs/WorkspaceTabBar', async () => {
 
   const WorkspaceTabBar = ({
     facilityId,
-    role,
-    orcaStatus,
   }: {
     facilityId?: string;
-    role?: string;
-    orcaStatus?: { label: string };
   }) => {
     const navigate = useNavigate();
     const basePath = `/f/${facilityId ?? '0001'}`;
@@ -151,12 +148,6 @@ vi.mock('./features/workspaceTabs/WorkspaceTabBar', async () => {
             患者管理
           </button>
         </div>
-        {orcaStatus ? <div>{orcaStatus.label}</div> : null}
-        {role === 'system_admin' || role === 'admin' ? (
-          <button type="button" aria-label="管理画面を開く" onClick={() => navigate(`${basePath}/administration`)}>
-            管理画面を開く
-          </button>
-        ) : null}
       </div>
     );
   };
@@ -205,6 +196,15 @@ describe('AppRouter navigation guard', () => {
     mockPatientsPageShouldThrow = false;
     mockNavigationGuardState.isDirty = false;
     mockNavigationGuardState.dirtySources = [];
+    vi.mocked(fetchOperationsReadiness).mockResolvedValue({
+      ok: true,
+      status: 200,
+      summaryStatus: 'UP',
+      checks: { orca: { status: 'UP' } },
+      runId: '20260307T000000Z',
+      traceId: 'trace-router',
+      raw: {},
+    });
     vi.mocked(httpFetch).mockImplementation(async (input, init) => {
       const url = typeof input === 'string' ? input : input.toString();
       if (url.endsWith('/session/me')) {
@@ -283,10 +283,28 @@ describe('AppRouter navigation guard', () => {
     render(<AppRouter />);
 
     await screen.findByTestId('reception-page');
-    expect(await screen.findByText(/^ORCA:/)).toBeInTheDocument();
+    expect(screen.queryByText(/^ORCA:/)).not.toBeInTheDocument();
 
     await user.click(await screen.findByRole('button', { name: '管理画面を開く' }));
     expect(window.location.pathname).toBe('/f/0001/administration');
+  });
+
+  it('system_admin は degraded readiness の時だけ ORCA ステータスを表示する', async () => {
+    vi.mocked(fetchOperationsReadiness).mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      summaryStatus: 'DOWN',
+      checks: { orca: { status: 'UNKNOWN' } },
+      runId: '20260307T000001Z',
+      traceId: 'trace-router-warning',
+      raw: {},
+    });
+    prepareSession('system_admin');
+
+    render(<AppRouter />);
+
+    await screen.findByTestId('reception-page');
+    expect(await screen.findByText('ORCA: 設定要確認')).toBeInTheDocument();
   });
 
   it('primary role が doctor でも roles に admin があれば管理画面へ遷移できる', async () => {
@@ -296,7 +314,7 @@ describe('AppRouter navigation guard', () => {
     render(<AppRouter />);
 
     await screen.findByTestId('reception-page');
-    expect(await screen.findByText(/^ORCA:/)).toBeInTheDocument();
+    expect(screen.queryByText(/^ORCA:/)).not.toBeInTheDocument();
 
     await user.click(await screen.findByRole('button', { name: '管理画面を開く' }));
     expect(window.location.pathname).toBe('/f/0001/administration');

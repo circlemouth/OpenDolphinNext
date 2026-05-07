@@ -1,0 +1,1894 @@
+[
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/medical-information",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {},
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "vary": "Origin",
+        "x-request-id": "508e183a-bd6a-4b30-a7d2-9de4cd88f112",
+        "x-frame-options": "DENY",
+        "referrer-policy": "same-origin",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "x-trace-id": "508e183a-bd6a-4b30-a7d2-9de4cd88f112",
+        "date": "Wed, 06 May 2026 20:12:03 GMT",
+        "connection": "close",
+        "x-run-id": "20260506T201203Z",
+        "x-content-type-options": "nosniff",
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-type": "application/json",
+        "content-length": "660"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T201203Z\",\"traceId\":\"508e183a-bd6a-4b30-a7d2-9de4cd88f112\",\"requestId\":\"508e183a-bd6a-4b30-a7d2-9de4cd88f112\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":8,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:12:03.327432213Z\",\"items\":[{\"code\":\"01\",\"name\":\"診察\"},{\"code\":\"02\",\"name\":\"薬のみ\"},{\"code\":\"03\",\"name\":\"注射のみ\"},{\"code\":\"04\",\"name\":\"検査のみ\"},{\"code\":\"05\",\"name\":\"リハビリテーション\"},{\"code\":\"06\",\"name\":\"健康診断\"},{\"code\":\"07\",\"name\":\"予防注射\"},{\"code\":\"99\",\"name\":\"該当なし\"}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "bb9c2872-3ed9-4d16-8309-08669e394d0e",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"visitDate\":\"2026-05-07\",\"requestNumber\":\"01\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "bb9c2872-3ed9-4d16-8309-08669e394d0e",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "bb9c2872-3ed9-4d16-8309-08669e394d0e",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "811",
+        "date": "Wed, 06 May 2026 20:12:03 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"13\",\"apiResultMessage\":\"対象がありません\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"bb9c2872-3ed9-4d16-8309-08669e394d0e\",\"requestId\":\"bb9c2872-3ed9-4d16-8309-08669e394d0e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":1,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":true,\"fetchedAt\":\"2026-05-06T20:12:03.538950421Z\",\"visitDate\":\"2026-05-07\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00001\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00001\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0505\",\"patient\":{\"patientId\":\"00003\",\"wholeName\":\"事例　三\",\"wholeNameKana\":\"ジレイ　サン\",\"birthDate\":\"1965-08-10 +09\",\"sex\":\"F\"}}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "bb9c2872-3ed9-4d16-8309-08669e394d0e",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"appointmentDate\":\"2026-05-07\",\"medicalInformation\":\"\",\"page\":1,\"size\":50}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "bb9c2872-3ed9-4d16-8309-08669e394d0e",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "bb9c2872-3ed9-4d16-8309-08669e394d0e",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "438",
+        "date": "Wed, 06 May 2026 20:12:03 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"21\",\"apiResultMessage\":\"対象の予約はありませんでした。\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"bb9c2872-3ed9-4d16-8309-08669e394d0e\",\"requestId\":\"bb9c2872-3ed9-4d16-8309-08669e394d0e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":0,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:12:03.535943879Z\",\"appointmentDate\":\"2026-05-07\",\"slots\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/medical-information",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "bb9c2872-3ed9-4d16-8309-08669e394d0e"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "bb9c2872-3ed9-4d16-8309-08669e394d0e",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "bb9c2872-3ed9-4d16-8309-08669e394d0e",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "667",
+        "date": "Wed, 06 May 2026 20:12:03 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"bb9c2872-3ed9-4d16-8309-08669e394d0e\",\"requestId\":\"bb9c2872-3ed9-4d16-8309-08669e394d0e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":8,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:12:03.541147338Z\",\"items\":[{\"code\":\"01\",\"name\":\"診察\"},{\"code\":\"02\",\"name\":\"薬のみ\"},{\"code\":\"03\",\"name\":\"注射のみ\"},{\"code\":\"04\",\"name\":\"検査のみ\"},{\"code\":\"05\",\"name\":\"リハビリテーション\"},{\"code\":\"06\",\"name\":\"健康診断\"},{\"code\":\"07\",\"name\":\"予防注射\"},{\"code\":\"99\",\"name\":\"該当なし\"}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/medical-information",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "ad37f1d9-8ca8-437f-9a73-9b4db3ad7747"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "ad37f1d9-8ca8-437f-9a73-9b4db3ad7747",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "ad37f1d9-8ca8-437f-9a73-9b4db3ad7747",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "667",
+        "date": "Wed, 06 May 2026 20:12:05 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"ad37f1d9-8ca8-437f-9a73-9b4db3ad7747\",\"requestId\":\"ad37f1d9-8ca8-437f-9a73-9b4db3ad7747\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":8,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:12:04.939819088Z\",\"items\":[{\"code\":\"01\",\"name\":\"診察\"},{\"code\":\"02\",\"name\":\"薬のみ\"},{\"code\":\"03\",\"name\":\"注射のみ\"},{\"code\":\"04\",\"name\":\"検査のみ\"},{\"code\":\"05\",\"name\":\"リハビリテーション\"},{\"code\":\"06\",\"name\":\"健康診断\"},{\"code\":\"07\",\"name\":\"予防注射\"},{\"code\":\"99\",\"name\":\"該当なし\"}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "ad37f1d9-8ca8-437f-9a73-9b4db3ad7747",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"appointmentDate\":\"2026-05-07\",\"medicalInformation\":\"\",\"page\":1,\"size\":50}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "ad37f1d9-8ca8-437f-9a73-9b4db3ad7747",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "ad37f1d9-8ca8-437f-9a73-9b4db3ad7747",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "438",
+        "date": "Wed, 06 May 2026 20:12:05 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"21\",\"apiResultMessage\":\"対象の予約はありませんでした。\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"ad37f1d9-8ca8-437f-9a73-9b4db3ad7747\",\"requestId\":\"ad37f1d9-8ca8-437f-9a73-9b4db3ad7747\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":0,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:12:04.942414463Z\",\"appointmentDate\":\"2026-05-07\",\"slots\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "ad37f1d9-8ca8-437f-9a73-9b4db3ad7747",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"visitDate\":\"2026-05-07\",\"requestNumber\":\"01\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "ad37f1d9-8ca8-437f-9a73-9b4db3ad7747",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "ad37f1d9-8ca8-437f-9a73-9b4db3ad7747",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "811",
+        "date": "Wed, 06 May 2026 20:12:05 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"13\",\"apiResultMessage\":\"対象がありません\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"ad37f1d9-8ca8-437f-9a73-9b4db3ad7747\",\"requestId\":\"ad37f1d9-8ca8-437f-9a73-9b4db3ad7747\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":1,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":true,\"fetchedAt\":\"2026-05-06T20:12:04.943354838Z\",\"visitDate\":\"2026-05-07\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00001\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00001\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0505\",\"patient\":{\"patientId\":\"00003\",\"wholeName\":\"事例　三\",\"wholeNameKana\":\"ジレイ　サン\",\"birthDate\":\"1965-08-10 +09\",\"sex\":\"F\"}}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"appointmentDate\":\"2026-05-07\",\"medicalInformation\":\"\",\"page\":1,\"size\":50}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "438",
+        "date": "Wed, 06 May 2026 20:12:06 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"21\",\"apiResultMessage\":\"対象の予約はありませんでした。\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533\",\"requestId\":\"ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":0,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:12:06.290326506Z\",\"appointmentDate\":\"2026-05-07\",\"slots\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"visitDate\":\"2026-05-07\",\"requestNumber\":\"01\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "811",
+        "date": "Wed, 06 May 2026 20:12:06 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"13\",\"apiResultMessage\":\"対象がありません\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533\",\"requestId\":\"ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":1,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":true,\"fetchedAt\":\"2026-05-06T20:12:06.294349422Z\",\"visitDate\":\"2026-05-07\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00001\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00001\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0505\",\"patient\":{\"patientId\":\"00003\",\"wholeName\":\"事例　三\",\"wholeNameKana\":\"ジレイ　サン\",\"birthDate\":\"1965-08-10 +09\",\"sex\":\"F\"}}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/medical-information",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "667",
+        "date": "Wed, 06 May 2026 20:12:06 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533\",\"requestId\":\"ef82f9f7-9c6c-4eb6-ae8c-7a0ae4a48533\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":8,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:12:06.299923631Z\",\"items\":[{\"code\":\"01\",\"name\":\"診察\"},{\"code\":\"02\",\"name\":\"薬のみ\"},{\"code\":\"03\",\"name\":\"注射のみ\"},{\"code\":\"04\",\"name\":\"検査のみ\"},{\"code\":\"05\",\"name\":\"リハビリテーション\"},{\"code\":\"06\",\"name\":\"健康診断\"},{\"code\":\"07\",\"name\":\"予防注射\"},{\"code\":\"99\",\"name\":\"該当なし\"}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"appointmentDate\":\"2026-05-07\",\"medicalInformation\":\"\",\"page\":1,\"size\":50}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "438",
+        "date": "Wed, 06 May 2026 20:12:07 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"21\",\"apiResultMessage\":\"対象の予約はありませんでした。\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":0,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:12:07.600058090Z\",\"appointmentDate\":\"2026-05-07\",\"slots\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/medical-information",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "667",
+        "date": "Wed, 06 May 2026 20:12:07 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":8,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:12:07.602544548Z\",\"items\":[{\"code\":\"01\",\"name\":\"診察\"},{\"code\":\"02\",\"name\":\"薬のみ\"},{\"code\":\"03\",\"name\":\"注射のみ\"},{\"code\":\"04\",\"name\":\"検査のみ\"},{\"code\":\"05\",\"name\":\"リハビリテーション\"},{\"code\":\"06\",\"name\":\"健康診断\"},{\"code\":\"07\",\"name\":\"予防注射\"},{\"code\":\"99\",\"name\":\"該当なし\"}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"visitDate\":\"2026-05-07\",\"requestNumber\":\"01\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "811",
+        "date": "Wed, 06 May 2026 20:12:07 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"13\",\"apiResultMessage\":\"対象がありません\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":1,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":true,\"fetchedAt\":\"2026-05-06T20:12:07.606009923Z\",\"visitDate\":\"2026-05-07\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00001\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00001\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0505\",\"patient\":{\"patientId\":\"00003\",\"wholeName\":\"事例　三\",\"wholeNameKana\":\"ジレイ　サン\",\"birthDate\":\"1965-08-10 +09\",\"sex\":\"F\"}}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "true",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"visitDate\":\"2026-05-07\",\"requestNumber\":\"01\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "811",
+        "date": "Wed, 06 May 2026 20:13:37 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"13\",\"apiResultMessage\":\"対象がありません\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":1,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":true,\"fetchedAt\":\"2026-05-06T20:13:37.739893465Z\",\"visitDate\":\"2026-05-07\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00001\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00001\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0505\",\"patient\":{\"patientId\":\"00003\",\"wholeName\":\"事例　三\",\"wholeNameKana\":\"ジレイ　サン\",\"birthDate\":\"1965-08-10 +09\",\"sex\":\"F\"}}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "true",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"appointmentDate\":\"2026-05-07\",\"medicalInformation\":\"\",\"page\":1,\"size\":50}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "438",
+        "date": "Wed, 06 May 2026 20:13:37 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"21\",\"apiResultMessage\":\"対象の予約はありませんでした。\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":0,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:13:37.739893506Z\",\"appointmentDate\":\"2026-05-07\",\"slots\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/visits/mutation",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "local",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"requestNumber\":\"01\",\"patientId\":\"00002\",\"acceptanceDate\":\"2026-05-07\",\"acceptanceTime\":\"05:14:08\",\"acceptancePush\":\"1\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "1062",
+        "date": "Wed, 06 May 2026 20:14:08 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"K3\",\"apiResultMessage\":\"受付登録終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:14:08.498957257Z\",\"resKey\":\"Acceptance_Info\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00002\",\"acceptanceId\":\"00002\",\"acceptanceDate\":\"2026-05-07\",\"acceptanceTime\":\"05:14:08\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"medicalInformation\":\"01\",\"insuranceCombinationNumber\":\"0004\",\"voucherNumber\":\"00002\",\"sequentialNumber\":\"1\",\"patient\":{\"patientId\":\"00002\",\"wholeName\":\"事例　二\",\"wholeNameKana\":\"ジレイ　ニ\",\"birthDate\":\"1957-12-10\",\"sex\":\"1\"},\"warnings\":[\"診療内容情報を自動設定しました\",\"acceptance_official_identifiers_reconciled_from_server_readonly_preflight\",\"acceptance_provisional_medicalmodv2_context_server_derived_from_acceptlstv2\"]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "local",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"appointmentDate\":\"2026-05-07\",\"medicalInformation\":\"\",\"page\":1,\"size\":50}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "438",
+        "date": "Wed, 06 May 2026 20:14:09 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"21\",\"apiResultMessage\":\"対象の予約はありませんでした。\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":0,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:14:08.969438674Z\",\"appointmentDate\":\"2026-05-07\",\"slots\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "local",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"visitDate\":\"2026-05-07\",\"requestNumber\":\"01\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "1209",
+        "date": "Wed, 06 May 2026 20:14:09 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"13\",\"apiResultMessage\":\"対象がありません\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":2,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":true,\"fetchedAt\":\"2026-05-06T20:14:08.973472549Z\",\"visitDate\":\"2026-05-07\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00001\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00001\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0505\",\"patient\":{\"patientId\":\"00003\",\"wholeName\":\"事例　三\",\"wholeNameKana\":\"ジレイ　サン\",\"birthDate\":\"1965-08-10 +09\",\"sex\":\"F\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00002\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00002\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0004\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0514\",\"patient\":{\"patientId\":\"00002\",\"wholeName\":\"事例　二\",\"wholeNameKana\":\"ジレイ　ニ\",\"birthDate\":\"1957-12-10 +09\",\"sex\":\"M\"}}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"appointmentDate\":\"2026-05-07\",\"medicalInformation\":\"\",\"page\":1,\"size\":50}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "438",
+        "date": "Wed, 06 May 2026 20:14:09 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"21\",\"apiResultMessage\":\"対象の予約はありませんでした。\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":0,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:14:08.975911632Z\",\"appointmentDate\":\"2026-05-07\",\"slots\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"visitDate\":\"2026-05-07\",\"requestNumber\":\"01\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "1209",
+        "date": "Wed, 06 May 2026 20:14:09 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"13\",\"apiResultMessage\":\"対象がありません\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":2,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":true,\"fetchedAt\":\"2026-05-06T20:14:08.976177132Z\",\"visitDate\":\"2026-05-07\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00001\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00001\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0505\",\"patient\":{\"patientId\":\"00003\",\"wholeName\":\"事例　三\",\"wholeNameKana\":\"ジレイ　サン\",\"birthDate\":\"1965-08-10 +09\",\"sex\":\"F\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00002\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00002\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0004\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0514\",\"patient\":{\"patientId\":\"00002\",\"wholeName\":\"事例　二\",\"wholeNameKana\":\"ジレイ　ニ\",\"birthDate\":\"1957-12-10 +09\",\"sex\":\"M\"}}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&from=2026-02-06",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "true",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "986",
+        "date": "Wed, 06 May 2026 20:14:25 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":2,\"bundles\":[{\"documentId\":91240,\"moduleId\":91241,\"entity\":\"treatmentOrder\",\"bundleName\":\"代表オーダー 20260502T132134Z\",\"bundleNumber\":\"1\",\"classCode\":\"400\",\"classCodeSystem\":\"Claim007\",\"className\":\"処置\",\"started\":\"2026-05-02\",\"enteredByName\":\"Doctor One\",\"enteredByRole\":\"Doctor\",\"items\":[{\"code\":\"140000610\",\"name\":\"創傷処置\",\"quantity\":\"1\",\"unit\":\"回\",\"memo\":\"\",\"rowRole\":\"main\"}],\"materialItems\":[],\"commentItems\":[]},{\"documentId\":91291,\"moduleId\":91292,\"entity\":\"treatmentOrder\",\"bundleName\":\"代表オーダー 20260430T020641Z\",\"bundleNumber\":\"1\",\"classCode\":\"400\",\"classCodeSystem\":\"Claim007\",\"className\":\"処置\",\"started\":\"2026-04-30\",\"enteredByName\":\"Doctor One\",\"enteredByRole\":\"Doctor\",\"items\":[{\"code\":\"140000610\",\"name\":\"創傷処置\",\"quantity\":\"1\",\"unit\":\"回\",\"memo\":\"\",\"rowRole\":\"main\"}],\"materialItems\":[],\"commentItems\":[]}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&from=2026-05-07",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "true",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "139",
+        "date": "Wed, 06 May 2026 20:14:25 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":0,\"bundles\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "true",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"appointmentDate\":\"2026-05-07\",\"page\":1,\"size\":50}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "438",
+        "date": "Wed, 06 May 2026 20:14:25 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"21\",\"apiResultMessage\":\"対象の予約はありませんでした。\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":0,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:14:25.399703084Z\",\"appointmentDate\":\"2026-05-07\",\"slots\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "true",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"visitDate\":\"2026-05-07\",\"requestNumber\":\"01\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "1209",
+        "date": "Wed, 06 May 2026 20:14:25 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"13\",\"apiResultMessage\":\"対象がありません\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":2,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":true,\"fetchedAt\":\"2026-05-06T20:14:25.423020417Z\",\"visitDate\":\"2026-05-07\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00001\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00001\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0505\",\"patient\":{\"patientId\":\"00003\",\"wholeName\":\"事例　三\",\"wholeNameKana\":\"ジレイ　サン\",\"birthDate\":\"1965-08-10 +09\",\"sex\":\"F\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00002\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00002\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0004\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0514\",\"patient\":{\"patientId\":\"00002\",\"wholeName\":\"事例　二\",\"wholeNameKana\":\"ジレイ　ニ\",\"birthDate\":\"1957-12-10 +09\",\"sex\":\"M\"}}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "true",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"appointmentDate\":\"2026-05-07\",\"page\":1,\"size\":50}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "438",
+        "date": "Wed, 06 May 2026 20:14:25 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"21\",\"apiResultMessage\":\"対象の予約はありませんでした。\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":0,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:14:25.483816917Z\",\"appointmentDate\":\"2026-05-07\",\"slots\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "true",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"visitDate\":\"2026-05-07\",\"requestNumber\":\"01\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "1209",
+        "date": "Wed, 06 May 2026 20:14:25 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"13\",\"apiResultMessage\":\"対象がありません\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":2,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":true,\"fetchedAt\":\"2026-05-06T20:14:25.492319292Z\",\"visitDate\":\"2026-05-07\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00001\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00001\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0505\",\"patient\":{\"patientId\":\"00003\",\"wholeName\":\"事例　三\",\"wholeNameKana\":\"ジレイ　サン\",\"birthDate\":\"1965-08-10 +09\",\"sex\":\"F\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00002\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00002\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0004\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0514\",\"patient\":{\"patientId\":\"00002\",\"wholeName\":\"事例　二\",\"wholeNameKana\":\"ジレイ　ニ\",\"birthDate\":\"1957-12-10 +09\",\"sex\":\"M\"}}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&entity=treatmentOrder&from=2026-05-07",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "3a552f90-9e9e-4d43-92ab-88fd93613d39",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "3a552f90-9e9e-4d43-92ab-88fd93613d39",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "139",
+        "date": "Wed, 06 May 2026 20:14:35 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":0,\"bundles\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/master/material?keyword=%E3%83%86%E3%82%B9%E3%83%88%E3%82%AA%E3%83%BC%E3%83%80%E3%83%BC%E9%A0%85%E7%9B%AE&page=1&size=2000",
+    "status": 503,
+    "statusText": "Service Unavailable",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "459",
+        "date": "Wed, 06 May 2026 20:14:36 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"code\":\"MASTER_MATERIAL_UNAVAILABLE\",\"error\":\"MASTER_MATERIAL_UNAVAILABLE\",\"errorCode\":\"MASTER_MATERIAL_UNAVAILABLE\",\"message\":\"特定器材マスタを取得できませんでした\",\"status\":503,\"runId\":\"20260506T195951Z-TREAT2\",\"correlationId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"timestamp\":\"2026-05-06T20:14:36.736148298Z\",\"path\":\"/openDolphin/api/orca/master/material\",\"errorCategory\":\"server_error\"}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/master/etensu?keyword=%E3%83%86%E3%82%B9%E3%83%88%E3%82%AA%E3%83%BC%E3%83%80%E3%83%BC%E9%A0%85%E7%9B%AE&category=4&page=1&size=2000",
+    "status": 503,
+    "statusText": "Service Unavailable",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "401",
+        "date": "Wed, 06 May 2026 20:14:36 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"code\":\"ETENSU_UNAVAILABLE\",\"error\":\"ETENSU_UNAVAILABLE\",\"errorCode\":\"ETENSU_UNAVAILABLE\",\"message\":\"etensu master unavailable\",\"status\":503,\"runId\":\"20260506T195951Z-TREAT2\",\"correlationId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"timestamp\":\"2026-05-06T20:14:36.731648131Z\",\"path\":\"/openDolphin/api/orca/master/etensu\",\"errorCategory\":\"server_error\"}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"patientId\":\"00002\",\"operations\":[{\"operation\":\"create\",\"entity\":\"treatmentOrder\",\"bundleName\":\"代表オーダー 20260506T195951Z-TREAT2\",\"bundleNumber\":\"1\",\"classCode\":\"400\",\"classCodeSystem\":\"Claim007\",\"className\":\"処置\",\"startDate\":\"2026-05-07\",\"items\":[{\"code\":\"140000610\",\"name\":\"創傷処置\",\"quantity\":\"1\",\"unit\":\"回\"}]}]}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "cac6f9b2-bf7c-4f78-bb24-c893a39d866c",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "cac6f9b2-bf7c-4f78-bb24-c893a39d866c",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "163",
+        "date": "Wed, 06 May 2026 20:14:51 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"createdDocumentIds\":[91297],\"updatedDocumentIds\":[],\"deletedDocumentIds\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&entity=instractionChargeOrder&from=2026-05-07",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "139",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":0,\"bundles\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&entity=testOrder&from=2026-05-07",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "139",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":0,\"bundles\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&entity=treatmentOrder&from=2026-05-07",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "569",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":1,\"bundles\":[{\"documentId\":91297,\"moduleId\":91298,\"entity\":\"treatmentOrder\",\"bundleName\":\"代表オーダー 20260506T195951Z-TREAT2\",\"bundleNumber\":\"1\",\"classCode\":\"400\",\"classCodeSystem\":\"Claim007\",\"className\":\"処置\",\"started\":\"2026-05-07\",\"enteredByName\":\"Doctor One\",\"enteredByRole\":\"Doctor\",\"items\":[{\"code\":\"140000610\",\"name\":\"創傷処置\",\"quantity\":\"1\",\"unit\":\"回\",\"memo\":\"\",\"rowRole\":\"main\"}],\"materialItems\":[],\"commentItems\":[]}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&entity=surgeryOrder&from=2026-05-07",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "139",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":0,\"bundles\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&entity=radiologyOrder&from=2026-05-07",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "139",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":0,\"bundles\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&entity=injectionOrder&from=2026-05-07",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "139",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":0,\"bundles\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&entity=physiologyOrder&from=2026-05-07",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "139",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":0,\"bundles\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&entity=baseChargeOrder&from=2026-05-07",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "139",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":0,\"bundles\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&entity=bacteriaOrder&from=2026-05-07",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "139",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":0,\"bundles\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/local/order/bundles?patientId=00002&entity=otherOrder&from=2026-05-07",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "139",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"patientId\":\"00002\",\"recordsReturned\":0,\"bundles\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/chart-support/medical-mod-v2",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "accept": "application/json",
+        "content-type": "application/json",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": "{\"encounterContext\":{\"patientId\":\"00002\",\"visitDate\":\"2026-05-07\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"insuranceCombinationNumber\":\"0004\",\"voucherNumber\":\"00002\",\"sequentialNumber\":\"1\"},\"medicalInformation\":[{\"entity\":\"treatmentOrder\",\"medicalClass\":\"400\",\"medicalClassName\":\"処置\",\"medicalClassNumber\":\"1\",\"medications\":[{\"code\":\"140000610\",\"name\":\"創傷処置\",\"number\":\"1\"}]}],\"classCode\":\"01\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "310",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"ok\":true,\"apiOk\":true,\"status\":200,\"apiResult\":\"00\",\"apiResultMessage\":\"登録処理終了\",\"informationDate\":\"2026-05-07\",\"informationTime\":\"05:16:41\",\"medicalUid\":\"d20b28df-5a39-47eb-a551-e68e0b962659\",\"medicalWarnings\":[],\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\"}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"appointmentDate\":\"2026-05-07\",\"page\":1,\"size\":50}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "438",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"21\",\"apiResultMessage\":\"対象の予約はありませんでした。\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":0,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:16:41.278710800Z\",\"appointmentDate\":\"2026-05-07\",\"slots\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"visitDate\":\"2026-05-07\",\"requestNumber\":\"01\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "1209",
+        "date": "Wed, 06 May 2026 20:16:41 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"13\",\"apiResultMessage\":\"対象がありません\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":2,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":true,\"fetchedAt\":\"2026-05-06T20:16:41.279749466Z\",\"visitDate\":\"2026-05-07\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00001\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00001\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0505\",\"patient\":{\"patientId\":\"00003\",\"wholeName\":\"事例　三\",\"wholeNameKana\":\"ジレイ　サン\",\"birthDate\":\"1965-08-10 +09\",\"sex\":\"F\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00002\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00002\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0004\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0514\",\"patient\":{\"patientId\":\"00002\",\"wholeName\":\"事例　二\",\"wholeNameKana\":\"ジレイ　ニ\",\"birthDate\":\"1957-12-10 +09\",\"sex\":\"M\"}}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"appointmentDate\":\"2026-05-07\",\"medicalInformation\":\"\",\"page\":1,\"size\":50}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "438",
+        "date": "Wed, 06 May 2026 20:17:14 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"21\",\"apiResultMessage\":\"対象の予約はありませんでした。\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":0,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:17:13.967438676Z\",\"appointmentDate\":\"2026-05-07\",\"slots\":[]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/visits/list",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "-ZaX8lmFTqz1HhHVJ5ZekT_2q8FfNdoqQbnjvh5DRrA",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"visitDate\":\"2026-05-07\",\"requestNumber\":\"01\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "http://localhost:5173",
+        "content-length": "1209",
+        "date": "Wed, 06 May 2026 20:17:14 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"13\",\"apiResultMessage\":\"対象がありません\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":2,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":true,\"fetchedAt\":\"2026-05-06T20:17:13.967450968Z\",\"visitDate\":\"2026-05-07\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00001\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00001\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0505\",\"patient\":{\"patientId\":\"00003\",\"wholeName\":\"事例　三\",\"wholeNameKana\":\"ジレイ　サン\",\"birthDate\":\"1965-08-10 +09\",\"sex\":\"F\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:00002\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\",\"voucherNumber\":\"00002\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0004\",\"updateDate\":\"2026-05-07\",\"updateTime\":\"0514\",\"patient\":{\"patientId\":\"00002\",\"wholeName\":\"事例　二\",\"wholeNameKana\":\"ジレイ　ニ\",\"birthDate\":\"1957-12-10 +09\",\"sex\":\"M\"}}]}"
+    }
+  },
+  {
+    "url": "http://localhost:5173/api/orca/official/appointments/medical-information",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "GET",
+      "headers": {
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "server",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+      },
+      "postData": ""
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260506T195951Z-TREAT2",
+        "x-request-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "x-trace-id": "72ce8e5f-1951-4c72-b477-b224fc47fbc3",
+        "referrer-policy": "same-origin",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "content-length": "667",
+        "date": "Wed, 06 May 2026 20:17:14 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260506T195951Z-TREAT2\",\"traceId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"requestId\":\"72ce8e5f-1951-4c72-b477-b224fc47fbc3\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":8,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-05-06T20:17:13.970991301Z\",\"items\":[{\"code\":\"01\",\"name\":\"診察\"},{\"code\":\"02\",\"name\":\"薬のみ\"},{\"code\":\"03\",\"name\":\"注射のみ\"},{\"code\":\"04\",\"name\":\"検査のみ\"},{\"code\":\"05\",\"name\":\"リハビリテーション\"},{\"code\":\"06\",\"name\":\"健康診断\"},{\"code\":\"07\",\"name\":\"予防注射\"},{\"code\":\"99\",\"name\":\"該当なし\"}]}"
+    }
+  }
+]

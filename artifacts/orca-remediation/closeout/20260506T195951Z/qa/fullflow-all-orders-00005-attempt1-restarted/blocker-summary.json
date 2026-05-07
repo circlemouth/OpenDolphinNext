@@ -1,0 +1,85 @@
+{
+  "runId": "20260506T195951Z-ALL1R",
+  "traceId": "trace-20260506T195951Z-ALL1R",
+  "blockerClassification": "orca-business-rejected",
+  "blockerReason": "orca_business_rejected:22",
+  "medicalInformationProbe": {
+    "status": 200,
+    "ok": true,
+    "url": "https://localhost:5173/api/orca/official/appointments/medical-information"
+  },
+  "acceptMutation": {
+    "observed": true,
+    "httpStatus": 200,
+    "httpStatusClass": "2xx",
+    "apiResult": "K3",
+    "businessSuccessClassification": "api_result_observed_unclassified",
+    "acceptanceEvidencePresent": true,
+    "patientEvidencePresent": true,
+    "canonicalKeyPresence": {
+      "acceptanceId": true,
+      "visitNumber": false,
+      "scheduleKey": false,
+      "encounterKey": true
+    },
+    "rawSensitiveFieldsExcluded": true
+  },
+  "receptionEntryDiagnostics": {
+    "totalRenderedRows": 4,
+    "matchingRows": 1,
+    "activeRows": 1,
+    "keyedActiveRows": 1,
+    "statuses": [
+      "受付中"
+    ],
+    "anyReceptionIdPresent": true,
+    "anyAppointmentIdPresent": true,
+    "anyScheduleKeyPresent": true,
+    "anyEncounterKeyPresent": true,
+    "rawSensitiveFieldsExcluded": true
+  },
+  "chartsHandoff": {
+    "status": "ready",
+    "scheduleKey": "",
+    "encounterKey": "1.3.6.1.4.1.9414.72.103:00003",
+    "title": "直前に確立した canonical handoff でカルテを開く"
+  },
+  "visitRowReadiness": "ready",
+  "sendResult": {
+    "status": "200",
+    "disabled": false,
+    "dialog": "shown",
+    "validation": {
+      "ok": false,
+      "payloadKind": "json",
+      "expectedMedicationCode": "620000001",
+      "codeFound": false,
+      "medicalInformationGroups": 0,
+      "medicationRows": 0,
+      "requestBodyBytes": 237
+    }
+  },
+  "orderResult": {
+    "status": "fallback-error",
+    "detail": "order UI save response not captured; local coded order fallback status=503 operations=8 reason={\"error\":\"order_bundle_unavailable\",\"code\":\"order_bundle_unavailable\",\"errorCode\":\"order_bundle_unavailable\",\"message\":\"Failed to mutate order bundle\",\"status\":503,\"errorCategory\":\"server_error\",\"traceId\":\"b6731801-40e8-45f8-9b8a-8aeb5d17777b\",\"requestId\":\"b6731801-40e8-45f8-9b8a-8aeb5d17777b\",\"runId\":\"20260506T195951Z-ALL1R\",\"path\":\"/openDolphin/api/local/order/bundles\",\"facilityId\":\"1.3.6.1.4.1.9414.72.103\",\"patientId\":\"00005\",\"karteId\":9079,\"routeNamespace\":\"local\",\"httpStatus\":503,\"errorMess"
+  },
+  "billingResult": {
+    "status": "clicked",
+    "detail": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/reception?sort=time&date=2026-05-07&intent=billing&from=charts&runId=20260506T195951Z-ALL1R&section=billing&returnTo=%2Ff%2F1.3.6.1.4.1.9414.72.103%2Fcharts%3Fsort%3Dtime%26date%3D2026-05-07"
+  },
+  "handoffStatePath": "handoff-state.json",
+  "selectedVisitRowPath": "selected-visit-row.json",
+  "evidencePaths": {
+    "summaryJson": "summary.json",
+    "summaryMd": "summary.md",
+    "blockerSummary": "blocker-summary.json",
+    "handoffState": "handoff-state.json",
+    "selectedVisitRow": "selected-visit-row.json",
+    "stepsLog": "steps.log",
+    "network": "network/network.json",
+    "requests": "network/requests.json",
+    "console": "console.json",
+    "pageErrors": "page-errors.json",
+    "screenshots": "screenshots"
+  }
+}

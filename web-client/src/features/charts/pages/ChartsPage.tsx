@@ -3953,7 +3953,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   );
 
   const handleLockChange = useCallback((locked: boolean, reason?: string) => {
-    setLockState({ locked, reason });
+    setLockState((prev) => (prev.locked === locked && prev.reason === reason ? prev : { locked, reason }));
   }, []);
 
   const handleUtilityButtonClick = useCallback(

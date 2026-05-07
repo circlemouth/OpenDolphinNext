@@ -486,6 +486,26 @@ describe('ChartsActionBar', () => {
     expect(screen.getAllByText(/ロック中: 操作中で印刷不可/).length).toBeGreaterThan(0);
   });
 
+  it('親から渡されたUIロック理由をonLockChangeへ折り返さない', async () => {
+    const onLockChange = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-501"
+          visitDate="2026-01-07"
+          uiLockReason="対象来院を再解決できません。"
+          onLockChange={onLockChange}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(onLockChange).toHaveBeenCalled());
+    expect(onLockChange).toHaveBeenLastCalledWith(false, undefined);
+    expect(onLockChange).not.toHaveBeenCalledWith(true, '対象来院を再解決できません。');
+  });
+
   it('selectedEntry.id は patientId として扱わず送信/終了をブロックする', () => {
     render(
       <MemoryRouter>

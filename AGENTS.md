@@ -8,6 +8,15 @@
 - セキュリティ上の懸念を見つけた場合、「別チケットで後日対応」として放置しない。少なくとも、根本原因の是正方針・再発防止策・検証結果まで揃えて報告すること。
 - 「一旦動くからOK」は禁止。**本番運用品質・安全性・保守性**を満たして初めて Done とみなす。
 
+## 0. 現状把握クイックスタート
+後続ワーカーは、作業開始直後に以下を確認してから設計に入ること。
+- `date -u +%Y%m%dT%H%M%SZ` で RUN_ID を採番する。
+- `git status --short` と `git branch --show-current` で、既存変更・作業ブランチ・未追跡成果物を把握する。自分が作った変更以外は勝手に戻さない。
+- `docs/README.md`、`docs/managerdocs/README.md`、`web-client/README.md`、`docs/architecture/server-modernization-overview.md`、`docs/runbooks/release-validation.md` を入口として読む。
+- UI 変更では `docs/web-client/ux/dads_app_ui_design_rules_20260411.md`、`docs/web-client/ux/web-client-ui-guideline.md`、`web-client/notes/ui-current-contract.md` を確認する。
+- セキュリティ・認証・患者文脈・ORCA・添付/画像・health/readiness に関わる場合は、該当する `docs/contracts/*.md` と `web-client/notes/security-spec.md` を必ず確認する。
+- 変更対象、信頼境界、攻撃面、最低 3 件の misuse case、実行する検証コマンドを短く整理してから実装する。
+
 ## 1. プロジェクト基本ルール
 - **目的**: Webクライアント (`web-client`) とモダナイズ版サーバー (`server-modernized`) を、本番運用を前提とした品質で連携・改善すること。
 - **主作業対象**: `web-client/` と `server-modernized/`。
@@ -22,6 +31,30 @@
   - Pythonスクリプトの実行（明示指示がない限り）。
   - 許可なき `worktree` 以外の場所での作業（指示された場合、適切な worktree を作成・移動せよ）。
   - セキュリティ上危険な暫定対応を、根拠や期限なしに残すこと。
+
+### 1.1 リポジトリ構成の現行理解
+| Path | 位置づけ | 主な注意 |
+| --- | --- | --- |
+| `web-client/` | React/Vite の現行 Web クライアント | `package.json` の `verify:web-guard`、`typecheck`、`test`、`build`、`ci` が検証入口。患者文脈を URL / storage に残さない。 |
+| `server-modernized/` | Jakarta EE 10 ベースの現行サーバー | REST resource、認証/認可、ORCA 接続、worker 公開面の主対象。 |
+| `domain/`, `api-contract/`, `persistence/`, `reporting/` | modernized server の Maven sibling module | `pom.server-modernized.xml` で `server-modernized` と一体ビルドする。API DTO / entity / migration / 帳票変更時に併せて確認する。 |
+| `docs/` | enduring docs の正本 hub | current contract / runbook / architecture を置く。dated packet や一時メモを正本にしない。 |
+| `web-client/notes/` | web-client current contract | auth、session、patient context、UI、ORCA、security、release gate の Web 側正本。 |
+| `ops/` | 環境起動・manual verification harness | Docker / ORCA / smoke の運用入口。 |
+| `tests/` | repo-level automated tests | Playwright / review-packet / helper tests。artifact policy を守る。 |
+| `scripts/` | thin runner / packaging tools | 既存 runner を優先し、同じ用途の新規スクリプトを乱立させない。 |
+| `artifacts/` | evidence / generated outputs | source of truth ではない。RUN_ID 単位で保存し、秘密情報・raw 患者情報を入れない。 |
+| `client/`, `server/`, `ext_lib/` | legacy reference | 明示指示なしに変更禁止。現行仕様の根拠にする場合も current docs / current code と照合する。 |
+
+### 1.2 変更種別ごとの主な読み先
+| 変更種別 | 先に読む正本 |
+| --- | --- |
+| 認証・認可・セッション | `web-client/notes/auth-check.md`, `web-client/notes/auth-transition.md`, `web-client/notes/security-spec.md`, `docs/contracts/runtime-config.md` |
+| ORCA route / 接続 / readiness | `docs/contracts/orca-route-taxonomy.md`, `docs/contracts/orca-connection.md`, `docs/contracts/orca-master-api.md`, `docs/operations/ORCA_CERTIFICATION_ONLY.md` |
+| health / readiness / runtime config | `docs/contracts/health-endpoints.md`, `docs/contracts/runtime-config.md`, `docs/architecture/server-modernization-overview.md` |
+| 添付・文書・患者画像 | `docs/contracts/document-integrity.md`, `docs/contracts/patient-images.md`, `docs/web-client/architecture/document-embedded-attachment-policy.md` |
+| Web UI / 患者文脈 | `web-client/notes/ui-current-contract.md`, `web-client/notes/patient-context-contract.md`, `docs/web-client/ux/` |
+| release / reviewer packet | `docs/runbooks/release-validation.md`, `docs/runbooks/reviewer-submission-packet.md`, `docs/releases/orca-remediation-cutover.md` |
 
 ## 2. セキュリティ最優先ルール (Security First)
 **すべての実装・レビュー・修正で、以下を最優先すること。**
@@ -138,6 +171,15 @@
 - **セキュリティ変更時のドキュメント更新は必須**:
   - 認証/認可/セッション/外部連携/ヘルスチェック/添付保存/監査ログに影響する変更では、該当ドキュメントを必ず更新すること。
   - 「コードだけ直して文書未更新」は不完了とみなす。
+- **正本と証跡の分離**:
+  - current contract は `docs/contracts/`、`docs/managerdocs/`、`web-client/notes/` に寄せる。
+  - workflow 実行手順は `docs/runbooks/` と `docs/releases/` に寄せる。
+  - background / research / history は `docs/reference/` に置く。
+  - dated packet / prompt / handoff / closeout / review docs は `docs/archive/` または `docs/implementation/` の位置づけを確認し、current 導線に混ぜない。
+  - generated evidence / screenshots / HAR / traces / review bundles は `artifacts/` に置き、source of truth に昇格させない。
+- **生成物の扱い**:
+  - `target/`、`dist/`、`test-results/`、`output/`、`tmp/`、`*.war`、review zip、`.DS_Store`、`__MACOSX`、`Thumbs.db` を通常のレビュー対象に混ぜない。
+  - 生成物を提出物に含める必要がある場合は、runbook の packet 生成・検証手順に従い、manifest / hash / sanitize 済み要約を揃える。
 
 ## 6. 環境・インフラ
 - **起動**: `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` を使用。
@@ -152,6 +194,27 @@
 - **本番相当設定の検証**:
   - 認証、Cookie、CORS、ORCA 接続、添付保存、エラーハンドリングは、可能な限り本番相当設定で確認すること。
   - 開発専用の緩和設定を使った場合は、報告に明記すること。
+
+### 6.1 標準検証コマンド
+変更範囲に応じて、最低限の focused test と full gate を組み合わせること。実行できない場合は、理由・代替検証・残リスクを報告する。
+
+| 対象 | 標準コマンド |
+| --- | --- |
+| Web guard | `cd web-client && npm run verify:web-guard` |
+| Web typecheck | `cd web-client && npm run typecheck` |
+| Web unit test | `cd web-client && npm run test:ci` または対象を絞った `npm test -- --run <test-file>` |
+| Web build / full CI | `cd web-client && npm run ci` |
+| Server focused test | `mvn -f pom.server-modernized.xml -pl server-modernized -am -Dtest=<TestClass> test` |
+| Server static/full verify | `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` |
+| Release smoke | `cd web-client && node scripts/runtime-ready-smoke.mjs` |
+| Doc/config guards | `bash server-modernized/tools/ci/check-doc-links.sh`、`bash server-modernized/tools/ci/check-config-contract.sh`、`bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh --root "$(git rev-parse --show-toplevel)"` |
+
+### 6.2 変更種別ごとの検証目安
+- Web UI のみ: `verify:web-guard`、対象 Vitest、`typecheck`、必要に応じて `build` とブラウザ目視確認。
+- Web の auth/session/patient context: 上記に加え、storage / URL scrub / CSRF / logout cleanup の異常系 test を追加または更新する。
+- Server resource / auth / ORCA / storage: focused Maven test、改ざん入力・認可拒否・fail closed test、`-Pstatic-analysis verify` を実行する。
+- contract / docs のみ: Markdown link / config contract / 該当 grep を実行し、コード正本と矛盾しないことを確認する。
+- release / reviewer packet: `docs/runbooks/release-validation.md` の順序を正本とし、古い RUN_ID や別ブランチの evidence を流用しない。
 
 ## 7. ワーキングフロー (作業手順)
 1. **理解**:
@@ -177,6 +240,8 @@
    - `web-client/` と `server-modernized/` に対して修正を行う。
    - `client/` / `server/` は参照のみとする。
    - 一時的な TODO, FIXME, デバッグ用緩和、秘密情報直書きを残さないこと。
+   - 既存 helper / service / guard / test pattern を優先し、同じ責務の独自実装を増やす前に `rg` で既存実装を探すこと。
+   - DTO / API 契約を変える場合は server、web-client、docs/contracts、web-client/notes、test fixture を同時に見直すこと。
 5. **検証**:
    - ローカルで起動確認し、エラーが出たら自律的に修正する。
    - 正常系だけでなく、**異常系・認可拒否・改ざん入力・境界条件** を検証すること。
@@ -191,9 +256,11 @@
    - `server-modernized` は、定義済みの unit/integration test・静的解析・ビルドを実行し、重大な新規警告を残さないこと。
    - `web-client` は、`package.json` に定義された lint / typecheck / test / build を実行すること。
    - 依存追加・更新時は、既知の重大脆弱性の有無も確認すること。
+   - `npm run ci` と `mvn ... -Pstatic-analysis verify` が重い場合でも、少なくとも対象 focused test と guard を先に通し、full gate 未実行なら理由を報告すること。
 7. **Git操作**:
    - `worktree` 作業時は、報告前に必ずコミットを行うこと。
    - `main` ブランチへのマージ指示時は、現在の作業ディレクトリの内容をマージすること。
+   - 作業開始時に存在した unrelated diff / untracked artifact は、自分の変更として staging しない。必要なら最終報告で「既存変更」として分けて記載する。
 8. **報告**:
    - `【ワーカー報告】` ヘッダーを使用。
    - 実施内容、結果、残課題、更新したドキュメントを明記。
@@ -236,6 +303,7 @@
 
 ## 11. サブエージェントルール
 - サブエージェントが使用可能な場合は積極的にサブエージェントを動かし、自分のコンテキストを圧迫しないよう運用すること。
+- ただし、実行環境の上位指示でサブエージェント利用が明示許可制の場合は、その上位指示を優先する。許可がない場合は自分で調査・実装し、必要なら報告で分割案だけ提示する。
 - サブエージェントを使用する場合、別途指示がない限りモデルは `gpt-5.5`、reasoning effort は `medium` を使用すること。
 - サブエージェントへのプロンプトには、必ず各自専用の `worktree` を作成してそこで作業するよう明示すること。
 - サブエージェントを使った場合は、**ハングしている場合を除き**、原則として作業終了まで待機し、完了結果を確認してから次の判断に進むこと。

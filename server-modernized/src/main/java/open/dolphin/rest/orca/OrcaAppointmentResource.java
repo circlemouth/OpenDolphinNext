@@ -31,6 +31,7 @@ import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
 import open.dolphin.rest.dto.orca.OrcaReceptionSelectorOptionsResponse;
 import open.dolphin.rest.dto.orca.PatientAppointmentListRequest;
 import open.dolphin.rest.dto.orca.PatientAppointmentListResponse;
+import open.dolphin.rest.dto.orca.PatientSummary;
 import open.dolphin.session.framework.SessionOperation;
 
 /**
@@ -414,9 +415,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             slot.setDepartmentCode(row.departmentCode());
             slot.setPhysicianCode(row.physicianCode());
             slot.setVisitInformation(resolveProjectedAppointmentStatus(row.state()));
-            slot.setPatient(projectionPatientSummaryRepository != null
-                    ? projectionPatientSummaryRepository.findByFacilityAndPatientId(facilityId, row.patientId())
-                    : null);
+            slot.setPatient(resolveProjectedPatientSummary(facilityId, row.patientId()));
             response.getSlots().add(slot);
             collectKey(seenScheduleKeys, row.scheduleKey());
             collectKey(seenEncounterKeys, row.linkedEncounterKey());
@@ -438,6 +437,22 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             case "cancelled" -> "取消";
             default -> "予約";
         };
+    }
+
+    PatientSummary resolveProjectedPatientSummary(String facilityId, String patientId) {
+        String normalizedPatientId = normalize(patientId);
+        if (normalizedPatientId == null) {
+            return null;
+        }
+        PatientSummary summary = projectionPatientSummaryRepository != null
+                ? projectionPatientSummaryRepository.findByFacilityAndPatientId(facilityId, normalizedPatientId)
+                : null;
+        if (summary != null && normalize(summary.getPatientId()) != null) {
+            return summary;
+        }
+        PatientSummary fallback = new PatientSummary();
+        fallback.setPatientId(normalizedPatientId);
+        return fallback;
     }
 
     private void collectKey(HashSet<String> sink, String value) {

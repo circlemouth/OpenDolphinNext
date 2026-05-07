@@ -114,6 +114,62 @@ const pickEncounterKey = (value: any): string | undefined =>
   value?.linkedEncounterKey ??
   value?.linked_encounter_key;
 
+const pickPatient = (value: any) => {
+  const patient = value?.patient ?? {};
+  return {
+    patientId:
+      patient?.patientId ??
+      patient?.Patient_ID ??
+      value?.patientId ??
+      value?.patient_id ??
+      value?.Patient_ID ??
+      value?.serverPatientId,
+    wholeName:
+      patient?.wholeName ??
+      patient?.WholeName ??
+      patient?.whole_name ??
+      value?.wholeName ??
+      value?.patientName ??
+      value?.serverPatientName,
+    wholeNameKana:
+      patient?.wholeNameKana ??
+      patient?.WholeNameKana ??
+      patient?.whole_name_kana ??
+      value?.wholeNameKana ??
+      value?.patientNameKana,
+    birthDate: patient?.birthDate ?? patient?.BirthDate ?? value?.birthDate,
+    sex: patient?.sex ?? patient?.Sex ?? value?.sex,
+  };
+};
+
+const hasText = (value: unknown): boolean => typeof value === 'string' && value.trim().length > 0;
+
+const isSelectorOptionOnlyRow = (value: any): boolean => {
+  if (!value || typeof value !== 'object') return false;
+  const patient = pickPatient(value);
+  const hasPatientContext = hasText(patient.patientId) || hasText(patient.wholeName) || hasText(patient.wholeNameKana);
+  const hasBusinessIdentity =
+    hasText(value.appointmentId) ||
+    hasText(pickReceptionId(value)) ||
+    hasText(pickScheduleKey(value)) ||
+    hasText(pickEncounterKey(value)) ||
+    hasText(value.voucherNumber) ||
+    hasText(value.sequentialNumber);
+  const hasTimelineContext =
+    hasText(value.appointmentTime) ||
+    hasText(value.acceptanceTime) ||
+    hasText(value.acceptance_time) ||
+    hasText(value.updateTime) ||
+    hasText(value.update_time);
+  const hasSelectorContext =
+    hasText(value.departmentCode) ||
+    hasText(value.departmentName) ||
+    hasText(value.physicianCode) ||
+    hasText(value.physicianName);
+
+  return hasSelectorContext && !hasPatientContext && !hasBusinessIdentity && !hasTimelineContext;
+};
+
 const toClaimStatus = (statusText?: unknown): ClaimBundleStatus | undefined => {
   if (typeof statusText !== 'string') return undefined;
   const normalized = statusText.toLowerCase();
@@ -232,14 +288,17 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
 
   const slots: any[] = Array.isArray(json?.slots) ? json.slots : [];
   slots.forEach((slot, index) => {
-    const patient = slot.patient ?? {};
+    if (isSelectorOptionOnlyRow(slot)) return;
+    const patient = pickPatient(slot);
     const reservationTime = toDisplayTime(json?.appointmentDate, slot.appointmentTime);
+    const scheduleKey = pickScheduleKey(slot);
+    const encounterKey = pickEncounterKey(slot);
     entries.push({
-      id: buildEntryId(slot.appointmentId, `slot-${index}`),
+      id: buildEntryId(slot.appointmentId ?? scheduleKey ?? encounterKey, `slot-${index}`),
       appointmentId: slot.appointmentId,
       receptionId: pickReceptionId(slot),
-      scheduleKey: pickScheduleKey(slot),
-      encounterKey: pickEncounterKey(slot),
+      scheduleKey,
+      encounterKey,
       patientId: patient.patientId,
       departmentCode: slot.departmentCode,
       physicianCode: slot.physicianCode,
@@ -262,14 +321,17 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
 
   const reservations: any[] = Array.isArray(json?.reservations) ? json.reservations : [];
   reservations.forEach((reservation, index) => {
-    const patient = reservation.patient ?? json?.patient ?? {};
+    if (isSelectorOptionOnlyRow(reservation)) return;
+    const patient = pickPatient({ ...reservation, patient: reservation.patient ?? json?.patient });
     const reservationTime = toDisplayTime(reservation.appointmentDate, reservation.appointmentTime);
+    const scheduleKey = pickScheduleKey(reservation);
+    const encounterKey = pickEncounterKey(reservation);
     entries.push({
-      id: buildEntryId(reservation.appointmentId, `reservation-${index}`),
+      id: buildEntryId(reservation.appointmentId ?? scheduleKey ?? encounterKey, `reservation-${index}`),
       appointmentId: reservation.appointmentId,
       receptionId: pickReceptionId(reservation),
-      scheduleKey: pickScheduleKey(reservation),
-      encounterKey: pickEncounterKey(reservation),
+      scheduleKey,
+      encounterKey,
       patientId: patient.patientId,
       departmentCode: reservation.departmentCode,
       physicianCode: reservation.physicianCode,
@@ -296,17 +358,20 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
 
   const visits: any[] = Array.isArray(json?.visits) ? json.visits : [];
   visits.forEach((visit, index) => {
-    const patient = visit.patient ?? {};
+    if (isSelectorOptionOnlyRow(visit)) return;
+    const patient = pickPatient(visit);
     const receptionId = pickReceptionId(visit);
+    const scheduleKey = pickScheduleKey(visit);
+    const encounterKey = pickEncounterKey(visit);
     const acceptanceTimeRaw =
       visit.acceptanceTime ?? visit.acceptance_time ?? visit.updateTime ?? visit.update_time ?? visit.appointmentTime;
     const acceptanceTime = toDisplayTime(json?.visitDate, acceptanceTimeRaw);
     entries.push({
-      id: buildEntryId(receptionId, `visit-${index}`),
+      id: buildEntryId(receptionId ?? scheduleKey ?? encounterKey, `visit-${index}`),
       appointmentId: visit.sequentialNumber,
       receptionId,
-      scheduleKey: pickScheduleKey(visit),
-      encounterKey: pickEncounterKey(visit),
+      scheduleKey,
+      encounterKey,
       patientId: patient.patientId,
       departmentCode: visit.departmentCode,
       physicianCode: visit.physicianCode,

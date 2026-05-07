@@ -79,6 +79,81 @@ describe('outpatient transformers', () => {
     );
   });
 
+  it('keeps projected schedule rows usable when only canonical keys and root patient id are present', () => {
+    const entries = parseAppointmentEntries({
+      appointmentDate: '2026-05-07',
+      slots: [
+        {
+          scheduleKey: 'F001:S-PROJECTED',
+          encounterKey: 'F001:E-PROJECTED',
+          patientId: '000099',
+          appointmentTime: '0930',
+          departmentCode: '01',
+          physicianCode: '10001',
+        },
+      ],
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toEqual(
+      expect.objectContaining({
+        id: 'F001:S-PROJECTED',
+        patientId: '000099',
+        scheduleKey: 'F001:S-PROJECTED',
+        encounterKey: 'F001:E-PROJECTED',
+      }),
+    );
+  });
+
+  it('ignores selector option rows returned alongside appointment and visit records', () => {
+    const entries = parseAppointmentEntries({
+      appointmentDate: '2026-05-07',
+      visitDate: '2026-05-07',
+      slots: [
+        { physicianCode: '10001', physicianName: '内科 太郎' },
+        {
+          scheduleKey: 'F001:S300',
+          appointmentTime: '0900',
+          patient: { patientId: '000004', wholeName: '予約 患者' },
+        },
+      ],
+      visits: [
+        { departmentCode: '01', departmentName: '内科' },
+        {
+          voucherNumber: '00001',
+          updateTime: '0505',
+          departmentCode: '01',
+          physicianCode: '10001',
+          patient: { patientId: '000003', wholeName: '事例 三' },
+        },
+      ],
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(entries.map((entry) => entry.patientId).sort()).toEqual(['000003', '000004']);
+  });
+
+  it('keeps rows with canonical identity even when patient context is missing so integrity checks can warn', () => {
+    const entries = parseAppointmentEntries({
+      appointmentDate: '2026-05-07',
+      slots: [
+        {
+          scheduleKey: 'F001:S-MISSING-PATIENT',
+          appointmentTime: '1000',
+          physicianCode: '10001',
+        },
+      ],
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toEqual(
+      expect.objectContaining({
+        scheduleKey: 'F001:S-MISSING-PATIENT',
+        patientId: undefined,
+      }),
+    );
+  });
+
   it('classifies accepted visit rows with updateTime as 受付中 instead of 予約', () => {
     const entries = parseAppointmentEntries({
       visitDate: '2026-05-03',

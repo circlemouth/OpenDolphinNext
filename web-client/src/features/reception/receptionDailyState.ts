@@ -308,7 +308,7 @@ export const clearReceptionDailyState = (scope?: StorageScope) => {
 };
 
 const entryIdentity = (entry: ReceptionEntry): string =>
-  entry.receptionId ?? entry.appointmentId ?? entry.patientId ?? entry.id;
+  entry.encounterKey ?? entry.scheduleKey ?? entry.receptionId ?? entry.appointmentId ?? entry.patientId ?? entry.id;
 
 const mergeEntry = (base: ReceptionEntry, override: ReceptionEntry): ReceptionEntry => {
   return {

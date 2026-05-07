@@ -352,6 +352,31 @@ describe('acceptmodv2 mutateVisit', () => {
     expect(result.hasRegistrationEvidence).toBe(true);
   });
 
+  it('Api_Result=00 でも patient evidence だけなら accepted にしない', async () => {
+    mockFetch.mockResolvedValue({
+      raw: {
+        apiResult: '00',
+        apiResultMessage: '受付登録終了',
+        patient: { patientId: '000001', name: '患者のみ' },
+      },
+      meta: { httpStatus: 200, dataSourceTransition: 'server' },
+      ok: true,
+    });
+
+    const result = await mutateVisit({
+      patientId: '000001',
+      requestNumber: '01',
+      acceptanceDate: '2026-01-20',
+      acceptancePush: '1',
+      paymentMode: 'insurance',
+    });
+
+    expect(result.businessStatus).toBe('notVerified');
+    expect(result.businessReason).toBe('success_code_without_registration_evidence');
+    expect(result.hasRegistrationEvidence).toBe(false);
+    expect(buildVisitEntryFromMutation(result, { paymentMode: 'insurance' })).toBeNull();
+  });
+
   it('実環境相当の空文字応答でも patientId を維持するが成功扱いしない', async () => {
     mockFetch.mockResolvedValue({
       raw: {
@@ -458,6 +483,20 @@ describe('buildVisitEntryFromMutation', () => {
     expect(entry?.encounterKey).toBeUndefined();
     expect(entry?.insurance).toBe('自費');
     expect(entry?.status).toBe('受付中');
+  });
+
+  it('businessAccepted でも受付識別子がなければ ReceptionEntry を作らない', () => {
+    const entry = buildVisitEntryFromMutation(
+      {
+        requestNumber: '01',
+        businessStatus: 'businessAccepted',
+        acceptanceDate: '2026-01-21',
+        acceptanceTime: '10:00:00',
+        patient: { patientId: '000002', name: '佐藤' },
+      },
+      { paymentMode: 'insurance' },
+    );
+    expect(entry).toBeNull();
   });
 
   it('canonical key が返ってきた場合は ReceptionEntry にそのまま載せる', () => {

@@ -405,12 +405,13 @@ export const buildVisitEntryFromMutation = (
   if (payload.requestNumber === '02' || payload.requestNumber === '00') return null;
   if (!isAcceptmodBusinessAccepted(payload.businessStatus)) return null;
   const patientId = payload.patient?.patientId;
-  if (!patientId && !payload.acceptanceId) return null;
+  const receptionId = payload.acceptanceId ?? payload.voucherNumber;
+  if (!patientId || (!receptionId && !payload.scheduleKey && !payload.encounterKey)) return null;
   const paymentLabel = options.paymentMode === 'self' ? '自費' : options.paymentMode === 'insurance' ? '保険' : undefined;
   return {
-    id: payload.acceptanceId ?? payload.visitNumber ?? patientId ?? `visit-${Date.now()}`,
+    id: receptionId ?? payload.scheduleKey ?? payload.encounterKey ?? payload.visitNumber ?? patientId,
     appointmentId: payload.visitNumber ?? payload.appointmentDate,
-    receptionId: payload.acceptanceId,
+    receptionId,
     scheduleKey: payload.scheduleKey,
     encounterKey: payload.encounterKey,
     patientId: patientId ?? undefined,

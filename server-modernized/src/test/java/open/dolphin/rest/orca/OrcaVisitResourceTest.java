@@ -76,6 +76,17 @@ class OrcaVisitResourceTest {
     }
 
     @Test
+    void projectedVisitPatientSummaryFallsBackToServerPatientId() {
+        OrcaVisitResource resource = new OrcaVisitResource();
+
+        PatientSummary summary = resource.resolveProjectedPatientSummary("F001", " 000099 ");
+
+        assertNotNull(summary);
+        assertEquals("000099", summary.getPatientId());
+        assertNull(summary.getWholeName());
+    }
+
+    @Test
     void visitListProjectedFallbackDoesNotSynthesizeVoucherOrSequential() {
         OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
         VisitPatientListResponse stub = new VisitPatientListResponse();

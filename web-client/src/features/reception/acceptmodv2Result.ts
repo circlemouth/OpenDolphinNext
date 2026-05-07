@@ -60,20 +60,6 @@ const ACCEPTANCE_EVIDENCE_KEYS = new Set([
 ]);
 
 const ACCEPTANCE_INFO_KEYS = new Set(['acceptanceInfo', 'Acceptance_Info', 'acceptance_info']);
-const PATIENT_INFO_KEYS = new Set(['patient', 'Patient', 'patientInformation', 'Patient_Information', 'patient_information']);
-const PATIENT_EVIDENCE_KEYS = new Set([
-  'patientId',
-  'Patient_ID',
-  'patient_id',
-  'name',
-  'wholeName',
-  'WholeName',
-  'wholeNameKana',
-  'WholeName_inKana',
-  'birthDate',
-  'BirthDate',
-]);
-
 const hasValue = (value: unknown): boolean => {
   if (typeof value === 'string') return value.trim().length > 0;
   if (typeof value === 'number') return Number.isFinite(value);
@@ -88,17 +74,6 @@ const hasAnyNonEmptyScalar = (value: unknown, depth = 0): boolean => {
   return Object.values(value as Record<string, unknown>).some((entry) => hasAnyNonEmptyScalar(entry, depth + 1));
 };
 
-const hasPatientEvidence = (value: unknown, depth = 0): boolean => {
-  if (depth > 6 || value == null) return false;
-  if (Array.isArray(value)) return value.some((entry) => hasPatientEvidence(entry, depth + 1));
-  if (typeof value !== 'object') return false;
-  return Object.entries(value as Record<string, unknown>).some(([key, entry]) => {
-    if (PATIENT_EVIDENCE_KEYS.has(key) && hasValue(entry)) return true;
-    if (PATIENT_INFO_KEYS.has(key)) return hasPatientEvidence(entry, depth + 1);
-    return typeof entry === 'object' && entry != null && hasPatientEvidence(entry, depth + 1);
-  });
-};
-
 const hasAcceptanceEvidence = (value: unknown, depth = 0): boolean => {
   if (depth > 6 || value == null) return false;
   if (Array.isArray(value)) return value.some((entry) => hasAcceptanceEvidence(entry, depth + 1));
@@ -111,7 +86,7 @@ const hasAcceptanceEvidence = (value: unknown, depth = 0): boolean => {
 };
 
 export const hasAcceptmodRegistrationEvidence = (raw: unknown) =>
-  hasAcceptanceEvidence(raw) || hasPatientEvidence(raw);
+  hasAcceptanceEvidence(raw);
 
 export const classifyAcceptmodv2BusinessResult = ({
   ok = true,

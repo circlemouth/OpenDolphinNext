@@ -191,7 +191,7 @@ vi.mock('../../outpatient/orcaQueueStatus', () => ({
 }));
 
 vi.mock('../../outpatient/appointmentDataBanner', () => ({
-  getAppointmentDataBanner: () => ({ tone: 'warning', message: '予約/来院データに不整合があります（受付ID欠損: 1）' }),
+  getAppointmentDataBanner: () => ({ tone: 'warning', message: '予約/来院データに不整合があります（受付識別子欠損: 1）' }),
   countAppointmentDataIntegrity: () => ({
     missingPatientId: 0,
     missingAppointmentId: 0,

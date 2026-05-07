@@ -54,6 +54,31 @@ public class KarteDocumentWriteService {
     private static final String QUERY_MODULE_BY_DOC_ID = "from ModuleModel m where m.document.id=:id order by m.id";
     private static final String QUERY_SCHEMA_BY_DOC_ID = "from SchemaModel i where i.document.id=:id order by i.id";
     private static final String QUERY_ATTACHMENT_BY_DOC_ID = "from AttachmentModel a where a.document.id=:id order by a.id";
+    private static final String SYNC_HIBERNATE_SEQUENCE_SQL = """
+            DO $$
+            DECLARE
+                row_info RECORD;
+                table_max BIGINT;
+                max_id BIGINT DEFAULT 1;
+            BEGIN
+                FOR row_info IN
+                    SELECT table_schema, table_name
+                      FROM information_schema.columns
+                     WHERE table_schema = 'opendolphin'
+                       AND column_name = 'id'
+                       AND column_default LIKE '%hibernate_sequence%'
+                     ORDER BY table_schema, table_name
+                LOOP
+                    EXECUTE format('SELECT COALESCE(MAX(id), 0) FROM %I.%I', row_info.table_schema, row_info.table_name)
+                       INTO table_max;
+                    max_id = GREATEST(max_id, table_max);
+                END LOOP;
+
+                IF max_id > 1 THEN
+                    PERFORM setval('opendolphin.hibernate_sequence', max_id, true);
+                END IF;
+            END $$;
+            """;
 
     @PersistenceContext
     private EntityManager em;
@@ -67,11 +92,14 @@ public class KarteDocumentWriteService {
     @jakarta.inject.Inject
     private DocumentIntegrityService documentIntegrityService;
 
+    private volatile boolean hibernateSequenceSynchronized;
+
     public long addDocument(DocumentModel document) {
         LOGGER.info("addDocument request id={}, docId={}",
                 document.getId(),
                 document.getDocInfoModel() != null ? document.getDocInfoModel().getDocId() : "null");
 
+        synchronizeHibernateSequenceBeforeInsert();
         prepareDocumentForInsert(document);
         em.persist(document);
         em.flush();
@@ -84,6 +112,19 @@ public class KarteDocumentWriteService {
             markRevisionSourceAsModified(parentPk, document.getConfirmed());
         }
         return id;
+    }
+
+    private void synchronizeHibernateSequenceBeforeInsert() {
+        if (hibernateSequenceSynchronized) {
+            return;
+        }
+        synchronized (this) {
+            if (hibernateSequenceSynchronized) {
+                return;
+            }
+            em.createNativeQuery(SYNC_HIBERNATE_SEQUENCE_SQL).executeUpdate();
+            hibernateSequenceSynchronized = true;
+        }
     }
 
     public long updateDocument(DocumentModel document) {

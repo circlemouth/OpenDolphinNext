@@ -1286,6 +1286,8 @@ describe('ReceptionPage accept UX', () => {
         traceId: 'TRACE-VISIT-HANDOFF',
         apiResult: '00',
         apiResultMessage: 'OK',
+        requestNumber: '01',
+        businessStatus: 'businessAccepted',
         acceptanceId: 'R-015',
         acceptanceDate: '2026-01-29',
         acceptanceTime: '11:05:00',
@@ -1453,8 +1455,9 @@ describe('ReceptionPage toolbar and tabs', () => {
 
     const toolbar = getToolbar();
     expect(toolbar).toBeInTheDocument();
+    expect(within(toolbar).getByLabelText('受付日')).toBeInTheDocument();
     expect(within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' })).toBeInTheDocument();
-    expect(within(toolbar).getByRole('button', { name: /日次状態/ })).toBeInTheDocument();
+    expect(within(toolbar).queryByRole('button', { name: /日次状態/ })).toBeNull();
     expect(document.querySelector('.reception-page__floating-actions')).toBeNull();
   });
 
@@ -1839,25 +1842,20 @@ describe('ReceptionPage list and side pane guidance', () => {
     expect(screen.queryByRole('region', { name: '既存患者受付/患者検索' })).toBeNull();
   });
 
-  it('keeps accept workflow and daily calendar mutually exclusive', async () => {
+  it('uses the reception date input as the single date control', async () => {
     const user = userEvent.setup();
     renderReceptionPage();
     const toolbar = getToolbar();
     const acceptButton = within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' });
-    const dailyStatusButton = within(toolbar).getByRole('button', { name: /日次状態/ });
+    const dateInput = within(toolbar).getByLabelText('受付日');
 
-    await user.click(acceptButton);
-    expect(await screen.findByRole('region', { name: '既存患者受付/患者検索' })).toBeInTheDocument();
-
-    await user.click(dailyStatusButton);
-    expect(await screen.findByRole('group', { name: '日次状態カレンダー' })).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: '既存患者受付/患者検索' })).toBeNull();
-    expect(dailyStatusButton).toHaveAttribute('aria-expanded', 'true');
+    expect(dateInput).toBeInTheDocument();
+    expect(within(toolbar).queryByRole('button', { name: /日次状態/ })).toBeNull();
+    expect(screen.queryByRole('group', { name: '日次状態カレンダー' })).toBeNull();
 
     await user.click(acceptButton);
     expect(await screen.findByRole('region', { name: '既存患者受付/患者検索' })).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: '日次状態カレンダー' })).toBeNull();
-    expect(dailyStatusButton).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('closes accept workflow modal with Escape key', async () => {
@@ -2044,7 +2042,8 @@ describe('ReceptionPage status/date/card action UX', () => {
     renderReceptionPage();
 
     const toolbar = getToolbar();
-    await user.selectOptions(within(toolbar).getByLabelText('診療科'), '02 外科');
+    await user.click(within(toolbar).getByRole('button', { name: '詳細条件' }));
+    await user.selectOptions(screen.getByLabelText('診療科'), '02 外科');
 
     const workflowModal = await openAcceptWorkflowModal(user);
     const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });

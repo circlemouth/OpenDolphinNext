@@ -20,6 +20,7 @@
 - client に内部詳細や安全性未確認の文字列を露出しません。
 - `PatientsPage` の edit/audit summary、`ChartsActionBar` の action/result feedback、`ReceptionPage` の accept/cancel/claim-send result は canonical copy を current contract とします。
 - `ReceptionPage` の ORCA official response では、safe な `Api_Result_Message` がある場合にそれを最優先表示し、client 側の補助文言で上書きしません。
+- `ReceptionPage` の accept result は `Api_Result=00` でも受付登録証跡がない場合は `notVerified` とし、`受付登録の完了証跡を確認できませんでした` を表示します。
 - `ReceptionPage` の accept/cancel result は `Api_Result=21` を保険不一致、`Api_Result=60` を受付なしとして扱い、`Api_Result_Message` が空の時だけ安全な fallback copy を補います。
 - `ReceptionPage` の accept/cancel result では `Api_Result=21/60` のとき受付日時・診療科・担当医などの成功コンテキストを client 側で捏造しません。
 - `ReceptionPage` の claim-send success は transmission 完了だけを伝え、収納確認前に `会計済み` を示す copy へ寄せません。

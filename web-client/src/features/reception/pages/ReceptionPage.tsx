@@ -29,6 +29,7 @@ import {
   type VisitMutationParams,
   type VisitMutationPayload,
 } from '../api';
+import { isAcceptmodBusinessAccepted } from '../acceptmodv2Result';
 import {
   fetchPatientMasterSearch,
   type PatientMasterRecord,
@@ -110,7 +111,6 @@ import {
 import type { StorageScope } from '../../../libs/session/storageScope';
 import {
   clearReceptionStatusOverridesForDate,
-  listReceptionSnapshotDates,
   resolveReceptionEntriesForDate,
   saveReceptionEntriesForDate,
 } from '../receptionDailyState';
@@ -148,6 +148,13 @@ const SECTION_LABEL: Record<ReceptionStatus, string> = {
   再計待: '再計待',
   会計済み: '会計済',
   予約: '予約',
+};
+const SORT_LABEL: Record<SortKey, string> = {
+  time: '優先時間',
+  acceptance: '受付時間',
+  reservation: '予約時間',
+  name: '氏名',
+  department: '診療科',
 };
 const FILTER_STORAGE_KEY = 'reception-filter-state';
 const FILTER_PANEL_COLLAPSE_KEY = 'reception-filter-panel-collapsed';
@@ -576,14 +583,6 @@ const shiftDate = (value: string, dayDelta: number): string => {
   return formatYmd(parsed.getUTCFullYear(), parsed.getUTCMonth() + 1, parsed.getUTCDate());
 };
 
-type DailyCalendarCell = {
-  ymd: string;
-  day: number;
-  weekday: number;
-  inMonth: boolean;
-};
-
-const DAILY_CALENDAR_WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'] as const;
 const DAILY_CALENDAR_YMD_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 const parseYmd = (value: string): { year: number; month: number; day: number } | null => {
@@ -609,49 +608,6 @@ const toUtcDateFromYmd = (value: string): Date | null => {
   const date = new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day));
   if (Number.isNaN(date.getTime())) return null;
   return date;
-};
-
-const startOfUtcMonth = (value: string): string => {
-  const date = toUtcDateFromYmd(value);
-  if (!date) return value;
-  return formatYmd(date.getUTCFullYear(), date.getUTCMonth() + 1, 1);
-};
-
-const shiftUtcMonth = (monthStartYmd: string, monthDelta: number): string => {
-  const date = toUtcDateFromYmd(monthStartYmd);
-  if (!date) return monthStartYmd;
-  date.setUTCDate(1);
-  date.setUTCMonth(date.getUTCMonth() + monthDelta);
-  return formatYmd(date.getUTCFullYear(), date.getUTCMonth() + 1, 1);
-};
-
-const buildDailyCalendarCells = (monthStartYmd: string): DailyCalendarCell[] => {
-  const monthStart = toUtcDateFromYmd(monthStartYmd);
-  if (!monthStart) return [];
-
-  const firstOfMonth = new Date(monthStart);
-  firstOfMonth.setUTCDate(1);
-  const startWeekday = firstOfMonth.getUTCDay();
-
-  const firstCell = new Date(firstOfMonth);
-  firstCell.setUTCDate(firstOfMonth.getUTCDate() - startWeekday);
-
-  const monthIndex = firstOfMonth.getUTCMonth();
-  const cells: DailyCalendarCell[] = [];
-
-  for (let offset = 0; offset < 42; offset += 1) {
-    const cellDate = new Date(firstCell);
-    cellDate.setUTCDate(firstCell.getUTCDate() + offset);
-    const weekday = cellDate.getUTCDay();
-    cells.push({
-      ymd: formatYmd(cellDate.getUTCFullYear(), cellDate.getUTCMonth() + 1, cellDate.getUTCDate()),
-      day: cellDate.getUTCDate(),
-      weekday,
-      inMonth: cellDate.getUTCMonth() === monthIndex,
-    });
-  }
-
-  return cells;
 };
 
 const loadCollapsedPanel = (key: string, fallback: boolean) => {
@@ -889,7 +845,6 @@ export function ReceptionPage({
     }
     if (landingSection === 'accept' || landingCreate) {
       setAcceptWorkflowModalOpen(true);
-      setDailyCalendarOpen(false);
       window.setTimeout(() => {
         const el = document.getElementById('reception-patient-search-patient-id');
         if (el instanceof HTMLInputElement) {
@@ -903,6 +858,7 @@ export function ReceptionPage({
   const [recordsModalPatient, setRecordsModalPatient] = useState<{ patientId: string; name?: string } | null>(null);
   const [missingMasterNote, setMissingMasterNote] = useState('');
   const summaryRef = useRef<HTMLDivElement | null>(null);
+  const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
   const appliedMeta = useRef<Partial<AuthServiceFlags>>({});
   const lastAuditEventHash = useRef<string | undefined>(undefined);
   const [selectedEntryKey, setSelectedEntryKey] = useState<string | null>(null);
@@ -1665,63 +1621,6 @@ export function ReceptionPage({
     () => appointmentEntries,
     [appointmentEntries],
   );
-  const snapshotDateOptions = useMemo(() => {
-    const fromState = effectiveDailyEntriesState.availableDates ?? [];
-    if (fromState.length > 0) return fromState.slice(0, 30);
-    return listReceptionSnapshotDates(storageScope, 30);
-  }, [dailyEntriesState.availableDates, storageScope]);
-  const dailyCalendarAvailableDates = useMemo(() => {
-    const enabled = new Set(snapshotDateOptions);
-    if (selectedDate) enabled.add(selectedDate);
-    return enabled;
-  }, [selectedDate, snapshotDateOptions]);
-  const dailyCalendarRootRef = useRef<HTMLDivElement | null>(null);
-  const [dailyCalendarOpen, setDailyCalendarOpen] = useState(false);
-  const [dailyCalendarMonthStart, setDailyCalendarMonthStart] = useState(() => startOfUtcMonth(selectedDate));
-  const dailyCalendarCells = useMemo(
-    () => buildDailyCalendarCells(dailyCalendarMonthStart),
-    [dailyCalendarMonthStart],
-  );
-  const dailyCalendarMonthLabel = useMemo(() => {
-    const parsed = parseYmd(dailyCalendarMonthStart);
-    if (!parsed) return dailyCalendarMonthStart;
-    return `${parsed.year}年${parsed.month}月`;
-  }, [dailyCalendarMonthStart]);
-  const toggleDailyCalendar = useCallback(() => {
-    setDailyCalendarOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        setAcceptWorkflowModalOpen(false);
-        setDailyCalendarMonthStart(startOfUtcMonth(selectedDate));
-      }
-      return next;
-    });
-  }, [selectedDate]);
-  useEffect(() => {
-    if (!dailyCalendarOpen) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      const root = dailyCalendarRootRef.current;
-      const target = event.target;
-      if (!root || !(target instanceof Node)) return;
-      if (root.contains(target)) return;
-      setDailyCalendarOpen(false);
-    };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setDailyCalendarOpen(false);
-      }
-    };
-    window.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('keydown', handleEscape);
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('keydown', handleEscape);
-    };
-  }, [dailyCalendarOpen]);
-  useEffect(() => {
-    if (!acceptWorkflowModalOpen) return;
-    setDailyCalendarOpen(false);
-  }, [acceptWorkflowModalOpen]);
   useEffect(() => {
     if (!acceptWorkflowModalOpen) return;
     const handleEscape = (event: KeyboardEvent) => {
@@ -2576,7 +2475,7 @@ export function ReceptionPage({
     () => (selectedEntry ? resolveQueueForEntry(selectedEntry) : undefined),
     [resolveQueueForEntry, selectedEntry],
   );
-  const summaryText = useMemo(() => `検索結果 ${displayedEntries.length}件`, [displayedEntries.length]);
+  const summaryText = useMemo(() => `${activeStatusLabel} ${activeStatusItems.length}件`, [activeStatusItems.length, activeStatusLabel]);
 
   const selectionSummaryText = useMemo(() => {
     if (!selectedEntry) return '選択中の患者はありません。';
@@ -2600,6 +2499,17 @@ export function ReceptionPage({
     if (Number.isNaN(parsed)) return selectedSavedView.updatedAt;
     return formatAutoRefreshTimestamp(parsed);
   }, [selectedSavedView]);
+  const activeFilterChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string }> = [];
+    if (departmentFilter) chips.push({ key: 'department', label: `診療科 ${departmentFilter}` });
+    if (physicianFilter) chips.push({ key: 'physician', label: `担当医 ${physicianFilter}` });
+    if (paymentMode !== 'all') {
+      chips.push({ key: 'payment', label: `保険/自費 ${paymentMode === 'insurance' ? '保険' : '自費'}` });
+    }
+    if (sortKey !== 'time') chips.push({ key: 'sort', label: `ソート ${SORT_LABEL[sortKey]}` });
+    if (selectedSavedView) chips.push({ key: 'saved-view', label: `保存ビュー ${selectedSavedView.label}` });
+    return chips;
+  }, [departmentFilter, paymentMode, physicianFilter, selectedSavedView, sortKey]);
 
   const unlinkedCounts = useMemo(() => {
     return countAppointmentDataIntegrity(visibleAppointmentEntries);
@@ -2616,8 +2526,8 @@ export function ReceptionPage({
     if (!banner || banner.tone !== 'warning') return null;
     const parts = [
       unlinkedCounts.missingPatientId > 0 ? `患者ID欠損: ${unlinkedCounts.missingPatientId}` : undefined,
-      unlinkedCounts.missingAppointmentId > 0 ? `予約ID欠損: ${unlinkedCounts.missingAppointmentId}` : undefined,
-      unlinkedCounts.missingReceptionId > 0 ? `受付ID欠損: ${unlinkedCounts.missingReceptionId}` : undefined,
+      unlinkedCounts.missingAppointmentId > 0 ? `予約識別子欠損: ${unlinkedCounts.missingAppointmentId}` : undefined,
+      unlinkedCounts.missingReceptionId > 0 ? `受付識別子欠損: ${unlinkedCounts.missingReceptionId}` : undefined,
     ].filter((value): value is string => typeof value === 'string');
     const key = `${mergedMeta.runId ?? 'runId'}-${selectedDate}-${unlinkedCounts.missingPatientId}-${unlinkedCounts.missingAppointmentId}-${unlinkedCounts.missingReceptionId}`;
     return { ...banner, key, detail: parts.join(' / ') };
@@ -3023,7 +2933,8 @@ export function ReceptionPage({
         const durationMs = Math.round(performance.now() - started);
         setAcceptDurationMs(durationMs);
         const apiResult = normalizeOrcaApiResult(payload.apiResult);
-        const isSuccess = isOrcaSuccessResult(apiResult) || ACCEPT_SUCCESS_RESULTS.has(apiResult);
+        const isSuccess = isAcceptmodBusinessAccepted(payload.businessStatus);
+        const isAcceptedWithWarnings = payload.businessStatus === 'businessAcceptedWithWarnings';
         const isAlreadyAccepted = apiResult === '16';
 
         if (isSuccess) {
@@ -3047,7 +2958,9 @@ export function ReceptionPage({
         }
 
         const toneResult: 'info' | 'warning' | 'error' = isSuccess
-          ? 'info'
+          ? isAcceptedWithWarnings
+            ? 'warning'
+            : 'info'
           : ACCEPT_WARNING_RESULTS.has(apiResult)
             ? 'warning'
             : 'error';
@@ -3057,6 +2970,8 @@ export function ReceptionPage({
           ? '受付登録が完了しました'
           : patientNotFound
             ? 'ローカル患者は存在しますが、ORCA 受付対象として未確認/未登録です'
+          : payload.businessStatus === 'notVerified'
+            ? '受付登録の完了証跡を確認できませんでした'
           : payload.apiResultMessage
             ? payload.apiResultMessage
           : isAlreadyAccepted
@@ -3277,7 +3192,6 @@ export function ReceptionPage({
     setPatientSearchSelected(null);
     patientSearchFilterRef.current = null;
     setAcceptWorkflowModalOpen(true);
-    setDailyCalendarOpen(false);
     setAcceptResult(null);
   }, []);
 
@@ -3294,7 +3208,6 @@ export function ReceptionPage({
         setPatientSearchError(null);
         setPatientSearchSelected(null);
         patientSearchFilterRef.current = null;
-        setDailyCalendarOpen(false);
         setAcceptResult(null);
       }
       return next;
@@ -3326,7 +3239,6 @@ export function ReceptionPage({
       setPatientSearchSelected(null);
       setAcceptPatientId('');
       setAcceptWorkflowModalOpen(true);
-      setDailyCalendarOpen(false);
       await patientSearchMutation.mutateAsync({
         keyword: primaryKeyword,
         searchType: filters.patientId ? 'patient-id' : undefined,
@@ -4602,6 +4514,87 @@ export function ReceptionPage({
       </button>
     ) : null;
 
+  const receptionStatusTabs = (
+    <div className="reception-status-tabs reception-status-tabs--section" role="region" aria-label="ステータスタブ">
+      <div className="reception-status-tabs__layout-actions" role="group" aria-label="表示形式">
+        <button
+          type="button"
+          className="reception-results-toolbar__toggle"
+          onClick={() => setStatusListLayout('table')}
+          aria-pressed={statusListLayout === 'table'}
+        >
+          表
+        </button>
+        <button
+          type="button"
+          className="reception-results-toolbar__toggle"
+          onClick={() => setStatusListLayout('cards')}
+          aria-pressed={statusListLayout === 'cards'}
+        >
+          カード
+        </button>
+      </div>
+      <div className="reception-status-tabs__list" role="tablist" aria-label="受付ステータス">
+        {STATUS_TAB_ORDER.map((status) => {
+          const isActive = status === activeStatusTab;
+          const count = groupedByStatus.get(status)?.length ?? 0;
+          const dotTone = statusExceptionTone.get(status);
+          return (
+            <button
+              key={status}
+              id={`reception-status-tab-${status}`}
+              type="button"
+              role="tab"
+              className={`reception-status-tabs__tab${isActive ? ' is-active' : ''}`}
+              aria-selected={isActive}
+              aria-controls={`reception-status-tabpanel-${status}`}
+              tabIndex={isActive ? 0 : -1}
+              onClick={() => handleStatusTabChange(status)}
+              onKeyDown={handleStatusTabKeyDown}
+            >
+              <span>{SECTION_LABEL[status]}</span>
+              <span>{count}</span>
+              {dotTone ? <span className="reception-status-tabs__dot" data-tone={dotTone} aria-hidden="true" /> : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderReceptionSectionHeader = (variant: 'cards' | 'table') => (
+    <header
+      className={
+        variant === 'cards'
+          ? 'reception-board__header reception-board__header--workspace'
+          : 'reception-section__header reception-section__header--workspace'
+      }
+    >
+      <div className="reception-workspace-header__primary">
+        <div className="reception-workspace-header__title" ref={summaryRef} tabIndex={-1} role="status" aria-live={infoLive}>
+          <h2 id={`reception-section-label-${activeStatusTab}`}>{activeStatusLabel}</h2>
+          <span className={variant === 'cards' ? 'reception-board__count' : 'reception-section__count'}>
+            {activeStatusItems.length}件
+          </span>
+          {appointmentQuery.isFetching ? (
+            <span className="reception-results-toolbar__loading">更新中…</span>
+          ) : null}
+        </div>
+        {activeFilterChips.length > 0 ? (
+          <div className="reception-workspace-header__chips" aria-label="適用中の詳細条件">
+            {activeFilterChips.map((chip) => (
+              <span key={chip.key} className="reception-workspace-header__chip">
+                {chip.label}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      <div className="reception-workspace-header__controls" ref={setToolbarHost} />
+      {receptionStatusTabs}
+    </header>
+  );
+
   return (
     <>
       <Global styles={receptionStyles} />
@@ -4612,7 +4605,10 @@ export function ReceptionPage({
         </a>
         <h1 className="sr-only">{title}</h1>
         <p className="sr-only">{description}</p>
-        <section className="reception-toolbar" role="region" aria-label="受付ツールバー" data-run-id={resolvedRunId}>
+        {toolbarHost
+          ? createPortal(
+              <>
+        <section className="reception-toolbar reception-toolbar--embedded" role="region" aria-label="受付ツールバー" data-run-id={resolvedRunId}>
           <form className="reception-toolbar__form" onSubmit={handleSearchSubmit}>
             <div className="reception-toolbar__cluster reception-toolbar__cluster--date" role="group" aria-label="日付操作">
               <span className="reception-toolbar__cluster-title">受付日</span>
@@ -4660,89 +4656,12 @@ export function ReceptionPage({
                   id="reception-search-date"
                   name="receptionSearchDate"
                   type="date"
+                  aria-label="受付日"
                   value={selectedDate}
                   onChange={(event) => setSelectedDate(event.target.value)}
                   required
                 />
               </label>
-              <div
-                ref={dailyCalendarRootRef}
-                className={`reception-daily-calendar${dailyCalendarOpen ? ' is-open' : ''}`}
-                data-run-id={resolvedRunId}
-              >
-                <button
-                  type="button"
-                  className="reception-daily-calendar__trigger"
-                  aria-label="日次状態（カレンダー）"
-                  aria-expanded={dailyCalendarOpen}
-                  onClick={toggleDailyCalendar}
-                >
-                  <span className="reception-daily-calendar__trigger-label">日次状態</span>
-                  <span className="reception-daily-calendar__trigger-date">{selectedDate}</span>
-                </button>
-                {dailyCalendarOpen ? (
-                  <div className="reception-daily-calendar__popover" role="group" aria-label="日次状態カレンダー">
-                    <header className="reception-daily-calendar__popover-header">
-                      <button
-                        type="button"
-                        className="reception-daily-calendar__nav"
-                        onClick={() => setDailyCalendarMonthStart((prev) => shiftUtcMonth(prev, -1))}
-                      >
-                        前月
-                      </button>
-                      <strong className="reception-daily-calendar__month" aria-live={infoLive}>
-                        {dailyCalendarMonthLabel}
-                      </strong>
-                      <button
-                        type="button"
-                        className="reception-daily-calendar__nav"
-                        onClick={() => setDailyCalendarMonthStart((prev) => shiftUtcMonth(prev, 1))}
-                      >
-                        翌月
-                      </button>
-                    </header>
-                    <div className="reception-daily-calendar__weekdays" aria-hidden="true">
-                      {DAILY_CALENDAR_WEEKDAYS.map((label) => (
-                        <span key={label}>{label}</span>
-                      ))}
-                    </div>
-                    <div className="reception-daily-calendar__days">
-                      {dailyCalendarCells.map((cell) => {
-                        const enabled = dailyCalendarAvailableDates.has(cell.ymd);
-                        const selected = cell.ymd === selectedDate;
-                        return (
-                          <button
-                            key={cell.ymd}
-                            type="button"
-                            className={`reception-daily-calendar__day${selected ? ' is-selected' : ''}${enabled ? ' is-enabled' : ''}${cell.inMonth ? '' : ' is-outside'}`}
-                            onClick={() => {
-                              if (!enabled) return;
-                              setSelectedDate(cell.ymd);
-                              setDailyCalendarOpen(false);
-                            }}
-                            disabled={!enabled}
-                            aria-pressed={selected}
-                            data-weekday={cell.weekday}
-                            title={enabled ? `${cell.ymd} の受付状況へ移動` : `${cell.ymd} は受付データがありません`}
-                          >
-                            {cell.day}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className="reception-daily-calendar__legend" aria-hidden="true">
-                      <span className="reception-daily-calendar__legend-item">
-                        <span className="reception-daily-calendar__legend-dot" data-kind="enabled" />
-                        受付データあり
-                      </span>
-                      <span className="reception-daily-calendar__legend-item">
-                        <span className="reception-daily-calendar__legend-dot" data-kind="selected" />
-                        選択中
-                      </span>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
             </div>
             <div className="reception-toolbar__cluster reception-toolbar__cluster--search" role="group" aria-label="検索">
               <label className="reception-search__field reception-toolbar__keyword-field">
@@ -4759,40 +4678,6 @@ export function ReceptionPage({
               <button type="submit" className="reception-search__button primary">
                 検索
               </button>
-            </div>
-            <div className="reception-toolbar__cluster reception-toolbar__cluster--filters" role="group" aria-label="絞り込み">
-              <label className="reception-search__field">
-                <span>診療科</span>
-                <select
-                  id="reception-search-department"
-                  name="receptionSearchDepartment"
-                  value={departmentFilter}
-                  onChange={(event) => setDepartmentFilter(event.target.value)}
-                >
-                  <option value="">すべて</option>
-                  {uniqueDepartments.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="reception-search__field">
-                <span>担当医</span>
-                <select
-                  id="reception-search-physician"
-                  name="receptionSearchPhysician"
-                  value={physicianFilter}
-                  onChange={(event) => setPhysicianFilter(event.target.value)}
-                >
-                  <option value="">すべて</option>
-                  {uniquePhysicians.map((physician) => (
-                    <option key={physician} value={physician}>
-                      {physician}
-                    </option>
-                  ))}
-                </select>
-              </label>
             </div>
             {receptionErrorIndicator && !sessionStatusSlot ? (
               <div className="reception-toolbar__status" role="status" aria-live={infoLive}>
@@ -4867,11 +4752,43 @@ export function ReceptionPage({
         {!filtersCollapsed ? (
           <section
             id="reception-toolbar-advanced"
-            className="reception-toolbar__advanced"
+            className="reception-toolbar__advanced reception-toolbar__advanced--embedded"
             role="region"
             aria-label="詳細条件"
           >
             <div className="reception-toolbar__advanced-grid">
+              <label className="reception-search__field">
+                <span>診療科</span>
+                <select
+                  id="reception-search-department"
+                  name="receptionSearchDepartment"
+                  value={departmentFilter}
+                  onChange={(event) => setDepartmentFilter(event.target.value)}
+                >
+                  <option value="">すべて</option>
+                  {uniqueDepartments.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="reception-search__field">
+                <span>担当医</span>
+                <select
+                  id="reception-search-physician"
+                  name="receptionSearchPhysician"
+                  value={physicianFilter}
+                  onChange={(event) => setPhysicianFilter(event.target.value)}
+                >
+                  <option value="">すべて</option>
+                  {uniquePhysicians.map((physician) => (
+                    <option key={physician} value={physician}>
+                      {physician}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="reception-search__field">
                 <span>保険/自費</span>
                 <select
@@ -4960,6 +4877,10 @@ export function ReceptionPage({
             </div>
           </section>
         ) : null}
+              </>,
+              toolbarHost,
+            )
+          : null}
           {(appointmentErrorContext || intentBanner || broadcast || appointmentQuery.data?.hasNextPage) && (
             <div className="reception-page__alerts" role="region" aria-label="警告/通知">
               {appointmentErrorContext && (
@@ -5200,60 +5121,6 @@ export function ReceptionPage({
             </section>
             ) : null}
 
-            <div className="reception-status-tabs" role="region" aria-label="ステータスタブ">
-              <div className="reception-status-tabs__header">
-                <div className="reception-status-tabs__summary" ref={summaryRef} tabIndex={-1} role="status" aria-live={infoLive}>
-                  <strong>{summaryText}</strong>
-                  {appointmentQuery.isFetching ? (
-                    <span className="reception-results-toolbar__loading">更新中…</span>
-                  ) : null}
-                </div>
-                <div className="reception-status-tabs__layout-actions" role="group" aria-label="表示形式">
-                  <button
-                    type="button"
-                    className="reception-results-toolbar__toggle"
-                    onClick={() => setStatusListLayout('table')}
-                    aria-pressed={statusListLayout === 'table'}
-                  >
-                    表
-                  </button>
-                  <button
-                    type="button"
-                    className="reception-results-toolbar__toggle"
-                    onClick={() => setStatusListLayout('cards')}
-                    aria-pressed={statusListLayout === 'cards'}
-                  >
-                    カード
-                  </button>
-                </div>
-              </div>
-              <div className="reception-status-tabs__list" role="tablist" aria-label="受付ステータス">
-                {STATUS_TAB_ORDER.map((status) => {
-                  const isActive = status === activeStatusTab;
-                  const count = groupedByStatus.get(status)?.length ?? 0;
-                  const dotTone = statusExceptionTone.get(status);
-                  return (
-                    <button
-                      key={status}
-                      id={`reception-status-tab-${status}`}
-                      type="button"
-                      role="tab"
-                      className={`reception-status-tabs__tab${isActive ? ' is-active' : ''}`}
-                      aria-selected={isActive}
-                      aria-controls={`reception-status-tabpanel-${status}`}
-                      tabIndex={isActive ? 0 : -1}
-                      onClick={() => handleStatusTabChange(status)}
-                      onKeyDown={handleStatusTabKeyDown}
-                    >
-                      <span>{SECTION_LABEL[status]}</span>
-                      <span>{count}</span>
-                      {dotTone ? <span className="reception-status-tabs__dot" data-tone={dotTone} aria-hidden="true" /> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             <section className="reception-list" role="region" aria-label="受付一覧">
               <div
                 className="reception-status-tabs__panel"
@@ -5263,14 +5130,7 @@ export function ReceptionPage({
               >
                 {statusListLayout === 'cards' ? (
                   <section className="reception-board__column" data-status={activeStatusTab} aria-label={`${activeStatusLabel}一覧`}>
-                    <header className="reception-board__header">
-                      <div className="reception-board__title">
-                        <h2>{activeStatusLabel}</h2>
-                        <span className="reception-board__count" aria-live={infoLive}>
-                          {activeStatusItems.length}件
-                        </span>
-                      </div>
-                    </header>
+                    {renderReceptionSectionHeader('cards')}
                     <div className="reception-board__body" role="list" aria-label={`${activeStatusLabel}の患者一覧`}>
                       {activeStatusItems.length === 0 ? (
                         <p className="reception-board__empty">「{activeStatusLabel}」に該当する患者はいません。</p>
@@ -5638,14 +5498,7 @@ export function ReceptionPage({
                   </section>
                 ) : (
                   <section className="reception-section" aria-label={`${activeStatusLabel}一覧`}>
-                    <header className="reception-section__header">
-                      <div>
-                        <h2 id={`reception-section-label-${activeStatusTab}`}>{activeStatusLabel}</h2>
-                        <span className="reception-section__count" aria-live={infoLive}>
-                          {activeStatusItems.length} 件
-                        </span>
-                      </div>
-                    </header>
+                    {renderReceptionSectionHeader('table')}
                     <div
                       className="reception-table__wrapper"
                       role="region"

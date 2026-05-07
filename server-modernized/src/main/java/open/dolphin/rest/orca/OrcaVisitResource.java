@@ -1377,9 +1377,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             visit.setInsuranceCombinationNumber(identifiers.insuranceCombinationNumber());
             visit.setUpdateDate(fromDate.toString());
             visit.setUpdateTime(ORCA_TIME_FORMAT.format(row.acceptanceDatetime()));
-            visit.setPatient(projectionPatientSummaryRepository != null
-                    ? projectionPatientSummaryRepository.findByFacilityAndPatientId(facilityId, row.patientId())
-                    : null);
+            visit.setPatient(resolveProjectedPatientSummary(facilityId, row.patientId()));
             response.getVisits().add(visit);
             collectKey(seenEncounterKeys, row.encounterKey());
             collectKey(seenAcceptanceIds, row.orcaAcceptanceId());
@@ -1390,6 +1388,22 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             response.setRecordsReturned(response.getVisits().size());
             response.setFallbackUsed(true);
         }
+    }
+
+    PatientSummary resolveProjectedPatientSummary(String facilityId, String patientId) {
+        String normalizedPatientId = normalize(patientId);
+        if (normalizedPatientId == null) {
+            return null;
+        }
+        PatientSummary summary = projectionPatientSummaryRepository != null
+                ? projectionPatientSummaryRepository.findByFacilityAndPatientId(facilityId, normalizedPatientId)
+                : null;
+        if (summary != null && normalize(summary.getPatientId()) != null) {
+            return summary;
+        }
+        PatientSummary fallback = new PatientSummary();
+        fallback.setPatientId(normalizedPatientId);
+        return fallback;
     }
 
     private String buildProjectionWorklistFlags(VisitMutationRequest body, VisitMutationResponse response) {

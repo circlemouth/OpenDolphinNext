@@ -1543,6 +1543,12 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
     if (!checkedAt) return orcaTopStatus.detail;
     return `${orcaTopStatus.detail} / 最終確認: ${checkedAt}`;
   }, [orcaTopStatus.checkedAt, orcaTopStatus.detail]);
+  const visibleOrcaTopStatus =
+    isSystemAdmin && (orcaTopStatus.tone === 'warning' || orcaTopStatus.tone === 'error') ? orcaTopStatus : null;
+
+  const handleOpenAdministration = useCallback(() => {
+    navigate(buildFacilityPath(session.facilityId, '/administration'));
+  }, [navigate, session.facilityId]);
 
   const executeSwitchAccount = useCallback(() => {
     const switchContext = buildSwitchContext(session, 'manual');
@@ -1632,7 +1638,22 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
               権限: {displayedRole}
             </span>
             <span id="app-shell-session-status-slot" className="app-shell__session-status-slot" aria-live="polite" />
+            {visibleOrcaTopStatus ? (
+              <span
+                className={`status-pill status-pill--xs status-pill--${visibleOrcaTopStatus.tone}`}
+                role="status"
+                aria-live="polite"
+                title={orcaTopStatusTooltip}
+              >
+                {visibleOrcaTopStatus.label}
+              </span>
+            ) : null}
             <div className="app-shell__session-actions" role="group" aria-label="セッション操作">
+              {isSystemAdmin ? (
+                <button type="button" className="app-shell__admin" onClick={handleOpenAdministration} aria-label="管理画面を開く">
+                  管理画面
+                </button>
+              ) : null}
               <button type="button" className="app-shell__switch" onClick={requestSwitchAccount}>
                 ユーザー切替
               </button>
@@ -1648,16 +1669,6 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
         <WorkspaceTabBar
           facilityId={session.facilityId}
           userId={session.userId}
-          role={effectiveSystemAdminRole ?? session.role}
-          orcaStatus={
-            isSystemAdmin
-              ? {
-                  tone: orcaTopStatus.tone,
-                  label: orcaTopStatus.label,
-                  tooltip: orcaTopStatusTooltip,
-                }
-              : undefined
-          }
         />
 
         <div className="app-shell__body" id="app-shell-main" tabIndex={-1} data-tab-id={outletScreenKey}>

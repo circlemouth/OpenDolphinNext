@@ -154,11 +154,12 @@ export const receptionStyles = css`
   }
 
   .reception-page {
+    --reception-page-gutter: clamp(1rem, 4vw, 2.75rem);
     --reception-floating-offset-right: max(1rem, calc(env(safe-area-inset-right) + 0.65rem));
     --reception-floating-offset-bottom: max(1rem, calc(env(safe-area-inset-bottom) + 0.65rem));
     --reception-floating-stack-height: 0rem;
     min-height: 100vh;
-    padding: 3rem clamp(1rem, 4vw, 2.75rem) 3rem;
+    padding: 3rem var(--reception-page-gutter) 3rem;
     background: var(--ui-surface-muted);
     display: flex;
     flex-direction: column;
@@ -378,33 +379,88 @@ export const receptionStyles = css`
     font-size: 0.85rem;
   }
 
+  .reception-toolbar--embedded {
+    gap: 0.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__form {
+    grid-template-columns: minmax(280px, 1fr) minmax(260px, 1fr) minmax(300px, auto);
+    gap: 0.5rem;
+    align-items: end;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__cluster,
+  .reception-toolbar--embedded .reception-toolbar__status {
+    gap: 0.42rem;
+    padding: 0.48rem;
+    border-color: rgba(148, 163, 184, 0.2);
+    background: #f8fafc;
+    align-self: end;
+    min-height: 0;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__cluster--search {
+    background: #ffffff;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__cluster-title,
+  .reception-toolbar--embedded .reception-search__field > span {
+    font-size: 0.72rem;
+    line-height: 1.1;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__cluster-title {
+    flex: 0 0 auto;
+    margin-right: 0.1rem;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__cluster--date {
+    align-items: center;
+  }
+
+  .reception-toolbar--embedded .reception-search__button,
+  .reception-toolbar__advanced--embedded .reception-search__button {
+    min-height: 2.25rem;
+    padding: 0.38rem 0.68rem;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__date-field {
+    flex-basis: 8.8rem;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__keyword-field {
+    min-width: 10rem;
+  }
+
+  .reception-toolbar__advanced--embedded {
+    margin-top: 0.55rem;
+    padding: 0.55rem 0 0;
+    border: 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .reception-toolbar__advanced--embedded .reception-toolbar__advanced-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .reception-toolbar__advanced--embedded .reception-toolbar__summary {
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+  }
+
   .reception-list {
     display: flex;
     flex-direction: column;
     gap: 0.9rem;
-  }
-
-  .reception-daily-calendar__trigger {
-    border-radius: 8px;
-    border: 1px solid rgba(148, 163, 184, 0.35);
-    background: rgba(255, 255, 255, 0.92);
-    color: #1e293b;
-    min-height: 2.5rem;
-    width: auto;
-    padding: 0.45rem 0.68rem;
-    box-shadow: none;
-    cursor: pointer;
-    text-align: left;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-  }
-
-  .reception-daily-calendar__trigger:focus-visible {
-    outline: 3px solid rgba(37, 99, 235, 0.45);
-    outline-offset: 2px;
+    width: calc(100% + (var(--reception-page-gutter) * 2));
+    margin-inline: calc(var(--reception-page-gutter) * -1);
   }
 
   .reception-page__header h1 {
@@ -417,174 +473,6 @@ export const receptionStyles = css`
     margin: 0.65rem 0 0;
     color: #475569;
     line-height: 1.6;
-  }
-
-  .reception-daily-calendar {
-    position: relative;
-    display: inline-flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .reception-daily-calendar__trigger {
-    min-width: 9.4rem;
-  }
-
-  .reception-daily-calendar__trigger-label {
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: #475569;
-  }
-
-  .reception-daily-calendar__trigger-date {
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-    font-size: 0.84rem;
-    font-weight: 800;
-    color: #334155;
-  }
-
-  .reception-daily-calendar.is-open .reception-daily-calendar__trigger {
-    border-color: rgba(100, 116, 139, 0.6);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  }
-
-  .reception-daily-calendar__popover {
-    position: absolute;
-    bottom: calc(100% + 0.55rem);
-    right: 0;
-    top: auto;
-    width: min(340px, 92vw);
-    border-radius: 20px;
-    border: 1px solid rgba(148, 163, 184, 0.45);
-    background: #ffffff;
-    box-shadow: 0 22px 60px rgba(15, 23, 42, 0.25);
-    padding: 0.85rem 0.9rem;
-    z-index: 200;
-    transform-origin: right bottom;
-    animation: reception-float-up 180ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .reception-daily-calendar__popover-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .reception-daily-calendar__month {
-    font-weight: 900;
-    color: #0f172a;
-    font-size: 0.98rem;
-  }
-
-  .reception-daily-calendar__nav {
-    border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, 0.55);
-    background: #ffffff;
-    color: #0f172a;
-    padding: 0.3rem 0.65rem;
-    cursor: pointer;
-    font-weight: 800;
-    font-size: 0.85rem;
-  }
-
-  .reception-daily-calendar__nav:hover {
-    background: #f1f5f9;
-  }
-
-  .reception-daily-calendar__weekdays {
-    margin-top: 0.65rem;
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.25rem;
-    font-size: 0.75rem;
-    font-weight: 900;
-    color: #64748b;
-    text-align: center;
-  }
-
-  .reception-daily-calendar__days {
-    margin-top: 0.35rem;
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.25rem;
-  }
-
-  .reception-daily-calendar__day {
-    border-radius: 12px;
-    border: 1px solid transparent;
-    background: transparent;
-    padding: 0.5rem 0;
-    font-weight: 900;
-    cursor: pointer;
-    color: rgba(100, 116, 139, 0.7);
-  }
-
-  .reception-daily-calendar__day.is-enabled {
-    color: #0f172a;
-    border-color: rgba(37, 99, 235, 0.22);
-    background: rgba(239, 246, 255, 0.65);
-  }
-
-  .reception-daily-calendar__day.is-enabled:hover {
-    background: rgba(219, 234, 254, 0.85);
-    border-color: rgba(37, 99, 235, 0.4);
-  }
-
-  .reception-daily-calendar__day.is-selected {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
-    color: #ffffff;
-  }
-
-  .reception-daily-calendar__day.is-outside:not(.is-selected) {
-    opacity: 0.5;
-  }
-
-  .reception-daily-calendar__day:disabled {
-    cursor: not-allowed;
-    opacity: 0.45;
-    background: transparent;
-    border-color: transparent;
-  }
-
-  .reception-daily-calendar__day:focus-visible {
-    outline: 3px solid rgba(37, 99, 235, 0.45);
-    outline-offset: 2px;
-  }
-
-  .reception-daily-calendar__legend {
-    margin-top: 0.65rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    font-size: 0.78rem;
-    color: #475569;
-    font-weight: 700;
-  }
-
-  .reception-daily-calendar__legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  .reception-daily-calendar__legend-dot {
-    width: 0.65rem;
-    height: 0.65rem;
-    border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, 0.55);
-    background: rgba(148, 163, 184, 0.18);
-  }
-
-  .reception-daily-calendar__legend-dot[data-kind='enabled'] {
-    border-color: rgba(37, 99, 235, 0.35);
-    background: rgba(219, 234, 254, 0.95);
-  }
-
-  .reception-daily-calendar__legend-dot[data-kind='selected'] {
-    border-color: rgba(37, 99, 235, 0.95);
-    background: rgba(29, 78, 216, 0.95);
   }
 
   .order-console {
@@ -2494,10 +2382,14 @@ export const receptionStyles = css`
   }
 
   .reception-status-tabs {
-    background: #ffffff;
-    border-radius: var(--ui-radius-lg);
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    padding: 0.75rem 0.85rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    background: transparent;
+    border-radius: 0;
+    border: 0;
+    padding: 0;
     box-shadow: none;
   }
 
@@ -2512,9 +2404,9 @@ export const receptionStyles = css`
   .reception-status-tabs__layout-actions {
     display: inline-flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 0.4rem;
-    margin-left: auto;
+    margin-left: 0;
   }
 
   .reception-status-tabs__summary {
@@ -2524,10 +2416,15 @@ export const receptionStyles = css`
     min-width: 0;
   }
 
+  .reception-status-tabs__filters {
+    margin: 0 0 0.7rem;
+  }
+
   .reception-status-tabs__list {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+    min-width: 0;
   }
 
   .reception-status-tabs__tab {
@@ -2642,6 +2539,73 @@ export const receptionStyles = css`
     background: linear-gradient(90deg, rgba(238, 242, 255, 0.95) 0%, #ffffff 65%);
     border-bottom: 1px solid rgba(148, 163, 184, 0.22);
     border-top: 4px solid var(--reception-board-accent);
+  }
+
+  .reception-board__header--workspace,
+  .reception-section__header--workspace {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.65rem;
+    padding: 0.85rem 1rem;
+    background: #f8fafc;
+    border-top: 4px solid var(--reception-board-accent, rgba(2, 132, 199, 0.85));
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  }
+
+  .reception-workspace-header__primary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .reception-workspace-header__title {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    min-width: 0;
+  }
+
+  .reception-workspace-header__title:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.45);
+    outline-offset: 3px;
+    border-radius: 8px;
+  }
+
+  .reception-workspace-header__title h2 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.2rem;
+    line-height: 1.2;
+  }
+
+  .reception-workspace-header__chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  .reception-workspace-header__chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.7rem;
+    border: 1px solid rgba(37, 99, 235, 0.24);
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .reception-workspace-header__controls {
+    min-width: 0;
   }
 
   .reception-board__title {
@@ -3574,8 +3538,8 @@ export const receptionStyles = css`
   }
 
   .reception-board--table .reception-section {
-    display: grid;
-    grid-template-columns: 132px minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     align-items: stretch;
   }
 
@@ -3596,13 +3560,7 @@ export const receptionStyles = css`
   }
 
   .reception-board--table .reception-section__header {
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: flex-start;
-    gap: 0.55rem;
-    padding: 0.9rem 0.85rem;
-    background: transparent;
-    border-right: 1px solid rgba(148, 163, 184, 0.22);
+    border-right: 0;
   }
 
   .reception-section__header h2 {
@@ -3611,10 +3569,10 @@ export const receptionStyles = css`
   }
 
   .reception-board--table .reception-section__header h2 {
-    font-size: 0.86rem;
+    font-size: 1.2rem;
     line-height: 1.2;
-    color: #334155;
-    letter-spacing: 0.02em;
+    color: #0f172a;
+    letter-spacing: 0;
   }
 
   .reception-section__count {
@@ -4091,8 +4049,34 @@ export const receptionStyles = css`
       padding: 0.7rem;
     }
 
+    .reception-toolbar--embedded {
+      padding: 0;
+    }
+
     .reception-toolbar__form {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .reception-toolbar--embedded .reception-toolbar__form {
+      grid-template-columns: minmax(0, 1fr);
+      width: 100%;
+    }
+
+    .reception-toolbar--embedded .reception-toolbar__cluster,
+    .reception-toolbar--embedded .reception-toolbar__status {
+      align-self: stretch;
+      width: 100%;
+    }
+
+    .reception-workspace-header__primary,
+    .reception-status-tabs {
+      align-items: stretch;
+    }
+
+    .reception-status-tabs__layout-actions,
+    .reception-status-tabs__list,
+    .reception-workspace-header__chips {
+      justify-content: flex-start;
     }
 
     .reception-toolbar__cluster,
@@ -4101,9 +4085,7 @@ export const receptionStyles = css`
     }
 
     .reception-toolbar__date-field,
-    .reception-toolbar__keyword-field,
-    .reception-daily-calendar,
-    .reception-daily-calendar__trigger {
+    .reception-toolbar__keyword-field {
       flex: 1 1 100%;
       width: 100%;
     }
@@ -4123,11 +4105,6 @@ export const receptionStyles = css`
     .reception-results-toolbar__actions {
       width: 100%;
       justify-content: flex-start;
-    }
-
-    .reception-daily-calendar__popover {
-      width: min(320px, calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 1rem));
-      bottom: calc(100% + 0.5rem);
     }
 
     .reception-layout {
@@ -4200,10 +4177,6 @@ export const receptionStyles = css`
 
     .reception-board__column {
       flex: 0 0 300px;
-    }
-
-    .reception-board--table .reception-section {
-      grid-template-columns: 1fr;
     }
 
     .reception-board--table .reception-section__header {

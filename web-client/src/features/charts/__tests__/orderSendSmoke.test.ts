@@ -1518,7 +1518,7 @@ describe('order send smoke', () => {
     expect(requestUrls.filter((url) => url === '/api/local/prescription-orders')).toHaveLength(2);
   });
 
-  it('postOrcaMedicalModV2Xml treats same-day duplicate as idempotent success', async () => {
+  it('postOrcaMedicalModV2Xml treats same-day duplicate as ORCA business rejection', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -1559,7 +1559,7 @@ describe('order send smoke', () => {
       { classCode: '01' },
     );
 
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
     expect(result.apiResult).toBe('80');
     expect(result.apiResultMessage).toBe('既に同日の診療データが登録されています');
   });

@@ -333,6 +333,9 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const approvalLocked = approvalLock?.locked === true;
   const approvalReason = approvalLocked ? '署名確定済みです。編集内容は履歴として追記されます。' : undefined;
   const actionLocked = uiLocked || isRunning || readOnly;
+  const parentActionLocked = isRunning || lockReason !== null;
+  const parentActionLockReason =
+    lockReason ?? (isRunning && runningAction ? `${ACTION_LABEL[runningAction]}を実行中です。` : undefined);
   const isLocked = actionLocked;
   const resolvedTraceId = traceId ?? getObservabilityMeta().traceId;
   const resolvedPatientId = patientId ?? selectedEntry?.patientId;
@@ -405,9 +408,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     if (!value) return undefined;
     return value.length >= 10 ? value.slice(0, 10) : value;
   };
-
-  const isIdempotentDuplicate = (apiResult?: string, apiResultMessage?: string) =>
-    apiResult === '80' && Boolean(apiResultMessage && /既に同日の診療データが登録されています/.test(apiResultMessage));
 
   const sendQueueLabel = useMemo(() => {
     const phase = queueEntry?.phase;
@@ -804,8 +804,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     return entries;
   }, [finishPrecheckReasons, printPrecheckReasons, sendPrecheckReasons]);
   useEffect(() => {
-    onLockChange?.(actionLocked, resolvedLockReason ?? undefined);
-  }, [actionLocked, onLockChange, resolvedLockReason]);
+    onLockChange?.(parentActionLocked, parentActionLockReason);
+  }, [onLockChange, parentActionLocked, parentActionLockReason]);
 
   const statusLine = useMemo(() => {
     if (isRunning && runningAction) {
@@ -1408,11 +1408,10 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             medicalInformation: preparedSendData.medicalInformation,
           });
           const result = await postOrcaMedicalModV2Xml(requestXml, { classCode: '01', signal });
-          const idempotentDuplicate = isIdempotentDuplicate(result.apiResult, result.apiResultMessage);
           const transportOk = result.ok;
-          const apiOk = (result.apiOk ?? isOrcaSuccessResult(result.apiResult)) || idempotentDuplicate;
+          const apiOk = result.apiOk ?? isOrcaSuccessResult(result.apiResult);
           const hasMissingTags = Boolean(result.missingTags?.length);
-          const allowMissingTags = idempotentDuplicate;
+          const allowMissingTags = false;
           const outcome = transportOk && apiOk && (!hasMissingTags || allowMissingTags) ? 'success' : transportOk ? 'warning' : 'error';
           const durationMs = Math.round(performance.now() - startedAt);
           const nextRunId = result.runId ?? getObservabilityMeta().runId ?? runId;

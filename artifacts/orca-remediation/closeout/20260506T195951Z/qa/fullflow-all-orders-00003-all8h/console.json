@@ -1,0 +1,11 @@
+[
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+    "location": {
+      "url": "https://localhost:5173/api/local/order/bundles",
+      "lineNumber": 0,
+      "columnNumber": 0
+    }
+  }
+]

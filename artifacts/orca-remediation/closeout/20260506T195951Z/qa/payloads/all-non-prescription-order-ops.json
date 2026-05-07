@@ -1,0 +1,97 @@
+[
+  {
+    "operation": "create",
+    "entity": "treatmentOrder",
+    "bundleName": "処置 __RUN_ID__",
+    "bundleNumber": "1",
+    "classCode": "400",
+    "classCodeSystem": "Claim007",
+    "className": "処置",
+    "startDate": "__ORDER_START_DATE__",
+    "items": [
+      { "code": "140000610", "name": "創傷処置", "quantity": "1", "unit": "回", "rowRole": "main" }
+    ]
+  },
+  {
+    "operation": "create",
+    "entity": "testOrder",
+    "bundleName": "検査 __RUN_ID__",
+    "bundleNumber": "1",
+    "classCode": "600",
+    "classCodeSystem": "Claim007",
+    "className": "検査",
+    "startDate": "__ORDER_START_DATE__",
+    "items": [
+      { "code": "160000310", "name": "尿一般", "quantity": "1", "unit": "回", "rowRole": "main" }
+    ]
+  },
+  {
+    "operation": "create",
+    "entity": "instractionChargeOrder",
+    "bundleName": "指導料 __RUN_ID__",
+    "bundleNumber": "1",
+    "classCode": "130",
+    "classCodeSystem": "Claim007",
+    "className": "医学管理",
+    "startDate": "__ORDER_START_DATE__",
+    "items": [
+      { "code": "112007410", "name": "在宅自己注射指導管理料", "quantity": "1", "unit": "回", "rowRole": "main", "masterCategory": "130" }
+    ]
+  },
+  {
+    "operation": "create",
+    "entity": "surgeryOrder",
+    "bundleName": "手術 __RUN_ID__",
+    "bundleNumber": "1",
+    "classCode": "500",
+    "classCodeSystem": "Claim007",
+    "className": "手術",
+    "startDate": "__ORDER_START_DATE__",
+    "items": [
+      { "code": "150003110", "name": "皮膚切開術", "quantity": "1", "unit": "回", "rowRole": "main" }
+    ]
+  },
+  {
+    "operation": "create",
+    "entity": "radiologyOrder",
+    "bundleName": "画像診断 __RUN_ID__",
+    "bundleNumber": "1",
+    "classCode": "700",
+    "classCodeSystem": "Claim007",
+    "className": "画像診断",
+    "startDate": "__ORDER_START_DATE__",
+    "bodyPart": { "code": "002001", "name": "胸部", "quantity": "1", "unit": "部位", "rowRole": "bodyPart" },
+    "items": [
+      { "code": "170027910", "name": "単純撮影", "quantity": "1", "unit": "回", "rowRole": "main" },
+      { "code": "820181000", "name": "画像診断コメント", "quantity": "1", "unit": "回", "rowRole": "comment", "structuredCommentValue": "QA" }
+    ]
+  },
+  {
+    "operation": "create",
+    "entity": "baseChargeOrder",
+    "bundleName": "基本診療料 __RUN_ID__",
+    "bundleNumber": "1",
+    "classCode": "110",
+    "classCodeSystem": "Claim007",
+    "className": "基本診療料",
+    "startDate": "__ORDER_START_DATE__",
+    "items": [
+      { "code": "110000110", "name": "初診料", "quantity": "1", "unit": "回", "rowRole": "main", "masterCategory": "110" }
+    ]
+  },
+  {
+    "operation": "create",
+    "entity": "injectionOrder",
+    "bundleName": "注射 __RUN_ID__",
+    "bundleNumber": "1",
+    "classCode": "310",
+    "classCodeSystem": "Claim007",
+    "className": "注射",
+    "startDate": "__ORDER_START_DATE__",
+    "items": [
+      { "code": "621894701", "name": "生理食塩液", "quantity": "1", "unit": "管", "rowRole": "main" },
+      { "code": "700000031", "name": "注射手技材料", "quantity": "1", "unit": "回", "rowRole": "material" },
+      { "code": "0085001", "name": "注射コメント", "quantity": "1", "unit": "回", "rowRole": "comment", "structuredCommentValue": "QA" }
+    ]
+  }
+]

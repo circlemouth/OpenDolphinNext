@@ -146,6 +146,17 @@ class OrcaAppointmentResourceTest {
     }
 
     @Test
+    void projectedAppointmentPatientSummaryFallsBackToServerPatientId() {
+        OrcaAppointmentResource resource = new OrcaAppointmentResource();
+
+        PatientSummary summary = resource.resolveProjectedPatientSummary("F001", " 000099 ");
+
+        assertNotNull(summary);
+        assertEquals("000099", summary.getPatientId());
+        assertNull(summary.getWholeName());
+    }
+
+    @Test
     void medicalInformationOptionsReturnsStubPayload() {
         OrcaAppointmentResource resource = new OrcaAppointmentResource();
         resource.setWrapperService(createService());

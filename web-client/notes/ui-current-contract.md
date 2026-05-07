@@ -63,8 +63,9 @@
 ## App Shell Surface
 ### Current Fact
 - App shell の brand 表示は `OpenDolphinNext` です。
-- 通常トップバーには session 操作として `ユーザー切替` と `ログアウト` を置きます。
+- 通常トップバーには session 操作として `ユーザー切替` と `ログアウト` を置き、admin 権限がある場合だけ `管理画面` を同じ session 操作群に置きます。
 - 通常トップバーには施設IDと RUN_ID copy CTA を常時表示しません。RUN_ID / traceId は障害時や support surface の safe support ID として扱います。
+- ORCA readiness は管理画面/運用監視を正本とし、App shell では warning/error の時だけ compact status を出します。正常時の `ORCA: readiness OK` は常時表示しません。
 - `受付` / `患者管理` は workspace tab の固定導線で、現在画面は active tab の強調表示で示します。
 
 ### Guard Behavior Minimum
@@ -125,6 +126,8 @@
 - 受付登録時の `Medical_Information` は UI 選択時のみ送信し、未選択なら送信しません。
 - 担当医コード、`Acceptance_Push`、診療内容コードは client 側で補完・正規化・抑止せず、選択値または未送信をそのまま official bridge に渡します。
 - ただし一部 WebORCA 環境で `Acceptance_Push` suppress が必要な場合は、client ではなく server runtime config `ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH=true` で明示します。default は off です。
+- 受付登録 response は `Api_Result=00` / `0000` / warning code だけでは成功扱いにしません。`acceptanceId` / `voucherNumber` / `scheduleKey` / `encounterKey` / `Acceptance_Info` などの受付登録証跡が同じ response にある場合だけ `businessAccepted` / `businessAcceptedWithWarnings` として一覧へ反映します。
+- patient evidence だけの response は `notVerified` とし、患者ID・氏名などから受付行や canonical handoff を client 側で捏造しません。
 - 会計送信や受付後続で使う visit context は `departmentCode` / `physicianCode` / `visitDate` の canonical 値だけを使い、display string 再解析・patientId first-match・`today` fallback を current contract に戻しません。
 - accept 成功後に charts を開く handoff は、mutation response の `scheduleKey` / `encounterKey` を優先し、未返却時だけ同一受付を指す refreshed entry で補完します。`patientId` 単独一致では handoff を解決しません。
 - patient search 結果から charts を開く導線は、直前 accept で確立した canonical handoff か、当日の active entry を一意に解決できる場合に限って有効化します。複数 active entry がある場合は fail-close します。
@@ -132,6 +135,10 @@
 - 受付ツールバーは正常時の `RT同期 接続済み` と `最終更新` を表示しません。自動更新停止や予約/来院データ不整合など、ユーザー対応が必要な状態だけを `エラー` 導線に集約します。
 - `エラー` 導線は受付ツールバーではなく app shell のセッション領域に表示し、通常の検索・絞り込み操作から分離します。
 - 予約/来院データ不整合は常時バナーではなく、`エラー` 導線を開いた詳細内に表示します。患者単位の送信エラー・遅延・未承認とは件数を分けて扱います。
+- appointment/slot 行の不整合判定は旧 `appointmentId` 単独ではなく、`appointmentId` / `scheduleKey` / `encounterKey` のいずれかを予約識別子として扱います。projection 由来で ORCA 予約番号が未返却でも canonical key がある行は不整合扱いにしません。
+- visit 行の不整合判定は旧 `receptionId` 単独ではなく、`encounterKey` / `scheduleKey` / `receptionId` のいずれかを受付識別子として扱います。canonical key がある visit 行は、受付番号表示が空でも不整合扱いにしません。
+- ORCA 予約/来院 API の `slots` / `visits` に混在する診療科・医師などの selector option 行は、患者・予約・受付・時刻の業務 context を持たない場合は受付行へ変換しません。実患者行で患者 ID や canonical key が欠落している場合だけ不整合として扱います。
+- 受付日、検索、再取得、詳細条件、既存患者受付/患者検索、表示切替、ステータスタブは、独立した上部 toolbar ではなく active status の一覧 header に compact controls として置きます。受付日の変更は date input に統一し、別個の `日次状態` カレンダーボタンは置きません。診療科/担当医、保険/自費、ソート、保存ビュー、ビュー保存/削除/クリアは同じ header 内の詳細条件で展開します。
 - 受付一覧の `表` / `カード` 表示切替はステータスタブの右端に置き、検索条件操作とは別の list view 操作として扱います。
 - 受付一覧の通常表示では予約IDを患者ID列に出さず、生年月日は `1957年12月10日生` 形式で表示します。性別は文字列ではなく、男性は青、女性は赤の左端ラインで区別します。
 - 受付一覧の表表示は `支払` / `請求` / `直近` 列を通常列から外し、会計送信・ORCA状態・補正メモなど必要な操作情報だけを残します。

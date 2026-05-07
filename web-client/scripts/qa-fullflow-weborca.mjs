@@ -90,6 +90,8 @@ const orderBundlePrefix = process.env.QA_ORDER_BUNDLE_PREFIX ?? '代表オーダ
 const orderBundleName = process.env.QA_ORDER_BUNDLE_NAME ?? `${orderBundlePrefix}${runId}`;
 const orderItemName = process.env.QA_ORDER_ITEM_NAME ?? 'テストオーダー項目';
 const orderQuantity = process.env.QA_ORDER_ITEM_QUANTITY ?? '1';
+const forceOrderFallback = process.env.QA_FORCE_ORDER_FALLBACK === '1';
+const skipOrderEditor = process.env.QA_SKIP_ORDER_EDITOR === '1';
 const masterKeyword = process.env.QA_MASTER_KEYWORD ?? '';
 const masterType = process.env.QA_MASTER_TYPE ?? 'material';
 const materialKeyword = process.env.QA_MATERIAL_KEYWORD ?? '';
@@ -98,6 +100,52 @@ const materialUnit = process.env.QA_MATERIAL_UNIT ?? '';
 
 const expectedMedicationCode = process.env.QA_EXPECT_MEDICATION_CODE ?? '';
 const expectedMedicationNumber = process.env.QA_EXPECT_MEDICATION_NUMBER ?? '';
+
+const applyOrderOperationTemplates = (value) => {
+  if (Array.isArray(value)) return value.map((entry) => applyOrderOperationTemplates(entry));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, applyOrderOperationTemplates(entry)]));
+  }
+  if (typeof value !== 'string') return value;
+  return value
+    .replaceAll('__RUN_ID__', runId)
+    .replaceAll('__PATIENT_ID__', patientId)
+    .replaceAll('__ORDER_START_DATE__', orderStartDate)
+    .replaceAll('__ORDER_BUNDLE_NAME__', orderBundleName);
+};
+
+const parseOrderFallbackOperations = () => {
+  const operationsPath = process.env.QA_ORDER_FALLBACK_OPERATIONS_FILE?.trim();
+  const raw = operationsPath
+    ? fs.readFileSync(path.resolve(process.cwd(), operationsPath), 'utf8')
+    : process.env.QA_ORDER_FALLBACK_OPERATIONS_JSON;
+  if (!raw?.trim()) return null;
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error('QA_ORDER_FALLBACK_OPERATIONS_JSON must be a non-empty JSON array');
+  }
+  return applyOrderOperationTemplates(parsed);
+};
+
+const orderFallbackOperations = parseOrderFallbackOperations();
+const savePrescriptionEncounterVariants = process.env.QA_PRESCRIPTION_SAVE_ENCOUNTER_VARIANTS === '1';
+const resetLocalAllOrderBundles = process.env.QA_RESET_LOCAL_ALL_ORDER_BUNDLES === '1';
+const resetLocalOrderNeedle = process.env.QA_RESET_LOCAL_ORDER_NEEDLE?.trim() ?? '';
+
+const parsePrescriptionFallbackOrder = () => {
+  const orderPath = process.env.QA_PRESCRIPTION_FALLBACK_FILE?.trim();
+  const raw = orderPath
+    ? fs.readFileSync(path.resolve(process.cwd(), orderPath), 'utf8')
+    : process.env.QA_PRESCRIPTION_FALLBACK_JSON;
+  if (!raw?.trim()) return null;
+  const parsed = JSON.parse(raw);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('QA_PRESCRIPTION_FALLBACK_JSON must be a JSON object');
+  }
+  return applyOrderOperationTemplates(parsed);
+};
+
+const prescriptionFallbackOrder = parsePrescriptionFallbackOrder();
 
 const resolveQaOrderGroup = (entity) => {
   switch (entity) {
@@ -203,6 +251,18 @@ const isMedicalModV2Url = (url) => {
   if (url.includes('/api21/medicalmodv2?')) return true;
   return /\/api21\/medicalmodv2(?:$|#)/.test(url);
 };
+
+const parseJsonObject = (value) => {
+  if (!value || typeof value !== 'string') return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const isAllZeroApiResult = (value) => Boolean(value && /^[0]+$/.test(String(value)));
 
 const isTarget = (url) =>
   url.includes(MEDICAL_INFORMATION_PROBE_PATH) ||
@@ -633,6 +693,7 @@ const buildBlockerSummary = (summary) => ({
     validation: summary.sendResult?.validation,
   },
   orderResult: summary.orderResult,
+  prescriptionResult: summary.prescriptionResult,
   billingResult: summary.billingResult,
   handoffStatePath: 'handoff-state.json',
   selectedVisitRowPath: 'selected-visit-row.json',
@@ -709,6 +770,7 @@ const buildSummaryMarkdown = (summary) =>
   `- Charts Handoff: ${summary.chartsHandoff?.status ?? 'unknown'}\n` +
   `- Visit Row Readiness: ${summary.visitRowReadiness ?? 'unknown'}\n` +
   `- Order Result: ${summary.orderResult?.status ?? 'unknown'}\n` +
+  `- Prescription Result: ${summary.prescriptionResult?.status ?? 'unknown'}\n` +
   `- ORCA Send: ${summary.sendResult?.status ?? 'unknown'}\n` +
   `- Blocker: ${summary.blockerClassification}\n` +
   (summary.blockerReason ? `- Blocker Reason: ${summary.blockerReason}\n` : '') +
@@ -1136,6 +1198,154 @@ const run = async () => {
   const chartsShot = await writeScreenshot(page, '04-charts-open');
 
   let orderResult = { status: 'skipped', detail: 'not attempted' };
+  if (resetLocalAllOrderBundles) {
+    const resetAllResult = await page.evaluate(
+      async ({ targetPatientId, targetRunId, targetStartDate, nameNeedle }) => {
+        const csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute('content')?.trim() ?? '';
+        if (!csrfToken || csrfToken === '__CSRF_TOKEN__') {
+          return { status: 0, deleted: 0, ok: false, reason: 'csrf-missing' };
+        }
+        const entities = [
+          'treatmentOrder',
+          'testOrder',
+          'instractionChargeOrder',
+          'surgeryOrder',
+          'radiologyOrder',
+          'baseChargeOrder',
+          'injectionOrder',
+        ];
+        let deleted = 0;
+        for (const entity of entities) {
+          const query = new URLSearchParams({ patientId: targetPatientId, entity, from: targetStartDate });
+          const readResponse = await fetch(`/api/local/order/bundles?${query.toString()}`, {
+            credentials: 'same-origin',
+            headers: { 'X-Run-Id': targetRunId },
+          });
+          if (!readResponse.ok) {
+            return { status: readResponse.status, deleted, ok: false, reason: `fetch-failed:${entity}` };
+          }
+          const body = await readResponse.json().catch(() => ({}));
+          const bundles = Array.isArray(body?.bundles) ? body.bundles : [];
+          const deleteOperations = [];
+          for (const bundle of bundles) {
+            const bundleName = typeof bundle?.bundleName === 'string' ? bundle.bundleName : '';
+            if (nameNeedle && !bundleName.includes(nameNeedle)) continue;
+            if (typeof bundle?.documentId === 'number' && bundle.documentId > 0) {
+              deleteOperations.push({
+                operation: 'delete',
+                entity,
+                documentId: bundle.documentId,
+                bundleName: typeof bundle?.bundleName === 'string' ? bundle.bundleName : undefined,
+                bundleNumber: typeof bundle?.bundleNumber === 'string' ? bundle.bundleNumber : undefined,
+                classCode: typeof bundle?.classCode === 'string' ? bundle.classCode : undefined,
+                classCodeSystem: typeof bundle?.classCodeSystem === 'string' ? bundle.classCodeSystem : undefined,
+                className: typeof bundle?.className === 'string' ? bundle.className : undefined,
+                startDate: typeof bundle?.started === 'string' ? bundle.started.slice(0, 10) : targetStartDate,
+                bodyPart: bundle?.bodyPart ?? undefined,
+                items: Array.isArray(bundle?.items) ? bundle.items : undefined,
+              });
+            }
+          }
+          if (deleteOperations.length === 0) continue;
+          const deleteResponse = await fetch('/api/local/order/bundles', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Run-Id': targetRunId,
+              'X-CSRF-Token': csrfToken,
+            },
+            body: JSON.stringify({ patientId: targetPatientId, operations: deleteOperations }),
+          });
+          const text = await deleteResponse.text().catch(() => '');
+          if (!deleteResponse.ok) {
+            return {
+              status: deleteResponse.status,
+              deleted,
+              ok: false,
+              reason: text.slice(0, 500),
+            };
+          }
+          deleted += deleteOperations.length;
+        }
+        return { status: 200, deleted, ok: true, reason: '' };
+      },
+      {
+        targetPatientId: patientId,
+        targetRunId: runId,
+        targetStartDate: orderStartDate,
+        nameNeedle: resetLocalOrderNeedle,
+      },
+    );
+    logStep(
+      `order reset all status=${resetAllResult.ok ? 'ok' : 'error'} deleted=${resetAllResult.deleted} http=${resetAllResult.status}${
+        resetAllResult.reason ? ` reason=${resetAllResult.reason}` : ''
+      }`,
+    );
+  }
+  if (skipOrderEditor) {
+    logStep('order editor skipped by QA_SKIP_ORDER_EDITOR=1');
+    if (forceOrderFallback) {
+      const fallbackOrderResult = await page.evaluate(
+        async ({ targetPatientId, targetRunId, targetEntity, targetBundleName, targetStartDate, targetOperations }) => {
+          const csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute('content')?.trim() ?? '';
+          if (!csrfToken || csrfToken === '__CSRF_TOKEN__') {
+            return { status: 0, ok: false, reason: 'csrf-missing' };
+          }
+          const operations = Array.isArray(targetOperations) && targetOperations.length > 0
+            ? targetOperations
+            : [
+                {
+                  operation: 'create',
+                  entity: targetEntity,
+                  bundleName: targetBundleName,
+                  bundleNumber: '1',
+                  classCode: '400',
+                  classCodeSystem: 'Claim007',
+                  className: '処置',
+                  startDate: targetStartDate,
+                  items: [{ code: '140000610', name: '創傷処置', quantity: '1', unit: '回', rowRole: 'main' }],
+                },
+              ];
+          const response = await fetch('/api/local/order/bundles', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Run-Id': targetRunId,
+              'X-CSRF-Token': csrfToken,
+            },
+            body: JSON.stringify({
+              patientId: targetPatientId,
+              operations,
+            }),
+          });
+          const text = await response.text().catch(() => '');
+          return {
+            status: response.status,
+            ok: response.ok,
+            reason: response.ok ? '' : text.slice(0, 500),
+            operationCount: operations.length,
+          };
+        },
+        {
+          targetPatientId: patientId,
+          targetRunId: runId,
+          targetEntity: orderEntity,
+          targetBundleName: orderBundleName,
+          targetStartDate: orderStartDate,
+          targetOperations: orderFallbackOperations,
+        },
+      );
+      orderResult = {
+        status: fallbackOrderResult.ok ? String(fallbackOrderResult.status) : 'fallback-error',
+        detail: `order editor skipped; local coded order fallback status=${fallbackOrderResult.status} operations=${fallbackOrderResult.operationCount ?? 1}${fallbackOrderResult.reason ? ` reason=${fallbackOrderResult.reason}` : ''}`,
+      };
+      logStep(`order result=${orderResult.status}`);
+    } else {
+      orderResult = { status: 'skipped', detail: 'QA_SKIP_ORDER_EDITOR=1' };
+    }
+  } else {
   try {
     if (process.env.QA_RESET_LOCAL_ORDER_BUNDLES !== '0') {
       const resetResult = await page.evaluate(
@@ -1319,17 +1529,36 @@ const run = async () => {
       .catch(() => null);
 
     const saveOrderButton = orderPanel.getByRole('button', { name: /保存して追加|保存して更新|保存して閉じる/ }).first();
-    await saveOrderButton.click({ force: true });
-    const orderResponse = await orderResponsePromise;
+    if (forceOrderFallback) {
+      logStep('order save UI click skipped by QA_FORCE_ORDER_FALLBACK=1; using local order fallback payload');
+    } else {
+      await saveOrderButton.click({ force: true });
+    }
+    const orderResponse = forceOrderFallback ? null : await orderResponsePromise;
     if (orderResponse) {
       orderResult = { status: String(orderResponse.status()), detail: orderResponse.url() };
     } else {
       const fallbackOrderResult = await page.evaluate(
-        async ({ targetPatientId, targetRunId, targetEntity, targetBundleName, targetStartDate }) => {
+        async ({ targetPatientId, targetRunId, targetEntity, targetBundleName, targetStartDate, targetOperations }) => {
           const csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute('content')?.trim() ?? '';
           if (!csrfToken || csrfToken === '__CSRF_TOKEN__') {
             return { status: 0, ok: false, reason: 'csrf-missing' };
           }
+          const operations = Array.isArray(targetOperations) && targetOperations.length > 0
+            ? targetOperations
+            : [
+                {
+                  operation: 'create',
+                  entity: targetEntity,
+                  bundleName: targetBundleName,
+                  bundleNumber: '1',
+                  classCode: '400',
+                  classCodeSystem: 'Claim007',
+                  className: '処置',
+                  startDate: targetStartDate,
+                  items: [{ code: '140000610', name: '創傷処置', quantity: '1', unit: '回', rowRole: 'main' }],
+                },
+              ];
           const response = await fetch('/api/local/order/bundles', {
             method: 'POST',
             credentials: 'same-origin',
@@ -1340,22 +1569,16 @@ const run = async () => {
             },
             body: JSON.stringify({
               patientId: targetPatientId,
-              operations: [
-                {
-                  operation: 'create',
-                  entity: targetEntity,
-                  bundleName: targetBundleName,
-                  bundleNumber: '1',
-                  classCode: '400',
-                  classCodeSystem: 'Claim007',
-                  className: '処置',
-                  startDate: targetStartDate,
-                  items: [{ code: '140000610', name: '創傷処置', quantity: '1', unit: '回' }],
-                },
-              ],
+              operations,
             }),
           });
-          return { status: response.status, ok: response.ok, reason: '' };
+          const text = await response.text().catch(() => '');
+          return {
+            status: response.status,
+            ok: response.ok,
+            reason: response.ok ? '' : text.slice(0, 500),
+            operationCount: operations.length,
+          };
         },
         {
           targetPatientId: patientId,
@@ -1363,11 +1586,12 @@ const run = async () => {
           targetEntity: orderEntity,
           targetBundleName: orderBundleName,
           targetStartDate: orderStartDate,
+          targetOperations: orderFallbackOperations,
         },
       );
       orderResult = {
         status: fallbackOrderResult.ok ? String(fallbackOrderResult.status) : 'fallback-error',
-        detail: `order UI save response not captured; local coded order fallback status=${fallbackOrderResult.status}${fallbackOrderResult.reason ? ` reason=${fallbackOrderResult.reason}` : ''}`,
+        detail: `order UI save response not captured; local coded order fallback status=${fallbackOrderResult.status} operations=${fallbackOrderResult.operationCount ?? 1}${fallbackOrderResult.reason ? ` reason=${fallbackOrderResult.reason}` : ''}`,
       };
     }
     logStep(`order result=${orderResult.status}`);
@@ -1377,6 +1601,79 @@ const run = async () => {
   } catch (error) {
     orderResult = { status: 'error', detail: String(error) };
     logStep(`order error=${String(error)}`);
+  }
+  }
+
+  let prescriptionResult = { status: 'skipped', detail: 'not attempted' };
+  if (prescriptionFallbackOrder) {
+    const fallbackPrescriptionResult = await page.evaluate(
+      async ({ targetFacilityId, targetPatientId, targetRunId, targetOrder, saveEncounterVariants, targetEncounterIds }) => {
+        const csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute('content')?.trim() ?? '';
+        if (!csrfToken || csrfToken === '__CSRF_TOKEN__') {
+          return { status: 0, ok: false, reason: 'csrf-missing' };
+        }
+        const baseEncounterId = typeof targetOrder.encounterId === 'string' && targetOrder.encounterId.trim()
+          ? targetOrder.encounterId.trim()
+          : undefined;
+        const encounterIds = saveEncounterVariants
+          ? Array.from(new Set([baseEncounterId, `${targetFacilityId}:${targetPatientId}`, ...(targetEncounterIds ?? [])].filter(Boolean)))
+          : [baseEncounterId];
+        const results = [];
+        let rpCount = 0;
+        for (const encounterId of encounterIds) {
+          const order = {
+            ...targetOrder,
+            patientId: targetPatientId,
+            encounterId,
+          };
+          rpCount = Array.isArray(order.rps) ? order.rps.length : rpCount;
+          const response = await fetch('/api/local/prescription-orders', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Run-Id': targetRunId,
+              'X-CSRF-Token': csrfToken,
+            },
+            body: JSON.stringify(order),
+          });
+          const text = await response.text().catch(() => '');
+          results.push({
+            status: response.status,
+            ok: response.ok,
+            reason: response.ok ? '' : text.slice(0, 500),
+            encounterId,
+          });
+        }
+        const failed = results.find((result) => !result.ok);
+        const last = results[results.length - 1] ?? { status: 0, ok: false, reason: 'not-run' };
+        return {
+          status: failed?.status ?? last.status,
+          ok: !failed,
+          reason: failed?.reason ?? '',
+          rpCount,
+          savedCount: results.length,
+          encounterIds: results.map((result) => result.encounterId),
+        };
+      },
+      {
+        targetFacilityId: facilityId,
+        targetPatientId: patientId,
+        targetRunId: runId,
+        targetOrder: prescriptionFallbackOrder,
+        saveEncounterVariants: savePrescriptionEncounterVariants,
+        targetEncounterIds: [chartsHandoff.encounterKey, lastHandoffState?.encounterKey],
+      },
+    );
+    prescriptionResult = {
+      status: fallbackPrescriptionResult.ok ? String(fallbackPrescriptionResult.status) : 'fallback-error',
+      detail: `prescription fallback status=${fallbackPrescriptionResult.status} rps=${fallbackPrescriptionResult.rpCount ?? 0} saved=${fallbackPrescriptionResult.savedCount ?? 0}${
+        fallbackPrescriptionResult.reason ? ` reason=${fallbackPrescriptionResult.reason}` : ''
+      }`,
+    };
+    logStep(`prescription result=${prescriptionResult.status}`);
+  } else {
+    logStep('prescription fallback not configured');
   }
 
   const finishButton = page.getByRole('button', { name: /診療終了|診察終了/ });
@@ -1505,6 +1802,17 @@ const run = async () => {
   const fallbackMedicalModRecord = [...networkRecords]
     .reverse()
     .find((r) => typeof r?.url === 'string' && isMedicalModV2Url(r.url));
+  const sendResponseBodyText = sendResponse
+    ? await sendResponse.text().catch(() => '')
+    : (fallbackMedicalModRecord?.response?.body ? String(fallbackMedicalModRecord.response.body) : '');
+  const sendResponseBody = parseJsonObject(sendResponseBodyText);
+  const sendBusinessOk = Boolean(
+    sendResponse &&
+      sendResponse.status() >= 200 &&
+      sendResponse.status() < 300 &&
+      sendResponseBody.ok === true &&
+      (sendResponseBody.apiOk === true || isAllZeroApiResult(sendResponseBody.apiResult)),
+  );
 
   const medicalmodv2RequestBody =
     (sendRequest && isMedicalModV2Url(sendRequest.url()) ? sendRequest.postData() : null) ??
@@ -1601,8 +1909,10 @@ const run = async () => {
   await safeClose(() => browser.close());
 
   const blockerReason =
-    sendResponse && sendResponse.status() >= 200 && sendResponse.status() < 300
+    sendBusinessOk
       ? undefined
+      : sendResponse && sendResponse.status() >= 200 && sendResponse.status() < 300
+        ? `orca_business_rejected:${sendResponseBody.apiResult ?? 'unknown'}`
       : leakedQueryKeys.length > 0
         ? `privacy_contract_violation:${leakedQueryKeys.join(',')}`
         : visitRowReadiness === 'missing_official_visit_identifiers'
@@ -1657,10 +1967,15 @@ const run = async () => {
       chartsShot,
     },
     orderResult,
+    prescriptionResult,
     finishToastText,
     sendResult: {
       status: sendResponse ? String(sendResponse.status()) : 'no-response',
       url: sendResponse ? sendResponse.url() : '',
+      ok: sendResponseBody.ok,
+      apiOk: sendResponseBody.apiOk,
+      apiResult: sendResponseBody.apiResult,
+      apiResultMessage: sendResponseBody.apiResultMessage,
       toast: sendToastText,
       banner: sendBannerText.trim() || undefined,
       disabled: sendDisabled,
@@ -1686,8 +2001,10 @@ const run = async () => {
     },
     blockerReason,
     blockerClassification:
-      sendResponse && sendResponse.status() >= 200 && sendResponse.status() < 300
+      sendBusinessOk
         ? 'none'
+        : sendResponse && sendResponse.status() >= 200 && sendResponse.status() < 300
+          ? 'orca-business-rejected'
         : leakedQueryKeys.length > 0
           ? 'repo-defect'
         : visitRowReadiness === 'missing_official_visit_identifiers'

@@ -21,11 +21,17 @@ export type AppointmentDataIntegrityCounts = {
   missingReceptionId: number;
 };
 
+const hasReceptionIdentity = (entry: ReceptionEntry) =>
+  Boolean(entry.receptionId || entry.scheduleKey || entry.encounterKey);
+
+const hasScheduleIdentity = (entry: ReceptionEntry) =>
+  Boolean(entry.appointmentId || entry.scheduleKey || entry.encounterKey);
+
 export const countAppointmentDataIntegrity = (entries: ReceptionEntry[]): AppointmentDataIntegrityCounts => ({
   missingPatientId: entries.filter((entry) => !entry.patientId).length,
-  // `visits` は予約外受付を含み、appointmentId が未採番でも正常系。
-  missingAppointmentId: entries.filter((entry) => entry.source !== 'visits' && !entry.appointmentId).length,
-  missingReceptionId: entries.filter((entry) => entry.source === 'visits' && !entry.receptionId).length,
+  // projected schedule rows may be keyed by canonical schedule/encounter keys before ORCA assigns a visible appointment id.
+  missingAppointmentId: entries.filter((entry) => entry.source !== 'visits' && !hasScheduleIdentity(entry)).length,
+  missingReceptionId: entries.filter((entry) => entry.source === 'visits' && !hasReceptionIdentity(entry)).length,
 });
 
 export function getAppointmentDataBanner({
@@ -54,8 +60,8 @@ export function getAppointmentDataBanner({
 
   const parts = [
     missingPatientId > 0 ? `患者ID欠損: ${missingPatientId}` : undefined,
-    missingAppointmentId > 0 ? `予約ID欠損: ${missingAppointmentId}` : undefined,
-    missingReceptionId > 0 ? `受付ID欠損: ${missingReceptionId}` : undefined,
+    missingAppointmentId > 0 ? `予約識別子欠損: ${missingAppointmentId}` : undefined,
+    missingReceptionId > 0 ? `受付識別子欠損: ${missingReceptionId}` : undefined,
   ].filter((value): value is string => typeof value === 'string');
 
   return { tone: 'warning', message: `予約/来院データに不整合があります（${parts.join(' / ')}）` };
