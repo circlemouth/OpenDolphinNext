@@ -2959,6 +2959,10 @@ export const receptionStyles = css`
   }
 
   .reception-card__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
     border-radius: 999px;
     border: 1px solid #1d4ed8;
     background: #ffffff;
@@ -3010,6 +3014,9 @@ export const receptionStyles = css`
   }
 
   .reception-card__submenu-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     border-radius: 10px;
     border: 1px solid #cbd5e1;
     background: #ffffff;
@@ -3020,6 +3027,14 @@ export const receptionStyles = css`
     font-size: 0.8rem;
     text-align: left;
     transition: background 0.2s ease, border-color 0.2s ease;
+  }
+
+  .reception-card__action .clinical-icon,
+  .reception-card__submenu-item .clinical-icon,
+  .reception-search__button .clinical-icon {
+    width: 1.2em;
+    height: 1.2em;
+    margin-inline-end: 0;
   }
 
   .reception-card__submenu-item:hover {

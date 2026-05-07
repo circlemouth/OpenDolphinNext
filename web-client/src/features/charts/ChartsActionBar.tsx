@@ -49,6 +49,7 @@ import {
   type OrcaEncounterContext,
 } from './orcaEncounterContext';
 import { retryOrcaQueue } from '../outpatient/orcaQueueApi';
+import { ClinicalIcon } from '../shared/ClinicalIcon';
 
 type ChartAction = 'start' | 'pause' | 'finish' | 'send' | 'draft' | 'cancel' | 'print';
 
@@ -2201,7 +2202,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           onClick={() => handleAction('draft')}
           aria-keyshortcuts="Shift+Enter"
         >
-          ドラフト保存
+          <ClinicalIcon icon="draft-clinical" />
+          <span>ドラフト保存</span>
         </button>
       );
   const printActionButton = (
@@ -2217,7 +2219,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       title={printDisabled ? `印刷不可: ${printPrecheckReasons.map((reason) => reason.summary).join(' / ')}` : undefined}
       aria-keyshortcuts="Alt+I"
     >
-      印刷/エクスポート
+      <ClinicalIcon icon="print-export-clinical" />
+      <span>印刷/エクスポート</span>
     </button>
   );
   const returnToReceptionButton = onReturnToReception ? (
@@ -2228,7 +2231,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       disabled={isRunning}
       data-disabled-reason={isRunning ? 'running' : undefined}
     >
-      受付へ戻る
+      <ClinicalIcon icon="return-reception" />
+      <span>受付へ戻る</span>
     </button>
   ) : null;
   const closeTabButton = onCloseChartTab ? (
@@ -2770,7 +2774,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             title={sendDisabled ? `送信不可: ${sendPrecheckReasons.map((reason) => reason.summary).join(' / ')}` : undefined}
             aria-keyshortcuts="Alt+S"
           >
-            {primaryAction === 'sending' ? '送信中…' : 'ORCA 送信'}
+            <ClinicalIcon icon="orca-send" />
+            <span>{primaryAction === 'sending' ? '送信中…' : 'ORCA 送信'}</span>
           </button>
         </div>
         <div className="charts-actions__group" data-group="support" role="group" aria-label="補助操作">

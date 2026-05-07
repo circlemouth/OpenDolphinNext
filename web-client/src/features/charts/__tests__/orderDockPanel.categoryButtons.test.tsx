@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 
 import { OrderDockPanel } from '../OrderDockPanel';
+import { RightUtilityDock } from '../RightUtilityDock';
 
 const renderWithClient = (ui: ReactElement) => {
   const client = new QueryClient({
@@ -22,6 +23,24 @@ const baseMeta = {
   fallbackUsed: false,
   dataSourceTransition: 'server' as const,
 };
+
+describe('RightUtilityDock clinical icons', () => {
+  it('right dock buttons keep accessible names while rendering generated clinical icons', async () => {
+    const user = userEvent.setup();
+    const onSelectTool = vi.fn();
+
+    render(<RightUtilityDock activeTool="prescription" onSelectTool={onSelectTool} />);
+
+    for (const label of ['処方', '注射', '処置', '検査', '算定']) {
+      const button = screen.getByRole('button', { name: `${label}候補を開く` });
+      expect(within(button).getByText(label)).toBeInTheDocument();
+      expect(button.querySelector('.clinical-icon')).not.toBeNull();
+    }
+
+    await user.click(screen.getByRole('button', { name: '注射候補を開く' }));
+    expect(onSelectTool).toHaveBeenCalledWith('injection');
+  });
+});
 
 describe('OrderDockPanel category quick-add', () => {
   it('主要カテゴリ導線を常時表示し quick-add / group-add の data-test-id を保持する', () => {

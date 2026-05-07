@@ -4730,6 +4730,10 @@ export const chartsStyles = css`
   }
 
   .charts-actions__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.42rem;
     border-radius: var(--ui-radius-md);
     border: 1px solid var(--ui-border);
     background: #ffffff;
@@ -4840,6 +4844,12 @@ export const chartsStyles = css`
     background: var(--ui-selected-bg);
     color: #1e3a8a;
     box-shadow: inset 3px 0 0 var(--ui-selected-rail);
+  }
+
+  .charts-actions__button .clinical-icon {
+    width: 1.2em;
+    height: 1.2em;
+    margin-inline-end: 0;
   }
 
   .charts-actions__more {
@@ -5795,6 +5805,11 @@ export const chartsStyles = css`
   }
 
   .soap-note__right-dock-button {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
     min-width: 36px;
     min-height: 52px;
     border-radius: var(--ui-radius-md);
@@ -5826,6 +5841,12 @@ export const chartsStyles = css`
   .soap-note__right-dock-button-text {
     display: block;
     text-align: center;
+  }
+
+  .soap-note__right-dock-button .clinical-icon {
+    width: 1.7rem;
+    height: 1.7rem;
+    margin-inline-end: 0;
   }
 
   .soap-note__right-dock-button:focus-visible {

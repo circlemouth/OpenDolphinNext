@@ -44,6 +44,7 @@ import { useAdminBroadcast } from '../../../libs/admin/useAdminBroadcast';
 import { AdminBroadcastBanner } from '../../shared/AdminBroadcastBanner';
 import { ApiFailureBanner } from '../../shared/ApiFailureBanner';
 import { AuditSummaryInline } from '../../shared/AuditSummaryInline';
+import { ClinicalIcon } from '../../shared/ClinicalIcon';
 import { PatientIdentityBar } from '../../shared/PatientIdentityBar';
 import { RunIdBadge } from '../../shared/RunIdBadge';
 import { StatusPill } from '../../shared/StatusPill';
@@ -4708,6 +4709,7 @@ export function ReceptionPage({
                 aria-expanded={acceptWorkflowModalOpen}
                 data-test-id="reception-open-accept-workflow"
               >
+                <ClinicalIcon icon="patient-search-existing" />
                 既存患者受付/患者検索
               </button>
             </div>
@@ -5276,7 +5278,8 @@ export function ReceptionPage({
                                   disabled={!canOpenCharts}
                                   title={canOpenCharts ? 'カルテを開く' : 'canonical key がないためカルテを開けません'}
                                 >
-                                  カルテ
+                                  <ClinicalIcon icon="chart-open" />
+                                  <span>カルテ</span>
                                 </button>
                                 <div>
                                   <div
@@ -5318,7 +5321,8 @@ export function ReceptionPage({
                                             disabled={billingSendInProgress || billingSendGuard?.canSend === false}
                                             title={billingSendInProgress ? '送信中です' : billingSendBlockedTitle}
                                           >
-                                            {billingSendInProgress ? '送信中…' : '会計送信'}
+                                            <ClinicalIcon icon="billing-send" />
+                                            <span>{billingSendInProgress ? '送信中…' : '会計送信'}</span>
                                           </button>
                                         ) : null}
                                         {isReceptionStatusMvpPhase2 && mvpDecision?.canRetry ? (
@@ -5354,7 +5358,8 @@ export function ReceptionPage({
                                               : '患者IDが未登録のため過去カルテを表示できません'
                                           }
                                         >
-                                          過去カルテ
+                                          <ClinicalIcon icon="chart-history" />
+                                          <span>過去カルテ</span>
                                         </button>
                                         <button
                                           type="button"
@@ -5379,7 +5384,8 @@ export function ReceptionPage({
                                                     : '受付IDが未登録のため取消できません'
                                           }
                                         >
-                                          受付取消
+                                          <ClinicalIcon icon="accept-cancel" />
+                                          <span>受付取消</span>
                                         </button>
                                       </div>
                                     ) : null}
@@ -5674,7 +5680,8 @@ export function ReceptionPage({
                                         disabled={billingSendInProgress || billingSendGuard?.canSend === false}
                                         title={billingSendInProgress ? '送信中です' : billingSendBlockedTitle}
                                       >
-                                        {billingSendInProgress ? '会計送信中…' : '会計送信'}
+                                        <ClinicalIcon icon="billing-send" />
+                                        <span>{billingSendInProgress ? '会計送信中…' : '会計送信'}</span>
                                       </button>
                                       {billingSendBlockedReason ? (
                                         <small className="reception-table__sub">{billingSendBlockedReason}</small>
@@ -5693,7 +5700,8 @@ export function ReceptionPage({
                                     disabled={!canOpenCharts}
                                     title={canOpenCharts ? 'カルテを開く' : 'canonical key がないためカルテを開けません'}
                                   >
-                                    カルテ
+                                    <ClinicalIcon icon="chart-open" />
+                                    <span>カルテ</span>
                                   </button>
                                   <div
                                     className={`reception-card__menu${tableActionMenuOpen ? ' is-open' : ''}`}
@@ -5736,7 +5744,8 @@ export function ReceptionPage({
                                               : '患者IDが未登録のため過去カルテを表示できません'
                                           }
                                         >
-                                          過去カルテ
+                                          <ClinicalIcon icon="chart-history" />
+                                          <span>過去カルテ</span>
                                         </button>
                                         {isReceptionStatusMvpPhase2 && mvpDecision?.canRetry ? (
                                           <button
@@ -5776,7 +5785,8 @@ export function ReceptionPage({
                                                     : '受付IDが未登録のため取消できません'
                                           }
                                         >
-                                          受付取消
+                                          <ClinicalIcon icon="accept-cancel" />
+                                          <span>受付取消</span>
                                         </button>
                                       </div>
                                     ) : null}
@@ -6052,7 +6062,8 @@ export function ReceptionPage({
                                             : '患者IDが未登録のため過去カルテを表示できません'
                                         }
                                       >
-                                        過去カルテ
+                                        <ClinicalIcon icon="chart-history" />
+                                        <span>過去カルテ</span>
                                       </button>
                                       <button
                                         type="button"
@@ -6094,7 +6105,8 @@ export function ReceptionPage({
                                         disabled={!canOpenCharts}
                                         title={patientSearchOpenChartsTitle}
                                       >
-                                        カルテを開く
+                                        <ClinicalIcon icon="chart-open" />
+                                        <span>カルテを開く</span>
                                       </button>
                                     </div>
                                   ) : null}

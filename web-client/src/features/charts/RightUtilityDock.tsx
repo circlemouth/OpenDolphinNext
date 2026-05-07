@@ -3,10 +3,19 @@ import {
   resolveRightUtilityToolLabel,
   type RightUtilityTool,
 } from './rightUtilityTools';
+import { ClinicalIcon, type ClinicalIconKey } from '../shared/ClinicalIcon';
 
 type RightUtilityDockProps = {
   activeTool: RightUtilityTool;
   onSelectTool: (tool: RightUtilityTool) => void;
+};
+
+const rightUtilityIconByTool: Record<RightUtilityTool, ClinicalIconKey> = {
+  prescription: 'prescription',
+  injection: 'injection',
+  treatment: 'treatment',
+  test: 'test',
+  charge: 'charge',
 };
 
 export function RightUtilityDock({ activeTool, onSelectTool }: RightUtilityDockProps) {
@@ -28,6 +37,7 @@ export function RightUtilityDock({ activeTool, onSelectTool }: RightUtilityDockP
               title={`${resolveRightUtilityToolLabel(item.tool)}候補を開く`}
               onClick={() => onSelectTool(item.tool)}
             >
+              <ClinicalIcon icon={rightUtilityIconByTool[item.tool]} />
               <span className="soap-note__right-dock-button-text">{item.label}</span>
             </button>
           );

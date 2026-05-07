@@ -147,6 +147,7 @@
 - row-local key (`encounterKey` / `scheduleKey` / `receptionId` / `appointmentId`) を一意に解決できない場合、受付一覧に positive な `送信済` 表示を重ねません。
 - Charts の transmission evidence / invoice / warning も同じ row-local key で解決し、`patientId` latest cache を positive source に戻しません。
 - Reception の visible page title は workspace tab の active 表示へ統合し、重複する page header card は表示しません。screen reader 向け heading / description は維持します。
+- 業務固有アイコンは文字ラベルの補助として使い、画像アイコンは accessible name を置換しません。`ORCA送信`、`会計送信`、`受付取消`、`診察終了`、`ロック解除` など主要・危険操作は icon-only にしません。
 
 ### Verification
 - test: reception accept/cancel の `Api_Result=21` を保険不一致、`Api_Result=60` を受付なしとして統一

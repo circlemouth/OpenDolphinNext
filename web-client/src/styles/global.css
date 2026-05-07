@@ -78,6 +78,18 @@ body {
   color: var(--ui-text);
 }
 
+.clinical-icon {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  margin-inline-end: 0.38rem;
+  border-radius: 0.24rem;
+  background: #ffffff;
+  object-fit: contain;
+  vertical-align: -0.22em;
+  flex: 0 0 auto;
+}
+
 ::selection {
   background: var(--ui-selection-bg);
 }
