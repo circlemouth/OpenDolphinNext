@@ -603,6 +603,13 @@ export const receptionStyles = css`
     min-height: 0;
   }
 
+  .reception-toolbar--embedded .reception-toolbar__cluster {
+    display: grid;
+    grid-template-rows: 1rem minmax(2.25rem, auto);
+    align-content: start;
+    align-items: start;
+  }
+
   .reception-toolbar--embedded .reception-toolbar__cluster--search {
     background: #ffffff;
   }
@@ -617,19 +624,28 @@ export const receptionStyles = css`
   .reception-toolbar--embedded .reception-toolbar__cluster-title {
     flex: 0 0 auto;
     margin-right: 0.1rem;
+    align-self: end;
   }
 
   .reception-toolbar--embedded .reception-toolbar__cluster--date {
-    align-items: center;
+    align-items: start;
   }
 
   .reception-toolbar--embedded .reception-toolbar__date-inline {
-    flex: 1 1 15rem;
-    width: auto;
+    width: 100%;
+    align-self: start;
   }
 
   .reception-toolbar--embedded .reception-toolbar__cluster--search {
     align-content: start;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__keyword-label {
+    align-self: end;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__keyword-control {
+    align-self: start;
   }
 
   .reception-toolbar--embedded .reception-search__button,
