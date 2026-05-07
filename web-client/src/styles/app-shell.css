@@ -11,7 +11,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: 1rem clamp(1rem, 4vw, 2.5rem) 0.75rem;
+  padding: 0.55rem clamp(1rem, 4vw, 2.5rem) 0.5rem;
   border-bottom: 1px solid var(--ui-border-subtle);
   background: var(--ui-surface);
 }
@@ -31,9 +31,26 @@
 .app-shell__session {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
   justify-content: flex-end;
+  min-width: 0;
+}
+
+.app-shell__session-summary {
+  min-width: 0;
+  max-width: clamp(8rem, 22vw, 15rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  background: var(--ui-surface-muted);
+  color: var(--ui-text);
+  padding: 0.28rem 0.55rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .app-shell__pill {
@@ -69,18 +86,20 @@
 .app-shell__session-actions {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
   justify-content: flex-end;
+  min-width: 0;
 }
 
 .app-shell__logout {
   border: 1px solid #dc2626;
   background: #dc2626;
   color: var(--ui-primary-contrast);
-  padding: 0.5rem 0.95rem;
-  min-height: 36px;
+  padding: 0.34rem 0.65rem;
+  min-height: 30px;
   border-radius: 8px;
+  font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(220, 38, 38, 0.22);
@@ -99,9 +118,10 @@
   border: 1px solid var(--ui-border);
   background: var(--ui-surface);
   color: var(--ui-text);
-  padding: 0.5rem 0.95rem;
-  min-height: 36px;
+  padding: 0.34rem 0.65rem;
+  min-height: 30px;
   border-radius: 8px;
+  font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
@@ -119,9 +139,10 @@
   border: 1px solid var(--ui-primary);
   background: var(--ui-primary);
   color: var(--ui-primary-contrast);
-  padding: 0.5rem 0.95rem;
-  min-height: 36px;
+  padding: 0.34rem 0.65rem;
+  min-height: 30px;
   border-radius: 8px;
+  font-size: 0.84rem;
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(29, 78, 216, 0.22);
@@ -843,6 +864,11 @@
   .app-shell__session {
     width: 100%;
     justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .app-shell__session-actions {
+    flex-wrap: wrap;
   }
 
   .app-shell__nav {
