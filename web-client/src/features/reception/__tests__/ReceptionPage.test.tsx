@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ReceptionPage } from '../pages/ReceptionPage';
@@ -57,6 +57,19 @@ let mockReceptionSelectorOptions = {
   departments: [] as Array<{ code: string; name: string }>,
   physicians: [] as Array<{ code: string; name: string }>,
 };
+let mockMedicalRecordsData:
+  | {
+      runId?: string;
+      records?: Array<{
+        documentId?: string;
+        performDate?: string;
+        departmentCode?: string;
+        departmentName?: string;
+        sequentialNumber?: string;
+        documentStatus?: string;
+      }>;
+    }
+  | undefined;
 let mockSearchParams = new URLSearchParams();
 let mockLocationState: Record<string, unknown> | undefined;
 let mockSessionRole = 'staff';
@@ -355,6 +368,17 @@ vi.mock('@tanstack/react-query', () => ({
         refetch: vi.fn(),
       };
     }
+    if (key === 'orca-medical-records') {
+      return {
+        data: mockMedicalRecordsData,
+        dataUpdatedAt: 0,
+        isError: false,
+        error: null,
+        isFetching: false,
+        isLoading: false,
+        refetch: vi.fn(),
+      };
+    }
     return {
       data: undefined,
       dataUpdatedAt: 0,
@@ -509,6 +533,7 @@ beforeEach(() => {
   mockClaimSendCache = {};
   mockMedicalInformationOptions = [{ code: '01', name: '外来' }];
   mockReceptionSelectorOptions = { departments: [], physicians: [] };
+  mockMedicalRecordsData = undefined;
   mockSearchParams = new URLSearchParams();
   mockLocationState = undefined;
   mockSessionRole = 'staff';
@@ -819,6 +844,56 @@ describe('ReceptionPage accept UX', () => {
     expect(getRowMenuAction(row2, /受付取消/)).toBeEnabled();
   });
 
+  it('shows only the ORCA patient ID in the normal table ID column', () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-visible-id',
+        patientId: '00003',
+        receptionId: '00001',
+        name: 'ID表示患者',
+        appointmentTime: '09:00',
+        department: '01 内科',
+        status: '受付中',
+        insurance: '保険',
+        source: 'visits',
+      },
+    ];
+
+    renderReceptionPage();
+
+    expect(screen.getByRole('columnheader', { name: '患者ID' })).toBeInTheDocument();
+    const row = screen.getByRole('row', { name: /ID表示患者/ });
+    expect(within(row).getByLabelText('00003')).toBeInTheDocument();
+    expect(within(row).queryByText('患者ID')).toBeNull();
+    expect(within(row).queryByText('受付ID')).toBeNull();
+    expect(within(row).queryByText('00001')).toBeNull();
+  });
+
+  it('does not present routine ORCA connectivity as a normal table column', () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-no-queue',
+        patientId: '00004',
+        receptionId: '00002',
+        name: 'キュー未対象患者',
+        appointmentTime: '09:15',
+        department: '01 内科',
+        status: '受付中',
+        insurance: '保険',
+        source: 'visits',
+      },
+    ];
+
+    renderReceptionPage();
+
+    expect(screen.queryByRole('columnheader', { name: 'ORCA連携' })).toBeNull();
+    const row = screen.getByRole('row', { name: /キュー未対象患者/ });
+    expect(within(row).queryByLabelText('ORCA連携: 対象なし')).toBeNull();
+    expect(within(row).queryByLabelText(/ORCAキュー/)).toBeNull();
+    expect(within(row).queryByText('未取得')).toBeNull();
+    expect(within(row).getByRole('button', { name: 'カルテを開く' })).toBeInTheDocument();
+  });
+
   it('shows confirmation dialog before cancel execution', async () => {
     mockAppointmentData.entries = [
       {
@@ -854,12 +929,24 @@ describe('ReceptionPage accept UX', () => {
 
     expect(mockMutationQueue).toHaveLength(1);
     const dialog = await screen.findByRole('dialog', { name: '受付取消の確認' });
-    expect(within(dialog).getByLabelText(/患者ID:P-210/)).toBeInTheDocument();
-    await user.type(within(dialog).getByLabelText('取消理由（任意）'), '誤受付');
+    expect(within(dialog).getByRole('region', { name: /取消対象 取消確認患者/ })).toBeInTheDocument();
+    expect(within(dialog).getByText('取消確認患者')).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('取消理由（任意）')).toBeNull();
+    expect(within(dialog).queryByText(/患者ID/)).toBeNull();
+    expect(within(dialog).queryByText(/受付ID/)).toBeNull();
+    expect(within(dialog).queryByText(/性別\/年齢/)).toBeNull();
+    expect(within(dialog).queryByText(/氏名:/)).toBeNull();
+    expect(within(dialog).queryByText(/患者同定情報と受付情報/)).toBeNull();
+    expect(within(dialog).queryByText('PT')).toBeNull();
     await user.click(within(dialog).getByRole('button', { name: '取消を実行' }));
 
     await waitFor(() => {
       expect(mockMutationQueue).toHaveLength(0);
+    });
+    expect(mockMutationCalls.at(-1)).toMatchObject({
+      acceptanceId: 'R-210',
+      patientId: 'P-210',
+      requestNumber: '02',
     });
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: '受付取消の確認' })).toBeNull();
@@ -1451,14 +1538,60 @@ describe('ReceptionPage official master search', () => {
 
 describe('ReceptionPage toolbar and tabs', () => {
   it('shows toolbar controls and removes floating actions', () => {
+    mockSearchParams = new URLSearchParams('date=2026-05-07');
     renderReceptionPage();
 
     const toolbar = getToolbar();
     expect(toolbar).toBeInTheDocument();
-    expect(within(toolbar).getByLabelText('受付日')).toBeInTheDocument();
-    expect(within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' })).toBeInTheDocument();
+    const dateInput = within(toolbar).getByLabelText('受付日') as HTMLInputElement;
+    expect(dateInput).toBeInTheDocument();
+    expect(within(toolbar).getByRole('button', { name: '前日に移動' })).toBeInTheDocument();
+    expect(within(toolbar).getByRole('button', { name: '翌日に移動' })).toBeInTheDocument();
+    expect(within(toolbar).queryByRole('button', { name: '前日' })).toBeNull();
+    expect(within(toolbar).queryByRole('button', { name: '翌日' })).toBeNull();
+    expect(within(toolbar).queryByRole('button', { name: '今日' })).toBeNull();
+    expect(within(toolbar).getByRole('searchbox', { name: '患者検索' })).toHaveAttribute(
+      'placeholder',
+      '患者ID・氏名・カナで検索できます。',
+    );
+    expect(within(toolbar).queryByText('患者ID・氏名・カナで検索できます。')).toBeNull();
+    expect(within(toolbar).getByRole('button', { name: '検索' })).toBeInTheDocument();
+    expect(within(toolbar).queryByRole('button', { name: '一覧操作' })).toBeNull();
+    expect(within(toolbar).getByRole('button', { name: '詳細条件' })).toHaveAttribute('aria-expanded', 'false');
+    expect(within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' })).toHaveAttribute('aria-expanded', 'false');
+    expect(within(toolbar).queryByRole('button', { name: '再取得' })).toBeNull();
+    const statusTabs = screen.getByRole('region', { name: 'ステータスタブ' });
+    expect(within(statusTabs).getByRole('button', { name: '再取得' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: '保険/自費' })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: '保存ビュー' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'クリア' })).toBeNull();
     expect(within(toolbar).queryByRole('button', { name: /日次状態/ })).toBeNull();
     expect(document.querySelector('.reception-page__floating-actions')).toBeNull();
+  });
+
+  it('shifts the reception date by one day with compact arrow buttons', async () => {
+    mockSearchParams = new URLSearchParams('date=2026-05-07');
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const toolbar = getToolbar();
+    const dateInput = within(toolbar).getByLabelText('受付日') as HTMLInputElement;
+    await user.click(within(toolbar).getByRole('button', { name: '前日に移動' }));
+    expect(dateInput).toHaveValue('2026-05-06');
+    await user.click(within(toolbar).getByRole('button', { name: '翌日に移動' }));
+    expect(dateInput).toHaveValue('2026-05-07');
+  });
+
+  it('places list actions without the 一覧操作 disclosure', () => {
+    renderReceptionPage();
+
+    const toolbar = getToolbar();
+    expect(within(toolbar).queryByRole('button', { name: '一覧操作' })).toBeNull();
+    expect(within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: '一覧操作' })).toBeNull();
+
+    const statusTabs = screen.getByRole('region', { name: 'ステータスタブ' });
+    expect(within(statusTabs).getByRole('button', { name: '再取得' })).toBeInTheDocument();
   });
 
   it('hides system details for non-debug users', () => {
@@ -1532,6 +1665,7 @@ describe('ReceptionPage list and side pane guidance', () => {
   });
 
   it('keeps list controls and patient summary compact for reception work', () => {
+    mockSearchParams = new URLSearchParams('date=2026-05-07');
     mockAppointmentData.entries = [
       {
         id: 'row-compact',
@@ -1547,25 +1681,69 @@ describe('ReceptionPage list and side pane guidance', () => {
         insurance: '保険',
         source: 'slots',
       },
+      {
+        id: 'row-child',
+        patientId: 'P-101',
+        appointmentId: 'A-101',
+        name: '小児患者',
+        kana: 'ショウニ',
+        birthDate: '2018-05-08',
+        sex: 'F',
+        appointmentTime: '09:30',
+        department: '01 内科',
+        status: '受付中',
+        insurance: '保険',
+        source: 'slots',
+      },
     ];
 
     renderReceptionPage();
 
     const statusTabs = screen.getByRole('region', { name: 'ステータスタブ' });
-    expect(within(statusTabs).getByRole('group', { name: '表示形式' })).toBeInTheDocument();
-    expect(within(statusTabs).getByRole('button', { name: '表' })).toHaveAttribute('aria-pressed', 'true');
-    expect(within(statusTabs).getByRole('button', { name: 'カード' })).toHaveAttribute('aria-pressed', 'false');
+    const displayActions = within(statusTabs).getByRole('group', { name: '表示形式' });
+    expect(displayActions).toBeInTheDocument();
+    expect(within(statusTabs).getByRole('tab', { name: '診察待ち 2' })).toHaveAttribute('aria-selected', 'true');
+    expect(document.querySelector('.reception-workspace-header__title')).toBeNull();
+    expect(statusTabs.previousElementSibling).toHaveClass('reception-workspace-header__controls');
+
+    const toolbar = screen.getByRole('region', { name: '受付ツールバー' });
+    expect(within(toolbar).queryByRole('group', { name: '表示形式' })).toBeNull();
+    expect(within(displayActions).getByRole('button', { name: '表' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(displayActions).getByRole('button', { name: 'カード' })).toHaveAttribute('aria-pressed', 'false');
 
     const table = screen.getByRole('table');
     expect(within(table).queryByRole('columnheader', { name: '支払' })).toBeNull();
     expect(within(table).queryByRole('columnheader', { name: '請求' })).toBeNull();
     expect(within(table).queryByRole('columnheader', { name: '直近' })).toBeNull();
+    expect(within(table).queryByRole('columnheader', { name: 'ORCA連携' })).toBeNull();
+    expect(within(table).queryByText('操作')).toBeNull();
+    expect(within(table).getByRole('columnheader', { name: '行操作' })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: '年齢' })).toBeInTheDocument();
 
     const row = screen.getByRole('row', { name: /表示患者/ });
     expect(row).toHaveAttribute('data-sex-tone', 'male');
-    expect(within(row).getByText('1957年12月10日生')).toBeInTheDocument();
+    expect(row).toHaveAccessibleName(/男性 成人/);
+    expect(row.querySelector('.reception-patient-icon')).toHaveAttribute('data-sex-tone', 'male');
+    expect(row.querySelector('.reception-patient-icon')).toHaveAttribute('data-age-group', 'adult');
+    expect(row.querySelector('.reception-patient-icon__halo')).toBeInTheDocument();
+    expect(row.querySelector('.reception-patient-icon__body')).toBeInTheDocument();
+    expect(within(row).getByText('68歳')).toBeInTheDocument();
+    expect(within(row).queryByText('1957年12月10日生')).toBeNull();
+    expect(within(row).getByText('内科')).toBeInTheDocument();
+    expect(within(row).queryByText('01 内科')).toBeNull();
+    const patientText = row.querySelector('.reception-table__patient-text');
+    expect(patientText?.textContent).toContain('ヒョウジ表示患者');
+    expect(patientText?.textContent).not.toContain('68歳');
     expect(within(row).queryByText(/予約ID/)).toBeNull();
     expect(within(row).queryByText(/DOB:/)).toBeNull();
+
+    const childRow = screen.getByRole('row', { name: /小児患者/ });
+    expect(childRow).toHaveAttribute('data-sex-tone', 'female');
+    expect(childRow).toHaveAccessibleName(/女性 小児/);
+    expect(childRow.querySelector('.reception-patient-icon')).toHaveAttribute('data-sex-tone', 'female');
+    expect(childRow.querySelector('.reception-patient-icon')).toHaveAttribute('data-age-group', 'child');
+    expect(childRow.querySelector('.reception-patient-icon__age-mark')).toBeInTheDocument();
+    expect(within(childRow).getByText('7歳')).toBeInTheDocument();
     expect(within(row).queryByText(/性別/)).toBeNull();
   });
 
@@ -1627,6 +1805,54 @@ describe('ReceptionPage list and side pane guidance', () => {
     expect(screen.queryByTestId('reception-audit')).toBeNull();
   });
 
+  it('過去カルテモーダルは実行IDと内部状態コードを表示しない', async () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-records-modal',
+        patientId: 'P-030',
+        receptionId: 'R-030',
+        name: '履歴患者',
+        birthDate: '1975-04-01',
+        sex: 'F',
+        visitDate: '2026-05-08',
+        appointmentTime: '10:30',
+        departmentCode: '01',
+        department: '01 内科',
+        status: '受付中',
+        insurance: '保険',
+        source: 'visits',
+      },
+    ];
+    mockMedicalRecordsData = {
+      runId: 'RUN-MEDICAL-RECORDS',
+      records: [
+        {
+          documentId: 'DOC-001',
+          performDate: '2026-05-07',
+          departmentCode: '01',
+          departmentName: '内科',
+          sequentialNumber: '1.0',
+          documentStatus: 'F',
+        },
+      ],
+    };
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const row = screen.getByRole('row', { name: /履歴患者/ });
+    await openRowActionMenu(user, row);
+    await user.click(getRowMenuAction(row, /過去カルテ/));
+
+    const dialog = await screen.findByRole('dialog', { name: /過去カルテ/ });
+    expect(within(dialog).getByText('2026-05-07')).toBeInTheDocument();
+    expect(within(dialog).getByText('内科')).toBeInTheDocument();
+    expect(within(dialog).queryByText(/RUN_ID/)).toBeNull();
+    expect(within(dialog).queryByText(/コピー/)).toBeNull();
+    expect(within(dialog).queryByText(/連番/)).toBeNull();
+    expect(within(dialog).queryByText(/状態/)).toBeNull();
+  });
+
   it('sends patient-id searchType when the accept workflow patient ID field is used', async () => {
     mockMutationQueue.push({
       patients: [],
@@ -1647,6 +1873,68 @@ describe('ReceptionPage list and side pane guidance', () => {
     await waitFor(() => {
       expect(mockMutationCalls.at(-1)).toEqual({ keyword: '0000001', searchType: 'patient-id' });
     });
+  });
+
+  it('uses the submitted patient ID field value even when React state has not re-rendered yet', async () => {
+    mockMutationQueue.push({
+      patients: [],
+      recordsReturned: 0,
+      runId: 'RUN-PATIENT-ID-FORMDATA',
+    });
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    const form = patientSearch.querySelector('[data-test-id="reception-patient-search-form"]') as HTMLFormElement;
+    const patientIdInput = within(patientSearch).getByLabelText('患者ID') as HTMLInputElement;
+    expect(form).not.toBeNull();
+    patientIdInput.value = '0000001';
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockMutationCalls.at(-1)).toEqual({ keyword: '0000001', searchType: 'patient-id' });
+    });
+  });
+
+  it('does not show a previously selected reception row as the accept workflow selected patient', async () => {
+    mockAppointmentData.entries = [
+      createBillingEntry({
+        id: 'row-previous-selection',
+        patientId: '00003',
+        name: '事例　三',
+        status: '受付中',
+      }),
+    ];
+    mockMutationQueue.push({
+      patients: [
+        {
+          patientId: '0000001',
+          name: 'スモーク 患者',
+          kana: 'スモーク カンジャ',
+          birthDate: '1970-01-01',
+          sex: 'M',
+        },
+      ],
+      recordsReturned: 1,
+      runId: 'RUN-PATIENT-ID-SELECTION',
+    });
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+    await user.click(screen.getByRole('row', { name: /事例　三/ }));
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    const form = within(patientSearch);
+    await user.type(form.getByLabelText('患者ID'), '0000001');
+    await user.click(form.getByRole('button', { name: '検索' }));
+
+    await waitFor(() => {
+      expect(within(workflowModal).getByText('選択患者: 未選択')).toBeInTheDocument();
+    });
+    expect(within(workflowModal).queryByText('選択患者: 事例　三')).toBeNull();
   });
 
   it('removes direct chart-open form from 当日受付モーダル', async () => {
@@ -1706,6 +1994,14 @@ describe('ReceptionPage list and side pane guidance', () => {
     await user.click(within(resultPanel).getAllByRole('listitem')[0]);
     expect(within(acceptPanel).getByRole('button', { name: '受付する' })).toBeInTheDocument();
     expect(within(acceptPanel).getByText('選択患者: 検索患者一')).toBeInTheDocument();
+    const identitySummary = within(acceptPanel).getByRole('group', { name: '受付対象 検索患者一' });
+    expect(identitySummary.textContent).toMatch(/ケンサクカンジャイチ.*検索患者一/s);
+    expect(within(identitySummary).getByText('46歳')).toBeInTheDocument();
+    expect(within(acceptPanel).queryByText('受付登録モーダル')).toBeNull();
+    expect(within(acceptPanel).queryByText('Pt')).toBeNull();
+    expect(within(acceptPanel).queryByText('患者ID 101')).toBeNull();
+    expect(within(acceptPanel).queryByText(/性別\/年齢/)).toBeNull();
+    expect(within(acceptPanel).queryByText(/受付対象:/)).toBeNull();
     expect(within(acceptPanel).getByLabelText(/診療科/)).toBeInTheDocument();
     expect(within(acceptPanel).getByLabelText(/保険\/自費/)).toBeInTheDocument();
     expect(within(acceptPanel).queryByText(/InsuranceProvider_Class/)).toBeNull();

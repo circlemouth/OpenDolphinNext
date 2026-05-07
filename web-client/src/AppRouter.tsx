@@ -1631,11 +1631,12 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
             <span className="app-shell__title">OpenDolphinNext</span>
           </div>
           <div className="app-shell__session" data-run-id={resolvedRunId}>
-            <span className="app-shell__pill app-shell__pill--fixed">
-              ユーザー: {session.displayName ?? session.commonName ?? session.userId}
-            </span>
-            <span className="app-shell__pill app-shell__pill--fixed" data-tooltip="補助情報: 認可ロール">
-              権限: {displayedRole}
+            <span
+              className="app-shell__session-summary"
+              aria-label={`ユーザー: ${session.displayName ?? session.commonName ?? session.userId} / 権限: ${displayedRole}`}
+              title={`ユーザー: ${session.displayName ?? session.commonName ?? session.userId} / 権限: ${displayedRole}`}
+            >
+              {session.displayName ?? session.commonName ?? session.userId} / {displayedRole}
             </span>
             <span id="app-shell-session-status-slot" className="app-shell__session-status-slot" aria-live="polite" />
             {visibleOrcaTopStatus ? (

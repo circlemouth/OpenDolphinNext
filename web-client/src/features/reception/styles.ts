@@ -159,7 +159,7 @@ export const receptionStyles = css`
     --reception-floating-offset-bottom: max(1rem, calc(env(safe-area-inset-bottom) + 0.65rem));
     --reception-floating-stack-height: 0rem;
     min-height: 100vh;
-    padding: 3rem var(--reception-page-gutter) 3rem;
+    padding: 1rem var(--reception-page-gutter) 3rem;
     background: var(--ui-surface-muted);
     display: flex;
     flex-direction: column;
@@ -298,7 +298,7 @@ export const receptionStyles = css`
 
   .reception-toolbar__form {
     display: grid;
-    grid-template-columns: minmax(360px, 1.15fr) minmax(280px, 0.9fr) minmax(260px, 0.75fr) minmax(250px, auto);
+    grid-template-columns: minmax(320px, 0.95fr) minmax(320px, 1.2fr) max-content;
     gap: 0.75rem;
     align-items: stretch;
   }
@@ -310,6 +310,7 @@ export const receptionStyles = css`
     align-items: flex-end;
     gap: 0.55rem;
     min-width: 0;
+    min-height: 4.75rem;
     border: 1px solid rgba(148, 163, 184, 0.24);
     border-radius: 8px;
     background: #f8fafc;
@@ -324,8 +325,69 @@ export const receptionStyles = css`
     line-height: 1;
   }
 
-  .reception-toolbar__cluster--search {
+  .reception-toolbar__date-inline,
+  .reception-toolbar__keyword-control {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .reception-date-shift-button {
+    display: inline-flex;
+    flex: 0 0 2.25rem;
+    width: 2.25rem;
+    min-height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #1d4ed8;
+    border-radius: 8px;
     background: #ffffff;
+    color: #1d4ed8;
+    cursor: pointer;
+  }
+
+  .reception-date-shift-button:hover {
+    background: #eff6ff;
+  }
+
+  .reception-date-shift-button:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.35);
+    outline-offset: 2px;
+  }
+
+  .reception-date-shift-button__triangle {
+    display: block;
+    width: 0;
+    height: 0;
+    border-top: 0.42rem solid transparent;
+    border-bottom: 0.42rem solid transparent;
+  }
+
+  .reception-date-shift-button__triangle--prev {
+    border-right: 0.62rem solid currentColor;
+  }
+
+  .reception-date-shift-button__triangle--next {
+    border-left: 0.62rem solid currentColor;
+  }
+
+  .reception-toolbar__keyword-label {
+    flex: 0 0 100%;
+    color: #0f172a;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .reception-toolbar__keyword-input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .reception-toolbar__keyword-submit {
+    flex: 0 0 auto;
   }
 
   .reception-toolbar__cluster--actions {
@@ -333,8 +395,80 @@ export const receptionStyles = css`
     align-content: flex-end;
   }
 
+  .reception-toolbar__disclosure-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    align-content: center;
+    gap: 0.45rem;
+    min-width: 0;
+    align-self: stretch;
+    min-height: 4.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 0.65rem;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__disclosure-actions {
+    align-self: stretch;
+  }
+
+  .reception-toolbar__view-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    margin-left: auto;
+  }
+
+  .reception-toolbar__view-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 0.18rem;
+    border: 1px solid rgba(37, 99, 235, 0.28);
+    border-radius: 999px;
+    background: #eff6ff;
+  }
+
+  .reception-toolbar__view-actions .reception-results-toolbar__toggle {
+    min-height: 2.15rem;
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.76rem;
+    line-height: 1;
+  }
+
+  .reception-toolbar__view-mode .reception-results-toolbar__toggle {
+    border: 0;
+    background: transparent;
+    color: #1e3a8a;
+    box-shadow: none;
+  }
+
+  .reception-toolbar__view-mode .reception-results-toolbar__toggle[aria-pressed='true'] {
+    background: #1d4ed8;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.22);
+  }
+
+  .reception-toolbar__view-actions .reception-results-toolbar__toggle--refresh {
+    margin-left: 0.2rem;
+    border-color: #0f766e;
+    background: #ecfdf5;
+    color: #0f766e;
+  }
+
+  .reception-toolbar__view-actions .reception-results-toolbar__toggle--refresh:hover {
+    background: #ccfbf1;
+    border-color: #0d9488;
+  }
+
   .reception-toolbar__date-field {
-    flex: 0 0 9.6rem;
+    flex: 1 1 9.6rem;
+    min-width: 0;
   }
 
   .reception-toolbar__keyword-field {
@@ -351,7 +485,13 @@ export const receptionStyles = css`
 
   @media (max-width: 1180px) {
     .reception-toolbar__form {
-      grid-template-columns: minmax(340px, 1fr) minmax(280px, 1fr);
+      grid-template-columns: minmax(230px, 0.9fr) minmax(260px, 1fr) minmax(250px, max-content);
+      gap: 0.5rem;
+    }
+
+    .reception-toolbar__disclosure-actions {
+      grid-column: auto;
+      justify-content: flex-end;
     }
   }
 
@@ -365,9 +505,69 @@ export const receptionStyles = css`
 
   .reception-toolbar__advanced-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: minmax(280px, 1.35fr) minmax(260px, 1fr) minmax(160px, 0.6fr);
     gap: 0.6rem;
+    align-items: stretch;
+  }
+
+  .reception-toolbar__panel {
+    background: #f8fafc;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: var(--ui-radius-md);
+    padding: 0.7rem;
+  }
+
+  .reception-toolbar__panel-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.55rem;
     align-items: end;
+    min-width: 0;
+    margin: 0;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 0.75rem;
+  }
+
+  .reception-toolbar__panel-group h3,
+  .reception-toolbar__panel-group legend {
+    margin: 0;
+    padding: 0;
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .reception-toolbar__panel-group legend {
+    padding: 0 0.25rem;
+  }
+
+  .reception-toolbar__panel-group--actions,
+  .reception-toolbar__panel-group--utility {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reception-toolbar__panel-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+
+  .reception-toolbar__panel-status {
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .reception-search__field-help {
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
   }
 
   .reception-toolbar__summary {
@@ -388,9 +588,9 @@ export const receptionStyles = css`
   }
 
   .reception-toolbar--embedded .reception-toolbar__form {
-    grid-template-columns: minmax(280px, 1fr) minmax(260px, 1fr) minmax(300px, auto);
+    grid-template-columns: minmax(300px, 0.95fr) minmax(280px, 1.15fr) minmax(170px, auto);
     gap: 0.5rem;
-    align-items: end;
+    align-items: stretch;
   }
 
   .reception-toolbar--embedded .reception-toolbar__cluster,
@@ -399,8 +599,15 @@ export const receptionStyles = css`
     padding: 0.48rem;
     border-color: rgba(148, 163, 184, 0.2);
     background: #f8fafc;
-    align-self: end;
+    align-self: stretch;
     min-height: 0;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__cluster {
+    display: grid;
+    grid-template-rows: 1rem minmax(2.25rem, auto);
+    align-content: start;
+    align-items: start;
   }
 
   .reception-toolbar--embedded .reception-toolbar__cluster--search {
@@ -408,7 +615,8 @@ export const receptionStyles = css`
   }
 
   .reception-toolbar--embedded .reception-toolbar__cluster-title,
-  .reception-toolbar--embedded .reception-search__field > span {
+  .reception-toolbar--embedded .reception-search__field > span,
+  .reception-toolbar--embedded .reception-toolbar__keyword-label {
     font-size: 0.72rem;
     line-height: 1.1;
   }
@@ -416,14 +624,33 @@ export const receptionStyles = css`
   .reception-toolbar--embedded .reception-toolbar__cluster-title {
     flex: 0 0 auto;
     margin-right: 0.1rem;
+    align-self: end;
   }
 
   .reception-toolbar--embedded .reception-toolbar__cluster--date {
-    align-items: center;
+    align-items: start;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__date-inline {
+    width: 100%;
+    align-self: start;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__cluster--search {
+    align-content: start;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__keyword-label {
+    align-self: end;
+  }
+
+  .reception-toolbar--embedded .reception-toolbar__keyword-control {
+    align-self: start;
   }
 
   .reception-toolbar--embedded .reception-search__button,
-  .reception-toolbar__advanced--embedded .reception-search__button {
+  .reception-toolbar__advanced--embedded .reception-search__button,
+  .reception-toolbar__panel--list-actions .reception-search__button {
     min-height: 2.25rem;
     padding: 0.38rem 0.68rem;
   }
@@ -438,15 +665,11 @@ export const receptionStyles = css`
 
   .reception-toolbar__advanced--embedded {
     margin-top: 0.55rem;
-    padding: 0.55rem 0 0;
-    border: 0;
-    border-top: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 0;
-    background: transparent;
+    padding: 0.65rem;
   }
 
   .reception-toolbar__advanced--embedded .reception-toolbar__advanced-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: minmax(280px, 1.35fr) minmax(260px, 1fr) minmax(150px, 0.6fr);
     gap: 0.5rem;
   }
 
@@ -1071,6 +1294,35 @@ export const receptionStyles = css`
     overflow: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    padding: 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.36);
+    border-radius: 14px;
+    background:
+      linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(255, 255, 255, 0) 1.15rem) top / 100% 1.15rem no-repeat,
+      linear-gradient(0deg, rgba(248, 250, 252, 0.98) 0%, rgba(255, 255, 255, 0) 1.15rem) bottom / 100% 1.15rem no-repeat,
+      #ffffff;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      inset 0 -1rem 1.1rem -1.2rem rgba(15, 23, 42, 0.32);
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(37, 99, 235, 0.42) rgba(226, 232, 240, 0.68);
+  }
+
+  .reception-accept-modal__accept::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .reception-accept-modal__accept::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.68);
+    border-radius: 999px;
+  }
+
+  .reception-accept-modal__accept::-webkit-scrollbar-thumb {
+    background: rgba(37, 99, 235, 0.46);
+    border-radius: 999px;
+    border: 2px solid rgba(248, 250, 252, 0.95);
+    background-clip: content-box;
   }
 
   .reception-accept-modal__submit {
@@ -1465,6 +1717,107 @@ export const receptionStyles = css`
     gap: 0.65rem;
   }
 
+  .reception-accept__identity-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: center;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgba(37, 99, 235, 0.14);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.72), rgba(248, 250, 252, 0.92));
+  }
+
+  .reception-accept__identity-card .reception-patient-icon {
+    width: 2.35rem;
+    height: 2.35rem;
+    flex-basis: 2.35rem;
+  }
+
+  .reception-accept__identity-card .reception-patient-icon svg {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+
+  .reception-accept__identity-text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.08rem;
+  }
+
+  .reception-accept__identity-kana {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 800;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .reception-accept__identity-name {
+    color: #0f172a;
+    font-size: 1.18rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .reception-accept__identity-age {
+    color: #475569;
+    font-size: 0.9rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .reception-cancel__identity-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    gap: 0.65rem;
+    align-items: center;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid rgba(248, 113, 113, 0.32);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(254, 242, 242, 0.84), rgba(255, 251, 251, 0.96));
+  }
+
+  .reception-cancel__identity-card .reception-patient-icon {
+    width: 2.45rem;
+    height: 2.45rem;
+    flex-basis: 2.45rem;
+  }
+
+  .reception-cancel__identity-card .reception-patient-icon svg {
+    width: 1.85rem;
+    height: 1.85rem;
+  }
+
+  .reception-cancel__identity-text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.08rem;
+  }
+
+  .reception-cancel__identity-eyebrow {
+    color: #991b1b;
+    font-size: 0.73rem;
+    font-weight: 900;
+    line-height: 1.15;
+  }
+
+  .reception-cancel__identity-name {
+    color: #0f172a;
+    font-size: 1.2rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .reception-cancel__identity-age {
+    color: #475569;
+    font-size: 0.92rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
   .reception-accept__details {
     display: flex;
     flex-direction: column;
@@ -1769,7 +2122,8 @@ export const receptionStyles = css`
   }
 
   .reception-search__field input,
-  .reception-search__field select {
+  .reception-search__field select,
+  .reception-toolbar__keyword-input {
     width: 100%;
     border-radius: 8px;
     border: 1px solid #cbd5e1;
@@ -1783,17 +2137,6 @@ export const receptionStyles = css`
     display: flex;
     gap: 0.6rem;
     flex-wrap: wrap;
-  }
-
-  .reception-search__date-nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-  }
-
-  .reception-search__date-nav .reception-search__button {
-    padding: 0.4rem 0.72rem;
-    font-size: 0.8rem;
   }
 
   .reception-search__date-history {
@@ -1889,6 +2232,18 @@ export const receptionStyles = css`
   .reception-search__button.primary {
     background: #1d4ed8;
     color: #ffffff;
+  }
+
+  .reception-search__button.danger {
+    border-color: #dc2626;
+    background: #dc2626;
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(220, 38, 38, 0.18);
+  }
+
+  .reception-search__button.danger:hover {
+    border-color: #b91c1c;
+    background: #b91c1c;
   }
 
   .reception-search__button.ghost:hover {
@@ -2385,6 +2740,9 @@ export const receptionStyles = css`
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-start;
+    align-self: stretch;
+    width: 100%;
     gap: 0.5rem 0.75rem;
     background: transparent;
     border-radius: 0;
@@ -2401,14 +2759,6 @@ export const receptionStyles = css`
     margin-bottom: 0.65rem;
   }
 
-  .reception-status-tabs__layout-actions {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0.4rem;
-    margin-left: 0;
-  }
-
   .reception-status-tabs__summary {
     display: inline-flex;
     align-items: baseline;
@@ -2423,8 +2773,13 @@ export const receptionStyles = css`
   .reception-status-tabs__list {
     display: flex;
     flex-wrap: wrap;
+    justify-content: flex-start;
     gap: 0.5rem;
     min-width: 0;
+  }
+
+  .reception-status-tabs .reception-toolbar__view-actions {
+    margin-left: auto;
   }
 
   .reception-status-tabs__tab {
@@ -2548,6 +2903,7 @@ export const receptionStyles = css`
     align-items: stretch;
     justify-content: flex-start;
     gap: 0.65rem;
+    position: relative;
     padding: 0.85rem 1rem;
     background: #f8fafc;
     border-top: 4px solid var(--reception-board-accent, rgba(2, 132, 199, 0.85));
@@ -2746,8 +3102,15 @@ export const receptionStyles = css`
 
   .reception-card__identity {
     display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .reception-card__identity-text {
+    display: flex;
     flex-direction: column;
-    gap: 0.18rem;
+    gap: 0.16rem;
     min-width: 0;
   }
 
@@ -3634,7 +3997,7 @@ export const receptionStyles = css`
   .reception-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 820px;
+    min-width: 760px;
   }
 
   .reception-table th,
@@ -3730,8 +4093,124 @@ export const receptionStyles = css`
     font-size: 0.78rem;
   }
 
+  .reception-table__patient {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+  }
+
+  .reception-table__patient-text {
+    min-width: 0;
+  }
+
   .reception-table__patient strong {
     display: block;
+  }
+
+  .reception-table__kana {
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .reception-table__age {
+    font-weight: 700;
+  }
+
+  .reception-table__age-cell {
+    color: #475569;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .reception-patient-icon {
+    --reception-patient-icon-bg: #f8fafc;
+    --reception-patient-icon-bg-strong: #e2e8f0;
+    --reception-patient-icon-fg: #64748b;
+    --reception-patient-icon-fg-soft: #94a3b8;
+    --reception-patient-icon-ring: rgba(100, 116, 139, 0.28);
+    --reception-patient-icon-glow: rgba(100, 116, 139, 0.12);
+    display: inline-flex;
+    flex: 0 0 2rem;
+    width: 2rem;
+    height: 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background:
+      radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.95), transparent 38%),
+      linear-gradient(145deg, var(--reception-patient-icon-bg) 0%, var(--reception-patient-icon-bg-strong) 100%);
+    box-shadow:
+      inset 0 0 0 1px var(--reception-patient-icon-ring),
+      0 0.35rem 0.8rem var(--reception-patient-icon-glow);
+  }
+
+  .reception-patient-icon svg {
+    width: 1.55rem;
+    height: 1.55rem;
+    overflow: visible;
+  }
+
+  .reception-patient-icon[data-sex-tone='male'] {
+    --reception-patient-icon-bg: #eff6ff;
+    --reception-patient-icon-bg-strong: #bfdbfe;
+    --reception-patient-icon-fg: #1d4ed8;
+    --reception-patient-icon-fg-soft: #60a5fa;
+    --reception-patient-icon-ring: rgba(37, 99, 235, 0.28);
+    --reception-patient-icon-glow: rgba(37, 99, 235, 0.16);
+  }
+
+  .reception-patient-icon[data-sex-tone='female'] {
+    --reception-patient-icon-bg: #fff1f2;
+    --reception-patient-icon-bg-strong: #fecdd3;
+    --reception-patient-icon-fg: #be123c;
+    --reception-patient-icon-fg-soft: #fb7185;
+    --reception-patient-icon-ring: rgba(225, 29, 72, 0.28);
+    --reception-patient-icon-glow: rgba(225, 29, 72, 0.16);
+  }
+
+  .reception-patient-icon[data-age-group='child'] {
+    border-radius: 12px;
+  }
+
+  .reception-patient-icon__halo {
+    fill: rgba(255, 255, 255, 0.34);
+    stroke: var(--reception-patient-icon-fg-soft);
+    stroke-width: 0.9;
+  }
+
+  .reception-patient-icon__shadow {
+    fill: none;
+    stroke: var(--reception-patient-icon-fg-soft);
+    stroke-linecap: round;
+    stroke-width: 2.3;
+    opacity: 0.34;
+  }
+
+  .reception-patient-icon__head,
+  .reception-patient-icon__body {
+    fill: var(--reception-patient-icon-fg);
+  }
+
+  .reception-patient-icon__highlight {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.88);
+    stroke-linecap: round;
+    stroke-width: 1.45;
+    opacity: 0.9;
+  }
+
+  .reception-patient-icon__age-mark circle {
+    fill: #ffffff;
+    stroke: var(--reception-patient-icon-fg-soft);
+    stroke-width: 0.9;
+  }
+
+  .reception-patient-icon__age-mark path {
+    fill: none;
+    stroke: var(--reception-patient-icon-fg);
+    stroke-linecap: round;
+    stroke-width: 1.15;
   }
 
   .reception-table__insurance {
@@ -3749,12 +4228,6 @@ export const receptionStyles = css`
     color: #0f172a;
   }
 
-  .reception-table__queue {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-  }
-
   .reception-table__note {
     color: #1f2937;
   }
@@ -3769,7 +4242,17 @@ export const receptionStyles = css`
     justify-content: flex-end;
     align-items: center;
     gap: 0.45rem;
+    min-height: 4.75rem;
     white-space: nowrap;
+  }
+
+  .reception-table__action-heading {
+    width: 15rem;
+  }
+
+  .reception-table__action .reception-card__action {
+    min-height: 2.25rem;
+    padding: 0.42rem 0.82rem;
   }
 
   .reception-table__action-button {
@@ -4083,12 +4566,27 @@ export const receptionStyles = css`
       width: 100%;
     }
 
+    .reception-toolbar__disclosure-actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+
+    .reception-toolbar__panel,
+    .reception-toolbar__advanced--embedded {
+      padding: 0.6rem;
+    }
+
+    .reception-toolbar__advanced-grid,
+    .reception-toolbar__advanced--embedded .reception-toolbar__advanced-grid,
+    .reception-toolbar__panel-group {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
     .reception-workspace-header__primary,
     .reception-status-tabs {
       align-items: stretch;
     }
 
-    .reception-status-tabs__layout-actions,
     .reception-status-tabs__list,
     .reception-workspace-header__chips {
       justify-content: flex-start;

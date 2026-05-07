@@ -45,7 +45,6 @@ import { AdminBroadcastBanner } from '../../shared/AdminBroadcastBanner';
 import { ApiFailureBanner } from '../../shared/ApiFailureBanner';
 import { AuditSummaryInline } from '../../shared/AuditSummaryInline';
 import { ClinicalIcon } from '../../shared/ClinicalIcon';
-import { PatientIdentityBar } from '../../shared/PatientIdentityBar';
 import { RunIdBadge } from '../../shared/RunIdBadge';
 import { StatusPill } from '../../shared/StatusPill';
 import { resolveCacheHitTone, resolveMetaFlagTone, resolveTransitionTone } from '../../shared/metaPillRules';
@@ -172,15 +171,42 @@ const formatLocalHms = (date: Date) => `${pad2(date.getHours())}:${pad2(date.get
 const todayString = () => formatLocalYmd(new Date());
 
 type PatientSexTone = 'male' | 'female' | 'unknown';
+type PatientAgeGroup = 'adult' | 'child' | 'unknown';
+type ParsedYmd = { year: number; month: number; day: number };
 
-const formatBirthDateJa = (value?: string | null) => {
+const CHILD_AGE_MAX = 14;
+
+const parsePatientYmd = (value?: string | null): ParsedYmd | null => {
   const raw = typeof value === 'string' ? value.trim() : '';
-  if (!raw) return '生年月日未登録';
+  if (!raw) return null;
   const compactMatch = raw.match(/^(\d{4})(\d{2})(\d{2})$/);
   const hyphenMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
   const match = compactMatch ?? hyphenMatch;
-  if (!match) return raw;
-  return `${Number(match[1])}年${Number(match[2])}月${Number(match[3])}日生`;
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return { year, month, day };
+};
+
+const calculateAge = (birthDate?: string | null, referenceDate?: string | null) => {
+  const birth = parsePatientYmd(birthDate);
+  const reference = parsePatientYmd(referenceDate) ?? parsePatientYmd(todayString());
+  if (!birth || !reference) return null;
+  let age = reference.year - birth.year;
+  if (reference.month < birth.month || (reference.month === birth.month && reference.day < birth.day)) {
+    age -= 1;
+  }
+  return age >= 0 && age < 130 ? age : null;
+};
+
+const formatAgeJa = (age: number | null) => (age === null ? '年齢未登録' : `${age}歳`);
+
+const resolvePatientAgeGroup = (age: number | null): PatientAgeGroup => {
+  if (age === null) return 'unknown';
+  return age <= CHILD_AGE_MAX ? 'child' : 'adult';
 };
 
 const resolvePatientSexTone = (value?: string | null): PatientSexTone => {
@@ -199,6 +225,48 @@ const resolvePatientSexAriaLabel = (tone: PatientSexTone) => {
   if (tone === 'female') return '女性';
   return undefined;
 };
+
+const resolvePatientAgeGroupLabel = (ageGroup: PatientAgeGroup) => {
+  if (ageGroup === 'child') return '小児';
+  if (ageGroup === 'adult') return '成人';
+  return '年齢区分未登録';
+};
+
+function PatientProfileIcon({ sexTone, ageGroup }: { sexTone: PatientSexTone; ageGroup: PatientAgeGroup }) {
+  const isChild = ageGroup === 'child';
+  const isFemale = sexTone === 'female';
+  const headY = isChild ? 10.7 : 9.8;
+  const headRadius = isChild ? 3.55 : 4.05;
+  const bodyPath = isFemale
+    ? isChild
+      ? 'M10.5 25.9C11.6 19.4 13.6 15.9 16 15.9C18.4 15.9 20.4 19.4 21.5 25.9H10.5Z'
+      : 'M9.7 26.4C11 18.9 13.3 15.2 16 15.2C18.7 15.2 21 18.9 22.3 26.4H9.7Z'
+    : isChild
+      ? 'M10 26V21.8C10 18.4 12.6 15.9 16 15.9C19.4 15.9 22 18.4 22 21.8V26H10Z'
+      : 'M9.6 26.4V21.3C9.6 17.8 12.4 15.2 16 15.2C19.6 15.2 22.4 17.8 22.4 21.3V26.4H9.6Z';
+  return (
+    <span
+      className="reception-patient-icon"
+      data-sex-tone={sexTone}
+      data-age-group={ageGroup}
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 32 32" focusable="false">
+        <circle className="reception-patient-icon__halo" cx="16" cy="16" r="13.2" />
+        <path className="reception-patient-icon__shadow" d="M8.8 26.8H23.2" />
+        <circle className="reception-patient-icon__head" cx="16" cy={headY} r={headRadius} />
+        <path className="reception-patient-icon__body" d={bodyPath} />
+        <path className="reception-patient-icon__highlight" d={isFemale ? 'M13.1 18.1C14 17.2 15 16.8 16 16.8' : 'M12.6 18.2C13.5 17.4 14.6 16.9 15.9 16.9'} />
+        {isChild ? (
+          <g className="reception-patient-icon__age-mark">
+            <circle cx="23.5" cy="8.4" r="3.2" />
+            <path d="M22.2 8.4H24.8M23.5 7.1V9.7" />
+          </g>
+        ) : null}
+      </svg>
+    </span>
+  );
+}
 
 const receptionStatusMvpPhase = (() => {
   const raw = import.meta.env.VITE_RECEPTION_STATUS_MVP ?? '';
@@ -240,6 +308,11 @@ const queuePhaseTone: Record<ClaimQueuePhase, 'info' | 'warning' | 'error' | 'su
 };
 
 type BillingWorkflowStatus = Extract<ReceptionStatus, '会計待ち' | '再計待' | '会計済み'>;
+type QueueDisplayStatus = {
+  label: string;
+  tone: 'info' | 'warning' | 'error' | 'success';
+  detail?: string;
+};
 
 const REBILL_FALLBACK_REASON = '会計済み後に変更があったため再会計が必要です。';
 
@@ -291,7 +364,7 @@ const formatCorrectionNote = (correction?: BillingCorrectionSignal) => {
   return correction.kind === '要再計' ? `再計待: ${correction.reason}` : `ORCA補正要確認: ${correction.reason}`;
 };
 
-const resolveQueueStatus = (entry?: ClaimQueueEntry) => {
+const resolveQueueStatus = (entry?: ClaimQueueEntry): QueueDisplayStatus => {
   if (!entry) return { label: '未取得', tone: 'warning' as const, detail: undefined };
   const label = queuePhaseLabel[entry.phase];
   const tone = queuePhaseTone[entry.phase];
@@ -300,7 +373,7 @@ const resolveQueueStatus = (entry?: ClaimQueueEntry) => {
   return { label, tone, detail };
 };
 
-const resolveOrcaQueueStatus = (entry?: OrcaQueueEntry) => {
+const resolveOrcaQueueStatus = (entry?: OrcaQueueEntry): QueueDisplayStatus => {
   if (!entry) return { label: '未取得', tone: 'warning' as const, detail: undefined };
   const sendStatus = resolveOrcaSendStatus(entry);
   const phase = toClaimQueueEntryFromOrcaQueueEntry(entry).phase;
@@ -316,6 +389,8 @@ const resolveOrcaQueueStatus = (entry?: OrcaQueueEntry) => {
     detail: detailParts.length > 0 ? detailParts.join(' / ') : undefined,
   };
 };
+
+const hasQueueDisplay = (status: QueueDisplayStatus) => status.label !== '未取得';
 
 const paymentModeLabel = (insurance?: string | null) => {
   const mode = resolvePaymentMode(insurance ?? undefined);
@@ -423,6 +498,17 @@ const resolveEntryDisplayLabel = (code: string, value?: string) => {
   const trimmed = value?.trim();
   if (trimmed && trimmed !== code) return trimmed;
   return code;
+};
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const normalizeDepartmentDisplayLabel = (label?: string, code?: string) => {
+  const trimmed = label?.trim();
+  if (!trimmed) return undefined;
+  const normalizedCode = normalizeCanonicalCode(code);
+  if (!normalizedCode || trimmed === normalizedCode) return trimmed;
+  const stripped = trimmed.replace(new RegExp(`^${escapeRegExp(normalizedCode)}[\\s:：/-]+`), '').trim();
+  return stripped || trimmed;
 };
 
 const isIdempotentDuplicate = (apiResult?: string, apiResultMessage?: string) =>
@@ -904,6 +990,7 @@ export function ReceptionPage({
   const [patientSearchError, setPatientSearchError] = useState<string | null>(null);
   const [patientSearchSelected, setPatientSearchSelected] = useState<PatientRecord | null>(null);
   const [patientSearchPage, setPatientSearchPage] = useState(1);
+  const patientSearchPatientIdDirtyRef = useRef(false);
   const [acceptOfficialReadinessByPatientId, setAcceptOfficialReadinessByPatientId] = useState<
     Record<string, AcceptOfficialReadinessProbe>
   >({});
@@ -942,7 +1029,6 @@ export function ReceptionPage({
   const [cancelConfirmState, setCancelConfirmState] = useState<{
     entry: ReceptionEntry;
     source: 'selection' | 'card' | 'table';
-    reason: string;
   } | null>(null);
   const [retryingPatientId, setRetryingPatientId] = useState<string | null>(null);
   const [claimSendingPatientId, setClaimSendingPatientId] = useState<string | null>(null);
@@ -1670,6 +1756,19 @@ export function ReceptionPage({
     collect(rawRecord.visits);
     return map;
   }, [appointmentQuery.data?.raw, selectorOptionsQuery.data?.departments]);
+  const resolveEntryDepartmentDisplay = useCallback(
+    (entry: Pick<ReceptionEntry, 'department' | 'departmentCode'>) => {
+      const raw = normalizeCanonicalCode(entry.department);
+      const explicitCode = normalizeCanonicalCode(entry.departmentCode);
+      const leadingCodeMatch = raw?.match(/^([A-Za-z0-9]+)[\s:：/-]+(.+)$/);
+      const rawIsCode = raw && /^[A-Za-z0-9]+$/.test(raw) ? raw : undefined;
+      const code = explicitCode ?? rawIsCode ?? leadingCodeMatch?.[1];
+      const mappedLabel = code ? departmentLabelMap.get(code) : undefined;
+      const rawLabel = leadingCodeMatch?.[2] ?? raw;
+      return normalizeDepartmentDisplayLabel(mappedLabel ?? rawLabel ?? code, code) ?? '—';
+    },
+    [departmentLabelMap],
+  );
   const physicianNameMap = useMemo(() => {
     const raw = appointmentQuery.data?.raw as Record<string, unknown> | undefined;
     const map: PhysicianNameMap = {};
@@ -2452,7 +2551,7 @@ export function ReceptionPage({
 
   useEffect(() => {
     if (!selectedEntry || !acceptAutoFillSignature) return;
-    if (acceptWorkflowModalOpen && patientSearchSelected) return;
+    if (acceptWorkflowModalOpen && (patientSearchSelected || patientSearchPatientIdDirtyRef.current)) return;
     if (lastAcceptAutoFillSignature.current === acceptAutoFillSignature) return;
     lastAcceptAutoFillSignature.current = acceptAutoFillSignature;
     applyAcceptAutoFill(selectedEntry);
@@ -2461,11 +2560,12 @@ export function ReceptionPage({
   useEffect(() => {
     if (!selectedEntry || selectedEntry.source !== 'unknown') return;
     if (!selectedEntry.patientId) return;
+    if (acceptWorkflowModalOpen && patientSearchPatientIdDirtyRef.current) return;
     if (acceptPatientId.trim()) return;
     setAcceptPatientId(selectedEntry.patientId);
     setPatientSearchPatientId(selectedEntry.patientId);
     lastAcceptAutoFill.current = { ...lastAcceptAutoFill.current, patientId: selectedEntry.patientId };
-  }, [acceptPatientId, selectedEntry]);
+  }, [acceptPatientId, acceptWorkflowModalOpen, selectedEntry]);
 
   const selectedBundle = useMemo(
     () => (selectedEntry ? resolveBundleForEntry(selectedEntry) : undefined),
@@ -3071,13 +3171,13 @@ export function ReceptionPage({
         enqueue({ tone: 'warning', message: '受付IDが未登録のため取消できません。' });
         return;
       }
-      setCancelConfirmState({ entry, source, reason: '' });
+      setCancelConfirmState({ entry, source });
     },
     [enqueue],
   );
 
   const executeCancelEntry = useCallback(
-    async (entry: ReceptionEntry, source: 'selection' | 'card' | 'table', reason?: string) => {
+    async (entry: ReceptionEntry, source: 'selection' | 'card' | 'table') => {
       const patientId = entry.patientId?.trim() ?? '';
       const acceptanceId = entry.receptionId?.trim() ?? '';
       if (!patientId || !acceptanceId) return;
@@ -3145,7 +3245,6 @@ export function ReceptionPage({
             acceptanceId,
             apiResult: payload.apiResult,
             apiResultMessage: payload.apiResultMessage,
-            reason: reason || undefined,
           },
         });
       } catch (error) {
@@ -3177,8 +3276,7 @@ export function ReceptionPage({
 
   const handleConfirmCancelEntry = useCallback(() => {
     if (!cancelConfirmState) return;
-    const reason = cancelConfirmState.reason.trim();
-    void executeCancelEntry(cancelConfirmState.entry, cancelConfirmState.source, reason || undefined);
+    void executeCancelEntry(cancelConfirmState.entry, cancelConfirmState.source);
     setCancelConfirmState(null);
   }, [cancelConfirmState, executeCancelEntry]);
 
@@ -3191,6 +3289,7 @@ export function ReceptionPage({
     setPatientSearchMeta(null);
     setPatientSearchError(null);
     setPatientSearchSelected(null);
+    patientSearchPatientIdDirtyRef.current = false;
     patientSearchFilterRef.current = null;
     setAcceptWorkflowModalOpen(true);
     setAcceptResult(null);
@@ -3208,6 +3307,7 @@ export function ReceptionPage({
         setPatientSearchMeta(null);
         setPatientSearchError(null);
         setPatientSearchSelected(null);
+        patientSearchPatientIdDirtyRef.current = false;
         patientSearchFilterRef.current = null;
         setAcceptResult(null);
       }
@@ -3218,12 +3318,17 @@ export function ReceptionPage({
   const handlePatientSearchSubmit = useCallback(
     async (event?: FormEvent<HTMLFormElement>) => {
       event?.preventDefault();
+      const formData = event?.currentTarget ? new FormData(event.currentTarget) : null;
+      const readSubmittedValue = (name: string, fallback: string) => {
+        const value = formData?.get(name);
+        return typeof value === 'string' ? value.trim() : fallback.trim();
+      };
       const filters = {
-        patientId: patientSearchPatientId.trim(),
-        nameSei: patientSearchNameSei.trim(),
-        nameMei: patientSearchNameMei.trim(),
-        kanaSei: patientSearchKanaSei.trim(),
-        kanaMei: patientSearchKanaMei.trim(),
+        patientId: readSubmittedValue('receptionPatientSearchPatientId', patientSearchPatientId),
+        nameSei: readSubmittedValue('receptionPatientSearchNameSei', patientSearchNameSei),
+        nameMei: readSubmittedValue('receptionPatientSearchNameMei', patientSearchNameMei),
+        kanaSei: readSubmittedValue('receptionPatientSearchKanaSei', patientSearchKanaSei),
+        kanaMei: readSubmittedValue('receptionPatientSearchKanaMei', patientSearchKanaMei),
       };
       const primaryKeyword =
         filters.patientId ||
@@ -3265,6 +3370,7 @@ export function ReceptionPage({
 
   const clearPatientSearch = useCallback(() => {
     setPatientSearchPatientId('');
+    patientSearchPatientIdDirtyRef.current = false;
     setAcceptPatientId('');
     setPatientSearchNameSei('');
     setPatientSearchNameMei('');
@@ -3340,6 +3446,7 @@ export function ReceptionPage({
         setPendingAcceptedChartsHandoff(null);
       }
       setPatientSearchSelected(patient);
+      patientSearchPatientIdDirtyRef.current = false;
       const resolvedPatientId = nextPatientId;
       if (resolvedPatientId) {
         setAcceptPatientId(resolvedPatientId);
@@ -3502,7 +3609,7 @@ export function ReceptionPage({
     acceptVisitKind,
     visibleAppointmentEntries,
   ]);
-  const selectedPatientName = patientSearchSelected?.name?.trim() || acceptTarget.name || '未選択';
+  const selectedPatientName = patientSearchSelected?.name?.trim() || '未選択';
 
   const openExceptionsModal = useCallback(() => {
     setExceptionsModalOpen(true);
@@ -4234,29 +4341,39 @@ export function ReceptionPage({
     [acceptPaymentMode, acceptVisitKind, acceptWorkflowModalOpen],
   );
 
-  const renderAcceptDetailPanel = (placement: 'sidepane' | 'modal') => (
-    <div
-      className={`reception-accept__detail-panel${placement === 'modal' ? ' reception-accept__detail-panel--modal' : ''}`}
-      data-test-id={placement === 'modal' ? 'reception-accept-detail-modal' : 'reception-accept-detail-sidepane'}
-    >
-      <PatientIdentityBar
-        className="reception-accept__identity-bar"
-        eyebrow={placement === 'modal' ? '受付登録モーダル' : '受付登録'}
-        title="受付登録"
-        patientName={selectedPatientName}
-        patientId={acceptTarget.patientId}
-        patientKana={patientSearchSelected?.kana?.trim() ?? undefined}
-        sex={acceptTarget.sex}
-        note={`受付対象: ${selectedPatientName}`}
-        selected={Boolean(selectedPatientId)}
-        chips={
-          isManualPatientMismatch ? (
+  const renderAcceptDetailPanel = (placement: 'sidepane' | 'modal') => {
+    const acceptPatientAge = calculateAge(acceptTarget.birthDate, selectedDate);
+    const acceptPatientAgeGroup = resolvePatientAgeGroup(acceptPatientAge);
+    const acceptPatientSexTone = resolvePatientSexTone(acceptTarget.sex);
+    const acceptPatientName = acceptTarget.name?.trim() || selectedPatientName;
+    const acceptPatientKana =
+      patientSearchSelected?.kana?.trim() ||
+      (selectedEntry?.patientId?.trim() === acceptTarget.patientId ? selectedEntry.kana?.trim() : '') ||
+      '';
+
+    return (
+      <div
+        className={`reception-accept__detail-panel${placement === 'modal' ? ' reception-accept__detail-panel--modal' : ''}`}
+        data-test-id={placement === 'modal' ? 'reception-accept-detail-modal' : 'reception-accept-detail-sidepane'}
+      >
+        <section
+          className="reception-accept__identity-card"
+          role="group"
+          aria-label={`受付対象 ${acceptPatientName}`}
+          data-selected={selectedPatientId ? 'true' : 'false'}
+        >
+          <PatientProfileIcon sexTone={acceptPatientSexTone} ageGroup={acceptPatientAgeGroup} />
+          <div className="reception-accept__identity-text">
+            {acceptPatientKana ? <small className="reception-accept__identity-kana">{acceptPatientKana}</small> : null}
+            <strong className="reception-accept__identity-name">{acceptPatientName}</strong>
+          </div>
+          <span className="reception-accept__identity-age">{formatAgeJa(acceptPatientAge)}</span>
+          {isManualPatientMismatch ? (
             <StatusPill tone="warning" size="xs">
               手入力不一致
             </StatusPill>
-          ) : undefined
-        }
-      />
+          ) : null}
+        </section>
       {acceptTargetMetaMissing ? (
         <small className="reception-accept__optional">
           手入力IDから患者同定情報（生年月日/性別）を取得できません。患者選択結果を確認してください。
@@ -4346,12 +4463,6 @@ export function ReceptionPage({
               {departmentOptions.length >= 200 && (
                 <small className="reception-accept__optional">候補が多いため上位200件に制限しています。</small>
               )}
-              {acceptDepartmentSelection && departmentOptions.length === 1 && departmentOptions[0]?.[0] && (
-                <small className="reception-accept__optional">選択中の行に基づいて診療科を反映しています。</small>
-              )}
-              {acceptDepartmentSelection && departmentOptions.length > 1 && (
-                <small className="reception-accept__optional">選択中の行に一致する診療科を優先します。</small>
-              )}
               {acceptErrors.department && <small className="reception-accept__error">{acceptErrors.department}</small>}
             </label>
 
@@ -4401,14 +4512,8 @@ export function ReceptionPage({
                   担当医が取得できません。フィルタ/受付一覧の読み込みを確認してください。
                 </small>
               )}
-              {acceptPhysicianSelection && physicianOptions.length > 0 && (
-                <small className="reception-accept__optional">選択中の行の担当医を反映しています。</small>
-              )}
               {physicianOptions.length >= 200 && (
                 <small className="reception-accept__optional">候補が多いため上位200件に制限しています。</small>
-              )}
-              {acceptPhysicianSelection && physicianOptions.length > 1 && (
-                <small className="reception-accept__optional">選択中の行に一致する担当医を優先します。</small>
               )}
               {acceptErrors.physician && <small className="reception-accept__error">{acceptErrors.physician}</small>}
             </label>
@@ -4450,9 +4555,6 @@ export function ReceptionPage({
                   </option>
                 ))}
               </select>
-              <small className="reception-accept__optional">
-                既存患者の受付に必要な場合のみ送信します。未選択なら `Medical_Information` は送信しません。
-              </small>
             </label>
           </div>
 
@@ -4494,8 +4596,9 @@ export function ReceptionPage({
           {acceptResult.detail && <p className="reception-accept__result-detail">{acceptResult.detail}</p>}
         </div>
       ) : null}
-    </div>
-  );
+      </div>
+    );
+  };
 
   const receptionErrorIndicator =
     receptionErrorCount > 0 ? (
@@ -4515,9 +4618,9 @@ export function ReceptionPage({
       </button>
     ) : null;
 
-  const receptionStatusTabs = (
-    <div className="reception-status-tabs reception-status-tabs--section" role="region" aria-label="ステータスタブ">
-      <div className="reception-status-tabs__layout-actions" role="group" aria-label="表示形式">
+  const receptionLayoutActions = (
+    <div className="reception-toolbar__view-actions" role="group" aria-label="一覧表示操作">
+      <div className="reception-toolbar__view-mode" role="group" aria-label="表示形式">
         <button
           type="button"
           className="reception-results-toolbar__toggle"
@@ -4535,6 +4638,23 @@ export function ReceptionPage({
           カード
         </button>
       </div>
+      <button
+        type="button"
+        className="reception-results-toolbar__toggle reception-results-toolbar__toggle--refresh"
+        onClick={() => appointmentQuery.refetch()}
+      >
+        再取得
+      </button>
+      {appointmentQuery.isFetching ? (
+        <span className="reception-results-toolbar__loading" role="status" aria-live={infoLive}>
+          更新中…
+        </span>
+      ) : null}
+    </div>
+  );
+
+  const receptionStatusTabs = (
+    <div className="reception-status-tabs reception-status-tabs--section" role="region" aria-label="ステータスタブ">
       <div className="reception-status-tabs__list" role="tablist" aria-label="受付ステータス">
         {STATUS_TAB_ORDER.map((status) => {
           const isActive = status === activeStatusTab;
@@ -4560,6 +4680,7 @@ export function ReceptionPage({
           );
         })}
       </div>
+      {receptionLayoutActions}
     </div>
   );
 
@@ -4571,26 +4692,24 @@ export function ReceptionPage({
           : 'reception-section__header reception-section__header--workspace'
       }
     >
-      <div className="reception-workspace-header__primary">
-        <div className="reception-workspace-header__title" ref={summaryRef} tabIndex={-1} role="status" aria-live={infoLive}>
-          <h2 id={`reception-section-label-${activeStatusTab}`}>{activeStatusLabel}</h2>
-          <span className={variant === 'cards' ? 'reception-board__count' : 'reception-section__count'}>
-            {activeStatusItems.length}件
-          </span>
-          {appointmentQuery.isFetching ? (
-            <span className="reception-results-toolbar__loading">更新中…</span>
+      <div className="sr-only" ref={summaryRef} tabIndex={-1} role="status" aria-live={infoLive}>
+        <h2 id={`reception-section-label-${activeStatusTab}`}>{activeStatusLabel}</h2>
+        <span>{activeStatusItems.length}件</span>
+      </div>
+      {appointmentQuery.isFetching || activeFilterChips.length > 0 ? (
+        <div className="reception-workspace-header__primary">
+          {appointmentQuery.isFetching ? <span className="reception-results-toolbar__loading">更新中…</span> : null}
+          {activeFilterChips.length > 0 ? (
+            <div className="reception-workspace-header__chips" aria-label="適用中の詳細条件">
+              {activeFilterChips.map((chip) => (
+                <span key={chip.key} className="reception-workspace-header__chip">
+                  {chip.label}
+                </span>
+              ))}
+            </div>
           ) : null}
         </div>
-        {activeFilterChips.length > 0 ? (
-          <div className="reception-workspace-header__chips" aria-label="適用中の詳細条件">
-            {activeFilterChips.map((chip) => (
-              <span key={chip.key} className="reception-workspace-header__chip">
-                {chip.label}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </div>
+      ) : null}
       <div className="reception-workspace-header__controls" ref={setToolbarHost} />
       {receptionStatusTabs}
     </header>
@@ -4611,33 +4730,38 @@ export function ReceptionPage({
               <>
         <section className="reception-toolbar reception-toolbar--embedded" role="region" aria-label="受付ツールバー" data-run-id={resolvedRunId}>
           <form className="reception-toolbar__form" onSubmit={handleSearchSubmit}>
-            <div className="reception-toolbar__cluster reception-toolbar__cluster--date" role="group" aria-label="日付操作">
+            <div className="reception-toolbar__cluster reception-toolbar__cluster--date" role="group" aria-label="受付日の変更">
               <span className="reception-toolbar__cluster-title">受付日</span>
-              <div className="reception-search__date-nav" role="group" aria-label="日付操作">
+              <div className="reception-toolbar__date-inline" role="group" aria-label="受付日の移動">
                 <button
                   type="button"
-                  className="reception-search__button ghost"
+                  className="reception-date-shift-button"
                   onClick={() => setSelectedDate((prev) => shiftDate(prev, -1))}
+                  aria-label="前日に移動"
                   title="前日に移動"
                 >
-                  前日
+                  <span className="reception-date-shift-button__triangle reception-date-shift-button__triangle--prev" aria-hidden="true" />
                 </button>
+                <label className="reception-search__field reception-toolbar__date-field">
+                  <span className="sr-only">日付</span>
+                  <input
+                    id="reception-search-date"
+                    name="receptionSearchDate"
+                    type="date"
+                    aria-label="受付日"
+                    value={selectedDate}
+                    onChange={(event) => setSelectedDate(event.target.value)}
+                    required
+                  />
+                </label>
                 <button
                   type="button"
-                  className="reception-search__button ghost"
-                  onClick={() => setSelectedDate(todayString())}
-                  disabled={selectedDate === todayString()}
-                  title="今日に移動"
-                >
-                  今日
-                </button>
-                <button
-                  type="button"
-                  className="reception-search__button ghost"
+                  className="reception-date-shift-button"
                   onClick={() => setSelectedDate((prev) => shiftDate(prev, 1))}
+                  aria-label="翌日に移動"
                   title="翌日に移動"
                 >
-                  翌日
+                  <span className="reception-date-shift-button__triangle reception-date-shift-button__triangle--next" aria-hidden="true" />
                 </button>
                 {chartVisitDate ? (
                   <button
@@ -4651,57 +4775,32 @@ export function ReceptionPage({
                   </button>
                 ) : null}
               </div>
-              <label className="reception-search__field reception-toolbar__date-field">
-                <span className="sr-only">日付</span>
-                <input
-                  id="reception-search-date"
-                  name="receptionSearchDate"
-                  type="date"
-                  aria-label="受付日"
-                  value={selectedDate}
-                  onChange={(event) => setSelectedDate(event.target.value)}
-                  required
-                />
-              </label>
             </div>
-            <div className="reception-toolbar__cluster reception-toolbar__cluster--search" role="group" aria-label="検索">
-              <label className="reception-search__field reception-toolbar__keyword-field">
-                <span>検索（患者ID/氏名/カナ）</span>
+            <div className="reception-toolbar__cluster reception-toolbar__cluster--search" role="group" aria-label="患者検索">
+              <label className="reception-toolbar__keyword-label" htmlFor="reception-search-keyword">
+                患者検索
+              </label>
+              <div className="reception-toolbar__keyword-control">
                 <input
+                  className="reception-toolbar__keyword-input"
                   id="reception-search-keyword"
                   name="receptionSearchKeyword"
                   type="search"
                   value={keyword}
                   onChange={(event) => setKeyword(event.target.value)}
-                  placeholder="PX-0001 / 山田 / ヤマダ"
+                  placeholder="患者ID・氏名・カナで検索できます。"
                 />
-              </label>
-              <button type="submit" className="reception-search__button primary">
-                検索
-              </button>
+                <button type="submit" className="reception-search__button primary reception-toolbar__keyword-submit">
+                  検索
+                </button>
+              </div>
             </div>
             {receptionErrorIndicator && !sessionStatusSlot ? (
               <div className="reception-toolbar__status" role="status" aria-live={infoLive}>
                 {receptionErrorIndicator}
               </div>
             ) : null}
-            <div className="reception-toolbar__cluster reception-toolbar__cluster--actions" role="group" aria-label="操作">
-              <button
-                type="button"
-                className="reception-search__button ghost"
-                onClick={() => appointmentQuery.refetch()}
-              >
-                再取得
-              </button>
-              <button
-                type="button"
-                className="reception-search__button ghost"
-                onClick={() => setFiltersCollapsed((prev) => !prev)}
-                aria-expanded={!filtersCollapsed}
-                aria-controls="reception-toolbar-advanced"
-              >
-                詳細条件
-              </button>
+            <div className="reception-toolbar__disclosure-actions" role="group" aria-label="補助操作">
               <button
                 type="button"
                 className="reception-search__button primary"
@@ -4711,6 +4810,15 @@ export function ReceptionPage({
               >
                 <ClinicalIcon icon="patient-search-existing" />
                 既存患者受付/患者検索
+              </button>
+              <button
+                type="button"
+                className="reception-search__button ghost"
+                onClick={() => setFiltersCollapsed((prev) => !prev)}
+                aria-expanded={!filtersCollapsed}
+                aria-controls="reception-toolbar-advanced"
+              >
+                詳細条件
               </button>
             </div>
           </form>
@@ -4754,122 +4862,136 @@ export function ReceptionPage({
         {!filtersCollapsed ? (
           <section
             id="reception-toolbar-advanced"
-            className="reception-toolbar__advanced reception-toolbar__advanced--embedded"
+            className="reception-toolbar__panel reception-toolbar__advanced reception-toolbar__advanced--embedded"
             role="region"
             aria-label="詳細条件"
           >
             <div className="reception-toolbar__advanced-grid">
-              <label className="reception-search__field">
-                <span>診療科</span>
-                <select
-                  id="reception-search-department"
-                  name="receptionSearchDepartment"
-                  value={departmentFilter}
-                  onChange={(event) => setDepartmentFilter(event.target.value)}
-                >
-                  <option value="">すべて</option>
-                  {uniqueDepartments.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="reception-search__field">
-                <span>担当医</span>
-                <select
-                  id="reception-search-physician"
-                  name="receptionSearchPhysician"
-                  value={physicianFilter}
-                  onChange={(event) => setPhysicianFilter(event.target.value)}
-                >
-                  <option value="">すべて</option>
-                  {uniquePhysicians.map((physician) => (
-                    <option key={physician} value={physician}>
-                      {physician}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="reception-search__field">
-                <span>保険/自費</span>
-                <select
-                  id="reception-search-payment-mode"
-                  name="receptionSearchPaymentMode"
-                  value={paymentMode}
-                  onChange={(event) => setPaymentMode(normalizePaymentMode(event.target.value))}
-                >
-                  <option value="all">すべて</option>
-                  <option value="insurance">保険</option>
-                  <option value="self">自費</option>
-                </select>
-              </label>
-              <label className="reception-search__field">
-                <span>ソート</span>
-                <select
-                  id="reception-search-sort"
-                  name="receptionSearchSort"
-                  value={sortKey}
-                  onChange={(event) => setSortKey(event.target.value as SortKey)}
-                >
-                  <option value="time">優先時間（受付→予約）</option>
-                  <option value="acceptance">受付時間</option>
-                  <option value="reservation">予約時間</option>
-                  <option value="name">氏名</option>
-                  <option value="department">診療科</option>
-                </select>
-              </label>
-              <label className="reception-search__field">
-                <span>保存ビュー</span>
-                <select
-                  id="reception-search-saved-view"
-                  name="receptionSearchSavedView"
-                  value={selectedViewId}
-                  onChange={(event) => setSelectedViewId(event.target.value)}
-                >
-                  <option value="">選択してください</option>
-                  {savedViews.map((view) => (
-                    <option key={view.id} value={view.id}>
-                      {view.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="reception-search__button ghost"
-                onClick={() => {
-                  const view = savedViews.find((item) => item.id === selectedViewId);
-                  if (view) applySavedView(view);
-                }}
-                disabled={!selectedViewId}
-              >
-                適用
-              </button>
-              <button
-                type="button"
-                className="reception-search__button ghost"
-                onClick={handleDeleteView}
-                disabled={!selectedViewId}
-              >
-                削除
-              </button>
-              <label className="reception-search__field">
-                <span>ビュー名</span>
-                <input
-                  id="reception-search-saved-view-name"
-                  name="receptionSearchSavedViewName"
-                  value={savedViewName}
-                  onChange={(event) => setSavedViewName(event.target.value)}
-                  placeholder="例: 内科/午前/保険"
-                />
-              </label>
-              <button type="button" className="reception-search__button primary" onClick={handleSaveView}>
-                現在の条件を保存
-              </button>
-              <button type="button" className="reception-search__button ghost" onClick={handleClear}>
-                クリア
-              </button>
+              <fieldset className="reception-toolbar__panel-group">
+                <legend>絞り込み</legend>
+                <label className="reception-search__field">
+                  <span>診療科</span>
+                  <select
+                    id="reception-search-department"
+                    name="receptionSearchDepartment"
+                    value={departmentFilter}
+                    onChange={(event) => setDepartmentFilter(event.target.value)}
+                  >
+                    <option value="">すべて</option>
+                    {uniqueDepartments.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="reception-search__field">
+                  <span>担当医</span>
+                  <select
+                    id="reception-search-physician"
+                    name="receptionSearchPhysician"
+                    value={physicianFilter}
+                    onChange={(event) => setPhysicianFilter(event.target.value)}
+                  >
+                    <option value="">すべて</option>
+                    {uniquePhysicians.map((physician) => (
+                      <option key={physician} value={physician}>
+                        {physician}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="reception-search__field">
+                  <span>保険/自費</span>
+                  <select
+                    id="reception-search-payment-mode"
+                    name="receptionSearchPaymentMode"
+                    value={paymentMode}
+                    onChange={(event) => setPaymentMode(normalizePaymentMode(event.target.value))}
+                  >
+                    <option value="all">すべて</option>
+                    <option value="insurance">保険</option>
+                    <option value="self">自費</option>
+                  </select>
+                </label>
+                <label className="reception-search__field">
+                  <span>ソート</span>
+                  <select
+                    id="reception-search-sort"
+                    name="receptionSearchSort"
+                    value={sortKey}
+                    onChange={(event) => setSortKey(event.target.value as SortKey)}
+                  >
+                    <option value="time">優先時間（受付→予約）</option>
+                    <option value="acceptance">受付時間</option>
+                    <option value="reservation">予約時間</option>
+                    <option value="name">氏名</option>
+                    <option value="department">診療科</option>
+                  </select>
+                </label>
+              </fieldset>
+              <fieldset className="reception-toolbar__panel-group">
+                <legend>保存ビュー</legend>
+                <label className="reception-search__field">
+                  <span>保存ビュー</span>
+                  <select
+                    id="reception-search-saved-view"
+                    name="receptionSearchSavedView"
+                    value={selectedViewId}
+                    onChange={(event) => setSelectedViewId(event.target.value)}
+                  >
+                    <option value="">選択してください</option>
+                    {savedViews.map((view) => (
+                      <option key={view.id} value={view.id}>
+                        {view.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="reception-toolbar__panel-row">
+                  <button
+                    type="button"
+                    className="reception-search__button ghost"
+                    onClick={() => {
+                      const view = savedViews.find((item) => item.id === selectedViewId);
+                      if (view) applySavedView(view);
+                    }}
+                    disabled={!selectedViewId}
+                  >
+                    適用
+                  </button>
+                  <button
+                    type="button"
+                    className="reception-search__button ghost"
+                    onClick={handleDeleteView}
+                    disabled={!selectedViewId}
+                  >
+                    削除
+                  </button>
+                </div>
+                <label className="reception-search__field">
+                  <span>ビュー名</span>
+                  <input
+                    id="reception-search-saved-view-name"
+                    name="receptionSearchSavedViewName"
+                    value={savedViewName}
+                    onChange={(event) => setSavedViewName(event.target.value)}
+                    aria-describedby="reception-search-saved-view-name-help"
+                  />
+                  <small id="reception-search-saved-view-name-help" className="reception-search__field-help">
+                    例: 内科/午前/保険
+                  </small>
+                </label>
+                <button type="button" className="reception-search__button primary" onClick={handleSaveView}>
+                  現在の条件を保存
+                </button>
+              </fieldset>
+              <fieldset className="reception-toolbar__panel-group reception-toolbar__panel-group--utility">
+                <legend>条件操作</legend>
+                <button type="button" className="reception-search__button ghost" onClick={handleClear}>
+                  クリア
+                </button>
+              </fieldset>
             </div>
             <div className="reception-toolbar__summary" role="status" aria-live={infoLive}>
               <span className="reception-search__saved-share">受付 ↔ 患者管理で共有</span>
@@ -5164,6 +5286,10 @@ export function ReceptionPage({
                           const isSelected = selectedEntryKey === entryKey(entry);
                           const sexTone = resolvePatientSexTone(entry.sex);
                           const sexAriaLabel = resolvePatientSexAriaLabel(sexTone);
+                          const patientAge = calculateAge(entry.birthDate, selectedDate);
+                          const patientAgeGroup = resolvePatientAgeGroup(patientAge);
+                          const patientAgeGroupLabel = resolvePatientAgeGroupLabel(patientAgeGroup);
+                          const departmentDisplay = resolveEntryDepartmentDisplay(entry);
                           const rowKey =
                             entryKey(entry) ??
                             `${entry.patientId ?? 'unknown'}-${entry.appointmentTime ?? entry.department ?? 'card'}`;
@@ -5182,8 +5308,11 @@ export function ReceptionPage({
                             billingSendGuard && !billingSendGuard.canSend ? billingSendGuard.title : 'ORCAへ会計送信します';
                           const billingSendInProgress = claimSendingPatientId === entry.patientId;
                           const activeQueue = orcaQueueStatus;
+                          const activeQueueVisible = hasQueueDisplay(activeQueue);
                           const queueDetailVisible =
-                            Boolean(activeQueue.detail) && (activeQueue.tone === 'warning' || activeQueue.tone === 'error');
+                            activeQueueVisible &&
+                            Boolean(activeQueue.detail) &&
+                            (activeQueue.tone === 'warning' || activeQueue.tone === 'error');
                           const acceptanceTime = normalizeTimeLabel(
                             entry.acceptanceTime ?? (entry.source === 'visits' ? entry.appointmentTime : undefined),
                           );
@@ -5230,7 +5359,7 @@ export function ReceptionPage({
                               data-sex-tone={sexTone}
                               data-visit-kind={visitKind ?? undefined}
                               data-elapsed-severity={elapsedSeverity ?? undefined}
-                              aria-label={`${entry.name ?? '患者'} ${entry.patientId ?? ''}${sexAriaLabel ? ` ${sexAriaLabel}` : ''}`}
+                              aria-label={`${entry.name ?? '患者'} ${entry.patientId ?? ''}${sexAriaLabel ? ` ${sexAriaLabel}` : ''} ${patientAgeGroupLabel}`}
                               onClick={() => handleSelectRow(entry)}
                               onDoubleClick={() => handleRowDoubleClick(entry)}
                               onKeyDown={(event) => {
@@ -5246,14 +5375,17 @@ export function ReceptionPage({
                             >
                               <div className="reception-card__summary">
                                 <div className="reception-card__identity">
-                                  {entry.kana ? <small className="reception-card__kana">{entry.kana}</small> : null}
-                                  <strong className="reception-card__display-name">{entry.name ?? '未登録'}</strong>
+                                  <PatientProfileIcon sexTone={sexTone} ageGroup={patientAgeGroup} />
+                                  <div className="reception-card__identity-text">
+                                    {entry.kana ? <small className="reception-card__kana">{entry.kana}</small> : null}
+                                    <strong className="reception-card__display-name">{entry.name ?? '未登録'}</strong>
+                                    <small className="reception-table__sub reception-table__age">{formatAgeJa(patientAge)}</small>
+                                  </div>
                                 </div>
                                 <div>
                                   <span className="reception-card__patient-id" aria-label={`患者ID: ${entry.patientId ?? '未登録'}`}>
                                     {entry.patientId ?? '—'}
                                   </span>
-                                  <small className="reception-table__sub">{formatBirthDateJa(entry.birthDate)}</small>
                                 </div>
                                 {billingProjection ? (
                                   <div className="reception-card__billing-summary">
@@ -5457,7 +5589,7 @@ export function ReceptionPage({
                                         予約ID: <code>{entry.appointmentId}</code>
                                       </span>
                                     ) : null}
-                                    <span>{entry.department ?? '—'}</span>
+                                    <span>{departmentDisplay}</span>
                                     {entry.physician ? <span>担当: {entry.physician}</span> : null}
                                     <span>直近: {resolveLastVisitForEntry(entry)}</span>
                                   </div>
@@ -5477,7 +5609,14 @@ export function ReceptionPage({
                                     ) : null}
                                     {debugUiEnabled && cached?.invoiceNumber ? <small>invoice: {cached.invoiceNumber}</small> : null}
                                     {debugUiEnabled && cached?.dataId ? <small>data: {cached.dataId}</small> : null}
-                                    <span className={`reception-queue reception-queue--${activeQueue.tone}`}>{activeQueue.label}</span>
+                                    {activeQueueVisible ? (
+                                      <span
+                                        className={`reception-queue reception-queue--${activeQueue.tone}`}
+                                        aria-label={`ORCA連携: ${activeQueue.label}${activeQueue.detail ? ` ${activeQueue.detail}` : ''}`}
+                                      >
+                                        {activeQueue.label}
+                                      </span>
+                                    ) : null}
                                     {queueDetailVisible ? <small>{truncateText(activeQueue.detail ?? '', 44)}</small> : null}
                                   </div>
                                   {correctionNote ? (
@@ -5531,12 +5670,14 @@ export function ReceptionPage({
                       >
                         <thead>
                           <tr>
-                            <th scope="col">ID</th>
+                            <th scope="col">患者ID</th>
                             <th scope="col">氏名</th>
+                            <th scope="col">年齢</th>
                             <th scope="col">来院/科</th>
                             <th scope="col">メモ/参照</th>
-                            <th scope="col">ORCA</th>
-                            <th scope="col">操作</th>
+                            <th scope="col" className="reception-table__action-heading">
+                              <span className="sr-only">行操作</span>
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -5559,7 +5700,9 @@ export function ReceptionPage({
                             const orcaQueueEntry = entry.patientId ? orcaQueueByPatientId.get(entry.patientId) : undefined;
                             const orcaQueueStatus = orcaQueueErrorStatus ?? resolveOrcaQueueStatus(orcaQueueEntry);
                             const displayedQueueStatus = isReceptionStatusMvpEnabled ? orcaQueueStatus : queueStatus;
+                            const displayedQueueVisible = hasQueueDisplay(displayedQueueStatus);
                             const queueDetailVisible =
+                              displayedQueueVisible &&
                               Boolean(displayedQueueStatus.detail) &&
                               (displayedQueueStatus.tone === 'warning' || displayedQueueStatus.tone === 'error');
                             const mvpDecision = isReceptionStatusMvpEnabled
@@ -5575,6 +5718,10 @@ export function ReceptionPage({
                             const isSelected = selectedEntryKey === entryKey(entry);
                             const sexTone = resolvePatientSexTone(entry.sex);
                             const sexAriaLabel = resolvePatientSexAriaLabel(sexTone);
+                            const patientAge = calculateAge(entry.birthDate, selectedDate);
+                            const patientAgeGroup = resolvePatientAgeGroup(patientAge);
+                            const patientAgeGroupLabel = resolvePatientAgeGroupLabel(patientAgeGroup);
+                            const departmentDisplay = resolveEntryDepartmentDisplay(entry);
                             const rowKey =
                               entryKey(entry) ??
                               `${entry.patientId ?? 'unknown'}-${entry.appointmentTime ?? entry.department ?? 'row'}`;
@@ -5606,7 +5753,7 @@ export function ReceptionPage({
                                   handleRowDoubleClick(entry);
                                 }}
                                 aria-selected={isSelected}
-                                aria-label={`${entry.name ?? '患者'} ${entry.appointmentTime ?? ''} ${entry.department ?? ''}${sexAriaLabel ? ` ${sexAriaLabel}` : ''}`}
+                                aria-label={`${entry.name ?? '患者'} ${entry.appointmentTime ?? ''} ${departmentDisplay}${sexAriaLabel ? ` ${sexAriaLabel}` : ''} ${patientAgeGroupLabel}`}
                                 data-test-id="reception-entry-row"
                                 data-patient-id={entry.patientId ?? ''}
                                 data-encounter-key={entry.encounterKey ?? ''}
@@ -5621,9 +5768,8 @@ export function ReceptionPage({
                                     as="div"
                                     className="reception-table__id"
                                     patientId={entry.patientId ?? '未登録'}
-                                    receptionId={entry.receptionId}
                                     appointmentId={undefined}
-                                    showLabels
+                                    showLabels={false}
                                     separator="slash"
                                     runId={resolvedRunId}
                                     itemClassName="reception-table__id-item"
@@ -5633,14 +5779,17 @@ export function ReceptionPage({
                                 </td>
                                 <td>
                                   <div className="reception-table__patient">
-                                    <strong>{entry.name ?? '未登録'}</strong>
-                                    <small className="reception-table__sub">{entry.kana ?? '—'}</small>
-                                    <small className="reception-table__sub">{formatBirthDateJa(entry.birthDate)}</small>
+                                    <PatientProfileIcon sexTone={sexTone} ageGroup={patientAgeGroup} />
+                                    <div className="reception-table__patient-text">
+                                      <small className="reception-table__sub reception-table__kana">{entry.kana ?? '—'}</small>
+                                      <strong>{entry.name ?? '未登録'}</strong>
+                                    </div>
                                   </div>
                                 </td>
+                                <td className="reception-table__age-cell">{formatAgeJa(patientAge)}</td>
                                 <td>
                                   <div className="reception-table__time">{entry.appointmentTime ?? '-'}</div>
-                                  <small className="reception-table__sub">{entry.department ?? '-'}</small>
+                                  <small className="reception-table__sub">{departmentDisplay}</small>
                                 </td>
                                 <td className="reception-table__note">
                                   {correctionNote ? (
@@ -5653,18 +5802,18 @@ export function ReceptionPage({
                                       送信: {billingProjection.transmission}
                                     </small>
                                   ) : null}
-                                  <div>{entry.note ? truncateText(entry.note, 36) : '—'}</div>
-                                </td>
-                                <td className="reception-table__queue">
-                                  <span
-                                    className={`reception-queue reception-queue--${displayedQueueStatus.tone}`}
-                                    aria-label={`ORCAキュー: ${displayedQueueStatus.label}${displayedQueueStatus.detail ? ` ${displayedQueueStatus.detail}` : ''}`}
-                                  >
-                                    {displayedQueueStatus.label}
-                                  </span>
+                                  {displayedQueueVisible ? (
+                                    <small
+                                      className="reception-table__sub"
+                                      aria-label={`ORCA連携: ${displayedQueueStatus.label}${displayedQueueStatus.detail ? ` ${displayedQueueStatus.detail}` : ''}`}
+                                    >
+                                      ORCA: {displayedQueueStatus.label}
+                                    </small>
+                                  ) : null}
                                   {queueDetailVisible ? (
                                     <small className="reception-table__sub">{displayedQueueStatus.detail}</small>
                                   ) : null}
+                                  <div>{entry.note ? truncateText(entry.note, 36) : '—'}</div>
                                 </td>
                                 <td className="reception-table__action">
                                   {billingProjection?.workflow === '会計待ち' ? (
@@ -5893,7 +6042,10 @@ export function ReceptionPage({
                             inputMode="numeric"
                             autoComplete="off"
                             value={patientSearchPatientId}
-                            onChange={(event) => setPatientSearchPatientId(event.target.value)}
+                            onChange={(event) => {
+                              patientSearchPatientIdDirtyRef.current = true;
+                              setPatientSearchPatientId(event.target.value);
+                            }}
                             placeholder="000001"
                           />
                         </label>
@@ -6243,65 +6395,46 @@ export function ReceptionPage({
         <FocusTrapDialog
           open={Boolean(cancelConfirmState)}
           title="受付取消の確認"
-          description="患者同定情報と受付情報を確認してから取消を実行します。"
           onClose={closeCancelConfirm}
           testId="reception-cancel-confirm-modal"
         >
           {cancelConfirmState ? (
-            <>
-              <p>
-                この受付を取消します。実行後は受付一覧へ反映されます。
-              </p>
-              <PatientIdentityBar
-                className="reception-cancel__identity-bar"
-                eyebrow="受付取消"
-                title={cancelConfirmState.entry.name ?? '取消対象'}
-                patientId={cancelConfirmState.entry.patientId}
-                patientKana={cancelConfirmState.entry.kana}
-                receptionId={cancelConfirmState.entry.receptionId}
-                appointmentId={cancelConfirmState.entry.appointmentId}
-                sex={cancelConfirmState.entry.sex}
-                note={`氏名: ${cancelConfirmState.entry.name ?? '—'} / 状態: ${
-                  SECTION_LABEL[cancelConfirmState.entry.status] ?? cancelConfirmState.entry.status
-                }`}
-                selected
-              />
-              <p>
-                氏名: {cancelConfirmState.entry.name ?? '—'} / 状態: {SECTION_LABEL[cancelConfirmState.entry.status] ?? cancelConfirmState.entry.status}
-              </p>
-              <label className="reception-accept__field">
-                <span>取消理由（任意）</span>
-                <input
-                  id="reception-cancel-reason"
-                  type="text"
-                  value={cancelConfirmState.reason}
-                  onChange={(event) =>
-                    setCancelConfirmState((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            reason: event.target.value,
-                          }
-                        : prev,
-                    )
-                  }
-                  placeholder="例: 誤受付のため"
-                />
-              </label>
-              <div className="reception-modal__actions">
-                <button type="button" className="reception-search__button ghost" onClick={closeCancelConfirm}>
-                  戻る
-                </button>
-                <button
-                  type="button"
-                  className="reception-search__button danger"
-                  onClick={handleConfirmCancelEntry}
-                  disabled={isAcceptSubmitting}
-                >
-                  {isAcceptSubmitting ? '取消中…' : '取消を実行'}
-                </button>
-              </div>
-            </>
+            (() => {
+              const entry = cancelConfirmState.entry;
+              const patientAge = calculateAge(entry.birthDate, selectedDate);
+              const patientAgeGroup = resolvePatientAgeGroup(patientAge);
+              const patientSexTone = resolvePatientSexTone(entry.sex);
+              const statusLabel = SECTION_LABEL[entry.status] ?? entry.status;
+              return (
+                <>
+                  <p>この受付を取消します。実行後は受付一覧へ反映されます。</p>
+                  <section className="reception-cancel__identity-card" aria-label={`取消対象 ${entry.name ?? '患者'}`}>
+                    <PatientProfileIcon sexTone={patientSexTone} ageGroup={patientAgeGroup} />
+                    <div className="reception-cancel__identity-text">
+                      <small className="reception-cancel__identity-eyebrow">取消対象</small>
+                      <strong className="reception-cancel__identity-name">{entry.name ?? '取消対象'}</strong>
+                    </div>
+                    <span className="reception-cancel__identity-age">{formatAgeJa(patientAge)}</span>
+                    <StatusPill tone="warning" size="xs">
+                      {statusLabel}
+                    </StatusPill>
+                  </section>
+                  <div className="reception-modal__actions">
+                    <button type="button" className="reception-search__button ghost" onClick={closeCancelConfirm}>
+                      戻る
+                    </button>
+                    <button
+                      type="button"
+                      className="reception-search__button danger"
+                      onClick={handleConfirmCancelEntry}
+                      disabled={isAcceptSubmitting}
+                    >
+                      {isAcceptSubmitting ? '取消中…' : '取消を実行'}
+                    </button>
+                  </div>
+                </>
+              );
+            })()
           ) : null}
         </FocusTrapDialog>
 
@@ -6313,7 +6446,6 @@ export function ReceptionPage({
           testId="reception-medical-records-modal"
         >
           <div className="reception-modal__actions">
-            {medicalRecordsModalQuery.data?.runId ? <RunIdBadge runId={medicalRecordsModalQuery.data.runId} /> : null}
             <button type="button" className="reception-search__button ghost" onClick={closeMedicalRecordsModal}>
               閉じる
             </button>
@@ -6328,7 +6460,6 @@ export function ReceptionPage({
               }`}
               destination="受付"
               nextAction="条件を見直す"
-              runId={medicalRecordsModalQuery.data?.runId ?? resolvedRunId}
               ariaLive="assertive"
             />
           ) : medicalRecordsModalQuery.data?.records?.length ? (
@@ -6337,15 +6468,10 @@ export function ReceptionPage({
                 const key =
                   record.documentId ?? record.sequentialNumber ?? `${record.performDate ?? 'unknown'}-${index}`;
                 const deptLabel = record.departmentName?.trim() || record.departmentCode?.trim();
-                const metaParts = [
-                  deptLabel ? `科: ${deptLabel}` : undefined,
-                  record.sequentialNumber ? `連番: ${record.sequentialNumber}` : undefined,
-                  record.documentStatus ? `状態: ${record.documentStatus}` : undefined,
-                ].filter((value): value is string => Boolean(value));
                 return (
                   <div key={key} className="reception-history__item" role="listitem">
                     <strong>{record.performDate ?? '—'}</strong>
-                    <small>{metaParts.join(' / ') || '—'}</small>
+                    {deptLabel ? <small>{deptLabel}</small> : null}
                   </div>
                 );
               })}
