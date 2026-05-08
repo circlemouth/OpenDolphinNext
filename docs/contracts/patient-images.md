@@ -31,6 +31,7 @@
 - [x] JPEG の alpha は白背景で flatten して同形式へ再エンコードし、metadata を除去する。
 - [x] 再エンコード後サイズも `max-bytes` を超えてはならない。
 - [x] temp file は `finally` で必ず削除する。
+- [x] 正規化後の画像保存は `InputStream` と `contentLength` を渡し、サービス層で全 byte を再度メモリ常駐させない。
 
 ## 設定契約
 - `patient-images.enabled`
@@ -45,7 +46,7 @@
 - [x] raw exception message をクライアントへ返さない。
 - [x] `AttachmentStorageManager` が backend probe を持ち、health で利用できるようにする。
 - [x] patient image asset は `/patients/{patientId}/images` を正本にし、document attachment reference と同一視しない。
-- [x] document 側から参照する場合も `uri` / `digest` / `storageKey` は server 側で asset metadata を再解決する。
+- [x] document 側から参照する場合は attachment `id` のみを受け付け、`uri` / `digest` / `storageKey` / owner / facility は server 側で asset metadata を再解決する。client 由来の保存先メタデータを含む reference payload は拒否する。
 - [x] reference remove は asset hard delete を意味しない。
 
 ## 実装タスク

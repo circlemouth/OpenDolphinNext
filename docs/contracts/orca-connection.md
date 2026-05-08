@@ -57,6 +57,11 @@
 - ORCA 鍵ローテーション時に TOTP secret が影響を受けないこと。
 - TOTP 鍵ローテーション時に ORCA 資格情報が影響を受けないこと。
 
+## 管理アップロード契約
+- `PUT /api/admin/orca/connection` の `clientCertificate` / `caCertificate` filename は表示・監査用メタデータに限定し、保存先パスや信頼境界の判断に使わない。
+- filename から path separator、quote、CRLF、制御文字を除去し、path segment が含まれる場合は末尾の basename のみ採用する。
+- filename が空または長すぎる場合はフィールドごとの安全な fallback 名を使う。
+
 ## ロギング / 監査契約
 - 記録してよいもの
   - facilityId

@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import open.dolphin.rest.masterupdate.MasterUpdateService;
@@ -98,9 +99,21 @@ class AdminMasterUpdateResourceTest {
         }
     }
 
+    @Test
+    void uploadFileNameSanitizerDropsPathAndControlCharacters() throws Exception {
+        assertEquals("dataset.zip", invokeSafeFileName("..\\private/dataset\u0001.zip", "dataset-upload.bin"));
+        assertEquals("dataset-upload.bin", invokeSafeFileName("../", "dataset-upload.bin"));
+    }
+
     private static void setField(Object target, String name, Object value) throws Exception {
         Field f = target.getClass().getDeclaredField(name);
         f.setAccessible(true);
         f.set(target, value);
+    }
+
+    private String invokeSafeFileName(String original, String fallback) throws Exception {
+        Method method = AdminMasterUpdateResource.class.getDeclaredMethod("safeFileName", String.class, String.class);
+        method.setAccessible(true);
+        return (String) method.invoke(resource, original, fallback);
     }
 }

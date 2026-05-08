@@ -11,7 +11,7 @@ RUN_ID: 20260121T063526Z
 ## Current 運用の基準
 - **対象**: 患者画像 asset は `/patients/{patientId}/images` で保存済みであること。
 - **送信方式**: `DocumentModel.attachment[]` には asset id から server が再解決した reference row だけを保存する。
-- **禁止**: base64 埋め込み、client 提供の `uri` / `digest` / `storageKey` 採用、preview state の storage restore。
+- **禁止**: base64 埋め込み、client 提供の `uri` / `digest` / `storageKey` / owner / facility 採用、preview state の storage restore。`uri` / `digest` を含む添付 payload は「解決済み」と見なさず拒否する。
 - **fail-close**: reference backend contract が成立しない場合は document attach action を feature-off に倒す。
 
 ## Delete Scope

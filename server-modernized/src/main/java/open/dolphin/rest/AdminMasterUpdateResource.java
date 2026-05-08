@@ -334,7 +334,29 @@ public class AdminMasterUpdateResource extends AbstractResource {
         if (value == null || value.isBlank()) {
             value = fallback;
         }
-        return value.replace('"', '_').replace("\r", "").replace("\n", "");
+        value = value.replace('\\', '/');
+        int slash = value.lastIndexOf('/');
+        if (slash >= 0) {
+            value = slash + 1 < value.length() ? value.substring(slash + 1) : fallback;
+        }
+        StringBuilder sanitized = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            if (Character.isISOControl(ch)) {
+                continue;
+            }
+            if (ch == '"' || ch == '\'' || ch == '\\' || ch == '/') {
+                sanitized.append('_');
+            } else {
+                sanitized.append(ch);
+            }
+        }
+        value = sanitized.toString().trim();
+        if (value.isBlank()) {
+            value = fallback;
+        }
+        byte[] bytes = value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return bytes.length > 180 ? fallback : value;
     }
 
     private boolean readBoolean(Object value) {

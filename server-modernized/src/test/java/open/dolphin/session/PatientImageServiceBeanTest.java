@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -80,6 +81,8 @@ class PatientImageServiceBeanTest {
         when(attachmentStorageManager.prepareExternalAssetForPersist(any(), any(), eq((long) payload.length)))
                 .thenAnswer(invocation -> {
                     AttachmentModel attachment = invocation.getArgument(0);
+                    InputStream stream = invocation.getArgument(1);
+                    assertThat(stream.readAllBytes()).containsExactly(payload);
                     attachment.setUri("s3://test-bucket/attachments/pending/F001/P001/image.png");
                     attachment.setDigest(sha256Hex(payload));
                     return true;

@@ -28,6 +28,14 @@ class PatientImagesSupportTest {
     }
 
     @Test
+    void safeFileNameForHeaderStripsPathSegmentsAndControlCharacters() {
+        PatientImagesSupport support = support();
+
+        assertEquals("scan.png", support.safeFileNameForHeader("..\\nested/scan\u0001.png", "fallback.png"));
+        assertEquals("fallback.png", support.safeFileNameForHeader("../", "fallback.png"));
+    }
+
+    @Test
     void buildDownloadUrlFallsBackWithoutUriInfo() {
         PatientImagesSupport support = support();
 

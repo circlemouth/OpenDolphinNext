@@ -492,7 +492,29 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         if (name == null || name.isBlank()) {
             name = fallback;
         }
-        return name.replace("\"", "_").replace("\r", "").replace("\n", "");
+        name = name.replace('\\', '/');
+        int slash = name.lastIndexOf('/');
+        if (slash >= 0) {
+            name = slash + 1 < name.length() ? name.substring(slash + 1) : fallback;
+        }
+        StringBuilder sanitized = new StringBuilder(name.length());
+        for (int i = 0; i < name.length(); i++) {
+            char ch = name.charAt(i);
+            if (Character.isISOControl(ch)) {
+                continue;
+            }
+            if (ch == '"' || ch == '\'' || ch == '\\' || ch == '/') {
+                sanitized.append('_');
+            } else {
+                sanitized.append(ch);
+            }
+        }
+        name = sanitized.toString().trim();
+        if (name.isBlank()) {
+            name = fallback;
+        }
+        byte[] bytes = name.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return bytes.length > 180 ? fallback : name;
     }
 
     private String requireAdminActor(HttpServletRequest request, String runId) {
