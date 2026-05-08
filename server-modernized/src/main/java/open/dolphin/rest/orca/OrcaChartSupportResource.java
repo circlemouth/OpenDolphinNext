@@ -12,13 +12,18 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.encounter.EncounterProjectionRepository;
+import open.dolphin.infomodel.PatientModel;
+import open.dolphin.orca.service.DiseaseProjectionService;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
@@ -37,6 +42,7 @@ import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
 import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Request;
 import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Response;
 import open.dolphin.rest.dto.orca.OrcaEncounterContext;
+import open.dolphin.session.PatientServiceBean;
 
 @Path("/orca/official/chart-support")
 public class OrcaChartSupportResource extends AbstractOrcaRestResource {
@@ -58,6 +64,12 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
 
     @Inject
     EncounterProjectionRepository encounterProjectionRepository;
+
+    @Inject
+    private PatientServiceBean patientServiceBean;
+
+    @Inject
+    private DiseaseProjectionService diseaseProjectionService;
 
     @POST
     @Path("/medical-mod-v2")
@@ -264,6 +276,16 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         }
     }
 
+    private record DiseaseModContextAuthority(
+            boolean accepted,
+            String departmentCode,
+            String insuranceCombinationNumber,
+            String source) {
+        private static DiseaseModContextAuthority rejected() {
+            return new DiseaseModContextAuthority(false, null, null, null);
+        }
+    }
+
     @POST
     @Path("/medication-get")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -453,22 +475,16 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             ChartSupportDiseaseModV3Request payload) {
         requireRemoteUser(request);
         String facilityId = requireFacilityId(request);
-        if (payload == null || isBlank(payload.getPatientId()) || isBlank(payload.getPerformDate())
-                || isBlank(payload.getDepartmentCode()) || payload.getDiseaseInformation() == null
-                || payload.getDiseaseInformation().isEmpty()) {
-            throw validationError(request, "payload",
-                    "patientId, performDate, departmentCode, and diseaseInformation are required");
-        }
-        if (!isBlank(payload.getRequestNumber())) {
+        if (payload != null && !isBlank(payload.getRequestNumber())) {
             throw validationError(request, "payload.requestNumber",
-                    "diseaseModV3 create currently requires Request_Number to be absent");
+                    "diseaseModV3 Request_Number is server-owned");
         }
-        for (ChartSupportDiseaseModV3Request.DiseaseInformation entry : payload.getDiseaseInformation()) {
-            if (entry == null || isBlank(entry.getDiseaseCode()) || isBlank(entry.getDiseaseStartDate())) {
-                throw validationError(request, "payload.diseaseInformation",
-                        "diseaseCode and diseaseStartDate are required for every create candidate");
-            }
-        }
+        String operation = normalizeDiseaseModOperation(payload != null ? payload.getOperation() : null, request);
+        validateDiseaseModPayload(request, payload, operation);
+        DiseaseModContextAuthority contextAuthority =
+                requireServerDerivedDiseaseModContext(request, facilityId, payload, operation);
+        applyServerDerivedDiseaseContext(request, payload, contextAuthority, operation);
+        prepareDiseaseModPayload(request, facilityId, payload, operation);
 
         String runId = resolveRunId(request);
         String traceId = resolveTraceId(request);
@@ -484,7 +500,11 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("traceId", traceId);
         details.put("patientIdPresent", true);
         details.put("departmentCode", payload.getDepartmentCode());
-        details.put("diseaseCandidateCount", payload.getDiseaseInformation().size());
+        details.put("operation", operation);
+        details.put("serverDerivedEncounterContextVerified", true);
+        details.put("serverDerivedEncounterContextSource", contextAuthority.source());
+        details.put("diseaseCandidateCount",
+                payload.getDiseaseInformation() != null ? payload.getDiseaseInformation().size() : 0);
         details.put("apiResult", response.getApiResult());
         details.put("responseClassification", response.getResponseClassification());
         details.put("httpStatus", response.getStatus());
@@ -492,6 +512,293 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         recordAudit(request, AUDIT_DISEASE_MOD_ACTION, details,
                 response.isBusinessAccepted() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
+    }
+
+    private String normalizeDiseaseModOperation(String operation, HttpServletRequest request) {
+        if (isBlank(operation)) {
+            return "create";
+        }
+        String normalized = operation.trim();
+        return switch (normalized) {
+            case "create", "update", "delete", "organizeDeletedDiseases" -> normalized;
+            default -> throw validationError(request, "payload.operation",
+                    "operation must be create, update, delete, or organizeDeletedDiseases");
+        };
+    }
+
+    private void validateDiseaseModPayload(
+            HttpServletRequest request,
+            ChartSupportDiseaseModV3Request payload,
+            String operation) {
+        if (payload == null || isBlank(payload.getPatientId()) || isBlank(payload.getPerformDate())
+                || isBlank(payload.getDepartmentCode())) {
+            throw validationError(request, "payload",
+                    "patientId, performDate, and departmentCode are required");
+        }
+        if (!payload.getForbiddenClientFields().isEmpty()) {
+            throw validationError(request, "payload.clientAuthority",
+                    "client-provided Request_Number, raw XML, URL, facility, or owner fields are not accepted");
+        }
+        requireDateOnly(request, payload.getPerformDate(), "payload.performDate");
+        if ("organizeDeletedDiseases".equals(operation)) {
+            ChartSupportDiseaseModV3Request.OrganizeInformation organize = payload.getOrganizeInformation();
+            if (organize == null || isBlank(organize.getDiseaseStartDate())) {
+                throw validationError(request, "payload.organizeInformation",
+                        "diseaseStartDate is required for organizeDeletedDiseases");
+            }
+            if (!organize.getForbiddenClientFields().isEmpty()) {
+                throw validationError(request, "payload.organizeInformation.clientAuthority",
+                        "client-provided Request_Number, raw XML, URL, facility, or owner fields are not accepted");
+            }
+            requireDateOnly(request, organize.getDiseaseStartDate(), "payload.organizeInformation.diseaseStartDate");
+            return;
+        }
+        if (payload.getDiseaseInformation() == null || payload.getDiseaseInformation().isEmpty()) {
+            throw validationError(request, "payload.diseaseInformation",
+                    "diseaseInformation is required for disease mutation");
+        }
+        for (ChartSupportDiseaseModV3Request.DiseaseInformation entry : payload.getDiseaseInformation()) {
+            validateDiseaseEntry(request, entry, "payload.diseaseInformation");
+        }
+        if ("update".equals(operation) || "delete".equals(operation)) {
+            validateDiseaseEntry(request, payload.getTargetDisease(), "payload.targetDisease");
+        }
+    }
+
+    private DiseaseModContextAuthority requireServerDerivedDiseaseModContext(
+            HttpServletRequest request,
+            String facilityId,
+            ChartSupportDiseaseModV3Request payload,
+            String operation) {
+        if (patientServiceBean == null) {
+            throw validationError(request, "payload.patientId", "patient authority service is required");
+        }
+        PatientModel patient = patientServiceBean.getPatientById(facilityId, payload.getPatientId());
+        if (patient == null) {
+            throw restError(request, Response.Status.NOT_FOUND, "patient_not_found", "Patient not found");
+        }
+        if (encounterProjectionRepository == null) {
+            throw validationError(request, "payload", "server-derived encounter context is required");
+        }
+        LocalDate visitDate = requireDateOnly(request, payload.getPerformDate(), "payload.performDate");
+        List<EncounterProjectionRepository.EncounterRow> rows =
+                encounterProjectionRepository.findByFacilityAndAcceptanceRange(
+                        facilityId,
+                        visitDate.atStartOfDay(TOKYO_ZONE).toInstant(),
+                        visitDate.plusDays(1).atStartOfDay(TOKYO_ZONE).toInstant());
+        List<DiseaseModContextAuthority> matches = rows.stream()
+                .map(row -> resolveDiseaseModContextAuthority(row, payload, operation, visitDate))
+                .filter(DiseaseModContextAuthority::accepted)
+                .toList();
+        if (matches.size() != 1) {
+            throw validationError(request, "payload",
+                    matches.isEmpty()
+                            ? "server-derived disease context was not found"
+                            : "server-derived disease context is ambiguous");
+        }
+        return matches.get(0);
+    }
+
+    private DiseaseModContextAuthority resolveDiseaseModContextAuthority(
+            EncounterProjectionRepository.EncounterRow row,
+            ChartSupportDiseaseModV3Request payload,
+            String operation,
+            LocalDate visitDate) {
+        if (row == null || payload == null || "cancelled".equalsIgnoreCase(normalize(row.businessState()))) {
+            return DiseaseModContextAuthority.rejected();
+        }
+        if (!safeEquals(row.patientId(), payload.getPatientId())) {
+            return DiseaseModContextAuthority.rejected();
+        }
+        if (row.acceptanceDatetime() == null
+                || !row.acceptanceDatetime().atZone(TOKYO_ZONE).toLocalDate().equals(visitDate)) {
+            return DiseaseModContextAuthority.rejected();
+        }
+        JsonNode flags = readProjectionFlags(row.worklistFlagsJson());
+        if (!isServerDerivedProjection(flags)) {
+            return DiseaseModContextAuthority.rejected();
+        }
+        JsonNode identifiers = flags.path("officialVisitIdentifiers");
+        String departmentCode = textNode(identifiers, "departmentCode");
+        String insuranceCombinationNumber = textNode(identifiers, "insuranceCombinationNumber");
+        if (!safeEquals(departmentCode, payload.getDepartmentCode())) {
+            return DiseaseModContextAuthority.rejected();
+        }
+        if (!"organizeDeletedDiseases".equals(operation)
+                && !payloadDiseaseInsuranceMatches(payload, insuranceCombinationNumber)) {
+            return DiseaseModContextAuthority.rejected();
+        }
+        return new DiseaseModContextAuthority(
+                true,
+                departmentCode,
+                insuranceCombinationNumber,
+                "encounter_projection_official_identifiers");
+    }
+
+    private boolean payloadDiseaseInsuranceMatches(
+            ChartSupportDiseaseModV3Request payload,
+            String serverInsuranceCombinationNumber) {
+        if (isBlank(serverInsuranceCombinationNumber)) {
+            return true;
+        }
+        List<ChartSupportDiseaseModV3Request.DiseaseInformation> entries =
+                payload.getDiseaseInformation() != null ? payload.getDiseaseInformation() : List.of();
+        for (ChartSupportDiseaseModV3Request.DiseaseInformation entry : entries) {
+            if (entry != null && !isBlank(entry.getInsuranceCombinationNumber())
+                    && !safeEquals(serverInsuranceCombinationNumber, entry.getInsuranceCombinationNumber())) {
+                return false;
+            }
+        }
+        ChartSupportDiseaseModV3Request.DiseaseInformation target = payload.getTargetDisease();
+        return target == null
+                || isBlank(target.getInsuranceCombinationNumber())
+                || safeEquals(serverInsuranceCombinationNumber, target.getInsuranceCombinationNumber());
+    }
+
+    private void applyServerDerivedDiseaseContext(
+            HttpServletRequest request,
+            ChartSupportDiseaseModV3Request payload,
+            DiseaseModContextAuthority contextAuthority,
+            String operation) {
+        payload.setDepartmentCode(contextAuthority.departmentCode());
+        if ("organizeDeletedDiseases".equals(operation)) {
+            if (payload.getOrganizeInformation() != null) {
+                payload.getOrganizeInformation().setDepartmentCode(contextAuthority.departmentCode());
+            }
+            return;
+        }
+        List<ChartSupportDiseaseModV3Request.DiseaseInformation> entries =
+                payload.getDiseaseInformation() != null ? payload.getDiseaseInformation() : List.of();
+        for (ChartSupportDiseaseModV3Request.DiseaseInformation entry : entries) {
+            applyServerDerivedDiseaseEntryContext(request, entry, contextAuthority, "payload.diseaseInformation");
+        }
+        if (payload.getTargetDisease() != null) {
+            applyServerDerivedDiseaseEntryContext(request, payload.getTargetDisease(), contextAuthority, "payload.targetDisease");
+        }
+    }
+
+    private void applyServerDerivedDiseaseEntryContext(
+            HttpServletRequest request,
+            ChartSupportDiseaseModV3Request.DiseaseInformation entry,
+            DiseaseModContextAuthority contextAuthority,
+            String field) {
+        if (entry == null) {
+            return;
+        }
+        if (!entry.getForbiddenClientFields().isEmpty()) {
+            throw validationError(request, field + ".clientAuthority",
+                    "client-provided Request_Number, raw XML, URL, facility, or owner fields are not accepted");
+        }
+        if (!isBlank(contextAuthority.insuranceCombinationNumber())) {
+            entry.setInsuranceCombinationNumber(contextAuthority.insuranceCombinationNumber());
+        }
+    }
+
+    private void prepareDiseaseModPayload(
+            HttpServletRequest request,
+            String facilityId,
+            ChartSupportDiseaseModV3Request payload,
+            String operation) {
+        if ("delete".equals(operation)) {
+            payload.setDiseaseInformation(List.of(copyDiseaseForDelete(payload.getTargetDisease())));
+        }
+        if ("update".equals(operation) || "delete".equals(operation)) {
+            requireCurrentOrcaDiseaseTarget(request, facilityId, payload);
+        }
+    }
+
+    private void validateDiseaseEntry(
+            HttpServletRequest request,
+            ChartSupportDiseaseModV3Request.DiseaseInformation entry,
+            String field) {
+        if (entry == null || isBlank(entry.getDiseaseCode()) || isBlank(entry.getDiseaseStartDate())) {
+            throw validationError(request, field,
+                    "diseaseCode and diseaseStartDate are required");
+        }
+        requireDateOnly(request, entry.getDiseaseStartDate(), field + ".diseaseStartDate");
+        if (!isBlank(entry.getDiseaseEndDate())) {
+            requireDateOnly(request, entry.getDiseaseEndDate(), field + ".diseaseEndDate");
+        }
+    }
+
+    private ChartSupportDiseaseModV3Request.DiseaseInformation copyDiseaseForDelete(
+            ChartSupportDiseaseModV3Request.DiseaseInformation target) {
+        ChartSupportDiseaseModV3Request.DiseaseInformation copy =
+                new ChartSupportDiseaseModV3Request.DiseaseInformation();
+        copy.setDiseaseCode(target.getDiseaseCode());
+        copy.setDiseaseName(target.getDiseaseName());
+        copy.setDiseaseStartDate(target.getDiseaseStartDate());
+        copy.setDiseaseEndDate(target.getDiseaseEndDate());
+        copy.setDiseaseInOut(target.getDiseaseInOut());
+        copy.setDiseaseSuspectedFlag(target.getDiseaseSuspectedFlag());
+        copy.setDiseaseOutCome("O");
+        copy.setInsuranceCombinationNumber(target.getInsuranceCombinationNumber());
+        return copy;
+    }
+
+    private void requireCurrentOrcaDiseaseTarget(
+            HttpServletRequest request,
+            String facilityId,
+            ChartSupportDiseaseModV3Request payload) {
+        DiseaseProjectionService projection = diseaseProjectionService();
+        LocalDate baseDate = requireDateOnly(request, payload.getPerformDate(), "payload.performDate");
+        String requestXml = projection.buildDiseaseGetRequestXml(payload.getPatientId(), baseDate);
+        OrcaTransportResult result = orcaTransport.invoke(
+                facilityId,
+                OrcaEndpoint.DISEASE_GET,
+                OrcaTransportRequest.post(requestXml));
+        open.dolphin.rest.dto.orca.DiseaseImportResponse mirror =
+                projection.buildMirrorResponseFromOrca(
+                        result,
+                        resolveTraceId(request),
+                        payload.getPatientId(),
+                        java.util.Date.from(baseDate.atStartOfDay(TOKYO_ZONE).toInstant()),
+                        java.util.Date.from(baseDate.plusDays(1).atStartOfDay(TOKYO_ZONE).toInstant()));
+        if (!"connected".equals(mirror.getOrcaMirrorStatus())
+                || mirror.getDiseases() == null
+                || mirror.getDiseases().stream().noneMatch(entry -> sameDiseaseTarget(entry, payload))) {
+            throw validationError(request, "payload.targetDisease", "target disease changed or was not found");
+        }
+    }
+
+    private boolean sameDiseaseTarget(
+            open.dolphin.rest.dto.orca.DiseaseImportResponse.DiseaseEntry current,
+            ChartSupportDiseaseModV3Request payload) {
+        ChartSupportDiseaseModV3Request.DiseaseInformation target =
+                payload != null ? payload.getTargetDisease() : null;
+        return current != null
+                && target != null
+                && safeEquals(normalizeDiseaseKeyPart(current.getDiagnosisCode()),
+                        normalizeDiseaseKeyPart(target.getDiseaseCode()))
+                && safeEquals(normalizeDiseaseKeyPart(current.getStartDate()),
+                        normalizeDiseaseKeyPart(target.getDiseaseStartDate()))
+                && safeEquals(normalizeDiseaseKeyPart(current.getDepartmentCode()),
+                        normalizeDiseaseKeyPart(payload.getDepartmentCode()))
+                && (isBlank(target.getInsuranceCombinationNumber())
+                        || safeEquals(normalizeDiseaseKeyPart(current.getInsuranceCombinationNumber()),
+                                normalizeDiseaseKeyPart(target.getInsuranceCombinationNumber())))
+                && (isBlank(target.getDiseaseName())
+                        || safeEquals(normalizeDiseaseKeyPart(current.getDiagnosisName()),
+                                normalizeDiseaseKeyPart(target.getDiseaseName())));
+    }
+
+    private String normalizeDiseaseKeyPart(String value) {
+        return value == null ? "" : value.trim().replace("　", "").replace(" ", "");
+    }
+
+    private LocalDate requireDateOnly(HttpServletRequest request, String value, String field) {
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException ex) {
+            throw validationError(request, field, "date must be yyyy-MM-dd");
+        }
+    }
+
+    private DiseaseProjectionService diseaseProjectionService() {
+        if (diseaseProjectionService == null) {
+            diseaseProjectionService = new DiseaseProjectionService();
+        }
+        return diseaseProjectionService;
     }
 
     private OrcaChartSupportSupport support() {

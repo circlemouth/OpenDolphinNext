@@ -48,17 +48,21 @@ class LocalDiagnosisResourceTest {
     }
 
     @Test
-    void getDiagnosesReturnsLocalSummaryRoutePayload() {
+    void getDiagnosesReturnsOrcaSourceOfTruthAndSeparatesPendingLocalPayload() {
         Map<String, Object> response = resource.getDiagnoses(request, "00001", "2026-03-25", null, false);
 
         assertEquals("00001", response.get("patientId"));
         assertEquals(1001L, response.get("karteId"));
+        assertEquals("orca", response.get("sourceOfTruth"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> diseases = (List<Map<String, Object>>) response.get("diseases");
-        assertEquals(1, diseases.size());
-        assertEquals(55L, diseases.get(0).get("diagnosisId"));
-        assertEquals("insurance-local", diseases.get(0).get("layer"));
-        assertEquals(false, diseases.get(0).get("readOnly"));
+        assertEquals(0, diseases.size());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> pending = (List<Map<String, Object>>) response.get("pendingLocalDiseases");
+        assertEquals(1, pending.size());
+        assertEquals(55L, pending.get(0).get("diagnosisId"));
+        assertEquals("insurance-local", pending.get(0).get("layer"));
+        assertEquals(false, pending.get(0).get("readOnly"));
     }
 
     @Test
@@ -68,6 +72,7 @@ class LocalDiagnosisResourceTest {
 
         Map<String, Object> response = resource.getDiagnoses(request, "00001", null, "2026-05-08", false);
 
+        assertEquals("orca", response.get("sourceOfTruth"));
         assertEquals("connected", response.get("orcaMirrorStatus"));
         assertEquals("F001", transport.facilityId());
         assertEquals(OrcaEndpoint.DISEASE_GET, transport.endpoint());
@@ -75,26 +80,33 @@ class LocalDiagnosisResourceTest {
         org.junit.jupiter.api.Assertions.assertTrue(transport.requestBody().contains("<Base_Date type=\"string\">20260508</Base_Date>"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> diseases = (List<Map<String, Object>>) response.get("diseases");
-        assertEquals(2, diseases.size());
-        assertEquals("conflict", diseases.get(0).get("syncState"));
-        Map<String, Object> mirror = diseases.get(1);
+        assertEquals(1, diseases.size());
+        Map<String, Object> mirror = diseases.get(0);
         assertEquals("orca-mirror", mirror.get("layer"));
         assertEquals("ORCA参照病名", mirror.get("diagnosisName"));
         assertEquals(true, mirror.get("readOnly"));
         assertEquals("conflict", mirror.get("syncState"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> pending = (List<Map<String, Object>>) response.get("pendingLocalDiseases");
+        assertEquals(1, pending.size());
+        assertEquals("insurance-local", pending.get(0).get("layer"));
     }
 
     @Test
-    void getDiagnosesKeepsLocalDiseasesAndSanitizesMirrorFailure() throws Exception {
+    void getDiagnosesDoesNotFallbackToLocalDiseasesAndSanitizesMirrorFailure() throws Exception {
         setField(resource, "orcaTransport", new FailingOrcaTransport());
 
         Map<String, Object> response = resource.getDiagnoses(request, "00001", null, "2026-05-08", false);
 
+        assertEquals("orca", response.get("sourceOfTruth"));
         assertEquals("unavailable", response.get("orcaMirrorStatus"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> diseases = (List<Map<String, Object>>) response.get("diseases");
-        assertEquals(1, diseases.size());
-        assertEquals("insurance-local", diseases.get(0).get("layer"));
+        assertEquals(0, diseases.size());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> pending = (List<Map<String, Object>>) response.get("pendingLocalDiseases");
+        assertEquals(1, pending.size());
+        assertEquals("insurance-local", pending.get(0).get("layer"));
         org.junit.jupiter.api.Assertions.assertFalse(response.toString().contains("https://orca.internal.example"));
     }
 
@@ -195,12 +207,15 @@ class LocalDiagnosisResourceTest {
         Map<String, Object> readback = resource.getDiagnoses(request, "00001", "2026-04-01", null, false);
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> diseases = (List<Map<String, Object>>) readback.get("diseases");
-        assertEquals("主病名テスト", diseases.get(0).get("diagnosisName"));
-        assertEquals("2026-04-10", diseases.get(0).get("startDate"));
-        assertEquals("2026-04-20", diseases.get(0).get("endDate"));
-        assertEquals("治癒", diseases.get(0).get("outcome"));
-        assertEquals("主病名", diseases.get(0).get("category"));
-        assertEquals("疑い", diseases.get(0).get("suspectedFlag"));
+        assertEquals(0, diseases.size());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> pending = (List<Map<String, Object>>) readback.get("pendingLocalDiseases");
+        assertEquals("主病名テスト", pending.get(0).get("diagnosisName"));
+        assertEquals("2026-04-10", pending.get(0).get("startDate"));
+        assertEquals("2026-04-20", pending.get(0).get("endDate"));
+        assertEquals("治癒", pending.get(0).get("outcome"));
+        assertEquals("主病名", pending.get(0).get("category"));
+        assertEquals("疑い", pending.get(0).get("suspectedFlag"));
 
         Map<String, Object> deleteResponse = resource.mutateDiagnoses(
                 request,
@@ -263,8 +278,11 @@ class LocalDiagnosisResourceTest {
         Map<String, Object> readback = resource.getDiagnoses(request, "00001", "2026-04-01", null, false);
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> diseases = (List<Map<String, Object>>) readback.get("diseases");
-        assertEquals("2026-04-10", diseases.get(0).get("startDate"));
-        assertEquals("2026-04-20", diseases.get(0).get("endDate"));
+        assertEquals(0, diseases.size());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> pending = (List<Map<String, Object>>) readback.get("pendingLocalDiseases");
+        assertEquals("2026-04-10", pending.get(0).get("startDate"));
+        assertEquals("2026-04-20", pending.get(0).get("endDate"));
     }
 
     @Test

@@ -72,7 +72,7 @@
 - `appointments/medical-information` の direct probe を同じ `RUN_ID` の sanitized probe summary に残し、`system01lstv2` 側の成功/失敗を smoke 本体と分離して再読できるようにする。raw response body は残さない。
 - patient search が 0 件なら `QA_PATIENT_ID` の不足/不一致として扱い、local seed 不一致のまま「UI 不具合」と誤判定しない。
 - `runtime-ready-smoke` が smoke seed 不一致で失敗した場合は、`tests/runtime-ready-smoke.log` を current `RUN_ID` へ保存し、`test-data-blocker` または `environment-blocker` として分類する。repo defect と断定したまま cutover 判断を進めない。
-- `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` は Vite PID だけで成功扱いしない。`https://localhost:5173/` の実応答と dev server process 生存を確認し、失敗時は actionable error として setup log に残す。
+- `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` は Vite PID だけで成功扱いしない。setup script が表示する `Open Web Client at ...` の実応答と dev server process 生存を確認し、失敗時は actionable error として setup log に残す。Codex などのブラウザ自動化で localhost の IPv6-only 待受に詰まる場合は、`WEB_CLIENT_CODEX_BROWSER_COMPAT=1 WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` で Vite を `0.0.0.0` bind に切り替える。
 - local smoke seed は `encounterKey=1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001`、`scheduleKey=SMOKE-SCHEDULE-20251129-0001`、`DEV_SMOKE_PATIENT_ID=0000001`、Asia/Tokyo 当日 09:00 を既定とし、schedule / encounter projection が同じ患者を指すことを確認する。
 - `runtime-ready-smoke` は `/api/orca/queue` と `/api/orca/pusheventgetv2` を blocked legacy route hit として扱い、browser request が出た場合は failure にする。この detector は success route ではなく、旧 route が使われていないことを検知するための gate である。
 - `QA_MEDICAL_INFORMATION` を指定しない run を 1 本含め、未選択時に browser request body の `medicalInformation` が未送信であることを証跡化する。未指定 run で request body に `medicalInformation` が含まれた場合は script failure として cutover を止める。

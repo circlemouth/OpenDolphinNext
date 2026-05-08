@@ -9,7 +9,7 @@ import { SoapNotePanel } from '../SoapNotePanel';
 import type { SoapEntry } from '../soapNote';
 import { DiagnosisEditPanel } from '../DiagnosisEditPanel';
 import type { DiagnosisEditPanelMeta } from '../DiagnosisEditPanel';
-import { fetchDiseases, mutateDiseases, searchDiseaseMasterCandidates } from '../diseaseApi';
+import { fetchDiseases, mutateOrcaDisease, searchDiseaseMasterCandidates } from '../diseaseApi';
 import { DocumentCreatePanel } from '../DocumentCreatePanel';
 import { fetchKarteIdByPatientId, fetchLetterDetail, fetchLetterList, saveLetterModule, deleteLetter } from '../letterApi';
 import { AUTH_SESSION_STORAGE_KEY } from '../../../libs/session/authStorage';
@@ -19,7 +19,7 @@ vi.mock('../diseaseApi', async () => {
   return {
     ...actual,
     fetchDiseases: vi.fn(),
-    mutateDiseases: vi.fn(),
+    mutateOrcaDisease: vi.fn(),
     resolveDiseaseCodeFromOrcaMaster: vi.fn(async () => undefined),
     searchDiseaseMasterCandidates: vi.fn(),
   };
@@ -108,6 +108,8 @@ const baseDiagnosisMeta: DiagnosisEditPanelMeta = {
   dataSourceTransition: 'server' as const,
   patientId: 'P-DADS-001',
   visitDate: '2026-04-21',
+  departmentCode: '01',
+  insuranceCombinationNumber: '0001',
 };
 
 const renderDiagnosisPanel = (meta: DiagnosisEditPanelMeta = baseDiagnosisMeta) =>
@@ -152,7 +154,8 @@ beforeEach(() => {
         diagnosisCode: 'E11.9',
         startDate: '2026-04-01',
         outcome: '継続',
-        layer: 'insurance-local',
+        layer: 'orca-mirror',
+        readOnly: true,
         category: '主病名',
       },
       {
@@ -162,7 +165,8 @@ beforeEach(() => {
         startDate: '2026-03-01',
         endDate: '2026-04-01',
         outcome: '治癒',
-        layer: 'insurance-local',
+        layer: 'orca-mirror',
+        readOnly: true,
         category: '副病名',
       },
       {
@@ -175,7 +179,7 @@ beforeEach(() => {
       },
     ],
   });
-  vi.mocked(mutateDiseases).mockResolvedValue({ ok: true, runId: 'RUN-DADS-DISEASE' });
+  vi.mocked(mutateOrcaDisease).mockResolvedValue({ ok: true, businessAccepted: true, runId: 'RUN-DADS-DISEASE' });
   vi.mocked(searchDiseaseMasterCandidates).mockResolvedValue([]);
   vi.mocked(fetchKarteIdByPatientId).mockResolvedValue({ ok: true, karteId: 3201 });
   vi.mocked(fetchLetterList).mockResolvedValue({ ok: true, letters: [] });
@@ -224,14 +228,16 @@ describe('DADS clinical input contract - disease', () => {
   it('keeps clinically important diagnosis state visible in active disease rows', async () => {
     renderDiagnosisPanel();
 
-    const activeList = await screen.findByRole('list', { name: '保険病名（活動中）' });
-    expect(within(activeList).getByText('糖尿病')).toBeVisible();
-    expect(within(activeList).getByText('主')).toBeVisible();
-    expect(within(activeList).getByText('開始:2026-04-01')).toBeVisible();
-    expect(within(activeList).getByText('転帰:継続')).toBeVisible();
-    expect(within(activeList).getByText('終了:—')).toBeVisible();
-    expect(within(activeList).getByText('コードあり')).toBeVisible();
-    expect(screen.getByText('参照専用。保険病名へ自動反映しません。')).toBeVisible();
+    const activeList = await screen.findByRole('list', { name: 'ORCA登録病名（活動中）' });
+    const diabetesRow = within(activeList).getByText('糖尿病').closest('li');
+    expect(diabetesRow).not.toBeNull();
+    expect(within(diabetesRow as HTMLElement).getByText('糖尿病')).toBeVisible();
+    expect(within(diabetesRow as HTMLElement).getByText('主')).toBeVisible();
+    expect(within(diabetesRow as HTMLElement).getByText('開始:2026-04-01')).toBeVisible();
+    expect(within(diabetesRow as HTMLElement).getByText('転帰:継続')).toBeVisible();
+    expect(within(diabetesRow as HTMLElement).getByText('終了:-')).toBeVisible();
+    expect(within(diabetesRow as HTMLElement).getByText('コードあり')).toBeVisible();
+    expect(screen.getByText('院内未送信')).toBeVisible();
 
     const quickStartDate = screen.getByLabelText(/開始日/);
     expect(quickStartDate).toHaveAttribute('type', 'date');
@@ -245,10 +251,11 @@ describe('DADS clinical input contract - disease', () => {
       readOnlyReason: 'DADS contract test: 権限がないため編集できません。',
     });
 
-    expect(await screen.findByText(/編集はブロックされています: DADS contract test: 権限がないため編集できません。/)).toBeVisible();
+    expect(await screen.findByText(/ORCA病名操作はブロックされています: DADS contract test: 権限がないため編集できません。/)).toBeVisible();
     expect(screen.getByText('閲覧専用を解除するには、タブロック解除または権限設定を確認してください。')).toBeVisible();
-    expect(screen.getByRole('button', { name: '詳細入力' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '保険病名に追加' })).toBeDisabled();
+    for (const button of screen.getAllByRole('button', { name: 'ORCAへ病名登録' })) {
+      expect(button).toBeDisabled();
+    }
   });
 });
 

@@ -2952,6 +2952,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       appointmentId: encounterContext.appointmentId,
       receptionId: encounterContext.receptionId,
       visitDate: encounterContext.visitDate,
+      departmentCode: encounterContext.departmentCode,
+      insuranceCombinationNumber: encounterContext.insuranceCombinationNumber,
       actorRole: session.role,
       readOnly: lockState.locked || tabLock.isReadOnly || encounterFailClosed,
       readOnlyReason: lockState.reason ?? tabLock.readOnlyReason ?? encounterFailCloseReason ?? undefined,
@@ -2965,6 +2967,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       encounterContext.receptionId,
       encounterContext.scheduleKey,
       encounterContext.visitDate,
+      encounterContext.departmentCode,
+      encounterContext.insuranceCombinationNumber,
       flags.runId,
       lockState.locked,
       lockState.reason,
@@ -5023,22 +5027,29 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                       onDocumentHistoryCopyConsumed={handleDocumentHistoryCopyConsumed}
                       documentPanel={documentPanel}
                       orcaPanel={
-                          <OrcaSummary
-                          summary={medicalSummaryPanelSummary}
-                          claim={claimQuery.data as ClaimOutpatientPayload | undefined}
-                          appointments={patientEntries}
-                          appointmentMeta={appointmentMeta}
-                          patientId={encounterContext.patientId}
-                          visitDate={encounterContext.visitDate}
-                          appointmentId={encounterContext.appointmentId}
-                          receptionId={encounterContext.receptionId}
-                          scheduleKey={encounterContext.scheduleKey}
-                          encounterKey={encounterContext.encounterKey}
-                          orcaEncounterContext={actionOrcaEncounterContext}
-                          onRefresh={handleRefreshSummary}
-                          isRefreshing={isManualRefreshing}
-                          showOperationalMeta={false}
-                        />
+                        showDebugUi ? (
+                          <section className="soap-note__order-group" data-group="orca-support">
+                            <header className="soap-note__order-group-header">
+                              <strong>ORCA確認（開発用）</strong>
+                            </header>
+                            <OrcaSummary
+                              summary={medicalSummaryPanelSummary}
+                              claim={claimQuery.data as ClaimOutpatientPayload | undefined}
+                              appointments={patientEntries}
+                              appointmentMeta={appointmentMeta}
+                              patientId={encounterContext.patientId}
+                              visitDate={encounterContext.visitDate}
+                              appointmentId={encounterContext.appointmentId}
+                              receptionId={encounterContext.receptionId}
+                              scheduleKey={encounterContext.scheduleKey}
+                              encounterKey={encounterContext.encounterKey}
+                              orcaEncounterContext={actionOrcaEncounterContext}
+                              onRefresh={handleRefreshSummary}
+                              isRefreshing={isManualRefreshing}
+                              showOperationalMeta={false}
+                            />
+                          </section>
+                        ) : null
                       }
                       bottomOrderHubIntegrationEnabled={isBottomOrderHubIntegrationEnabled}
                       onOrderDockStateChange={handleOrderDockStateChange}

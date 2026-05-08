@@ -3,7 +3,7 @@ import { css } from '@emotion/react';
 export const chartsStyles = css`
   .charts-page {
     min-height: 100vh;
-    padding: 1.35rem clamp(0.75rem, 1.6vw, 1.25rem);
+    padding: 1.35rem 0;
     background: var(--ui-surface-muted);
     display: flex;
     flex-direction: column;
@@ -96,7 +96,7 @@ export const chartsStyles = css`
   }
 
   .charts-page[data-charts-compact-header='1'] {
-    padding: 1rem clamp(0.65rem, 1.4vw, 1.1rem);
+    padding: 1rem 0;
     gap: var(--charts-space-lg);
   }
 
@@ -4334,6 +4334,11 @@ export const chartsStyles = css`
     gap: var(--charts-space-sm);
   }
 
+  .charts-diagnosis__quick-add--authoring {
+    border-color: rgba(37, 99, 235, 0.22);
+    background: #ffffff;
+  }
+
   .charts-diagnosis__quick-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -4368,6 +4373,33 @@ export const chartsStyles = css`
     padding: 0.35rem 0.8rem;
     font-weight: 800;
     cursor: pointer;
+  }
+
+  .charts-diagnosis__confirm {
+    display: grid;
+    gap: var(--charts-space-xs);
+    margin: 0;
+  }
+
+  .charts-diagnosis__confirm div {
+    display: grid;
+    grid-template-columns: minmax(6rem, 0.35fr) minmax(0, 1fr);
+    gap: var(--charts-space-sm);
+    align-items: baseline;
+    border-bottom: 1px solid var(--ui-border-subtle);
+    padding-bottom: var(--charts-space-xs);
+  }
+
+  .charts-diagnosis__confirm dt {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .charts-diagnosis__confirm dd {
+    margin: 0;
+    color: #0f172a;
+    overflow-wrap: anywhere;
   }
 
   .charts-document-list {

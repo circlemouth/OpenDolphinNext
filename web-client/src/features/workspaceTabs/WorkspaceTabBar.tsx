@@ -42,27 +42,12 @@ const createInitialTabsState = (): ChartsPatientTabsStorage => ({
   tabs: [],
 });
 
-const resolvePatientToken = (tab: ChartsPatientTab) => {
-  const raw = normalizeText(tab.encounterKey) ?? normalizeText(tab.scheduleKey);
-  if (!raw) return undefined;
-  const parts = raw.split(':').map((part) => part.trim()).filter(Boolean);
-  return parts.at(-1) ?? raw;
-};
-
 const resolvePatientTabDisplay = (tab: ChartsPatientTab) => {
-  const primary = normalizeText(tab.name) ?? `患者 ID:${tab.patientId}`;
-  const secondaryParts = [`ID:${tab.patientId}`];
-  const department = normalizeText(tab.department);
-  if (department) secondaryParts.push(department);
-  const token = resolvePatientToken(tab);
-  if (token) secondaryParts.push(token);
-  if (normalizeText(tab.visitDate)) secondaryParts.push(tab.visitDate);
-  const secondary = secondaryParts.join(' / ');
+  const primary = normalizeText(tab.name) ?? '患者名未登録';
   return {
     primary,
-    secondary,
-    accessibleLabel: `${primary} ${secondary}`.trim(),
-    title: [primary, secondary].filter(Boolean).join('\n'),
+    accessibleLabel: primary,
+    title: primary,
   };
 };
 
@@ -400,7 +385,6 @@ export function WorkspaceTabBar({
                       </svg>
                       <span className="workspace-tabs__tab-labels">
                         <span className="workspace-tabs__tab-primary">{display.primary}</span>
-                        <span className="workspace-tabs__tab-secondary">{display.secondary}</span>
                       </span>
                     </button>
                     <button
@@ -460,7 +444,6 @@ export function WorkspaceTabBar({
                         >
                           <span className="workspace-tabs__tab-labels">
                             <span className="workspace-tabs__tab-primary">{display.primary}</span>
-                            <span className="workspace-tabs__tab-secondary">{display.secondary}</span>
                           </span>
                         </button>
                         <button

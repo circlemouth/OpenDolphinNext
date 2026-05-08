@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import open.dolphin.encounter.EncounterProjectionRepository;
+import open.dolphin.infomodel.PatientModel;
 import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
@@ -34,6 +35,7 @@ import open.dolphin.rest.dto.orca.ChartSupportMedicationGetResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
 import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Request;
 import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Response;
+import open.dolphin.session.PatientServiceBean;
 import org.junit.jupiter.api.Test;
 
 class OrcaChartSupportResourceTest {
@@ -396,6 +398,7 @@ class OrcaChartSupportResourceTest {
                 """);
         OrcaChartSupportResource resource = new OrcaChartSupportResource();
         injectField(resource, "orcaTransport", transport);
+        injectDiseaseModAuthority(resource);
 
         ChartSupportDiseaseModV3Response response = resource.diseaseModV3(
                 buildRequest(),
@@ -430,8 +433,65 @@ class OrcaChartSupportResourceTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
         assertEquals("payload.requestNumber", body.get("field"));
-        assertEquals("diseaseModV3 create currently requires Request_Number to be absent", body.get("message"));
+        assertEquals("diseaseModV3 Request_Number is server-owned", body.get("message"));
         assertNull(transport.endpoint());
+    }
+
+    @Test
+    void diseaseModV3RejectsRequestNumber01OutsideOrganizeOperationBeforeOfficialInvoke() {
+        CapturingTransport transport = new CapturingTransport();
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        ChartSupportDiseaseModV3Request payload = newDiseasePayload();
+        payload.setRequestNumber("01");
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> resource.diseaseModV3(buildRequest(), payload));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
+        assertEquals("payload.requestNumber", body.get("field"));
+        assertEquals("diseaseModV3 Request_Number is server-owned", body.get("message"));
+        assertNull(transport.endpoint());
+    }
+
+    @Test
+    void diseaseModV3OrganizeDeletedDiseasesIsOnlyOperationThatEmitsRequestNumber01() {
+        CapturingTransport transport = new CapturingTransport("""
+                <xmlio2>
+                  <diseaseres>
+                    <Information_Date>2026-04-22</Information_Date>
+                    <Information_Time>14:24:00</Information_Time>
+                    <Api_Result>0000</Api_Result>
+                    <Api_Result_Message>正常終了</Api_Result_Message>
+                  </diseaseres>
+                </xmlio2>
+                """);
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        injectDiseaseModAuthority(resource);
+        ChartSupportDiseaseModV3Request payload = newDiseasePayload();
+        payload.setOperation("organizeDeletedDiseases");
+        payload.setDiseaseInformation(List.of());
+        ChartSupportDiseaseModV3Request.OrganizeInformation organize =
+                new ChartSupportDiseaseModV3Request.OrganizeInformation();
+        organize.setDepartmentCode("11");
+        organize.setDiseaseStartDate("2026-04-01");
+        payload.setOrganizeInformation(organize);
+
+        ChartSupportDiseaseModV3Response response = resource.diseaseModV3(
+                buildRequest(),
+                payload);
+
+        assertEquals(OrcaEndpoint.DISEASE_MOD_V3, transport.endpoint());
+        assertNull(transport.query());
+        assertEquals("01", transport.requestNumber());
+        assertTrue(transport.requestXml().contains("<Organize_Information type=\"record\">"));
+        assertTrue(transport.requestXml().contains("<Disease_StartDate type=\"string\">2026-04-01</Disease_StartDate>"));
+        assertTrue(!transport.requestXml().contains("<Disease_Information_child type=\"record\">"));
+        assertTrue(response.isBusinessAccepted());
     }
 
     private static HttpServletRequest buildRequest() {
@@ -505,6 +565,36 @@ class OrcaChartSupportResourceTest {
         injectField(resource, "encounterProjectionRepository", repository);
     }
 
+    private static void injectDiseaseModAuthority(OrcaChartSupportResource resource) {
+        PatientServiceBean patientServiceBean = mock(PatientServiceBean.class);
+        when(patientServiceBean.getPatientById("F001", "00001")).thenReturn(mock(PatientModel.class));
+        injectField(resource, "patientServiceBean", patientServiceBean);
+
+        EncounterProjectionRepository repository = mock(EncounterProjectionRepository.class);
+        when(repository.findByFacilityAndAcceptanceRange(eq("F001"), any(Instant.class), any(Instant.class)))
+                .thenReturn(List.of(new EncounterProjectionRepository.EncounterRow(
+                        "F001:5678",
+                        "F001",
+                        "00001",
+                        20L,
+                        "F001:2",
+                        "5678",
+                        Instant.parse("2026-04-21T23:00:00Z"),
+                        "checked_in",
+                        null,
+                        null,
+                        null,
+                        "doctor01",
+                        null,
+                        """
+                        {"rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true,"officialVisitIdentifiers":{"departmentCode":"11","physicianCode":"10001","insuranceCombinationNumber":"0001","voucherNumber":"5678","sequentialNumber":"1"}}
+                        """,
+                        null,
+                        1L,
+                        Instant.parse("2026-04-21T23:00:01Z"))));
+        injectField(resource, "encounterProjectionRepository", repository);
+    }
+
     private static ChartSupportSubjectivesModV2Request newSubjectivesPayload() {
         ChartSupportSubjectivesModV2Request payload = new ChartSupportSubjectivesModV2Request();
         payload.setPatientId("00001");
@@ -529,7 +619,7 @@ class OrcaChartSupportResourceTest {
         disease.setDiseaseStartDate("2026-04-22");
         disease.setDiseaseInOut("O");
         disease.setDiseaseSuspectedFlag("S");
-        disease.setInsuranceCombinationNumber("");
+        disease.setInsuranceCombinationNumber("0001");
         payload.setDiseaseInformation(List.of(disease));
         return payload;
     }

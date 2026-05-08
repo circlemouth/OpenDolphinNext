@@ -505,7 +505,7 @@ export const receptionStyles = css`
 
   .reception-toolbar__advanced-grid {
     display: grid;
-    grid-template-columns: minmax(280px, 1.35fr) minmax(260px, 1fr) minmax(160px, 0.6fr);
+    grid-template-columns: minmax(360px, 1.35fr) minmax(320px, 1fr);
     gap: 0.6rem;
     align-items: stretch;
   }
@@ -555,6 +555,36 @@ export const receptionStyles = css`
     align-items: center;
     gap: 0.45rem;
     min-width: 0;
+  }
+
+  .reception-toolbar__save-row {
+    display: grid;
+    grid-template-columns: minmax(10rem, 1fr) max-content;
+    align-items: end;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .reception-toolbar__save-button {
+    min-height: 2.75rem;
+    align-self: end;
+    white-space: nowrap;
+  }
+
+  .reception-search__button--clear {
+    min-height: 2.75rem;
+    align-self: end;
+    border: 1px solid rgba(220, 38, 38, 0.45);
+    background: #fff7ed;
+    color: #b91c1c;
+    box-shadow: none;
+  }
+
+  .reception-search__button--clear:hover,
+  .reception-search__button--clear:focus-visible {
+    border-color: rgba(185, 28, 28, 0.75);
+    background: #fee2e2;
+    color: #991b1b;
   }
 
   .reception-toolbar__panel-status {
@@ -687,17 +717,28 @@ export const receptionStyles = css`
   }
 
   .reception-toolbar__advanced--embedded {
-    margin-top: 0.55rem;
-    padding: 0.65rem;
+    width: 100%;
+    margin-top: 0;
+    padding: 0.55rem 0.6rem;
   }
 
   .reception-toolbar__advanced--embedded .reception-toolbar__advanced-grid {
-    grid-template-columns: minmax(280px, 1.35fr) minmax(260px, 1fr) minmax(150px, 0.6fr);
-    gap: 0.5rem;
+    grid-template-columns: minmax(460px, 1.45fr) minmax(420px, 1fr);
+    gap: 0.45rem;
+  }
+
+  .reception-toolbar__advanced--embedded .reception-toolbar__panel-group {
+    padding: 0.6rem;
+    gap: 0.45rem;
+  }
+
+  .reception-toolbar__advanced--embedded .reception-toolbar__panel-group--utility {
+    align-content: end;
+    min-width: 6.5rem;
   }
 
   .reception-toolbar__advanced--embedded .reception-toolbar__summary {
-    margin-top: 0.5rem;
+    margin-top: 0.42rem;
     font-size: 0.78rem;
   }
 
@@ -2999,7 +3040,10 @@ export const receptionStyles = css`
 
   .reception-workspace-header__controls {
     display: flex;
+    flex-direction: column;
     justify-content: flex-start;
+    align-items: stretch;
+    gap: 0.5rem;
     width: 100%;
     min-width: 0;
   }

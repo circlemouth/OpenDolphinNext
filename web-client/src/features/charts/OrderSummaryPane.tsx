@@ -102,7 +102,6 @@ export function OrderSummaryPane({
       <header className="soap-note__paper-header">
         <div>
           <strong>オーダー概要</strong>
-          <span className="soap-note__paper-meta">カテゴリ別詳細カード</span>
         </div>
       </header>
 
@@ -214,15 +213,7 @@ export function OrderSummaryPane({
         </section>
       ) : null}
 
-      {orcaPanel ? (
-        <section className="soap-note__order-group" data-group="orca-support">
-          <header className="soap-note__order-group-header">
-            <strong>ORCA確認</strong>
-            <span className="soap-note__order-group-meta">runtime support</span>
-          </header>
-          {orcaPanel}
-        </section>
-      ) : null}
+      {orcaPanel}
     </aside>
   );
 }

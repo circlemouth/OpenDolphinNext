@@ -9,6 +9,8 @@ describe('OrderSummaryPane', () => {
 
     const pane = screen.getByLabelText('オーダー概要');
 
+    expect(pane).not.toHaveTextContent('カテゴリ別詳細カード');
+    expect(pane).not.toHaveTextContent('runtime support');
     expect(pane.querySelector('.soap-note__order-group[data-group="document"]')).not.toBeNull();
     expect(pane.querySelector('.soap-note__order-group[data-group="prescription"]')).toBeNull();
     expect(pane.querySelector('.soap-note__order-group[data-group="injection"]')).toBeNull();
@@ -17,6 +19,7 @@ describe('OrderSummaryPane', () => {
     expect(pane.querySelector('.soap-note__order-group[data-group="charge"]')).toBeNull();
 
     expect(screen.getByRole('button', { name: '文書を編集' })).toBeInTheDocument();
+    expect(screen.queryByText('ORCA確認')).not.toBeInTheDocument();
     expect(pane.querySelector('.soap-note__order-group-rail')).toBeNull();
     expect(pane.querySelector('.soap-note__right-dock-button')).toBeNull();
     expect(screen.queryByText('該当オーダーなし')).toBeNull();

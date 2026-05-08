@@ -74,6 +74,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/orca/official/chart-support/medication-get`
 - `/api/orca/official/chart-support/contraindication-check`
 - `/api/orca/official/chart-support/income-info`
+- `/api/orca/official/chart-support/disease-mod-v3`
 - `/api/orca/official/reports/{type}`
 - `/api/orca/official/disease-master/name/{param}/`
 
@@ -109,6 +110,8 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/local/prescription-orders`
 - `/api/local/prescription-orders/do-import`
 
+`/api/local/diagnoses/{patientId}` は Charts 向けの ORCA disease read model です。主 `diseases` は ORCA `diseasegetv2` 再取得結果だけを返し、既存 local-only disease は `pendingLocalDiseases` に隔離します。ORCA unavailable 時に local-only disease を主 `diseases` へ fallback してはいけません。ORCA 病名 mutation は local route ではなく official `/api/orca/official/chart-support/disease-mod-v3` を使用します。
+
 ### Admin-Internal
 
 - `/api/admin/internal/orca/patients/sync/status`
@@ -127,6 +130,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 
 - patient create / update は official bridge として `/api/orca/official/patientmodv2/outpatient/*` に固定する。
 - appointment / visit / billing / report / chart-support / disease lookup は official bridge として `/api/orca/official/*` に固定する。
+- Charts の ORCA 病名 create / update / delete / 削除病名整理は official bridge として `/api/orca/official/chart-support/disease-mod-v3` に固定する。`Request_Number=01` は削除病名整理だけで server が生成し、通常 CRUD や client payload からは送らない。
 - order inputsets / interaction check は master-backed read として `/api/orca/master/order/*` に固定する。
 - order bundles / recommendations / prescription orders / chart medical summary / diagnoses は local-only として `/api/local/*` に固定する。
 - sync status と admin wrapper label は `/api/admin/internal/*` に固定する。

@@ -525,17 +525,30 @@ final class OrcaChartSupportSupport {
     }
 
     String buildDiseaseModV3RequestXml(ChartSupportDiseaseModV3Request payload) {
+        String operation = normalizeDiseaseOperation(payload.getOperation());
         StringBuilder builder = new StringBuilder();
         builder.append("<data>");
         builder.append("<diseasereq type=\"record\">");
+        if ("organizeDeletedDiseases".equals(operation)) {
+            appendTag(builder, "Request_Number", "01");
+        }
         appendTag(builder, "Patient_ID", payload.getPatientId());
         appendTag(builder, "Perform_Date", payload.getPerformDate());
         appendTag(builder, "Perform_Time", fallback(payload.getPerformTime(), "00:00:00"));
+        ChartSupportDiseaseModV3Request.OrganizeInformation organizeInformation = payload.getOrganizeInformation();
+        if (organizeInformation != null) {
+            builder.append("<Organize_Information type=\"record\">");
+            appendTag(builder, "Department_Code", fallback(organizeInformation.getDepartmentCode(), "01"));
+            appendTag(builder, "Disease_StartDate", organizeInformation.getDiseaseStartDate());
+            builder.append("</Organize_Information>");
+        }
         builder.append("<Diagnosis_Information type=\"record\">");
         appendTag(builder, "Department_Code", payload.getDepartmentCode());
         builder.append("</Diagnosis_Information>");
-        builder.append("<Disease_Information type=\"array\">");
-        if (payload.getDiseaseInformation() != null) {
+        if (!"organizeDeletedDiseases".equals(operation)) {
+            builder.append("<Disease_Information type=\"array\">");
+        }
+        if (!"organizeDeletedDiseases".equals(operation) && payload.getDiseaseInformation() != null) {
             for (ChartSupportDiseaseModV3Request.DiseaseInformation entry : payload.getDiseaseInformation()) {
                 if (entry == null) {
                     continue;
@@ -547,15 +560,25 @@ final class OrcaChartSupportSupport {
                 appendTag(builder, "Disease_StartDate", entry.getDiseaseStartDate());
                 appendTag(builder, "Disease_EndDate", entry.getDiseaseEndDate());
                 appendTag(builder, "Disease_SuspectedFlag", entry.getDiseaseSuspectedFlag());
-                appendTag(builder, "Disease_OutCome", entry.getDiseaseOutCome());
+                appendTag(builder, "Disease_OutCome",
+                        "delete".equals(operation) ? "O" : entry.getDiseaseOutCome());
                 appendTag(builder, "Insurance_Combination_Number", entry.getInsuranceCombinationNumber());
                 builder.append("</Disease_Information_child>");
             }
         }
-        builder.append("</Disease_Information>");
+        if (!"organizeDeletedDiseases".equals(operation)) {
+            builder.append("</Disease_Information>");
+        }
         builder.append("</diseasereq>");
         builder.append("</data>");
         return builder.toString();
+    }
+
+    private String normalizeDiseaseOperation(String operation) {
+        if (operation == null || operation.isBlank()) {
+            return "create";
+        }
+        return operation.trim();
     }
 
     ChartSupportDiseaseModV3Response parseDiseaseModV3Response(

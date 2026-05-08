@@ -1,28 +1,29 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
-import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
-import { resolveAriaLive } from '../../libs/observability/observability';
 import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
+import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
+import { resolveAriaLive } from '../../libs/observability/observability';
+import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
+import type { DataSourceTransition } from './authService';
 import {
   DISEASE_CANDIDATE_CONFIRM_NOTE,
-  DISEASE_CLINICAL_UNAVAILABLE_NOTE,
   DISEASE_CONFLICT_NOTE,
-  DISEASE_MIRROR_EMPTY_NOTE,
-  DISEASE_OUTCOME_PRESETS,
   DISEASE_MANUAL_RESOLUTION_NOTE,
+  DISEASE_MIRROR_EMPTY_NOTE,
   DISEASE_MIRROR_UNAVAILABLE_NOTE,
+  DISEASE_OUTCOME_PRESETS,
   DISEASE_SYNC_CANDIDATES_NOTE,
   fetchDiseases,
-  mutateDiseases,
+  mutateOrcaDisease,
   resolveDiseaseCodeFromOrcaMaster,
   searchDiseaseMasterCandidates,
   type DiseaseEntry,
   type DiseaseLayer,
   type DiseaseMasterCandidate,
+  type OrcaDiseaseMutationOperation,
+  type OrcaDiseaseMutationRequest,
 } from './diseaseApi';
-import type { DataSourceTransition } from './authService';
 
 export type DiagnosisEditPanelMeta = {
   runId?: string;
@@ -34,6 +35,8 @@ export type DiagnosisEditPanelMeta = {
   appointmentId?: string;
   receptionId?: string;
   visitDate?: string;
+  departmentCode?: string;
+  insuranceCombinationNumber?: string;
   actorRole?: string;
   readOnly?: boolean;
   readOnlyReason?: string;
@@ -63,20 +66,23 @@ type QuickCandidateOption = {
   candidate: DiseaseMasterCandidate;
 };
 
+type FormMutationInput = {
+  operation: Extract<OrcaDiseaseMutationOperation, 'create' | 'update'>;
+  form: DiagnosisFormState;
+  sourceEntry?: DiseaseEntry;
+};
+
+type OrcaDiseaseInformation = NonNullable<OrcaDiseaseMutationRequest['diseaseInformation']>[number];
+
+type PendingAction =
+  | { operation: 'create'; title: string; confirmLabel: string; form: DiagnosisFormState; sourceEntry?: DiseaseEntry }
+  | { operation: 'update'; title: string; confirmLabel: string; form: DiagnosisFormState; sourceEntry?: DiseaseEntry }
+  | { operation: 'delete'; title: string; confirmLabel: string; entry: DiseaseEntry }
+  | { operation: 'organizeDeletedDiseases'; title: string; confirmLabel: string };
+
 const QUICK_CANDIDATE_MIN_KEYWORD = 2;
 const QUICK_CANDIDATE_MAX_ITEMS = 20;
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-const formatQuickCandidateLabel = (candidate: DiseaseMasterCandidate) => {
-  const codeParts: string[] = [];
-  if (candidate.icdTen?.trim()) {
-    codeParts.push(`ICD:${candidate.icdTen.trim()}`);
-  }
-  if (candidate.code?.trim()) {
-    codeParts.push(`病名:${candidate.code.trim()}`);
-  }
-  return codeParts.length > 0 ? `${candidate.name}（${codeParts.join(' / ')}）` : candidate.name;
-};
 
 const buildEmptyForm = (today: string): DiagnosisFormState => ({
   prefix: '',
@@ -106,14 +112,24 @@ const toFormState = (entry: DiseaseEntry, today: string): DiagnosisFormState => 
 const resolveDiseaseLayer = (entry: DiseaseEntry): DiseaseLayer => entry.layer ?? 'insurance-local';
 const isMainDisease = (entry: DiseaseEntry) => entry.category?.includes('主') ?? false;
 const isSuspectedDisease = (entry: DiseaseEntry) => entry.suspectedFlag?.includes('疑い') ?? entry.category?.includes('疑い') ?? false;
+const formatEntryName = (entry?: DiseaseEntry | null) => entry?.diagnosisName?.trim() || '名称未設定';
 const buildEntryKey = (entry: DiseaseEntry) =>
   `${resolveDiseaseLayer(entry)}:${entry.diagnosisId ?? `${entry.diagnosisName ?? 'unknown'}-${entry.startDate ?? 'na'}`}`;
 
+const formatQuickCandidateLabel = (candidate: DiseaseMasterCandidate) => {
+  const codeParts: string[] = [];
+  if (candidate.icdTen?.trim()) {
+    codeParts.push(`ICD:${candidate.icdTen.trim()}`);
+  }
+  if (candidate.code?.trim()) {
+    codeParts.push(`病名:${candidate.code.trim()}`);
+  }
+  return codeParts.length > 0 ? `${candidate.name}（${codeParts.join(' / ')}）` : candidate.name;
+};
+
 const isValidDateOnly = (value: string) => {
   const match = DATE_ONLY_PATTERN.exec(value);
-  if (!match) {
-    return false;
-  }
+  if (!match) return false;
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
@@ -140,17 +156,89 @@ const validateDiagnosisForm = (state: DiagnosisFormState): string | null => {
   return null;
 };
 
+const buildDiseaseInput = (input: FormMutationInput) => {
+  const combinedName = `${input.form.prefix ?? ''}${input.form.name ?? ''}${input.form.suffix ?? ''}`.trim();
+  return {
+    diagnosisId: input.sourceEntry?.diagnosisId ?? input.form.diagnosisId,
+    diagnosisName: combinedName,
+    diagnosisCode: input.form.code.trim() || undefined,
+    departmentCode: input.sourceEntry?.departmentCode,
+    insuranceCombinationNumber: input.sourceEntry?.insuranceCombinationNumber,
+    startDate: input.form.startDate || undefined,
+    endDate: input.form.endDate || undefined,
+    outcome: input.form.outcome || undefined,
+    category: input.form.isMain ? '主病名' : '副病名',
+    suspectedFlag: input.form.isSuspected ? '疑い' : undefined,
+  };
+};
+
+const toOrcaDiseaseInformation = (entry: DiseaseEntry): OrcaDiseaseInformation => ({
+  diseaseCode: entry.diagnosisCode,
+  diseaseName: entry.diagnosisName,
+  diseaseStartDate: entry.startDate,
+  diseaseEndDate: entry.endDate,
+  diseaseInOut: 'O',
+  diseaseSuspectedFlag: isSuspectedDisease(entry) ? 'S' : undefined,
+  diseaseOutCome: entry.outcome,
+  insuranceCombinationNumber: entry.insuranceCombinationNumber,
+});
+
+function DiseaseRow({
+  entry,
+  actions,
+}: {
+  entry: DiseaseEntry;
+  actions?: ReactNode;
+}) {
+  return (
+    <li className="charts-diagnosis__item">
+      <div className="charts-diagnosis__item-main">
+        <div className="charts-diagnosis__title">
+          <strong className="charts-diagnosis__name">{formatEntryName(entry)}</strong>
+          {entry.diagnosisCode ? <span className="charts-diagnosis__code">({entry.diagnosisCode})</span> : null}
+        </div>
+        <div className="charts-diagnosis__meta">
+          <span className="charts-diagnosis__badges" role="list" aria-label="病名属性">
+            {isMainDisease(entry) ? (
+              <span className="charts-diagnosis__badge charts-diagnosis__badge--main" role="listitem">
+                主
+              </span>
+            ) : (
+              <span className="charts-diagnosis__badge charts-diagnosis__badge--sub" role="listitem">
+                副
+              </span>
+            )}
+            {isSuspectedDisease(entry) ? (
+              <span className="charts-diagnosis__badge charts-diagnosis__badge--suspected" role="listitem">
+                疑い
+              </span>
+            ) : null}
+          </span>
+          <span className="charts-diagnosis__dates">
+            <span>開始:{entry.startDate ? entry.startDate : '-'}</span>
+            <span>転帰:{entry.outcome ? entry.outcome : '-'}</span>
+            <span>終了:{entry.endDate ? entry.endDate : '-'}</span>
+            <span className={`charts-diagnosis__code-state${entry.diagnosisCode ? ' charts-diagnosis__code-state--ok' : ' charts-diagnosis__code-state--warn'}`}>
+              {entry.diagnosisCode ? 'コードあり' : 'コード未設定'}
+            </span>
+          </span>
+        </div>
+      </div>
+      {actions ? (
+        <div className="charts-side-panel__item-actions charts-diagnosis__item-actions" role="group" aria-label="病名操作">
+          {actions}
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
 export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps) {
   const queryClient = useQueryClient();
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [form, setForm] = useState<DiagnosisFormState>(() => buildEmptyForm(today));
-  const [quickAdd, setQuickAdd] = useState<{
-    name: string;
-    code: string;
-    startDate: string;
-    isMain: boolean;
-    isSuspected: boolean;
-  }>({
+  const [editingEntry, setEditingEntry] = useState<DiseaseEntry | undefined>();
+  const [quickAdd, setQuickAdd] = useState({
     name: '',
     code: '',
     startDate: today,
@@ -161,31 +249,17 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
   const [quickCandidateKeyword, setQuickCandidateKeyword] = useState('');
   const [notice, setNotice] = useState<{ tone: 'info' | 'success' | 'error'; message: string } | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const nameInputRef = useRef<HTMLInputElement | null>(null);
+
   const blockReasons = useMemo(() => {
     const reasons: string[] = [];
-    if (meta.readOnly) {
-      reasons.push(meta.readOnlyReason ?? '閲覧専用のため編集できません。');
-    }
-    if (meta.missingMaster) {
-      reasons.push('マスター未同期のため編集できません。');
-    }
-    if (meta.fallbackUsed) {
-      reasons.push('フォールバックデータのため編集できません。');
-    }
+    if (meta.readOnly) reasons.push(meta.readOnlyReason ?? '閲覧専用のため編集できません。');
+    if (meta.missingMaster) reasons.push('マスター未同期のため編集できません。');
+    if (meta.fallbackUsed) reasons.push('フォールバックデータのため編集できません。');
     return reasons;
   }, [meta.fallbackUsed, meta.missingMaster, meta.readOnly, meta.readOnlyReason]);
   const isBlocked = blockReasons.length > 0;
-  const unblockHints = useMemo(() => {
-    const hints: string[] = [];
-    if (meta.readOnly) {
-      hints.push('閲覧専用を解除するには、タブロック解除または権限設定を確認してください。');
-    }
-    if (meta.missingMaster || meta.fallbackUsed) {
-      hints.push('マスター同期または再取得を実行して、編集可能状態へ戻してください。');
-    }
-    return hints;
-  }, [meta.fallbackUsed, meta.missingMaster, meta.readOnly]);
   const auditMetaDetails = useMemo(
     () => ({
       cacheHit: meta.cacheHit,
@@ -210,7 +284,41 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     },
     enabled: !!patientId,
   });
-  const karteId = diagnosisQuery.data?.karteId;
+
+  const list = useMemo(() => diagnosisQuery.data?.diseases ?? [], [diagnosisQuery.data?.diseases]);
+  const mirrorList = useMemo(() => list.filter((entry) => resolveDiseaseLayer(entry) === 'orca-mirror'), [list]);
+  const pendingLocalList = useMemo(() => {
+    const pendingLocalDiseases = diagnosisQuery.data?.pendingLocalDiseases;
+    if (Array.isArray(pendingLocalDiseases) && pendingLocalDiseases.length > 0) {
+      return pendingLocalDiseases.filter((entry) => resolveDiseaseLayer(entry) === 'insurance-local');
+    }
+    return list.filter((entry) => resolveDiseaseLayer(entry) === 'insurance-local');
+  }, [diagnosisQuery.data?.pendingLocalDiseases, list]);
+  const activeMirrorList = useMemo(() => mirrorList.filter((entry) => !entry.endDate), [mirrorList]);
+  const endedMirrorList = useMemo(() => mirrorList.filter((entry) => Boolean(entry.endDate)), [mirrorList]);
+  const isMirrorConnected = diagnosisQuery.data?.orcaMirrorStatus === 'connected';
+  const isOrcaMutationBlocked = isBlocked || !isMirrorConnected || diagnosisQuery.isError || !meta.visitDate || !meta.departmentCode;
+  const mutationBlockReasons = useMemo(() => {
+    const reasons = [...blockReasons];
+    if (!isMirrorConnected) reasons.push('ORCA病名を取得できません。');
+    if (diagnosisQuery.isError) reasons.push('病名取得に失敗しました。');
+    if (!meta.visitDate) reasons.push('診療日が未確定です。');
+    if (!meta.departmentCode) reasons.push('診療科コードが未確定です。');
+    return reasons;
+  }, [blockReasons, diagnosisQuery.isError, isMirrorConnected, meta.departmentCode, meta.visitDate]);
+  const unblockHints = useMemo(() => {
+    const hints: string[] = [];
+    if (meta.readOnly) {
+      hints.push('閲覧専用を解除するには、タブロック解除または権限設定を確認してください。');
+    }
+    if (meta.missingMaster || meta.fallbackUsed) {
+      hints.push('マスター同期または再取得を実行して、編集可能状態へ戻してください。');
+    }
+    if (!isMirrorConnected || diagnosisQuery.isError || !meta.visitDate || !meta.departmentCode) {
+      hints.push('ORCA病名を再取得し、正本確認ができる状態にしてください。');
+    }
+    return hints;
+  }, [diagnosisQuery.isError, isMirrorConnected, meta.departmentCode, meta.fallbackUsed, meta.missingMaster, meta.readOnly, meta.visitDate]);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -227,7 +335,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         referenceDate: quickAdd.startDate || today,
         limit: QUICK_CANDIDATE_MAX_ITEMS,
       }),
-    enabled: !isBlocked && quickCandidateKeyword.length >= QUICK_CANDIDATE_MIN_KEYWORD,
+    enabled: !isOrcaMutationBlocked && quickCandidateKeyword.length >= QUICK_CANDIDATE_MIN_KEYWORD,
     staleTime: 30_000,
   });
 
@@ -243,17 +351,12 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
 
   const quickCandidateMap = useMemo(() => {
     const map = new Map<string, QuickCandidateOption>();
-    for (const option of quickCandidateOptions) {
-      map.set(option.key, option);
-    }
+    for (const option of quickCandidateOptions) map.set(option.key, option);
     return map;
   }, [quickCandidateOptions]);
 
   useEffect(() => {
-    if (!quickCandidateSelection) {
-      return;
-    }
-    if (!quickCandidateMap.has(quickCandidateSelection)) {
+    if (quickCandidateSelection && !quickCandidateMap.has(quickCandidateSelection)) {
       setQuickCandidateSelection('');
     }
   }, [quickCandidateMap, quickCandidateSelection]);
@@ -278,64 +381,69 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
 
   useLayoutEffect(() => {
     if (!isEditorOpen) return;
-    const el = nameInputRef.current;
-    if (!el) return;
-    el.focus();
-    try {
-      el.select();
-    } catch {
-      // ignore select errors (e.g. input type/date)
-    }
+    nameInputRef.current?.focus();
+    nameInputRef.current?.select();
   }, [isEditorOpen, form.diagnosisId]);
 
-  const mutation = useMutation({
-    mutationFn: async (payload: DiagnosisFormState) => {
+  const formMutation = useMutation({
+    mutationFn: async (input: FormMutationInput) => {
       if (!patientId) throw new Error('patientId is required');
-      const operation = payload.diagnosisId ? 'update' : 'create';
-      const category = payload.isMain ? '主病名' : '副病名';
-      const suspectedFlag = payload.isSuspected ? '疑い' : undefined;
-      const combinedName = `${payload.prefix ?? ''}${payload.name ?? ''}${payload.suffix ?? ''}`.trim();
-      const explicitCode = payload.code?.trim();
+      const combinedName = `${input.form.prefix ?? ''}${input.form.name ?? ''}${input.form.suffix ?? ''}`.trim();
+      const explicitCode = input.form.code.trim();
       const resolvedCode =
         explicitCode ||
         (await resolveDiseaseCodeFromOrcaMaster({
           diagnosisName: combinedName,
-          prefix: payload.prefix,
-          mainName: payload.name,
-          suffix: payload.suffix,
-          referenceDate: payload.startDate,
+          prefix: input.form.prefix,
+          mainName: input.form.name,
+          suffix: input.form.suffix,
+          referenceDate: input.form.startDate,
         }));
-      if (!karteId) throw new Error('karteId is required');
-      return mutateDiseases({
+      if (!resolvedCode) {
+        throw new Error('ORCA病名登録には病名コードが必要です。病名マスター候補を選択するかコードを入力してください。');
+      }
+      if (!meta.visitDate) {
+        throw new Error('ORCA病名登録には診療日が必要です。');
+      }
+      if (!meta.departmentCode) {
+        throw new Error('ORCA病名登録には診療科コードが必要です。');
+      }
+      const disease = buildDiseaseInput(input);
+      return mutateOrcaDisease({
         patientId,
-        karteId,
-        operations: [
+        operation: input.operation,
+        performDate: meta.visitDate,
+        departmentCode: meta.departmentCode,
+        diseaseInformation: [
           {
-            operation,
-            diagnosisId: payload.diagnosisId,
-            diagnosisName: combinedName,
-            diagnosisCode: resolvedCode || undefined,
-            startDate: payload.startDate || undefined,
-            endDate: payload.endDate || undefined,
-            outcome: payload.outcome || undefined,
-            category,
-            suspectedFlag,
+            diseaseCode: resolvedCode,
+            diseaseName: disease.diagnosisName,
+            diseaseStartDate: disease.startDate,
+            diseaseEndDate: disease.endDate,
+            diseaseInOut: 'O',
+            diseaseSuspectedFlag: input.form.isSuspected ? 'S' : undefined,
+            diseaseOutCome: disease.outcome,
+            insuranceCombinationNumber: meta.insuranceCombinationNumber ?? disease.insuranceCombinationNumber,
           },
         ],
+        targetDisease: input.operation === 'update' && input.sourceEntry ? toOrcaDiseaseInformation(input.sourceEntry) : undefined,
       });
     },
-    onSuccess: (result, payload) => {
-      const failureMessage = result.message ?? '病名の保存に失敗しました。';
-      setNotice({ tone: result.ok ? 'success' : 'error', message: result.ok ? '病名を保存しました。' : failureMessage });
+    onSuccess: (result, input) => {
+      const failureMessage = result.message ?? 'ORCA病名の処理に失敗しました。';
+      setNotice({
+        tone: result.ok ? 'success' : 'error',
+        message: result.ok ? 'ORCA病名を処理しました。再取得結果を反映します。' : failureMessage,
+      });
       recordOutpatientFunnel('charts_action', {
         runId: result.runId ?? meta.runId,
         cacheHit: meta.cacheHit ?? false,
         missingMaster: meta.missingMaster ?? false,
         dataSourceTransition: meta.dataSourceTransition ?? 'server',
         fallbackUsed: meta.fallbackUsed ?? false,
-        action: payload.diagnosisId ? 'update' : 'create',
+        action: input.operation,
         outcome: result.ok ? 'success' : 'error',
-        note: payload.name,
+        note: input.form.name,
       });
       logAuditEvent({
         runId: result.runId ?? meta.runId,
@@ -344,51 +452,33 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         fallbackUsed: meta.fallbackUsed,
         dataSourceTransition: meta.dataSourceTransition,
         payload: {
-          action: 'CHARTS_DISEASE_MUTATION',
+          action: 'CHARTS_ORCA_DISEASE_MUTATION',
           outcome: result.ok ? 'success' : 'error',
           subject: 'charts',
           details: {
             ...auditMetaDetails,
-            runId: result.runId ?? meta.runId,
-            operation: payload.diagnosisId ? 'update' : 'create',
+            operation: input.operation,
             patientId,
-            diagnosisId: payload.diagnosisId,
-            diagnosisName: payload.name,
-            diagnosisCode: payload.code,
-            startDate: payload.startDate,
-            endDate: payload.endDate,
-            outcome: payload.outcome,
-            isMain: payload.isMain,
-            isSuspected: payload.isSuspected,
-            category: payload.isMain ? '主病名' : '副病名',
-            suspectedFlag: payload.isSuspected ? '疑い' : undefined,
+            diagnosisId: input.sourceEntry?.diagnosisId ?? input.form.diagnosisId,
+            diagnosisName: input.form.name,
+            startDate: input.form.startDate,
             ...(result.ok ? {} : { error: failureMessage }),
           },
         },
       });
       if (result.ok) {
         queryClient.invalidateQueries({ queryKey });
+        setPendingAction(null);
         setForm(buildEmptyForm(today));
-        if (!payload.diagnosisId) {
-          setQuickAdd({
-            name: '',
-            code: '',
-            startDate: today,
-            isMain: false,
-            isSuspected: false,
-          });
-          setQuickCandidateSelection('');
-        }
-        if (payload.diagnosisId) {
-          setIsEditorOpen(false);
-        } else {
-          requestAnimationFrame(() => nameInputRef.current?.focus());
-        }
+        setEditingEntry(undefined);
+        setIsEditorOpen(false);
+        setQuickAdd({ name: '', code: '', startDate: today, isMain: false, isSuspected: false });
+        setQuickCandidateSelection('');
       }
     },
-    onError: (error: unknown, payload) => {
+    onError: (error: unknown, input) => {
       const message = error instanceof Error ? error.message : String(error);
-      setNotice({ tone: 'error', message: `病名の保存に失敗しました: ${message}` });
+      setNotice({ tone: 'error', message: `ORCA病名の処理に失敗しました: ${message}` });
       logAuditEvent({
         runId: meta.runId,
         cacheHit: meta.cacheHit,
@@ -396,22 +486,14 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         fallbackUsed: meta.fallbackUsed,
         dataSourceTransition: meta.dataSourceTransition,
         payload: {
-          action: 'CHARTS_DISEASE_MUTATION',
+          action: 'CHARTS_ORCA_DISEASE_MUTATION',
           outcome: 'error',
           subject: 'charts',
           details: {
             ...auditMetaDetails,
-            runId: meta.runId,
-            operation: payload.diagnosisId ? 'update' : 'create',
+            operation: input.operation,
             patientId,
-            diagnosisId: payload.diagnosisId,
-            diagnosisName: payload.name,
-            diagnosisCode: payload.code,
-            startDate: payload.startDate,
-            endDate: payload.endDate,
-            outcome: payload.outcome,
-            isMain: payload.isMain,
-            isSuspected: payload.isSuspected,
+            diagnosisName: input.form.name,
             error: message,
           },
         },
@@ -422,22 +504,28 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
   const deleteMutation = useMutation({
     mutationFn: async (entry: DiseaseEntry) => {
       if (!patientId) throw new Error('patientId is required');
-      if (!karteId) throw new Error('karteId is required');
-      return mutateDiseases({
+      if (!meta.visitDate) {
+        throw new Error('ORCA病名削除には診療日が必要です。');
+      }
+      if (!meta.departmentCode) {
+        throw new Error('ORCA病名削除には診療科コードが必要です。');
+      }
+      const targetDisease = toOrcaDiseaseInformation(entry);
+      return mutateOrcaDisease({
+        operation: 'delete',
         patientId,
-        karteId,
-        operations: [
-          {
-            operation: 'delete',
-            diagnosisId: entry.diagnosisId,
-            diagnosisName: entry.diagnosisName,
-          },
-        ],
+        performDate: meta.visitDate,
+        departmentCode: meta.departmentCode,
+        diseaseInformation: [targetDisease],
+        targetDisease,
       });
     },
     onSuccess: (result, entry) => {
-      const failureMessage = result.message ?? '病名の削除に失敗しました。';
-      setNotice({ tone: result.ok ? 'success' : 'error', message: result.ok ? '病名を削除しました。' : failureMessage });
+      const failureMessage = result.message ?? 'ORCA病名の削除に失敗しました。';
+      setNotice({
+        tone: result.ok ? 'success' : 'error',
+        message: result.ok ? 'ORCA病名を削除しました。再取得結果を反映します。' : failureMessage,
+      });
       logAuditEvent({
         runId: result.runId ?? meta.runId,
         cacheHit: meta.cacheHit,
@@ -445,149 +533,189 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         fallbackUsed: meta.fallbackUsed,
         dataSourceTransition: meta.dataSourceTransition,
         payload: {
-          action: 'CHARTS_DISEASE_MUTATION',
+          action: 'CHARTS_ORCA_DISEASE_MUTATION',
           outcome: result.ok ? 'success' : 'error',
           subject: 'charts',
           details: {
             ...auditMetaDetails,
-            runId: result.runId ?? meta.runId,
             operation: 'delete',
             patientId,
-            diagnosisId: entry.diagnosisId,
             diagnosisName: entry.diagnosisName,
-            diagnosisCode: entry.diagnosisCode,
             startDate: entry.startDate,
-            endDate: entry.endDate,
-            outcome: entry.outcome,
-            category: entry.category,
-            suspectedFlag: entry.suspectedFlag,
             ...(result.ok ? {} : { error: failureMessage }),
           },
         },
       });
       if (result.ok) {
+        setPendingAction(null);
         queryClient.invalidateQueries({ queryKey });
       }
     },
-    onError: (error: unknown, entry) => {
+    onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
-      setNotice({ tone: 'error', message: `病名の削除に失敗しました: ${message}` });
-      logAuditEvent({
-        runId: meta.runId,
-        cacheHit: meta.cacheHit,
-        missingMaster: meta.missingMaster,
-        fallbackUsed: meta.fallbackUsed,
-        dataSourceTransition: meta.dataSourceTransition,
-        payload: {
-          action: 'CHARTS_DISEASE_MUTATION',
-          outcome: 'error',
-          subject: 'charts',
-          details: {
-            ...auditMetaDetails,
-            runId: meta.runId,
-            operation: 'delete',
-            patientId,
-            diagnosisId: entry.diagnosisId,
-            diagnosisName: entry.diagnosisName,
-            diagnosisCode: entry.diagnosisCode,
-            startDate: entry.startDate,
-            endDate: entry.endDate,
-            outcome: entry.outcome,
-            category: entry.category,
-            suspectedFlag: entry.suspectedFlag,
-            error: message,
-          },
-        },
-      });
+      setNotice({ tone: 'error', message: `ORCA病名の削除に失敗しました: ${message}` });
     },
   });
 
-  const list = useMemo(() => diagnosisQuery.data?.diseases ?? [], [diagnosisQuery.data?.diseases]);
-  const insuranceList = useMemo(
-    () => list.filter((entry) => resolveDiseaseLayer(entry) === 'insurance-local'),
-    [list],
-  );
-  const mirrorList = useMemo(() => list.filter((entry) => resolveDiseaseLayer(entry) === 'orca-mirror'), [list]);
-  const isMirrorConnected = diagnosisQuery.data?.orcaMirrorStatus === 'connected';
-  const activeList = useMemo(() => insuranceList.filter((entry) => !entry.endDate), [insuranceList]);
-  const endedList = useMemo(() => insuranceList.filter((entry) => Boolean(entry.endDate)), [insuranceList]);
+  const organizeMutation = useMutation({
+    mutationFn: async () => {
+      if (!patientId) throw new Error('patientId is required');
+      if (!meta.visitDate) {
+        throw new Error('削除病名整理には診療日が必要です。');
+      }
+      if (!meta.departmentCode) {
+        throw new Error('削除病名整理には診療科コードが必要です。');
+      }
+      return mutateOrcaDisease({
+        operation: 'organizeDeletedDiseases',
+        patientId,
+        performDate: meta.visitDate,
+        departmentCode: meta.departmentCode,
+        organizeInformation: {
+          departmentCode: meta.departmentCode,
+          diseaseStartDate: meta.visitDate,
+        },
+      });
+    },
+    onSuccess: (result) => {
+      const failureMessage = result.message ?? '削除病名の整理に失敗しました。';
+      setNotice({
+        tone: result.ok ? 'success' : 'error',
+        message: result.ok ? '削除病名を整理しました。再取得結果を反映します。' : failureMessage,
+      });
+      if (result.ok) {
+        setPendingAction(null);
+        queryClient.invalidateQueries({ queryKey });
+      }
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      setNotice({ tone: 'error', message: `削除病名の整理に失敗しました: ${message}` });
+    },
+  });
+
+  const isAnyMutationPending = formMutation.isPending || deleteMutation.isPending || organizeMutation.isPending;
   const panelNotes = useMemo(() => {
     const notes = new Map<string, { tone: 'info' | 'error'; message: string }>();
     const addNote = (message: string, tone: 'info' | 'error' = 'info') => {
-      if (!notes.has(message)) {
-        notes.set(message, { tone, message });
-      }
+      if (!notes.has(message)) notes.set(message, { tone, message });
     };
-    if (quickCandidateOptions.length > 0 || insuranceList.some((entry) => entry.syncState === 'candidate')) {
+    if (quickCandidateOptions.length > 0 || pendingLocalList.some((entry) => entry.syncState === 'candidate')) {
       addNote(DISEASE_SYNC_CANDIDATES_NOTE);
     }
-    if (insuranceList.some((entry) => entry.syncState === 'conflict' || entry.syncState === 'stale')) {
+    if (mirrorList.some((entry) => entry.syncState === 'conflict' || entry.syncState === 'stale')) {
       addNote(DISEASE_CONFLICT_NOTE, 'error');
     }
+    if (pendingLocalList.length > 0) {
+      addNote('院内未送信の病名があります。ORCAへ登録するまで主一覧には表示しません。');
+    }
     addNote(DISEASE_MANUAL_RESOLUTION_NOTE);
-    addNote(DISEASE_CLINICAL_UNAVAILABLE_NOTE);
     for (const entry of list) {
       if (entry.note?.trim()) {
         addNote(entry.note.trim(), entry.syncState === 'conflict' || entry.syncState === 'stale' ? 'error' : 'info');
       }
     }
     return [...notes.values()];
-  }, [insuranceList, list, quickCandidateOptions.length]);
+  }, [list, mirrorList, pendingLocalList, quickCandidateOptions.length]);
 
   if (!patientId) {
     return <p className="charts-side-panel__empty">患者IDが未選択のため病名編集を開始できません。</p>;
   }
 
   const openCreate = () => {
+    setEditingEntry(undefined);
     setForm(buildEmptyForm(today));
     setNotice(null);
     setIsEditorOpen(true);
   };
 
   const openEdit = (entry: DiseaseEntry) => {
+    setEditingEntry(entry);
     setForm(toFormState(entry, today));
     setNotice(null);
     setIsEditorOpen(true);
   };
 
+  const requestFormMutation = (operation: Extract<OrcaDiseaseMutationOperation, 'create' | 'update'>, nextForm: DiagnosisFormState, sourceEntry?: DiseaseEntry) => {
+    const validationMessage = validateDiagnosisForm(nextForm);
+    if (validationMessage) {
+      setNotice({ tone: 'error', message: validationMessage });
+      return;
+    }
+    setPendingAction({
+      operation,
+      title: operation === 'create' ? 'ORCAへ病名登録' : 'ORCA病名を更新',
+      confirmLabel: operation === 'create' ? 'ORCAへ病名登録' : 'ORCA病名を更新',
+      form: nextForm,
+      sourceEntry,
+    });
+  };
+
   const applyQuickCandidate = (optionKey: string) => {
     setQuickCandidateSelection(optionKey);
-    if (!optionKey) {
-      return;
-    }
+    if (!optionKey) return;
     const option = quickCandidateMap.get(optionKey);
-    if (!option) {
-      return;
-    }
+    if (!option) return;
     const selectedCode = option.candidate.icdTen?.trim() || option.candidate.code?.trim() || '';
     setQuickAdd((prev) => ({
       ...prev,
       name: option.candidate.name,
       code: selectedCode || prev.code,
     }));
-    setNotice({
-      tone: 'info',
-      message: `候補「${option.candidate.name}」を反映しました。`,
+    setNotice({ tone: 'info', message: `候補「${option.candidate.name}」を反映しました。` });
+  };
+
+  const confirmPendingAction = () => {
+    if (!pendingAction || isOrcaMutationBlocked) return;
+    if (pendingAction.operation === 'delete') {
+      deleteMutation.mutate(pendingAction.entry);
+      return;
+    }
+    if (pendingAction.operation === 'organizeDeletedDiseases') {
+      organizeMutation.mutate();
+      return;
+    }
+    formMutation.mutate({
+      operation: pendingAction.operation,
+      form: pendingAction.form,
+      sourceEntry: pendingAction.sourceEntry,
     });
   };
+
+  const pendingForm = pendingAction && 'form' in pendingAction ? pendingAction.form : null;
+  const pendingEntry = pendingAction && 'entry' in pendingAction ? pendingAction.entry : pendingAction && 'sourceEntry' in pendingAction ? pendingAction.sourceEntry : null;
 
   return (
     <section className="charts-side-panel__section" data-test-id="diagnosis-edit-panel">
       <header className="charts-side-panel__section-header">
         <div>
-          <strong>保険病名</strong>
-          <p className="charts-diagnosis__lead">保険病名だけが編集可能です。ORCA mirror は参照専用、候補は明示確認でのみ反映します。</p>
+          <strong>ORCA登録病名</strong>
+          <p className="charts-diagnosis__lead">カルテ画面の病名は ORCA 再取得結果を正本にします。院内未送信の病名は別枠で確認します。</p>
         </div>
         <div className="charts-diagnosis__header-actions" role="group" aria-label="病名操作">
-          <button type="button" className="charts-side-panel__ghost" onClick={openCreate} disabled={isBlocked}>
-            詳細入力
+          <button type="button" className="charts-side-panel__ghost" onClick={openCreate} disabled={isOrcaMutationBlocked || isAnyMutationPending}>
+            ORCAへ病名登録
+          </button>
+          <button
+            type="button"
+            className="charts-side-panel__ghost"
+            onClick={() =>
+              setPendingAction({
+                operation: 'organizeDeletedDiseases',
+                title: '削除病名を整理',
+                confirmLabel: '削除病名を整理',
+              })
+            }
+            disabled={isOrcaMutationBlocked || isAnyMutationPending}
+          >
+            削除病名を整理
           </button>
         </div>
       </header>
 
-      {isBlocked && (
+      {mutationBlockReasons.length > 0 ? (
         <div className="charts-side-panel__notice charts-side-panel__notice--info">
-          <div>編集はブロックされています: {blockReasons.join(' / ')}</div>
+          <div>ORCA病名操作はブロックされています: {mutationBlockReasons.join(' / ')}</div>
           {unblockHints.length > 0 ? (
             <ul className="charts-diagnosis__unblock">
               {unblockHints.map((hint) => (
@@ -596,7 +724,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
             </ul>
           ) : null}
         </div>
-      )}
+      ) : null}
       {panelNotes.length > 0 ? (
         <div className="charts-diagnosis__notes" aria-live={resolveAriaLive('info')}>
           {panelNotes.map((note) => (
@@ -606,178 +734,11 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
           ))}
         </div>
       ) : null}
-      {notice && <div className={`charts-side-panel__notice charts-side-panel__notice--${notice.tone}`}>{notice.message}</div>}
+      {notice ? <div className={`charts-side-panel__notice charts-side-panel__notice--${notice.tone}`}>{notice.message}</div> : null}
 
-      <div className="charts-side-panel__list charts-diagnosis__list-scroll" aria-live={resolveAriaLive('info')}>
-        <div className="charts-side-panel__list-header">
-          <span>保険病名</span>
-          <span>{diagnosisQuery.isFetching ? '更新中' : `${insuranceList.length}件`}</span>
-        </div>
-        {diagnosisQuery.isError && (
-          <p className="charts-side-panel__empty">病名の取得に失敗しました。</p>
-        )}
-        {insuranceList.length === 0 && !diagnosisQuery.isFetching && (
-          <p className="charts-side-panel__empty">保険病名が未登録です。</p>
-        )}
-        {insuranceList.length > 0 && (
-          <>
-            <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="保険病名（活動中）">
-              {activeList.map((entry) => (
-                <li key={buildEntryKey(entry)} className="charts-diagnosis__item">
-                  <div className="charts-diagnosis__item-main">
-                    <div className="charts-diagnosis__title">
-                      <strong className="charts-diagnosis__name">{entry.diagnosisName ?? '名称未設定'}</strong>
-                      {entry.diagnosisCode ? <span className="charts-diagnosis__code">({entry.diagnosisCode})</span> : null}
-                    </div>
-                    <div className="charts-diagnosis__meta">
-                      <span className="charts-diagnosis__badges" role="list" aria-label="病名属性">
-                        {isMainDisease(entry) ? (
-                          <span className="charts-diagnosis__badge charts-diagnosis__badge--main" role="listitem">
-                            主
-                          </span>
-                        ) : (
-                          <span className="charts-diagnosis__badge charts-diagnosis__badge--sub" role="listitem">
-                            副
-                          </span>
-                        )}
-                        {isSuspectedDisease(entry) ? (
-                          <span className="charts-diagnosis__badge charts-diagnosis__badge--suspected" role="listitem">
-                            疑い
-                          </span>
-                        ) : null}
-                      </span>
-                          <span className="charts-diagnosis__dates">
-                            <span>開始:{entry.startDate ? entry.startDate : '—'}</span>
-                            <span>転帰:{entry.outcome ? entry.outcome : '—'}</span>
-                            <span>終了:{entry.endDate ? entry.endDate : '—'}</span>
-                            <span
-                              className={`charts-diagnosis__code-state${
-                                entry.diagnosisCode ? ' charts-diagnosis__code-state--ok' : ' charts-diagnosis__code-state--warn'
-                              }`}
-                            >
-                              {entry.diagnosisCode ? 'コードあり' : '⚠ コード未設定'}
-                            </span>
-                          </span>
-                        </div>
-                  </div>
-                  <div className="charts-side-panel__item-actions charts-diagnosis__item-actions" role="group" aria-label="病名操作">
-                    <button type="button" onClick={() => openEdit(entry)} disabled={isBlocked || entry.readOnly}>
-                      編集
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteMutation.mutate(entry)}
-                      disabled={deleteMutation.isPending || isBlocked || entry.readOnly}
-                    >
-                      削除
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            {endedList.length > 0 ? (
-              <details className="charts-diagnosis__ended">
-                <summary className="charts-diagnosis__ended-summary">転帰あり（{endedList.length}件）</summary>
-                <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="保険病名（転帰あり）">
-                  {endedList.map((entry) => (
-                    <li key={buildEntryKey(entry)} className="charts-diagnosis__item">
-                      <div className="charts-diagnosis__item-main">
-                        <div className="charts-diagnosis__title">
-                          <strong className="charts-diagnosis__name">{entry.diagnosisName ?? '名称未設定'}</strong>
-                          {entry.diagnosisCode ? <span className="charts-diagnosis__code">({entry.diagnosisCode})</span> : null}
-                        </div>
-                        <div className="charts-diagnosis__meta">
-                          <span className="charts-diagnosis__badges" role="list" aria-label="病名属性">
-                            {isMainDisease(entry) ? (
-                              <span className="charts-diagnosis__badge charts-diagnosis__badge--main" role="listitem">
-                                主
-                              </span>
-                            ) : (
-                              <span className="charts-diagnosis__badge charts-diagnosis__badge--sub" role="listitem">
-                                副
-                              </span>
-                            )}
-                            {isSuspectedDisease(entry) ? (
-                              <span className="charts-diagnosis__badge charts-diagnosis__badge--suspected" role="listitem">
-                                疑い
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="charts-diagnosis__dates">
-                            <span>開始:{entry.startDate ? entry.startDate : '—'}</span>
-                            <span>転帰:{entry.outcome ? entry.outcome : '—'}</span>
-                            <span>終了:{entry.endDate ? entry.endDate : '—'}</span>
-                            <span
-                              className={`charts-diagnosis__code-state${
-                                entry.diagnosisCode ? ' charts-diagnosis__code-state--ok' : ' charts-diagnosis__code-state--warn'
-                              }`}
-                            >
-                              {entry.diagnosisCode ? 'コードあり' : '⚠ コード未設定'}
-                            </span>
-                          </span>
-                        </div>
-                      </div>
-                      <div className="charts-side-panel__item-actions charts-diagnosis__item-actions" role="group" aria-label="病名操作">
-                        <button type="button" onClick={() => openEdit(entry)} disabled={isBlocked || entry.readOnly}>
-                          編集
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteMutation.mutate(entry)}
-                          disabled={deleteMutation.isPending || isBlocked || entry.readOnly}
-                        >
-                          削除
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            ) : null}
-          </>
-        )}
-      </div>
-
-      <section className="charts-diagnosis__quick-add" aria-label="ORCA mirror">
+      <section className="charts-diagnosis__quick-add charts-diagnosis__quick-add--authoring" aria-label="ORCAへ病名登録">
         <div className="charts-side-panel__subheader">
-          <strong>ORCA mirror</strong>
-          <span className="charts-side-panel__help">参照専用。保険病名へ自動反映しません。</span>
-        </div>
-        {mirrorList.length === 0 ? (
-          <p className="charts-side-panel__empty">
-            {isMirrorConnected ? DISEASE_MIRROR_EMPTY_NOTE : DISEASE_MIRROR_UNAVAILABLE_NOTE}
-          </p>
-        ) : (
-          <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="ORCA mirror">
-            {mirrorList.map((entry) => (
-              <li key={buildEntryKey(entry)} className="charts-diagnosis__item">
-                <div className="charts-diagnosis__item-main">
-                  <div className="charts-diagnosis__title">
-                    <strong className="charts-diagnosis__name">{entry.diagnosisName ?? '名称未設定'}</strong>
-                    {entry.diagnosisCode ? <span className="charts-diagnosis__code">({entry.diagnosisCode})</span> : null}
-                  </div>
-                  <div className="charts-diagnosis__meta">
-                    <span className="charts-diagnosis__badges" role="list" aria-label="病名属性">
-                      <span className="charts-diagnosis__badge charts-diagnosis__badge--sub" role="listitem">
-                        参照専用
-                      </span>
-                    </span>
-                    <span className="charts-diagnosis__dates">
-                      <span>開始:{entry.startDate ? entry.startDate : '—'}</span>
-                      <span>転帰:{entry.outcome ? entry.outcome : '—'}</span>
-                      <span>終了:{entry.endDate ? entry.endDate : '—'}</span>
-                    </span>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="charts-diagnosis__quick-add" aria-label="候補">
-        <div className="charts-side-panel__subheader">
-          <strong>候補</strong>
+          <strong>ORCAへ病名登録</strong>
           <span className="charts-side-panel__help">{DISEASE_CANDIDATE_CONFIRM_NOTE}</span>
         </div>
         <div className="charts-diagnosis__quick-grid">
@@ -791,17 +752,17 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                 setQuickAdd((prev) => ({ ...prev, name: event.target.value }));
               }}
               placeholder="例: 高血圧症"
-              disabled={isBlocked || mutation.isPending}
+              disabled={isOrcaMutationBlocked || isAnyMutationPending}
             />
           </div>
           <div className="charts-side-panel__field charts-diagnosis__quick-candidates">
-            <label htmlFor="diagnosis-quick-candidate">病名候補</label>
+            <label htmlFor="diagnosis-quick-candidate">病名マスター候補</label>
             <select
               id="diagnosis-quick-candidate"
               value={quickCandidateSelection}
-            onChange={(event) => applyQuickCandidate(event.target.value)}
-            disabled={isBlocked || mutation.isPending || quickCandidateOptions.length === 0}
-          >
+              onChange={(event) => applyQuickCandidate(event.target.value)}
+              disabled={isOrcaMutationBlocked || isAnyMutationPending || quickCandidateOptions.length === 0}
+            >
               <option value="">{quickCandidateOptions.length > 0 ? '候補を選択して入力へ反映' : '候補なし'}</option>
               {quickCandidateOptions.map((option) => (
                 <option key={option.key} value={option.key}>
@@ -809,24 +770,9 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                 </option>
               ))}
             </select>
-            {quickCandidateQuery.isFetching ? (
-              <p className="charts-side-panel__help charts-diagnosis__quick-candidate-help">候補を検索中...</p>
-            ) : null}
-            {!quickCandidateQuery.isFetching && quickCandidateQuery.isError ? (
-              <p className="charts-side-panel__help charts-diagnosis__quick-candidate-help charts-diagnosis__quick-candidate-help--warn">
-                候補の取得に失敗しました。
-              </p>
-            ) : null}
-            {!quickCandidateQuery.isFetching &&
-            !quickCandidateQuery.isError &&
-            quickAdd.name.trim().length >= QUICK_CANDIDATE_MIN_KEYWORD &&
-            quickCandidateOptions.length === 0 ? (
+            {quickCandidateQuery.isFetching ? <p className="charts-side-panel__help charts-diagnosis__quick-candidate-help">候補を検索中...</p> : null}
+            {!quickCandidateQuery.isFetching && quickAdd.name.trim().length >= QUICK_CANDIDATE_MIN_KEYWORD && quickCandidateOptions.length === 0 ? (
               <p className="charts-side-panel__help charts-diagnosis__quick-candidate-help">一致する候補はありません。</p>
-            ) : null}
-            {quickAdd.name.trim().length > 0 && quickAdd.name.trim().length < QUICK_CANDIDATE_MIN_KEYWORD ? (
-              <p className="charts-side-panel__help charts-diagnosis__quick-candidate-help">
-                {QUICK_CANDIDATE_MIN_KEYWORD}文字以上で候補を表示します。
-              </p>
             ) : null}
           </div>
           <div className="charts-side-panel__field">
@@ -836,7 +782,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
               value={quickAdd.code}
               onChange={(event) => setQuickAdd((prev) => ({ ...prev, code: event.target.value }))}
               placeholder="例: I10"
-              disabled={isBlocked || mutation.isPending}
+              disabled={isOrcaMutationBlocked || isAnyMutationPending}
             />
           </div>
           <div className="charts-side-panel__field">
@@ -849,19 +795,15 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                 setQuickCandidateSelection('');
                 setQuickAdd((prev) => ({ ...prev, startDate: event.target.value }));
               }}
-              disabled={isBlocked || mutation.isPending}
-              aria-describedby="diagnosis-quick-start-help"
+              disabled={isOrcaMutationBlocked || isAnyMutationPending}
             />
-            <p id="diagnosis-quick-start-help" className="charts-side-panel__help">
-              西暦の例: 2026-04-21。日付は保存後にサーバー再取得で確認します。
-            </p>
           </div>
           <label className="charts-side-panel__toggle">
             <input
               type="checkbox"
               checked={quickAdd.isMain}
               onChange={(event) => setQuickAdd((prev) => ({ ...prev, isMain: event.target.checked }))}
-              disabled={isBlocked || mutation.isPending}
+              disabled={isOrcaMutationBlocked || isAnyMutationPending}
             />
             主病名
           </label>
@@ -870,7 +812,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
               type="checkbox"
               checked={quickAdd.isSuspected}
               onChange={(event) => setQuickAdd((prev) => ({ ...prev, isSuspected: event.target.checked }))}
-              disabled={isBlocked || mutation.isPending}
+              disabled={isOrcaMutationBlocked || isAnyMutationPending}
             />
             疑い
           </label>
@@ -878,33 +820,132 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         <div className="charts-diagnosis__quick-actions">
           <button
             type="button"
-            disabled={isBlocked || mutation.isPending}
+            disabled={isOrcaMutationBlocked || isAnyMutationPending}
             onClick={() => {
-              const nextForm = {
+              requestFormMutation('create', {
                 ...buildEmptyForm(today),
                 name: quickAdd.name.trim(),
                 code: quickAdd.code.trim(),
                 startDate: quickAdd.startDate || today,
                 isMain: quickAdd.isMain,
                 isSuspected: quickAdd.isSuspected,
-              };
-              const validationMessage = validateDiagnosisForm(nextForm);
-              if (validationMessage) {
-                setNotice({ tone: 'error', message: validationMessage });
-                return;
-              }
-              mutation.mutate(nextForm);
+              });
             }}
           >
-            保険病名に追加
+            ORCAへ病名登録
           </button>
         </div>
       </section>
 
+      <section className="charts-diagnosis__quick-add" aria-label="ORCA登録病名">
+        <div className="charts-side-panel__subheader">
+          <strong>ORCA登録病名</strong>
+          <span className="charts-side-panel__help">{diagnosisQuery.isFetching ? '取得中' : isMirrorConnected ? `${mirrorList.length}件` : '未確認'}</span>
+        </div>
+        {diagnosisQuery.isError ? <p className="charts-side-panel__empty">病名の取得に失敗しました。</p> : null}
+        {mirrorList.length === 0 && !diagnosisQuery.isFetching ? (
+          <p className="charts-side-panel__empty">{isMirrorConnected ? DISEASE_MIRROR_EMPTY_NOTE : DISEASE_MIRROR_UNAVAILABLE_NOTE}</p>
+        ) : null}
+        {mirrorList.length > 0 ? (
+          <>
+            <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="ORCA登録病名（活動中）">
+              {activeMirrorList.map((entry) => (
+                <DiseaseRow
+                  key={buildEntryKey(entry)}
+                  entry={entry}
+                  actions={
+                    <>
+                      <button type="button" onClick={() => openEdit(entry)} disabled={isOrcaMutationBlocked || isAnyMutationPending}>
+                        ORCA病名を更新
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPendingAction({
+                            operation: 'delete',
+                            title: 'ORCA病名を削除',
+                            confirmLabel: 'ORCA病名を削除',
+                            entry,
+                          })
+                        }
+                        disabled={isOrcaMutationBlocked || isAnyMutationPending}
+                      >
+                        ORCA病名を削除
+                      </button>
+                    </>
+                  }
+                />
+              ))}
+            </ul>
+            {endedMirrorList.length > 0 ? (
+              <details className="charts-diagnosis__ended">
+                <summary className="charts-diagnosis__ended-summary">転帰あり（{endedMirrorList.length}件）</summary>
+                <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="ORCA登録病名（転帰あり）">
+                  {endedMirrorList.map((entry) => (
+                    <DiseaseRow
+                      key={buildEntryKey(entry)}
+                      entry={entry}
+                      actions={
+                        <>
+                          <button type="button" onClick={() => openEdit(entry)} disabled={isOrcaMutationBlocked || isAnyMutationPending}>
+                            ORCA病名を更新
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPendingAction({
+                                operation: 'delete',
+                                title: 'ORCA病名を削除',
+                                confirmLabel: 'ORCA病名を削除',
+                                entry,
+                              })
+                            }
+                            disabled={isOrcaMutationBlocked || isAnyMutationPending}
+                          >
+                            ORCA病名を削除
+                          </button>
+                        </>
+                      }
+                    />
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+          </>
+        ) : null}
+      </section>
+
+      <section className="charts-diagnosis__quick-add" aria-label="院内未送信病名">
+        <div className="charts-side-panel__subheader">
+          <strong>院内未送信</strong>
+          <span className="charts-side-panel__help">{pendingLocalList.length}件 / ORCA正本には未反映</span>
+        </div>
+        {pendingLocalList.length === 0 ? <p className="charts-side-panel__empty">院内未送信の病名はありません。</p> : null}
+        {pendingLocalList.length > 0 ? (
+          <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="院内未送信病名">
+            {pendingLocalList.map((entry) => (
+              <DiseaseRow
+                key={buildEntryKey(entry)}
+                entry={entry}
+                actions={
+                  <button
+                    type="button"
+                    onClick={() => requestFormMutation('create', toFormState(entry, today), entry)}
+                    disabled={isOrcaMutationBlocked || isAnyMutationPending}
+                  >
+                    ORCAへ病名登録
+                  </button>
+                }
+              />
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
       <FocusTrapDialog
         open={isEditorOpen}
-        title={form.diagnosisId ? '病名の編集' : '病名の追加'}
-        description="接頭語/接尾語、疑い病名に対応。Enter で保存、Esc で閉じます。"
+        title={editingEntry ? 'ORCA病名の更新' : 'ORCA病名の追加'}
+        description="入力内容は確認ダイアログで確認してから ORCA へ送信します。"
         onClose={() => setIsEditorOpen(false)}
         initialFocus="none"
         testId="charts-diagnosis-editor-dialog"
@@ -913,32 +954,15 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
           className="charts-side-panel__form charts-diagnosis__editor"
           onSubmit={(event) => {
             event.preventDefault();
-            if (isBlocked) {
-              return;
-            }
-            if (!form.name.trim()) {
-              setNotice({ tone: 'error', message: '病名を入力してください。' });
-              return;
-            }
-            const validationMessage = validateDiagnosisForm(form);
-            if (validationMessage) {
-              setNotice({ tone: 'error', message: validationMessage });
-              return;
-            }
-            mutation.mutate(form);
+            if (isOrcaMutationBlocked) return;
+            requestFormMutation(editingEntry ? 'update' : 'create', form, editingEntry);
           }}
         >
           {notice ? <div className={`charts-side-panel__notice charts-side-panel__notice--${notice.tone}`}>{notice.message}</div> : null}
           <div className="charts-diagnosis__name-row" role="group" aria-label="病名（接頭/病名/接尾）">
             <div className="charts-side-panel__field charts-diagnosis__name-part">
               <label htmlFor="diagnosis-prefix">接頭</label>
-              <input
-                id="diagnosis-prefix"
-                value={form.prefix}
-                onChange={(event) => setForm((prev) => ({ ...prev, prefix: event.target.value }))}
-                placeholder="例: 術後"
-                disabled={isBlocked}
-              />
+              <input id="diagnosis-prefix" value={form.prefix} onChange={(event) => setForm((prev) => ({ ...prev, prefix: event.target.value }))} disabled={isOrcaMutationBlocked} />
             </div>
             <div className="charts-side-panel__field charts-diagnosis__name-main">
               <label htmlFor="diagnosis-name">病名 *</label>
@@ -948,41 +972,21 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                 value={form.name}
                 onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
                 placeholder="例: 高血圧症"
-                disabled={isBlocked}
+                disabled={isOrcaMutationBlocked}
               />
             </div>
             <div className="charts-side-panel__field charts-diagnosis__name-part">
               <label htmlFor="diagnosis-suffix">接尾</label>
-              <input
-                id="diagnosis-suffix"
-                value={form.suffix}
-                onChange={(event) => setForm((prev) => ({ ...prev, suffix: event.target.value }))}
-                placeholder="例: による"
-                disabled={isBlocked}
-              />
+              <input id="diagnosis-suffix" value={form.suffix} onChange={(event) => setForm((prev) => ({ ...prev, suffix: event.target.value }))} disabled={isOrcaMutationBlocked} />
             </div>
           </div>
           <div className="charts-side-panel__field-row">
             <label className="charts-side-panel__toggle">
-              <input
-                id="diagnosis-main"
-                name="diagnosisMain"
-                type="checkbox"
-                checked={form.isMain}
-                onChange={(event) => setForm((prev) => ({ ...prev, isMain: event.target.checked }))}
-                disabled={isBlocked}
-              />
+              <input type="checkbox" checked={form.isMain} onChange={(event) => setForm((prev) => ({ ...prev, isMain: event.target.checked }))} disabled={isOrcaMutationBlocked} />
               主病名
             </label>
             <label className="charts-side-panel__toggle">
-              <input
-                id="diagnosis-suspected"
-                name="diagnosisSuspected"
-                type="checkbox"
-                checked={form.isSuspected}
-                onChange={(event) => setForm((prev) => ({ ...prev, isSuspected: event.target.checked }))}
-                disabled={isBlocked}
-              />
+              <input type="checkbox" checked={form.isSuspected} onChange={(event) => setForm((prev) => ({ ...prev, isSuspected: event.target.checked }))} disabled={isOrcaMutationBlocked} />
               疑い
             </label>
           </div>
@@ -990,81 +994,76 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
             <summary className="charts-diagnosis__advanced-summary">詳細（コード/開始/転帰）</summary>
             <div className="charts-side-panel__field">
               <label htmlFor="diagnosis-code">病名コード ※任意</label>
-              <input
-                id="diagnosis-code"
-                value={form.code}
-                onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
-                placeholder="例: I10"
-                disabled={isBlocked}
-              />
+              <input id="diagnosis-code" value={form.code} onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))} placeholder="例: I10" disabled={isOrcaMutationBlocked} />
             </div>
             <div className="charts-side-panel__field-row">
               <div className="charts-side-panel__field">
                 <label htmlFor="diagnosis-start">開始日 ※必須</label>
-                <input
-                  id="diagnosis-start"
-                  type="date"
-                  value={form.startDate}
-                  onChange={(event) => setForm((prev) => ({ ...prev, startDate: event.target.value }))}
-                  disabled={isBlocked}
-                  aria-describedby="diagnosis-start-help"
-                />
-                <p id="diagnosis-start-help" className="charts-side-panel__help">
-                  西暦の例: 2026-04-21。保存後に再取得した日付を一覧へ表示します。
-                </p>
+                <input id="diagnosis-start" type="date" value={form.startDate} onChange={(event) => setForm((prev) => ({ ...prev, startDate: event.target.value }))} disabled={isOrcaMutationBlocked} />
               </div>
               <div className="charts-side-panel__field">
                 <label htmlFor="diagnosis-end">転帰日 ※任意</label>
-                <input
-                  id="diagnosis-end"
-                  type="date"
-                  value={form.endDate}
-                  onChange={(event) => setForm((prev) => ({ ...prev, endDate: event.target.value }))}
-                  disabled={isBlocked}
-                  aria-describedby="diagnosis-end-help"
-                />
-                <p id="diagnosis-end-help" className="charts-side-panel__help">
-                  西暦の例: 2026-04-30。開始日より前の日付は保存できません。
-                </p>
+                <input id="diagnosis-end" type="date" value={form.endDate} onChange={(event) => setForm((prev) => ({ ...prev, endDate: event.target.value }))} disabled={isOrcaMutationBlocked} />
               </div>
             </div>
             <div className="charts-side-panel__field">
               <label htmlFor="diagnosis-outcome">転帰 ※任意</label>
-              <input
-                id="diagnosis-outcome"
-                list="diagnosis-outcome-options"
-                value={form.outcome}
-                onChange={(event) => setForm((prev) => ({ ...prev, outcome: event.target.value }))}
-                placeholder="例: 継続"
-                disabled={isBlocked}
-                aria-describedby="diagnosis-outcome-help"
-              />
+              <input id="diagnosis-outcome" list="diagnosis-outcome-options" value={form.outcome} onChange={(event) => setForm((prev) => ({ ...prev, outcome: event.target.value }))} placeholder="例: 継続" disabled={isOrcaMutationBlocked} />
               <datalist id="diagnosis-outcome-options">
                 {DISEASE_OUTCOME_PRESETS.map((option) => (
                   <option key={option} value={option} />
                 ))}
               </datalist>
-              <p id="diagnosis-outcome-help" className="charts-side-panel__help">
-                入力できる転帰: {DISEASE_OUTCOME_PRESETS.join('、')}。
-              </p>
             </div>
           </details>
           <div className="charts-diagnosis__editor-actions" role="group" aria-label="病名保存">
-            <button type="submit" disabled={mutation.isPending || isBlocked}>
-              {form.diagnosisId ? '更新' : '追加'}
+            <button type="submit" disabled={isAnyMutationPending || isOrcaMutationBlocked}>
+              {editingEntry ? 'ORCA病名を更新' : 'ORCAへ病名登録'}
             </button>
-            <button
-              type="button"
-              className="charts-side-panel__ghost"
-              onClick={() => {
-                setIsEditorOpen(false);
-              }}
-            >
+            <button type="button" className="charts-side-panel__ghost" onClick={() => setIsEditorOpen(false)}>
               閉じる
             </button>
           </div>
-          <small className="charts-diagnosis__hint">追加後もダイアログは開いたままです（連続入力向け）。編集は保存後に自動で閉じます。</small>
         </form>
+      </FocusTrapDialog>
+
+      <FocusTrapDialog
+        open={Boolean(pendingAction)}
+        title={pendingAction?.title ?? 'ORCA病名操作'}
+        description="この操作は ORCA へ送信し、成功後に再取得した結果だけを画面へ反映します。"
+        onClose={() => setPendingAction(null)}
+        initialFocus="none"
+        testId="charts-diagnosis-confirm-dialog"
+      >
+        <div className="charts-side-panel__form charts-diagnosis__editor">
+          <dl className="charts-diagnosis__confirm">
+            <div>
+              <dt>操作</dt>
+              <dd>{pendingAction?.title ?? '-'}</dd>
+            </div>
+            <div>
+              <dt>病名</dt>
+              <dd>{pendingForm?.name || formatEntryName(pendingEntry)}</dd>
+            </div>
+            <div>
+              <dt>開始日</dt>
+              <dd>{pendingForm?.startDate || pendingEntry?.startDate || '-'}</dd>
+            </div>
+            <div>
+              <dt>転帰</dt>
+              <dd>{pendingForm?.outcome || pendingEntry?.outcome || '-'}</dd>
+            </div>
+          </dl>
+          <div className="charts-side-panel__notice charts-side-panel__notice--info">ORCA再取得が完了するまで一覧は更新しません。</div>
+          <div className="charts-diagnosis__editor-actions" role="group" aria-label="ORCA病名操作の確認">
+            <button type="button" onClick={confirmPendingAction} disabled={isAnyMutationPending || isOrcaMutationBlocked}>
+              {pendingAction?.confirmLabel ?? '実行'}
+            </button>
+            <button type="button" className="charts-side-panel__ghost" onClick={() => setPendingAction(null)} disabled={isAnyMutationPending}>
+              キャンセル
+            </button>
+          </div>
+        </div>
       </FocusTrapDialog>
     </section>
   );

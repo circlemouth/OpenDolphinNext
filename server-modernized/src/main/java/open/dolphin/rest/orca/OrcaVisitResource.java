@@ -1363,6 +1363,9 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
                 continue;
             }
             ProjectionOfficialIdentifiers identifiers = readProjectionOfficialIdentifiers(row.worklistFlagsJson());
+            if (!hasCompleteOfficialIdentifiers(identifiers)) {
+                continue;
+            }
             VisitPatientListResponse.VisitEntry visit = new VisitPatientListResponse.VisitEntry();
             visit.setScheduleKey(firstText(
                     CanonicalEncounterKeys.optionalScheduleKey(facilityId, identifiers.sequentialNumber()),
@@ -1492,6 +1495,13 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
                 && hasText(response.getVoucherNumber())
                 && hasText(response.getSequentialNumber())
                 && hasText(response.getInsuranceCombinationNumber());
+    }
+
+    private boolean hasCompleteOfficialIdentifiers(ProjectionOfficialIdentifiers identifiers) {
+        return identifiers != null
+                && hasText(identifiers.voucherNumber())
+                && hasText(identifiers.sequentialNumber())
+                && hasText(identifiers.insuranceCombinationNumber());
     }
 
     private String firstText(String primary, String fallback) {

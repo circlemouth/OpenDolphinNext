@@ -161,6 +161,7 @@ const STATUS_LIST_LAYOUT_STORAGE_KEY = 'reception-status-list-layout';
 const ORCA_QUEUE_REFRESH_INTERVAL_MS = 60_000;
 const ORCA_QUEUE_QUERY_KEY = ['orca-queue'] as const;
 const PATIENT_SEARCH_PAGE_SIZE = 50;
+const PATIENT_SEARCH_TIMEOUT_MS = 15_000;
 const STATUS_TAB_ORDER = SECTION_ORDER;
 
 type ReceptionPatientSearchFilters = {
@@ -170,6 +171,23 @@ type ReceptionPatientSearchFilters = {
   kanaSei: string;
   kanaMei: string;
 };
+
+const withPatientSearchTimeout = <T,>(promise: Promise<T>): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error('患者検索がタイムアウトしました。条件を確認して再検索してください。'));
+    }, PATIENT_SEARCH_TIMEOUT_MS);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
 
 const toPatientRecordFromMaster = (patient: PatientMasterRecord): PatientRecord => ({
   patientId: patient.patientId,
@@ -194,7 +212,7 @@ const mergeOfficialPatientIntoEntry = (entry: ReceptionEntry, patient?: PatientR
 const searchOfficialReceptionPatients = async (filters: ReceptionPatientSearchFilters, runId?: string): Promise<PatientListResponse> => {
   const patientId = filters.patientId.trim();
   if (patientId) {
-    const result = await refetchOfficialCanonicalPatients({ patientIds: [patientId], runId });
+    const result = await withPatientSearchTimeout(refetchOfficialCanonicalPatients({ patientIds: [patientId], runId }));
     return {
       patients: result.patients,
       runId,
@@ -210,7 +228,7 @@ const searchOfficialReceptionPatients = async (filters: ReceptionPatientSearchFi
 
   const fullName = `${filters.nameSei.trim()} ${filters.nameMei.trim()}`.trim();
   const fullKana = `${filters.kanaSei.trim()} ${filters.kanaMei.trim()}`.trim();
-  const result = await fetchPatientMasterSearch({ name: fullName, kana: fullKana });
+  const result = await withPatientSearchTimeout(fetchPatientMasterSearch({ name: fullName, kana: fullKana }));
   return {
     patients: result.patients.map(toPatientRecordFromMaster),
     runId: result.runId ?? runId,
@@ -2525,6 +2543,18 @@ export function ReceptionPage({
       }));
   }, [acceptPhysicianSelection, displayedEntries, physicianNameMap, selectedEntryKey, selectorOptionsQuery.data?.physicians, visibleAppointmentEntries]);
 
+  useEffect(() => {
+    if (!patientSearchSelected?.patientId?.trim()) return;
+    if (!acceptPaymentMode) {
+      setAcceptPaymentMode('insurance');
+      setAcceptErrors((prev) => ({ ...prev, paymentMode: undefined }));
+    }
+    if (!acceptPhysicianSelection && physicianOptions[0]?.code) {
+      setAcceptPhysicianSelection(physicianOptions[0].code);
+      setAcceptErrors((prev) => ({ ...prev, physician: undefined }));
+    }
+  }, [acceptPaymentMode, acceptPhysicianSelection, patientSearchSelected, physicianOptions]);
+
   const selectedEntry = useMemo(() => {
     if (!selectedEntryKey) return undefined;
     return displayedEntries.find((entry) => entryKey(entry) === selectedEntryKey);
@@ -4737,7 +4767,7 @@ export function ReceptionPage({
       data-test-id="reception-open-accept-workflow"
     >
       <ClinicalIcon icon="patient-search-existing" />
-      既存患者受付/患者検索
+      患者を受付する
     </button>
   );
 
@@ -4889,7 +4919,7 @@ export function ReceptionPage({
                   aria-expanded={!filtersCollapsed}
                   aria-controls="reception-toolbar-advanced"
                 >
-                  詳細条件
+                  表示条件変更
                 </button>
               </div>
             </div>
@@ -5006,6 +5036,9 @@ export function ReceptionPage({
                     <option value="department">診療科</option>
                   </select>
                 </label>
+                <button type="button" className="reception-search__button reception-search__button--clear" onClick={handleClear}>
+                  条件をクリア
+                </button>
               </fieldset>
               <fieldset className="reception-toolbar__panel-group">
                 <legend>保存ビュー</legend>
@@ -5046,28 +5079,20 @@ export function ReceptionPage({
                     削除
                   </button>
                 </div>
-                <label className="reception-search__field">
-                  <span>ビュー名</span>
-                  <input
-                    id="reception-search-saved-view-name"
-                    name="receptionSearchSavedViewName"
-                    value={savedViewName}
-                    onChange={(event) => setSavedViewName(event.target.value)}
-                    aria-describedby="reception-search-saved-view-name-help"
-                  />
-                  <small id="reception-search-saved-view-name-help" className="reception-search__field-help">
-                    例: 内科/午前/保険
-                  </small>
-                </label>
-                <button type="button" className="reception-search__button primary" onClick={handleSaveView}>
-                  現在の条件を保存
-                </button>
-              </fieldset>
-              <fieldset className="reception-toolbar__panel-group reception-toolbar__panel-group--utility">
-                <legend>条件操作</legend>
-                <button type="button" className="reception-search__button ghost" onClick={handleClear}>
-                  クリア
-                </button>
+                <div className="reception-toolbar__save-row">
+                  <label className="reception-search__field">
+                    <span>ビュー名</span>
+                    <input
+                      id="reception-search-saved-view-name"
+                      name="receptionSearchSavedViewName"
+                      value={savedViewName}
+                      onChange={(event) => setSavedViewName(event.target.value)}
+                    />
+                  </label>
+                  <button type="button" className="reception-search__button primary reception-toolbar__save-button" onClick={handleSaveView}>
+                    現在の条件を保存
+                  </button>
+                </div>
               </fieldset>
             </div>
             <div className="reception-toolbar__summary" role="status" aria-live={infoLive}>
@@ -6240,7 +6265,6 @@ export function ReceptionPage({
                                   acceptedChartsHandoff?.encounter.patientId === resolvedPatientId ? acceptedChartsHandoff : null,
                                 entries: visibleAppointmentEntries,
                               });
-                              const canOpenCharts = chartsHandoffCandidate.kind === 'ready';
                               const patientSearchOpenChartsTitle =
                                 chartsHandoffCandidate.kind === 'ready'
                                   ? chartsHandoffCandidate.source === 'accepted'
@@ -6325,13 +6349,15 @@ export function ReceptionPage({
                                             detail:
                                               chartsHandoffCandidate.reason === 'ambiguous_active_entries'
                                                 ? '同一患者の active entry が複数あるため、対象の受付を 1 件に絞ってください。'
-                                                : '当日の受付から canonical key を受け取れる患者のみカルテを開けます。',
+                                                : chartsHandoffCandidate.reason === 'no_active_entry'
+                                                  ? '受付登録を完了するとカルテを開けます。'
+                                                  : '当日の受付から canonical key を受け取れる患者のみカルテを開けます。',
                                           });
                                         }}
                                         onKeyDown={(event) => {
                                           event.stopPropagation();
                                         }}
-                                        disabled={!canOpenCharts}
+                                        disabled={!resolvedPatientId}
                                         title={patientSearchOpenChartsTitle}
                                       >
                                         <ClinicalIcon icon="chart-open" />

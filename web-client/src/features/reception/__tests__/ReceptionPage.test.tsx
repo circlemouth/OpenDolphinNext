@@ -514,7 +514,7 @@ const getToolbar = () => {
 };
 
 const openAcceptWorkflowModal = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(screen.getByRole('button', { name: '既存患者受付/患者検索' }));
+  await user.click(screen.getByRole('button', { name: '患者を受付する' }));
   return (await screen.findByRole('region', { name: '既存患者受付/患者検索' })) as HTMLElement;
 };
 
@@ -645,7 +645,7 @@ describe('ReceptionPage accept UX', () => {
     expect(within(acceptPanel).getByText('選択患者: 山田太郎')).toBeInTheDocument();
     expect(within(acceptPanel).getByRole('button', { name: '受付する' })).toBeInTheDocument();
     const paymentSelect = within(acceptPanel).getByLabelText(/保険\/自費/);
-    expect(paymentSelect).toHaveValue('');
+    expect(paymentSelect).toHaveValue('insurance');
 
     const row2 = screen.getByRole('row', { name: /佐藤花子/ });
     await user.click(row2);
@@ -699,13 +699,14 @@ describe('ReceptionPage accept UX', () => {
     const departmentSelect = within(acceptPanel).getByLabelText(/診療科/) as HTMLSelectElement;
     const physicianSelect = within(acceptPanel).getByLabelText(/担当医/) as HTMLSelectElement;
     const registerButton = within(acceptPanel).getByRole('button', { name: '受付する' });
+    await waitFor(() => expect(within(acceptPanel).getByLabelText(/保険\/自費/)).toHaveValue('insurance'));
+    expect(physicianSelect).toHaveValue('10001');
     await user.selectOptions(departmentSelect, '');
     await user.selectOptions(physicianSelect, '');
     expect(registerButton).toBeDisabled();
 
     const paymentSelect = within(acceptPanel).getByLabelText(/保険\/自費/);
-    expect(paymentSelect).toHaveValue('');
-    await user.selectOptions(paymentSelect, 'insurance');
+    expect(paymentSelect).toHaveValue('insurance');
     await user.selectOptions(departmentSelect, departmentSelect.options[1]?.value ?? '01');
     await user.selectOptions(physicianSelect, physicianSelect.options[1]?.value ?? '10001');
     await waitFor(() => expect(registerButton).toBeEnabled());
@@ -1501,7 +1502,15 @@ describe('ReceptionPage accept UX', () => {
     await user.click(selectedItem);
 
     const chartsButton = within(selectedItem).getByRole('button', { name: 'カルテを開く' });
-    expect(chartsButton).toBeDisabled();
+    expect(chartsButton).toBeEnabled();
+    await user.click(chartsButton);
+    expect(mockOpenCharts).not.toHaveBeenCalled();
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tone: 'warning',
+        message: 'カルテを開くための canonical key が見つかりません。',
+      }),
+    );
 
     const acceptPanel = getAcceptRegisterPanel(workflowModal);
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
@@ -1665,14 +1674,14 @@ describe('ReceptionPage toolbar and tabs', () => {
     expect(within(toolbar).queryByText('患者ID・氏名・カナで検索できます。')).toBeNull();
     expect(within(toolbar).getByRole('button', { name: '検索' })).toBeInTheDocument();
     expect(within(toolbar).queryByRole('button', { name: '一覧操作' })).toBeNull();
-    expect(within(toolbar).getByRole('button', { name: '詳細条件' })).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getByRole('button', { name: '既存患者受付/患者検索' })).toHaveAttribute('aria-expanded', 'false');
+    expect(within(toolbar).getByRole('button', { name: '表示条件変更' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: '患者を受付する' })).toHaveAttribute('aria-expanded', 'false');
     expect(within(toolbar).queryByRole('button', { name: '再取得' })).toBeNull();
     const statusTabs = screen.getByRole('region', { name: 'ステータスタブ' });
     expect(within(statusTabs).getByRole('button', { name: '再取得' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: '保険/自費' })).toBeNull();
     expect(screen.queryByRole('combobox', { name: '保存ビュー' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'クリア' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '条件をクリア' })).toBeNull();
     expect(within(toolbar).queryByRole('button', { name: /日次状態/ })).toBeNull();
     expect(document.querySelector('.reception-page__floating-actions')).toBeNull();
   });
@@ -1695,7 +1704,7 @@ describe('ReceptionPage toolbar and tabs', () => {
 
     const toolbar = getToolbar();
     expect(within(toolbar).queryByRole('button', { name: '一覧操作' })).toBeNull();
-    expect(screen.getByRole('button', { name: '既存患者受付/患者検索' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '患者を受付する' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: '一覧操作' })).toBeNull();
 
     const statusTabs = screen.getByRole('region', { name: 'ステータスタブ' });
@@ -1707,17 +1716,19 @@ describe('ReceptionPage toolbar and tabs', () => {
     expect(screen.queryByText('システム詳細')).toBeNull();
   });
 
-  it('toggles advanced filters from 詳細条件 button', async () => {
+  it('toggles advanced filters from 表示条件変更 button', async () => {
     const user = userEvent.setup();
     renderReceptionPage();
 
     expect(screen.queryByRole('combobox', { name: '保険/自費' })).toBeNull();
     const toolbar = getToolbar();
-    const toggleButton = within(toolbar).getByRole('button', { name: '詳細条件' });
+    const toggleButton = within(toolbar).getByRole('button', { name: '表示条件変更' });
     await user.click(toggleButton);
 
     expect(screen.getByRole('combobox', { name: '保険/自費' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: '保存ビュー' })).toBeInTheDocument();
+    expect(screen.queryByText('例: 内科/午前/保険')).toBeNull();
+    expect(screen.getByRole('button', { name: '条件をクリア' })).toBeInTheDocument();
 
     await user.click(toggleButton);
     expect(screen.queryByRole('combobox', { name: '保険/自費' })).toBeNull();
@@ -2197,7 +2208,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     const user = userEvent.setup();
     renderReceptionPage();
 
-    const acceptButton = screen.getByRole('button', { name: '既存患者受付/患者検索' });
+    const acceptButton = screen.getByRole('button', { name: '患者を受付する' });
 
     const workflowModal = await openAcceptWorkflowModal(user);
     const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
@@ -2270,7 +2281,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     const user = userEvent.setup();
     renderReceptionPage();
     const toolbar = getToolbar();
-    const acceptButton = screen.getByRole('button', { name: '既存患者受付/患者検索' });
+    const acceptButton = screen.getByRole('button', { name: '患者を受付する' });
     const dateInput = within(toolbar).getByLabelText('受付日');
 
     expect(dateInput).toBeInTheDocument();
@@ -2319,8 +2330,8 @@ describe('ReceptionPage status/date/card action UX', () => {
     const user = userEvent.setup();
     renderReceptionPage();
     const toolbar = getToolbar();
-    await user.click(within(toolbar).getByRole('button', { name: '詳細条件' }));
-    await user.click(screen.getByRole('button', { name: 'クリア' }));
+    await user.click(within(toolbar).getByRole('button', { name: '表示条件変更' }));
+    await user.click(screen.getByRole('button', { name: '条件をクリア' }));
     expect(screen.getByRole('button', { name: '検索' })).toBeInTheDocument();
   });
 
@@ -2466,7 +2477,7 @@ describe('ReceptionPage status/date/card action UX', () => {
     renderReceptionPage();
 
     const toolbar = getToolbar();
-    await user.click(within(toolbar).getByRole('button', { name: '詳細条件' }));
+    await user.click(within(toolbar).getByRole('button', { name: '表示条件変更' }));
     await user.selectOptions(screen.getByLabelText('診療科'), '02 外科');
 
     const workflowModal = await openAcceptWorkflowModal(user);

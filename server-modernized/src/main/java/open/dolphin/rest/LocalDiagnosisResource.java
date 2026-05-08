@@ -79,7 +79,7 @@ public class LocalDiagnosisResource extends AbstractResource {
             throw restError(request, Response.Status.NOT_FOUND, "karte_not_found", "Karte not found");
         }
         List<RegisteredDiagnosisModel> diagnoses = karteServiceBean.getDiagnosis(karte.getId(), fromDate, activeOnly);
-        List<Map<String, Object>> items = new ArrayList<>();
+        List<Map<String, Object>> pendingLocalItems = new ArrayList<>();
         for (RegisteredDiagnosisModel diagnosis : diagnoses) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("diagnosisId", diagnosis.getId());
@@ -97,21 +97,24 @@ public class LocalDiagnosisResource extends AbstractResource {
             item.put("syncState", "none");
             item.put("readOnly", Boolean.FALSE);
             item.put("candidateOnly", Boolean.FALSE);
-            items.add(item);
+            pendingLocalItems.add(item);
         }
         DiseaseImportResponse mirrorResponse = fetchOrcaMirror(request, facilityId, patientId, fromDate, toDate);
         List<DiseaseImportResponse.DiseaseEntry> mirrorEntries =
                 mirrorResponse.getDiseases() != null ? mirrorResponse.getDiseases() : List.of();
-        projectionService().applyMirrorDiffState(items, mirrorEntries);
+        projectionService().applyMirrorDiffState(pendingLocalItems, mirrorEntries);
+        List<Map<String, Object>> mirrorItems = new ArrayList<>();
         for (DiseaseImportResponse.DiseaseEntry entry : mirrorEntries) {
-            items.add(toMirrorItem(entry));
+            mirrorItems.add(toMirrorItem(entry));
         }
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("patientId", patientId);
         response.put("karteId", karte.getId());
         response.put("runId", resolveTraceId(request));
+        response.put("sourceOfTruth", "orca");
         response.put("orcaMirrorStatus", mirrorResponse.getOrcaMirrorStatus());
-        response.put("diseases", items);
+        response.put("diseases", mirrorItems);
+        response.put("pendingLocalDiseases", pendingLocalItems);
         return response;
     }
 

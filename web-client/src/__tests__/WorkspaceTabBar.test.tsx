@@ -129,10 +129,10 @@ describe('WorkspaceTabBar navigation', () => {
 
     expect(window.location.pathname).toBe('/f/0001/reception');
 
-    const patientTab = await screen.findByRole('tab', { name: /山田 太郎 ID:00000001 \/ 内科/i });
+    const patientTab = await screen.findByRole('tab', { name: '山田 太郎' });
     expect(patientTab).toBeInTheDocument();
     expect(within(patientTab).getByText('山田 太郎')).toBeInTheDocument();
-    expect(within(patientTab).getByText(/ID:00000001 \/ 内科/)).toBeInTheDocument();
+    expect(within(patientTab).queryByText(/ID:00000001|内科|2026-03-01/)).toBeNull();
     const tabs = screen.getAllByRole('tab');
     expect(tabs.some((tab) => tab.textContent?.includes('受付'))).toBe(true);
     expect(tabs.some((tab) => tab.textContent?.includes('患者管理'))).toBe(true);
@@ -162,14 +162,14 @@ describe('WorkspaceTabBar navigation', () => {
       </QueryClientProvider>,
     );
 
-    const closeButton = await screen.findByRole('button', { name: /山田 太郎 ID:00000001 \/ 内科/i });
+    const closeButton = await screen.findByRole('button', { name: '山田 太郎を閉じる' });
     await user.click(closeButton);
 
     await waitFor(() => {
       expect(window.location.pathname).toBe('/f/0001/reception');
     });
     await waitFor(() => {
-      expect(screen.queryByRole('tab', { name: /山田 太郎 ID:00000001 \/ 内科/i })).toBeNull();
+      expect(screen.queryByRole('tab', { name: '山田 太郎' })).toBeNull();
     });
   });
 
@@ -186,7 +186,7 @@ describe('WorkspaceTabBar navigation', () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByRole('tab', { name: /山田 太郎 ID:00000001 \/ 内科/i })).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: '山田 太郎' })).toBeInTheDocument();
 
     firstRender.unmount();
     clearChartsPatientTabsStorage();
@@ -199,7 +199,7 @@ describe('WorkspaceTabBar navigation', () => {
     );
 
     await waitFor(() => {
-      expect(screen.queryByRole('tab', { name: /山田 太郎 ID:00000001 \/ 内科/i })).toBeNull();
+      expect(screen.queryByRole('tab', { name: '山田 太郎' })).toBeNull();
     });
   });
 

@@ -37,11 +37,11 @@ export const DISEASE_SYNC_CANDIDATES_NOTE = '同期候補があります';
 export const DISEASE_CONFLICT_NOTE = 'ORCA側と差分があります';
 export const DISEASE_MANUAL_RESOLUTION_NOTE = '保険病名の確認が必要です';
 export const DISEASE_MIRROR_UNAVAILABLE_NOTE =
-  'ORCA病名を取得できませんでした。同期状態は未確認です。保険病名はこの画面で登録・編集できます。';
+  'ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。';
 export const DISEASE_MIRROR_EMPTY_NOTE = 'ORCAに登録済みの病名はありません。';
 export const DISEASE_CLINICAL_UNAVAILABLE_NOTE =
   '外部の臨床病名ソースは未接続です。ここでは院内の保険病名を登録・編集し、候補は確認後に反映します。';
-export const DISEASE_CANDIDATE_CONFIRM_NOTE = '候補は自動反映されません。内容を確認してから保険病名に追加してください。';
+export const DISEASE_CANDIDATE_CONFIRM_NOTE = '候補は自動反映されません。内容を確認してからORCAへ病名登録してください。';
 export const ORDER_SET_CANDIDATE_NOTE = '候補です。オーダーセット適用時も保険病名へ自動登録しません。';
 export const DISEASE_OUTCOME_PRESETS = ['継続', '治癒', '中止', '再発', '死亡', '転院', '不明'] as const;
 
@@ -60,6 +60,7 @@ export type DiseaseImportResponse = {
   runId?: string;
   orcaMirrorStatus?: 'connected' | 'unavailable';
   diseases?: DiseaseEntry[];
+  pendingLocalDiseases?: DiseaseEntry[];
   patientImportAttempted?: boolean;
   patientImportStatus?: number;
 };
@@ -93,6 +94,52 @@ export type DiseaseMutationResult = {
   createdDiagnosisIds?: number[];
   updatedDiagnosisIds?: number[];
   removedDiagnosisIds?: number[];
+  raw?: unknown;
+};
+
+export type OrcaDiseaseMutationOperation = 'create' | 'update' | 'delete' | 'organizeDeletedDiseases';
+
+export type OrcaDiseaseMutationRequest = {
+  operation: OrcaDiseaseMutationOperation;
+  patientId: string;
+  performDate: string;
+  performTime?: string;
+  departmentCode: string;
+  diseaseInformation?: Array<{
+    diseaseCode?: string;
+    diseaseName?: string;
+    diseaseStartDate?: string;
+    diseaseEndDate?: string;
+    diseaseInOut?: string;
+    diseaseSuspectedFlag?: string;
+    diseaseOutCome?: string;
+    insuranceCombinationNumber?: string;
+  }>;
+  targetDisease?: {
+    diseaseCode?: string;
+    diseaseName?: string;
+    diseaseStartDate?: string;
+    diseaseEndDate?: string;
+    diseaseInOut?: string;
+    diseaseSuspectedFlag?: string;
+    diseaseOutCome?: string;
+    insuranceCombinationNumber?: string;
+  };
+  organizeInformation?: {
+    departmentCode?: string;
+    diseaseStartDate: string;
+  };
+};
+
+export type OrcaDiseaseMutationResult = {
+  ok: boolean;
+  businessAccepted?: boolean;
+  status?: number;
+  apiResult?: string;
+  responseClassification?: string;
+  runId?: string;
+  traceId?: string;
+  message?: string;
   raw?: unknown;
 };
 
@@ -564,6 +611,9 @@ export async function fetchDiseases(params: FetchDiseasesParams): Promise<Diseas
     routeMismatch: parsed.ok ? false : parsed.routeMismatch,
     runId: json.runId ?? parsed.runId ?? runId,
     diseases: Array.isArray(json.diseases) ? json.diseases.map((entry) => normalizeDiseaseEntry(entry)) : [],
+    pendingLocalDiseases: Array.isArray(json.pendingLocalDiseases)
+      ? json.pendingLocalDiseases.map((entry) => normalizeDiseaseEntry(entry))
+      : [],
   };
 }
 
@@ -641,6 +691,33 @@ export async function mutateDiseases(params: {
     createdDiagnosisIds: Array.isArray(json.createdDiagnosisIds) ? (json.createdDiagnosisIds as number[]) : undefined,
     updatedDiagnosisIds: Array.isArray(json.updatedDiagnosisIds) ? (json.updatedDiagnosisIds as number[]) : undefined,
     removedDiagnosisIds: Array.isArray(json.removedDiagnosisIds) ? (json.removedDiagnosisIds as number[]) : undefined,
+    raw: json,
+  };
+}
+
+export async function mutateOrcaDisease(params: OrcaDiseaseMutationRequest): Promise<OrcaDiseaseMutationResult> {
+  const runId = getObservabilityMeta().runId ?? generateRunId();
+  updateObservabilityMeta({ runId });
+  const response = await httpFetch('/api/orca/official/chart-support/disease-mod-v3', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  const parsed = await parseOrcaApiResponse(response, { fallbackMessage: 'ORCA病名の登録に失敗しました。' });
+  const json = (parsed.json ?? {}) as Record<string, unknown>;
+  return {
+    ok: parsed.ok && json.businessAccepted === true,
+    businessAccepted: json.businessAccepted === true,
+    status: parsed.status,
+    apiResult: typeof json.apiResult === 'string' ? json.apiResult : undefined,
+    responseClassification: typeof json.responseClassification === 'string' ? json.responseClassification : undefined,
+    runId: typeof json.runId === 'string' ? json.runId : parsed.runId ?? runId,
+    traceId: typeof json.traceId === 'string' ? json.traceId : undefined,
+    message: parsed.ok
+      ? json.businessAccepted === true
+        ? undefined
+        : 'ORCA病名の処理を完了確認できませんでした。再取得後に状態を確認してください。'
+      : parsed.message,
     raw: json,
   };
 }

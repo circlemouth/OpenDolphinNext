@@ -68,6 +68,7 @@
 - 通常トップバーには施設IDと RUN_ID copy CTA を常時表示しません。RUN_ID / traceId は障害時や support surface の safe support ID として扱います。
 - ORCA readiness は管理画面/運用監視を正本とし、App shell では warning/error の時だけ compact status を出します。正常時の `ORCA: readiness OK` は常時表示しません。
 - `受付` / `患者管理` は workspace tab の固定導線で、現在画面は active tab の強調表示で示します。
+- Charts の患者 workspace tab は画面上では患者名だけを表示します。患者ID、受付/予約キー、診療日などは通常の tab label に出しません。
 
 ### Guard Behavior Minimum
 - `FacilityGate` は未認証の非 login route を `/login` へ `replace` し、`state.from` を保持します。
@@ -84,10 +85,10 @@
 - page CTA の owner は `ChartsActionBar` で、`ORCA送信` の primary と `ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。
 - `PastHubPanel` は左列の historical reference / Do 補助 surface であり、comparison 専用主面ではありません。
 - runtime right rail は `処方 / 注射 / 処置 / 検査 / 算定` の order-facing chooser-only surface です。`document` / `ORCA` / embedded editor は right rail に含めません。
-- オーダー truth editor、`文書を編集` entry、`OrcaSummary` は center primary 側に置き、right rail は chooser source と handoff だけを担います。
+- オーダー truth editor、`文書を編集` entry は center primary 側に置き、right rail は chooser source と handoff だけを担います。`OrcaSummary` は開発用表示時だけ center primary 側に追加します。
 - `latest-follow` は `SoapNotePanel` / `PastHubPanel` / `ChartsActionBar` の局所補助として存在し、独立 route はありません。
-- `OrcaSummary` は Charts 内部の補助 panel です。
-- `OrcaSummary` の `Workflow / 院内ローカル診療サマリ`、`Transmission / medical-mod-v2`、`ORCA収納情報` は must-visible 情報として closed disclosure の外に置き、page CTA owner を奪いません。
+- `OrcaSummary` は Charts 内部の開発/運用確認用 panel です。通常 UI では表示せず、`showDebugUi` 有効時のみ `ORCA確認（開発用）` として表示します。
+- 通常 UI の ORCA 送信可否・印刷可否は `ChartsActionBar` の guard reason / action state で扱い、`OrcaSummary` の `Workflow / 院内ローカル診療サマリ`、`Transmission / medical-mod-v2`、`ORCA収納情報` は page CTA owner を奪いません。
 - `DocumentTimeline` と `MedicalOutpatientRecordPanel` は `showDebugUi` 有効時のみ表示される debug-only surface です。
 - `MedicalOutpatientRecordPanel` は debug-only でも `院内ローカル診療サマリ詳細` の visible card として表示し、`ORCA収納情報` と混同する official 風 label や disclosure にはしません。
 
@@ -148,10 +149,10 @@
 - appointment/slot 行の不整合判定は旧 `appointmentId` 単独ではなく、`appointmentId` / `scheduleKey` / `encounterKey` のいずれかを予約識別子として扱います。projection 由来で ORCA 予約番号が未返却でも canonical key がある行は不整合扱いにしません。
 - visit 行の不整合判定は旧 `receptionId` 単独ではなく、`encounterKey` / `scheduleKey` / `receptionId` のいずれかを受付識別子として扱います。canonical key がある visit 行は、受付番号表示が空でも不整合扱いにしません。
 - ORCA 予約/来院 API の `slots` / `visits` に混在する診療科・医師などの selector option 行は、患者・予約・受付・時刻の業務 context を持たない場合は受付行へ変換しません。実患者行で患者 ID や canonical key が欠落している場合だけ不整合として扱います。
-- 受付日、受付患者検索、詳細条件、表示切替、ステータスタブは、独立した上部 toolbar ではなく active status の一覧 header に compact controls として置きます。標準表示は受付日の変更と現行範囲の受付患者検索（患者ID/氏名/カナ）に絞ります。受付日の変更は `受付日` label の右側に date input を置き、前後 1 日移動は date input の左右にある小さな三角矢印で行います。テキストの `前日` / `翌日` / `今日` ボタンや別個の `日次状態` カレンダーボタンは置きません。受付患者検索の `検索` ボタンは検索文字入力欄の右側へ置き、検索説明は別行 text ではなく input placeholder に入れます。`詳細条件` は患者検索グループ内に置き、`一覧操作` の折りたたみボタンは置きません。`既存患者受付/患者検索` は下段ステータスタブ行で `会計済み` / `予約` の右側へ置きます。再取得はステータスタブ行右端の `表` / `カード` 表示切替の右横に置きます。診療科/担当医、保険/自費、ソート、保存ビュー、ビュー保存/削除/クリアは同じ header 内の `詳細条件` で、`絞り込み` / `保存ビュー` / `条件操作` に分けて展開します。
+- 受付日、受付患者検索、表示条件変更、表示切替、ステータスタブは、独立した上部 toolbar ではなく active status の一覧 header に compact controls として置きます。標準表示は受付日の変更と現行範囲の受付患者検索（患者ID/氏名/カナ）に絞ります。受付日の変更は `受付日` label の右側に date input を置き、前後 1 日移動は date input の左右にある小さな三角矢印で行います。テキストの `前日` / `翌日` / `今日` ボタンや別個の `日次状態` カレンダーボタンは置きません。受付患者検索の `検索` ボタンは検索文字入力欄の右側へ置き、検索説明は別行 text ではなく input placeholder に入れます。`表示条件変更` は患者検索グループ内に置き、`一覧操作` の折りたたみボタンは置きません。`患者を受付する` は下段ステータスタブ行で `会計済み` / `予約` の右側へ置きます。再取得はステータスタブ行右端の `表` / `カード` 表示切替の右横に置きます。診療科/担当医、保険/自費、ソート、保存ビュー、ビュー保存/削除は同じ header 内の `表示条件変更` で展開します。絞り込み条件のクリアは独立カードにせず、`絞り込み` カード内の `条件をクリア` ボタンで表示します。
 - Reception header の受付日・患者検索・補助操作は個別カードに分けず、1 つの compact control strip 内で区切り線だけを使って統一表示します。
-- Reception header の compact control strip は親カード内で左揃えにし、`詳細条件` は患者検索グループ内、`既存患者受付/患者検索` はステータスタブ行の `会計済み` / `予約` の右側に配置します。
-- 既存患者受付の `保険/自費` は自動既定値を持たず、`保険` または `自費` の明示選択を必須にします。ORCA 公式患者検索結果や一覧行の保険情報から暗黙に `保険` を補完して受付送信してはいけません。
+- Reception header の compact control strip は親カード内で左揃えにし、`表示条件変更` は患者検索グループ内、`患者を受付する` はステータスタブ行の `会計済み` / `予約` の右側に配置します。
+- 既存患者受付の `保険/自費` は患者選択時に `保険` を初期選択し、担当医は server-authoritative selector の先頭候補を初期選択します。ユーザーが変更した値を優先し、患者情報だけから受付文脈や canonical handoff を捏造してはいけません。
 - App shell の `受付` / `患者管理` タブバーと受付一覧カードの間は、受付画面本体の上余白を小さく保ち、操作できない大きな空白帯を作りません。
 - 受付一覧 header 内の `受付日` と `患者検索` の compact control は同一行では高さを揃え、片方だけが低く見える配置にしません。
 - 受付一覧の `表` / `カード` 表示切替はステータスタブ行の右端に小さく右揃えで置き、`再取得` と同じ list view 操作群として扱います。`表` / `カード` は同一 segmented switch として見せ、`再取得` は別操作と分かる控えめな補助色で表示します。
@@ -160,6 +161,7 @@
 - 受付一覧の右端は `カルテ` と `その他` の行操作に使います。各ボタンの label が操作内容を示すため、画面上の列見出し `操作` は表示しません。支援技術向けには `行操作` の列名を維持します。
 - 受付一覧の表表示は `支払` / `請求` / `直近` 列を通常列から外し、会計送信・ORCA状態・補正メモなど必要な操作情報だけを残します。
 - 受付一覧の通常表では ORCA 連携を専用列にしません。ORCA 連携は成立している前提のため `—` などの正常プレースホルダーを出さず、queue / error などユーザー対応が必要な状態だけメモ/参照列に補助情報として出します。
+- ORCA 公式来院一覧に runtime projection を補完表示する場合は、server-derived `Voucher_Number` / `Sequential_Number` / `Insurance_Combination_Number` 相当が projection に揃った行だけを扱います。旧 local smoke seed など ORCA 正式識別子の無い projection は受付一覧の official row として表示しません。
 - 受付一覧の workflow state は `受付中 / 診療中 / 会計待ち / 再計待 / 会計済み / 予約` で扱い、`送信済` は transmission signal として別表示します。会計送信成功だけで `会計済み` へ遷移させません。
 - `再計待` は会計済み後の編集を示す workflow state です。補足文は correction note として扱い、generic memo と混在させません。
 - row-local key (`encounterKey` / `scheduleKey` / `receptionId` / `appointmentId`) を一意に解決できない場合、受付一覧に positive な `送信済` 表示を重ねません。
@@ -194,7 +196,10 @@
 - chart support では、patient-aware な official `contraindicationcheckv2` と、ORCA master を使う static interaction check を UI copy で明確に分離します。
 - SOAP 補助入力、chart summary、Patients の diff/review は local-only surface として表示し、official ORCA write と誤認させる copy を残しません。
 - local-only wording は `症状詳記（院内ローカル）`、`院内ローカル診療サマリ`、`院内メモはローカル編集のみ` に寄せ、official write surface と見分けられる状態を current contract とします。
-- Disease は single list truth に戻さず、`保険病名` / `ORCA mirror` / `候補` を visible unit で分離します。manual-resolution note は default visible とし、mirror unavailable 時も fake list を出しません。
+- Disease は ORCA 正本です。Charts の主病名一覧は `/api/local/diagnoses/{patientId}` が返す ORCA `diseasegetv2` 再取得結果だけを `ORCA登録病名` として表示します。既存 local-only disease は `院内未送信` 枠に隔離し、主一覧へ混ぜません。
+- ORCA unavailable 時は local-only disease を fallback 表示せず、「ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。」を表示し、ORCA 病名操作を disabled にします。
+- ORCA 病名操作は `ORCAへ病名登録` / `ORCA病名を更新` / `ORCA病名を削除` / `削除病名を整理` に分け、いずれも明示 confirm 後に `/api/orca/official/chart-support/disease-mod-v3` へ送ります。成功後は楽観更新せず、再取得した ORCA `diseasegetv2` 結果だけを表示します。
+- `diseasev3` operation は `create|update|delete|organizeDeletedDiseases` に限定します。`Request_Number=01` は `削除病名を整理` だけで使い、通常 create/update/delete には混ぜません。client は `Request_Number` を送らず、server-owned value として扱います。
 
 ### Verification
 - code-confirm: `PatientsPage` の初期選択、warning copy、fallback CTA

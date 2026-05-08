@@ -5,12 +5,18 @@ set -euo pipefail
 #   WEB_CLIENT_MODE=npm ./setup-modernized-env.sh
 #     → モダナイズ版サーバーは Docker で立ち上げつつ、Web クライアントはローカルの
 #       npm run dev サーバーで起動します。
+#   WEB_CLIENT_CODEX_BROWSER_COMPAT=1 WEB_CLIENT_MODE=npm ./setup-modernized-env.sh
+#     → Codex などのブラウザ自動化で localhost の IPv6-only 待受に詰まる場合の
+#       互換起動です。Vite を 0.0.0.0 に bind し、表示される Open Web Client at
+#       の URL からアクセスしてください。
 #   WEB_CLIENT_MODE=docker ./setup-modernized-env.sh
 #     → これまで通り Web クライアントも Docker コンテナとして立ち上げます。
 #
 # WEB_CLIENT_DEV_HOST / WEB_CLIENT_DEV_PORT で npm モードのホスト/ポートを調整し、
 # WEB_CLIENT_DEV_LOG でログパス、VITE_* 系環境変数で Web クライアントの Vite 設定を
-# 切り替えられます。
+# 切り替えられます。Codex などのブラウザ自動化で localhost の IPv6-only 待受に
+# 詰まる場合は WEB_CLIENT_CODEX_BROWSER_COMPAT=1 を指定すると、Vite を 0.0.0.0 に
+# bind しつつアクセス URL は localhost として案内します。
 #
 # 注意（複数施設運用）:
 # - 本スクリプトが起動時に与える ORCA_* は「起動時デフォルト（_default）」として扱われます。
@@ -36,6 +42,32 @@ normalize_base_path() {
     raw="/"
   fi
   printf '%s' "$raw"
+}
+
+is_truthy() {
+  local raw="${1:-}"
+  local normalized
+  normalized="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
+  case "$normalized" in
+    1|true|yes|y|on)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+web_client_local_access_host() {
+  local host="${1:-localhost}"
+  case "$host" in
+    0.0.0.0|::)
+      printf 'localhost'
+      ;;
+    *)
+      printf '%s' "$host"
+      ;;
+  esac
 }
 
 load_orca_env_file() {
@@ -145,7 +177,12 @@ SMOKE_PATIENT_KANA_FAMILY_NAME="${DEV_SMOKE_PATIENT_KANA_FAMILY_NAME:-スモー�
 SMOKE_PATIENT_KANA_GIVEN_NAME="${DEV_SMOKE_PATIENT_KANA_GIVEN_NAME:-カンジャ}"
 
 WEB_CLIENT_MODE="${WEB_CLIENT_MODE:-npm}"
-WEB_CLIENT_DEV_HOST="${WEB_CLIENT_DEV_HOST:-localhost}"
+WEB_CLIENT_CODEX_BROWSER_COMPAT="${WEB_CLIENT_CODEX_BROWSER_COMPAT:-${CODEX_BROWSER_COMPAT:-0}}"
+if [[ -z "${WEB_CLIENT_DEV_HOST+x}" ]] && is_truthy "$WEB_CLIENT_CODEX_BROWSER_COMPAT"; then
+  WEB_CLIENT_DEV_HOST="0.0.0.0"
+else
+  WEB_CLIENT_DEV_HOST="${WEB_CLIENT_DEV_HOST:-localhost}"
+fi
 WEB_CLIENT_DEV_PORT="${WEB_CLIENT_DEV_PORT:-5173}"
 export WEB_CLIENT_DEV_PORT
 WEB_CLIENT_DEV_LOG="${WEB_CLIENT_DEV_LOG:-tmp/web-client-dev.log}"
@@ -1530,7 +1567,9 @@ wait_for_web_client_dev_server() {
   if [[ "${VITE_DEV_USE_HTTPS:-1}" == "1" ]]; then
     scheme="https"
   fi
-  local url="${scheme}://${WEB_CLIENT_DEV_HOST}:${WEB_CLIENT_DEV_PORT}/"
+  local access_host
+  access_host="$(web_client_local_access_host "$WEB_CLIENT_DEV_HOST")"
+  local url="${scheme}://${access_host}:${WEB_CLIENT_DEV_PORT}/"
   local pid=""
   if [[ -f "$WEB_CLIENT_DEV_PID_FILE" ]]; then
     pid="$(<"$WEB_CLIENT_DEV_PID_FILE" || true)"
@@ -1599,7 +1638,13 @@ main() {
     if [[ "${VITE_DEV_USE_HTTPS:-1}" == "1" ]]; then
       scheme="https"
     fi
-    log "All set! Web Client dev server is listening at ${scheme}://${WEB_CLIENT_DEV_HOST}:${WEB_CLIENT_DEV_PORT}"
+    local access_host
+    access_host="$(web_client_local_access_host "$WEB_CLIENT_DEV_HOST")"
+    log "All set! Web Client dev server is listening on ${WEB_CLIENT_DEV_HOST}:${WEB_CLIENT_DEV_PORT}"
+    log "Open Web Client at ${scheme}://${access_host}:${WEB_CLIENT_DEV_PORT}/"
+    if is_truthy "$WEB_CLIENT_CODEX_BROWSER_COMPAT"; then
+      log "Codex browser compatibility mode is enabled for npm dev server binding."
+    fi
     log "Logs: $WEB_CLIENT_DEV_LOG_PATH"
   else
     log "All set! Web Client is running at http://localhost:${WEB_CLIENT_DEV_PORT}"

@@ -20,6 +20,7 @@ import {
   fetchDiseases,
   fetchDiseasesWithPatientImportRecovery,
   mutateDiseases,
+  mutateOrcaDisease,
   resolveDiseaseCodeFromOrcaMaster,
   searchDiseaseMasterCandidates,
 } from './diseaseApi';
@@ -501,5 +502,57 @@ describe('diseaseApi', () => {
     expect(body.operations[0]).not.toHaveProperty('layer');
     expect(body.operations[0]).not.toHaveProperty('candidateOnly');
     expect(body.operations[0]).not.toHaveProperty('readOnly');
+  });
+
+  it('sends official ORCA disease mutation without Request_Number, raw XML, or arbitrary URL fields', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ runId: 'RUN-OFFICIAL-DISEASE', businessAccepted: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await mutateOrcaDisease({
+      patientId: '000001',
+      operation: 'create',
+      performDate: '2026-05-08',
+      departmentCode: '01',
+      diseaseInformation: [
+        {
+          diseaseName: '高血圧症',
+          diseaseCode: 'I10',
+          diseaseStartDate: '2026-05-08',
+          diseaseOutCome: '継続',
+          insuranceCombinationNumber: '0001',
+        },
+      ],
+    });
+
+    expect(httpFetch).toHaveBeenCalledWith(
+      '/api/orca/official/chart-support/disease-mod-v3',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    const requestInit = vi.mocked(httpFetch).mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(String(requestInit.body)) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      patientId: '000001',
+      operation: 'create',
+      performDate: '2026-05-08',
+      departmentCode: '01',
+      diseaseInformation: [
+        {
+          diseaseName: '高血圧症',
+          diseaseCode: 'I10',
+          diseaseStartDate: '2026-05-08',
+          diseaseOutCome: '継続',
+          insuranceCombinationNumber: '0001',
+        },
+      ],
+    });
+    expect(body).not.toHaveProperty('disease');
+    expect(body).not.toHaveProperty('requestNumber');
+    expect(body).not.toHaveProperty('Request_Number');
+    expect(body).not.toHaveProperty('rawXml');
+    expect(body).not.toHaveProperty('url');
   });
 });

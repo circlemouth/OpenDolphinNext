@@ -87,7 +87,7 @@ class OrcaVisitResourceTest {
     }
 
     @Test
-    void visitListProjectedFallbackDoesNotSynthesizeVoucherOrSequential() {
+    void visitListSkipsProjectedFallbackWithoutOfficialIdentifiers() {
         OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
         VisitPatientListResponse stub = new VisitPatientListResponse();
         stub.setApiResult("00");
@@ -133,15 +133,8 @@ class OrcaVisitResourceTest {
 
         VisitPatientListResponse response = resource.visitList(createRequest("F001:doctor01", Map.of()), request);
 
-        assertEquals(1, response.getVisits().size());
-        VisitPatientListResponse.VisitEntry merged = response.getVisits().get(0);
-        assertEquals("F001:S100", merged.getScheduleKey());
-        assertEquals("F001:E100", merged.getEncounterKey());
-        assertNull(merged.getVoucherNumber());
-        assertNull(merged.getSequentialNumber());
-        assertEquals("000001", merged.getPatient().getPatientId());
-        assertTrue(response.isFallbackUsed());
-        assertEquals(1, response.getRecordsReturned());
+        assertEquals(0, response.getVisits().size());
+        assertNull(response.getRecordsReturned());
     }
 
     @Test

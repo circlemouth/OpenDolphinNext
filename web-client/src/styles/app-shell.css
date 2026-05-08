@@ -262,6 +262,7 @@
 
 .workspace-tabs__fixed {
   display: inline-flex;
+  align-items: center;
   gap: 0.4rem;
   flex-wrap: wrap;
   width: 100%;
