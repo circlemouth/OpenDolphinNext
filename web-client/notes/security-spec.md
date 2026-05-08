@@ -44,3 +44,9 @@
 - `index.html` の `meta[name="csrf-token"]` へ実トークンを注入する（`__CSRF_TOKEN__` を本番値へ置換）。配信時はキャッシュでトークンが残留しないよう `Cache-Control: private, no-store`（または同等以上）を設定する。
 - `/api/logout` は `POST` + `credentials` + CSRF 必須で受け付ける。frontend は 404 を `unsupported` 扱いで継続するため、404 が継続する環境では監査ログ上の未実装警告が残る点に注意する。
 - 画像機能ヘッダは `X-Client-Feature-Images` のみを利用する。`X-Feature-Images` は廃止済みのため受理前提にしない。
+
+## 8. Backend Error Responses
+- REST エラー応答の `details` は client-safe allowlist に限定し、患者ID、施設ID、接続先、origin、credential、内部 URL、raw exception message を含めない。
+- 互換性のため top-level に残せる detail は `validationError`、`field`、`reason`、`retryable` のみとし、値は固定コードまたは safe token に限定する。
+- 5xx 応答の `message` は status ごとの汎用文にし、詳細は監査ログ・構造化ログ側だけで扱う。
+- CSRF 403 は `csrf_validation_failed` / `csrf_origin_mismatch` / `csrf_origin_missing` のような固定 reason code のみを返し、expected / actual origin は応答に含めない。

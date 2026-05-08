@@ -51,7 +51,10 @@ class CsrfProtectionFilterTest {
         FailureResult result = executeForbidden("https://evil.test", null, "https", "example.test", 443, null);
 
         assertThat(result.details()).containsEntry("reason", "csrf_origin_mismatch");
+        assertThat(result.details()).doesNotContainKeys("expectedOrigin", "actualOrigin");
         assertThat(result.body()).contains("csrf_origin_mismatch");
+        assertThat(result.body()).doesNotContain("evil.test");
+        assertThat(result.body()).doesNotContain("example.test");
     }
 
     @Test
@@ -75,7 +78,10 @@ class CsrfProtectionFilterTest {
         FailureResult result = executeForbidden(null, "https://evil.test/charts", "https", "example.test", 443, null);
 
         assertThat(result.details()).containsEntry("reason", "csrf_origin_mismatch");
+        assertThat(result.details()).doesNotContainKeys("expectedOrigin", "actualOrigin");
         assertThat(result.body()).contains("csrf_origin_mismatch");
+        assertThat(result.body()).doesNotContain("evil.test");
+        assertThat(result.body()).doesNotContain("example.test");
     }
 
     @Test
@@ -83,7 +89,9 @@ class CsrfProtectionFilterTest {
         FailureResult result = executeForbidden(null, null, "https", "example.test", 443, null);
 
         assertThat(result.details()).containsEntry("reason", "csrf_origin_missing");
+        assertThat(result.details()).doesNotContainKeys("expectedOrigin", "actualOrigin");
         assertThat(result.body()).contains("csrf_origin_missing");
+        assertThat(result.body()).doesNotContain("example.test");
     }
 
     @Test
@@ -141,6 +149,9 @@ class CsrfProtectionFilterTest {
                 "198.51.100.20");
 
         assertThat(result.details()).containsEntry("reason", "csrf_origin_mismatch");
+        assertThat(result.details()).doesNotContainKeys("expectedOrigin", "actualOrigin");
+        assertThat(result.body()).doesNotContain("forwarded.example.test");
+        assertThat(result.body()).doesNotContain("internal.local");
     }
 
     private FailureResult executeForbidden(

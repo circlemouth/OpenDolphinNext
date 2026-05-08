@@ -28,7 +28,7 @@ class RestExceptionMapperTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) response.getEntity();
         assertEquals("orca_gateway_error", body.get("error"));
-        assertEquals("ORCA facility configuration is not available", body.get("message"));
+        assertEquals("Service unavailable", body.get("message"));
     }
 
     @Test
@@ -43,11 +43,12 @@ class RestExceptionMapperTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) response.getEntity();
         assertEquals("orca_gateway_error", body.get("error"));
-        assertEquals("Invalid ORCA API URL", body.get("message"));
+        assertEquals("Upstream service failure", body.get("message"));
         String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);
         assertFalse(rendered.contains("bad host.example.invalid"));
         assertFalse(rendered.contains("userinfo"));
         assertFalse(rendered.contains("private-prefix"));
+        assertFalse(rendered.contains("Invalid ORCA API URL"));
     }
 
     @Test
@@ -61,8 +62,23 @@ class RestExceptionMapperTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) response.getEntity();
         assertEquals("orca_gateway_error", body.get("error"));
-        assertEquals("ORCA upstream authentication failed", body.get("message"));
+        assertEquals("Service unavailable", body.get("message"));
         assertFalse(String.valueOf(body.get("message")).contains("401"));
+    }
+
+    @Test
+    void mapsUnexpectedServerFailuresToGenericMessage() throws Exception {
+        RestExceptionMapper mapper = mapperWithRequest("/api/admin/access/users");
+
+        Response response = mapper.toResponse(new IllegalStateException("database diagnostic detail"));
+
+        assertEquals(500, response.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) response.getEntity();
+        assertEquals("internal_server_error", body.get("error"));
+        assertEquals("Internal server error", body.get("message"));
+        String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);
+        assertFalse(rendered.contains("database diagnostic detail"));
     }
 
     private static RestExceptionMapper mapperWithRequest(String uri) throws Exception {

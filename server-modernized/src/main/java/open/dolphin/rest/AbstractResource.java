@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.Locale;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -59,6 +60,16 @@ public class AbstractResource {
     public static final String ERROR_MESSAGE_ATTRIBUTE = AbstractResource.class.getName() + ".ERROR_MESSAGE";
     public static final String ERROR_STATUS_ATTRIBUTE = AbstractResource.class.getName() + ".ERROR_STATUS";
     public static final String ERROR_DETAILS_ATTRIBUTE = AbstractResource.class.getName() + ".ERROR_DETAILS";
+    private static final Set<String> RESPONSE_DETAIL_KEYS = Set.of(
+            "field",
+            "reason",
+            "retryable",
+            "validationError");
+    private static final Set<String> RESPONSE_TOP_LEVEL_DETAIL_KEYS = Set.of(
+            "field",
+            "reason",
+            "retryable",
+            "validationError");
 
     protected Date parseDate(String source) {
         try {
@@ -308,11 +319,12 @@ public class AbstractResource {
     private static Map<String, Object> buildErrorBody(HttpServletRequest request, int status, String errorCode,
             String message, Map<String, ?> details) {
         Map<String, Object> body = new LinkedHashMap<>();
+        String responseMessage = sanitizeResponseMessage(status, message);
         body.put("error", errorCode);
         body.put("code", errorCode);
         body.put("errorCode", errorCode);
-        if (message != null && !message.isBlank()) {
-            body.put("message", message);
+        if (responseMessage != null && !responseMessage.isBlank()) {
+            body.put("message", responseMessage);
         }
         body.put("status", status);
         body.put("errorCategory", classifyErrorCategory(status));
@@ -334,38 +346,19 @@ public class AbstractResource {
                 body.put("path", path);
             }
         }
-        if (details != null) {
-            Map<String, Object> detailMap = new LinkedHashMap<>();
-            details.forEach((key, value) -> {
-                if (key == null || value == null) {
-                    return;
+        Map<String, Object> responseDetails = filterResponseErrorDetails(details);
+        if (!responseDetails.isEmpty()) {
+            body.put("details", responseDetails);
+            responseDetails.forEach((key, value) -> {
+                if (RESPONSE_TOP_LEVEL_DETAIL_KEYS.contains(key)) {
+                    body.putIfAbsent(key, value);
                 }
-                String k = key.toString();
-                if (k.isBlank()) {
-                    return;
-                }
-                // Avoid awkward nesting when callers already pass a "details" map.
-                // Our response always provides a top-level "details" object, so merge its entries.
-                if ("details".equals(k) && value instanceof Map<?, ?> nested) {
-                    for (Map.Entry<?, ?> entry : nested.entrySet()) {
-                        if (entry.getKey() == null || entry.getValue() == null) {
-                            continue;
-                        }
-                        String nk = entry.getKey().toString();
-                        if (nk.isBlank()) {
-                            continue;
-                        }
-                        detailMap.put(nk, entry.getValue());
-                        body.putIfAbsent(nk, entry.getValue());
-                    }
-                    return;
-                }
-                detailMap.put(k, value);
-                // Keep backward compatibility: also merge into top-level, but never override core fields.
-                body.putIfAbsent(k, value);
             });
-            if (!detailMap.isEmpty()) {
-                body.put("details", detailMap);
+        }
+        if (!body.containsKey("validationError") && responseDetails.containsKey("validationError")) {
+            Object validationError = responseDetails.get("validationError");
+            if (validationError instanceof Boolean) {
+                body.put("validationError", validationError);
             }
         }
         if (!body.containsKey("validationError") && (status == 400 || status == 422)) {
@@ -417,6 +410,18 @@ public class AbstractResource {
         };
     }
 
+    private static String sanitizeResponseMessage(int status, String message) {
+        if (status >= 500) {
+            return switch (status) {
+                case 502 -> "Upstream service failure";
+                case 503 -> "Service unavailable";
+                case 504 -> "Gateway timeout";
+                default -> "Internal server error";
+            };
+        }
+        return message;
+    }
+
     private static void markErrorAttributes(HttpServletRequest request, int status, String errorCode, String message,
             Map<String, ?> details) {
         if (request == null) {
@@ -455,5 +460,74 @@ public class AbstractResource {
         });
         Map<String, Object> sanitized = AuditDetailSanitizer.sanitizeDetails("REST_ERROR_RESPONSE", filtered);
         return sanitized != null ? sanitized : filtered;
+    }
+
+    private static Map<String, Object> filterResponseErrorDetails(Map<String, ?> details) {
+        Map<String, Object> filtered = new LinkedHashMap<>();
+        if (details == null) {
+            return filtered;
+        }
+        details.forEach((key, value) -> collectResponseErrorDetail(filtered, key, value));
+        return filtered;
+    }
+
+    private static void collectResponseErrorDetail(Map<String, Object> target, Object key, Object value) {
+        if (key == null || value == null) {
+            return;
+        }
+        String rawKey = key.toString();
+        if ("details".equals(rawKey) && value instanceof Map<?, ?> nested) {
+            nested.forEach((nestedKey, nestedValue) -> collectResponseErrorDetail(target, nestedKey, nestedValue));
+            return;
+        }
+        String normalizedKey = canonicalResponseDetailKey(rawKey);
+        if (normalizedKey.isBlank()) {
+            return;
+        }
+        if (!RESPONSE_DETAIL_KEYS.contains(normalizedKey)) {
+            return;
+        }
+        Object sanitizedValue = sanitizeResponseDetailValue(normalizedKey, value);
+        if (sanitizedValue != null) {
+            target.put(normalizedKey, sanitizedValue);
+        }
+    }
+
+    private static Object sanitizeResponseDetailValue(String key, Object value) {
+        if ("validationError".equals(key) || "retryable".equals(key)) {
+            return value instanceof Boolean booleanValue ? booleanValue : null;
+        }
+        if (!(value instanceof CharSequence sequence)) {
+            return null;
+        }
+        String text = sequence.toString().trim();
+        if (text.isEmpty() || text.length() > 128) {
+            return null;
+        }
+        if ("reason".equals(key) || "field".equals(key)) {
+            return text.matches("[A-Za-z0-9_.:-]+") ? text : null;
+        }
+        return null;
+    }
+
+    private static String canonicalResponseDetailKey(String key) {
+        if (key == null) {
+            return "";
+        }
+        StringBuilder normalized = new StringBuilder(key.length());
+        String lower = key.trim().toLowerCase(Locale.ROOT);
+        for (int i = 0; i < lower.length(); i++) {
+            char c = lower.charAt(i);
+            if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_') {
+                normalized.append(c);
+            }
+        }
+        return switch (normalized.toString()) {
+            case "validationerror" -> "validationError";
+            case "field" -> "field";
+            case "reason" -> "reason";
+            case "retryable" -> "retryable";
+            default -> "";
+        };
     }
 }
