@@ -616,9 +616,27 @@ final class PatientImagesSupport {
         if (name == null || name.isBlank()) {
             name = fallbackBase;
         }
-        name = name.replace("\"", "_")
-                .replace("\r", "")
-                .replace("\n", "");
+        name = name.replace('\\', '/');
+        int slash = name.lastIndexOf('/');
+        if (slash >= 0) {
+            name = slash + 1 < name.length() ? name.substring(slash + 1) : fallbackBase;
+        }
+        StringBuilder sanitized = new StringBuilder(name.length());
+        for (int i = 0; i < name.length(); i++) {
+            char ch = name.charAt(i);
+            if (Character.isISOControl(ch)) {
+                continue;
+            }
+            if (ch == '"' || ch == '\'' || ch == '\\' || ch == '/') {
+                sanitized.append('_');
+            } else {
+                sanitized.append(ch);
+            }
+        }
+        name = sanitized.toString().trim();
+        if (name.isBlank()) {
+            name = fallbackBase;
+        }
         byte[] bytes = name.getBytes(StandardCharsets.UTF_8);
         if (bytes.length > 180) {
             name = fallbackBase;

@@ -234,9 +234,9 @@ const isMissingCsrfAllowedRuntime = () => {
   return csrfRuntimeOverride?.allowMissingCsrf ?? import.meta.env.VITE_ALLOW_MISSING_CSRF === ALLOW_MISSING_CSRF_FLAG;
 };
 
-const isOrcaEndpoint = (url?: URL | null): boolean => {
+const isUpstreamAuthEndpoint = (url?: URL | null): boolean => {
   if (!url) return false;
-  const pattern = /^\/(orca|api\/orca|blobapi|karte|odletter|user|api\/admin|api\/chart-events|chart-events|api\/realtime|realtime)(\/|$)/;
+  const pattern = /^\/(orca|api\/orca|blobapi|karte|odletter|user)(\/|$)/;
   return pattern.test(url.pathname);
 };
 
@@ -306,7 +306,7 @@ export async function httpFetch(input: RequestInfo | URL, init?: HttpFetchInit) 
   const response = await fetch(resolvedInput, { ...initWithHeaders, cache, credentials });
   captureObservabilityFromResponse(response);
   const resolvedInit =
-    init?.notifySessionExpired === undefined && isOrcaEndpoint(requestUrl)
+    init?.notifySessionExpired === undefined && isUpstreamAuthEndpoint(requestUrl)
       ? { ...init, notifySessionExpired: false }
       : init;
   if (shouldNotifySessionExpired(response.status, resolvedInit)) {

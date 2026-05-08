@@ -74,6 +74,22 @@ class PatientImageAttachmentReferenceTest {
     }
 
     @Test
+    void postDocument_rejectsClientSuppliedResolvedAttachmentMetadata() {
+        assertThatThrownBy(() -> resource.postDocument("""
+                {
+                  "attachment": [
+                    {"id": 0, "uri": "client-supplied-placeholder", "digest": "client-supplied-digest"}
+                  ]
+                }
+                """))
+                .isInstanceOf(WebApplicationException.class)
+                .satisfies(throwable -> {
+                    WebApplicationException ex = (WebApplicationException) throwable;
+                    assertThat(ex.getResponse().getStatus()).isEqualTo(400);
+                });
+    }
+
+    @Test
     void postDocument_rejectsNonPatientImageReference() {
         when(karteServiceBean.findFacilityIdByAttachmentId(901L)).thenReturn("F001");
         when(em.createQuery(anyString(), eq(AttachmentModel.class))).thenReturn(attachmentQuery);

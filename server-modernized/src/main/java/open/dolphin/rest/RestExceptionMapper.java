@@ -303,6 +303,14 @@ public class RestExceptionMapper implements ExceptionMapper<Throwable> {
     }
 
     private String resolveMessage(int status, String message) {
+        if (status >= 500) {
+            return switch (status) {
+                case 502 -> "Upstream service failure";
+                case 503 -> "Service unavailable";
+                case 504 -> "Gateway timeout";
+                default -> "Internal server error";
+            };
+        }
         if (message != null && !message.isBlank()) {
             return message;
         }

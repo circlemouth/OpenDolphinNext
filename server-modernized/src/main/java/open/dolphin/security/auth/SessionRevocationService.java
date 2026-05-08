@@ -16,6 +16,10 @@ public class SessionRevocationService {
 
     public static final String REASON_PASSWORD_RESET = "password_reset";
     public static final String REASON_PRIVILEGE_DOWNGRADE = "privilege_downgrade";
+    public static final String REASON_PRIVILEGE_CHANGE = "privilege_change";
+    public static final String REASON_ORCA_LINK_CHANGE = "orca_link_change";
+    public static final String REASON_ACCESS_POLICY_CHANGE = "access_policy_change";
+    public static final String REASON_ACCOUNT_STATE_CHANGE = "account_state_change";
     public static final String REASON_FACTOR2_CREDENTIAL_REVOKE = "factor2_credential_revoke";
     public static final String REASON_LOGOUT = "logout";
 
@@ -32,8 +36,20 @@ public class SessionRevocationService {
         userSecurityStateRepository.incrementSessionEpoch(userPk, updatedAt);
     }
 
+    public void incrementCredentialEpoch(long userPk, Instant updatedAt) {
+        userSecurityStateRepository.incrementCredentialEpoch(userPk, updatedAt);
+    }
+
     public void markPasswordChanged(long userPk, Instant changedAt) {
         userSecurityStateRepository.markPasswordChanged(userPk, changedAt);
+    }
+
+    public int revokeAllForSecurityStateChange(long userPk, String facilityId, String reason, HttpServletRequest request) {
+        String normalizedReason = normalizeReason(reason);
+        Instant now = Instant.now();
+        incrementSessionEpoch(userPk, now);
+        incrementCredentialEpoch(userPk, now);
+        return revokeAllForUser(userPk, facilityId, normalizedReason, request);
     }
 
     public int revokeAllForUser(long userPk, String facilityId, String reason, HttpServletRequest request) {
@@ -90,6 +106,10 @@ public class SessionRevocationService {
     private static String normalizeReason(String reason) {
         if (REASON_PASSWORD_RESET.equals(reason)
                 || REASON_PRIVILEGE_DOWNGRADE.equals(reason)
+                || REASON_PRIVILEGE_CHANGE.equals(reason)
+                || REASON_ORCA_LINK_CHANGE.equals(reason)
+                || REASON_ACCESS_POLICY_CHANGE.equals(reason)
+                || REASON_ACCOUNT_STATE_CHANGE.equals(reason)
                 || REASON_FACTOR2_CREDENTIAL_REVOKE.equals(reason)
                 || REASON_LOGOUT.equals(reason)) {
             return reason;

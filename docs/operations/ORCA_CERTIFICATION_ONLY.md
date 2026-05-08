@@ -35,6 +35,7 @@
 - administration の internal wrapper は **capability-driven な local-only contract** です。official ORCA bridge と同じものとして扱わず、院内ローカル処理や stub 応答を明示表示します。
 - administration の診断チェックは readiness / capability 付き local wrapper / 権限確認済み時の WebORCA 接続テストだけを実行します。official/local を混ぜた「一括疎通」ボタンとして扱いません。
 - master updates では **official 最終更新情報** と **local artifact の upload / rollback / history** を分けて表示します。official 取得の結果は local artifact 履歴へ追加されます。
+- local artifact upload の filename は表示・履歴用メタデータに限定し、path separator / quote / CRLF / 制御文字を除去して basename のみを採用します。保存先や dataset 選択は server-side の datasetCode と artifact store 設定から決定します。
 
 ## 3.1 read-only wrapper の公式契約メモ
 - 保険組合せ一覧は `patientlst6v2` を使い、ORCA へ送る XML root は `patientlst6req` とする。`Reqest_Number=01`（公式表記）、`Patient_ID`、`Base_Date`、`Start_Date`、`End_Date` を送る。`insurancecombinationreq` や `Perform_Date` はこの read-only wrapper の upstream payload へ送らない。

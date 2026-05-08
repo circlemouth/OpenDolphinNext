@@ -1,6 +1,7 @@
 package open.dolphin.rest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -58,14 +59,55 @@ class AbstractResourceErrorResponseTest {
                 request,
                 Response.Status.INTERNAL_SERVER_ERROR,
                 "internal_server_error",
-                "failed");
+                "backend failed at jdbc://internal.local/private");
 
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) ex.getResponse().getEntity();
         assertEquals("trace-only-1", body.get("traceId"));
         assertEquals("trace-only-1", body.get("requestId"));
         assertEquals(500, body.get("status"));
+        assertEquals("Internal server error", body.get("message"));
         assertTrue(body.containsKey("timestamp"));
+    }
+
+    @Test
+    void restErrorResponseDetailsAreSanitizedAndNotMergedIntoTopLevel() throws Exception {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/api/patient-images");
+
+        WebApplicationException ex = AbstractResource.restError(
+                request,
+                Response.Status.FORBIDDEN,
+                "forbidden",
+                "Access denied",
+                Map.of(
+                        "patientId", "P-001",
+                        "facilityId", "F-001",
+                        "reason", "csrf_origin_mismatch",
+                        "details", Map.of(
+                                "patientId", "P-002",
+                                "field", "imageId",
+                                "internalUrl", "https://internal.example.test")),
+                null);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) ex.getResponse().getEntity();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> details = (Map<String, Object>) body.get("details");
+        assertNotNull(details);
+        assertEquals("csrf_origin_mismatch", details.get("reason"));
+        assertEquals("imageId", details.get("field"));
+        assertFalse(details.containsKey("patientId"));
+        assertFalse(details.containsKey("facilityId"));
+        assertFalse(details.containsKey("internalUrl"));
+        assertEquals("csrf_origin_mismatch", body.get("reason"));
+        assertFalse(body.containsKey("patientId"));
+        assertFalse(body.containsKey("facilityId"));
+        String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);
+        assertFalse(rendered.contains("P-001"));
+        assertFalse(rendered.contains("P-002"));
+        assertFalse(rendered.contains("F-001"));
+        assertFalse(rendered.contains("internal.example.test"));
     }
 
     @Test

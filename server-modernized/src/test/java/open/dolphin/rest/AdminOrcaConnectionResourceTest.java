@@ -20,6 +20,7 @@ import jakarta.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -198,6 +199,12 @@ class AdminOrcaConnectionResourceTest {
     }
 
     @Test
+    void certificateFileNameSanitizerDropsPathAndControlCharacters() throws Exception {
+        assertEquals("client.p12", invokeSafeFileName("..\\private/client\u0001.p12", "clientCertificate.bin"));
+        assertEquals("clientCertificate.bin", invokeSafeFileName("../", "clientCertificate.bin"));
+    }
+
+    @Test
     void putConfigReturnsBadRequestWhenPushUrlIsInvalid() throws Exception {
         when(request.getHeader("X-Run-Id")).thenReturn("RUN-PUSH");
         when(request.getRemoteUser()).thenReturn("FACILITY:admin");
@@ -238,10 +245,9 @@ class AdminOrcaConnectionResourceTest {
             Map<String, Object> body = (Map<String, Object>) ex.getResponse().getEntity();
             assertEquals("invalid_request", body.get("error"));
             assertEquals("接続先URLが不正です。", body.get("message"));
-            @SuppressWarnings("unchecked")
-            Map<String, Object> details = (Map<String, Object>) body.get("details");
-            assertEquals("save", details.get("operation"));
-            assertEquals("FACILITY", details.get("facilityId"));
+            assertNull(body.get("details"));
+            assertFalse(body.containsKey("operation"));
+            assertFalse(body.containsKey("facilityId"));
             String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);
             assertFalse(rendered.contains("facility.example.orca"));
             assertFalse(rendered.contains("admin:pass"));
@@ -347,6 +353,12 @@ class AdminOrcaConnectionResourceTest {
         Field f = target.getClass().getDeclaredField(name);
         f.setAccessible(true);
         f.set(target, value);
+    }
+
+    private String invokeSafeFileName(String original, String fallback) throws Exception {
+        Method method = AdminOrcaConnectionResource.class.getDeclaredMethod("safeFileName", String.class, String.class);
+        method.setAccessible(true);
+        return (String) method.invoke(resource, original, fallback);
     }
 
     private static final class CapturingAuditDispatcher extends SessionAuditDispatcher {

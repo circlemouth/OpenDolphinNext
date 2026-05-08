@@ -41,7 +41,7 @@ public class CsrfProtectionFilter implements Filter {
         String expectedToken = CsrfTokenSupport.getToken(httpRequest);
         String providedToken = httpRequest.getHeader(CsrfTokenSupport.CSRF_HEADER_NAME);
         if (!CsrfTokenSupport.matches(expectedToken, providedToken)) {
-            Map<String, Object> details = buildFailureDetails("csrf_validation_failed", null, null);
+            Map<String, Object> details = buildFailureDetails("csrf_validation_failed");
             applyFailureAttributes(httpRequest, "csrf_validation_failed", FORBIDDEN_MESSAGE, details);
             writeForbidden(httpRequest, httpResponse, "csrf_validation_failed", FORBIDDEN_MESSAGE, details);
             return;
@@ -49,10 +49,7 @@ public class CsrfProtectionFilter implements Filter {
 
         RequestSecuritySupport.SameOriginCheckResult originCheck = RequestSecuritySupport.validateSameOrigin(httpRequest);
         if (!originCheck.allowed()) {
-            Map<String, Object> details = buildFailureDetails(
-                    originCheck.code(),
-                    RequestSecuritySupport.resolveExpectedOrigin(httpRequest),
-                    RequestSecuritySupport.resolvePresentedOrigin(httpRequest));
+            Map<String, Object> details = buildFailureDetails(originCheck.code());
             applyFailureAttributes(httpRequest, originCheck.code(), ORIGIN_MESSAGE, details);
             writeForbidden(httpRequest, httpResponse, originCheck.code(), ORIGIN_MESSAGE, details);
             return;
@@ -73,16 +70,10 @@ public class CsrfProtectionFilter implements Filter {
         request.setAttribute(AbstractResource.ERROR_DETAILS_ATTRIBUTE, details);
     }
 
-    private Map<String, Object> buildFailureDetails(String code, String expectedOrigin, String actualOrigin) {
+    private Map<String, Object> buildFailureDetails(String code) {
         Map<String, Object> details = new HashMap<>();
         details.put("reason", code);
         details.put("status", "failed");
-        if (expectedOrigin != null) {
-            details.put("expectedOrigin", expectedOrigin);
-        }
-        if (actualOrigin != null) {
-            details.put("actualOrigin", actualOrigin);
-        }
         return details;
     }
 

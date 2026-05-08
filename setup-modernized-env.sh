@@ -1492,8 +1492,6 @@ start_web_client_npm() {
   local dev_disable_audit="${VITE_DISABLE_AUDIT:-0}"
   local dev_enable_facility_header="${VITE_ENABLE_FACILITY_HEADER:-1}"
   local dev_api_base_url="${WEB_CLIENT_DEV_API_BASE:-/api}"
-  local dev_orca_master_user="${VITE_ORCA_MASTER_USER:-1.3.6.1.4.1.9414.70.1:admin}"
-  local dev_orca_master_password="${VITE_ORCA_MASTER_PASSWORD:-21232f297a57a5a743894a0e4a801fc3}"
   local dev_orca_mode="${ORCA_MODE:-}"
   local dev_orca_path_prefix
   dev_orca_path_prefix="$(resolve_web_client_orca_path_prefix "$dev_proxy_target")"
@@ -1519,8 +1517,6 @@ VITE_DISABLE_AUDIT=$dev_disable_audit
 VITE_ENABLE_FACILITY_HEADER=$dev_enable_facility_header
 VITE_SINGLE_FACILITY_LOGIN=$VITE_SINGLE_FACILITY_LOGIN_EFFECTIVE
 VITE_DEFAULT_FACILITY_ID=$VITE_DEFAULT_FACILITY_ID_EFFECTIVE
-VITE_ORCA_MASTER_USER=$dev_orca_master_user
-VITE_ORCA_MASTER_PASSWORD=$dev_orca_master_password
 VITE_ORCA_MODE=$dev_orca_mode
 VITE_ORCA_API_PATH_PREFIX=$dev_orca_path_prefix
 VITE_BASE_PATH=$base_path

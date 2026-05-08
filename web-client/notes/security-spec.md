@@ -2,8 +2,9 @@
 
 ## 1. Secrets
 - `VITE_` 接頭辞の変数は公開配布物へ埋め込まれるため、機密値を設定しない。
-- `.env.local` / `.env.*` に機密値を置かない。`npm run verify:no-public-secrets` は `gitignore` 対象外の `.env*` を検査し、client 側へ誤って公開変数の秘密値を持ち込む変更を拒否する。必要な認証情報はサーバ側または Secret Manager で管理する。
+- `.env.local` / `.env.*` に機密値を置かない。`npm run verify:no-public-secrets` は tracked active source/config/docs を検査し、client 側へ誤って公開変数の秘密名キーワードや廃止済み ORCA master 公開キーを持ち込む変更を拒否する。必要な認証情報はサーバ側または Secret Manager で管理する。
 - ORCA 接続資格情報はサーバ側設定のみで扱い、client 側へ再配置しない。
+- `VITE_ORCA_MASTER_USER` / `VITE_ORCA_MASTER_PASSWORD` は廃止済みであり、setup script や sample config でも生成・記載しない。
 - `npm run verify:no-public-secrets` を CI 必須チェックとして運用する。
 
 ## 2. CSRF
@@ -44,3 +45,9 @@
 - `index.html` の `meta[name="csrf-token"]` へ実トークンを注入する（`__CSRF_TOKEN__` を本番値へ置換）。配信時はキャッシュでトークンが残留しないよう `Cache-Control: private, no-store`（または同等以上）を設定する。
 - `/api/logout` は `POST` + `credentials` + CSRF 必須で受け付ける。frontend は 404 を `unsupported` 扱いで継続するため、404 が継続する環境では監査ログ上の未実装警告が残る点に注意する。
 - 画像機能ヘッダは `X-Client-Feature-Images` のみを利用する。`X-Feature-Images` は廃止済みのため受理前提にしない。
+
+## 8. Backend Error Responses
+- REST エラー応答の `details` は client-safe allowlist に限定し、患者ID、施設ID、接続先、origin、credential、内部 URL、raw exception message を含めない。
+- 互換性のため top-level に残せる detail は `validationError`、`field`、`reason`、`retryable` のみとし、値は固定コードまたは safe token に限定する。
+- 5xx 応答の `message` は status ごとの汎用文にし、詳細は監査ログ・構造化ログ側だけで扱う。
+- CSRF 403 は `csrf_validation_failed` / `csrf_origin_mismatch` / `csrf_origin_missing` のような固定 reason code のみを返し、expected / actual origin は応答に含めない。

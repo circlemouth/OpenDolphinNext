@@ -81,17 +81,26 @@ final class AdminAccessMutationSupport {
         UpdateUserInput input = parseUpdateUserInput(resource, request, payload);
         UserModel user = updateExistingUser(resource, request, facilityId, userPk, input, actor);
         AdminAccessResource.OrcaLinkStatus orcaLink = null;
+        boolean orcaLinkChanged = false;
         if (input.orcaUserId() != null) {
-            orcaLink = upsertOrcaLink(resource, request, userPk, input.orcaUserId(), actor);
+            AdminAccessResource.OrcaLinkStatus existingOrcaLink = findOrcaLinkByUserPk(facilityId, userPk);
+            if (sameOrcaUserId(existingOrcaLink, input.orcaUserId())) {
+                orcaLink = existingOrcaLink;
+            } else {
+                orcaLink = upsertOrcaLink(resource, request, userPk, input.orcaUserId(), actor);
+                orcaLinkChanged = true;
+            }
         }
+        boolean rolesChanged = false;
         if (input.rolesProvided()) {
-            applyUpdatedRoles(resource, request, facilityId, user, userPk, actor, input, orcaLink);
+            rolesChanged = applyUpdatedRoles(resource, request, facilityId, user, userPk, actor, input, orcaLink);
         }
         AdminAccessResource.UserAccessProfileRow profile =
                 resource.upsertProfile(userPk, input.sexToken(), input.staffRole(), null, Instant.now());
         if (orcaLink == null) {
             orcaLink = findOrcaLinkByUserPk(facilityId, userPk);
         }
+        revokeChangedSecurityState(userPk, facilityId, rolesChanged, orcaLinkChanged, request);
         Response response = buildUpdateUserResponse(resource, user, profile, orcaLink, runId);
         recordUpdateUserAudit(resource, request, runId, facilityId, userPk, user, input, orcaLink);
         return response;
@@ -130,6 +139,7 @@ final class AdminAccessMutationSupport {
         Instant now = Instant.now();
         resource.upsertProfile(userPk, null, null, Boolean.TRUE, now);
         sessionRevocationService.incrementSessionEpoch(userPk, now);
+        sessionRevocationService.incrementCredentialEpoch(userPk, now);
         sessionRevocationService.markPasswordChanged(userPk, now);
         int revokedCount = sessionRevocationService.revokeAllForUser(
                 userPk,
@@ -330,7 +340,7 @@ final class AdminAccessMutationSupport {
         return user;
     }
 
-    private void applyUpdatedRoles(
+    private boolean applyUpdatedRoles(
             AdminAccessResource resource,
             HttpServletRequest request,
             String facilityId,
@@ -339,7 +349,7 @@ final class AdminAccessMutationSupport {
             String actor,
             UpdateUserInput input,
             AdminAccessResource.OrcaLinkStatus orcaLink) {
-        boolean hadAdminRole = containsAdminRole(currentRoleNames(user));
+        List<String> currentRoles = currentRoleNames(user);
         List<String> roles = new ArrayList<>(input.roles());
         if (!containsRole(roles, BASELINE_ROLE)) {
             roles.add(BASELINE_ROLE);
@@ -356,16 +366,31 @@ final class AdminAccessMutationSupport {
             throw resource.restError(request, Response.Status.BAD_REQUEST, "cannot_remove_own_admin_role",
                     "自分自身の admin 権限は削除できません。別の管理者で実行してください。");
         }
-        replaceRoles(user, roles);
-        if (hadAdminRole && !containsAdminRole(roles)) {
-            Instant now = Instant.now();
-            sessionRevocationService.incrementSessionEpoch(userPk, now);
-            sessionRevocationService.revokeAllForUser(
-                    userPk,
-                    facilityId,
-                    SessionRevocationService.REASON_PRIVILEGE_DOWNGRADE,
-                    request);
+        boolean changed = !sameRoleSet(currentRoles, roles);
+        if (changed) {
+            replaceRoles(user, roles);
         }
+        return changed;
+    }
+
+    private void revokeChangedSecurityState(
+            long userPk,
+            String facilityId,
+            boolean rolesChanged,
+            boolean orcaLinkChanged,
+            HttpServletRequest request) {
+        if (!rolesChanged && !orcaLinkChanged) {
+            return;
+        }
+        String reason;
+        if (rolesChanged && orcaLinkChanged) {
+            reason = SessionRevocationService.REASON_ACCESS_POLICY_CHANGE;
+        } else if (rolesChanged) {
+            reason = SessionRevocationService.REASON_PRIVILEGE_CHANGE;
+        } else {
+            reason = SessionRevocationService.REASON_ORCA_LINK_CHANGE;
+        }
+        sessionRevocationService.revokeAllForSecurityStateChange(userPk, facilityId, reason, request);
     }
 
     private Response buildUpdateUserResponse(
@@ -479,6 +504,24 @@ final class AdminAccessMutationSupport {
                 .map(RoleModel::getRole)
                 .filter(Objects::nonNull)
                 .toList();
+    }
+
+    private boolean sameRoleSet(List<String> currentRoles, List<String> desiredRoles) {
+        Set<String> currentNames = currentRoles == null ? Set.of() : currentRoles.stream()
+                .map(AdminAccessMutationSupportUtils::normalizeRoleKey)
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        Set<String> desiredNames = desiredRoles == null ? Set.of() : desiredRoles.stream()
+                .map(AdminAccessMutationSupportUtils::normalizeRoleKey)
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        return currentNames.equals(desiredNames);
+    }
+
+    private boolean sameOrcaUserId(AdminAccessResource.OrcaLinkStatus existingLink, String requestedOrcaUserId) {
+        String existing = existingLink != null ? trimToNull(existingLink.orcaUserId()) : null;
+        String requested = trimToNull(requestedOrcaUserId);
+        return Objects.equals(existing, requested);
     }
 
     private FacilityModel resolveFacility(String facilityId) {

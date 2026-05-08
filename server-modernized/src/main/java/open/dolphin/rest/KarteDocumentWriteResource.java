@@ -273,17 +273,13 @@ public class KarteDocumentWriteResource extends AbstractResource {
             if (attachment == null) {
                 continue;
             }
-            if (isResolvedAttachmentPayload(attachment)) {
-                resolvedAttachments.add(attachment);
-                continue;
-            }
             if (attachment.getId() <= 0L) {
                 throw attachmentReferenceError(
                         effectiveRequest,
                         Response.Status.BAD_REQUEST,
                         ERROR_CODE_ATTACHMENT_REFERENCE_UNSUPPORTED,
-                        "Attachment reference payload is unsupported without an attachment id.",
-                        Map.of("attachmentId", attachment.getId()));
+                        "Attachment reference payload must use a server-resolved attachment id.",
+                        Map.of("attachmentId", attachment.getId(), "acceptedReference", "id"));
             }
             AttachmentModel source = resolveAttachmentReferenceSource(attachment.getId(), effectiveRequest, actorFacility);
             if (!PatientImageServiceBean.LINK_RELATION_PATIENT_IMAGE_PHASEA.equals(source.getLinkRelation())) {
@@ -335,13 +331,6 @@ public class KarteDocumentWriteResource extends AbstractResource {
             document.setAttachment(resolvedAttachments);
             applyReferenceDocumentDefaults(document, actor, authoritativeKarteId, authoritativePatientId);
         }
-    }
-
-    private boolean isResolvedAttachmentPayload(AttachmentModel attachment) {
-        return attachment != null
-                && attachment.getId() <= 0L
-                && hasText(attachment.getUri())
-                && hasText(attachment.getDigest());
     }
 
     private AttachmentModel resolveAttachmentReferenceSource(long attachmentId,

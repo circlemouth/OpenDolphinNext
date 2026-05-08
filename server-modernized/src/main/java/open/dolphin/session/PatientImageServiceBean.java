@@ -9,14 +9,13 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -68,11 +67,22 @@ public class PatientImageServiceBean {
                                     long contentLength) {
         Objects.requireNonNull(contentPath, "contentPath");
         try {
-            byte[] bytes = Files.readAllBytes(contentPath);
-            if (contentLength >= 0 && bytes.length != contentLength) {
+            long actualLength = Files.size(contentPath);
+            if (contentLength >= 0 && actualLength != contentLength) {
                 throw new IllegalArgumentException("contentLength does not match file size");
             }
-            return uploadImage(facilityId, patientId, actorUserId, fileName, contentType, bytes);
+            return uploadImage(
+                    facilityId,
+                    patientId,
+                    actorUserId,
+                    fileName,
+                    contentType,
+                    actualLength,
+                    attachment -> {
+                        try (InputStream in = Files.newInputStream(contentPath)) {
+                            return attachmentStorageManager.prepareExternalAssetForPersist(attachment, in, actualLength);
+                        }
+                    });
         } catch (IOException ex) {
             throw new IllegalStateException("Failed to read patient image payload", ex);
         }
@@ -90,6 +100,37 @@ public class PatientImageServiceBean {
         Objects.requireNonNull(fileName, "fileName");
         Objects.requireNonNull(contentType, "contentType");
         Objects.requireNonNull(bytes, "bytes");
+
+        return uploadImage(
+                facilityId,
+                patientId,
+                actorUserId,
+                fileName,
+                contentType,
+                bytes.length,
+                attachment -> {
+                    try (ByteArrayInputStream in = new ByteArrayInputStream(bytes)) {
+                        return attachmentStorageManager.prepareExternalAssetForPersist(attachment, in, bytes.length);
+                    }
+                });
+    }
+
+    private UploadResult uploadImage(String facilityId,
+                                     String patientId,
+                                     String actorUserId,
+                                     String fileName,
+                                     String contentType,
+                                     long contentLength,
+                                     ExternalAssetUploader uploader) {
+        Objects.requireNonNull(facilityId, "facilityId");
+        Objects.requireNonNull(patientId, "patientId");
+        Objects.requireNonNull(actorUserId, "actorUserId");
+        Objects.requireNonNull(fileName, "fileName");
+        Objects.requireNonNull(contentType, "contentType");
+        Objects.requireNonNull(uploader, "uploader");
+        if (contentLength < 0L) {
+            throw new IllegalArgumentException("contentLength must be non-negative");
+        }
 
         PatientModel patient = patientServiceBean.getPatientById(facilityId, patientId);
         if (patient == null) {
@@ -124,7 +165,7 @@ public class PatientImageServiceBean {
         AttachmentModel attachment = new AttachmentModel();
         attachment.setFileName(fileName);
         attachment.setContentType(contentType);
-        attachment.setContentSize(bytes.length);
+        attachment.setContentSize(contentLength);
         attachment.setLastModified(now.getTime());
         attachment.setTitle(fileName);
         attachment.setStatus(IInfoModel.STATUS_FINAL);
@@ -142,8 +183,8 @@ public class PatientImageServiceBean {
         if (storageMode == null || !storageMode.isS3()) {
             throw new IllegalStateException("Patient image upload requires S3 attachment storage");
         }
-        try (ByteArrayInputStream in = new ByteArrayInputStream(bytes)) {
-            if (!attachmentStorageManager.prepareExternalAssetForPersist(attachment, in, bytes.length)) {
+        try {
+            if (!uploader.upload(attachment)) {
                 throw new IllegalStateException("Patient image upload requires pre-externalized attachment");
             }
         } catch (Exception ex) {
@@ -228,14 +269,6 @@ public class PatientImageServiceBean {
         return ISO_INSTANT.format(date.toInstant());
     }
 
-    private String sha256Hex(byte[] bytes) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
-        } catch (Exception ex) {
-            throw new IllegalStateException("Failed to calculate attachment digest", ex);
-        }
-    }
-
     private DownloadHandle toDownloadHandle(Object[] row) {
         if (row == null || row.length < 6) {
             return null;
@@ -269,5 +302,10 @@ public class PatientImageServiceBean {
         public Date createdAt() {
             return createdAt == null ? null : new Date(createdAt.getTime());
         }
+    }
+
+    @FunctionalInterface
+    private interface ExternalAssetUploader {
+        boolean upload(AttachmentModel attachment) throws Exception;
     }
 }

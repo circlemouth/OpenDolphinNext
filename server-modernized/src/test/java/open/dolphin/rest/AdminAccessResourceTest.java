@@ -6,19 +6,24 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import java.lang.reflect.Field;
 import java.time.Instant;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -174,6 +179,7 @@ class AdminAccessResourceTest {
         verify(entityManager).merge(target);
         InOrder inOrder = inOrder(sessionRevocationService);
         inOrder.verify(sessionRevocationService).incrementSessionEpoch(eq(10L), any(Instant.class));
+        inOrder.verify(sessionRevocationService).incrementCredentialEpoch(eq(10L), any(Instant.class));
         inOrder.verify(sessionRevocationService).markPasswordChanged(eq(10L), any(Instant.class));
         inOrder.verify(sessionRevocationService).revokeAllForUser(
                 10L,
@@ -209,10 +215,10 @@ class AdminAccessResourceTest {
         when(request.getHeader("X-Run-Id")).thenReturn("RUN-TEST");
         when(request.getRemoteUser()).thenReturn("F001:admin");
         when(userServiceBean.isAdmin("F001:admin")).thenReturn(true);
-        when(sessionRevocationService.revokeAllForUser(
+        when(sessionRevocationService.revokeAllForSecurityStateChange(
                 10L,
                 "F001",
-                SessionRevocationService.REASON_PRIVILEGE_DOWNGRADE,
+                SessionRevocationService.REASON_PRIVILEGE_CHANGE,
                 request)).thenReturn(1);
 
         UserModel target = new UserModel();
@@ -235,11 +241,92 @@ class AdminAccessResourceTest {
         Response response = resource.updateUser(request, 10L, Map.of("roles", List.of("user")));
 
         assertEquals(200, response.getStatus());
-        verify(sessionRevocationService).incrementSessionEpoch(eq(10L), any(Instant.class));
-        verify(sessionRevocationService).revokeAllForUser(
+        verify(sessionRevocationService).revokeAllForSecurityStateChange(
                 10L,
                 "F001",
-                SessionRevocationService.REASON_PRIVILEGE_DOWNGRADE,
+                SessionRevocationService.REASON_PRIVILEGE_CHANGE,
+                request);
+    }
+
+    @Test
+    void updateUserRevokesSessionsWhenNonAdminRoleSetChanges() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-TEST");
+        when(request.getRemoteUser()).thenReturn("F001:admin");
+        when(userServiceBean.isAdmin("F001:admin")).thenReturn(true);
+
+        UserModel target = new UserModel();
+        target.setId(10L);
+        target.setUserId("F001:user01");
+        target.setRoles(new ArrayList<>(List.of(role("user"), role("operator"))));
+        when(entityManager.find(UserModel.class, 10L)).thenReturn(target);
+        when(entityManager.contains(any(RoleModel.class))).thenReturn(true);
+        mockRoleReload("F001:user01", List.of(role("user")));
+        mockNoOrcaLinkTable();
+
+        Response response = resource.updateUser(request, 10L, Map.of("roles", List.of("user")));
+
+        assertEquals(200, response.getStatus());
+        verify(sessionRevocationService).revokeAllForSecurityStateChange(
+                10L,
+                "F001",
+                SessionRevocationService.REASON_PRIVILEGE_CHANGE,
+                request);
+    }
+
+    @Test
+    void updateUserDoesNotRevokeSessionsWhenRoleSetIsUnchanged() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-TEST");
+        when(request.getRemoteUser()).thenReturn("F001:admin");
+        when(userServiceBean.isAdmin("F001:admin")).thenReturn(true);
+
+        UserModel target = new UserModel();
+        target.setId(10L);
+        target.setUserId("F001:user01");
+        target.setRoles(new ArrayList<>(List.of(role("user"))));
+        when(entityManager.find(UserModel.class, 10L)).thenReturn(target);
+        mockNoOrcaLinkTable();
+
+        Response response = resource.updateUser(request, 10L, Map.of("roles", List.of(" USER ")));
+
+        assertEquals(200, response.getStatus());
+        verify(sessionRevocationService, never()).revokeAllForSecurityStateChange(
+                eq(10L),
+                eq("F001"),
+                anyString(),
+                eq(request));
+    }
+
+    @Test
+    void updateUserRevokesSessionsWhenOrcaLinkChanges() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-TEST");
+        when(request.getRemoteUser()).thenReturn("F001:admin");
+        when(userServiceBean.isAdmin("F001:admin")).thenReturn(true);
+
+        UserModel target = new UserModel();
+        target.setId(10L);
+        target.setUserId("F001:user01");
+        target.setRoles(new ArrayList<>(List.of(role("user"))));
+        when(entityManager.find(UserModel.class, 10L)).thenReturn(target);
+
+        Query tableExistsForRead = nativeQuery(List.of(1));
+        Query currentLink = nativeQuery(List.of(new Object[]{
+                10L,
+                "orca_old",
+                Timestamp.from(Instant.parse("2026-05-08T15:00:00Z"))
+        }));
+        Query tableExistsForWrite = nativeQuery(List.of(1));
+        Query ownerLookup = nativeQuery(List.of());
+        Query upsert = nativeQuery(List.of());
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(tableExistsForRead, currentLink, tableExistsForWrite, ownerLookup, upsert);
+
+        Response response = resource.updateUser(request, 10L, Map.of("orcaUserId", "orca_new"));
+
+        assertEquals(200, response.getStatus());
+        verify(sessionRevocationService).revokeAllForSecurityStateChange(
+                10L,
+                "F001",
+                SessionRevocationService.REASON_ORCA_LINK_CHANGE,
                 request);
     }
 
@@ -262,6 +349,28 @@ class AdminAccessResourceTest {
         RoleModel role = new RoleModel();
         role.setRole(name);
         return role;
+    }
+
+    private void mockRoleReload(String userId, List<RoleModel> roles) {
+        @SuppressWarnings("unchecked")
+        TypedQuery<RoleModel> roleQuery = mock(TypedQuery.class);
+        when(entityManager.createQuery("from RoleModel r where r.userId=:uid", RoleModel.class)).thenReturn(roleQuery);
+        when(roleQuery.setParameter("uid", userId)).thenReturn(roleQuery);
+        when(roleQuery.getResultList()).thenReturn(roles);
+    }
+
+    private void mockNoOrcaLinkTable() {
+        Query query = nativeQuery(List.of());
+        when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+    }
+
+    private static Query nativeQuery(List<?> resultList) {
+        Query query = mock(Query.class);
+        when(query.setParameter(anyString(), any())).thenReturn(query);
+        when(query.setMaxResults(anyInt())).thenReturn(query);
+        when(query.getResultList()).thenReturn(resultList);
+        when(query.executeUpdate()).thenReturn(1);
+        return query;
     }
 
     private static final class TestableAdminAccessResource extends AdminAccessResource {
