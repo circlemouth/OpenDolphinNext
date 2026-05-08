@@ -213,6 +213,21 @@ describe('httpFetch session expiry reasons', () => {
     expect(notifySpy).not.toHaveBeenCalled();
   });
 
+  it('notifies for first-party admin and realtime API 401 responses', async () => {
+    setSession();
+    const { sessionExpiry, httpClient } = await importSubjects();
+    const notifySpy = vi.spyOn(sessionExpiry, 'notifySessionExpired');
+
+    mockFetchSequence([401]);
+    await httpClient.httpFetch('/api/admin/orca/connection', { method: 'GET' });
+    expect(notifySpy).toHaveBeenCalledWith('unauthorized', 401);
+
+    notifySpy.mockClear();
+    mockFetchSequence([401]);
+    await httpClient.httpFetch('/api/realtime/reception', { method: 'GET' });
+    expect(notifySpy).toHaveBeenCalledWith('unauthorized', 401);
+  });
+
   it('does not notify for /karte and /odletter endpoints on 401', async () => {
     setSession();
     const { sessionExpiry, httpClient } = await importSubjects();
