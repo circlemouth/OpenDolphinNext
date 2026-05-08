@@ -103,6 +103,44 @@ class SessionRevocationServiceTest {
         }
     }
 
+    @Test
+    void revokeAllForSecurityStateChangeAdvancesSessionAndCredentialEpochs() throws Exception {
+        try (EmbeddedPostgres postgres = EmbeddedPostgres.builder().start()) {
+            DataSource dataSource = postgres.getPostgresDatabase();
+            migrate(dataSource);
+
+            AuthSessionRegistryRepository registryRepository = new AuthSessionRegistryRepository();
+            UserSecurityStateRepository securityStateRepository = new UserSecurityStateRepository();
+            SessionAuditDispatcher auditDispatcher = mock(SessionAuditDispatcher.class);
+            SessionRevocationService service = new SessionRevocationService();
+            setField(registryRepository, "dataSource", dataSource);
+            setField(securityStateRepository, "dataSource", dataSource);
+            setField(service, "authSessionRegistryRepository", registryRepository);
+            setField(service, "userSecurityStateRepository", securityStateRepository);
+            setField(service, "sessionAuditDispatcher", auditDispatcher);
+
+            securityStateRepository.ensureRow(901L);
+            Instant issuedAt = Instant.parse("2026-03-25T12:00:00Z");
+            registryRepository.upsertAuthenticatedSession("sess-policy", 901L, "F001:user01", "F001", "client-1", "password",
+                    issuedAt, issuedAt, 0L, 0L);
+
+            HttpServletRequest request = mock(HttpServletRequest.class);
+            whenRequest(request, "F001:admin", "/api/admin/access/users/901", "trace-901", "req-901");
+
+            int revokedCount = service.revokeAllForSecurityStateChange(
+                    901L,
+                    "F001",
+                    SessionRevocationService.REASON_PRIVILEGE_CHANGE,
+                    request);
+
+            assertThat(revokedCount).isEqualTo(1);
+            assertThat(securityStateRepository.currentSessionEpoch(901L)).isEqualTo(1L);
+            assertThat(securityStateRepository.currentCredentialEpoch(901L)).isEqualTo(1L);
+            assertThat(registryRepository.findBySessionId("sess-policy").orElseThrow().revocationReason())
+                    .isEqualTo(SessionRevocationService.REASON_PRIVILEGE_CHANGE);
+        }
+    }
+
     private static void migrate(DataSource dataSource) {
         Flyway.configure()
                 .dataSource(dataSource)

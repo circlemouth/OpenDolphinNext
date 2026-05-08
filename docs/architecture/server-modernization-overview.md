@@ -48,6 +48,7 @@ cd web-client && node scripts/runtime-ready-smoke.mjs
 
 ## business-critical flows
 - 認証と session 失効は server 側で統一し、権限変更や認証状態変更後は古い session を残さない。
+- 管理 API で role set / ORCA link / privileged capability / アカウント状態が実際に変わる場合は、対象ユーザーの active session を全失効し、session epoch と credential epoch を更新する。同一 role set の再送信など実効権限が変わらない更新では失効しない。
 - 受付からカルテへ渡すキーは `scheduleKey` / `encounterKey` を正本とし、client 推測値や旧受付 ID を route authority にしない。
 - `medicalmodv2` は server 側の `encounter_projection` と server-derived `worklist_flags.officialVisitIdentifiers` を authority とし、client が送った `voucherNumber` / `sequentialNumber` / 保険組合せ等をそのまま信頼しない。WebORCA Trial の直接受付で厳密な voucher が返らない場合も、server が `acceptlstv2` から一意に再同定した provisional context だけを許容し、不一致は ORCA transport 前に拒否する。
 - ORCA 接続は施設別設定と allowlist で解決し、任意 URL 接続や implicit fallback を許容しない。
