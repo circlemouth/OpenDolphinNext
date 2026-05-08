@@ -28,6 +28,12 @@ import open.dolphin.infomodel.ModelUtils;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.RegisteredDiagnosisModel;
 import open.dolphin.infomodel.UserModel;
+import open.dolphin.orca.service.DiseaseProjectionService;
+import open.dolphin.orca.transport.OrcaEndpoint;
+import open.dolphin.orca.transport.OrcaTransport;
+import open.dolphin.orca.transport.OrcaTransportRequest;
+import open.dolphin.orca.transport.OrcaTransportResult;
+import open.dolphin.rest.dto.orca.DiseaseImportResponse;
 import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.UserServiceBean;
@@ -46,6 +52,12 @@ public class LocalDiagnosisResource extends AbstractResource {
     @Inject
     private UserServiceBean userServiceBean;
 
+    @Inject
+    private OrcaTransport orcaTransport;
+
+    @Inject
+    private DiseaseProjectionService diseaseProjectionService;
+
     @GET
     @Path("/{patientId}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -61,6 +73,7 @@ public class LocalDiagnosisResource extends AbstractResource {
             throw restError(request, Response.Status.NOT_FOUND, "patient_not_found", "Patient not found");
         }
         Date fromDate = ModelUtils.getDateAsObject(from != null ? from : ModelUtils.getDateAsString(ModelUtils.AD1800));
+        Date toDate = ModelUtils.getDateAsObject(to != null ? to : ModelUtils.getDateAsString(new Date()));
         KarteBean karte = karteServiceBean.getKarte(facilityId, patientId, fromDate);
         if (karte == null) {
             throw restError(request, Response.Status.NOT_FOUND, "karte_not_found", "Karte not found");
@@ -86,10 +99,18 @@ public class LocalDiagnosisResource extends AbstractResource {
             item.put("candidateOnly", Boolean.FALSE);
             items.add(item);
         }
+        DiseaseImportResponse mirrorResponse = fetchOrcaMirror(request, facilityId, patientId, fromDate, toDate);
+        List<DiseaseImportResponse.DiseaseEntry> mirrorEntries =
+                mirrorResponse.getDiseases() != null ? mirrorResponse.getDiseases() : List.of();
+        projectionService().applyMirrorDiffState(items, mirrorEntries);
+        for (DiseaseImportResponse.DiseaseEntry entry : mirrorEntries) {
+            items.add(toMirrorItem(entry));
+        }
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("patientId", patientId);
         response.put("karteId", karte.getId());
         response.put("runId", resolveTraceId(request));
+        response.put("orcaMirrorStatus", mirrorResponse.getOrcaMirrorStatus());
         response.put("diseases", items);
         return response;
     }
@@ -268,5 +289,64 @@ public class LocalDiagnosisResource extends AbstractResource {
 
     private static Date toDate(LocalDate value) {
         return Date.from(value.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    private DiseaseImportResponse fetchOrcaMirror(
+            HttpServletRequest request,
+            String facilityId,
+            String patientId,
+            Date fromDate,
+            Date toDate) {
+        DiseaseImportResponse unavailable = new DiseaseImportResponse();
+        unavailable.setRunId(resolveTraceId(request));
+        unavailable.setPatientId(patientId);
+        unavailable.setOrcaMirrorStatus("unavailable");
+        unavailable.setDiseases(List.of());
+        if (orcaTransport == null) {
+            return unavailable;
+        }
+        try {
+            LocalDate baseDate = toDateOnly(toDate);
+            String requestXml = projectionService().buildDiseaseGetRequestXml(patientId, baseDate);
+            OrcaTransportResult result = orcaTransport.invoke(
+                    facilityId,
+                    OrcaEndpoint.DISEASE_GET,
+                    OrcaTransportRequest.post(requestXml));
+            return projectionService().buildMirrorResponseFromOrca(result, resolveTraceId(request), patientId, fromDate, toDate);
+        } catch (RuntimeException ex) {
+            return unavailable;
+        }
+    }
+
+    private DiseaseProjectionService projectionService() {
+        if (diseaseProjectionService == null) {
+            diseaseProjectionService = new DiseaseProjectionService();
+        }
+        return diseaseProjectionService;
+    }
+
+    private static LocalDate toDateOnly(Date date) {
+        Date safeDate = date != null ? date : new Date();
+        return safeDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+
+    private static Map<String, Object> toMirrorItem(DiseaseImportResponse.DiseaseEntry entry) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("diagnosisId", entry.getDiagnosisId());
+        item.put("diagnosisName", entry.getDiagnosisName());
+        item.put("diagnosisCode", entry.getDiagnosisCode());
+        item.put("departmentCode", entry.getDepartmentCode());
+        item.put("insuranceCombinationNumber", entry.getInsuranceCombinationNumber());
+        item.put("startDate", entry.getStartDate());
+        item.put("endDate", entry.getEndDate());
+        item.put("outcome", entry.getOutcome());
+        item.put("category", entry.getCategory());
+        item.put("suspectedFlag", entry.getSuspectedFlag());
+        item.put("layer", "orca-mirror");
+        item.put("syncState", entry.getSyncState());
+        item.put("readOnly", Boolean.TRUE);
+        item.put("candidateOnly", Boolean.FALSE);
+        item.put("note", entry.getNote());
+        return item;
     }
 }

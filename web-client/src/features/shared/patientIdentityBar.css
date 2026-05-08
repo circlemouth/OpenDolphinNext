@@ -113,10 +113,18 @@
   font-variant-numeric: tabular-nums;
 }
 
+.patient-identity-bar__title-trailing {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+}
+
 .patient-identity-bar__kana {
   margin: 0;
   color: var(--ui-text-muted);
-  font-size: 0.88rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .patient-identity-bar__actions {

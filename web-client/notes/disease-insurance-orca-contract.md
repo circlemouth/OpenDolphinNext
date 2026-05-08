@@ -6,20 +6,20 @@
 - `保険病名`: 院内ローカルの authoring truth
 - `ORCA mirror`: ORCA 由来の read-only mirror
 - `候補`: master / order-set / 補助入力から来る candidate source
-- `clinical`: 未実装。実装されるまで current writable surface に昇格しない
+- `clinical`: 外部の臨床病名 source。未接続の間は current writable surface に昇格しない
 
 ## Fixed Boundary
 - `保険病名` だけが create / update / delete できます。
 - `ORCA mirror` は read-only です。auto-merge / auto-delete / auto-overwrite を禁止します。
 - `候補` は truth ではありません。明示 confirm なしで `保険病名` に昇格させません。
-- clinical source 未実装時は fake list を出さず、boundary note で止めます。
+- 外部の臨床病名 source が未接続の間は fake list を出さず、boundary note で止めます。
 
 ## Canonical Notes
 - `同期候補があります`
 - `ORCA側と差分があります`
 - `保険病名の確認が必要です`
-- `ORCA mirror を取得できないため、同期状態は未確認です。`
-- `clinical source が未実装のため、この画面では保険病名だけを扱います。`
+- `ORCA病名の参照取得はこの画面ではまだ接続されていないため、ORCA側との同期状態は未確認です。保険病名はこの画面で登録・編集できます。`
+- `外部の臨床病名ソースは未接続です。ここでは院内の保険病名を登録・編集し、候補は確認後に反映します。`
 
 ## Conflict Matrix
 | 状態 | 保険病名 | ORCA mirror | 候補 | UI / fallback |
@@ -32,9 +32,16 @@
 
 ## Fallback Gates
 - UG-04 未解決: insurance-local のみ writable
-- UG-05 未解決: ORCA mirror は read-only
-- UG-06 未解決: visible diff + manual resolution
+- UG-05 解決: Charts は `/api/local/diagnoses/{patientId}` の server-side projection から ORCA `diseasegetv2` mirror を取得し、`layer=orca-mirror` / `readOnly=true` として表示する。
+- UG-06 解決: local 保険病名と ORCA mirror は auto-merge / auto-overwrite せず、差分がある場合は `ORCA側と差分があります` と `保険病名の確認が必要です` を表示する。
 - UG-07 未解決: outcome preset は input assist のみ
+
+## Charts ORCA Mirror API
+- Charts の病名欄は `GET /api/local/diagnoses/{patientId}` を使用する。クライアントは `facilityId` / owner / storage key を送らず、サーバーは認証済みセッションの施設で患者とカルテを解決してから ORCA mirror を取得する。
+- ORCA mirror の取得は server-side ORCA transport の allowlist / runtime config に従い、任意 URL は受け付けない。ORCA response は外部入力として XML secure parser で読み、allowlist 済みの病名名、コード、開始日、転帰、診療科、保険組合せ番号だけを projection する。
+- response は `orcaMirrorStatus=connected|unavailable` を返す。`connected` で mirror が空の場合は「ORCAに登録済みの病名はありません。」、`unavailable` の場合だけ「ORCA病名を取得できませんでした。同期状態は未確認です。保険病名はこの画面で登録・編集できます。」を表示する。
+- ORCA mirror は read-only で、候補や mirror entry は明示操作なしに保険病名へ昇格しない。取得成功時に旧文言「ORCA病名の参照取得はこの画面ではまだ接続されていない」は表示しない。
+- ORCA transport failure / parser failure / non-zero ORCA result は fail closed とし、内部 URL、資格情報、raw XML、stack trace、ORCA 詳細メッセージを API response / UI に出さない。
 
 ## Order Set Rule
 - order-set の disease は candidate-only semantics です。

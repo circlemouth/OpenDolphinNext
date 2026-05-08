@@ -33,6 +33,11 @@ type ChartsPatientSummaryBarProps = {
   inlineActionBar?: ReactNode;
 };
 
+type PatientSexTone = 'male' | 'female' | 'unknown';
+type PatientAgeGroup = 'adult' | 'child' | 'unknown';
+
+const CHILD_AGE_MAX = 14;
+
 const normalizeValue = (value?: string): string | undefined => {
   if (!value) return undefined;
   if (value.trim() === '' || value === '—') return undefined;
@@ -56,19 +61,73 @@ const formatSex = (sex?: string): string => {
   const safe = normalizeValue(sex);
   if (!safe) return '—';
   const normalized = safe.trim().toLowerCase();
-  if (normalized === '1' || normalized === 'm' || normalized === 'male' || normalized === '男') return '男';
-  if (normalized === '2' || normalized === 'f' || normalized === 'female' || normalized === '女') return '女';
+  if (normalized === '1' || normalized === 'm' || normalized === 'male' || normalized === '男' || normalized === '男性') {
+    return '男';
+  }
+  if (normalized === '2' || normalized === 'f' || normalized === 'female' || normalized === '女' || normalized === '女性') {
+    return '女';
+  }
   if (normalized === '9') return '不明';
   return safe;
 };
+
+const resolvePatientSexTone = (sex?: string): PatientSexTone => {
+  const formatted = formatSex(sex);
+  if (formatted === '男') return 'male';
+  if (formatted === '女') return 'female';
+  return 'unknown';
+};
+
+const resolvePatientAgeGroup = (age?: string): PatientAgeGroup => {
+  const safe = normalizeValue(age);
+  if (!safe) return 'unknown';
+  const match = safe.match(/\d+/);
+  if (!match) return 'unknown';
+  const years = Number(match[0]);
+  if (!Number.isFinite(years) || years < 0 || years > 130) return 'unknown';
+  return years <= CHILD_AGE_MAX ? 'child' : 'adult';
+};
+
+function ChartsPatientProfileIcon({ sexTone, ageGroup }: { sexTone: PatientSexTone; ageGroup: PatientAgeGroup }) {
+  const isChild = ageGroup === 'child';
+  const isFemale = sexTone === 'female';
+  const headY = isChild ? 10.7 : 9.8;
+  const headRadius = isChild ? 3.55 : 4.05;
+  const bodyPath = isFemale
+    ? isChild
+      ? 'M10.5 25.9C11.6 19.4 13.6 15.9 16 15.9C18.4 15.9 20.4 19.4 21.5 25.9H10.5Z'
+      : 'M9.7 26.4C11 18.9 13.3 15.2 16 15.2C18.7 15.2 21 18.9 22.3 26.4H9.7Z'
+    : isChild
+      ? 'M10 26V21.8C10 18.4 12.6 15.9 16 15.9C19.4 15.9 22 18.4 22 21.8V26H10Z'
+      : 'M9.6 26.4V21.3C9.6 17.8 12.4 15.2 16 15.2C19.6 15.2 22.4 17.8 22.4 21.3V26.4H9.6Z';
+
+  return (
+    <span className="reception-patient-icon charts-patient-summary__profile-icon" data-sex-tone={sexTone} data-age-group={ageGroup}>
+      <svg viewBox="0 0 32 32" focusable="false">
+        <circle className="reception-patient-icon__halo" cx="16" cy="16" r="13.2" />
+        <path className="reception-patient-icon__shadow" d="M8.8 26.8H23.2" />
+        <circle className="reception-patient-icon__head" cx="16" cy={headY} r={headRadius} />
+        <path className="reception-patient-icon__body" d={bodyPath} />
+        <path
+          className="reception-patient-icon__highlight"
+          d={isFemale ? 'M13.1 18.1C14 17.2 15 16.8 16 16.8' : 'M12.6 18.2C13.5 17.4 14.6 16.9 15.9 16.9'}
+        />
+        {isChild ? (
+          <g className="reception-patient-icon__age-mark">
+            <circle cx="23.5" cy="8.4" r="3.2" />
+            <path d="M22.2 8.4H24.8M23.5 7.1V9.7" />
+          </g>
+        ) : null}
+      </svg>
+    </span>
+  );
+}
 
 export function ChartsPatientSummaryBar({
   patientDisplay,
   patientId,
   visitDate,
   encounterStatus,
-  receptionId,
-  appointmentId,
   department,
   physician,
   runId,
@@ -93,8 +152,8 @@ export function ChartsPatientSummaryBar({
   const normalizedEncounterStatus = normalizeValue(encounterStatus) ?? '再選択が必要';
   const normalizedDepartment = normalizeValue(department) ?? '未設定';
   const normalizedPhysician = normalizeValue(physician) ?? '未設定';
-  const normalizedReceptionId = normalizeValue(receptionId) ?? '未解決';
-  const normalizedAppointmentId = normalizeValue(appointmentId) ?? '未解決';
+  const sexTone = resolvePatientSexTone(patientDisplay.sex);
+  const ageGroup = resolvePatientAgeGroup(patientDisplay.age);
 
   return (
     <div
@@ -107,17 +166,22 @@ export function ChartsPatientSummaryBar({
     >
       <PatientIdentityBar
         className="charts-patient-summary__identity-bar"
-        eyebrow="Charts / patient"
+        eyebrow="CHARTS"
         patientId={patientId}
         patientName={displayName}
         patientKana={kana}
-        sex={sex}
-        age={age}
-        visitDate={normalizedVisitDate}
-        receptionId={receptionId}
-        appointmentId={appointmentId}
+        photo={<ChartsPatientProfileIcon sexTone={sexTone} ageGroup={ageGroup} />}
         note={undefined}
         selected
+        titleTrailing={
+          <span className="charts-patient-summary__compact-meta" aria-label="患者基本情報">
+            <span>{sex}</span>
+            <span>{age}</span>
+            <span>{birthDate}</span>
+          </span>
+        }
+        showMeta={false}
+        showVisitSupport={false}
         chips={
           <>
             {missingMaster ? (
@@ -135,11 +199,6 @@ export function ChartsPatientSummaryBar({
                 Cache hit
               </StatusPill>
             ) : null}
-            {dataSourceTransition ? (
-              <StatusPill tone="neutral" size="xs" className="charts-patient-summary__alert-pill">
-                {dataSourceTransition}
-              </StatusPill>
-            ) : null}
           </>
         }
         supporting={
@@ -153,33 +212,13 @@ export function ChartsPatientSummaryBar({
                 <span className="charts-patient-summary__encounter-label">状態</span>
                 <span className="charts-patient-summary__encounter-value">{normalizedEncounterStatus}</span>
               </span>
-              <span className="charts-patient-summary__encounter-item">
-                <span className="charts-patient-summary__encounter-label">受付ID / 予約ID</span>
-                <span className="charts-patient-summary__encounter-value">
-                  {normalizedReceptionId} / {normalizedAppointmentId}
-                </span>
-              </span>
-              <span className="charts-patient-summary__encounter-item">
+              <span className="charts-patient-summary__encounter-item charts-patient-summary__encounter-item--wide">
                 <span className="charts-patient-summary__encounter-label">診療科 / 担当医</span>
                 <span className="charts-patient-summary__encounter-value">
                   {normalizedDepartment} / {normalizedPhysician}
                 </span>
               </span>
             </section>
-            <div className="charts-patient-summary__fact-grid" aria-label="患者補足情報">
-              <span className="charts-patient-summary__fact">
-                <span className="charts-patient-summary__fact-label">生年月日</span>
-                <span className="charts-patient-summary__fact-value">{birthDate}</span>
-              </span>
-              <span className="charts-patient-summary__fact">
-                <span className="charts-patient-summary__fact-label">性別</span>
-                <span className="charts-patient-summary__fact-value">{sex}</span>
-              </span>
-              <span className="charts-patient-summary__fact">
-                <span className="charts-patient-summary__fact-label">年齢</span>
-                <span className="charts-patient-summary__fact-value">{age}</span>
-              </span>
-            </div>
             {hasAddressMeta ? (
               <details className="charts-patient-summary__extra">
                 <summary className="charts-patient-summary__extra-summary">住所・連絡情報</summary>

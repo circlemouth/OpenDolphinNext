@@ -36,8 +36,11 @@ export type DiseaseSyncState =
 export const DISEASE_SYNC_CANDIDATES_NOTE = '同期候補があります';
 export const DISEASE_CONFLICT_NOTE = 'ORCA側と差分があります';
 export const DISEASE_MANUAL_RESOLUTION_NOTE = '保険病名の確認が必要です';
-export const DISEASE_MIRROR_UNAVAILABLE_NOTE = 'ORCA mirror を取得できないため、同期状態は未確認です。';
-export const DISEASE_CLINICAL_UNAVAILABLE_NOTE = 'clinical source が未実装のため、この画面では保険病名だけを扱います。';
+export const DISEASE_MIRROR_UNAVAILABLE_NOTE =
+  'ORCA病名を取得できませんでした。同期状態は未確認です。保険病名はこの画面で登録・編集できます。';
+export const DISEASE_MIRROR_EMPTY_NOTE = 'ORCAに登録済みの病名はありません。';
+export const DISEASE_CLINICAL_UNAVAILABLE_NOTE =
+  '外部の臨床病名ソースは未接続です。ここでは院内の保険病名を登録・編集し、候補は確認後に反映します。';
 export const DISEASE_CANDIDATE_CONFIRM_NOTE = '候補は自動反映されません。内容を確認してから保険病名に追加してください。';
 export const ORDER_SET_CANDIDATE_NOTE = '候補です。オーダーセット適用時も保険病名へ自動登録しません。';
 export const DISEASE_OUTCOME_PRESETS = ['継続', '治癒', '中止', '再発', '死亡', '転院', '不明'] as const;
@@ -55,6 +58,7 @@ export type DiseaseImportResponse = {
   apiResult?: string;
   apiResultMessage?: string;
   runId?: string;
+  orcaMirrorStatus?: 'connected' | 'unavailable';
   diseases?: DiseaseEntry[];
   patientImportAttempted?: boolean;
   patientImportStatus?: number;

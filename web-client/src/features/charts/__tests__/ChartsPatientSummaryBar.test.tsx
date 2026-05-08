@@ -25,8 +25,8 @@ const baseProps = {
 };
 
 describe('ChartsPatientSummaryBar', () => {
-  it('note が空のときは患者メモパネルを表示しない', () => {
-    render(
+  it('患者サマリーを ORCA 患者ID中心のコンパクト表示にする', () => {
+    const { container } = render(
       <ChartsPatientSummaryBar
         {...baseProps}
         patientDisplay={{
@@ -36,30 +36,37 @@ describe('ChartsPatientSummaryBar', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: '診察開始' })).toBeNull();
-    expect(screen.queryByRole('heading', { name: '患者メモ' })).toBeNull();
-    expect(screen.queryByText('患者メモなし')).toBeNull();
-    const identityBar = screen.getByRole('region', { name: '患者識別帯' });
-    expect(identityBar).toHaveTextContent('1980-05-20');
-    expect(identityBar).toHaveTextContent('2026-04-17');
-    expect(identityBar).toHaveTextContent('R-001');
-    expect(identityBar).toHaveTextContent('A-001');
-    expect(identityBar).toHaveTextContent('診療中');
-    expect(identityBar).toHaveTextContent('内科 / 医師A');
-    expect(identityBar).toHaveTextContent('〒100-0001');
-    expect(identityBar).toHaveTextContent('東京都千代田区千代田1-1');
+    const summary = container.querySelector('.charts-patient-summary');
+    expect(summary).not.toBeNull();
+    expect(summary).toHaveTextContent('患者ID: 000001');
+    expect(summary).toHaveTextContent('2026-04-17');
+    expect(summary).toHaveTextContent('診療中');
+    expect(summary).toHaveTextContent('内科 / 医師A');
+    expect(summary).toHaveTextContent('男');
+    expect(summary).toHaveTextContent('45歳6ヶ月');
+    expect(summary).toHaveTextContent('1980-05-20');
+    expect(summary).toHaveTextContent('〒100-0001');
+    expect(summary).toHaveTextContent('東京都千代田区千代田1-1');
+    expect(summary).not.toHaveTextContent('受付ID');
+    expect(summary).not.toHaveTextContent('予約ID');
+    expect(summary).not.toHaveTextContent('R-001');
+    expect(summary).not.toHaveTextContent('A-001');
+
+    const profileIcon = container.querySelector('.charts-patient-summary__profile-icon');
+    expect(profileIcon).toHaveAttribute('data-sex-tone', 'male');
+    expect(profileIcon).toHaveAttribute('data-age-group', 'adult');
   });
 
-  it('note があるときは識別帯の supporting copy に集約表示する', () => {
-    render(<ChartsPatientSummaryBar {...baseProps} />);
+  it('note があるときだけ患者メモを表示する', () => {
+    const { container } = render(<ChartsPatientSummaryBar {...baseProps} />);
 
-    const identityBar = screen.getByRole('region', { name: '患者識別帯' });
-    expect(identityBar).toHaveTextContent('転倒歴あり。採血時は左腕を優先。');
-    expect(identityBar).toHaveTextContent('患者ID: 000001');
+    const summary = container.querySelector('.charts-patient-summary');
+    expect(summary).toHaveTextContent('転倒歴あり。採血時は左腕を優先。');
+    expect(screen.getByRole('heading', { name: '患者メモ' })).toBeInTheDocument();
   });
 
-  it('住所と郵便番号は識別帯の supporting copy に統合表示する', () => {
-    render(
+  it('住所と郵便番号は details ではなく閉じた補助情報としてまとめる', () => {
+    const { container } = render(
       <ChartsPatientSummaryBar
         {...baseProps}
         patientDisplay={{
@@ -69,9 +76,26 @@ describe('ChartsPatientSummaryBar', () => {
       />,
     );
 
-    const identityBar = screen.getByRole('region', { name: '患者識別帯' });
-    expect(identityBar).toHaveTextContent('東京都千代田区千代田1-1');
-    expect(identityBar).toHaveTextContent('〒100-0001');
+    const summary = container.querySelector('.charts-patient-summary');
+    expect(summary).toHaveTextContent('東京都千代田区千代田1-1');
+    expect(summary).toHaveTextContent('〒100-0001');
     expect(screen.queryByRole('button', { name: '詳細' })).toBeNull();
+  });
+
+  it('data source transition is telemetry only and is not shown as a patient chip', () => {
+    const { container } = render(
+      <ChartsPatientSummaryBar
+        {...baseProps}
+        dataSourceTransition="server"
+        patientDisplay={{
+          ...baseProps.patientDisplay,
+          note: undefined,
+        }}
+      />,
+    );
+
+    const summary = container.querySelector('.charts-patient-summary');
+    expect(summary).toHaveAttribute('data-source-transition', 'server');
+    expect(summary).not.toHaveTextContent('server');
   });
 });

@@ -92,3 +92,8 @@
 - [x] 施設 A 更新後も default facility が変化しない。
 - [x] 2FA 鍵と ORCA 鍵を別々に回しても相互影響しない。
 - [x] ログと readiness 応答に接続先詳細が含まれない。
+
+## Charts Disease Mirror
+- Charts の ORCA 病名 mirror は `/api/local/diagnoses/{patientId}` の server-side projection から `diseasegetv2` を呼ぶ。呼び出し施設は認証済み request context の facilityId で解決し、クライアント提供の facilityId / owner / URL は使わない。
+- `diseasegetv2` は既存の ORCA transport / runtime config / allowlist に従い、任意 URL 入力から接続しない。失敗時は `orcaMirrorStatus=unavailable` の sanitized state だけを返し、base URL、host、credential、raw XML、stack trace は返さない。
+- mirror response は read-only projection とし、local 保険病名を自動上書きしない。差分は UI で manual-resolution として表示する。

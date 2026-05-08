@@ -3,7 +3,7 @@ import { css } from '@emotion/react';
 export const chartsStyles = css`
   .charts-page {
     min-height: 100vh;
-    padding: 2.25rem clamp(1rem, 4vw, 2.75rem);
+    padding: 1.35rem clamp(0.75rem, 1.6vw, 1.25rem);
     background: var(--ui-surface-muted);
     display: flex;
     flex-direction: column;
@@ -96,7 +96,7 @@ export const chartsStyles = css`
   }
 
   .charts-page[data-charts-compact-header='1'] {
-    padding: 1.35rem clamp(0.75rem, 3vw, 2.25rem);
+    padding: 1rem clamp(0.65rem, 1.4vw, 1.1rem);
     gap: var(--charts-space-lg);
   }
 
@@ -898,6 +898,8 @@ export const chartsStyles = css`
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__surface {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.7rem;
     border-color: transparent;
     background: transparent;
     box-shadow: none;
@@ -905,16 +907,27 @@ export const chartsStyles = css`
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__body {
-    gap: var(--charts-space-sm);
+    display: grid;
+    grid-template-columns: minmax(210px, 0.42fr) minmax(430px, 1fr);
+    grid-template-areas:
+      "header supporting"
+      "chips supporting";
+    align-items: center;
+    column-gap: clamp(0.75rem, 2vw, 1.6rem);
+    row-gap: 0.3rem;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__avatar {
-    width: 3rem;
-    height: 3rem;
-    border-radius: var(--ui-radius-md);
-    border-color: rgba(37, 99, 235, 0.18);
-    background: rgba(239, 246, 255, 0.78);
-    color: #1d4ed8;
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .charts-patient-summary__identity-bar .patient-identity-bar__header {
+    grid-area: header;
+    align-items: center;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__eyebrow {
@@ -922,11 +935,12 @@ export const chartsStyles = css`
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__title-row {
-    gap: 0.75rem;
+    gap: 0.55rem;
+    align-items: center;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__title {
-    font-size: clamp(1.18rem, 1.65vw, 1.55rem);
+    font-size: 0.98rem;
     font-weight: 800;
   }
 
@@ -943,7 +957,7 @@ export const chartsStyles = css`
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__kana {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__meta {
@@ -952,42 +966,86 @@ export const chartsStyles = css`
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__chips {
+    grid-area: chips;
     gap: 0.35rem;
   }
 
+  .charts-patient-summary__identity-bar .patient-identity-bar__supporting {
+    grid-area: supporting;
+    padding-top: 0;
+    padding-left: clamp(0.75rem, 1.8vw, 1.25rem);
+    border-top: 0;
+    border-left: 1px solid rgba(226, 232, 240, 0.95);
+  }
+
   .charts-patient-summary__supporting {
-    display: grid;
-    gap: var(--charts-space-xs);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    min-width: 0;
   }
 
   .charts-patient-summary__encounter-band {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(164px, 1fr));
-    gap: var(--charts-space-xs);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    min-width: 0;
   }
 
   .charts-patient-summary__encounter-item {
-    display: grid;
-    gap: 2px;
-    padding: 0.7rem 0.8rem;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    min-height: 1.55rem;
+    padding: 0.18rem 0.48rem;
     border: 1px solid rgba(37, 99, 235, 0.16);
-    border-radius: var(--ui-radius-md);
-    background: linear-gradient(180deg, rgba(239, 246, 255, 0.88), rgba(248, 250, 252, 0.96));
+    border-radius: 999px;
+    background: rgba(248, 250, 252, 0.9);
+  }
+
+  .charts-patient-summary__encounter-item--wide {
+    max-width: 100%;
   }
 
   .charts-patient-summary__encounter-label {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: #1d4ed8;
+    white-space: nowrap;
   }
 
   .charts-patient-summary__encounter-value {
     color: #0f172a;
-    font-size: 0.86rem;
+    font-size: 0.82rem;
     font-weight: 700;
     line-height: 1.45;
     word-break: break-word;
+  }
+
+  .charts-patient-summary__compact-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 0.3rem;
+    color: #334155;
+    font-size: 0.76rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .charts-patient-summary__compact-meta span:not(:last-child)::after {
+    content: '・';
+    margin-left: 0.4rem;
+    color: #94a3b8;
+  }
+
+  .charts-patient-summary__profile-icon {
+    flex-basis: 1.95rem;
+    width: 1.95rem;
+    height: 1.95rem;
   }
 
   .charts-patient-summary__fact-grid {
@@ -1154,6 +1212,31 @@ export const chartsStyles = css`
   }
 
   @media (max-width: 720px) {
+    .charts-patient-summary__identity-bar .patient-identity-bar__body {
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "header"
+        "chips"
+        "supporting";
+    }
+
+    .charts-patient-summary__identity-bar .patient-identity-bar__supporting {
+      padding-top: 0.45rem;
+      padding-left: 0;
+      border-top: 1px solid rgba(226, 232, 240, 0.95);
+      border-left: 0;
+    }
+
+    .charts-patient-summary__supporting {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .charts-patient-summary__compact-meta {
+      justify-content: flex-start;
+      white-space: normal;
+    }
+
     .charts-patient-summary__encounter-band,
     .charts-patient-summary__fact-grid {
       grid-template-columns: 1fr;
@@ -6500,13 +6583,6 @@ export const chartsStyles = css`
     color: #0f172a;
     font-size: 0.96rem;
     font-weight: 800;
-  }
-
-  .soap-note__section-support {
-    margin: 0;
-    color: #475569;
-    font-size: 0.82rem;
-    line-height: 1.45;
   }
 
   .soap-note__section-meta {

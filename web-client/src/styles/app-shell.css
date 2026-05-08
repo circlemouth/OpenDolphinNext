@@ -254,8 +254,9 @@
 
 .workspace-tabs {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
   min-width: 0;
 }
 
@@ -263,14 +264,17 @@
   display: inline-flex;
   gap: 0.4rem;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .workspace-tabs__dynamic-area {
   min-width: 0;
-  flex: 1 1 auto;
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.95);
 }
 
 .workspace-tabs__dynamic-controls {
@@ -417,6 +421,23 @@
   color: var(--ui-primary-contrast);
   box-shadow: 0 10px 20px rgba(29, 78, 216, 0.22);
   font-weight: 800;
+}
+
+.workspace-tabs__tab--patient.is-active {
+  border-color: rgba(37, 99, 235, 0.55);
+  background: rgba(239, 246, 255, 0.96);
+  color: var(--ui-text);
+  box-shadow:
+    inset 3px 0 0 var(--ui-module-charts),
+    0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
+.workspace-tabs__tab--patient.is-active .workspace-tabs__tab-primary {
+  color: #0f172a;
+}
+
+.workspace-tabs__tab--patient.is-active .workspace-tabs__tab-secondary {
+  color: #334155;
 }
 
 .workspace-tabs__tab--reception {

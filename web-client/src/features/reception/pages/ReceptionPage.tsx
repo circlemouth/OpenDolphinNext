@@ -94,9 +94,8 @@ import {
 import { findOrcaClaimSendEntryForMatch, loadOrcaClaimSendCache } from '../../charts/orcaClaimSendCache';
 import { postMedicalRecords, type MedicalRecordEntry } from '../../administration/orcaInternalWrapperApi';
 import {
-  searchLocalPatients,
+  refetchOfficialCanonicalPatients,
   verifyOfficialPatientExactExistence,
-  type LocalPatientSearchParams,
   type PatientListResponse,
   type PatientRecord,
 } from '../../patients/api';
@@ -163,6 +162,75 @@ const ORCA_QUEUE_REFRESH_INTERVAL_MS = 60_000;
 const ORCA_QUEUE_QUERY_KEY = ['orca-queue'] as const;
 const PATIENT_SEARCH_PAGE_SIZE = 50;
 const STATUS_TAB_ORDER = SECTION_ORDER;
+
+type ReceptionPatientSearchFilters = {
+  patientId: string;
+  nameSei: string;
+  nameMei: string;
+  kanaSei: string;
+  kanaMei: string;
+};
+
+const toPatientRecordFromMaster = (patient: PatientMasterRecord): PatientRecord => ({
+  patientId: patient.patientId,
+  name: patient.name,
+  kana: patient.kana,
+  birthDate: patient.birthDate,
+  sex: patient.sex,
+  insurance: (patient.insuranceCount ?? 0) > 0 || (patient.publicInsuranceCount ?? 0) > 0 ? 'insurance' : undefined,
+});
+
+const mergeOfficialPatientIntoEntry = (entry: ReceptionEntry, patient?: PatientRecord): ReceptionEntry => {
+  if (!patient) return entry;
+  return {
+    ...entry,
+    name: patient.name?.trim() || entry.name,
+    kana: patient.kana?.trim() || entry.kana,
+    birthDate: patient.birthDate?.trim() || entry.birthDate,
+    sex: patient.sex?.trim() || entry.sex,
+  };
+};
+
+const searchOfficialReceptionPatients = async (filters: ReceptionPatientSearchFilters, runId?: string): Promise<PatientListResponse> => {
+  const patientId = filters.patientId.trim();
+  if (patientId) {
+    const result = await refetchOfficialCanonicalPatients({ patientIds: [patientId], runId });
+    return {
+      patients: result.patients,
+      runId,
+      routeNamespace: 'official',
+      apiResult: result.apiResult,
+      apiResultMessage: result.apiResultMessage,
+      recordsReturned: result.patients.length,
+      status: result.status,
+      missingTags: result.missingPatientIds,
+      dataSourceTransition: result.ok ? 'server' : 'fallback',
+    };
+  }
+
+  const fullName = `${filters.nameSei.trim()} ${filters.nameMei.trim()}`.trim();
+  const fullKana = `${filters.kanaSei.trim()} ${filters.kanaMei.trim()}`.trim();
+  const result = await fetchPatientMasterSearch({ name: fullName, kana: fullKana });
+  return {
+    patients: result.patients.map(toPatientRecordFromMaster),
+    runId: result.runId ?? runId,
+    traceId: result.traceId,
+    requestId: result.requestId,
+    routeNamespace: 'official',
+    apiResult: result.apiResult,
+    apiResultMessage: result.apiResultMessage,
+    cacheHit: result.cacheHit,
+    missingMaster: result.missingMaster,
+    dataSourceTransition: result.dataSourceTransition,
+    fallbackUsed: result.fallbackUsed,
+    fetchedAt: result.fetchedAt,
+    recordsReturned: result.recordsReturned ?? result.patients.length,
+    sourcePath: result.sourcePath,
+    status: result.status,
+    error: result.error,
+    raw: result.raw,
+  };
+};
 
 const pad2 = (value: number) => value.toString().padStart(2, '0');
 const formatLocalYmd = (date: Date) =>
@@ -990,17 +1058,13 @@ export function ReceptionPage({
   const [patientSearchError, setPatientSearchError] = useState<string | null>(null);
   const [patientSearchSelected, setPatientSearchSelected] = useState<PatientRecord | null>(null);
   const [patientSearchPage, setPatientSearchPage] = useState(1);
+  const [officialPatientById, setOfficialPatientById] = useState<Record<string, PatientRecord>>({});
+  const officialPatientHydrationAttemptedRef = useRef<Set<string>>(new Set());
   const patientSearchPatientIdDirtyRef = useRef(false);
   const [acceptOfficialReadinessByPatientId, setAcceptOfficialReadinessByPatientId] = useState<
     Record<string, AcceptOfficialReadinessProbe>
   >({});
-  const patientSearchFilterRef = useRef<{
-    patientId: string;
-    nameSei: string;
-    nameMei: string;
-    kanaSei: string;
-    kanaMei: string;
-  } | null>(null);
+  const patientSearchFilterRef = useRef<ReceptionPatientSearchFilters | null>(null);
 
   const lastAcceptAutoFill = useRef<{
     patientId?: string;
@@ -1041,7 +1105,7 @@ export function ReceptionPage({
   const storageScopeRef = useRef(storageScope);
 
   const isSystemAdmin = isSystemAdminRole(session.role);
-  const debugUiEnabled = (import.meta.env.DEV && searchParams.get('debug') === '1') || isSystemAdmin;
+  const debugUiEnabled = import.meta.env.VITE_ENABLE_DEBUG_UI === '1' && (isSystemAdmin || (import.meta.env.DEV && searchParams.get('debug') === '1'));
 
   const [statusListLayout, setStatusListLayout] = useState<StatusListLayout>(() => {
     const fromQuery = searchParams.get('receptionList');
@@ -1290,9 +1354,9 @@ export function ReceptionPage({
   const patientSearchMutation = useMutation<
     PatientListResponse,
     Error,
-    { keyword: string; searchType?: LocalPatientSearchParams['searchType'] }
+    ReceptionPatientSearchFilters
   >({
-    mutationFn: (params) => searchLocalPatients({ keyword: params.keyword, searchType: params.searchType }),
+    mutationFn: (params) => searchOfficialReceptionPatients(params, mergedMeta.runId ?? flags.runId),
     onSuccess: (result) => {
       const normalizeToken = (value: string) => value.replace(/\s+/g, '').trim();
       const filters = patientSearchFilterRef.current;
@@ -1318,6 +1382,16 @@ export function ReceptionPage({
             })
           : basePatients;
 
+      setOfficialPatientById((previous) => {
+        const next = { ...previous };
+        for (const patient of filteredPatients) {
+          const patientId = patient.patientId?.trim();
+          if (patientId) {
+            next[patientId] = { ...next[patientId], ...patient };
+          }
+        }
+        return next;
+      });
       setPatientSearchResults(filteredPatients);
       setPatientSearchMeta({
         ...result,
@@ -1388,29 +1462,32 @@ export function ReceptionPage({
           nextEntriesSnapshot = baseEntries;
           return base;
         }
-        createdEntryKey = entryKey(nextEntry);
+        const nextPatientId = nextEntry.patientId?.trim() || params.patientId?.trim();
+        const resolvedNextEntry = mergeOfficialPatientIntoEntry(nextEntry, nextPatientId ? officialPatientById[nextPatientId] : undefined);
+        createdEntryKey = entryKey(resolvedNextEntry);
         const deduped = baseEntries.filter((entry) => {
-          if (entry.encounterKey && nextEntry.encounterKey && entry.encounterKey === nextEntry.encounterKey) return false;
-          if (entry.scheduleKey && nextEntry.scheduleKey && entry.scheduleKey === nextEntry.scheduleKey) return false;
-          if (entry.receptionId && nextEntry.receptionId && entry.receptionId === nextEntry.receptionId) return false;
-          if (entry.id && nextEntry.id && entry.id === nextEntry.id) return false;
-          const samePatient = entry.patientId?.trim() && nextEntry.patientId?.trim() && entry.patientId.trim() === nextEntry.patientId.trim();
+          if (entry.encounterKey && resolvedNextEntry.encounterKey && entry.encounterKey === resolvedNextEntry.encounterKey) return false;
+          if (entry.scheduleKey && resolvedNextEntry.scheduleKey && entry.scheduleKey === resolvedNextEntry.scheduleKey) return false;
+          if (entry.receptionId && resolvedNextEntry.receptionId && entry.receptionId === resolvedNextEntry.receptionId) return false;
+          if (entry.id && resolvedNextEntry.id && entry.id === resolvedNextEntry.id) return false;
+          const samePatient =
+            entry.patientId?.trim() && resolvedNextEntry.patientId?.trim() && entry.patientId.trim() === resolvedNextEntry.patientId.trim();
           const departmentMatches =
-            !entry.departmentCode || !nextEntry.departmentCode || entry.departmentCode === nextEntry.departmentCode;
+            !entry.departmentCode || !resolvedNextEntry.departmentCode || entry.departmentCode === resolvedNextEntry.departmentCode;
           const physicianMatches =
-            !entry.physicianCode || !nextEntry.physicianCode || entry.physicianCode === nextEntry.physicianCode;
+            !entry.physicianCode || !resolvedNextEntry.physicianCode || entry.physicianCode === resolvedNextEntry.physicianCode;
           const reservationWasAccepted =
             params.requestNumber === '01' &&
-            Boolean(nextEntry.receptionId) &&
+            Boolean(resolvedNextEntry.receptionId) &&
             Boolean(samePatient) &&
             entry.status === '予約' &&
             departmentMatches &&
             physicianMatches &&
-            (!entry.receptionId || entry.receptionId === nextEntry.receptionId);
+            (!entry.receptionId || entry.receptionId === resolvedNextEntry.receptionId);
           if (reservationWasAccepted) return false;
           return true;
         });
-        const nextEntries = [nextEntry, ...deduped];
+        const nextEntries = [resolvedNextEntry, ...deduped];
         nextEntriesSnapshot = nextEntries;
         return {
           ...base,
@@ -1443,7 +1520,7 @@ export function ReceptionPage({
         setSelectedEntryKey(createdEntryKey);
       }
     },
-    [appointmentQueryKey, queryClient],
+    [appointmentQueryKey, officialPatientById, queryClient],
   );
 
   const intent = searchParams.get('intent') as 'appointment_change' | 'appointment_cancel' | null;
@@ -1704,9 +1781,44 @@ export function ReceptionPage({
     normalizedLiveEntries.length,
   ]);
   const appointmentEntries = effectiveDailyEntriesState.entries;
+  useEffect(() => {
+    const patientIds = Array.from(
+      new Set(
+        appointmentEntries
+          .map((entry) => entry.patientId?.trim() ?? '')
+          .filter((patientId) => patientId && !officialPatientById[patientId] && !officialPatientHydrationAttemptedRef.current.has(patientId)),
+      ),
+    ).slice(0, 50);
+    if (patientIds.length === 0) return;
+    patientIds.forEach((patientId) => officialPatientHydrationAttemptedRef.current.add(patientId));
+    let cancelled = false;
+    refetchOfficialCanonicalPatients({ patientIds, runId: mergedMeta.runId ?? flags.runId })
+      .then((result) => {
+        if (cancelled || result.patients.length === 0) return;
+        setOfficialPatientById((previous) => {
+          const next = { ...previous };
+          result.patients.forEach((patient) => {
+            const patientId = patient.patientId?.trim();
+            if (!patientId) return;
+            next[patientId] = { ...next[patientId], ...patient };
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        patientIds.forEach((patientId) => officialPatientHydrationAttemptedRef.current.delete(patientId));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [appointmentEntries, flags.runId, mergedMeta.runId, officialPatientById]);
   const visibleAppointmentEntries = useMemo(
-    () => appointmentEntries,
-    [appointmentEntries],
+    () =>
+      appointmentEntries.map((entry) => {
+        const patientId = entry.patientId?.trim();
+        return patientId ? mergeOfficialPatientIntoEntry(entry, officialPatientById[patientId]) : entry;
+      }),
+    [appointmentEntries, officialPatientById],
   );
   useEffect(() => {
     if (!acceptWorkflowModalOpen) return;
@@ -1745,9 +1857,11 @@ export function ReceptionPage({
           (record.departmentCode as string | undefined) ??
           (record.Department_Code as string | undefined) ??
           (record.department_code as string | undefined);
-        const normalizedCode = code?.trim();
+        const normalizedCode = normalizeCanonicalCode(code);
         if (!normalizedCode) return;
-        map.set(normalizedCode, resolveEntryDisplayLabel(normalizedCode, name));
+        const label = resolveEntryDisplayLabel(normalizedCode, name);
+        if (label === normalizedCode && map.has(normalizedCode)) return;
+        map.set(normalizedCode, label);
       });
     };
     const rawRecord = raw as Record<string, unknown>;
@@ -2464,7 +2578,6 @@ export function ReceptionPage({
     (entry: ReceptionEntry | undefined, options?: { force?: boolean }) => {
       if (!entry) return;
       const nextPatientId = entry.patientId?.trim() ?? '';
-      const nextPaymentMode = resolvePaymentMode(entry.insurance ?? undefined);
       const nextDepartmentCode = resolveReceptionEntryDepartmentCode(entry);
       const nextPhysicianCode = resolveReceptionEntryPhysicianCode(entry);
       const nextVisitKind = acceptVisitKind.trim() ? acceptVisitKind : '1';
@@ -2482,14 +2595,6 @@ export function ReceptionPage({
       } else if (shouldUpdate(acceptPatientId, nextPatientId, lastAcceptAutoFill.current.patientId)) {
         setAcceptPatientId(nextPatientId);
         setPatientSearchPatientId(nextPatientId);
-        updated = true;
-      }
-      if (
-        nextPaymentMode &&
-        nextPaymentMode !== 'all' &&
-        shouldUpdate(acceptPaymentMode, nextPaymentMode, lastAcceptAutoFill.current.paymentMode)
-      ) {
-        setAcceptPaymentMode(nextPaymentMode);
         updated = true;
       }
       if (!acceptVisitKind.trim() && nextVisitKind) {
@@ -2511,16 +2616,13 @@ export function ReceptionPage({
       if (updated) {
         lastAcceptAutoFill.current = {
           patientId: nextPatientId || lastAcceptAutoFill.current.patientId,
-          paymentMode: (nextPaymentMode && nextPaymentMode !== 'all'
-            ? nextPaymentMode
-            : lastAcceptAutoFill.current.paymentMode) as 'insurance' | 'self' | '',
+          paymentMode: lastAcceptAutoFill.current.paymentMode,
           departmentCode: nextDepartmentSelection || lastAcceptAutoFill.current.departmentCode,
           physicianCode: nextPhysicianSelection || lastAcceptAutoFill.current.physicianCode,
         };
         setAcceptErrors((prev) => {
           const next = { ...prev };
           if (nextPatientId) delete next.patientId;
-          if (nextPaymentMode) delete next.paymentMode;
           if (nextDepartmentSelection) delete next.department;
           if (nextPhysicianSelection) delete next.physician;
           return next;
@@ -2530,7 +2632,6 @@ export function ReceptionPage({
     [
       acceptDepartmentSelection,
       acceptPatientId,
-      acceptPaymentMode,
       acceptPhysicianSelection,
       acceptVisitKind,
     ],
@@ -2967,11 +3068,8 @@ export function ReceptionPage({
           ? `${manualPatientId}:${selectedPatientId}`
           : null;
       const mismatchNotConfirmed = Boolean(manualMismatchKey && manualAcceptConfirmedKey !== manualMismatchKey);
-      const resolvedPaymentMode = acceptPaymentMode || 'insurance';
+      const resolvedPaymentMode = acceptPaymentMode;
       const resolvedVisitKind = acceptVisitKind.trim() || '1';
-      if (!acceptPaymentMode) {
-        setAcceptPaymentMode(resolvedPaymentMode);
-      }
       if (!acceptVisitKind.trim()) {
         setAcceptVisitKind(resolvedVisitKind);
       }
@@ -3345,10 +3443,7 @@ export function ReceptionPage({
       setPatientSearchSelected(null);
       setAcceptPatientId('');
       setAcceptWorkflowModalOpen(true);
-      await patientSearchMutation.mutateAsync({
-        keyword: primaryKeyword,
-        searchType: filters.patientId ? 'patient-id' : undefined,
-      });
+      await patientSearchMutation.mutateAsync(filters);
       logUiState({
         action: 'patient_search',
         screen: 'reception',
@@ -3449,6 +3544,7 @@ export function ReceptionPage({
       patientSearchPatientIdDirtyRef.current = false;
       const resolvedPatientId = nextPatientId;
       if (resolvedPatientId) {
+        setOfficialPatientById((previous) => ({ ...previous, [resolvedPatientId]: { ...previous[resolvedPatientId], ...patient } }));
         setAcceptPatientId(resolvedPatientId);
         setPatientSearchPatientId(resolvedPatientId);
         lastAcceptAutoFill.current = { ...lastAcceptAutoFill.current, patientId: resolvedPatientId };
@@ -3462,17 +3558,6 @@ export function ReceptionPage({
           setSelectedEntryKey(null);
         }
         verifyAcceptPatientOfficialReadiness(resolvedPatientId);
-      }
-      const resolvedPaymentMode = resolvePaymentMode(patient.insurance ?? undefined);
-      if (resolvedPaymentMode && resolvedPaymentMode !== 'all') {
-        const shouldAutoFill =
-          !acceptPaymentMode.trim() ||
-          (lastAcceptAutoFill.current.paymentMode && acceptPaymentMode === lastAcceptAutoFill.current.paymentMode);
-        if (shouldAutoFill) {
-          setAcceptPaymentMode(resolvedPaymentMode);
-          lastAcceptAutoFill.current = { ...lastAcceptAutoFill.current, paymentMode: resolvedPaymentMode };
-          setAcceptErrors((prev) => ({ ...prev, paymentMode: undefined }));
-        }
       }
       if (!acceptVisitKind.trim()) {
         setAcceptVisitKind('1');
@@ -3490,7 +3575,6 @@ export function ReceptionPage({
       });
     },
     [
-      acceptPaymentMode,
       acceptVisitKind,
       acceptedChartsHandoff?.encounter.patientId,
       flags.runId,
@@ -3699,16 +3783,16 @@ export function ReceptionPage({
       setMasterSelected(patient);
       const resolvedPatientId = patient.patientId?.trim() ?? '';
       if (resolvedPatientId) {
+        setOfficialPatientById((previous) => ({
+          ...previous,
+          [resolvedPatientId]: { ...previous[resolvedPatientId], ...toPatientRecordFromMaster(patient) },
+        }));
         setAcceptPatientId(resolvedPatientId);
         lastAcceptAutoFill.current = {
           ...lastAcceptAutoFill.current,
           patientId: resolvedPatientId,
         };
         setAcceptErrors((prev) => ({ ...prev, patientId: undefined }));
-      }
-      if (!acceptPaymentMode) {
-        const hasInsurance = (patient.insuranceCount ?? 0) > 0 || (patient.publicInsuranceCount ?? 0) > 0;
-        setAcceptPaymentMode(hasInsurance ? 'insurance' : 'self');
       }
       if (!acceptVisitKind.trim()) {
         setAcceptVisitKind('1');
@@ -3724,7 +3808,7 @@ export function ReceptionPage({
         },
       });
     },
-    [acceptPaymentMode, acceptVisitKind, flags.runId, mergedMeta.runId],
+    [acceptVisitKind, flags.runId, mergedMeta.runId],
   );
 
   useEffect(() => {
@@ -3736,15 +3820,10 @@ export function ReceptionPage({
         patientId: masterSelected.patientId,
       };
     }
-    if (!acceptPaymentMode) {
-      const hasInsurance =
-        (masterSelected.insuranceCount ?? 0) > 0 || (masterSelected.publicInsuranceCount ?? 0) > 0;
-      setAcceptPaymentMode(hasInsurance ? 'insurance' : 'self');
-    }
     if (!acceptVisitKind.trim()) {
       setAcceptVisitKind('1');
     }
-  }, [acceptPatientId, acceptPaymentMode, acceptVisitKind, masterSelected]);
+  }, [acceptPatientId, acceptVisitKind, masterSelected]);
 
   const handleSearchSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -4329,16 +4408,12 @@ export function ReceptionPage({
           setAcceptPatientId(resolvedPatientId);
           lastAcceptAutoFill.current = { ...lastAcceptAutoFill.current, patientId: resolvedPatientId };
         }
-        if (!acceptPaymentMode) {
-          const hasInsurance = resolvePaymentMode(entry.insurance ?? undefined) ?? 'self';
-          setAcceptPaymentMode(hasInsurance === 'self' ? 'self' : 'insurance');
-        }
         if (!acceptVisitKind.trim()) {
           setAcceptVisitKind('1');
         }
       }
     },
-    [acceptPaymentMode, acceptVisitKind, acceptWorkflowModalOpen],
+    [acceptVisitKind, acceptWorkflowModalOpen],
   );
 
   const renderAcceptDetailPanel = (placement: 'sidepane' | 'modal') => {
@@ -4477,7 +4552,7 @@ export function ReceptionPage({
                 onChange={(event) => setAcceptPaymentMode(event.target.value as 'insurance' | 'self' | '')}
                 aria-invalid={Boolean(acceptErrors.paymentMode)}
               >
-                <option value="">自動（既定: 保険）</option>
+                <option value="" disabled>選択してください</option>
                 <option value="insurance">保険</option>
                 <option value="self">自費</option>
               </select>
@@ -4653,6 +4728,19 @@ export function ReceptionPage({
     </div>
   );
 
+  const acceptWorkflowAction = (
+    <button
+      type="button"
+      className="reception-search__button primary reception-status-tabs__accept-action"
+      onClick={toggleAcceptWorkflowModal}
+      aria-expanded={acceptWorkflowModalOpen}
+      data-test-id="reception-open-accept-workflow"
+    >
+      <ClinicalIcon icon="patient-search-existing" />
+      既存患者受付/患者検索
+    </button>
+  );
+
   const receptionStatusTabs = (
     <div className="reception-status-tabs reception-status-tabs--section" role="region" aria-label="ステータスタブ">
       <div className="reception-status-tabs__list" role="tablist" aria-label="受付ステータス">
@@ -4679,6 +4767,7 @@ export function ReceptionPage({
             </button>
           );
         })}
+        {acceptWorkflowAction}
       </div>
       {receptionLayoutActions}
     </div>
@@ -4778,7 +4867,7 @@ export function ReceptionPage({
             </div>
             <div className="reception-toolbar__cluster reception-toolbar__cluster--search" role="group" aria-label="患者検索">
               <label className="reception-toolbar__keyword-label" htmlFor="reception-search-keyword">
-                患者検索
+                受付患者検索
               </label>
               <div className="reception-toolbar__keyword-control">
                 <input
@@ -4793,6 +4882,15 @@ export function ReceptionPage({
                 <button type="submit" className="reception-search__button primary reception-toolbar__keyword-submit">
                   検索
                 </button>
+                <button
+                  type="button"
+                  className="reception-search__button ghost reception-toolbar__advanced-toggle"
+                  onClick={() => setFiltersCollapsed((prev) => !prev)}
+                  aria-expanded={!filtersCollapsed}
+                  aria-controls="reception-toolbar-advanced"
+                >
+                  詳細条件
+                </button>
               </div>
             </div>
             {receptionErrorIndicator && !sessionStatusSlot ? (
@@ -4800,27 +4898,6 @@ export function ReceptionPage({
                 {receptionErrorIndicator}
               </div>
             ) : null}
-            <div className="reception-toolbar__disclosure-actions" role="group" aria-label="補助操作">
-              <button
-                type="button"
-                className="reception-search__button primary"
-                onClick={toggleAcceptWorkflowModal}
-                aria-expanded={acceptWorkflowModalOpen}
-                data-test-id="reception-open-accept-workflow"
-              >
-                <ClinicalIcon icon="patient-search-existing" />
-                既存患者受付/患者検索
-              </button>
-              <button
-                type="button"
-                className="reception-search__button ghost"
-                onClick={() => setFiltersCollapsed((prev) => !prev)}
-                aria-expanded={!filtersCollapsed}
-                aria-controls="reception-toolbar-advanced"
-              >
-                詳細条件
-              </button>
-            </div>
           </form>
           {debugUiEnabled ? (
             <details className="reception-page__meta-details" data-test-id="reception-meta-details">

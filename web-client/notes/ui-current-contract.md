@@ -119,10 +119,15 @@
 - unknown: pane geometry、最小 state schema
 
 ## Reception Surface
+### Debug Diagnostics
+- Reception diagnostic panels (official master search panel, order console, and audit history panel) are debug-only surfaces. They must stay hidden unless `VITE_ENABLE_DEBUG_UI=1` is set and the viewer is either system_admin or using the development `?debug=1` route.
+
 ### Current Fact
+- `ChartsPatientSummaryBar` は患者に紐づく識別子を ORCA 患者IDに集約し、受付ID / 予約IDは上部サマリーに表示しません。性別・年齢は受付と同じ患者アイコンと compact meta に集約し、診療科 / 担当医は ORCA selector options または ORCA 由来の表示名を優先して表示します。
+- Charts の患者基本表示（氏名、カナ、生年月日、性別、年齢）は ORCA official canonical patient batch を最優先にし、local seed/fallback 患者が同じ patientId で存在しても ORCA 値を上書きしてはいけません。住所やメモなど ORCA batch に含まれない補助項目だけ local fallback を使います。
 - Reception は既存患者の受付導線です。新患登録や患者作成は current surface に含めません。
-- `既存患者受付/患者検索` モーダルの患者 picker は `/api/local/patients/search` を使います。patientId / 氏名 / カナのローカル条件で絞り込み、official `patientlst3v2` はこの導線では使いません。
-- official `patientlst3v2` + `WholeName` 必須の name-search は別の master search 導線の契約であり、accept workflow の患者 picker に混在させません。
+- `既存患者受付/患者検索` モーダルの患者 picker は ORCA official を使います。患者ID検索は `/api/orca/official/patients/batch`、氏名検索は `/api/orca/official/patients/name-search` を使い、受付導線の検索結果に `/api/local/patients/search` の seed/local 患者を混在させません。カナは official 氏名検索結果の画面内絞り込みとして扱い、カナ単独検索は受付導線では送信しません。
+- official `patientlst3v2` + `WholeName` 必須の name-search は受付 workflow の氏名検索でも使います。患者ID指定時は exact lookup を優先し、氏名検索結果に対してだけカナの画面内絞り込みを適用します。
 - `InOut` 未選択はエラーではなく「未送信」を意味します。
 - 受付登録時の `Medical_Information` は UI 選択時のみ送信し、未選択なら送信しません。
 - 担当医コード、`Acceptance_Push`、診療内容コードは client 側で補完・正規化・抑止せず、選択値または未送信をそのまま official bridge に渡します。
@@ -143,7 +148,10 @@
 - appointment/slot 行の不整合判定は旧 `appointmentId` 単独ではなく、`appointmentId` / `scheduleKey` / `encounterKey` のいずれかを予約識別子として扱います。projection 由来で ORCA 予約番号が未返却でも canonical key がある行は不整合扱いにしません。
 - visit 行の不整合判定は旧 `receptionId` 単独ではなく、`encounterKey` / `scheduleKey` / `receptionId` のいずれかを受付識別子として扱います。canonical key がある visit 行は、受付番号表示が空でも不整合扱いにしません。
 - ORCA 予約/来院 API の `slots` / `visits` に混在する診療科・医師などの selector option 行は、患者・予約・受付・時刻の業務 context を持たない場合は受付行へ変換しません。実患者行で患者 ID や canonical key が欠落している場合だけ不整合として扱います。
-- 受付日、患者検索、詳細条件、表示切替、ステータスタブは、独立した上部 toolbar ではなく active status の一覧 header に compact controls として置きます。標準表示は受付日の変更と現行範囲の患者検索（患者ID/氏名/カナ）に絞ります。受付日の変更は `受付日` label の右側に date input を置き、前後 1 日移動は date input の左右にある小さな三角矢印で行います。テキストの `前日` / `翌日` / `今日` ボタンや別個の `日次状態` カレンダーボタンは置きません。患者検索の `検索` ボタンは検索文字入力欄の右側へ置き、検索説明は別行 text ではなく input placeholder に入れます。`既存患者受付/患者検索` と `詳細条件` は受付日・患者検索と同じ compact control 行に置き、`一覧操作` の折りたたみボタンは置きません。再取得はステータスタブ行右端の `表` / `カード` 表示切替の右横に置きます。診療科/担当医、保険/自費、ソート、保存ビュー、ビュー保存/削除/クリアは同じ header 内の `詳細条件` で、`絞り込み` / `保存ビュー` / `条件操作` に分けて展開します。
+- 受付日、受付患者検索、詳細条件、表示切替、ステータスタブは、独立した上部 toolbar ではなく active status の一覧 header に compact controls として置きます。標準表示は受付日の変更と現行範囲の受付患者検索（患者ID/氏名/カナ）に絞ります。受付日の変更は `受付日` label の右側に date input を置き、前後 1 日移動は date input の左右にある小さな三角矢印で行います。テキストの `前日` / `翌日` / `今日` ボタンや別個の `日次状態` カレンダーボタンは置きません。受付患者検索の `検索` ボタンは検索文字入力欄の右側へ置き、検索説明は別行 text ではなく input placeholder に入れます。`詳細条件` は患者検索グループ内に置き、`一覧操作` の折りたたみボタンは置きません。`既存患者受付/患者検索` は下段ステータスタブ行で `会計済み` / `予約` の右側へ置きます。再取得はステータスタブ行右端の `表` / `カード` 表示切替の右横に置きます。診療科/担当医、保険/自費、ソート、保存ビュー、ビュー保存/削除/クリアは同じ header 内の `詳細条件` で、`絞り込み` / `保存ビュー` / `条件操作` に分けて展開します。
+- Reception header の受付日・患者検索・補助操作は個別カードに分けず、1 つの compact control strip 内で区切り線だけを使って統一表示します。
+- Reception header の compact control strip は親カード内で左揃えにし、`詳細条件` は患者検索グループ内、`既存患者受付/患者検索` はステータスタブ行の `会計済み` / `予約` の右側に配置します。
+- 既存患者受付の `保険/自費` は自動既定値を持たず、`保険` または `自費` の明示選択を必須にします。ORCA 公式患者検索結果や一覧行の保険情報から暗黙に `保険` を補完して受付送信してはいけません。
 - App shell の `受付` / `患者管理` タブバーと受付一覧カードの間は、受付画面本体の上余白を小さく保ち、操作できない大きな空白帯を作りません。
 - 受付一覧 header 内の `受付日` と `患者検索` の compact control は同一行では高さを揃え、片方だけが低く見える配置にしません。
 - 受付一覧の `表` / `カード` 表示切替はステータスタブ行の右端に小さく右揃えで置き、`再取得` と同じ list view 操作群として扱います。`表` / `カード` は同一 segmented switch として見せ、`再取得` は別操作と分かる控えめな補助色で表示します。
@@ -161,7 +169,7 @@
 
 ### Verification
 - test: reception accept/cancel の `Api_Result=21` を保険不一致、`Api_Result=60` を受付なしとして統一
-- test: accept workflow の patient search request が `/api/local/patients/search` を使い、current local search 条件に一致すること
+- test: accept workflow の patient search request が ORCA official patient lookup 用の form filters を保持し、患者ID検索で local seed patient を混在させないこと
 - test: visit list request が `Department_Code` を送ること
 - test: `Medical_Information` 未選択時に送信しないこと
 - test: master search 導線では `WholeName` 未入力で official patient search を送らず、`InOut` 未選択時は official payload から省くこと

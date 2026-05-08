@@ -103,6 +103,7 @@ vi.mock('../../administration/api', () => ({
 }));
 
 vi.mock('../../reception/api', () => ({
+  fetchReceptionSelectorOptions: vi.fn(async () => ({ departments: [], physicians: [] })),
   fetchClaimFlags: vi.fn(async () => {
     fetchCounters.claim += 1;
     return {

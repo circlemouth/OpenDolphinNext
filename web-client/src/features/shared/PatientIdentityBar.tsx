@@ -20,6 +20,9 @@ export interface PatientIdentityBarProps {
   actions?: ReactNode;
   supporting?: ReactNode;
   photo?: ReactNode;
+  titleTrailing?: ReactNode;
+  showMeta?: boolean;
+  showVisitSupport?: boolean;
   selected?: boolean;
   tone?: 'neutral' | 'info' | 'success' | 'warning' | 'error';
   className?: string;
@@ -47,6 +50,9 @@ export function PatientIdentityBar({
   actions,
   supporting,
   photo,
+  titleTrailing,
+  showMeta = true,
+  showVisitSupport = true,
   selected = false,
   tone = 'neutral',
   className,
@@ -74,29 +80,32 @@ export function PatientIdentityBar({
           <div className="patient-identity-bar__header">
             <div className="patient-identity-bar__headline">
               <p className="patient-identity-bar__eyebrow">{eyebrow}</p>
+              {resolvedKana ? <p className="patient-identity-bar__kana">{resolvedKana}</p> : null}
               <div className="patient-identity-bar__title-row">
                 <h2 className="patient-identity-bar__title">{resolvedTitle}</h2>
                 {resolvedPatientId ? <span className="patient-identity-bar__id">患者ID: {resolvedPatientId}</span> : null}
+                {titleTrailing ? <span className="patient-identity-bar__title-trailing">{titleTrailing}</span> : null}
               </div>
               {resolvedName && resolvedName !== resolvedTitle ? <p className="patient-identity-bar__name">{resolvedName}</p> : null}
-              {resolvedKana ? <p className="patient-identity-bar__kana">{resolvedKana}</p> : null}
             </div>
             {actions ? <div className="patient-identity-bar__actions">{actions}</div> : null}
           </div>
 
-          <PatientMetaRow
-            patientId={resolvedPatientId}
-            receptionId={normalizeValue(receptionId)}
-            appointmentId={normalizeValue(appointmentId)}
-            sex={normalizeValue(sex)}
-            age={normalizeValue(age)}
-            variant="detailed"
-            showLabels
-            separator="dot"
-            className="patient-identity-bar__meta"
-          />
+          {showMeta ? (
+            <PatientMetaRow
+              patientId={resolvedPatientId}
+              receptionId={normalizeValue(receptionId)}
+              appointmentId={normalizeValue(appointmentId)}
+              sex={normalizeValue(sex)}
+              age={normalizeValue(age)}
+              variant="detailed"
+              showLabels
+              separator="dot"
+              className="patient-identity-bar__meta"
+            />
+          ) : null}
 
-          {resolvedVisitDate || resolvedNote ? (
+          {showVisitSupport && (resolvedVisitDate || resolvedNote) ? (
             <div className="patient-identity-bar__supporting-copy">
               {resolvedVisitDate ? <span className="patient-identity-bar__supporting-item">診療日 {resolvedVisitDate}</span> : null}
               {resolvedNote ? <span className="patient-identity-bar__supporting-item">{resolvedNote}</span> : null}

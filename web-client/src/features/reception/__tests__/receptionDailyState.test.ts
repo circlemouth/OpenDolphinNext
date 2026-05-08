@@ -105,6 +105,8 @@ describe('receptionDailyState', () => {
     expect(restored.source).toBe('snapshot');
     expect(restored.entries).toHaveLength(1);
     expect(restored.entries[0]?.patientId).toBe('P-001');
+    expect(restored.entries[0]?.name).toBe('山田太郎');
+    expect(restored.entries[0]?.department).toBe('内科');
     expect(sessionStorage.getItem(scopedStorageKey)).toBeNull();
     expect(localStorage.getItem(legacyStorageKey)).toBeNull();
   });

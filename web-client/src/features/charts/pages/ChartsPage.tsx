@@ -31,8 +31,15 @@ import { ImageDockedPanel } from '../../images/components';
 import { type KarteImageListItem } from '../../images/api';
 import type { ChartImageAttachment } from '../documentImageAttach';
 import { receptionStyles } from '../../reception/styles';
-import { fetchAppointmentOutpatients, fetchClaimFlags, type AppointmentPayload, type ReceptionEntry } from '../../reception/api';
-import { searchLocalPatients, type PatientRecord } from '../../patients/api';
+import {
+  fetchAppointmentOutpatients,
+  fetchClaimFlags,
+  fetchReceptionSelectorOptions,
+  type AppointmentPayload,
+  type ReceptionEntry,
+  type ReceptionSelectorOption,
+} from '../../reception/api';
+import { refetchOfficialCanonicalPatients, searchLocalPatients, type PatientRecord } from '../../patients/api';
 import { getAuditEventLog, logAuditEvent, logUiState, type AuditEventRecord } from '../../../libs/audit/auditLogger';
 import { buildUnavailableMedicalSummary, fetchChartsMedicalSummary } from '../api';
 import { openChartEncounter } from '../encounterTransitionApi';
@@ -130,6 +137,30 @@ const parseDate = (value?: string): Date | null => {
 
 const formatLocalDateYmd = (date: Date): string =>
   `${date.getFullYear().toString().padStart(4, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+const normalizeMasterDisplayValue = (value?: string | null): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed && trimmed !== '—' ? trimmed : undefined;
+};
+
+const isCodeLikeDisplay = (value?: string | null): boolean => {
+  const normalized = normalizeMasterDisplayValue(value);
+  return Boolean(normalized && /^[0-9A-Za-z_-]+$/.test(normalized));
+};
+
+const resolveSelectorDisplayName = (
+  rawValue: string | undefined,
+  code: string | undefined,
+  options: ReceptionSelectorOption[] | undefined,
+): string | undefined => {
+  const normalizedRaw = normalizeMasterDisplayValue(rawValue);
+  const normalizedCode = normalizeMasterDisplayValue(code);
+  const option = options?.find((item) => item.code === normalizedCode || item.code === normalizedRaw);
+  if (option?.name && option.name !== option.code) return option.name;
+  if (normalizedRaw && normalizedRaw !== normalizedCode && !isCodeLikeDisplay(normalizedRaw)) return normalizedRaw;
+  return normalizedRaw ?? normalizedCode;
+};
 
 const formatAge = (birthDate?: string, baseDate: Date = new Date()): string => {
   const birth = parseDate(birthDate);
@@ -1787,6 +1818,14 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     },
   });
 
+  const selectorOptionsQuery = useQuery({
+    queryKey: ['reception-selector-options'],
+    queryFn: fetchReceptionSelectorOptions,
+    enabled: hasEncounterHandoffKey,
+    staleTime: 300_000,
+    refetchOnWindowFocus: false,
+  });
+
   const orcaQueueQueryKey = ['orca-queue', isSystemAdmin ? 'system-admin' : 'non-admin'] as const;
   const orcaQueueQuery = useQuery({
     queryKey: orcaQueueQueryKey,
@@ -2220,6 +2259,18 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     retry: 1,
   });
   const fallbackPatient: PatientRecord | null = patientFallbackQuery.data ?? null;
+  const officialPatientQuery = useQuery({
+    queryKey: ['charts-official-canonical-patient', patientId, flags.runId],
+    queryFn: async () => {
+      if (!patientId) return null;
+      const result = await refetchOfficialCanonicalPatients({ patientIds: [patientId], runId: flags.runId });
+      return result.patients.find((patient) => (patient.patientId ?? '').trim() === patientId) ?? null;
+    },
+    enabled: hasEncounterHandoffKey && Boolean(patientId),
+    staleTime: 60_000,
+    retry: 1,
+  });
+  const officialPatient: PatientRecord | null = officialPatientQuery.data ?? null;
 
   const karteIdQuery = useQuery({
     queryKey: ['charts-karte-id', patientId],
@@ -2563,28 +2614,41 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
 
   const patientDisplay = useMemo(() => {
     const baseDate = parseDate(actionVisitDate) ?? new Date();
-    const birthDateRaw = selectedEntry?.birthDate ?? fallbackPatient?.birthDate;
+    const birthDateRaw = officialPatient?.birthDate ?? selectedEntry?.birthDate ?? fallbackPatient?.birthDate;
     const birthDateParts = formatBirthDateParts(birthDateRaw);
     const resolvedName =
+      officialPatient?.name ??
       selectedEntry?.name ??
       fallbackPatient?.name ??
       (patientId ? `患者ID:${patientId}` : '患者未選択');
+    const resolvedDepartment =
+      resolveSelectorDisplayName(
+        selectedEntry?.department,
+        selectedEntry?.departmentCode ?? encounterContext.departmentCode,
+        selectorOptionsQuery.data?.departments,
+      ) ?? '—';
+    const resolvedPhysician =
+      resolveSelectorDisplayName(
+        selectedEntry?.physician,
+        selectedEntry?.physicianCode ?? encounterContext.physicianCode,
+        selectorOptionsQuery.data?.physicians,
+      ) ?? '—';
     return {
       patientId: patientId ?? '—',
       receptionId: receptionId ?? '—',
       appointmentId: appointmentId ?? '—',
       name: resolvedName,
-      kana: selectedEntry?.kana ?? fallbackPatient?.kana ?? '—',
+      kana: officialPatient?.kana ?? selectedEntry?.kana ?? fallbackPatient?.kana ?? '—',
       birthDate: birthDateParts.display,
       birthDateIso: birthDateParts.iso,
       birthDateEra: birthDateParts.era,
       age: formatAge(birthDateRaw, baseDate),
-      sex: selectedEntry?.sex ?? fallbackPatient?.sex ?? '—',
+      sex: officialPatient?.sex ?? selectedEntry?.sex ?? fallbackPatient?.sex ?? '—',
       zip: fallbackPatient?.zip ?? '—',
       address: fallbackPatient?.address ?? '—',
       status: selectedEntry?.status ?? '—',
-      department: selectedEntry?.department ?? '—',
-      physician: selectedEntry?.physician ?? '—',
+      department: resolvedDepartment,
+      physician: resolvedPhysician,
       insurance: selectedEntry?.insurance ?? fallbackPatient?.insurance ?? '—',
       visitDate: actionVisitDate ?? '—',
       appointmentTime: selectedEntry?.appointmentTime ?? '—',
@@ -2601,19 +2665,29 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     fallbackPatient?.sex,
     fallbackPatient?.zip,
     fallbackPatient?.address,
+    officialPatient?.birthDate,
+    officialPatient?.kana,
+    officialPatient?.name,
+    officialPatient?.sex,
     patientId,
     receptionId,
+    encounterContext.departmentCode,
+    encounterContext.physicianCode,
     selectedEntry?.appointmentTime,
     selectedEntry?.birthDate,
     selectedEntry?.department,
+    selectedEntry?.departmentCode,
     selectedEntry?.insurance,
     selectedEntry?.kana,
     selectedEntry?.name,
     selectedEntry?.note,
     selectedEntry?.physician,
+    selectedEntry?.physicianCode,
     selectedEntry?.sex,
     selectedEntry?.status,
     selectedEntry?.visitDate,
+    selectorOptionsQuery.data?.departments,
+    selectorOptionsQuery.data?.physicians,
   ]);
   const soapSendSummary = useMemo(
     () => ({
@@ -2690,7 +2764,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   useEffect(() => {
     const key = patientTabKeyForContext;
     if (!key) return;
-    const nextName = (selectedEntry?.name ?? fallbackPatient?.name ?? '').trim();
+    const nextName = (officialPatient?.name ?? selectedEntry?.name ?? fallbackPatient?.name ?? '').trim();
     const nextDepartment = (selectedEntry?.department ?? '').trim();
     if (!nextName && !nextDepartment) return;
     setPatientTabsState((prev) => {
@@ -2714,7 +2788,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       );
       return { ...prev, tabs: nextTabs };
     });
-  }, [fallbackPatient?.name, patientTabKeyForContext, selectedEntry?.department, selectedEntry?.name]);
+  }, [fallbackPatient?.name, officialPatient?.name, patientTabKeyForContext, selectedEntry?.department, selectedEntry?.name]);
 
   const lockTarget = useMemo(() => {
     const patientId = selectedEntry?.patientId ?? encounterContext.patientId;
@@ -4737,8 +4811,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                       encounterStatus={selectedEntry?.status}
                       receptionId={receptionId}
                       appointmentId={appointmentId}
-                      department={selectedEntry?.department}
-                      physician={selectedEntry?.physician}
+                      department={patientDisplay.department}
+                      physician={patientDisplay.physician}
                       runId={resolvedRunId ?? flags.runId}
                       missingMaster={resolvedMissingMaster}
                       fallbackUsed={resolvedFallbackUsed}

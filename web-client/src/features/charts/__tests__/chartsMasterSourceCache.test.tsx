@@ -113,6 +113,7 @@ vi.mock('../../administration/api', () => ({
 }));
 
 vi.mock('../../reception/api', () => ({
+  fetchReceptionSelectorOptions: vi.fn(async () => ({ departments: [], physicians: [] })),
   fetchClaimFlags: vi.fn(async (_context: unknown, options?: { preferredSourceOverride?: string }) => {
     fetchCounters.claim += 1;
     return { ...buildClaimPayload(currentPolicy), preferredSourceOverride: options?.preferredSourceOverride };

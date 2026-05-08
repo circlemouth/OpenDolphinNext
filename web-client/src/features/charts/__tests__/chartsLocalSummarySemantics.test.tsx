@@ -56,6 +56,7 @@ vi.mock('../../administration/api', () => ({
 }));
 
 vi.mock('../../reception/api', () => ({
+  fetchReceptionSelectorOptions: vi.fn(async () => ({ departments: [], physicians: [] })),
   fetchClaimFlags: vi.fn(async () => ({
     runId: 'RUN-CLAIM',
     cacheHit: true,

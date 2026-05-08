@@ -17,6 +17,7 @@ public class DiseaseImportResponse {
     private String runId;
     private String patientId;
     private String baseDate;
+    private String orcaMirrorStatus;
     private List<DiseaseEntry> diseases;
     private List<String> warnings;
 
@@ -74,6 +75,14 @@ public class DiseaseImportResponse {
 
     public void setBaseDate(String baseDate) {
         this.baseDate = baseDate;
+    }
+
+    public String getOrcaMirrorStatus() {
+        return orcaMirrorStatus;
+    }
+
+    public void setOrcaMirrorStatus(String orcaMirrorStatus) {
+        this.orcaMirrorStatus = orcaMirrorStatus;
     }
 
     public List<DiseaseEntry> getDiseases() {

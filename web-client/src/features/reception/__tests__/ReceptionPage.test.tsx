@@ -86,6 +86,17 @@ const mockVerifyOfficialPatientExactExistence = vi.hoisted(() =>
     missingPatientIds: patientId !== 'LOCAL-001' ? [] : [patientId],
   })),
 );
+const mockRefetchOfficialCanonicalPatients = vi.hoisted(() =>
+  vi.fn(async ({ patientIds }: { patientIds: string[] }) => ({
+    ok: true,
+    patients: [] as Array<{ patientId?: string; name?: string; kana?: string; birthDate?: string; sex?: string }>,
+    status: 200,
+    apiResult: '00',
+    apiResultMessage: '',
+    matchedPatientIds: patientIds,
+    missingPatientIds: [],
+  })),
+);
 
 const mockAuthFlags = {
   runId: 'RUN-AUTH',
@@ -194,6 +205,7 @@ vi.mock('../../patients/api', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
+    refetchOfficialCanonicalPatients: mockRefetchOfficialCanonicalPatients,
     verifyOfficialPatientExactExistence: mockVerifyOfficialPatientExactExistence,
   };
 });
@@ -502,13 +514,18 @@ const getToolbar = () => {
 };
 
 const openAcceptWorkflowModal = async (user: ReturnType<typeof userEvent.setup>) => {
-  const toolbar = getToolbar();
-  await user.click(within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' }));
+  await user.click(screen.getByRole('button', { name: '既存患者受付/患者検索' }));
   return (await screen.findByRole('region', { name: '既存患者受付/患者検索' })) as HTMLElement;
 };
 
 const getAcceptRegisterPanel = (workflowModal: HTMLElement) =>
   within(workflowModal).getByRole('region', { name: '受付登録モーダル' });
+
+const selectInsurancePayment = async (user: ReturnType<typeof userEvent.setup>, acceptPanel: HTMLElement) => {
+  const paymentSelect = acceptPanel.querySelector('#reception-accept-payment-mode') as HTMLSelectElement | null;
+  if (!paymentSelect) throw new Error('reception-accept-payment-mode select was not found');
+  await user.selectOptions(paymentSelect, 'insurance');
+};
 
 const openRowActionMenu = async (user: ReturnType<typeof userEvent.setup>, row: HTMLElement) => {
   const trigger = within(row).getByRole('button', { name: /その他|操作を開く/ });
@@ -540,6 +557,16 @@ beforeEach(() => {
   mockInvalidateQueries.mockClear();
   mockEnqueue.mockReset();
   mockOpenCharts.mockReset();
+  mockRefetchOfficialCanonicalPatients.mockClear();
+  mockRefetchOfficialCanonicalPatients.mockImplementation(async ({ patientIds }: { patientIds: string[] }) => ({
+    ok: true,
+    patients: [],
+    status: 200,
+    apiResult: '00',
+    apiResultMessage: '',
+    matchedPatientIds: patientIds,
+    missingPatientIds: [],
+  }));
   mockVerifyOfficialPatientExactExistence.mockClear();
   mockVerifyOfficialPatientExactExistence.mockImplementation(async ({ patientId }: { patientId: string }) => ({
     ok: patientId !== 'LOCAL-001',
@@ -557,6 +584,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe('ReceptionPage accept UX', () => {
@@ -617,7 +645,7 @@ describe('ReceptionPage accept UX', () => {
     expect(within(acceptPanel).getByText('選択患者: 山田太郎')).toBeInTheDocument();
     expect(within(acceptPanel).getByRole('button', { name: '受付する' })).toBeInTheDocument();
     const paymentSelect = within(acceptPanel).getByLabelText(/保険\/自費/);
-    expect(paymentSelect).toHaveValue('insurance');
+    expect(paymentSelect).toHaveValue('');
 
     const row2 = screen.getByRole('row', { name: /佐藤花子/ });
     await user.click(row2);
@@ -676,7 +704,8 @@ describe('ReceptionPage accept UX', () => {
     expect(registerButton).toBeDisabled();
 
     const paymentSelect = within(acceptPanel).getByLabelText(/保険\/自費/);
-    expect(paymentSelect).toHaveValue('insurance');
+    expect(paymentSelect).toHaveValue('');
+    await user.selectOptions(paymentSelect, 'insurance');
     await user.selectOptions(departmentSelect, departmentSelect.options[1]?.value ?? '01');
     await user.selectOptions(physicianSelect, physicianSelect.options[1]?.value ?? '10001');
     await waitFor(() => expect(registerButton).toBeEnabled());
@@ -869,6 +898,77 @@ describe('ReceptionPage accept UX', () => {
     expect(within(row).queryByText('00001')).toBeNull();
   });
 
+  it('keeps selector department names when raw ORCA visit rows only repeat the department code', () => {
+    mockReceptionSelectorOptions = {
+      departments: [{ code: '02', name: 'Psychiatry' }],
+      physicians: [],
+    };
+    mockAppointmentData.entries = [
+      {
+        id: 'row-department-code',
+        patientId: '00004',
+        receptionId: '00004',
+        name: 'Department Code Patient',
+        appointmentTime: '14:58',
+        department: '02',
+        departmentCode: '02',
+        status: '受付中',
+        insurance: 'insurance',
+        source: 'visits',
+      },
+    ];
+    mockAppointmentData.raw = {
+      visits: [{ Department_Code: '02' }],
+    };
+
+    renderReceptionPage();
+
+    const row = screen.getByRole('row', { name: /Department Code Patient/ });
+    expect(within(row).getByText('Psychiatry')).toBeInTheDocument();
+    expect(within(row).queryByText('02')).toBeNull();
+  });
+
+  it('hydrates reception rows from ORCA canonical patient data after returning from charts', async () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-hydrate',
+        patientId: '00002',
+        receptionId: '00002',
+        name: 'Seed Patient',
+        appointmentTime: '15:35',
+        department: '02',
+        status: '受付中',
+        source: 'visits',
+      },
+    ];
+    mockRefetchOfficialCanonicalPatients.mockResolvedValueOnce({
+      ok: true,
+      patients: [
+        {
+          patientId: '00002',
+          name: '事例　一',
+          kana: 'ジレイ　イチ',
+          birthDate: '2015-01-01',
+          sex: 'M',
+        },
+      ],
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: '',
+      matchedPatientIds: ['00002'],
+      missingPatientIds: [],
+    });
+
+    renderReceptionPage();
+
+    const hydratedRow = await screen.findByRole('row', { name: /事例　一/ });
+    expect(within(hydratedRow).queryByText('Seed Patient')).toBeNull();
+    expect(mockRefetchOfficialCanonicalPatients).toHaveBeenCalledWith({
+      patientIds: ['00002'],
+      runId: 'RUN-APPOINT',
+    });
+  });
+
   it('does not present routine ORCA connectivity as a normal table column', () => {
     mockAppointmentData.entries = [
       {
@@ -1004,6 +1104,7 @@ describe('ReceptionPage accept UX', () => {
     const acceptPanel = getAcceptRegisterPanel(workflowModal);
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
+    await selectInsurancePayment(user, acceptPanel);
     await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
 
     const row = await screen.findByRole('row', { name: /予約登録患者/ });
@@ -1094,6 +1195,7 @@ describe('ReceptionPage accept UX', () => {
     const acceptPanel = getAcceptRegisterPanel(workflowModal);
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
+    await selectInsurancePayment(user, acceptPanel);
     const submitButton = within(acceptPanel).getByRole('button', { name: '受付する' });
     await user.click(submitButton);
 
@@ -1161,6 +1263,7 @@ describe('ReceptionPage accept UX', () => {
     const acceptPanel = getAcceptRegisterPanel(workflowModal);
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
+    await selectInsurancePayment(user, acceptPanel);
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療内容コード/), '02');
     await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
 
@@ -1224,6 +1327,7 @@ describe('ReceptionPage accept UX', () => {
     const acceptPanel = getAcceptRegisterPanel(workflowModal);
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
+    await selectInsurancePayment(user, acceptPanel);
     await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
 
     expect(mockMutationCalls.at(-1)).toMatchObject({
@@ -1335,6 +1439,7 @@ describe('ReceptionPage accept UX', () => {
     const acceptPanel = getAcceptRegisterPanel(workflowModal);
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
+    await selectInsurancePayment(user, acceptPanel);
     await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
 
     expect(mockMutationCalls.at(-1)).toMatchObject({
@@ -1401,6 +1506,7 @@ describe('ReceptionPage accept UX', () => {
     const acceptPanel = getAcceptRegisterPanel(workflowModal);
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
+    await selectInsurancePayment(user, acceptPanel);
     await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
 
     await waitFor(() => expect(chartsButton).toBeEnabled());
@@ -1494,6 +1600,7 @@ describe('ReceptionPage accept UX', () => {
 describe('ReceptionPage official master search', () => {
   it('requires WholeName before calling the official patient search', async () => {
     mockSessionRole = 'system_admin';
+    vi.stubEnv('VITE_ENABLE_DEBUG_UI', '1');
     const user = userEvent.setup();
     renderReceptionPage();
 
@@ -1506,6 +1613,7 @@ describe('ReceptionPage official master search', () => {
 
   it('allows master search without inOut selection and omits inOut from the official request', async () => {
     mockSessionRole = 'system_admin';
+    vi.stubEnv('VITE_ENABLE_DEBUG_UI', '1');
     mockMutationQueue.push({
       ok: true,
       apiResult: '00',
@@ -1550,7 +1658,7 @@ describe('ReceptionPage toolbar and tabs', () => {
     expect(within(toolbar).queryByRole('button', { name: '前日' })).toBeNull();
     expect(within(toolbar).queryByRole('button', { name: '翌日' })).toBeNull();
     expect(within(toolbar).queryByRole('button', { name: '今日' })).toBeNull();
-    expect(within(toolbar).getByRole('searchbox', { name: '患者検索' })).toHaveAttribute(
+    expect(within(toolbar).getByRole('searchbox', { name: '受付患者検索' })).toHaveAttribute(
       'placeholder',
       '患者ID・氏名・カナで検索できます。',
     );
@@ -1558,7 +1666,7 @@ describe('ReceptionPage toolbar and tabs', () => {
     expect(within(toolbar).getByRole('button', { name: '検索' })).toBeInTheDocument();
     expect(within(toolbar).queryByRole('button', { name: '一覧操作' })).toBeNull();
     expect(within(toolbar).getByRole('button', { name: '詳細条件' })).toHaveAttribute('aria-expanded', 'false');
-    expect(within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: '既存患者受付/患者検索' })).toHaveAttribute('aria-expanded', 'false');
     expect(within(toolbar).queryByRole('button', { name: '再取得' })).toBeNull();
     const statusTabs = screen.getByRole('region', { name: 'ステータスタブ' });
     expect(within(statusTabs).getByRole('button', { name: '再取得' })).toBeInTheDocument();
@@ -1587,7 +1695,7 @@ describe('ReceptionPage toolbar and tabs', () => {
 
     const toolbar = getToolbar();
     expect(within(toolbar).queryByRole('button', { name: '一覧操作' })).toBeNull();
-    expect(within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '既存患者受付/患者検索' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: '一覧操作' })).toBeNull();
 
     const statusTabs = screen.getByRole('region', { name: 'ステータスタブ' });
@@ -1805,6 +1913,15 @@ describe('ReceptionPage list and side pane guidance', () => {
     expect(screen.queryByTestId('reception-audit')).toBeNull();
   });
 
+  it('does not show debug panels to system_admin unless debug UI is explicitly enabled', () => {
+    mockSessionRole = 'system_admin';
+    renderReceptionPage();
+
+    expect(screen.queryByTestId('order-console')).toBeNull();
+    expect(screen.queryByTestId('reception-audit')).toBeNull();
+    expect(screen.queryByRole('region', { name: '既存患者マスタ検索' })).toBeNull();
+  });
+
   it('過去カルテモーダルは実行IDと内部状態コードを表示しない', async () => {
     mockAppointmentData.entries = [
       {
@@ -1871,7 +1988,13 @@ describe('ReceptionPage list and side pane guidance', () => {
     await user.click(form.getByRole('button', { name: '検索' }));
 
     await waitFor(() => {
-      expect(mockMutationCalls.at(-1)).toEqual({ keyword: '0000001', searchType: 'patient-id' });
+      expect(mockMutationCalls.at(-1)).toEqual({
+        patientId: '0000001',
+        nameSei: '',
+        nameMei: '',
+        kanaSei: '',
+        kanaMei: '',
+      });
     });
   });
 
@@ -1894,7 +2017,13 @@ describe('ReceptionPage list and side pane guidance', () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(mockMutationCalls.at(-1)).toEqual({ keyword: '0000001', searchType: 'patient-id' });
+      expect(mockMutationCalls.at(-1)).toEqual({
+        patientId: '0000001',
+        nameSei: '',
+        nameMei: '',
+        kanaSei: '',
+        kanaMei: '',
+      });
     });
   });
 
@@ -2068,8 +2197,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     const user = userEvent.setup();
     renderReceptionPage();
 
-    const toolbar = getToolbar();
-    const acceptButton = within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' });
+    const acceptButton = screen.getByRole('button', { name: '既存患者受付/患者検索' });
 
     const workflowModal = await openAcceptWorkflowModal(user);
     const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
@@ -2142,7 +2270,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     const user = userEvent.setup();
     renderReceptionPage();
     const toolbar = getToolbar();
-    const acceptButton = within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' });
+    const acceptButton = screen.getByRole('button', { name: '既存患者受付/患者検索' });
     const dateInput = within(toolbar).getByLabelText('受付日');
 
     expect(dateInput).toBeInTheDocument();

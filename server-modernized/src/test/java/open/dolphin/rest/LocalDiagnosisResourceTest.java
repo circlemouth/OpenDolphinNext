@@ -17,6 +17,11 @@ import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.RegisteredDiagnosisModel;
 import open.dolphin.infomodel.UserModel;
+import open.dolphin.orca.service.DiseaseProjectionService;
+import open.dolphin.orca.transport.OrcaEndpoint;
+import open.dolphin.orca.transport.OrcaTransport;
+import open.dolphin.orca.transport.OrcaTransportRequest;
+import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.UserServiceBean;
@@ -36,6 +41,7 @@ class LocalDiagnosisResourceTest {
         karteServiceBean = new StubKarteServiceBean();
         setField(resource, "karteServiceBean", karteServiceBean);
         setField(resource, "userServiceBean", new StubUserServiceBean());
+        setField(resource, "diseaseProjectionService", new DiseaseProjectionService());
         request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("F001:doctor01");
         when(request.getHeader("X-Trace-Id")).thenReturn("trace-100");
@@ -53,6 +59,53 @@ class LocalDiagnosisResourceTest {
         assertEquals(55L, diseases.get(0).get("diagnosisId"));
         assertEquals("insurance-local", diseases.get(0).get("layer"));
         assertEquals(false, diseases.get(0).get("readOnly"));
+    }
+
+    @Test
+    void getDiagnosesAddsReadOnlyOrcaMirrorAndMarksDiffWithoutTrustingClientFacility() throws Exception {
+        StubOrcaTransport transport = new StubOrcaTransport(orcaDiseaseResponse("ORCA参照病名", "I10"));
+        setField(resource, "orcaTransport", transport);
+
+        Map<String, Object> response = resource.getDiagnoses(request, "00001", null, "2026-05-08", false);
+
+        assertEquals("connected", response.get("orcaMirrorStatus"));
+        assertEquals("F001", transport.facilityId());
+        assertEquals(OrcaEndpoint.DISEASE_GET, transport.endpoint());
+        org.junit.jupiter.api.Assertions.assertTrue(transport.requestBody().contains("<Patient_ID type=\"string\">00001</Patient_ID>"));
+        org.junit.jupiter.api.Assertions.assertTrue(transport.requestBody().contains("<Base_Date type=\"string\">20260508</Base_Date>"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> diseases = (List<Map<String, Object>>) response.get("diseases");
+        assertEquals(2, diseases.size());
+        assertEquals("conflict", diseases.get(0).get("syncState"));
+        Map<String, Object> mirror = diseases.get(1);
+        assertEquals("orca-mirror", mirror.get("layer"));
+        assertEquals("ORCA参照病名", mirror.get("diagnosisName"));
+        assertEquals(true, mirror.get("readOnly"));
+        assertEquals("conflict", mirror.get("syncState"));
+    }
+
+    @Test
+    void getDiagnosesKeepsLocalDiseasesAndSanitizesMirrorFailure() throws Exception {
+        setField(resource, "orcaTransport", new FailingOrcaTransport());
+
+        Map<String, Object> response = resource.getDiagnoses(request, "00001", null, "2026-05-08", false);
+
+        assertEquals("unavailable", response.get("orcaMirrorStatus"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> diseases = (List<Map<String, Object>>) response.get("diseases");
+        assertEquals(1, diseases.size());
+        assertEquals("insurance-local", diseases.get(0).get("layer"));
+        org.junit.jupiter.api.Assertions.assertFalse(response.toString().contains("https://orca.internal.example"));
+    }
+
+    @Test
+    void getDiagnosesRejectsFacilityMismatchBeforeOrcaMirrorLookup() throws Exception {
+        setField(resource, "patientServiceBean", new RejectingPatientServiceBean());
+
+        WebApplicationException exception = assertThrows(WebApplicationException.class,
+                () -> resource.getDiagnoses(request, "00001", null, "2026-05-08", false));
+
+        assertEquals(404, exception.getResponse().getStatus());
     }
 
     @Test
@@ -268,6 +321,21 @@ class LocalDiagnosisResourceTest {
         field.set(target, value);
     }
 
+    private static String orcaDiseaseResponse(String diseaseName, String diseaseCode) {
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<xmlio2><diseasegetres>"
+                + "<Api_Result>0000</Api_Result>"
+                + "<Disease_Information type=\"array\">"
+                + "<Disease_Information_child type=\"record\">"
+                + "<Disease_Code type=\"string\">" + diseaseCode + "</Disease_Code>"
+                + "<Disease_Name type=\"string\">" + diseaseName + "</Disease_Name>"
+                + "<Disease_StartDate type=\"string\">20260501</Disease_StartDate>"
+                + "<Department_Code type=\"string\">01</Department_Code>"
+                + "</Disease_Information_child>"
+                + "</Disease_Information>"
+                + "</diseasegetres></xmlio2>";
+    }
+
     private static final class StubPatientServiceBean extends PatientServiceBean {
         @Override
         public PatientModel getPatientById(String fid, String pid) {
@@ -277,6 +345,13 @@ class LocalDiagnosisResourceTest {
             patient.setFullName("患者");
             patient.setBirthday(LocalDate.parse("1980-01-01"));
             return patient;
+        }
+    }
+
+    private static final class RejectingPatientServiceBean extends PatientServiceBean {
+        @Override
+        public PatientModel getPatientById(String fid, String pid) {
+            return null;
         }
     }
 
@@ -359,6 +434,44 @@ class LocalDiagnosisResourceTest {
             UserModel user = new UserModel();
             user.setUserId(userId);
             return user;
+        }
+    }
+
+    private static final class StubOrcaTransport implements OrcaTransport {
+        private final String body;
+        private String facilityId;
+        private OrcaEndpoint endpoint;
+        private String requestBody;
+
+        StubOrcaTransport(String body) {
+            this.body = body;
+        }
+
+        @Override
+        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
+            this.facilityId = facilityId;
+            this.endpoint = endpoint;
+            this.requestBody = request != null ? request.getBody() : null;
+            return new OrcaTransportResult(null, "POST", 200, body, "application/xml", Map.of());
+        }
+
+        String facilityId() {
+            return facilityId;
+        }
+
+        OrcaEndpoint endpoint() {
+            return endpoint;
+        }
+
+        String requestBody() {
+            return requestBody;
+        }
+    }
+
+    private static final class FailingOrcaTransport implements OrcaTransport {
+        @Override
+        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
+            throw new RuntimeException("https://orca.internal.example/basic-secret");
         }
     }
 }

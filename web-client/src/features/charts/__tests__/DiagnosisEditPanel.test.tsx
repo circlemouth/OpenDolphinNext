@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { DiagnosisEditPanel } from '../DiagnosisEditPanel';
+import { DiagnosisEditPanel, type DiagnosisEditPanelMeta } from '../DiagnosisEditPanel';
 import { fetchDiseases, mutateDiseases, searchDiseaseMasterCandidates } from '../diseaseApi';
 
 vi.mock('../diseaseApi', async () => {
@@ -26,7 +26,7 @@ vi.mock('../../../libs/telemetry/telemetryClient', () => ({
   recordOutpatientFunnel: vi.fn(),
 }));
 
-const renderPanel = () => {
+const renderPanel = (metaOverride: Partial<DiagnosisEditPanelMeta> = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -47,6 +47,7 @@ const renderPanel = () => {
           missingMaster: false,
           fallbackUsed: false,
           dataSourceTransition: 'server',
+          ...metaOverride,
         }}
       />
     </QueryClientProvider>,
@@ -59,6 +60,7 @@ beforeEach(() => {
     ok: true,
     patientId: 'P-TEST-001',
     karteId: 1001,
+    orcaMirrorStatus: 'connected',
     diseases: [
       {
         diagnosisId: 1,
@@ -107,7 +109,7 @@ describe('DiagnosisEditPanel quick add candidates', () => {
     expect(screen.getByText('ORCA mirror')).toBeInTheDocument();
     expect(screen.getByText('候補')).toBeInTheDocument();
     expect(await screen.findByText('保険病名の確認が必要です')).toBeInTheDocument();
-    expect(screen.getByText('clinical source が未実装のため、この画面では保険病名だけを扱います。')).toBeInTheDocument();
+    expect(screen.getByText('外部の臨床病名ソースは未接続です。ここでは院内の保険病名を登録・編集し、候補は確認後に反映します。')).toBeInTheDocument();
     expect(await screen.findByText('ORCA側と差分があります')).toBeInTheDocument();
     expect(await screen.findByText('高血圧症')).toBeInTheDocument();
 

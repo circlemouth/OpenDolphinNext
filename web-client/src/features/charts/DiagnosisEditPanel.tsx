@@ -9,6 +9,7 @@ import {
   DISEASE_CANDIDATE_CONFIRM_NOTE,
   DISEASE_CLINICAL_UNAVAILABLE_NOTE,
   DISEASE_CONFLICT_NOTE,
+  DISEASE_MIRROR_EMPTY_NOTE,
   DISEASE_OUTCOME_PRESETS,
   DISEASE_MANUAL_RESOLUTION_NOTE,
   DISEASE_MIRROR_UNAVAILABLE_NOTE,
@@ -200,12 +201,12 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     [meta],
   );
 
-  const queryKey = ['charts-diagnosis', patientId];
+  const queryKey = ['charts-diagnosis', patientId, meta.visitDate];
   const diagnosisQuery = useQuery({
     queryKey,
     queryFn: () => {
       if (!patientId) throw new Error('patientId is required');
-      return fetchDiseases({ patientId });
+      return fetchDiseases({ patientId, to: meta.visitDate });
     },
     enabled: !!patientId,
   });
@@ -507,6 +508,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     [list],
   );
   const mirrorList = useMemo(() => list.filter((entry) => resolveDiseaseLayer(entry) === 'orca-mirror'), [list]);
+  const isMirrorConnected = diagnosisQuery.data?.orcaMirrorStatus === 'connected';
   const activeList = useMemo(() => insuranceList.filter((entry) => !entry.endDate), [insuranceList]);
   const endedList = useMemo(() => insuranceList.filter((entry) => Boolean(entry.endDate)), [insuranceList]);
   const panelNotes = useMemo(() => {
@@ -742,7 +744,9 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
           <span className="charts-side-panel__help">参照専用。保険病名へ自動反映しません。</span>
         </div>
         {mirrorList.length === 0 ? (
-          <p className="charts-side-panel__empty">{DISEASE_MIRROR_UNAVAILABLE_NOTE}</p>
+          <p className="charts-side-panel__empty">
+            {isMirrorConnected ? DISEASE_MIRROR_EMPTY_NOTE : DISEASE_MIRROR_UNAVAILABLE_NOTE}
+          </p>
         ) : (
           <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="ORCA mirror">
             {mirrorList.map((entry) => (

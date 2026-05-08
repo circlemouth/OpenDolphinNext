@@ -136,7 +136,10 @@ describe('SoapNotePanel local readback contract', () => {
     sectionCases.forEach(([placeholder, body]) => {
       expect(screen.getByPlaceholderText(placeholder)).toHaveValue(body);
     });
-    expect(screen.getByText('Free は院内ローカル保存時に S として記録し、保存応答から再読込した場合も Free 欄へ戻します。')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Free は院内ローカル保存時に S として記録し、保存応答から再読込した場合も Free 欄へ戻します。'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Free')).toHaveValue('自由記載の主観情報');
     expect(screen.getAllByText(/最終更新:/).length).toBeGreaterThan(0);
   });
 

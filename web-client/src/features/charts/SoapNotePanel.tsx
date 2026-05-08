@@ -182,14 +182,6 @@ const resolveSoapCategory = (section: SoapSectionKey): 'S' | 'O' | 'A' | 'P' | n
 const resolveSoapSaveErrorCopy = (detail?: string | null): string =>
   `${resolveUserSafeSaveFailure('SOAPのみ', detail)} 病名・オーダー・文書など他領域の保存状態とは別です。未保存のSOAP欄を再試行してください。`;
 
-const SOAP_SECTION_SUPPORT_TEXT: Record<SoapSectionKey, string> = {
-  free: 'Free は院内ローカル保存時に S として記録し、保存応答から再読込した場合も Free 欄へ戻します。',
-  subjective: '自覚症状・主訴など S に相当する内容を記載します。',
-  objective: '所見・検査値など O に相当する内容を記載します。',
-  assessment: '評価・鑑別など A に相当する内容を記載します。',
-  plan: '方針・処方・検査予定など P に相当する内容を記載します。',
-};
-
 const isSoapSectionKey = (value: unknown): value is SoapSectionKey =>
   value === 'free' || value === 'subjective' || value === 'objective' || value === 'assessment' || value === 'plan';
 
@@ -2061,7 +2053,6 @@ export function SoapNotePanel({
                     return viewMode === 'soap' ? 4 : 2;
                   })();
                   const textareaId = `soap-note-${section}`;
-                  const supportTextId = `${textareaId}-support`;
                   return (
                     <article key={section} className="soap-note__section" data-section={section}>
                       <div className="soap-note__section-header">
@@ -2082,9 +2073,6 @@ export function SoapNotePanel({
                           )}
                         </div>
                       </div>
-                      <p id={supportTextId} className="soap-note__section-support">
-                        {SOAP_SECTION_SUPPORT_TEXT[section]}
-                      </p>
                       <textarea
                         id={textareaId}
                         name={`soapNote-${section}`}
@@ -2094,7 +2082,6 @@ export function SoapNotePanel({
                         placeholder={`${SOAP_SECTION_LABELS[section]} を記載してください。`}
                         readOnly={readOnly}
                         aria-readonly={readOnly}
-                        aria-describedby={supportTextId}
                       />
                       <div className="soap-note__section-actions">
                         {section === 'free' ? (
