@@ -2530,7 +2530,7 @@ describe('ReceptionPage status/date/card action UX', () => {
     });
   });
 
-  it('shows 会計送信 button on 会計待ち rows and keeps workflow in 会計待ち on success', async () => {
+  it('会計待ち rows do not expose the routine initial 会計送信 action', async () => {
     mockAppointmentData.entries = [createBillingEntry()];
     mockSearchParams = new URLSearchParams('date=2026-01-29');
     mockLocationState = { visitDate: '2026-01-29' };
@@ -2541,47 +2541,12 @@ describe('ReceptionPage status/date/card action UX', () => {
     await user.click(screen.getByRole('tab', { name: /会計待ち/ }));
     const listRegion = screen.getByRole('region', { name: '受付一覧' });
     const row = within(listRegion).getByRole('row', { name: /診察終了患者/ });
-    await user.click(within(row).getByRole('button', { name: '会計送信' }));
-
-    await waitFor(() => expect(vi.mocked(postOrcaMedicalModV2Xml)).toHaveBeenCalled());
-    expect(vi.mocked(buildMedicalModV2RequestXml)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        encounterContext: {
-          patientId: 'P-501',
-          visitDate: '2026-01-29',
-          departmentCode: '01',
-          physicianCode: '10001',
-          insuranceCombinationNumber: '0001',
-          voucherNumber: '1234',
-          sequentialNumber: '1',
-        },
-      }),
-    );
-    expect(vi.mocked(postOrcaMedicalModV2Xml)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        encounterContext: {
-          patientId: 'P-501',
-          visitDate: '2026-01-29',
-          departmentCode: '01',
-          physicianCode: '10001',
-          insuranceCombinationNumber: '0001',
-          voucherNumber: '1234',
-          sequentialNumber: '1',
-        },
-      }),
-      { classCode: '01' },
-    );
-    expect(mockEnqueue).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tone: 'success',
-        message: '会計送信を完了',
-        detail: '会計済みは収納確認後に反映します。',
-      }),
-    );
-
-    await waitFor(() => {
-      expect(within(row).getByText(/送信:\s*送信済/)).toBeInTheDocument();
-    });
+    expect(within(row).queryByRole('button', { name: '会計送信' })).not.toBeInTheDocument();
+    expect(within(row).getByText('初回送信は医師画面で実行')).toBeInTheDocument();
+    expect(vi.mocked(buildMedicalModV2RequestXml)).not.toHaveBeenCalled();
+    expect(vi.mocked(postOrcaMedicalModV2Xml)).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalledWith(expect.objectContaining({ message: '会計送信を完了' }));
+    expect(within(row).getByText('送信: 未送信')).toBeInTheDocument();
     await expect(screen.queryByRole('tab', { name: /会計済/ })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /会計待ち/ })).toHaveAttribute('aria-selected', 'true');
     expect(within(listRegion).getByRole('row', { name: /診察終了患者/ })).toBeInTheDocument();
@@ -2705,10 +2670,9 @@ describe('ReceptionPage status/date/card action UX', () => {
     await user.click(screen.getByRole('tab', { name: /会計待ち/ }));
     const listRegion = screen.getByRole('region', { name: '受付一覧' });
     const row = within(listRegion).getByRole('row', { name: new RegExp(entry.name ?? '') });
-    const sendButton = within(row).getByRole('button', { name: '会計送信' });
-
-    expect(sendButton).toBeDisabled();
-    expect(within(row).getByText(reason)).toBeInTheDocument();
+    expect(within(row).queryByRole('button', { name: '会計送信' })).not.toBeInTheDocument();
+    expect(within(row).getByText('初回送信は医師画面で実行')).toBeInTheDocument();
+    expect(reason.test(row.textContent ?? '')).toBe(false);
     expect(vi.mocked(buildMedicalModV2RequestXml)).not.toHaveBeenCalled();
     expect(vi.mocked(postOrcaMedicalModV2Xml)).not.toHaveBeenCalled();
   });

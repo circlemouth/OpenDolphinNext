@@ -115,7 +115,7 @@ type SendConfirmSummary = {
 const ACTION_LABEL: Record<ChartAction, string> = {
   start: '診察開始',
   pause: '診察中断',
-  finish: '診察終了',
+  finish: '診察終了して会計へ送信',
   send: 'ORCA送信',
   draft: 'ドラフト保存',
   cancel: 'キャンセル',
@@ -252,6 +252,7 @@ export interface ChartsActionBarProps {
   onApprovalUnlock?: () => void;
   onBeforeAction?: (action: ChartAction) => boolean | Promise<boolean>;
   sendConfirmSummary?: SendConfirmSummary;
+  showLegacyOrcaSend?: boolean;
 }
 
 export type ChartsActionBarHandle = {
@@ -303,6 +304,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   onApprovalUnlock,
   onBeforeAction,
   sendConfirmSummary,
+  showLegacyOrcaSend = false,
 }: ChartsActionBarProps, ref) {
   const session = useOptionalSession();
   const canRetryOrcaQueue = isSystemAdminRole(session?.role);
@@ -652,14 +654,24 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     if (!resolvedPatientId) {
       reasons.push({
         key: 'patient_not_selected',
-        summary: '患者未選択: 対象未確定で診察終了不可',
-        detail: 'patientId が未確定のため診察終了を実行できません。',
+        summary: '患者未選択: 対象未確定で会計送信不可',
+        detail: 'patientId が未確定のため診察終了して会計へ送信を実行できません。',
         next: ['患者管理で患者を選択', '受付へ戻って対象患者を確定'],
       });
     }
 
+    for (const reason of sendPrecheckReasons) {
+      if (reason.key === 'draft_unsaved' || reason.key === 'locked' || reason.key === 'patient_not_selected') {
+        continue;
+      }
+      reasons.push({
+        ...reason,
+        summary: reason.summary.replaceAll('送信不可', '会計送信不可'),
+      });
+    }
+
     return reasons;
-  }, [isRunning, readOnly, readOnlyReason, resolvedLockReason, uiLocked, resolvedPatientId]);
+  }, [isRunning, readOnly, readOnlyReason, resolvedLockReason, sendPrecheckReasons, uiLocked, resolvedPatientId]);
 
   const sendDisabled = isRunning || sendPrecheckReasons.length > 0;
   const primaryAction = useMemo<ChartAction | 'sending'>(() => {
@@ -667,10 +679,10 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     const status = (selectedEntry?.status ?? '').trim();
     if (/受付|予約/.test(status)) return 'start';
     if (/診療中|診察中/.test(status)) return 'finish';
-    if (/終了|会計|送信待ち|送信済/.test(status)) return 'send';
+    if (/終了|会計|送信待ち|送信済/.test(status)) return showLegacyOrcaSend ? 'send' : 'finish';
     if (!status) return 'finish';
-    return 'send';
-  }, [isRunning, runningAction, selectedEntry?.status]);
+    return showLegacyOrcaSend ? 'send' : 'finish';
+  }, [isRunning, runningAction, selectedEntry?.status, showLegacyOrcaSend]);
 
   const printPrecheckReasons: GuardReason[] = useMemo(() => {
     const reasons: GuardReason[] = [];
@@ -1156,8 +1168,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     }
 
     if (action === 'finish' && !resolvedPatientId) {
-      const blockedReason = '患者IDが未確定のため診察終了を実行できません。Patients で患者を選択してください。';
-      setBanner({ tone: 'warning', message: `診察終了を停止: ${blockedReason}`, nextAction: 'Patients で対象患者を選択してください。' });
+      const blockedReason = '患者IDが未確定のため診察終了して会計へ送信を実行できません。Patients で患者を選択してください。';
+      setBanner({ tone: 'warning', message: `会計送信を停止: ${blockedReason}`, nextAction: 'Patients で対象患者を選択してください。' });
       setRetryAction(null);
       setToast(null);
       logTelemetry(action, 'blocked', undefined, blockedReason, blockedReason);
@@ -1178,6 +1190,29 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           trigger: 'patient_not_selected',
           traceId: resolvedTraceId,
           blockedReasons: ['patient_not_selected'],
+        },
+      });
+      return;
+    }
+
+    if (action === 'finish' && finishPrecheckReasons.length > 0) {
+      const blockedReason = finishPrecheckReasons
+        .map((reason) => `${reason.summary}: ${reason.detail}`)
+        .join(' / ');
+      setBanner({
+        tone: 'warning',
+        message: `診察終了して会計へ送信を停止: ${blockedReason}`,
+        nextAction: '画面上部のガード理由を確認し、受付で再取得してください。',
+      });
+      setRetryAction(null);
+      setToast(null);
+      logTelemetry(action, 'blocked', undefined, blockedReason, blockedReason);
+      logAudit(action, 'blocked', blockedReason, undefined, {
+        phase: 'lock',
+        details: {
+          trigger: 'precheck',
+          traceId: resolvedTraceId,
+          blockedReasons: finishPrecheckReasons.map((reason) => reason.key),
         },
       });
       return;
@@ -1583,7 +1618,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           logAudit(action, 'success', undefined, durationMs, {
             phase: 'do',
             details: {
-              completionMode: 'local_finish',
+              completionMode: 'close_and_send_to_billing',
               traceId: nextTraceId,
             },
           });
@@ -2742,42 +2777,44 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                       ? 'patient_not_selected'
                       : undefined
                 }
-                title={!resolvedPatientId ? '患者未選択のため終了できません。' : otherBlocked ? statusLine : undefined}
+                title={!resolvedPatientId ? '患者未選択のため会計送信できません。' : otherBlocked ? statusLine : undefined}
                 onClick={() => handleAction('finish')}
                 aria-keyshortcuts="Alt+E"
               >
-                診察終了
+                診察終了して会計へ送信
               </button>
             </>
           )}
         </div>
-        <div className="charts-actions__group" data-group="send" role="group" aria-label="主要送信操作">
-          <button
-            type="button"
-            id="charts-action-send"
-            className={`charts-actions__button charts-actions__button--send${
-              primaryAction === 'send' || primaryAction === 'sending' ? ' charts-actions__button--primary-route' : ''
-            }`}
-            disabled={sendDisabled}
-            onClick={() => {
-              setConfirmAction('send');
-              approvalSessionRef.current = { action: 'send', closed: false };
-              logApproval('send', 'open');
-            }}
-            aria-disabled={sendDisabled}
-            aria-describedby={!isRunning && sendPrecheckReasons.length > 0 ? 'charts-actions-send-guard' : undefined}
-            data-disabled-reason={
-              sendDisabled
-                ? (isRunning ? 'running' : sendPrecheckReasons.map((reason) => reason.key).join(','))
-                : undefined
-            }
-            title={sendDisabled ? `送信不可: ${sendPrecheckReasons.map((reason) => reason.summary).join(' / ')}` : undefined}
-            aria-keyshortcuts="Alt+S"
-          >
-            <ClinicalIcon icon="orca-send" />
-            <span>{primaryAction === 'sending' ? '送信中…' : 'ORCA 送信'}</span>
-          </button>
-        </div>
+        {showLegacyOrcaSend ? (
+          <div className="charts-actions__group" data-group="send" role="group" aria-label="主要送信操作">
+            <button
+              type="button"
+              id="charts-action-send"
+              className={`charts-actions__button charts-actions__button--send${
+                primaryAction === 'send' || primaryAction === 'sending' ? ' charts-actions__button--primary-route' : ''
+              }`}
+              disabled={sendDisabled}
+              onClick={() => {
+                setConfirmAction('send');
+                approvalSessionRef.current = { action: 'send', closed: false };
+                logApproval('send', 'open');
+              }}
+              aria-disabled={sendDisabled}
+              aria-describedby={!isRunning && sendPrecheckReasons.length > 0 ? 'charts-actions-send-guard' : undefined}
+              data-disabled-reason={
+                sendDisabled
+                  ? (isRunning ? 'running' : sendPrecheckReasons.map((reason) => reason.key).join(','))
+                  : undefined
+              }
+              title={sendDisabled ? `送信不可: ${sendPrecheckReasons.map((reason) => reason.summary).join(' / ')}` : undefined}
+              aria-keyshortcuts="Alt+S"
+            >
+              <ClinicalIcon icon="orca-send" />
+              <span>{primaryAction === 'sending' ? '送信中…' : 'ORCA 送信'}</span>
+            </button>
+          </div>
+        ) : null}
         <div className="charts-actions__group" data-group="support" role="group" aria-label="補助操作">
           {returnToReceptionButton}
           {draftSaveButton}
@@ -2822,6 +2859,10 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
 
       {!isRunning && sendPrecheckReasons.length > 0 && (
         renderGuardNote('charts-actions-send-guard', '送信不可', sendPrecheckReasons)
+      )}
+
+      {!isRunning && finishPrecheckReasons.length > 0 && (
+        renderGuardNote('charts-actions-finish-guard', '診察終了・会計送信不可', finishPrecheckReasons)
       )}
 
       {!isRunning && printPrecheckReasons.length > 0 && (

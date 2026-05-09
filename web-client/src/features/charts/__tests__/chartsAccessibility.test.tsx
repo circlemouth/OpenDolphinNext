@@ -46,6 +46,7 @@ describe('Charts accessibility', () => {
           missingMaster
           fallbackUsed={false}
           patientId="000123"
+          showLegacyOrcaSend
         />
       </MemoryRouter>,
     );

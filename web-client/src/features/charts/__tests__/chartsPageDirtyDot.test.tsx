@@ -257,6 +257,24 @@ vi.mock('../../outpatient/orcaQueueStatus', () => ({
 
 vi.mock('../../../libs/http/httpClient', () => ({
   hasStoredAuth: () => true,
+  httpFetch: vi.fn(async () => ({
+    ok: true,
+    json: async () => ({
+      ok: true,
+      state: 'ORCA_MEDICAL_REGISTERED',
+      encounterKey: 'F001:E100',
+      idempotencyKey: 'idem-close-send-1',
+    }),
+  })),
+}));
+
+vi.mock('../closeAndSendBillingApi', () => ({
+  closeAndSendToBilling: vi.fn(async () => ({
+    ok: true,
+    state: 'ORCA_MEDICAL_REGISTERED',
+    encounterKey: 'F001:E100',
+    idempotencyKey: 'idem-close-send-1',
+  })),
 }));
 
 vi.mock('../AuthServiceControls', () => ({ AuthServiceControls: () => null }));
@@ -278,7 +296,13 @@ vi.mock('../ChartsActionBar', () => ({
     };
     const runFinish = async () => {
       const allow = (await onBeforeAction?.('finish')) ?? true;
-      if (allow) await onAfterFinish?.();
+      if (allow) {
+        try {
+          await onAfterFinish?.();
+        } catch {
+          // The page-level close-and-send workflow is tested elsewhere; dirty-dot tests only need the guard transition.
+        }
+      }
     };
     const runDraftSave = async () => {
       const allow = (await onBeforeAction?.('draft')) ?? true;

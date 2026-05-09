@@ -13,6 +13,7 @@
 - ORCA 取得不可時に local-only disease を主病名一覧へ fallback 表示しません。病名登録・更新・削除も disabled にします。
 - ORCA 病名の create / update / delete は `/api/orca/official/chart-support/disease-mod-v3` だけを使い、成功後の `diseasegetv2` 再取得結果が UI truth です。
 - `院内未送信` は隔離表示し、ORCAへ登録する明示 confirm がある場合だけ `diseasev3` へ送信します。
+- 診察終了時の標準導線では、`POST /api/local/encounters/{encounterKey}/close-and-send-to-billing` が server-side snapshot を作成し、ORCA連携対象として明示された病名だけを `diseasev3` 連携候補にします。候補病名、臨床メモ、local-only disease は会計送信 snapshot に自動昇格しません。
 - `候補` は truth ではありません。明示 confirm なしで ORCA 登録 payload に昇格させません。
 - 外部の臨床病名 source が未接続の間は fake list を出さず、boundary note で止めます。
 
@@ -55,6 +56,7 @@
 - `Request_Number=02/03/04` は今回の UI/API からは送らず、client provided value は 400 で拒否する。
 - `update|delete` は mutation 前に ORCA `diseasegetv2` を再取得して target が存在することを server-side で確認し、drift 時は fail closed にする。
 - mutation 成功後は楽観更新せず、`diseasegetv2` 再取得結果だけで Charts の主病名一覧を更新する。
+- 会計送信 workflow から病名を送る場合も client は `patientId` / `facilityId` / 診療科 / 保険組合せ / `Request_Number` を指定しない。server が encounter projection、保存済み病名、ORCA mirror 差分から送信対象を導出し、未確定・候補・院内メモは除外する。
 
 ## Order Set Rule
 - order-set の disease は candidate-only semantics です。

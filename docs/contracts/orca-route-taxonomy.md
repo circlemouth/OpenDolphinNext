@@ -103,6 +103,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/local/charts/subjectives`
 - `/api/local/charts/medical-records`
 - `/api/local/encounters/{encounterKey}/medical-summary`
+- `/api/local/encounters/{encounterKey}/close-and-send-to-billing`
 - `/api/local/diagnoses`
 - `/api/local/diagnoses/{patientId}`
 - `/api/local/order/bundles`
@@ -133,6 +134,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - Charts の ORCA 病名 create / update / delete / 削除病名整理は official bridge として `/api/orca/official/chart-support/disease-mod-v3` に固定する。`Request_Number=01` は削除病名整理だけで server が生成し、通常 CRUD や client payload からは送らない。
 - order inputsets / interaction check は master-backed read として `/api/orca/master/order/*` に固定する。
 - order bundles / recommendations / prescription orders / chart medical summary / diagnoses は local-only として `/api/local/*` に固定する。
+- 通常外来の初回会計送信は local workflow `/api/local/encounters/{encounterKey}/close-and-send-to-billing` に固定する。client が `patientId` / `facilityId` / voucher / sequential / insurance / `Medical_Uid` / `classCode` を送る direct official 初回送信は通常 UI に戻さない。`/api/orca/official/chart-support/medical-mod-v2` は low-level official bridge / QA focused test 用として残す。
 - sync status と admin wrapper label は `/api/admin/internal/*` に固定する。
 - `/api/local/patients/mutation` は `LocalPatientMutationRequest` / `LocalPatientMutationResponse` を使い、official patientmodv2 DTO と共有しない。
 

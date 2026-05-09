@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -200,6 +200,14 @@ vi.mock('../../outpatient/appointmentDataBanner', () => ({
 }));
 
 describe('ReceptionPage recovery order', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_ENABLE_DEBUG_UI', '1');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it('renders data warning behind toolbar error -> recovery -> details in order', async () => {
     const user = userEvent.setup();
     render(

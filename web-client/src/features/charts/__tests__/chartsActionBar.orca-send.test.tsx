@@ -143,6 +143,7 @@ const renderActionBar = (selectedEntry?: Partial<ReceptionEntry>) =>
         <ChartsActionBar
           {...({
             ...baseProps,
+            showLegacyOrcaSend: true,
             patientId: '000001',
             encounterId: 'F001:E100',
             visitDate: '2026-01-20',
@@ -168,6 +169,7 @@ const renderActionBarWithProps = (props: Record<string, unknown>) =>
       <ChartsActionBar
         {...({
           ...baseProps,
+          showLegacyOrcaSend: true,
           patientId: '000001',
           encounterId: 'F001:E100',
           visitDate: '2026-01-20',
@@ -218,6 +220,7 @@ describe('ChartsActionBar ORCA send', () => {
         <ChartsActionBar
           {...({
             ...baseProps,
+            showLegacyOrcaSend: true,
             patientId: '000001',
             encounterId: 'F001:E100',
             visitDate: '2026-01-20',

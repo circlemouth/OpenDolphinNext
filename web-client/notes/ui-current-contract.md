@@ -82,7 +82,7 @@
 ### Current Fact
 - normal runtime の中心 surface は `SoapNotePanel` です。
 - `ChartsPatientSummaryBar` は患者文脈を常時見せる encounter context band として扱います。
-- page CTA の owner は `ChartsActionBar` で、`ORCA送信` の primary と `ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。
+- page CTA の owner は `ChartsActionBar` です。通常 UI の primary は `診察終了して会計へ送信` で、`ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。低レベル `ORCA送信` direct bridge は debug / QA / focused test 用に限定し、通常画面の初回会計送信導線には出しません。
 - `PastHubPanel` は左列の historical reference / Do 補助 surface であり、comparison 専用主面ではありません。
 - runtime right rail は `処方 / 注射 / 処置 / 検査 / 算定` の order-facing chooser-only surface です。`document` / `ORCA` / embedded editor は right rail に含めません。
 - オーダー truth editor、`文書を編集` entry は center primary 側に置き、right rail は chooser source と handoff だけを担います。`OrcaSummary` は開発用表示時だけ center primary 側に追加します。
@@ -99,9 +99,9 @@
 - reload 跨ぎの文脈復元は行いません。
 - minimal encounter context を再解決できないときは editor を fail-close し、generic な `閉じる` ではなく `受付へ戻る` を named recovery CTA として出します。
 - active patient の workspace tab switch/close は、未保存入力がある場合に save/discard/cancel guard を通します。
-- ORCA 送信ボタンは canonical encounter context (`patientId`, `visitDate`, `departmentCode`, `physicianCode`, `insuranceCombinationNumber`, `voucherNumber`, `sequentialNumber`) が揃わない限り enable しません。
+- `診察終了して会計へ送信` は canonical encounter context (`patientId`, `visitDate`, `departmentCode`, `physicianCode`, `insuranceCombinationNumber`, `voucherNumber`, `sequentialNumber`) が揃わない限り進めません。未保存、来院文脈不足、ORCA unavailable、送信後変更などの理由は disabled だけにせず guard summary / visible note に出します。
 - `visitDate` の `today` fallback や display string parsing は ORCA 送信文脈に使いません。
-- chart flow 後続の旧 follow-up route は current contract に含めません。chart send/finish の official outbound は `medicalmodv2` と `incomeinfv2` のみです。
+- chart flow 後続の旧 follow-up route は current contract に含めません。通常の初回会計送信は `/api/local/encounters/{encounterKey}/close-and-send-to-billing` を使い、server が encounter projection と保存済み order/disease から ORCA payload を導出します。低レベル official outbound は `medicalmodv2` / `diseasev3` / `incomeinfv2` の bridge として残します。
 
 ### Terminology
 - 「参照カルテ」と「参照パネル」は current docs 上で完全同義とは断定しません。
@@ -113,7 +113,7 @@
 - manual: SoapNotePanel 中心の通常導線、Patients / Mobile Images / 管理画面 への遷移確認
 - guard minimum:
   - right rail は chooser-only を維持し、`document` / `ORCA` tool や embedded editor を再混入させない
-  - canonical encounter context 不足時は ORCA送信を fail-close
+  - canonical encounter context 不足時は `診察終了して会計へ送信` を fail-close
   - canonical encounter context 不足時は report print / incomeinfv2 取得も fail-close
   - ORCA収納情報は official income semantics (`未収金合計`, `請求金額`, `入金額`, `保険適用金額`, `自費金額`, `食事・生活療養負担金`) を表示
   - 院内ローカル診療サマリと ORCA収納情報の責務を混ぜない
@@ -161,10 +161,10 @@
 - 受付一覧の active status と件数はステータスタブの active tab へ統合し、別の大きな `診察待ち 6件` 見出しを重複表示しません。ステータスタブは `患者ID` / `氏名` などの結果 table header のすぐ上に左揃えで置き、日付・検索 control より上の中央見出しとしては扱いません。screen reader 向け heading / live status は維持します。
 - 受付一覧の通常表示では患者ID列に ORCA 患者IDの値だけを表示し、行内で `患者ID` ラベルは繰り返しません。受付ID/予約IDは通常列に出しません。受付ID/予約IDは取消・handoff・debug/meta 用の row-local key として扱い、患者IDの代替表示にしません。氏名列はふりがなを患者名の上に置き、生年月日は表示せず、受付日時点の年齢は独立した `年齢` 列に表示します。診療科は canonical `departmentCode` を保持しつつ、表示では ORCA selector / raw visit data 由来の診療科名を優先し、`01` や `01 内科` のようなコード主導表示に戻しません。性別と小児/成人区分は、男性/女性/未登録の色と小児/成人の形状が分かるプロフィールバッジ型の患者アイコンで表示します。
 - 受付一覧の右端は `カルテ` と `その他` の行操作に使います。各ボタンの label が操作内容を示すため、画面上の列見出し `操作` は表示しません。支援技術向けには `行操作` の列名を維持します。
-- 受付一覧の表表示は `支払` / `請求` / `直近` 列を通常列から外し、会計送信・ORCA状態・補正メモなど必要な操作情報だけを残します。
+- 受付一覧の表表示は `支払` / `請求` / `直近` 列を通常列から外し、ORCA状態・補正メモなど必要な操作情報だけを残します。標準の初回 `会計送信` 操作は Reception から出さず、医師画面の `診察終了して会計へ送信` を起点にします。Reception 側は再送・確認・明示的追加送信など recovery 操作の owner です。
 - 受付一覧の通常表では ORCA 連携を専用列にしません。ORCA 連携は成立している前提のため `—` などの正常プレースホルダーを出さず、queue / error などユーザー対応が必要な状態だけメモ/参照列に補助情報として出します。
 - ORCA 公式来院一覧に runtime projection を補完表示する場合は、server-derived `Voucher_Number` / `Sequential_Number` / `Insurance_Combination_Number` 相当が projection に揃った行だけを扱います。旧 local smoke seed など ORCA 正式識別子の無い projection は受付一覧の official row として表示しません。
-- 受付一覧の workflow state は `受付中 / 診療中 / 会計待ち / 再計待 / 会計済み / 予約` で扱い、`送信済` は transmission signal として別表示します。会計送信成功だけで `会計済み` へ遷移させません。
+- 受付一覧の workflow state は `受付中 / 診療中 / 会計待ち / 再計待 / 会計済み / 予約` で扱い、ORCA workflow 表示は `診察中 / 送信待ち / ORCA送信中 / 会計可 / 要確認 / 送信後変更あり / ORCA側展開済み` に寄せます。`送信済` は transmission signal として別表示します。会計送信成功だけで `会計済み` へ遷移させません。
 - `再計待` は会計済み後の編集を示す workflow state です。補足文は correction note として扱い、generic memo と混在させません。
 - row-local key (`encounterKey` / `scheduleKey` / `receptionId` / `appointmentId`) を一意に解決できない場合、受付一覧に positive な `送信済` 表示を重ねません。
 - Charts の transmission evidence / invoice / warning も同じ row-local key で解決し、`patientId` latest cache を positive source に戻しません。
@@ -179,6 +179,7 @@
 - test: master search 導線では `WholeName` 未入力で official patient search を送らず、`InOut` 未選択時は official payload から省くこと
 - test: claim-send / visit context で patientId first-match / display string reparsing / `today` fallback を使わないこと
 - test: accept 成功後の charts handoff は `scheduleKey` / `encounterKey` を持つ canonical context だけで成立し、mutation response または refreshed entry のどちらでも同じ contract を使うこと
+- test: Reception は標準の初回 `会計送信` direct button を出さず、医師画面から送信する案内と recovery-only surface に寄せること
 - test: 会計送信成功が workflow `会計済み` を直ちに意味せず、`送信済` は transmission signal として別表示されること
 - test: 会計済み後の編集は `再計待` へ移り、correction note を generic memo と分離して表示すること
 - manual: Reception 画面文言が既存患者受付限定で、新患は Patients へ誘導すること

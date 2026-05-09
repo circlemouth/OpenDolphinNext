@@ -84,7 +84,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0311", appliedVersion(connection));
+                assertEquals("0312", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -104,6 +104,8 @@ class FreshSchemaBaselineTest {
                 assertTrue(tableExists(connection, "opendolphin", "d_orca_push_event_inbox"));
                 assertTrue(tableExists(connection, "opendolphin", "d_orca_push_cursor"));
                 assertTrue(tableExists(connection, "opendolphin", "d_orca_push_connection_state"));
+                assertTrue(tableExists(connection, "opendolphin", "d_billing_orca_snapshot"));
+                assertTrue(tableExists(connection, "opendolphin", "d_billing_orca_transmission"));
                 assertTrue(tableExists(connection, "opendolphin", "user_security_state"));
                 assertTrue(tableExists(connection, "opendolphin", "auth_session_registry"));
                 assertTrue(tableExists(connection, "opendolphin", "audit_event"));
@@ -128,6 +130,9 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "d_attachment", "storage_version_id"));
                 assertTrue(columnExists(connection, "opendolphin", "d_attachment", "storage_etag"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_provider"));
+                assertTrue(columnExists(connection, "opendolphin", "d_billing_orca_snapshot", "snapshot_json"));
+                assertTrue(columnExists(connection, "opendolphin", "d_billing_orca_transmission", "idempotency_key"));
+                assertTrue(columnExists(connection, "opendolphin", "d_billing_orca_transmission", "medical_uid"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_bucket"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_key"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_version_id"));

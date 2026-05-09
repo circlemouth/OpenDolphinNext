@@ -506,6 +506,7 @@ const paymentModeLabel = (insurance?: string | null) => {
 const ACCEPT_SUCCESS_RESULTS = new Set(['00', '0000', 'K3']);
 const ACCEPT_WARNING_RESULTS = new Set(['16', '21', '60']);
 const RECEPTION_SUPPORT_GUIDE = '必要に応じて RUN_ID コピーで実行IDを共有してください。';
+const RECEPTION_INITIAL_BILLING_SEND_ENABLED = false;
 
 const buildReceptionAcceptResultDetail = () => '結果を確認し、必要なら一覧を再取得してください。';
 
@@ -5570,7 +5571,7 @@ export function ReceptionPage({
                                     </button>
                                     {cardActionMenuOpen ? (
                                       <div className="reception-card__submenu" role="menu" aria-label="カード追加操作">
-                                        {status === '会計待ち' ? (
+                                        {status === '会計待ち' && RECEPTION_INITIAL_BILLING_SEND_ENABLED ? (
                                           <button
                                             type="button"
                                             className="reception-card__submenu-item primary"
@@ -5587,6 +5588,8 @@ export function ReceptionPage({
                                             <ClinicalIcon icon="billing-send" />
                                             <span>{billingSendInProgress ? '送信中…' : '会計送信'}</span>
                                           </button>
+                                        ) : status === '会計待ち' ? (
+                                          <span className="reception-table__sub">初回送信は医師画面で実行</span>
                                         ) : null}
                                         {isReceptionStatusMvpPhase2 && mvpDecision?.canRetry ? (
                                           <button
@@ -5947,7 +5950,7 @@ export function ReceptionPage({
                                   <div>{entry.note ? truncateText(entry.note, 36) : '—'}</div>
                                 </td>
                                 <td className="reception-table__action">
-                                  {billingProjection?.workflow === '会計待ち' ? (
+                                  {billingProjection?.workflow === '会計待ち' && RECEPTION_INITIAL_BILLING_SEND_ENABLED ? (
                                     <div>
                                       <button
                                         type="button"
@@ -5967,6 +5970,8 @@ export function ReceptionPage({
                                         <small className="reception-table__sub">{billingSendBlockedReason}</small>
                                       ) : null}
                                     </div>
+                                  ) : billingProjection?.workflow === '会計待ち' ? (
+                                    <small className="reception-table__sub">初回送信は医師画面で実行</small>
                                   ) : null}
                                   <button
                                     type="button"

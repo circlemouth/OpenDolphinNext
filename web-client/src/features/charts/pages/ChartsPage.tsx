@@ -43,6 +43,7 @@ import { refetchOfficialCanonicalPatients, searchLocalPatients, type PatientReco
 import { getAuditEventLog, logAuditEvent, logUiState, type AuditEventRecord } from '../../../libs/audit/auditLogger';
 import { buildUnavailableMedicalSummary, fetchChartsMedicalSummary } from '../api';
 import { openChartEncounter } from '../encounterTransitionApi';
+import { closeAndSendToBilling } from '../closeAndSendBillingApi';
 import { fetchKarteIdByPatientId, type LetterModulePayload } from '../letterApi';
 import { fetchOrderBundlesWithPatientImportRecovery, mutateOrderBundles, type OrderBundle } from '../orderBundleApi';
 import { fetchPrescriptionOrderBundlesWithPatientImportRecovery, mutatePrescriptionOrderBundles } from '../prescriptionOrderApi';
@@ -238,6 +239,14 @@ const SOAP_HISTORY_MAX_BYTES = 200_000;
 const UTILITY_PATIENT_UNSELECTED_MESSAGE = '患者が未選択のため利用できません';
 const UTILITY_PANEL_LAYOUT_STORAGE_BASE = 'opendolphin:web-client:charts:utility-panel-layout';
 const UTILITY_PANEL_LAYOUT_STORAGE_VERSION = 'v1';
+
+const generateBillingIdempotencyKey = (encounterKey: string) => {
+  const safeEncounterKey = encounterKey.replace(/[^A-Za-z0-9:_./-]/g, '_');
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `close-send:${safeEncounterKey}:${crypto.randomUUID()}`;
+  }
+  return `close-send:${safeEncounterKey}:${Date.now()}`;
+};
 const UTILITY_PANEL_DEFAULT_OFFSET_X = 24;
 const UTILITY_PANEL_DEFAULT_OFFSET_Y = 28;
 const UTILITY_PANEL_MIN_WIDTH = 640;
@@ -3514,6 +3523,18 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   ]);
 
   const handleAfterFinish = useCallback(async () => {
+    const workflowEncounterKey = encounterContext.encounterKey ?? selectedEntry?.encounterKey;
+    if (!workflowEncounterKey) {
+      throw new Error('encounterKey がないため会計送信を実行できません。受付から開き直してください。');
+    }
+    const idempotencyKey = generateBillingIdempotencyKey(workflowEncounterKey);
+    const billingResult = await closeAndSendToBilling(workflowEncounterKey, {
+      idempotencyKey,
+      runPrecheck: false,
+    });
+    if (!billingResult.ok) {
+      throw new Error('診察終了と会計送信に失敗しました。ORCA送信状態を確認してください。');
+    }
     if (patientId && actionVisitDate) {
       upsertReceptionStatusOverride({
         date: actionVisitDate,
@@ -3536,9 +3557,17 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     if (!activeKey) return;
     setDraftState((prev) => ({ ...prev, dirty: false, dirtySources: [] }));
     forceClosePatientTab(activeKey);
+    return {
+      runId: billingResult.runId,
+      traceId: billingResult.traceId,
+      encounterKey: billingResult.encounterKey ?? workflowEncounterKey,
+      idempotencyKey: billingResult.idempotencyKey ?? idempotencyKey,
+      detail: `close-and-send-to-billing state=${billingResult.state ?? 'unknown'} medicalUid=${billingResult.medicalUid ? 'present' : 'missing'}`,
+    };
   }, [
     actionVisitDate,
     activePatientTabKey,
+    encounterContext.encounterKey,
     flags.runId,
     forceClosePatientTab,
     handleRefreshWithoutSummary,

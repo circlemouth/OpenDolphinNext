@@ -95,6 +95,7 @@ describe('ChartsActionBar', () => {
       <MemoryRouter>
         <ChartsActionBar
           {...baseProps}
+          showLegacyOrcaSend
           patientId="P-100"
           visitDate="2026-01-03"
           orcaEncounterContext={{
@@ -146,6 +147,7 @@ describe('ChartsActionBar', () => {
       <MemoryRouter>
         <ChartsActionBar
           {...baseProps}
+          showLegacyOrcaSend
           patientId="P-777"
           visitDate="2026-01-08"
           orcaEncounterContext={{
@@ -211,23 +213,41 @@ describe('ChartsActionBar', () => {
           {...baseProps}
           patientId="P-200"
           visitDate="2026-01-04"
-          selectedEntry={{ patientId: 'P-200', department: '01 内科', visitDate: '2026-01-04' } as any}
+          orcaEncounterContext={{
+            patientId: 'P-200',
+            visitDate: '2026-01-04',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          }}
+          selectedEntry={{
+            patientId: 'P-200',
+            department: '01 内科',
+            visitDate: '2026-01-04',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          } as any}
           onAfterFinish={onAfterFinish}
         />
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('button', { name: '診察終了' }));
+    await user.click(screen.getByRole('button', { name: '診察終了して会計へ送信' }));
 
     await waitFor(() => expect(onAfterFinish).toHaveBeenCalledTimes(1));
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
-    expect(screen.getByText('診察終了を完了')).toBeInTheDocument();
+    expect(screen.getByText('診察終了して会計へ送信を完了')).toBeInTheDocument();
     expect(recordChartsAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'ENCOUNTER_CLOSE',
         outcome: 'success',
         details: expect.objectContaining({
-          completionMode: 'local_finish',
+          completionMode: 'close_and_send_to_billing',
         }),
       }),
     );
@@ -238,6 +258,7 @@ describe('ChartsActionBar', () => {
       <MemoryRouter>
         <ChartsActionBar
           {...baseProps}
+          showLegacyOrcaSend
           patientId="P-201"
           visitDate="2026-01-04"
           selectedEntry={{ patientId: 'P-201', visitDate: '2026-01-04', departmentCode: '01' } as any}
@@ -258,6 +279,7 @@ describe('ChartsActionBar', () => {
       <MemoryRouter>
         <ChartsActionBar
           {...baseProps}
+          showLegacyOrcaSend
           patientId="P-202"
           visitDate="2026-01-04"
           orcaEncounterContext={{
@@ -400,14 +422,33 @@ describe('ChartsActionBar', () => {
           {...baseProps}
           patientId="P-104"
           visitDate="2026-01-04"
-          selectedEntry={{ patientId: 'P-104', status: '診療中', visitDate: '2026-01-04', department: '01 内科' } as any}
+          orcaEncounterContext={{
+            patientId: 'P-104',
+            visitDate: '2026-01-04',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          }}
+          selectedEntry={{
+            patientId: 'P-104',
+            status: '診療中',
+            visitDate: '2026-01-04',
+            department: '01 内科',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          } as any}
           onAfterStart={onAfterStart}
           onAfterFinish={onAfterFinish}
         />
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('button', { name: '診察終了' }));
+    await user.click(screen.getByRole('button', { name: '診察終了して会計へ送信' }));
 
     await waitFor(() => expect(onAfterFinish).toHaveBeenCalledTimes(1));
     expect(onAfterStart).not.toHaveBeenCalled();
@@ -517,8 +558,8 @@ describe('ChartsActionBar', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('button', { name: '診察終了' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'ORCA 送信' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '診察終了して会計へ送信' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'ORCA 送信' })).not.toBeInTheDocument();
   });
 
   it('保存・印刷・受付へ戻るは disclosure 外の補助操作として常時表示する', () => {

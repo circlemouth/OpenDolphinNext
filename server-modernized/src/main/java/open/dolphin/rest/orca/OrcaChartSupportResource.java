@@ -475,11 +475,15 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             ChartSupportDiseaseModV3Request payload) {
         requireRemoteUser(request);
         String facilityId = requireFacilityId(request);
-        if (payload != null && !isBlank(payload.getRequestNumber())) {
+        if (payload == null) {
+            throw validationError(request, "payload",
+                    "patientId, performDate, and departmentCode are required");
+        }
+        if (!isBlank(payload.getRequestNumber())) {
             throw validationError(request, "payload.requestNumber",
                     "diseaseModV3 Request_Number is server-owned");
         }
-        String operation = normalizeDiseaseModOperation(payload != null ? payload.getOperation() : null, request);
+        String operation = normalizeDiseaseModOperation(payload.getOperation(), request);
         validateDiseaseModPayload(request, payload, operation);
         DiseaseModContextAuthority contextAuthority =
                 requireServerDerivedDiseaseModContext(request, facilityId, payload, operation);
