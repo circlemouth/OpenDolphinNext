@@ -32,7 +32,7 @@ import open.dolphin.session.PatientServiceBean;
  * so the local patient table stays consistent with ORCA.</p>
  */
 @Path("/orca/official/patientmodv2/outpatient")
-public final class PatientModV2OutpatientResource extends AbstractResource {
+public class PatientModV2OutpatientResource extends AbstractResource {
 
     private static final String DATA_SOURCE_SERVER = "server";
     private static final String ROUTE_NAMESPACE = "official";

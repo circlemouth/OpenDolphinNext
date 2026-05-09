@@ -507,6 +507,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   const [form, setForm] = useState<PatientRecord>({});
   const [baseline, setBaseline] = useState<PatientRecord | null>(null);
   const [selectionNotice, setSelectionNotice] = useState<{ tone: 'info' | 'warning'; message: string } | null>(null);
+  const [pendingImportSelectionPatientId, setPendingImportSelectionPatientId] = useState<string | null>(null);
   const [, setSelectionLost] = useState(false);
   const [pendingSelection, setPendingSelection] = useState<PatientRecord | null>(null);
   const [switchingSelection, setSwitchingSelection] = useState(false);
@@ -689,6 +690,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       setLastOfficialAction('import');
       setLastSaveResult(toImportSaveResult(result));
       setLastAttempt(null);
+      setPendingImportSelectionPatientId(null);
       const auditEvent = buildImportAuditEvent(patientId, result);
       logAuditEvent({
         runId: result.runId,
@@ -715,9 +717,11 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           baselineRef.current = target;
           setSelectionLost(false);
           setEditorMode('update');
+          setPendingImportSelectionPatientId(null);
           setSelectionNotice({ tone: 'info', message: `ORCA既存患者取込後の患者 ${patientId} を自動選択しました。` });
           setActiveDetailTab('basic');
         } else {
+          setPendingImportSelectionPatientId(patientId);
           setSelectionNotice({
             tone: 'warning',
             message: `ORCA既存患者取込は完了しましたが、現在の検索条件では患者番号 ${patientId} が一覧に見つかりません。`,
@@ -757,6 +761,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     },
     onError: (_error: unknown, patientId) => {
       setLastOfficialAction('import');
+      setPendingImportSelectionPatientId(null);
       setLastSaveResult({
         ok: false,
         writeAccepted: false,
@@ -1177,6 +1182,33 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       setSelectionNotice(null);
     }
   }, [selectedId, selectionNotice]);
+
+  useEffect(() => {
+    if (!pendingImportSelectionPatientId) return;
+    if (!patientsQuery.data || patientsQuery.isFetching) return;
+    const importedPatient = patients.find((patient) => patient.patientId === pendingImportSelectionPatientId);
+    if (!importedPatient) return;
+    if (hasUnsavedChanges) {
+      setSelectionNotice({
+        tone: 'info',
+        message: `ORCA既存患者取込後の患者 ${pendingImportSelectionPatientId} が一覧に表示されました。編集中の内容は保持しています。`,
+      });
+      setPendingImportSelectionPatientId(null);
+      return;
+    }
+    setSelectedId(resolvePatientKey(importedPatient));
+    setForm(importedPatient);
+    setBaseline(importedPatient);
+    baselineRef.current = importedPatient;
+    setSelectionLost(false);
+    setEditorMode('update');
+    setActiveDetailTab('basic');
+    setSelectionNotice({
+      tone: 'info',
+      message: `ORCA既存患者取込後の患者 ${pendingImportSelectionPatientId} を自動選択しました。`,
+    });
+    setPendingImportSelectionPatientId(null);
+  }, [hasUnsavedChanges, patients, patientsQuery.data, patientsQuery.isFetching, pendingImportSelectionPatientId]);
 
   useEffect(() => {
     if (!patientsQuery.dataUpdatedAt) return;

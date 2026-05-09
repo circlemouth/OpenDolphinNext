@@ -1981,7 +1981,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     expect(within(dialog).queryByText(/状態/)).toBeNull();
   });
 
-  it('sends patient-id searchType when the accept workflow patient ID field is used', async () => {
+  it('pads the accept workflow patient ID to the ORCA digit count before search', async () => {
     mockMutationQueue.push({
       patients: [],
       recordsReturned: 0,
@@ -1995,18 +1995,39 @@ describe('ReceptionPage list and side pane guidance', () => {
     const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
     const form = within(patientSearch);
     await user.clear(form.getByLabelText('患者ID'));
-    await user.type(form.getByLabelText('患者ID'), '0000001');
+    await user.type(form.getByLabelText('患者ID'), '1');
     await user.click(form.getByRole('button', { name: '検索' }));
 
     await waitFor(() => {
       expect(mockMutationCalls.at(-1)).toEqual({
-        patientId: '0000001',
+        patientId: '000001',
         nameSei: '',
         nameMei: '',
         kanaSei: '',
         kanaMei: '',
       });
     });
+  });
+
+  it('shows a no-result notice instead of a timeout when patient ID search completes with zero hits', async () => {
+    mockMutationQueue.push({
+      patients: [],
+      recordsReturned: 0,
+      runId: 'RUN-PATIENT-ID-NO-HIT',
+    });
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    const form = within(patientSearch);
+    await user.clear(form.getByLabelText('患者ID'));
+    await user.type(form.getByLabelText('患者ID'), '999999');
+    await user.click(form.getByRole('button', { name: '検索' }));
+
+    expect(await within(workflowModal).findByText(/患者ID 999999 に一致する ORCA 患者は見つかりません/)).toBeInTheDocument();
+    expect(within(workflowModal).queryByText(/タイムアウト/)).not.toBeInTheDocument();
   });
 
   it('uses the submitted patient ID field value even when React state has not re-rendered yet', async () => {
@@ -2024,18 +2045,34 @@ describe('ReceptionPage list and side pane guidance', () => {
     const form = patientSearch.querySelector('[data-test-id="reception-patient-search-form"]') as HTMLFormElement;
     const patientIdInput = within(patientSearch).getByLabelText('患者ID') as HTMLInputElement;
     expect(form).not.toBeNull();
-    patientIdInput.value = '0000001';
+    patientIdInput.value = '1';
     fireEvent.submit(form);
 
     await waitFor(() => {
       expect(mockMutationCalls.at(-1)).toEqual({
-        patientId: '0000001',
+        patientId: '000001',
         nameSei: '',
         nameMei: '',
         kanaSei: '',
         kanaMei: '',
       });
     });
+  });
+
+  it('keeps the accept workflow patient ID field numeric and capped to the ORCA digit count', async () => {
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    const patientIdInput = within(patientSearch).getByLabelText('患者ID') as HTMLInputElement;
+
+    await user.clear(patientIdInput);
+    await user.type(patientIdInput, '12A345678');
+
+    expect(patientIdInput).toHaveValue('123456');
+    expect(patientIdInput).toHaveAttribute('maxLength', '6');
+    expect(patientIdInput).toHaveAttribute('pattern', '[0-9]*');
   });
 
   it('does not show a previously selected reception row as the accept workflow selected patient', async () => {

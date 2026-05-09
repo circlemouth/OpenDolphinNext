@@ -129,6 +129,8 @@
 - Reception は既存患者の受付導線です。新患登録や患者作成は current surface に含めません。
 - `既存患者受付/患者検索` モーダルの患者 picker は ORCA official を使います。患者ID検索は `/api/orca/official/patients/batch`、氏名検索は `/api/orca/official/patients/name-search` を使い、受付導線の検索結果に `/api/local/patients/search` の seed/local 患者を混在させません。カナは official 氏名検索結果の画面内絞り込みとして扱い、カナ単独検索は受付導線では送信しません。
 - official `patientlst3v2` + `WholeName` 必須の name-search は受付 workflow の氏名検索でも使います。患者ID指定時は exact lookup を優先し、氏名検索結果に対してだけカナの画面内絞り込みを適用します。
+- 既存患者受付/患者検索モーダルの患者ID入力は ORCA 患者番号として数字のみ 6 桁までを受け付けます。6 桁未満で検索した場合は送信前に左ゼロ埋めし、例として `1` は `000001` として official lookup に渡します。
+- 既存患者受付/患者検索モーダルで official lookup が正常に完了して 0 件だった場合は、通信タイムアウトとは別に「検索は完了したが該当患者が見つからない」旨を warning として表示します。
 - `InOut` 未選択はエラーではなく「未送信」を意味します。
 - 受付登録時の `Medical_Information` は UI 選択時のみ送信し、未選択なら送信しません。
 - 担当医コード、`Acceptance_Push`、診療内容コードは client 側で補完・正規化・抑止せず、選択値または未送信をそのまま official bridge に渡します。

@@ -209,6 +209,24 @@ const mergeOfficialPatientIntoEntry = (entry: ReceptionEntry, patient?: PatientR
   };
 };
 
+const ORCA_PATIENT_ID_DIGITS = 6;
+
+const normalizeOrcaPatientIdInput = (value: string) => value.replace(/\D/g, '').slice(0, ORCA_PATIENT_ID_DIGITS);
+
+const formatOrcaPatientIdForSearch = (value: string, options: { preserveNonNumeric?: boolean } = {}) => {
+  const trimmed = value.trim();
+  if (options.preserveNonNumeric && trimmed && !/^\d+$/.test(trimmed)) return trimmed;
+  const normalized = normalizeOrcaPatientIdInput(value);
+  return normalized ? normalized.padStart(ORCA_PATIENT_ID_DIGITS, '0') : '';
+};
+
+const buildPatientSearchNoResultMessage = (filters: ReceptionPatientSearchFilters | null) => {
+  if (filters?.patientId.trim()) {
+    return `検索は完了しましたが、患者ID ${filters.patientId.trim()} に一致する ORCA 患者は見つかりません。`;
+  }
+  return '検索は完了しましたが、指定条件に一致する ORCA 患者は見つかりません。';
+};
+
 const searchOfficialReceptionPatients = async (filters: ReceptionPatientSearchFilters, runId?: string): Promise<PatientListResponse> => {
   const patientId = filters.patientId.trim();
   if (patientId) {
@@ -1074,6 +1092,7 @@ export function ReceptionPage({
   const [patientSearchResults, setPatientSearchResults] = useState<PatientRecord[]>([]);
   const [patientSearchMeta, setPatientSearchMeta] = useState<PatientListResponse | null>(null);
   const [patientSearchError, setPatientSearchError] = useState<string | null>(null);
+  const [patientSearchNotice, setPatientSearchNotice] = useState<string | null>(null);
   const [patientSearchSelected, setPatientSearchSelected] = useState<PatientRecord | null>(null);
   const [patientSearchPage, setPatientSearchPage] = useState(1);
   const [officialPatientById, setOfficialPatientById] = useState<Record<string, PatientRecord>>({});
@@ -1380,18 +1399,15 @@ export function ReceptionPage({
       const filters = patientSearchFilterRef.current;
       const basePatients = result.patients ?? [];
       const filteredPatients =
-        filters
+        filters && !filters.patientId.trim()
           ? basePatients.filter((patient) => {
-              const patientId = (patient.patientId ?? '').trim();
               const fullName = normalizeToken(patient.name ?? '');
               const fullKana = normalizeToken(patient.kana ?? '');
-              const needlePatientId = filters.patientId.trim();
               const needleNameSei = normalizeToken(filters.nameSei);
               const needleNameMei = normalizeToken(filters.nameMei);
               const needleKanaSei = normalizeToken(filters.kanaSei);
               const needleKanaMei = normalizeToken(filters.kanaMei);
 
-              if (needlePatientId && !patientId.startsWith(needlePatientId)) return false;
               if (needleNameSei && !fullName.includes(needleNameSei)) return false;
               if (needleNameMei && !fullName.includes(needleNameMei)) return false;
               if (needleKanaSei && !fullKana.includes(needleKanaSei)) return false;
@@ -1417,10 +1433,12 @@ export function ReceptionPage({
       });
       setPatientSearchPage(1);
       setPatientSearchError(null);
+      setPatientSearchNotice(filteredPatients.length === 0 ? buildPatientSearchNoResultMessage(filters) : null);
     },
     onError: (error) => {
       const detail = error instanceof Error ? error.message : String(error);
       setPatientSearchError(detail);
+      setPatientSearchNotice(null);
     },
   });
   const masterSearchMutation = useMutation<PatientMasterSearchResponse, Error, Parameters<typeof fetchPatientMasterSearch>[0]>({
@@ -3416,6 +3434,7 @@ export function ReceptionPage({
     setPatientSearchResults([]);
     setPatientSearchMeta(null);
     setPatientSearchError(null);
+    setPatientSearchNotice(null);
     setPatientSearchSelected(null);
     patientSearchPatientIdDirtyRef.current = false;
     patientSearchFilterRef.current = null;
@@ -3434,6 +3453,7 @@ export function ReceptionPage({
         setPatientSearchResults([]);
         setPatientSearchMeta(null);
         setPatientSearchError(null);
+        setPatientSearchNotice(null);
         setPatientSearchSelected(null);
         patientSearchPatientIdDirtyRef.current = false;
         patientSearchFilterRef.current = null;
@@ -3451,8 +3471,12 @@ export function ReceptionPage({
         const value = formData?.get(name);
         return typeof value === 'string' ? value.trim() : fallback.trim();
       };
+      const submittedPatientId = readSubmittedValue('receptionPatientSearchPatientId', patientSearchPatientId);
+      const patientId = formatOrcaPatientIdForSearch(submittedPatientId, {
+        preserveNonNumeric: !patientSearchPatientIdDirtyRef.current && submittedPatientId === patientSearchPatientId,
+      });
       const filters = {
-        patientId: readSubmittedValue('receptionPatientSearchPatientId', patientSearchPatientId),
+        patientId,
         nameSei: readSubmittedValue('receptionPatientSearchNameSei', patientSearchNameSei),
         nameMei: readSubmittedValue('receptionPatientSearchNameMei', patientSearchNameMei),
         kanaSei: readSubmittedValue('receptionPatientSearchKanaSei', patientSearchKanaSei),
@@ -3466,10 +3490,15 @@ export function ReceptionPage({
         filters.nameMei;
       if (!primaryKeyword) {
         setPatientSearchError('患者ID / 氏名 / カナ のいずれかを入力してください。');
+        setPatientSearchNotice(null);
         return;
+      }
+      if (patientId && patientId !== patientSearchPatientId) {
+        setPatientSearchPatientId(patientId);
       }
       patientSearchFilterRef.current = filters;
       setPatientSearchError(null);
+      setPatientSearchNotice(null);
       setPatientSearchSelected(null);
       setAcceptPatientId('');
       setAcceptWorkflowModalOpen(true);
@@ -6146,8 +6175,10 @@ export function ReceptionPage({
                             value={patientSearchPatientId}
                             onChange={(event) => {
                               patientSearchPatientIdDirtyRef.current = true;
-                              setPatientSearchPatientId(event.target.value);
+                              setPatientSearchPatientId(normalizeOrcaPatientIdInput(event.target.value));
                             }}
+                            maxLength={ORCA_PATIENT_ID_DIGITS}
+                            pattern={/^\d*$/.test(patientSearchPatientId) ? '[0-9]*' : undefined}
                             placeholder="000001"
                           />
                         </label>
@@ -6222,6 +6253,18 @@ export function ReceptionPage({
                         nextAction="条件を見直す"
                         runId={patientSearchMeta?.runId ?? resolvedRunId}
                         ariaLive="assertive"
+                      />
+                    ) : null}
+
+                    {!patientSearchError && patientSearchNotice ? (
+                      <ToneBanner
+                        tone="warning"
+                        message={patientSearchNotice}
+                        destination="受付"
+                        nextAction="条件を見直す"
+                        runId={patientSearchMeta?.runId ?? resolvedRunId}
+                        ariaLive="polite"
+                        showMeta={false}
                       />
                     ) : null}
 

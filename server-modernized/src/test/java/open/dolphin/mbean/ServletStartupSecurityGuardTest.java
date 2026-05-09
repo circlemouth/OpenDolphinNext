@@ -1,12 +1,19 @@
 package open.dolphin.mbean;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import jakarta.ejb.Singleton;
+import jakarta.ejb.Startup;
+import jakarta.ejb.TransactionAttribute;
+import jakarta.ejb.TransactionAttributeType;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import open.dolphin.runtime.config.RuntimeConfigurationStartupGuard;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.testsupport.MicroProfileConfigTestSupport;
 import org.junit.jupiter.api.Test;
@@ -16,6 +23,16 @@ class ServletStartupSecurityGuardTest {
 
     @TempDir
     Path tempDir;
+
+    @Test
+    void runtimeConfigurationStartupGuardRunsEagerlyWithoutTransaction() {
+        assertTrue(RuntimeConfigurationStartupGuard.class.isAnnotationPresent(Singleton.class));
+        assertTrue(RuntimeConfigurationStartupGuard.class.isAnnotationPresent(Startup.class));
+        TransactionAttribute transactionAttribute =
+                RuntimeConfigurationStartupGuard.class.getAnnotation(TransactionAttribute.class);
+        assertNotNull(transactionAttribute);
+        assertEquals(TransactionAttributeType.NOT_SUPPORTED, transactionAttribute.value());
+    }
 
     @Test
     void productionLikeEnvironmentRejectsLegacyOrcaMasterCredential() throws Exception {

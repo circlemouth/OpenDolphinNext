@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
+import java.lang.reflect.Modifier;
 import java.time.LocalDate;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.SimpleAddressModel;
@@ -20,6 +21,11 @@ import open.dolphin.session.PatientServiceBean;
 import org.junit.jupiter.api.Test;
 
 class PatientModV2OutpatientResourceIdempotencyTest {
+
+    @Test
+    void resourceClassIsProxyableForJaxRsCdiInjection() {
+        assertFalse(Modifier.isFinal(PatientModV2OutpatientResource.class.getModifiers()));
+    }
 
     @Test
     void createReturnsIdempotentWhenExistingMatches() {

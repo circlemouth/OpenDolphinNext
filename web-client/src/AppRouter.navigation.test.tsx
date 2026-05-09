@@ -307,6 +307,27 @@ describe('AppRouter navigation guard', () => {
     expect(await screen.findByText('ORCA: 設定要確認')).toBeInTheDocument();
   });
 
+  it('system_admin does not show ORCA failure when only non-ORCA readiness checks are down', async () => {
+    vi.mocked(fetchOperationsReadiness).mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      summaryStatus: 'DOWN',
+      checks: {
+        orca: { status: 'UP' },
+        attachmentStorage: { status: 'DOWN' },
+      },
+      runId: '20260307T000002Z',
+      traceId: 'trace-router-orca-up',
+      raw: {},
+    });
+    prepareSession('system_admin');
+
+    render(<AppRouter />);
+
+    await screen.findByTestId('reception-page');
+    expect(screen.queryByText(/^ORCA:/)).not.toBeInTheDocument();
+  });
+
   it('primary role が doctor でも roles に admin があれば管理画面へ遷移できる', async () => {
     prepareSession('doctor', ['doctor', 'admin', 'user']);
     const user = userEvent.setup();

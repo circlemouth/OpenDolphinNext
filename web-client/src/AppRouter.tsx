@@ -298,7 +298,7 @@ const formatOrcaTopStatusTimestamp = (value: string | null): string | null => {
 const resolveOrcaTopStatus = (result: OperationsReadinessResponse): OrcaTopStatus => {
   const checkedAt = result.runId ? new Date().toISOString() : null;
   const orcaStatus = typeof result.checks?.orca?.status === 'string' ? result.checks.orca.status : undefined;
-  if (result.ok && orcaStatus === 'UP') {
+  if (orcaStatus === 'UP') {
     return {
       tone: 'success',
       label: 'ORCA: readiness OK',

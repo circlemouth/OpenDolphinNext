@@ -33,12 +33,20 @@ $FlywayRepairOnValidation = if ($env:FLYWAY_REPAIR_ON_VALIDATION) { $env:FLYWAY_
 $OpenDolphinSchemaAction = if ($env:OPENDOLPHIN_SCHEMA_ACTION) { $env:OPENDOLPHIN_SCHEMA_ACTION } else { "create" }
 $env:OPENDOLPHIN_SCHEMA_ACTION = $OpenDolphinSchemaAction
 $FlywayRunId = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
+$DocumentIntegrityKeyringHostPath = if ($env:DOCUMENT_INTEGRITY_KEYRING_PATH) { $env:DOCUMENT_INTEGRITY_KEYRING_PATH } else { Join-Path $ScriptDir "tmp/document-integrity-keyring.local.json" }
+$DocumentIntegrityKeyringContainerPath = "/opt/jboss/wildfly/document-integrity-keyring.json"
+$DocumentIntegrityKeyringSource = if ($env:DOCUMENT_INTEGRITY_KEYRING_PATH) { "env:DOCUMENT_INTEGRITY_KEYRING_PATH" } else { "generated-local-ignored" }
 
 $ModernizedAppHttpPort = if ($env:MODERNIZED_APP_HTTP_PORT) { $env:MODERNIZED_APP_HTTP_PORT } else { "9080" }
 $ServerHealthUrl = "http://localhost:$ModernizedAppHttpPort/openDolphin/api/health"
 $WorktreeContainerSuffix = if ($env:WORKTREE_CONTAINER_SUFFIX) { $env:WORKTREE_CONTAINER_SUFFIX } else { "" }
 $OpenDolphinRuntimeProfileEffective = if ($env:OPENDOLPHIN_RUNTIME_PROFILE) { $env:OPENDOLPHIN_RUNTIME_PROFILE } else { "" }
 $OpenDolphinEnvironmentEffective = if ($env:OPENDOLPHIN_ENVIRONMENT) { $env:OPENDOLPHIN_ENVIRONMENT } else { "trial-local" }
+$OpenDolphinTimezoneEffective = if ($env:OPENDOLPHIN_TIMEZONE) { $env:OPENDOLPHIN_TIMEZONE } else { "Asia/Tokyo" }
+$OpenDolphinCloudZeroEffective = if ($env:OPENDOLPHIN_CLOUD_ZERO) { $env:OPENDOLPHIN_CLOUD_ZERO } else { "false" }
+$SecurityTrustedProxiesEffective = if ($env:SECURITY_TRUSTED_PROXIES) { $env:SECURITY_TRUSTED_PROXIES } else { "127.0.0.1/32,::1/128" }
+$ModernizedDbSslModeEffective = if ($env:MODERNIZED_DB_SSLMODE) { $env:MODERNIZED_DB_SSLMODE } else { "disable" }
+$ModernizedDbSslRootCertEffective = if ($env:MODERNIZED_DB_SSLROOTCERT) { $env:MODERNIZED_DB_SSLROOTCERT } else { "/dev/null" }
 $AttachmentStorageModeEffective = if ($env:ATTACHMENT_STORAGE_MODE) { $env:ATTACHMENT_STORAGE_MODE } else { "s3" }
 $ObjectStorageFreeRuntime = $false
 
@@ -479,10 +487,55 @@ function Generate-CustomProperties {
     Log "custom.properties written to $CustomPropOutput"
 }
 
+function Generate-DocumentIntegrityKeyring {
+    if (-not [System.IO.Path]::IsPathRooted($DocumentIntegrityKeyringHostPath)) {
+        $script:DocumentIntegrityKeyringHostPath = Join-Path $ScriptDir $DocumentIntegrityKeyringHostPath
+    }
+    $parent = Split-Path $DocumentIntegrityKeyringHostPath -Parent
+    if (-not (Test-Path $parent)) {
+        if ($DocumentIntegrityKeyringSource -eq "generated-local-ignored") {
+            New-Item -ItemType Directory -Path $parent -Force | Out-Null
+        } else {
+            throw "DOCUMENT_INTEGRITY_KEYRING_PATH parent directory is not readable."
+        }
+    }
+    if (Test-Path $DocumentIntegrityKeyringHostPath) {
+        Log "Document integrity keyring source=$DocumentIntegrityKeyringSource path_class=local-file" -Color Cyan
+        return
+    }
+    if ($DocumentIntegrityKeyringSource -ne "generated-local-ignored") {
+        throw "DOCUMENT_INTEGRITY_KEYRING_PATH is set but does not point to a readable file."
+    }
+    $bytes = New-Object byte[] 32
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $rng.GetBytes($bytes)
+    } finally {
+        $rng.Dispose()
+    }
+    $rawKeyB64 = [Convert]::ToBase64String($bytes)
+    $content = @"
+{
+  "algorithm": "HMAC-SHA256",
+  "keys": [
+    {
+      "keyId": "local-$FlywayRunId",
+      "status": "active",
+      "hmacKeyB64": "$rawKeyB64"
+    }
+  ]
+}
+"@
+    [System.IO.File]::WriteAllText($DocumentIntegrityKeyringHostPath, $content, (New-Object System.Text.UTF8Encoding $false))
+    Log "Document integrity keyring source=$DocumentIntegrityKeyringSource path_class=local-ignored-file" -Color Cyan
+}
+
 function Generate-ComposeOverride {
     Log "Generating $ComposeOverrideFile..." -Color Cyan
     $propBaseName = Split-Path $CustomPropOutput -Leaf
     $storageEnvBlock = ""
+    $minioEnvBlock = ""
+    $minioMcEnvBlock = ""
     if ($ObjectStorageFreeRuntime) {
         $storageEnvBlock = @"
       OPENDOLPHIN_RUNTIME_PROFILE: $OpenDolphinRuntimeProfileEffective
@@ -507,6 +560,24 @@ function Generate-ComposeOverride {
       PHR_EXPORT_S3_ACCESS_KEY: ''
       PHR_EXPORT_S3_SECRET_KEY: ''
 "@
+    } else {
+        $storageEnvBlock = @"
+      ATTACHMENT_STORAGE_S3_ACCESS_KEY: $env:ATTACHMENT_STORAGE_S3_ACCESS_KEY
+      ATTACHMENT_STORAGE_S3_SECRET_KEY: $env:ATTACHMENT_STORAGE_S3_SECRET_KEY
+      PHR_EXPORT_S3_ACCESS_KEY: $env:PHR_EXPORT_S3_ACCESS_KEY
+      PHR_EXPORT_S3_SECRET_KEY: $env:PHR_EXPORT_S3_SECRET_KEY
+"@
+        $minioEnvBlock = @"
+    environment:
+      MINIO_ROOT_USER: $env:MINIO_ROOT_USER
+      MINIO_ROOT_PASSWORD: $env:MINIO_ROOT_PASSWORD
+"@
+        $minioMcEnvBlock = @"
+  minio-mc:
+    environment:
+      MINIO_ROOT_USER: $env:MINIO_ROOT_USER
+      MINIO_ROOT_PASSWORD: $env:MINIO_ROOT_PASSWORD
+"@
     }
     $content = @"
 services:
@@ -514,12 +585,17 @@ services:
     container_name: $ServerContainerName
     environment:
       OPENDOLPHIN_ENVIRONMENT: $OpenDolphinEnvironmentEffective
+      OPENDOLPHIN_TIMEZONE: $OpenDolphinTimezoneEffective
+      OPENDOLPHIN_CLOUD_ZERO: $OpenDolphinCloudZeroEffective
+      SECURITY_TRUSTED_PROXIES: $SecurityTrustedProxiesEffective
+      DB_SSLMODE: $ModernizedDbSslModeEffective
+      DB_SSLROOTCERT: $ModernizedDbSslRootCertEffective
       ORCA_API_HOST: $ORN_ORCA_API_HOST
       ORCA_API_PORT: $ORN_ORCA_API_PORT
       ORCA_API_SCHEME: $ORN_ORCA_API_SCHEME
       ORCA_API_USER: $ORN_ORCA_API_USER
       ORCA_API_PASSWORD: $ORN_ORCA_API_PASSWORD
-      ORCA_BASE_URL: $ORN_ORCA_BASE_URL
+      ORCA_BASE_URL: ''
       ORCA_MODE: $ORN_ORCA_MODE
       ORCA_API_PATH_PREFIX: $env:ORCA_API_PATH_PREFIX
       ORCA_API_WEBORCA: $env:ORCA_API_WEBORCA
@@ -528,14 +604,19 @@ services:
       OPENDOLPHIN_FACILITY_ID: $FacilityId
       OPENDOLPHIN_SINGLE_FACILITY_MODE: $SingleFacilityMode
       OPENDOLPHIN_SCHEMA_ACTION: $OpenDolphinSchemaAction
+      DOCUMENT_INTEGRITY_MODE: enforce
+      DOCUMENT_INTEGRITY_KEYRING_PATH: $DocumentIntegrityKeyringContainerPath
 $storageEnvBlock
       JAVA_OPTS_APPEND: \${JAVA_OPTS_APPEND:-} -Dhibernate.hbm2ddl.auto=$OpenDolphinSchemaAction -Djakarta.persistence.schema-generation.database.action=$OpenDolphinSchemaAction -Dmicrometer.export.otlp.enabled=false -Dio.micrometer.export.otlp.enabled=false -Dotlp.enabled=false -Dotel.metrics.exporter=none -Dotel.sdk.disabled=true
     volumes:
       - ./${propBaseName}:/opt/jboss/wildfly/custom.properties
+      - ${DocumentIntegrityKeyringHostPath}:${DocumentIntegrityKeyringContainerPath}:ro
   db-modernized:
     container_name: $PostgresContainerName
   minio:
     container_name: $MinioContainerName
+$minioEnvBlock
+$minioMcEnvBlock
 "@
     [System.IO.File]::WriteAllText($ComposeOverrideFile, $content, (New-Object System.Text.UTF8Encoding $false))
     Log "docker-compose override written to $ComposeOverrideFile"
@@ -931,6 +1012,7 @@ function Main {
         return
     }
     Generate-CustomProperties
+    Generate-DocumentIntegrityKeyring
     Generate-ComposeOverride
     Start-ModernizedServer
     Apply-FlywayMigrations
