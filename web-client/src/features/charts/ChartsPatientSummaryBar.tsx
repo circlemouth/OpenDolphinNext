@@ -166,7 +166,6 @@ export function ChartsPatientSummaryBar({
     >
       <PatientIdentityBar
         className="charts-patient-summary__identity-bar"
-        eyebrow="CHARTS"
         patientId={patientId}
         patientName={displayName}
         patientKana={kana}

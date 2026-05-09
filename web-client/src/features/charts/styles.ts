@@ -899,6 +899,7 @@ export const chartsStyles = css`
 
   .charts-patient-summary__identity-bar .patient-identity-bar__surface {
     grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
     gap: 0.7rem;
     border-color: transparent;
     background: transparent;
@@ -918,20 +919,20 @@ export const chartsStyles = css`
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__avatar {
-    width: 2rem;
-    height: 2rem;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
+    align-self: center;
+    width: 2.65rem;
+    height: 2.65rem;
+    border-radius: 50%;
+    border: 1px solid rgba(37, 99, 235, 0.24);
+    background: linear-gradient(145deg, rgba(239, 246, 255, 0.98), rgba(224, 242, 254, 0.9));
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.82),
+      0 10px 18px rgba(15, 23, 42, 0.08);
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__header {
     grid-area: header;
     align-items: center;
-  }
-
-  .charts-patient-summary__identity-bar .patient-identity-bar__eyebrow {
-    color: #475569;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__title-row {
@@ -1043,9 +1044,9 @@ export const chartsStyles = css`
   }
 
   .charts-patient-summary__profile-icon {
-    flex-basis: 1.95rem;
-    width: 1.95rem;
-    height: 1.95rem;
+    flex-basis: 2.1rem;
+    width: 2.1rem;
+    height: 2.1rem;
   }
 
   .charts-patient-summary__fact-grid {
@@ -5692,15 +5693,6 @@ export const chartsStyles = css`
     min-width: 0;
   }
 
-  .soap-note__eyebrow {
-    margin: 0;
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #64748b;
-  }
-
   .soap-note__title-row {
     display: flex;
     align-items: center;
@@ -7910,25 +7902,6 @@ export const chartsStyles = css`
     font-size: 0.72rem;
     font-weight: 700;
     line-height: 1.2;
-  }
-
-  .soap-note__meta-details {
-    margin-top: var(--charts-space-2xs);
-  }
-
-  .soap-note__meta-details > summary {
-    cursor: pointer;
-    list-style: none;
-  }
-
-  .soap-note__meta-details > summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .soap-note__meta-details .soap-note__subtitle {
-    margin-top: var(--charts-space-2xs);
-    font-size: 0.8rem;
-    color: #64748b;
   }
 
   .soap-note__summary-body {

@@ -213,7 +213,7 @@ describe('DADS clinical input contract - SOAP', () => {
       />,
     );
 
-    const panel = screen.getByLabelText('SOAP 記載');
+    const panel = screen.getByLabelText('カルテ本文');
     expect(within(panel).getByText('読み取り専用: 別端末で編集中のため編集できません。')).toBeVisible();
     expect(within(panel).getByText('保存済')).toBeVisible();
     for (const label of ['Free', 'Subjective', 'Objective', 'Assessment', 'Plan']) {

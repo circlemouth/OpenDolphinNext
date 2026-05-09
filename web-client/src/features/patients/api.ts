@@ -137,6 +137,14 @@ const normalizeBoolean = (value: unknown) => {
 
 const normalizeApiString = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : undefined);
 
+const PATIENT_NOT_FOUND_WORDING_PATTERN =
+  /(患者番号がありません|patient[-_\s]*not[-_\s]*found|no\s+patient|患者番号に該当する患者が存在しません|該当する患者が存在しません|患者.*存在しません)/i;
+
+const isPatientNotFoundPlaceholder = (patient: PatientRecord) =>
+  PATIENT_NOT_FOUND_WORDING_PATTERN.test(
+    [patient.name, patient.kana, patient.memo].filter((value): value is string => Boolean(value)).join(' '),
+  );
+
 const extractApiResult = (json: Record<string, unknown>): string | undefined => {
   return normalizeApiString(json.apiResult);
 };
@@ -339,7 +347,10 @@ export async function refetchOfficialCanonicalPatients(params: {
   const apiResult = extractApiResult(json);
   const apiResultMessage = extractApiResultMessage(json);
   const list = Array.isArray(json.patients) ? (json.patients as any[]) : [];
-  const patients = list.map(mapCanonicalPatient).filter((patient) => Object.values(patient).some(Boolean));
+  const patients = list
+    .map(mapCanonicalPatient)
+    .filter((patient) => Object.values(patient).some(Boolean))
+    .filter((patient) => !isPatientNotFoundPlaceholder(patient));
   const requestedPatientIds = new Set(patientIds);
   const matchedPatientIds = Array.from(new Set(patients
     .map((patient) => normalizeApiString(patient.patientId))

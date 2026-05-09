@@ -170,6 +170,17 @@ const isSelectorOptionOnlyRow = (value: any): boolean => {
   return hasSelectorContext && !hasPatientContext && !hasBusinessIdentity && !hasTimelineContext;
 };
 
+const isLegacyLocalSmokePatient = (patient: ReturnType<typeof pickPatient>): boolean => {
+  const patientId = typeof patient.patientId === 'string' ? patient.patientId.trim() : '';
+  if (patientId !== '0000001') return false;
+  const name = typeof patient.wholeName === 'string' ? patient.wholeName.trim() : '';
+  const kana = typeof patient.wholeNameKana === 'string' ? patient.wholeNameKana.trim() : '';
+  return name.includes('スモーク') || kana.includes('スモーク');
+};
+
+const hasDisplayablePatientContext = (patient: ReturnType<typeof pickPatient>): boolean =>
+  hasText(patient.patientId) && hasText(patient.wholeName) && !isLegacyLocalSmokePatient(patient);
+
 const toClaimStatus = (statusText?: unknown): ClaimBundleStatus | undefined => {
   if (typeof statusText !== 'string') return undefined;
   const normalized = statusText.toLowerCase();
@@ -290,6 +301,7 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
   slots.forEach((slot, index) => {
     if (isSelectorOptionOnlyRow(slot)) return;
     const patient = pickPatient(slot);
+    if (!hasDisplayablePatientContext(patient)) return;
     const reservationTime = toDisplayTime(json?.appointmentDate, slot.appointmentTime);
     const scheduleKey = pickScheduleKey(slot);
     const encounterKey = pickEncounterKey(slot);
@@ -323,6 +335,7 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
   reservations.forEach((reservation, index) => {
     if (isSelectorOptionOnlyRow(reservation)) return;
     const patient = pickPatient({ ...reservation, patient: reservation.patient ?? json?.patient });
+    if (!hasDisplayablePatientContext(patient)) return;
     const reservationTime = toDisplayTime(reservation.appointmentDate, reservation.appointmentTime);
     const scheduleKey = pickScheduleKey(reservation);
     const encounterKey = pickEncounterKey(reservation);
@@ -360,6 +373,7 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
   visits.forEach((visit, index) => {
     if (isSelectorOptionOnlyRow(visit)) return;
     const patient = pickPatient(visit);
+    if (!hasDisplayablePatientContext(patient)) return;
     const receptionId = pickReceptionId(visit);
     const scheduleKey = pickScheduleKey(visit);
     const encounterKey = pickEncounterKey(visit);

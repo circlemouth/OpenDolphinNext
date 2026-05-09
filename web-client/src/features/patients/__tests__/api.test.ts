@@ -246,6 +246,26 @@ describe('patients api official mutation', () => {
     expect(result.missingPatientIds).toEqual([]);
   });
 
+  it('canonical batch の patient-not-found placeholder は official patient として扱わない', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      buildCanonicalBatchResponse('000001', '患者番号がありません', {
+        apiResult: '00',
+        apiResultMessage: 'OK',
+      }),
+    );
+
+    const result = await refetchOfficialCanonicalPatients({
+      patientIds: ['000001'],
+      runId: 'RUN-CANONICAL',
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(200);
+    expect(result.patients).toEqual([]);
+    expect(result.matchedPatientIds).toEqual([]);
+    expect(result.missingPatientIds).toEqual(['000001']);
+  });
+
   it('official exact existence は Patient_ID 完全一致だけを accepted にする', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(buildCanonicalBatchResponse('00001', 'Trial 患者'));
 

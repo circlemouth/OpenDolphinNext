@@ -51,7 +51,6 @@ import { resolveCacheHitTone, resolveMetaFlagTone, resolveTransitionTone } from 
 import { PatientMetaRow } from '../../shared/PatientMetaRow';
 import {
   OUTPATIENT_AUTO_REFRESH_INTERVAL_MS,
-  formatAutoRefreshTimestamp,
   useAutoRefreshNotice,
 } from '../../shared/autoRefreshNotice';
 import { MISSING_MASTER_RECOVERY_NEXT_ACTION } from '../../shared/missingMasterRecovery';
@@ -86,7 +85,6 @@ import {
   buildPendingAcceptHandoff,
   buildReceptionEncounterFromEntry,
   resolveAcceptMutationHandoff,
-  resolvePatientChartsHandoff,
   resolvePendingAcceptHandoffFromEntries,
   type PendingReceptionHandoff,
   type ResolvedReceptionHandoff,
@@ -136,7 +134,7 @@ import {
 } from '../../charts/orderRpNormalization';
 import { resolveAcceptmodFallbackMessage } from '../acceptmodv2Result';
 
-type SortKey = 'time' | 'acceptance' | 'reservation' | 'name' | 'department';
+type SortKey = 'acceptance' | 'reservation' | 'name' | 'department';
 type StatusListLayout = 'table' | 'cards';
 
 const SECTION_ORDER: ReceptionStatus[] = ['受付中', '診療中', '会計待ち', '再計待', '会計済み', '予約'];
@@ -149,7 +147,6 @@ const SECTION_LABEL: Record<ReceptionStatus, string> = {
   予約: '予約',
 };
 const SORT_LABEL: Record<SortKey, string> = {
-  time: '優先時間',
   acceptance: '受付時間',
   reservation: '予約時間',
   name: '氏名',
@@ -161,7 +158,6 @@ const STATUS_LIST_LAYOUT_STORAGE_KEY = 'reception-status-list-layout';
 const ORCA_QUEUE_REFRESH_INTERVAL_MS = 60_000;
 const ORCA_QUEUE_QUERY_KEY = ['orca-queue'] as const;
 const PATIENT_SEARCH_PAGE_SIZE = 50;
-const PATIENT_SEARCH_TIMEOUT_MS = 15_000;
 const STATUS_TAB_ORDER = SECTION_ORDER;
 
 type ReceptionPatientSearchFilters = {
@@ -171,23 +167,6 @@ type ReceptionPatientSearchFilters = {
   kanaSei: string;
   kanaMei: string;
 };
-
-const withPatientSearchTimeout = <T,>(promise: Promise<T>): Promise<T> =>
-  new Promise<T>((resolve, reject) => {
-    const timeoutId = window.setTimeout(() => {
-      reject(new Error('患者検索がタイムアウトしました。条件を確認して再検索してください。'));
-    }, PATIENT_SEARCH_TIMEOUT_MS);
-    promise.then(
-      (value) => {
-        window.clearTimeout(timeoutId);
-        resolve(value);
-      },
-      (error) => {
-        window.clearTimeout(timeoutId);
-        reject(error);
-      },
-    );
-  });
 
 const toPatientRecordFromMaster = (patient: PatientMasterRecord): PatientRecord => ({
   patientId: patient.patientId,
@@ -209,15 +188,22 @@ const mergeOfficialPatientIntoEntry = (entry: ReceptionEntry, patient?: PatientR
   };
 };
 
-const ORCA_PATIENT_ID_DIGITS = 6;
+const ORCA_PATIENT_ID_MIN_DIGITS = 5;
+const ORCA_PATIENT_ID_MAX_DIGITS = 8;
 
-const normalizeOrcaPatientIdInput = (value: string) => value.replace(/\D/g, '').slice(0, ORCA_PATIENT_ID_DIGITS);
+const normalizeOrcaPatientIdInput = (value: string) => value.replace(/\D/g, '').slice(0, ORCA_PATIENT_ID_MAX_DIGITS);
 
 const formatOrcaPatientIdForSearch = (value: string, options: { preserveNonNumeric?: boolean } = {}) => {
   const trimmed = value.trim();
   if (options.preserveNonNumeric && trimmed && !/^\d+$/.test(trimmed)) return trimmed;
   const normalized = normalizeOrcaPatientIdInput(value);
-  return normalized ? normalized.padStart(ORCA_PATIENT_ID_DIGITS, '0') : '';
+  if (!normalized) return '';
+  const significantDigits = normalized.replace(/^0+/, '');
+  if (!significantDigits) return '0'.repeat(ORCA_PATIENT_ID_MIN_DIGITS);
+  if (significantDigits.length <= ORCA_PATIENT_ID_MIN_DIGITS) {
+    return significantDigits.padStart(ORCA_PATIENT_ID_MIN_DIGITS, '0');
+  }
+  return normalized;
 };
 
 const buildPatientSearchNoResultMessage = (filters: ReceptionPatientSearchFilters | null) => {
@@ -230,7 +216,7 @@ const buildPatientSearchNoResultMessage = (filters: ReceptionPatientSearchFilter
 const searchOfficialReceptionPatients = async (filters: ReceptionPatientSearchFilters, runId?: string): Promise<PatientListResponse> => {
   const patientId = filters.patientId.trim();
   if (patientId) {
-    const result = await withPatientSearchTimeout(refetchOfficialCanonicalPatients({ patientIds: [patientId], runId }));
+    const result = await refetchOfficialCanonicalPatients({ patientIds: [patientId], runId });
     return {
       patients: result.patients,
       runId,
@@ -246,7 +232,7 @@ const searchOfficialReceptionPatients = async (filters: ReceptionPatientSearchFi
 
   const fullName = `${filters.nameSei.trim()} ${filters.nameMei.trim()}`.trim();
   const fullKana = `${filters.kanaSei.trim()} ${filters.kanaMei.trim()}`.trim();
-  const result = await withPatientSearchTimeout(fetchPatientMasterSearch({ name: fullName, kana: fullKana }));
+  const result = await fetchPatientMasterSearch({ name: fullName, kana: fullKana });
   return {
     patients: result.patients.map(toPatientRecordFromMaster),
     runId: result.runId ?? runId,
@@ -381,7 +367,7 @@ const isReceptionStatusMvpEnabled = receptionStatusMvpPhase >= 1;
 const isReceptionStatusMvpPhase2 = receptionStatusMvpPhase >= 2;
 
 const isSortKey = (value?: string | null): value is SortKey =>
-  value === 'time' || value === 'acceptance' || value === 'reservation' || value === 'name' || value === 'department';
+  value === 'acceptance' || value === 'reservation' || value === 'name' || value === 'department';
 const isStatusListLayout = (value?: string | null): value is StatusListLayout =>
   value === 'table' || value === 'cards';
 const resolveInitialStatusTab = (section?: string | null): ReceptionStatus => {
@@ -884,11 +870,6 @@ const sortEntries = (entries: ReceptionEntry[], sortKey: SortKey) => {
   };
 
   return [...entries].sort((a, b) => {
-    if (sortKey === 'time') {
-      const aTime = a.acceptanceTime ?? a.reservationTime ?? a.appointmentTime;
-      const bTime = b.acceptanceTime ?? b.reservationTime ?? b.appointmentTime;
-      return toMinutes(aTime) - toMinutes(bTime);
-    }
     if (sortKey === 'acceptance') {
       return toMinutes(a.acceptanceTime) - toMinutes(b.acceptanceTime);
     }
@@ -995,7 +976,7 @@ export function ReceptionPage({
   const [paymentMode, setPaymentMode] = useState<PaymentMode>(() => normalizePaymentMode(searchParams.get('pay')));
   const [sortKey, setSortKey] = useState<SortKey>(() => {
     const fromUrl = searchParams.get('sort');
-    return isSortKey(fromUrl) ? fromUrl : 'time';
+    return isSortKey(fromUrl) ? fromUrl : 'acceptance';
   });
   const [activeStatusTab, setActiveStatusTab] = useState<ReceptionStatus>(() =>
     resolveInitialStatusTab(searchParams.get('section')),
@@ -1980,6 +1961,13 @@ export function ReceptionPage({
       selectedDepartmentCode: acceptDepartmentSelection,
     });
   }, [acceptDepartmentSelection, departmentLabelMap, visibleAppointmentEntries]);
+  useEffect(() => {
+    if (acceptDepartmentSelection.trim()) return;
+    const firstDepartmentCode = departmentOptions[0]?.[0];
+    if (!firstDepartmentCode) return;
+    setAcceptDepartmentSelection(firstDepartmentCode);
+    setAcceptErrors((prev) => ({ ...prev, department: undefined }));
+  }, [acceptDepartmentSelection, departmentOptions]);
   const rawFilteredEntries = useMemo(
     () => filterEntries(visibleAppointmentEntries, keyword, departmentFilter, physicianFilter, paymentMode),
     [departmentFilter, keyword, paymentMode, physicianFilter, visibleAppointmentEntries],
@@ -2744,12 +2732,6 @@ export function ReceptionPage({
     () => savedViews.find((view) => view.id === selectedViewId) ?? null,
     [savedViews, selectedViewId],
   );
-  const savedViewUpdatedAtLabel = useMemo(() => {
-    if (!selectedSavedView?.updatedAt) return null;
-    const parsed = Date.parse(selectedSavedView.updatedAt);
-    if (Number.isNaN(parsed)) return selectedSavedView.updatedAt;
-    return formatAutoRefreshTimestamp(parsed);
-  }, [selectedSavedView]);
   const activeFilterChips = useMemo(() => {
     const chips: Array<{ key: string; label: string }> = [];
     if (departmentFilter) chips.push({ key: 'department', label: `診療科 ${departmentFilter}` });
@@ -2757,7 +2739,7 @@ export function ReceptionPage({
     if (paymentMode !== 'all') {
       chips.push({ key: 'payment', label: `保険/自費 ${paymentMode === 'insurance' ? '保険' : '自費'}` });
     }
-    if (sortKey !== 'time') chips.push({ key: 'sort', label: `ソート ${SORT_LABEL[sortKey]}` });
+    if (sortKey !== 'acceptance') chips.push({ key: 'sort', label: `ソート ${SORT_LABEL[sortKey]}` });
     if (selectedSavedView) chips.push({ key: 'saved-view', label: `保存ビュー ${selectedSavedView.label}` });
     return chips;
   }, [departmentFilter, paymentMode, physicianFilter, selectedSavedView, sortKey]);
@@ -3907,7 +3889,7 @@ export function ReceptionPage({
     setDepartmentFilter('');
     setPhysicianFilter('');
     setPaymentMode('all');
-    setSortKey('time');
+    setSortKey('acceptance');
   }, []);
 
   const applySavedView = useCallback(
@@ -3919,7 +3901,7 @@ export function ReceptionPage({
       setDepartmentFilter(view.filters.department ?? '');
       setPhysicianFilter(view.filters.physician ?? '');
       setPaymentMode(view.filters.paymentMode ?? 'all');
-      setSortKey(isSortKey(view.filters.sort) ? (view.filters.sort as SortKey) : 'time');
+      setSortKey(isSortKey(view.filters.sort) ? (view.filters.sort as SortKey) : 'acceptance');
       setSelectedDate(view.filters.date ?? selectedDate);
       appointmentQuery.refetch();
     },
@@ -4588,7 +4570,6 @@ export function ReceptionPage({
                 }}
                 aria-invalid={Boolean(acceptErrors.department)}
               >
-                <option value="">選択してください</option>
                 {departmentOptions.map(([code, name]) => (
                   <option key={code} value={code}>
                     {name}
@@ -4694,16 +4675,14 @@ export function ReceptionPage({
           </div>
 
           <div className="reception-accept__actions">
-            <div className="reception-accept__hints" aria-live={infoLive}>
-              <span>受付内容を確認して「受付する」を押してください。</span>
-              <span>この画面は既存患者の受付専用です。新患登録は Patients で行ってください。</span>
-              {debugUiEnabled ? (
+            {debugUiEnabled ? (
+              <div className="reception-accept__hints" aria-live={infoLive}>
                 <>
                   <span>Api_Result=00/K3: 左の一覧へ即時反映 / Api_Result=16/21/60: 警告表示</span>
                   <span>runId/traceId は監査ログ（action=reception_accept）とコンソールに残します</span>
                 </>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -4780,11 +4759,6 @@ export function ReceptionPage({
       >
         再取得
       </button>
-      {appointmentQuery.isFetching ? (
-        <span className="reception-results-toolbar__loading" role="status" aria-live={infoLive}>
-          更新中…
-        </span>
-      ) : null}
     </div>
   );
 
@@ -4845,18 +4819,15 @@ export function ReceptionPage({
         <h2 id={`reception-section-label-${activeStatusTab}`}>{activeStatusLabel}</h2>
         <span>{activeStatusItems.length}件</span>
       </div>
-      {appointmentQuery.isFetching || activeFilterChips.length > 0 ? (
+      {activeFilterChips.length > 0 ? (
         <div className="reception-workspace-header__primary">
-          {appointmentQuery.isFetching ? <span className="reception-results-toolbar__loading">更新中…</span> : null}
-          {activeFilterChips.length > 0 ? (
-            <div className="reception-workspace-header__chips" aria-label="適用中の詳細条件">
-              {activeFilterChips.map((chip) => (
-                <span key={chip.key} className="reception-workspace-header__chip">
-                  {chip.label}
-                </span>
-              ))}
-            </div>
-          ) : null}
+          <div className="reception-workspace-header__chips" aria-label="適用中の詳細条件">
+            {activeFilterChips.map((chip) => (
+              <span key={chip.key} className="reception-workspace-header__chip">
+                {chip.label}
+              </span>
+            ))}
+          </div>
         </div>
       ) : null}
       <div className="reception-workspace-header__controls" ref={setToolbarHost} />
@@ -5059,7 +5030,6 @@ export function ReceptionPage({
                     value={sortKey}
                     onChange={(event) => setSortKey(event.target.value as SortKey)}
                   >
-                    <option value="time">優先時間（受付→予約）</option>
                     <option value="acceptance">受付時間</option>
                     <option value="reservation">予約時間</option>
                     <option value="name">氏名</option>
@@ -5124,12 +5094,6 @@ export function ReceptionPage({
                   </button>
                 </div>
               </fieldset>
-            </div>
-            <div className="reception-toolbar__summary" role="status" aria-live={infoLive}>
-              <span className="reception-search__saved-share">受付 ↔ 患者管理で共有</span>
-              <span className="reception-search__saved-updated">
-                {selectedSavedView ? `選択中の更新: ${savedViewUpdatedAtLabel ?? '—'}` : '選択中のビューはありません'}
-              </span>
             </div>
           </section>
         ) : null}
@@ -6145,13 +6109,13 @@ export function ReceptionPage({
                     <header className="reception-patient-search__header">
                       <h3>患者検索</h3>
                       <div className="reception-patient-search__header-actions">
-                        <span className="reception-patient-search__meta" aria-live={infoLive}>
-                          {patientSearchMutation.isPending
-                            ? '検索中…'
-                            : showPatientSearchPagination
+                        {!patientSearchMutation.isPending ? (
+                          <span className="reception-patient-search__meta" aria-live={infoLive}>
+                            {showPatientSearchPagination
                               ? `${patientSearchResults.length}件（${patientSearchRangeLabel}）`
                               : `${patientSearchResults.length}件`}
-                        </span>
+                          </span>
+                        ) : null}
                         <button
                           type="button"
                           className="reception-search__button ghost"
@@ -6182,9 +6146,9 @@ export function ReceptionPage({
                               patientSearchPatientIdDirtyRef.current = true;
                               setPatientSearchPatientId(normalizeOrcaPatientIdInput(event.target.value));
                             }}
-                            maxLength={ORCA_PATIENT_ID_DIGITS}
+                            maxLength={ORCA_PATIENT_ID_MAX_DIGITS}
                             pattern={/^\d*$/.test(patientSearchPatientId) ? '[0-9]*' : undefined}
-                            placeholder="000001"
+                            placeholder="00001"
                           />
                         </label>
                       </div>
@@ -6282,19 +6246,19 @@ export function ReceptionPage({
                       <header className="reception-accept-modal__results-header">
                         <div>
                           <h3>患者検索結果</h3>
-                          <span className="reception-patient-search__meta" aria-live={infoLive}>
-                            {patientSearchMutation.isPending
-                              ? '検索中…'
-                              : showPatientSearchPagination
+                          {!patientSearchMutation.isPending ? (
+                            <span className="reception-patient-search__meta" aria-live={infoLive}>
+                              {showPatientSearchPagination
                                 ? `${patientSearchResults.length}件（${patientSearchRangeLabel}）`
                                 : `${patientSearchResults.length}件`}
-                          </span>
+                            </span>
+                          ) : null}
                         </div>
                       </header>
                       <div className="reception-accept-modal__results-body">
                         <div className="reception-patient-search__list" role="list" aria-label="検索結果">
                           {patientSearchMutation.isPending ? (
-                            <p className="reception-sidepane__empty">検索中…</p>
+                            null
                           ) : patientSearchResults.length === 0 ? (
                             <p className="reception-sidepane__empty">検索結果がありません。</p>
                           ) : (
@@ -6307,22 +6271,6 @@ export function ReceptionPage({
                                 (Boolean(resolvedPatientId) &&
                                   Boolean(patientSearchSelected?.patientId) &&
                                   resolvedPatientId === patientSearchSelected?.patientId);
-                              const chartsHandoffCandidate = resolvePatientChartsHandoff({
-                                patientId: resolvedPatientId,
-                                acceptedHandoff:
-                                  acceptedChartsHandoff?.encounter.patientId === resolvedPatientId ? acceptedChartsHandoff : null,
-                                entries: visibleAppointmentEntries,
-                              });
-                              const patientSearchOpenChartsTitle =
-                                chartsHandoffCandidate.kind === 'ready'
-                                  ? chartsHandoffCandidate.source === 'accepted'
-                                    ? '直前に確立した canonical handoff でカルテを開く'
-                                    : '当日の受付から一意に解決した canonical handoff でカルテを開く'
-                                  : chartsHandoffCandidate.reason === 'ambiguous_active_entries'
-                                    ? '同一患者の active entry が複数あるためカルテを開けません'
-                                    : chartsHandoffCandidate.reason === 'missing_handoff_key'
-                                      ? '当日の受付に canonical key がないためカルテを開けません'
-                                      : '当日の active entry がないためカルテを開けません';
                               return (
                                 <div
                                   key={key}
@@ -6369,47 +6317,21 @@ export function ReceptionPage({
                                       <button
                                         type="button"
                                         className="reception-search__button primary"
-                                        data-test-id="reception-patient-search-open-charts"
-                                        data-schedule-key={
-                                          chartsHandoffCandidate.kind === 'ready'
-                                            ? chartsHandoffCandidate.encounter.scheduleKey ?? ''
-                                            : ''
-                                        }
-                                        data-encounter-key={
-                                          chartsHandoffCandidate.kind === 'ready'
-                                            ? chartsHandoffCandidate.encounter.encounterKey ?? ''
-                                            : ''
-                                        }
+                                        data-test-id="reception-accept-register"
+                                        data-testid="reception-accept-register"
                                         onClick={(event) => {
                                           event.stopPropagation();
-                                          if (!resolvedPatientId) return;
-                                          if (chartsHandoffCandidate.kind === 'ready') {
-                                            openChartsWithEncounter(
-                                              chartsHandoffCandidate.encounter,
-                                              'patient_search',
-                                              buildReceptionEncounterFromEntry(chartsHandoffCandidate.encounter),
-                                            );
-                                            return;
-                                          }
-                                          enqueue({
-                                            tone: 'warning',
-                                            message: 'カルテを開くための canonical key が見つかりません。',
-                                            detail:
-                                              chartsHandoffCandidate.reason === 'ambiguous_active_entries'
-                                                ? '同一患者の active entry が複数あるため、対象の受付を 1 件に絞ってください。'
-                                                : chartsHandoffCandidate.reason === 'no_active_entry'
-                                                  ? '受付登録を完了するとカルテを開けます。'
-                                                  : '当日の受付から canonical key を受け取れる患者のみカルテを開けます。',
-                                          });
+                                          void handleAcceptRegister(event);
                                         }}
                                         onKeyDown={(event) => {
                                           event.stopPropagation();
                                         }}
-                                        disabled={!resolvedPatientId}
-                                        title={patientSearchOpenChartsTitle}
+                                        disabled={isAcceptSubmitting || acceptRegisterDecision.disabled}
+                                        aria-disabled={isAcceptSubmitting || acceptRegisterDecision.disabled}
+                                        title={acceptRegisterDecision.reason}
                                       >
-                                        <ClinicalIcon icon="chart-open" />
-                                        <span>カルテを開く</span>
+                                        <ClinicalIcon icon="orca-send" />
+                                        <span>{isAcceptSubmitting ? '受付中…' : '受付する'}</span>
                                       </button>
                                     </div>
                                   ) : null}
@@ -6469,22 +6391,6 @@ export function ReceptionPage({
                       {selectedPatientId ? (
                         <>
                           {renderAcceptDetailPanel('modal')}
-                          <div className="reception-accept-modal__submit">
-                            <button
-                              type="button"
-                              className="reception-search__button primary"
-                              onClick={(event) => void handleAcceptRegister(event)}
-                              disabled={isAcceptSubmitting || acceptRegisterDecision.disabled}
-                              aria-disabled={isAcceptSubmitting || acceptRegisterDecision.disabled}
-                              data-test-id="reception-accept-register"
-                              title={acceptRegisterDecision.reason}
-                            >
-                              {isAcceptSubmitting ? '受付中…' : '受付する'}
-                            </button>
-                            <p className="reception-accept-modal__submit-hint" aria-live={infoLive}>
-                              {acceptRegisterDecision.reason ?? '必須項目を入力すると受付できます。'}
-                            </p>
-                          </div>
                         </>
                       ) : (
                         <p className="reception-sidepane__empty">

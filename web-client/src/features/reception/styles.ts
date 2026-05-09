@@ -1389,25 +1389,6 @@ export const receptionStyles = css`
     background-clip: content-box;
   }
 
-  .reception-accept-modal__submit {
-    margin-top: auto;
-    padding-top: 0.55rem;
-    border-top: 1px solid rgba(148, 163, 184, 0.22);
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-  }
-
-  .reception-accept-modal__submit .reception-search__button {
-    width: 100%;
-  }
-
-  .reception-accept-modal__submit-hint {
-    margin: 0;
-    font-size: 0.82rem;
-    color: #475569;
-  }
-
   .reception-sidepane {
     background: #ffffff;
     border-radius: 20px;
@@ -3962,12 +3943,6 @@ export const receptionStyles = css`
     gap: 0.6rem;
     align-items: baseline;
     min-width: 0;
-  }
-
-  .reception-results-toolbar__loading {
-    font-size: 0.85rem;
-    color: #475569;
-    font-weight: 700;
   }
 
   .reception-results-toolbar__actions {

@@ -1569,7 +1569,6 @@ export function SoapNotePanel({
     return normalized.length > 0 ? normalized : '不明';
   };
 
-  const authoredFirst = authoredMeta.first;
   const authoredLast = authoredMeta.last;
   const authoredSummary = authoredLast
     ? `最終更新: ${formatSoapAuthoredAt(authoredLast.authoredAt)} / ${resolveEntryActor(authoredLast)}`
@@ -1755,7 +1754,7 @@ export function SoapNotePanel({
   return (
     <section
       className="soap-note"
-      aria-label="SOAP 記載"
+      aria-label="カルテ本文"
       data-run-id={meta.runId}
       data-view-mode={viewMode}
       data-right-drawer-open={drawerOpen ? 'true' : 'false'}
@@ -1765,9 +1764,8 @@ export function SoapNotePanel({
     >
       <header className="soap-note__header">
         <div className="soap-note__header-main">
-          <p className="soap-note__eyebrow">Primary Workspace</p>
           <div className="soap-note__title-row">
-            <h2>SOAP 記載</h2>
+            <h2>カルテ本文</h2>
             <div className="soap-note__sync" role="status" aria-live={resolveAriaLive(syncState.error ? 'error' : 'info')}>
               <span
                 className={`soap-note__sync-badge${
@@ -1788,14 +1786,6 @@ export function SoapNotePanel({
             </div>
           </div>
           <p className="soap-note__subtitle soap-note__subtitle--meta">{authoredSummary}</p>
-          <details className="soap-note__meta-details">
-            <summary className="soap-note__subtitle">記載情報</summary>
-            <p className="soap-note__subtitle">
-              記載者: {resolveAuthorLabel(author)} ／ role: {author.role} ／ 受付ID: {meta.receptionId ?? '—'} ／ 初回:{' '}
-              {authoredFirst ? `${formatSoapAuthoredAt(authoredFirst.authoredAt)} / ${resolveEntryActor(authoredFirst)}` : '—'} ／
-              最終: {authoredLast ? `${formatSoapAuthoredAt(authoredLast.authoredAt)} / ${resolveEntryActor(authoredLast)}` : '—'}
-            </p>
-          </details>
         </div>
         <div className="soap-note__actions">
           <button

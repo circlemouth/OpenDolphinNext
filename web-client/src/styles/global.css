@@ -286,26 +286,24 @@ body {
 
 .login-brand__badge {
   width: 100%;
-  height: clamp(150px, 26vh, 260px);
+  height: clamp(220px, 38vh, 380px);
   max-width: none;
-  /* Allow full expansion */
   background: transparent;
   border: none;
-  padding: 1.5rem;
-  /* Keep a little padding so logo doesn't touch the absolute edge, or make it 0 for full bleed? "全体を表示" usually implies safe area or full. Let's give it slight breathing room (2rem) inside the full container. */
+  padding: 0;
   box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 1;
+  overflow: hidden;
 }
 
 .login-brand__badge img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  transform: scale(1.2);
-  /* Shows the whole image respecting aspect ratio */
+  object-fit: cover;
+  object-position: center;
 }
 
 .login-brand__text {
@@ -613,9 +611,8 @@ body {
   }
 
   .login-brand__badge {
-    width: 100px;
-    height: 100px;
-    padding: 16px;
+    width: min(100%, 420px);
+    height: clamp(160px, 26vh, 240px);
   }
 
   .login-card__header h1 {

@@ -638,12 +638,12 @@ describe('ReceptionPage accept UX', () => {
     const resultPanel = within(workflowModal).getByRole('region', { name: '患者検索結果モーダル' });
     const acceptPanel = getAcceptRegisterPanel(workflowModal);
     expect(within(resultPanel).queryByText(/Api_Result_Message:/)).toBeNull();
-    expect(within(acceptPanel).queryByRole('button', { name: '受付する' })).toBeNull();
+    expect(within(workflowModal).queryByTestId('reception-accept-register')).toBeNull();
     expect(within(acceptPanel).getByText(/左の患者検索結果カードを選択すると/)).toBeInTheDocument();
 
     await user.click(within(resultPanel).getAllByRole('listitem')[0]);
     expect(within(acceptPanel).getByText('選択患者: 山田太郎')).toBeInTheDocument();
-    expect(within(acceptPanel).getByRole('button', { name: '受付する' })).toBeInTheDocument();
+    expect(within(workflowModal).getByTestId('reception-accept-register')).toBeInTheDocument();
     const paymentSelect = within(acceptPanel).getByLabelText(/保険\/自費/);
     expect(paymentSelect).toHaveValue('insurance');
 
@@ -653,7 +653,7 @@ describe('ReceptionPage accept UX', () => {
     expect(within(acceptPanel).getByText('選択患者: 山田太郎')).toBeInTheDocument();
   });
 
-  it('enables 受付する only after required fields are filled', async () => {
+  it('enables 受付する when required fields are auto-filled', async () => {
     mockAppointmentData.entries = [
       {
         id: 'row-1',
@@ -698,16 +698,14 @@ describe('ReceptionPage accept UX', () => {
     await user.click(within(resultPanel).getAllByRole('listitem')[0]);
     const departmentSelect = within(acceptPanel).getByLabelText(/診療科/) as HTMLSelectElement;
     const physicianSelect = within(acceptPanel).getByLabelText(/担当医/) as HTMLSelectElement;
-    const registerButton = within(acceptPanel).getByRole('button', { name: '受付する' });
+    const registerButton = within(workflowModal).getByTestId('reception-accept-register');
     await waitFor(() => expect(within(acceptPanel).getByLabelText(/保険\/自費/)).toHaveValue('insurance'));
+    expect(departmentSelect).toHaveValue('01');
     expect(physicianSelect).toHaveValue('10001');
-    await user.selectOptions(departmentSelect, '');
-    await user.selectOptions(physicianSelect, '');
-    expect(registerButton).toBeDisabled();
 
     const paymentSelect = within(acceptPanel).getByLabelText(/保険\/自費/);
     expect(paymentSelect).toHaveValue('insurance');
-    await user.selectOptions(departmentSelect, departmentSelect.options[1]?.value ?? '01');
+    await user.selectOptions(departmentSelect, departmentSelect.options[0]?.value ?? '01');
     await user.selectOptions(physicianSelect, physicianSelect.options[1]?.value ?? '10001');
     await waitFor(() => expect(registerButton).toBeEnabled());
     expect(mockVerifyOfficialPatientExactExistence).toHaveBeenCalledWith(expect.objectContaining({ patientId: 'P-010' }));
@@ -750,8 +748,8 @@ describe('ReceptionPage accept UX', () => {
     await user.selectOptions(within(acceptPanel).getByLabelText(/来院区分/), '1');
 
     await waitFor(() => {
-      expect(within(acceptPanel).getByRole('button', { name: '受付する' })).toBeDisabled();
-      expect(within(acceptPanel).getByText(/ORCA 受付対象として未登録です/)).toBeInTheDocument();
+      expect(within(workflowModal).getByTestId('reception-accept-register')).toBeDisabled();
+      expect(within(acceptPanel).getByText(/ORCA 受付対象として未確認\/未登録です/)).toBeInTheDocument();
     });
     expect(mockVerifyOfficialPatientExactExistence).toHaveBeenCalledWith(expect.objectContaining({ patientId: 'LOCAL-001' }));
     expect(mockMutationCalls).toHaveLength(1);
@@ -822,9 +820,9 @@ describe('ReceptionPage accept UX', () => {
     const physicianSelect = within(acceptPanel).getByLabelText(/担当医/) as HTMLSelectElement;
     const paymentSelect = within(acceptPanel).getByLabelText(/保険\/自費/) as HTMLSelectElement;
     const visitKindSelect = within(acceptPanel).getByLabelText(/来院区分/) as HTMLSelectElement;
-    const registerButton = within(acceptPanel).getByRole('button', { name: '受付する' });
+    const registerButton = within(workflowModal).getByTestId('reception-accept-register');
 
-    await user.selectOptions(departmentSelect, departmentSelect.options[1]?.value ?? '01');
+    await user.selectOptions(departmentSelect, departmentSelect.options[0]?.value ?? '01');
     await user.selectOptions(physicianSelect, physicianSelect.options[1]?.value ?? '10001');
     await user.selectOptions(visitKindSelect, '');
     expect(registerButton).toBeDisabled();
@@ -1106,7 +1104,7 @@ describe('ReceptionPage accept UX', () => {
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
     await selectInsurancePayment(user, acceptPanel);
-    await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
+    await user.click(within(workflowModal).getByTestId('reception-accept-register'));
 
     const row = await screen.findByRole('row', { name: /予約登録患者/ });
     expect(row).toHaveAttribute('data-reception-status', '受付中');
@@ -1197,7 +1195,7 @@ describe('ReceptionPage accept UX', () => {
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
     await selectInsurancePayment(user, acceptPanel);
-    const submitButton = within(acceptPanel).getByRole('button', { name: '受付する' });
+    const submitButton = within(workflowModal).getByTestId('reception-accept-register');
     await user.click(submitButton);
 
     const resultHeading = await screen.findByRole('heading', { name: '送信結果' });
@@ -1266,7 +1264,7 @@ describe('ReceptionPage accept UX', () => {
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
     await selectInsurancePayment(user, acceptPanel);
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療内容コード/), '02');
-    await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
+    await user.click(within(workflowModal).getByTestId('reception-accept-register'));
 
     expect(mockMutationCalls.at(-1)).toMatchObject({
       requestNumber: '01',
@@ -1329,7 +1327,7 @@ describe('ReceptionPage accept UX', () => {
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
     await selectInsurancePayment(user, acceptPanel);
-    await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
+    await user.click(within(workflowModal).getByTestId('reception-accept-register'));
 
     expect(mockMutationCalls.at(-1)).toMatchObject({
       requestNumber: '01',
@@ -1377,9 +1375,9 @@ describe('ReceptionPage accept UX', () => {
     const acceptPanel = getAcceptRegisterPanel(workflowModal);
     const departmentSelect = within(acceptPanel).getByLabelText(/診療科/) as HTMLSelectElement;
     const physicianSelect = within(acceptPanel).getByLabelText(/担当医/) as HTMLSelectElement;
-    const registerButton = within(acceptPanel).getByRole('button', { name: '受付する' });
+    const registerButton = within(workflowModal).getByTestId('reception-accept-register');
 
-    expect(departmentSelect.options).toHaveLength(1);
+    expect(departmentSelect.options).toHaveLength(0);
     expect(physicianSelect.options).toHaveLength(1);
     expect(registerButton).toBeDisabled();
     expect(mockMutationCalls).toHaveLength(1);
@@ -1441,7 +1439,7 @@ describe('ReceptionPage accept UX', () => {
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
     await selectInsurancePayment(user, acceptPanel);
-    await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
+    await user.click(within(workflowModal).getByTestId('reception-accept-register'));
 
     expect(mockMutationCalls.at(-1)).toMatchObject({
       requestNumber: '01',
@@ -1501,40 +1499,18 @@ describe('ReceptionPage accept UX', () => {
     const selectedItem = within(resultPanel).getAllByRole('listitem')[0];
     await user.click(selectedItem);
 
-    const chartsButton = within(selectedItem).getByRole('button', { name: 'カルテを開く' });
-    expect(chartsButton).toBeEnabled();
-    await user.click(chartsButton);
-    expect(mockOpenCharts).not.toHaveBeenCalled();
-    expect(mockEnqueue).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tone: 'warning',
-        message: 'カルテを開くための canonical key が見つかりません。',
-      }),
-    );
+    expect(within(selectedItem).queryByRole('button', { name: 'カルテを開く' })).toBeNull();
+    const registerButton = within(selectedItem).getByRole('button', { name: '受付する' });
+    expect(registerButton).toBeEnabled();
 
     const acceptPanel = getAcceptRegisterPanel(workflowModal);
     await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
     await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
     await selectInsurancePayment(user, acceptPanel);
-    await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
+    await waitFor(() => expect(registerButton).toBeEnabled());
+    await user.click(registerButton);
 
-    await waitFor(() => expect(chartsButton).toBeEnabled());
-    expect(chartsButton).toHaveAttribute('data-schedule-key', 'F001:S150');
-    expect(chartsButton).toHaveAttribute('data-encounter-key', 'F001:E150');
-
-    await user.click(chartsButton);
-
-    expect(mockOpenCharts).toHaveBeenCalledWith(
-      expect.objectContaining({
-        encounter: expect.objectContaining({
-          patientId: 'P-015',
-          receptionId: 'R-015',
-          scheduleKey: 'F001:S150',
-          encounterKey: 'F001:E150',
-          visitDate: '2026-01-29',
-        }),
-      }),
-    );
+    expect(mockOpenCharts).not.toHaveBeenCalled();
   });
 
   it('patient search は server-derived 公式 visit 行から既存受付 handoff を開く', async () => {
@@ -1585,23 +1561,9 @@ describe('ReceptionPage accept UX', () => {
     const selectedItem = within(resultPanel).getAllByRole('listitem')[0];
     await user.click(selectedItem);
 
-    const chartsButton = within(selectedItem).getByRole('button', { name: 'カルテを開く' });
-    expect(chartsButton).toBeEnabled();
-    expect(chartsButton).toHaveAttribute('data-schedule-key', 'F001:S160');
-    expect(chartsButton).toHaveAttribute('data-encounter-key', 'F001:E160');
-
-    await user.click(chartsButton);
-
-    expect(mockOpenCharts).toHaveBeenCalledWith(
-      expect.objectContaining({
-        encounter: expect.objectContaining({
-          patientId: 'P-016',
-          scheduleKey: 'F001:S160',
-          encounterKey: 'F001:E160',
-          visitDate: '2026-01-29',
-        }),
-      }),
-    );
+    expect(within(selectedItem).queryByRole('button', { name: 'カルテを開く' })).toBeNull();
+    expect(within(selectedItem).getByRole('button', { name: '受付する' })).toBeInTheDocument();
+    expect(mockOpenCharts).not.toHaveBeenCalled();
     expect(mockMutationCalls).toHaveLength(1);
   });
 });
@@ -1981,7 +1943,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     expect(within(dialog).queryByText(/状態/)).toBeNull();
   });
 
-  it('pads the accept workflow patient ID to the ORCA digit count before search', async () => {
+  it('pads the accept workflow patient ID to the ORCA trial digit count before search', async () => {
     mockMutationQueue.push({
       patients: [],
       recordsReturned: 0,
@@ -2000,7 +1962,7 @@ describe('ReceptionPage list and side pane guidance', () => {
 
     await waitFor(() => {
       expect(mockMutationCalls.at(-1)).toEqual({
-        patientId: '000001',
+        patientId: '00001',
         nameSei: '',
         nameMei: '',
         kanaSei: '',
@@ -2050,7 +2012,35 @@ describe('ReceptionPage list and side pane guidance', () => {
 
     await waitFor(() => {
       expect(mockMutationCalls.at(-1)).toEqual({
-        patientId: '000001',
+        patientId: '00001',
+        nameSei: '',
+        nameMei: '',
+        kanaSei: '',
+        kanaMei: '',
+      });
+    });
+  });
+
+  it('normalizes over-padded ORCA trial patient IDs before search', async () => {
+    mockMutationQueue.push({
+      patients: [],
+      recordsReturned: 0,
+      runId: 'RUN-PATIENT-ID-OVERPADDED',
+    });
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    const form = within(patientSearch);
+    await user.clear(form.getByLabelText('患者ID'));
+    await user.type(form.getByLabelText('患者ID'), '000001');
+    await user.click(form.getByRole('button', { name: '検索' }));
+
+    await waitFor(() => {
+      expect(mockMutationCalls.at(-1)).toEqual({
+        patientId: '00001',
         nameSei: '',
         nameMei: '',
         kanaSei: '',
@@ -2068,10 +2058,10 @@ describe('ReceptionPage list and side pane guidance', () => {
     const patientIdInput = within(patientSearch).getByLabelText('患者ID') as HTMLInputElement;
 
     await user.clear(patientIdInput);
-    await user.type(patientIdInput, '12A345678');
+    await user.type(patientIdInput, '12A3456789');
 
-    expect(patientIdInput).toHaveValue('123456');
-    expect(patientIdInput).toHaveAttribute('maxLength', '6');
+    expect(patientIdInput).toHaveValue('12345678');
+    expect(patientIdInput).toHaveAttribute('maxLength', '8');
     expect(patientIdInput).toHaveAttribute('pattern', '[0-9]*');
   });
 
@@ -2087,7 +2077,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     mockMutationQueue.push({
       patients: [
         {
-          patientId: '0000001',
+          patientId: '00001',
           name: 'スモーク 患者',
           kana: 'スモーク カンジャ',
           birthDate: '1970-01-01',
@@ -2105,7 +2095,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     const workflowModal = await openAcceptWorkflowModal(user);
     const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
     const form = within(patientSearch);
-    await user.type(form.getByLabelText('患者ID'), '0000001');
+    await user.type(form.getByLabelText('患者ID'), '00001');
     await user.click(form.getByRole('button', { name: '検索' }));
 
     await waitFor(() => {
@@ -2169,7 +2159,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     expect(within(resultPanel).getAllByRole('listitem').length).toBeGreaterThan(0);
 
     await user.click(within(resultPanel).getAllByRole('listitem')[0]);
-    expect(within(acceptPanel).getByRole('button', { name: '受付する' })).toBeInTheDocument();
+    expect(within(workflowModal).getByTestId('reception-accept-register')).toBeInTheDocument();
     expect(within(acceptPanel).getByText('選択患者: 検索患者一')).toBeInTheDocument();
     const identitySummary = within(acceptPanel).getByRole('group', { name: '受付対象 検索患者一' });
     expect(identitySummary.textContent).toMatch(/ケンサクカンジャイチ.*検索患者一/s);
@@ -2294,11 +2284,10 @@ describe('ReceptionPage list and side pane guidance', () => {
     await waitFor(() => {
       expect(within(resultPanel).getByText('折りたたみ患者')).toBeInTheDocument();
     });
-    const acceptPanel = getAcceptRegisterPanel(workflowModal);
-    expect(within(acceptPanel).queryByRole('button', { name: '受付する' })).toBeNull();
+    expect(within(workflowModal).queryByTestId('reception-accept-register')).toBeNull();
 
     await user.click(within(resultPanel).getAllByRole('listitem')[0]);
-    expect(within(acceptPanel).getByRole('button', { name: '受付する' })).toBeInTheDocument();
+    expect(within(workflowModal).getByTestId('reception-accept-register')).toBeInTheDocument();
   });
 
   it('shows close button in accept workflow modal and closes it', async () => {
@@ -2522,8 +2511,7 @@ describe('ReceptionPage status/date/card action UX', () => {
     await user.click(within(patientSearch).getByRole('button', { name: '検索' }));
     const resultPanel = within(workflowModal).getByRole('region', { name: '患者検索結果モーダル' });
     await user.click(within(resultPanel).getAllByRole('listitem')[0]);
-    const acceptPanel = getAcceptRegisterPanel(workflowModal);
-    const registerButton = within(acceptPanel).getByRole('button', { name: '受付する' });
+    const registerButton = within(workflowModal).getByTestId('reception-accept-register');
     await waitFor(() => {
       expect(registerButton).toBeDisabled();
       expect(registerButton).toHaveTextContent('受付する');

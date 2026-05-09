@@ -51,6 +51,7 @@ describe('ChartsPatientSummaryBar', () => {
     expect(summary).not.toHaveTextContent('予約ID');
     expect(summary).not.toHaveTextContent('R-001');
     expect(summary).not.toHaveTextContent('A-001');
+    expect(summary).not.toHaveTextContent('CHARTS');
 
     const profileIcon = container.querySelector('.charts-patient-summary__profile-icon');
     expect(profileIcon).toHaveAttribute('data-sex-tone', 'male');

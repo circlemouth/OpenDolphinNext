@@ -81,7 +81,8 @@
 ## Charts Surface
 ### Current Fact
 - normal runtime の中心 surface は `SoapNotePanel` です。
-- `ChartsPatientSummaryBar` は患者文脈を常時見せる encounter context band として扱います。
+- `ChartsPatientSummaryBar` は患者文脈を常時見せる encounter context band として扱います。画面種別の装飾ラベル（例: `CHARTS`）は表示しません。
+- `SoapNotePanel` の利用者向け見出しは `カルテ本文` とし、内部向けの `Primary Workspace` や折りたたみの記載メタ情報は通常表示に置きません。
 - page CTA の owner は `ChartsActionBar` です。通常 UI の primary は `診察終了して会計へ送信` で、`ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。低レベル `ORCA送信` direct bridge は debug / QA / focused test 用に限定し、通常画面の初回会計送信導線には出しません。
 - `PastHubPanel` は左列の historical reference / Do 補助 surface であり、comparison 専用主面ではありません。
 - runtime right rail は `処方 / 注射 / 処置 / 検査 / 算定` の order-facing chooser-only surface です。`document` / `ORCA` / embedded editor は right rail に含めません。
@@ -129,8 +130,9 @@
 - Reception は既存患者の受付導線です。新患登録や患者作成は current surface に含めません。
 - `既存患者受付/患者検索` モーダルの患者 picker は ORCA official を使います。患者ID検索は `/api/orca/official/patients/batch`、氏名検索は `/api/orca/official/patients/name-search` を使い、受付導線の検索結果に `/api/local/patients/search` の seed/local 患者を混在させません。カナは official 氏名検索結果の画面内絞り込みとして扱い、カナ単独検索は受付導線では送信しません。
 - official `patientlst3v2` + `WholeName` 必須の name-search は受付 workflow の氏名検索でも使います。患者ID指定時は exact lookup を優先し、氏名検索結果に対してだけカナの画面内絞り込みを適用します。
-- 既存患者受付/患者検索モーダルの患者ID入力は ORCA 患者番号として数字のみ 6 桁までを受け付けます。6 桁未満で検索した場合は送信前に左ゼロ埋めし、例として `1` は `000001` として official lookup に渡します。
-- 既存患者受付/患者検索モーダルで official lookup が正常に完了して 0 件だった場合は、通信タイムアウトとは別に「検索は完了したが該当患者が見つからない」旨を warning として表示します。
+- 既存患者受付/患者検索モーダルの患者ID入力は ORCA 患者番号として数字のみ 8 桁までを受け付けます。WebORCA Trial の初期患者は 5 桁 ID なので、6 桁未満および過剰ゼロ埋めされた入力は送信前に 5 桁へ正規化し、例として `1` / `000001` は `00001` として official lookup に渡します。6 桁以上の非ゼロ始まり ID は桁を落とさず exact lookup に渡します。
+- 既存患者受付/患者検索モーダルで official lookup が正常に完了して 0 件だった場合、または ORCA が `患者番号がありません` 等の not-found placeholder を返した場合は、患者カードとして表示せず「検索は完了したが該当患者が見つからない」旨を warning として表示します。
+- 既存患者受付/患者検索モーダルの受付登録では、診療科 select に空の `選択してください` option を置かず、ORCA selector / 受付一覧から得た診療科候補の先頭を初期選択します。受付実行ボタンは右ペイン下部ではなく、選択中の患者検索結果カード内に表示し、患者選択・ORCA 受付対象確認・必須項目が揃った場合だけ有効化します。患者検索結果カード内の `カルテを開く` は置きません。
 - `InOut` 未選択はエラーではなく「未送信」を意味します。
 - 受付登録時の `Medical_Information` は UI 選択時のみ送信し、未選択なら送信しません。
 - 担当医コード、`Acceptance_Push`、診療内容コードは client 側で補完・正規化・抑止せず、選択値または未送信をそのまま official bridge に渡します。
@@ -139,9 +141,9 @@
 - patient evidence だけの response は `notVerified` とし、患者ID・氏名などから受付行や canonical handoff を client 側で捏造しません。
 - 会計送信や受付後続で使う visit context は `departmentCode` / `physicianCode` / `visitDate` の canonical 値だけを使い、display string 再解析・patientId first-match・`today` fallback を current contract に戻しません。
 - accept 成功後に charts を開く handoff は、mutation response の `scheduleKey` / `encounterKey` を優先し、未返却時だけ同一受付を指す refreshed entry で補完します。`patientId` 単独一致では handoff を解決しません。
-- patient search 結果から charts を開く導線は、直前 accept で確立した canonical handoff か、当日の active entry を一意に解決できる場合に限って有効化します。複数 active entry がある場合は fail-close します。
+- patient search 結果から charts を開く導線は置きません。Charts 再開は受付一覧の row/card action など、既に受付行の canonical handoff が成立している導線に限定します。
 - 既存患者受付/患者検索モーダルの患者ID/氏名/カナ検索は、送信時の form value を正とし、受付行 auto-fill や未反映 state でユーザーが入力した患者IDを上書きしません。検索結果未選択時の右ペインは、既存の受付行選択を「選択患者」として表示しません。
-- 既存患者受付/患者検索モーダルの受付登録ペインは、右側のスクロール可能なフォーム区画を境界・scrollbar・陰影で明示します。患者サマリは性別/小児区分アイコン、ふりがな、氏名、年齢だけを表示し、上部で示す患者IDや内部名 `受付登録モーダル`、`Medical_Information` などの実装説明は visible copy に出しません。
+- 既存患者受付/患者検索モーダルの受付登録ペインは、右側のスクロール可能なフォーム区画を境界・scrollbar・陰影で明示します。患者サマリは性別/小児区分アイコン、ふりがな、氏名、年齢だけを表示し、上部で示す患者IDや内部名 `受付登録モーダル`、`Medical_Information` などの実装説明は visible copy に出しません。右ペイン下部に「受付内容を確認して...」「必須項目を入力すると...」のような補助文は置きません。
 - 受付取消確認モーダルは、取消対象の同定に必要な氏名・年齢・性別/小児区分アイコン・現在状態だけを表示します。RUN_ID、患者ID/受付ID/予約ID、性別コード、ふりがな、重複した氏名/状態文、取消理由入力、内部説明文は visible copy に出しません。取消実行は破壊的操作として赤系の danger CTA で表示します。
 - 過去カルテモーダルは利用者向けの履歴情報だけを表示し、RUN_ID copy CTA や ORCA 内部の連番/状態コードを visible copy に出しません。
 - Reception surface は常時表示の戻り導線を持たず、Charts 再開は受付行または受付/患者検索の canonical handoff が成立した場合の操作として出します。
@@ -150,7 +152,7 @@
 - 予約/来院データ不整合は常時バナーではなく、`エラー` 導線を開いた詳細内に表示します。患者単位の送信エラー・遅延・未承認とは件数を分けて扱います。
 - appointment/slot 行の不整合判定は旧 `appointmentId` 単独ではなく、`appointmentId` / `scheduleKey` / `encounterKey` のいずれかを予約識別子として扱います。projection 由来で ORCA 予約番号が未返却でも canonical key がある行は不整合扱いにしません。
 - visit 行の不整合判定は旧 `receptionId` 単独ではなく、`encounterKey` / `scheduleKey` / `receptionId` のいずれかを受付識別子として扱います。canonical key がある visit 行は、受付番号表示が空でも不整合扱いにしません。
-- ORCA 予約/来院 API の `slots` / `visits` に混在する診療科・医師などの selector option 行は、患者・予約・受付・時刻の業務 context を持たない場合は受付行へ変換しません。実患者行で患者 ID や canonical key が欠落している場合だけ不整合として扱います。
+- ORCA 予約/来院 API の `slots` / `visits` に混在する診療科・医師などの selector option 行は、患者・予約・受付・時刻の業務 context を持たない場合は受付行へ変換しません。受付一覧に表示する実患者行は ORCA 患者IDと氏名を必須とし、患者IDだけの projection/local 行は表示しません。
 - 受付日、受付患者検索、表示条件変更、表示切替、ステータスタブは、独立した上部 toolbar ではなく active status の一覧 header に compact controls として置きます。標準表示は受付日の変更と現行範囲の受付患者検索（患者ID/氏名/カナ）に絞ります。受付日の変更は `受付日` label の右側に date input を置き、前後 1 日移動は date input の左右にある小さな三角矢印で行います。テキストの `前日` / `翌日` / `今日` ボタンや別個の `日次状態` カレンダーボタンは置きません。受付患者検索の `検索` ボタンは検索文字入力欄の右側へ置き、検索説明は別行 text ではなく input placeholder に入れます。`表示条件変更` は患者検索グループ内に置き、`一覧操作` の折りたたみボタンは置きません。`患者を受付する` は下段ステータスタブ行で `会計済み` / `予約` の右側へ置きます。再取得はステータスタブ行右端の `表` / `カード` 表示切替の右横に置きます。診療科/担当医、保険/自費、ソート、保存ビュー、ビュー保存/削除は同じ header 内の `表示条件変更` で展開します。絞り込み条件のクリアは独立カードにせず、`絞り込み` カード内の `条件をクリア` ボタンで表示します。
 - Reception header の受付日・患者検索・補助操作は個別カードに分けず、1 つの compact control strip 内で区切り線だけを使って統一表示します。
 - Reception header の compact control strip は親カード内で左揃えにし、`表示条件変更` は患者検索グループ内、`患者を受付する` はステータスタブ行の `会計済み` / `予約` の右側に配置します。
@@ -163,7 +165,7 @@
 - 受付一覧の右端は `カルテ` と `その他` の行操作に使います。各ボタンの label が操作内容を示すため、画面上の列見出し `操作` は表示しません。支援技術向けには `行操作` の列名を維持します。
 - 受付一覧の表表示は `支払` / `請求` / `直近` 列を通常列から外し、ORCA状態・補正メモなど必要な操作情報だけを残します。標準の初回 `会計送信` 操作は Reception から出さず、医師画面の `診察終了して会計へ送信` を起点にします。Reception 側は再送・確認・明示的追加送信など recovery 操作の owner です。
 - 受付一覧の通常表では ORCA 連携を専用列にしません。ORCA 連携は成立している前提のため `—` などの正常プレースホルダーを出さず、queue / error などユーザー対応が必要な状態だけメモ/参照列に補助情報として出します。
-- ORCA 公式来院一覧に runtime projection を補完表示する場合は、server-derived `Voucher_Number` / `Sequential_Number` / `Insurance_Combination_Number` 相当が projection に揃った行だけを扱います。旧 local smoke seed など ORCA 正式識別子の無い projection は受付一覧の official row として表示しません。
+- ORCA 公式来院一覧に runtime projection を補完表示する場合は、server-derived `Voucher_Number` / `Sequential_Number` / `Insurance_Combination_Number` 相当が projection に揃った行だけを扱います。旧 local smoke seed など ORCA 正式識別子の無い projection や、`0000001 / スモーク 患者` の legacy local smoke seed は受付一覧の official row として表示しません。
 - 受付一覧の workflow state は `受付中 / 診療中 / 会計待ち / 再計待 / 会計済み / 予約` で扱い、ORCA workflow 表示は `診察中 / 送信待ち / ORCA送信中 / 会計可 / 要確認 / 送信後変更あり / ORCA側展開済み` に寄せます。`送信済` は transmission signal として別表示します。会計送信成功だけで `会計済み` へ遷移させません。
 - `再計待` は会計済み後の編集を示す workflow state です。補足文は correction note として扱い、generic memo と混在させません。
 - row-local key (`encounterKey` / `scheduleKey` / `receptionId` / `appointmentId`) を一意に解決できない場合、受付一覧に positive な `送信済` 表示を重ねません。

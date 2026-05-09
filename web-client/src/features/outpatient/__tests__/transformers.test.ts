@@ -34,13 +34,13 @@ describe('outpatient transformers', () => {
           receptionId: 'R-1',
           scheduleKey: 'F001:S200',
           encounterKey: 'F001:E200',
-          patient: { patientId: '000002' },
+          patient: { patientId: '000002', wholeName: '重複 患者' },
         },
         {
           receptionId: 'R-2',
           scheduleKey: 'F001:S200',
           encounterKey: 'F001:E200',
-          patient: { patientId: '000002' },
+          patient: { patientId: '000002', wholeName: '重複 患者' },
         },
       ],
     });
@@ -60,7 +60,7 @@ describe('outpatient transformers', () => {
           insuranceCombinationNumber: '0003',
           departmentCode: '01',
           physicianCode: '10001',
-          patient: { patientId: '000003' },
+          patient: { patientId: '000003', wholeName: '来院 患者' },
         },
       ],
     });
@@ -79,7 +79,7 @@ describe('outpatient transformers', () => {
     );
   });
 
-  it('keeps projected schedule rows usable when only canonical keys and root patient id are present', () => {
+  it('drops projected schedule rows when only canonical keys and root patient id are present', () => {
     const entries = parseAppointmentEntries({
       appointmentDate: '2026-05-07',
       slots: [
@@ -94,15 +94,7 @@ describe('outpatient transformers', () => {
       ],
     });
 
-    expect(entries).toHaveLength(1);
-    expect(entries[0]).toEqual(
-      expect.objectContaining({
-        id: 'F001:S-PROJECTED',
-        patientId: '000099',
-        scheduleKey: 'F001:S-PROJECTED',
-        encounterKey: 'F001:E-PROJECTED',
-      }),
-    );
+    expect(entries).toHaveLength(0);
   });
 
   it('ignores selector option rows returned alongside appointment and visit records', () => {
@@ -133,7 +125,7 @@ describe('outpatient transformers', () => {
     expect(entries.map((entry) => entry.patientId).sort()).toEqual(['000003', '000004']);
   });
 
-  it('keeps rows with canonical identity even when patient context is missing so integrity checks can warn', () => {
+  it('drops rows with canonical identity when patient context is missing', () => {
     const entries = parseAppointmentEntries({
       appointmentDate: '2026-05-07',
       slots: [
@@ -145,13 +137,26 @@ describe('outpatient transformers', () => {
       ],
     });
 
-    expect(entries).toHaveLength(1);
-    expect(entries[0]).toEqual(
-      expect.objectContaining({
-        scheduleKey: 'F001:S-MISSING-PATIENT',
-        patientId: undefined,
-      }),
-    );
+    expect(entries).toHaveLength(0);
+  });
+
+  it('drops the legacy local smoke seed even when a local name is present', () => {
+    const entries = parseAppointmentEntries({
+      appointmentDate: '2026-05-09',
+      slots: [
+        {
+          scheduleKey: 'F001:SMOKE-SEED',
+          appointmentTime: '0900',
+          patient: {
+            patientId: '0000001',
+            wholeName: 'スモーク 患者',
+            wholeNameKana: 'スモーク カンジャ',
+          },
+        },
+      ],
+    });
+
+    expect(entries).toHaveLength(0);
   });
 
   it('classifies accepted visit rows with updateTime as 受付中 instead of 予約', () => {

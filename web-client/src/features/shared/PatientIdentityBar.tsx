@@ -44,7 +44,7 @@ export function PatientIdentityBar({
   visitDate,
   receptionId,
   appointmentId,
-  eyebrow = 'Patient identity',
+  eyebrow,
   note,
   chips,
   actions,
@@ -79,7 +79,7 @@ export function PatientIdentityBar({
         <div className="patient-identity-bar__body">
           <div className="patient-identity-bar__header">
             <div className="patient-identity-bar__headline">
-              <p className="patient-identity-bar__eyebrow">{eyebrow}</p>
+              {eyebrow ? <p className="patient-identity-bar__eyebrow">{eyebrow}</p> : null}
               {resolvedKana ? <p className="patient-identity-bar__kana">{resolvedKana}</p> : null}
               <div className="patient-identity-bar__title-row">
                 <h2 className="patient-identity-bar__title">{resolvedTitle}</h2>
