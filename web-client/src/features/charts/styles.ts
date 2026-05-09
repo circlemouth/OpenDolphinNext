@@ -5468,7 +5468,7 @@ export const chartsStyles = css`
     gap: var(--charts-space-md);
     --soap-right-drawer-reserved: min(640px, 56vw);
     --soap-right-drawer-minimized-handle: 56px;
-    --soap-right-drawer-resize-handle-size: 40px;
+    --soap-right-drawer-resize-handle-size: 12px;
   }
 
   .revision-drawer {
@@ -6099,7 +6099,7 @@ export const chartsStyles = css`
     top: 0;
     left: 0;
     bottom: 0;
-    width: var(--soap-right-drawer-resize-handle-size, 40px);
+    width: var(--soap-right-drawer-resize-handle-size, 12px);
     cursor: col-resize;
     touch-action: none;
     z-index: 4;
@@ -6148,7 +6148,7 @@ export const chartsStyles = css`
   .soap-note__right-drawer [data-role='right-drawer-resize-handle']:hover::before,
   .soap-note__right-drawer-resize-handle:focus-visible::before,
   .soap-note__right-drawer [data-role='right-drawer-resize-handle']:focus-visible::before {
-    width: calc(var(--soap-right-drawer-resize-handle-size, 40px) * 0.6667);
+    width: calc(var(--soap-right-drawer-resize-handle-size, 12px) * 0.6667);
     opacity: 1;
   }
 
@@ -8123,13 +8123,25 @@ export const chartsStyles = css`
 
     .soap-note__right-drawer[data-open='true'][data-minimized='true'] {
       transform: translateX(0);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .soap-note__right-drawer[data-minimized='true'] .soap-note__right-drawer-restore-handle {
+      display: none;
+    }
+
+    .soap-note__right-drawer-resize-handle,
+    .soap-note__right-drawer [data-role='right-drawer-resize-handle'] {
+      display: none;
+      pointer-events: none;
     }
 
     .soap-note__right-drawer[data-minimized='true'] .soap-note__right-drawer-content {
-      opacity: 1;
-      visibility: visible;
-      pointer-events: auto;
-      user-select: auto;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      user-select: none;
     }
 
     .soap-note__right-drawer-order-layout {

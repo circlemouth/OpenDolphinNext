@@ -21,7 +21,7 @@ describe('RightUtilityDrawer', () => {
       <RightUtilityDrawer
         open
         activeTool="prescription"
-        meta={{ patientId: 'P-001', visitDate: '2026-04-17' }}
+        meta={{ patientId: 'P-001', appointmentId: 'APT-001', receptionId: 'RCP-001', visitDate: '2026-04-17' }}
         onClose={vi.fn()}
         onToolSelect={vi.fn()}
         onOrderRequest={vi.fn()}
@@ -42,5 +42,49 @@ describe('RightUtilityDrawer', () => {
     expect(screen.queryByText('文書')).not.toBeInTheDocument();
     expect(screen.queryByText('ORCA')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('処方入力')).not.toBeInTheDocument();
+  });
+
+  it('患者未選択では候補取得とORCA検索を開始せず理由だけを表示する', () => {
+    renderWithClient(
+      <RightUtilityDrawer
+        open
+        activeTool="prescription"
+        meta={{ appointmentId: 'APT-001', receptionId: 'RCP-001', visitDate: '2026-04-17' }}
+        onClose={vi.fn()}
+        onToolSelect={vi.fn()}
+        onOrderRequest={vi.fn()}
+        orderBundles={[]}
+        prescriptionBundles={[]}
+      />,
+    );
+
+    expect(document.querySelector('.soap-note__right-drawer')?.getAttribute('data-chooser-state')).toBe('blocked');
+    expect(screen.getByText('オーダー候補を開始できません')).toBeInTheDocument();
+    expect(screen.getByText('患者が選択されていません。候補表示、ORCA候補検索、新規作成は開始できません。')).toBeInTheDocument();
+    expect(screen.queryByText('既存オーダー')).not.toBeInTheDocument();
+    expect(screen.queryByText('ORCA入力セット')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '新規作成を開く' })).not.toBeInTheDocument();
+  });
+
+  it('来院文脈不足では候補取得と新規作成を fail closed にする', () => {
+    renderWithClient(
+      <RightUtilityDrawer
+        open
+        activeTool="prescription"
+        meta={{ patientId: 'P-001', visitDate: '2026-04-17' }}
+        patientId="P-001"
+        onClose={vi.fn()}
+        onToolSelect={vi.fn()}
+        onOrderRequest={vi.fn()}
+        orderBundles={[]}
+        prescriptionBundles={[]}
+      />,
+    );
+
+    expect(document.querySelector('.soap-note__right-drawer')?.getAttribute('data-chooser-state')).toBe('blocked');
+    expect(screen.getByText('来院文脈が不足しています。候補表示、ORCA候補検索、新規作成は開始できません。')).toBeInTheDocument();
+    expect(screen.queryByText('患者候補')).not.toBeInTheDocument();
+    expect(screen.queryByText('検索して追加')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '新規作成を開く' })).not.toBeInTheDocument();
   });
 });

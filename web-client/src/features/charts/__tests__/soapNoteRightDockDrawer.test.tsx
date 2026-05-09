@@ -646,7 +646,7 @@ describe('SoapNotePanel right dock drawer', () => {
     expect(drawer.style.getPropertyValue('--soap-right-drawer-width')).toBe(initialWidth);
   });
 
-  it('右ドック表示中に新規入力を開始すると中央編集面を表示し候補ドックを最小化する', async () => {
+  it('右ドック表示中に新規入力を開始すると中央編集面へ handoff し候補ドックを閉じる', async () => {
     const user = userEvent.setup();
     const previousInnerWidth = window.innerWidth;
     setViewportWidth(1920);
@@ -655,7 +655,7 @@ describe('SoapNotePanel right dock drawer', () => {
         <SoapNotePanel
           history={[]}
           meta={{
-            runId: 'RUN-RIGHT-DOCK-NEW-MINIMIZE',
+            runId: 'RUN-RIGHT-DOCK-NEW-HANDOFF',
             patientId: 'P-010',
             appointmentId: 'APT-010',
             receptionId: 'RCP-010',
@@ -676,9 +676,9 @@ describe('SoapNotePanel right dock drawer', () => {
 
       await waitFor(() => {
         expect(screen.getByLabelText('注射名')).toBeInTheDocument();
-        expect(drawer.getAttribute('data-minimized')).toBe('true');
+        expect(drawer.getAttribute('data-open')).toBe('false');
+        expect(drawer.getAttribute('data-minimized')).toBe('false');
       });
-      expect(drawer.style.getPropertyValue('--soap-right-drawer-width')).toBe('56px');
     } finally {
       setViewportWidth(previousInnerWidth);
     }
