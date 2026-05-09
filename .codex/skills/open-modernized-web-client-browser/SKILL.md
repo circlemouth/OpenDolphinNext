@@ -21,7 +21,7 @@ Use this repository-local workflow to start `server-modernized` with Docker and 
 Use the repo script when a full local stack startup or refresh is appropriate. Add the HTTP and host overrides even when the user mentions only `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh`; these are the browser-compatible defaults for Codex:
 
 ```bash
-WEB_CLIENT_MODE=npm WEB_CLIENT_DEV_HOST=0.0.0.0 VITE_DEV_USE_HTTPS=0 ./setup-modernized-env.sh
+ORCA_DB_SSLROOTCERT=/dev/null WEB_CLIENT_MODE=npm WEB_CLIENT_DEV_HOST=0.0.0.0 VITE_DEV_USE_HTTPS=0 ./setup-modernized-env.sh
 ```
 
 This starts `server-modernized` through Docker Compose and starts `web-client` via `npm run dev` on port `5173`.
