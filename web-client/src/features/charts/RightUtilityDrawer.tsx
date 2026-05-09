@@ -96,7 +96,44 @@ const MAX_PREVIEW_ITEMS = 3;
 const MIN_DRAWER_WIDTH = 560;
 const MAX_DRAWER_RIGHT_GUTTER = 80;
 const MINIMIZED_HANDLE_WIDTH = 56;
-const RESIZE_HIT_WIDTH = 40;
+const RESIZE_HIT_WIDTH = 12;
+
+type EncounterGuardStatus = 'ok' | 'noPatient' | 'noEncounter';
+
+type EncounterGuard = {
+  status: EncounterGuardStatus;
+  message?: string;
+};
+
+type OrderChooserState = {
+  status: 'closed' | 'blocked' | 'open' | 'loading' | 'error';
+  tool: RightUtilityTool;
+  source?: 'existing' | 'patient' | 'facility' | 'orca' | 'search';
+  reason?: EncounterGuardStatus | 'fetchFailure';
+};
+
+const hasText = (value: string | undefined) => Boolean(value?.trim());
+
+const resolveEncounterGuard = (patientId: string | undefined, meta: OrderBundleEditPanelMeta): EncounterGuard => {
+  if (!hasText(patientId)) {
+    return {
+      status: 'noPatient',
+      message: '患者が選択されていません。候補表示、ORCA候補検索、新規作成は開始できません。',
+    };
+  }
+  if (
+    !hasText(meta.encounterId) &&
+    !hasText(meta.scheduleKey) &&
+    !hasText(meta.appointmentId) &&
+    !hasText(meta.receptionId)
+  ) {
+    return {
+      status: 'noEncounter',
+      message: '来院文脈が不足しています。候補表示、ORCA候補検索、新規作成は開始できません。',
+    };
+  }
+  return { status: 'ok' };
+};
 
 const clampDrawerWidth = (width: number) => {
   if (!Number.isFinite(width)) return MIN_DRAWER_WIDTH;
@@ -200,6 +237,9 @@ export function RightUtilityDrawer({
     if (activeOrderEntity && groupSpec.entities.includes(activeOrderEntity)) return activeOrderEntity;
     return groupSpec.defaultEntity;
   }, [activeOrderEntity, groupSpec]);
+  const guardedPatientId = patientId ?? meta.patientId;
+  const encounterGuard = useMemo(() => resolveEncounterGuard(guardedPatientId, meta), [guardedPatientId, meta]);
+  const chooserEnabled = open && encounterGuard.status === 'ok';
 
   useEffect(() => {
     setInputSetKeyword('');
@@ -225,10 +265,10 @@ export function RightUtilityDrawer({
 
   const recommendationFrom = useMemo(() => subtractDays(meta.visitDate, 365), [meta.visitDate]);
   const recommendationQuery = useQuery({
-    queryKey: ['right-utility-drawer-recommendations', patientId, selectedEntity, recommendationFrom],
+    queryKey: ['right-utility-drawer-recommendations', guardedPatientId, selectedEntity, recommendationFrom],
     queryFn: async () =>
       fetchOrderRecommendations({
-        patientId: patientId!,
+        patientId: guardedPatientId!,
         entity: selectedEntity ?? undefined,
         from: recommendationFrom,
         includeFacility: true,
@@ -236,7 +276,7 @@ export function RightUtilityDrawer({
         facilityLimit: 4,
         scanLimit: 200,
       }),
-    enabled: open && Boolean(patientId && selectedEntity),
+    enabled: chooserEnabled && Boolean(guardedPatientId && selectedEntity),
     staleTime: 30_000,
   });
 
@@ -254,7 +294,7 @@ export function RightUtilityDrawer({
         effective: meta.visitDate,
         size: 8,
       }),
-    enabled: open && Boolean(selectedEntity && submittedInputSetKeyword.trim()),
+    enabled: chooserEnabled && Boolean(selectedEntity && submittedInputSetKeyword.trim()),
     staleTime: 30_000,
   });
 
@@ -272,6 +312,28 @@ export function RightUtilityDrawer({
     activeOrderRequest && (activeOrderRequest.kind === 'edit' || activeOrderRequest.kind === 'copy')
       ? activeOrderRequest.bundle
       : null;
+  const orderChooserState = useMemo<OrderChooserState>(() => {
+    if (!open) return { status: 'closed', tool: activeTool };
+    if (encounterGuard.status !== 'ok') {
+      return { status: 'blocked', tool: activeTool, reason: encounterGuard.status };
+    }
+    if (recommendationQuery.isFetching || inputSetQuery.isFetching) return { status: 'loading', tool: activeTool };
+    if (recommendationQuery.data && !recommendationQuery.data.ok) {
+      return { status: 'error', tool: activeTool, source: 'patient', reason: 'fetchFailure' };
+    }
+    if (inputSetQuery.data && !inputSetQuery.data.ok) {
+      return { status: 'error', tool: activeTool, source: 'orca', reason: 'fetchFailure' };
+    }
+    return { status: 'open', tool: activeTool };
+  }, [
+    activeTool,
+    encounterGuard.status,
+    inputSetQuery.data,
+    inputSetQuery.isFetching,
+    open,
+    recommendationQuery.data,
+    recommendationQuery.isFetching,
+  ]);
   const resolvedDrawerWidth = clampDrawerWidth(width);
   const visibleDrawerWidth = minimized ? MINIMIZED_HANDLE_WIDTH : resolvedDrawerWidth;
   const drawerInlineStyle = useMemo(
@@ -338,6 +400,7 @@ export function RightUtilityDrawer({
   };
 
   const handleOpenExistingBundle = (entity: OrderEntity, bundle: OrderBundle) => {
+    if (encounterGuard.status !== 'ok') return;
     onOrderRequest?.(entity, {
       requestId: buildChooserRequestId('edit'),
       kind: 'edit',
@@ -346,6 +409,7 @@ export function RightUtilityDrawer({
   };
 
   const handleApplyRecommendation = (entity: OrderEntity, candidate: OrderRecommendationCandidate) => {
+    if (encounterGuard.status !== 'ok') return;
     onOrderRequest?.(entity, {
       requestId: buildChooserRequestId('recommendation'),
       kind: 'recommendation',
@@ -354,6 +418,7 @@ export function RightUtilityDrawer({
   };
 
   const handleApplyInputSet = (entity: OrderEntity, item: OrcaOrderInputSetSummary) => {
+    if (encounterGuard.status !== 'ok') return;
     const groupKey = resolveOrderGroupKeyByEntity(entity);
     if (!groupKey) return;
     onOrderRequest?.(entity, {
@@ -364,7 +429,7 @@ export function RightUtilityDrawer({
   };
 
   const handleCreateNew = () => {
-    if (!selectedEntity) return;
+    if (!selectedEntity || encounterGuard.status !== 'ok') return;
     onOrderRequest?.(selectedEntity, {
       requestId: buildChooserRequestId('new'),
       kind: 'new',
@@ -382,6 +447,7 @@ export function RightUtilityDrawer({
       data-mode={mode}
       data-minimized={minimized ? 'true' : 'false'}
       data-order-layout="stack"
+      data-chooser-state={orderChooserState.status}
       aria-hidden={!open}
       aria-label="右ユーティリティドロワー"
       style={drawerInlineStyle}
@@ -489,7 +555,19 @@ export function RightUtilityDrawer({
                   </div>
                 ) : null}
 
-                {resolveOrderChooserSources(activeTool).map((source) => {
+                {encounterGuard.status !== 'ok' ? (
+                  <section
+                    className="soap-note__right-drawer-order-preview soap-note__right-drawer-order-preview--blocked"
+                    aria-label="オーダー候補の開始条件"
+                  >
+                    <div className="soap-note__right-drawer-order-preview-header">
+                      <strong>オーダー候補を開始できません</strong>
+                    </div>
+                    {renderEmptyState(encounterGuard.message ?? '患者または来院文脈を確認してください。')}
+                  </section>
+                ) : null}
+
+                {encounterGuard.status === 'ok' ? resolveOrderChooserSources(activeTool).map((source) => {
                   if (!selectedEntity || !groupSpec) return null;
                   if (source.key === 'existing') {
                     return (
@@ -584,7 +662,9 @@ export function RightUtilityDrawer({
                         </div>
                         {source.note ? <p className="order-dock__empty">{source.note}</p> : null}
                         {recommendationQuery.isFetching ? renderEmptyState('候補を取得しています...') : null}
-                        {recommendationQuery.data && !recommendationQuery.data.ok ? renderEmptyState('候補取得に失敗しました。再試行してください。') : null}
+                        {recommendationQuery.data && !recommendationQuery.data.ok
+                          ? renderEmptyState(source.key === 'patient' ? '患者候補を取得できませんでした。時間をおいて再試行してください。' : '施設頻用候補を取得できませんでした。時間をおいて再試行してください。')
+                          : null}
                         {!recommendationQuery.isFetching && (!recommendationQuery.data || recommendationQuery.data.ok) && candidates.length === 0
                           ? renderEmptyState('このカテゴリの候補はありません。')
                           : null}
@@ -647,7 +727,7 @@ export function RightUtilityDrawer({
                           {isSearching ? '検索中…' : '検索'}
                         </button>
                         {submittedInputSetKeyword.trim() && inputSetQuery.data && !inputSetQuery.data.ok
-                          ? renderEmptyState('候補取得に失敗しました。再試行してください。')
+                          ? renderEmptyState('ORCA候補を取得できませんでした。通信状態またはORCA接続設定を確認してください。')
                           : null}
                         {submittedInputSetKeyword.trim() && !isSearching && inputSetQuery.data?.ok && inputSetItems.length === 0
                           ? renderEmptyState('このカテゴリの候補はありません。')
@@ -696,7 +776,7 @@ export function RightUtilityDrawer({
                       </button>
                     </section>
                   );
-                })}
+                }) : null}
               </div>
             </section>
           </div>

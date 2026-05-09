@@ -633,7 +633,10 @@ export function SoapNotePanel({
       setActiveTool(groupKey);
       setDrawerPeek(false);
       if (request.kind === 'new') {
-        setDrawerMinimized(true);
+        setDrawerOpen(false);
+        setDrawerMinimized(false);
+      } else {
+        setDrawerMinimized(false);
       }
       setActiveOrderEntity(entity);
       setActiveOrderRequest(request);
