@@ -9,7 +9,7 @@
 - `clinical`: 外部の臨床病名 source。未接続の間は current writable surface に昇格しない
 
 ## Fixed Boundary
-- Charts の主病名一覧は `GET /api/local/diagnoses/{patientId}` が返す ORCA `diseasegetv2` projection だけを表示します。
+- Charts の主病名一覧は `GET /api/local/diagnoses/{patientId}` が返す ORCA `diseasegetv2?class=01` projection だけを表示します。ORCA `Api_Result=21` は「対象病名なし」の正常 0 件として扱い、ORCA unavailable とは分離します。
 - ORCA 取得不可時に local-only disease を主病名一覧へ fallback 表示しません。病名登録・更新・削除も disabled にします。
 - ORCA 病名の create / update / delete は `/api/orca/official/chart-support/disease-mod-v3` だけを使い、成功後の `diseasegetv2` 再取得結果が UI truth です。
 - `院内未送信` は隔離表示し、ORCAへ登録する明示 confirm がある場合だけ `diseasev3` へ送信します。

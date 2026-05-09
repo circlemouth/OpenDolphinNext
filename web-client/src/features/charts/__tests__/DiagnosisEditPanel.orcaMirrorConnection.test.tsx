@@ -63,6 +63,21 @@ afterEach(() => {
 });
 
 describe('DiagnosisEditPanel ORCA mirror connection', () => {
+  it('shows neutral loading copy instead of unavailable copy while ORCA mirror retrieval is pending', () => {
+    vi.mocked(fetchDiseases).mockReturnValueOnce(new Promise(() => undefined));
+
+    renderPanel('2026-05-08');
+
+    expect(screen.getByText('ORCA登録病名を確認中です。確認完了まで病名操作は待機します。')).toBeInTheDocument();
+    expect(screen.queryByText(/ORCA病名操作はブロックされています/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。'),
+    ).not.toBeInTheDocument();
+    for (const button of screen.getAllByRole('button', { name: 'ORCAへ病名登録' })) {
+      expect(button).toBeDisabled();
+    }
+  });
+
   it('shows ORCA registered diagnoses from the connected mirror without auto-authoring local diseases', async () => {
     vi.mocked(fetchDiseases).mockResolvedValueOnce({
       ok: true,

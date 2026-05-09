@@ -2740,7 +2740,7 @@ export function ReceptionPage({
       chips.push({ key: 'payment', label: `保険/自費 ${paymentMode === 'insurance' ? '保険' : '自費'}` });
     }
     if (sortKey !== 'acceptance') chips.push({ key: 'sort', label: `ソート ${SORT_LABEL[sortKey]}` });
-    if (selectedSavedView) chips.push({ key: 'saved-view', label: `保存ビュー ${selectedSavedView.label}` });
+    if (selectedSavedView) chips.push({ key: 'saved-view', label: `表示条件 ${selectedSavedView.label}` });
     return chips;
   }, [departmentFilter, paymentMode, physicianFilter, selectedSavedView, sortKey]);
 
@@ -5041,9 +5041,9 @@ export function ReceptionPage({
                 </button>
               </fieldset>
               <fieldset className="reception-toolbar__panel-group">
-                <legend>保存ビュー</legend>
+                <legend>表示条件を保存</legend>
                 <label className="reception-search__field">
-                  <span>保存ビュー</span>
+                  <span>保存した条件</span>
                   <select
                     id="reception-search-saved-view"
                     name="receptionSearchSavedView"
@@ -6211,6 +6211,16 @@ export function ReceptionPage({
                         >
                           {patientSearchMutation.isPending ? '検索中…' : '検索'}
                         </button>
+                        {!patientSearchMutation.isPending ? (
+                          <div className="reception-patient-search__result-summary" aria-live={infoLive}>
+                            <h3>患者検索結果</h3>
+                            <span className="reception-patient-search__meta">
+                              {showPatientSearchPagination
+                                ? `${patientSearchResults.length}件（${patientSearchRangeLabel}）`
+                                : `${patientSearchResults.length}件`}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     </form>
 
@@ -6243,18 +6253,6 @@ export function ReceptionPage({
                       aria-label="患者検索結果モーダル"
                       data-run-id={resolvedRunId}
                     >
-                      <header className="reception-accept-modal__results-header">
-                        <div>
-                          <h3>患者検索結果</h3>
-                          {!patientSearchMutation.isPending ? (
-                            <span className="reception-patient-search__meta" aria-live={infoLive}>
-                              {showPatientSearchPagination
-                                ? `${patientSearchResults.length}件（${patientSearchRangeLabel}）`
-                                : `${patientSearchResults.length}件`}
-                            </span>
-                          ) : null}
-                        </div>
-                      </header>
                       <div className="reception-accept-modal__results-body">
                         <div className="reception-patient-search__list" role="list" aria-label="検索結果">
                           {patientSearchMutation.isPending ? (
@@ -6266,6 +6264,7 @@ export function ReceptionPage({
                               const index = (patientSearchPage - 1) * PATIENT_SEARCH_PAGE_SIZE + pageIndex;
                               const key = patient.patientId ?? `${patient.name ?? 'unknown'}-${index}`;
                               const resolvedPatientId = patient.patientId?.trim() ?? '';
+                              const patientBirthDate = patient.birthDate?.trim() ?? '';
                               const isSelected =
                                 patientSearchSelected === patient ||
                                 (Boolean(resolvedPatientId) &&
@@ -6290,6 +6289,9 @@ export function ReceptionPage({
                                 >
                                   <div className="reception-patient-search__item-main">
                                     <strong>{patient.name ?? '氏名未登録'}</strong>
+                                    {patientBirthDate ? (
+                                      <small className="reception-patient-search__item-birth">生年月日: {patientBirthDate}</small>
+                                    ) : null}
                                     <span className="reception-patient-search__item-id">ID: {patient.patientId ?? '—'}</span>
                                   </div>
                                   {isSelected ? (
@@ -6380,12 +6382,7 @@ export function ReceptionPage({
                     data-run-id={resolvedRunId}
                   >
                     <header className="reception-accept-modal__accept-header">
-                      <div>
-                        <h3>受付登録</h3>
-                        <p className="reception-accept-modal__selected-patient">
-                          選択患者: {selectedPatientName}
-                        </p>
-                      </div>
+                      <h3>受付登録</h3>
                     </header>
                     <div className="reception-accept-modal__accept">
                       {selectedPatientId ? (

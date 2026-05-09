@@ -99,8 +99,8 @@
 - [x] ログと readiness 応答に接続先詳細が含まれない。
 
 ## Charts Disease Mirror
-- Charts の病名正本は ORCA `diseasegetv2` の再取得結果です。`/api/local/diagnoses/{patientId}` の server-side projection から `diseasegetv2` を呼ぶ。呼び出し施設は認証済み request context の facilityId で解決し、クライアント提供の facilityId / owner / URL は使わない。
-- `diseasegetv2` は既存の ORCA transport / runtime config / allowlist に従い、任意 URL 入力から接続しない。失敗時は `orcaMirrorStatus=unavailable` の sanitized state だけを返し、base URL、host、credential、raw XML、stack trace は返さない。
+- Charts の病名正本は ORCA `diseasegetv2?class=01` の再取得結果です。`/api/local/diagnoses/{patientId}` の server-side projection から `diseasegetv2` を呼ぶ。呼び出し施設は認証済み request context の facilityId で解決し、クライアント提供の facilityId / owner / URL は使わない。
+- `diseasegetv2` は既存の ORCA transport / runtime config / allowlist に従い、任意 URL 入力から接続しない。失敗時は `orcaMirrorStatus=unavailable` の sanitized state だけを返し、base URL、host、credential、raw XML、stack trace は返さない。ORCA `Api_Result=21`（対象病名なし）は取得成功の 0 件として扱い、unavailable と混同しない。
 - mirror response は ORCA projection を `diseases`、既存 local-only disease を `pendingLocalDiseases` として分離する。ORCA unavailable 時に local-only disease を `diseases` へ fallback しない。
 
 ## Charts Disease Mutation

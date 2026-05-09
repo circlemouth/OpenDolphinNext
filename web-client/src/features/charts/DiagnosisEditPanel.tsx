@@ -297,15 +297,17 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
   const activeMirrorList = useMemo(() => mirrorList.filter((entry) => !entry.endDate), [mirrorList]);
   const endedMirrorList = useMemo(() => mirrorList.filter((entry) => Boolean(entry.endDate)), [mirrorList]);
   const isMirrorConnected = diagnosisQuery.data?.orcaMirrorStatus === 'connected';
+  const isDiseaseMirrorPending = diagnosisQuery.isLoading || (diagnosisQuery.isFetching && !diagnosisQuery.data && !diagnosisQuery.isError);
+  const isDiseaseMirrorUnavailable = Boolean(diagnosisQuery.data) && !isMirrorConnected;
   const isOrcaMutationBlocked = isBlocked || !isMirrorConnected || diagnosisQuery.isError || !meta.visitDate || !meta.departmentCode;
   const mutationBlockReasons = useMemo(() => {
     const reasons = [...blockReasons];
-    if (!isMirrorConnected) reasons.push('ORCA病名を取得できません。');
+    if (isDiseaseMirrorUnavailable) reasons.push('ORCA病名を取得できません。');
     if (diagnosisQuery.isError) reasons.push('病名取得に失敗しました。');
     if (!meta.visitDate) reasons.push('診療日が未確定です。');
     if (!meta.departmentCode) reasons.push('診療科コードが未確定です。');
     return reasons;
-  }, [blockReasons, diagnosisQuery.isError, isMirrorConnected, meta.departmentCode, meta.visitDate]);
+  }, [blockReasons, diagnosisQuery.isError, isDiseaseMirrorUnavailable, meta.departmentCode, meta.visitDate]);
   const unblockHints = useMemo(() => {
     const hints: string[] = [];
     if (meta.readOnly) {
@@ -314,11 +316,11 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     if (meta.missingMaster || meta.fallbackUsed) {
       hints.push('マスター同期または再取得を実行して、編集可能状態へ戻してください。');
     }
-    if (!isMirrorConnected || diagnosisQuery.isError || !meta.visitDate || !meta.departmentCode) {
+    if (isDiseaseMirrorUnavailable || diagnosisQuery.isError || !meta.visitDate || !meta.departmentCode) {
       hints.push('ORCA病名を再取得し、正本確認ができる状態にしてください。');
     }
     return hints;
-  }, [diagnosisQuery.isError, isMirrorConnected, meta.departmentCode, meta.fallbackUsed, meta.missingMaster, meta.readOnly, meta.visitDate]);
+  }, [diagnosisQuery.isError, isDiseaseMirrorUnavailable, meta.departmentCode, meta.fallbackUsed, meta.missingMaster, meta.readOnly, meta.visitDate]);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -713,7 +715,11 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         </div>
       </header>
 
-      {mutationBlockReasons.length > 0 ? (
+      {isDiseaseMirrorPending ? (
+        <div className="charts-side-panel__notice charts-side-panel__notice--info">
+          ORCA登録病名を確認中です。確認完了まで病名操作は待機します。
+        </div>
+      ) : mutationBlockReasons.length > 0 ? (
         <div className="charts-side-panel__notice charts-side-panel__notice--info">
           <div>ORCA病名操作はブロックされています: {mutationBlockReasons.join(' / ')}</div>
           {unblockHints.length > 0 ? (
@@ -843,7 +849,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
           <span className="charts-side-panel__help">{diagnosisQuery.isFetching ? '取得中' : isMirrorConnected ? `${mirrorList.length}件` : '未確認'}</span>
         </div>
         {diagnosisQuery.isError ? <p className="charts-side-panel__empty">病名の取得に失敗しました。</p> : null}
-        {mirrorList.length === 0 && !diagnosisQuery.isFetching ? (
+        {mirrorList.length === 0 && !diagnosisQuery.isFetching && !diagnosisQuery.isError && diagnosisQuery.data ? (
           <p className="charts-side-panel__empty">{isMirrorConnected ? DISEASE_MIRROR_EMPTY_NOTE : DISEASE_MIRROR_UNAVAILABLE_NOTE}</p>
         ) : null}
         {mirrorList.length > 0 ? (

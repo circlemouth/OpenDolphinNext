@@ -76,8 +76,10 @@ class LocalDiagnosisResourceTest {
         assertEquals("connected", response.get("orcaMirrorStatus"));
         assertEquals("F001", transport.facilityId());
         assertEquals(OrcaEndpoint.DISEASE_GET, transport.endpoint());
+        assertEquals(DiseaseProjectionService.DISEASE_GET_QUERY, transport.requestQuery());
         org.junit.jupiter.api.Assertions.assertTrue(transport.requestBody().contains("<Patient_ID type=\"string\">00001</Patient_ID>"));
-        org.junit.jupiter.api.Assertions.assertTrue(transport.requestBody().contains("<Base_Date type=\"string\">20260508</Base_Date>"));
+        org.junit.jupiter.api.Assertions.assertTrue(transport.requestBody().contains("<Base_Date type=\"string\">2026-05-08</Base_Date>"));
+        org.junit.jupiter.api.Assertions.assertFalse(transport.requestBody().contains("Request_Number"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> diseases = (List<Map<String, Object>>) response.get("diseases");
         assertEquals(1, diseases.size());
@@ -90,6 +92,23 @@ class LocalDiagnosisResourceTest {
         List<Map<String, Object>> pending = (List<Map<String, Object>>) response.get("pendingLocalDiseases");
         assertEquals(1, pending.size());
         assertEquals("insurance-local", pending.get(0).get("layer"));
+    }
+
+    @Test
+    void getDiagnosesTreatsOrcaNoDiseaseAsConnectedEmptyMirror() throws Exception {
+        setField(resource, "orcaTransport", new StubOrcaTransport(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                        + "<xmlio2><disease_infores>"
+                        + "<Api_Result>21</Api_Result>"
+                        + "<Api_Result_Message>対象病名がありません</Api_Result_Message>"
+                        + "</disease_infores></xmlio2>"));
+
+        Map<String, Object> response = resource.getDiagnoses(request, "00001", null, "2026-05-08", false);
+
+        assertEquals("connected", response.get("orcaMirrorStatus"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> diseases = (List<Map<String, Object>>) response.get("diseases");
+        assertEquals(0, diseases.size());
     }
 
     @Test
@@ -460,6 +479,7 @@ class LocalDiagnosisResourceTest {
         private String facilityId;
         private OrcaEndpoint endpoint;
         private String requestBody;
+        private String requestQuery;
 
         StubOrcaTransport(String body) {
             this.body = body;
@@ -470,6 +490,7 @@ class LocalDiagnosisResourceTest {
             this.facilityId = facilityId;
             this.endpoint = endpoint;
             this.requestBody = request != null ? request.getBody() : null;
+            this.requestQuery = request != null ? request.getQuery() : null;
             return new OrcaTransportResult(null, "POST", 200, body, "application/xml", Map.of());
         }
 
@@ -483,6 +504,10 @@ class LocalDiagnosisResourceTest {
 
         String requestBody() {
             return requestBody;
+        }
+
+        String requestQuery() {
+            return requestQuery;
         }
     }
 

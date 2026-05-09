@@ -750,7 +750,7 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         OrcaTransportResult result = orcaTransport.invoke(
                 facilityId,
                 OrcaEndpoint.DISEASE_GET,
-                OrcaTransportRequest.post(requestXml));
+                OrcaTransportRequest.post(requestXml).withQuery(DiseaseProjectionService.DISEASE_GET_QUERY));
         open.dolphin.rest.dto.orca.DiseaseImportResponse mirror =
                 projection.buildMirrorResponseFromOrca(
                         result,

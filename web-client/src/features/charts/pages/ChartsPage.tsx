@@ -2553,6 +2553,9 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       : undefined;
   const orcaRecoveryAlert = useMemo(() => {
     if (!patientId) return null;
+    if (orderBundleSummaryQuery.isFetching || prescriptionBundleSummaryQuery.isFetching || diagnosisSummaryQuery.isFetching) {
+      return null;
+    }
     const candidates = [
       orderBundleSummaryQuery.data && !orderBundleSummaryQuery.data.ok
         ? {
@@ -2595,7 +2598,15 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       };
     }
     return null;
-  }, [diagnosisSummaryQuery.data, orderBundleSummaryQuery.data, patientId, prescriptionBundleSummaryQuery.data]);
+  }, [
+    diagnosisSummaryQuery.data,
+    diagnosisSummaryQuery.isFetching,
+    orderBundleSummaryQuery.data,
+    orderBundleSummaryQuery.isFetching,
+    patientId,
+    prescriptionBundleSummaryQuery.data,
+    prescriptionBundleSummaryQuery.isFetching,
+  ]);
   const diagnosisCountForSend =
     diagnosisSummaryQuery.data && diagnosisSummaryQuery.data.ok
       ? (diagnosisSummaryQuery.data.diseases ?? []).length

@@ -43,7 +43,7 @@ public enum OrcaEndpoint {
     PATIENT_MEMO_MOD("/orca06/patientmemomodv2", true, false, null,
             "Patient_ID", "Request_Number"),
     DISEASE_GET("/api01rv2/diseasegetv2", true, true, null,
-            "Request_Number", "Patient_ID"),
+            "Patient_ID"),
     DISEASE_MOD_V3("/orca22/diseasev3", true, true, null,
             "Patient_ID", "Perform_Date"),
     MEDICAL_GET("/api01rv2/medicalgetv2", true, true, null,

@@ -217,8 +217,8 @@ export const chartsStyles = css`
     display: flex;
     flex-direction: column;
     gap: var(--charts-space-md);
-    --charts-column-left: minmax(250px, 0.82fr);
-    --charts-column-center: minmax(460px, 2.25fr);
+    --charts-column-left: minmax(210px, 0.58fr);
+    --charts-column-center: minmax(520px, 2.45fr);
     --charts-column-right: minmax(260px, 1fr);
     --charts-column-gap: var(--charts-space-sm);
     --charts-utility-compact-width: 72px;
@@ -249,22 +249,22 @@ export const chartsStyles = css`
   }
 
   .charts-workbench[data-charts-compact-ui='1'] {
-    --charts-column-left: minmax(230px, 0.75fr);
-    --charts-column-center: minmax(520px, 2.25fr);
+    --charts-column-left: minmax(190px, 0.52fr);
+    --charts-column-center: minmax(560px, 2.5fr);
     --charts-column-right: minmax(230px, 0.86fr);
   }
 
   .charts-page[data-charts-ui-opt-b='1'] .charts-workbench {
     /* Center-first distribution while keeping 3 columns (layout only). */
-    --charts-column-left: minmax(240px, 0.76fr);
-    --charts-column-center: minmax(560px, 2.32fr);
+    --charts-column-left: minmax(200px, 0.54fr);
+    --charts-column-center: minmax(600px, 2.58fr);
     --charts-column-right: minmax(240px, 0.88fr);
     --charts-column-gap: var(--charts-space-xs);
   }
 
   .charts-page[data-charts-ui-opt-b='1'] .charts-workbench[data-charts-compact-ui='1'] {
-    --charts-column-left: minmax(220px, 0.68fr);
-    --charts-column-center: minmax(580px, 2.42fr);
+    --charts-column-left: minmax(180px, 0.48fr);
+    --charts-column-center: minmax(620px, 2.7fr);
     --charts-column-right: minmax(220px, 0.8fr);
     --charts-column-gap: var(--charts-space-xs);
   }
@@ -10923,7 +10923,7 @@ export const chartsStyles = css`
     }
 
     .charts-workbench__body {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(180px, 0.46fr) minmax(0, 1.54fr);
     }
 
     .charts-workbench__sticky-grid {

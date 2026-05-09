@@ -29,7 +29,8 @@ public class DiseaseProjectionService {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd")
             .withLocale(Locale.JAPAN)
             .withZone(ZoneId.systemDefault());
-    private static final DateTimeFormatter ORCA_DATE_FORMAT = DateTimeFormatter.BASIC_ISO_DATE;
+    private static final DateTimeFormatter ORCA_DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
+    public static final String DISEASE_GET_QUERY = "class=01";
 
     public DiseaseImportResponse buildImportResponse(
             List<RegisteredDiagnosisModel> diagnoses,
@@ -59,7 +60,6 @@ public class DiseaseProjectionService {
         String safeBaseDate = ORCA_DATE_FORMAT.format(baseDate != null ? baseDate : LocalDate.now());
         return "<data>"
                 + "<disease_inforeq type=\"record\">"
-                + "<Request_Number type=\"string\">01</Request_Number>"
                 + "<Patient_ID type=\"string\">" + safePatientId + "</Patient_ID>"
                 + "<Base_Date type=\"string\">" + safeBaseDate + "</Base_Date>"
                 + "</disease_inforeq>"
@@ -88,6 +88,12 @@ public class DiseaseProjectionService {
             String apiResult = firstText(document, "Api_Result");
             response.setApiResult(apiResult);
             response.setApiResultMessage("orca_disease_mirror_result");
+            if ("21".equals(apiResult)) {
+                response.setOrcaMirrorStatus("connected");
+                response.setApiResultMessage("orca_disease_mirror_empty");
+                response.setDiseases(new ArrayList<>());
+                return response;
+            }
             if (apiResult != null && !apiResult.matches("0+")) {
                 return response;
             }
@@ -183,7 +189,7 @@ public class DiseaseProjectionService {
                 continue;
             }
             String name = firstChildText(element, "Disease_Name", "DiseaseName", "byomei");
-            String code = firstChildText(element, "Disease_Code", "DiseaseCode", "khnbyomeicd");
+            String code = firstChildText(element, "Disease_Code", "DiseaseCode", "Disease_Single_Code", "khnbyomeicd");
             String startDate = normalizeOrcaDate(firstChildText(element, "Disease_StartDate", "Start_Date", "sryymd"));
             if (isBlank(name) && isBlank(code)) {
                 continue;

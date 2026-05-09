@@ -314,7 +314,7 @@ public class LocalDiagnosisResource extends AbstractResource {
             OrcaTransportResult result = orcaTransport.invoke(
                     facilityId,
                     OrcaEndpoint.DISEASE_GET,
-                    OrcaTransportRequest.post(requestXml));
+                    OrcaTransportRequest.post(requestXml).withQuery(DiseaseProjectionService.DISEASE_GET_QUERY));
             return projectionService().buildMirrorResponseFromOrca(result, resolveTraceId(request), patientId, fromDate, toDate);
         } catch (RuntimeException ex) {
             return unavailable;

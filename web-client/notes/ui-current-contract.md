@@ -201,7 +201,7 @@
 - chart support では、patient-aware な official `contraindicationcheckv2` と、ORCA master を使う static interaction check を UI copy で明確に分離します。
 - SOAP 補助入力、chart summary、Patients の diff/review は local-only surface として表示し、official ORCA write と誤認させる copy を残しません。
 - local-only wording は `症状詳記（院内ローカル）`、`院内ローカル診療サマリ`、`院内メモはローカル編集のみ` に寄せ、official write surface と見分けられる状態を current contract とします。
-- Disease は ORCA 正本です。Charts の主病名一覧は `/api/local/diagnoses/{patientId}` が返す ORCA `diseasegetv2` 再取得結果だけを `ORCA登録病名` として表示します。既存 local-only disease は `院内未送信` 枠に隔離し、主一覧へ混ぜません。
+- Disease は ORCA 正本です。Charts の主病名一覧は `/api/local/diagnoses/{patientId}` が返す ORCA `diseasegetv2?class=01` 再取得結果だけを `ORCA登録病名` として表示します。既存 local-only disease は `院内未送信` 枠に隔離し、主一覧へ混ぜません。ORCA `Api_Result=21` は「対象病名なし」の正常 0 件として扱います。
 - ORCA unavailable 時は local-only disease を fallback 表示せず、「ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。」を表示し、ORCA 病名操作を disabled にします。
 - ORCA 病名操作は `ORCAへ病名登録` / `ORCA病名を更新` / `ORCA病名を削除` / `削除病名を整理` に分け、いずれも明示 confirm 後に `/api/orca/official/chart-support/disease-mod-v3` へ送ります。成功後は楽観更新せず、再取得した ORCA `diseasegetv2` 結果だけを表示します。
 - `diseasev3` operation は `create|update|delete|organizeDeletedDiseases` に限定します。`Request_Number=01` は `削除病名を整理` だけで使い、通常 create/update/delete には混ぜません。client は `Request_Number` を送らず、server-owned value として扱います。

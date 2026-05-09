@@ -1276,7 +1276,6 @@ export const receptionStyles = css`
   .reception-accept-modal__search-results {
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
     min-height: 0;
     flex: 1;
   }
@@ -1334,13 +1333,6 @@ export const receptionStyles = css`
     margin: 0;
     font-size: 1rem;
     color: #0f172a;
-  }
-
-  .reception-accept-modal__selected-patient {
-    margin: 0.35rem 0 0;
-    font-size: 0.84rem;
-    color: #334155;
-    font-weight: 700;
   }
 
   .reception-accept-modal__accept-actions {
@@ -3627,8 +3619,22 @@ export const receptionStyles = css`
 
   .reception-patient-search__buttons {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.75rem;
     flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .reception-patient-search__result-summary {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .reception-patient-search__result-summary h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #0f172a;
   }
 
   .reception-patient-search-panel {
@@ -3752,18 +3758,27 @@ export const receptionStyles = css`
   }
 
   .reception-patient-search__item-main {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.6rem;
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
+    gap: 0.45rem;
     align-items: baseline;
-    flex-wrap: wrap;
   }
 
   .reception-patient-search__item-id {
+    grid-column: 3;
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
     font-size: 0.85rem;
     font-weight: 700;
     color: #475569;
+  }
+
+  .reception-patient-search__item-birth {
+    grid-column: 2;
+    min-width: 0;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
   }
 
   .reception-patient-search__item-select:focus-visible {
@@ -3819,6 +3834,11 @@ export const receptionStyles = css`
     display: block;
     margin-top: 0.2rem;
     color: #64748b;
+  }
+
+  .reception-patient-search__item .reception-patient-search__item-birth {
+    margin-top: 0;
+    font-size: 0.78rem;
   }
 
   .reception-patient-search__item-meta {

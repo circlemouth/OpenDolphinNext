@@ -642,7 +642,8 @@ describe('ReceptionPage accept UX', () => {
     expect(within(acceptPanel).getByText(/左の患者検索結果カードを選択すると/)).toBeInTheDocument();
 
     await user.click(within(resultPanel).getAllByRole('listitem')[0]);
-    expect(within(acceptPanel).getByText('選択患者: 山田太郎')).toBeInTheDocument();
+    expect(within(acceptPanel).queryByText('選択患者: 山田太郎')).toBeNull();
+    expect(within(acceptPanel).getByRole('group', { name: '受付対象 山田太郎' })).toBeInTheDocument();
     expect(within(workflowModal).getByTestId('reception-accept-register')).toBeInTheDocument();
     const paymentSelect = within(acceptPanel).getByLabelText(/保険\/自費/);
     expect(paymentSelect).toHaveValue('insurance');
@@ -650,7 +651,8 @@ describe('ReceptionPage accept UX', () => {
     const row2 = screen.getByRole('row', { name: /佐藤花子/ });
     await user.click(row2);
 
-    expect(within(acceptPanel).getByText('選択患者: 山田太郎')).toBeInTheDocument();
+    expect(within(acceptPanel).queryByText('選択患者: 山田太郎')).toBeNull();
+    expect(within(acceptPanel).getByRole('group', { name: '受付対象 山田太郎' })).toBeInTheDocument();
   });
 
   it('enables 受付する when required fields are auto-filled', async () => {
@@ -1642,7 +1644,7 @@ describe('ReceptionPage toolbar and tabs', () => {
     const statusTabs = screen.getByRole('region', { name: 'ステータスタブ' });
     expect(within(statusTabs).getByRole('button', { name: '再取得' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: '保険/自費' })).toBeNull();
-    expect(screen.queryByRole('combobox', { name: '保存ビュー' })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: '保存した条件' })).toBeNull();
     expect(screen.queryByRole('button', { name: '条件をクリア' })).toBeNull();
     expect(within(toolbar).queryByRole('button', { name: /日次状態/ })).toBeNull();
     expect(document.querySelector('.reception-page__floating-actions')).toBeNull();
@@ -1688,7 +1690,8 @@ describe('ReceptionPage toolbar and tabs', () => {
     await user.click(toggleButton);
 
     expect(screen.getByRole('combobox', { name: '保険/自費' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: '保存ビュー' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: '保存した条件' })).toBeInTheDocument();
+    expect(screen.getByText('表示条件を保存')).toBeInTheDocument();
     expect(screen.queryByText('例: 内科/午前/保険')).toBeNull();
     expect(screen.getByRole('button', { name: '条件をクリア' })).toBeInTheDocument();
 
@@ -2099,7 +2102,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     await user.click(form.getByRole('button', { name: '検索' }));
 
     await waitFor(() => {
-      expect(within(workflowModal).getByText('選択患者: 未選択')).toBeInTheDocument();
+      expect(within(workflowModal).queryByText('選択患者: 未選択')).toBeNull();
     });
     expect(within(workflowModal).queryByText('選択患者: 事例　三')).toBeNull();
   });
@@ -2155,12 +2158,13 @@ describe('ReceptionPage list and side pane guidance', () => {
     const acceptPanel = getAcceptRegisterPanel(workflowModal);
 
     expect(within(workflowModal).queryByText('受付対象')).toBeNull();
-    expect(within(resultPanel).queryByText('生年月日: 1980-01-01')).toBeNull();
+    expect(within(resultPanel).getByText('生年月日: 1980-01-01')).toBeInTheDocument();
     expect(within(resultPanel).getAllByRole('listitem').length).toBeGreaterThan(0);
 
     await user.click(within(resultPanel).getAllByRole('listitem')[0]);
     expect(within(workflowModal).getByTestId('reception-accept-register')).toBeInTheDocument();
-    expect(within(acceptPanel).getByText('選択患者: 検索患者一')).toBeInTheDocument();
+    expect(within(acceptPanel).queryByText('選択患者: 検索患者一')).toBeNull();
+    expect(within(acceptPanel).getByRole('group', { name: '受付対象 検索患者一' })).toBeInTheDocument();
     const identitySummary = within(acceptPanel).getByRole('group', { name: '受付対象 検索患者一' });
     expect(identitySummary.textContent).toMatch(/ケンサクカンジャイチ.*検索患者一/s);
     expect(within(identitySummary).getByText('46歳')).toBeInTheDocument();
@@ -2172,7 +2176,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     expect(within(acceptPanel).getByLabelText(/診療科/)).toBeInTheDocument();
     expect(within(acceptPanel).getByLabelText(/保険\/自費/)).toBeInTheDocument();
     expect(within(acceptPanel).queryByText(/InsuranceProvider_Class/)).toBeNull();
-    expect(within(resultPanel).queryByText('生年月日: 1990-02-02')).toBeNull();
+    expect(within(resultPanel).getByText('生年月日: 1990-02-02')).toBeInTheDocument();
   });
 
   it('paginates patient-search results when the hit count is large', async () => {
