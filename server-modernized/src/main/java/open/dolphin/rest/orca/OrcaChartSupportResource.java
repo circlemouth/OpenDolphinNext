@@ -25,6 +25,7 @@ import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.orca.service.DiseaseProjectionService;
+import open.dolphin.orca.service.OrcaDiseaseOperationStore;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
@@ -73,6 +74,9 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
 
     @Inject
     private DiseaseProjectionService diseaseProjectionService;
+
+    @Inject
+    private OrcaDiseaseOperationStore diseaseOperationStore;
 
     @POST
     @Path("/medical-mod-v2")
@@ -282,10 +286,11 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
     private record DiseaseModContextAuthority(
             boolean accepted,
             String departmentCode,
+            String physicianCode,
             String insuranceCombinationNumber,
             String source) {
         private static DiseaseModContextAuthority rejected() {
-            return new DiseaseModContextAuthority(false, null, null, null);
+            return new DiseaseModContextAuthority(false, null, null, null, null);
         }
     }
 
@@ -496,11 +501,19 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         String runId = resolveRunId(request);
         String traceId = resolveTraceId(request);
         String requestXml = support().buildDiseaseModV3RequestXml(payload);
+        String idempotencyKey = OrcaDiseaseOperationStore.idempotencyKey(operation, requestXml);
+        if (diseaseOperationStore != null
+                && diseaseOperationStore.findByIdempotencyKey(facilityId, idempotencyKey) != null) {
+            throw restError(request, Response.Status.CONFLICT, "duplicate_orca_disease_operation",
+                    "Duplicate ORCA disease operation was rejected");
+        }
         OrcaTransportResult result = orcaTransport.invoke(
                 facilityId,
                 OrcaEndpoint.DISEASE_MOD_V3,
                 OrcaTransportRequest.post(requestXml));
         ChartSupportDiseaseModV3Response response = support().parseDiseaseModV3Response(result, runId, traceId);
+        saveDiseaseOperation(request, facilityId, payload, operation, contextAuthority, idempotencyKey,
+                requestXml, result, response);
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("runId", runId);
@@ -523,6 +536,40 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         recordAudit(request, AUDIT_DISEASE_MOD_ACTION, details,
                 response.isBusinessAccepted() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
+    }
+
+    private void saveDiseaseOperation(
+            HttpServletRequest request,
+            String facilityId,
+            ChartSupportDiseaseModV3Request payload,
+            String operation,
+            DiseaseModContextAuthority contextAuthority,
+            String idempotencyKey,
+            String requestXml,
+            OrcaTransportResult result,
+            ChartSupportDiseaseModV3Response response) {
+        if (diseaseOperationStore == null) {
+            return;
+        }
+        diseaseOperationStore.saveCompleted(new OrcaDiseaseOperationStore.OperationCommand(
+                facilityId,
+                operation,
+                idempotencyKey,
+                requireRemoteUser(request),
+                Instant.now(),
+                Instant.now(),
+                Instant.now(),
+                payload.getPatientId(),
+                null,
+                null,
+                requireDateOnly(request, payload.getPerformDate(), "payload.performDate"),
+                payload.getDepartmentCode(),
+                contextAuthority.physicianCode(),
+                contextAuthority.insuranceCombinationNumber(),
+                payload.getDiseaseInformation() != null ? payload.getDiseaseInformation().size() : 0,
+                requestXml,
+                result != null ? result.getBody() : null,
+                response));
     }
 
     private String normalizeDiseaseModOperation(String operation, HttpServletRequest request) {
@@ -631,6 +678,7 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         }
         JsonNode identifiers = flags.path("officialVisitIdentifiers");
         String departmentCode = textNode(identifiers, "departmentCode");
+        String physicianCode = textNode(identifiers, "physicianCode");
         String insuranceCombinationNumber = textNode(identifiers, "insuranceCombinationNumber");
         if (!safeEquals(departmentCode, payload.getDepartmentCode())) {
             return DiseaseModContextAuthority.rejected();
@@ -642,6 +690,7 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         return new DiseaseModContextAuthority(
                 true,
                 departmentCode,
+                physicianCode,
                 insuranceCombinationNumber,
                 "encounter_projection_official_identifiers");
     }

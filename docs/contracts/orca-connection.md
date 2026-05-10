@@ -113,6 +113,7 @@
 - `operation=create|update|delete|organizeDeletedDiseases` は server-owned enum とする。通常 create/update/delete は `Request_Number` を送らず、delete は `Disease_OutCome=O` を server が生成する。`Request_Number=01` は `organizeDeletedDiseases` の削除病名整理だけで生成する。
 - 転帰送信値は server allowlist で `ACTIVE=` 空、`CURED=F`、`DEATH=D`、`DISCONTINUED=P`、`DELETED=O` に固定する。`C` と `S` は送らず、`TRANSFERRED` は Trial 実送信確認まで ORCA 送信を block する。
 - ORCA warning / unmatch は固定フィールドに normalize し、患者情報、内部 URL、資格情報、raw XML、stack trace を API/UI/監査ログへ出さない。
+- server は diseasev3 送信前に server-generated request hash から冪等キーを作成し、同一 facility の同一 diseasev3 request を二重送信として ORCA transport 前に拒否する。送信後は `orca_disease_operation` に request / response hash、固定 `operationStatus`、`needsUserReview`、warning/unmatch summary を保存し、raw XML や資格情報は保存しない。
 - mutation 成功後の Charts 表示は ORCA `diseasegetv2` 再取得結果だけを正本とし、楽観更新や local fallback で成功扱いにしない。
 
 ## Close And Send Billing Workflow

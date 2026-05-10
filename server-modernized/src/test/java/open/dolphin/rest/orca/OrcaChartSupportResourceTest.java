@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.infomodel.PatientModel;
+import open.dolphin.orca.service.OrcaDiseaseOperationStore;
 import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
@@ -456,6 +457,35 @@ class OrcaChartSupportResourceTest {
         Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
         assertEquals("payload.requestNumber", body.get("field"));
         assertEquals("diseaseModV3 Request_Number is server-owned", body.get("message"));
+        assertNull(transport.endpoint());
+    }
+
+    @Test
+    void diseaseModV3RejectsDuplicateServerGeneratedIdempotencyKeyBeforeOfficialInvoke() {
+        CapturingTransport transport = new CapturingTransport();
+        OrcaDiseaseOperationStore operationStore = mock(OrcaDiseaseOperationStore.class);
+        when(operationStore.findByIdempotencyKey(eq("F001"), anyString()))
+                .thenReturn(new OrcaDiseaseOperationStore.OperationRow(
+                        10L,
+                        "F001",
+                        "diseasev3:create:duplicate",
+                        "ORCA_ACCEPTED",
+                        "0".repeat(64),
+                        "1".repeat(64),
+                        false));
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        injectField(resource, "diseaseOperationStore", operationStore);
+        injectDiseaseModAuthority(resource);
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> resource.diseaseModV3(buildRequest(), newDiseasePayload()));
+
+        assertEquals(409, exception.getResponse().getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
+        assertEquals("duplicate_orca_disease_operation", body.get("error"));
         assertNull(transport.endpoint());
     }
 

@@ -68,6 +68,7 @@
 - `update|delete` は mutation 前に ORCA `diseasegetv2` を再取得して target が存在することを server-side で確認し、drift 時は fail closed にする。
 - target 照合は表示名だけで行わない。診療科、開始日、入外、保険組合せ、現在転帰、component code 列、supplement 列、snapshot hash を使い、drift 時は fail closed にする。
 - `diseasev3` の `Disease_Warning_Info` と `Disease_Unmatch_Information` は固定フィールドだけを `warnings[]` / `unmatchInformation[]` に normalize し、患者情報、内部 URL、raw XML、資格情報、stack trace、ORCA 内部詳細は API/UI に露出しない。
+- server は diseasev3 request XML から server-generated idempotency key を作り、同一 facility の同一 request を ORCA transport 前に拒否する。`orca_disease_operation` は request / response hash と固定 summary だけを保存し、raw XML、任意 URL、資格情報、患者詳細、保険詳細を保存しない。
 - mutation 成功後は楽観更新せず、`diseasegetv2` 再取得結果だけで Charts の主病名一覧を更新する。
 - 会計送信 workflow から病名を送る場合も client は `patientId` / `facilityId` / 診療科 / 保険組合せ / `Request_Number` を指定しない。server が encounter projection、保存済み病名、ORCA mirror 差分から送信対象を導出し、未確定・候補・院内メモは除外する。
 
