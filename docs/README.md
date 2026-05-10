@@ -6,6 +6,7 @@
 - [managerdocs/README.md](managerdocs/README.md)
 - [contracts/](contracts/)
 - [contracts/audit-log.md](contracts/audit-log.md)
+- [contracts/prescription-authority.md](contracts/prescription-authority.md)
 - [architecture/](architecture/)
 - [architecture/repository-doc-taxonomy.md](architecture/repository-doc-taxonomy.md)
 - [runbooks/](runbooks/)
