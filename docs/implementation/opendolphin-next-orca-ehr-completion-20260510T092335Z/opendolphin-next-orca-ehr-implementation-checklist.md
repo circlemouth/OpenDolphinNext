@@ -267,6 +267,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] ORCA DB直接病名参照コード、CLAIM病名送信コード、`diseasev2` 依存を削除する。
 - [ ] 診療録確定済みタイトル直接更新経路、確定済み処方 payload 直接上書き経路を削除する。
   - [x] `KarteDocumentWriteService.updateTitle` は `TMP` 以外の診療録タイトル直接更新を `karte.document.finalized_update_denied` / HTTP 409 で拒否し、確定済みタイトル変更を revision/event 経由に限定する。
+  - [x] `/api/local/prescription-orders` と `/api/local/prescription-orders/do-import` は server-derived `encounter_projection` が会計待ち・取消・閉鎖相当の場合、処方 payload 永続化前に `prescription_order_finalized_update_denied` / HTTP 409 で拒否する。client 提供の encounter/patient/facility は権威にせず、projection の facility/patient 不一致は `encounter_not_found` として扱う。
 - [ ] Webクライアントの生ORCAプロキシ設定、ORCA認証情報を扱うフロント設定を削除する。
 - [ ] ORCA送信成功を診療録確定と同義に扱う UI 文言、ORCA送信失敗時に登録済み/反映済みと表示する文言、重要警告を初期非表示にする UI を削除または変更する。
 

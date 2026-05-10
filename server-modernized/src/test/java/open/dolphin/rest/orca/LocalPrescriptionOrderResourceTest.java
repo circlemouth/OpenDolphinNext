@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.rest.dto.orca.PrescriptionClaimComment;
 import open.dolphin.rest.dto.orca.PrescriptionDoctorComment;
@@ -43,16 +44,19 @@ class LocalPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
 
     private LocalPrescriptionOrderResource resource;
     private FakePrescriptionOrderRepository fakeRepository;
+    private FakeEncounterProjectionRepository fakeEncounterProjectionRepository;
     private HttpServletRequest servletRequest;
 
     @BeforeEach
     void setUp() throws Exception {
         resource = new LocalPrescriptionOrderResource();
         fakeRepository = new FakePrescriptionOrderRepository();
+        fakeEncounterProjectionRepository = new FakeEncounterProjectionRepository();
 
         injectField(resource, "sessionAuditDispatcher", new RecordingSessionAuditDispatcher());
         injectField(resource, "patientServiceBean", new FakePatientServiceBean());
         injectField(resource, "prescriptionOrderRepository", fakeRepository);
+        injectField(resource, "encounterProjectionRepository", fakeEncounterProjectionRepository);
         injectField(resource, "authoritativeAuditRepository", new StubAuditRepository(true));
 
         Map<String, Object> attributes = new HashMap<>();
@@ -241,6 +245,51 @@ class LocalPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void saveOrderRejectsBillingClosedEncounterMutation() {
+        fakeEncounterProjectionRepository.put(row("F001:E100", "F001", "00001", "accounting-wait"));
+        PrescriptionOrder payload = buildPayload();
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.saveOrder(servletRequest, payload));
+
+        assertEquals(409, ex.getResponse().getStatus());
+        assertTrue(String.valueOf(ex.getResponse().getEntity())
+                .contains("prescription_order_finalized_update_denied"));
+        assertEquals(0, fakeRepository.saveCalls);
+    }
+
+    @Test
+    void doImportRejectsBillingClosedEncounterMutation() {
+        fakeEncounterProjectionRepository.put(row("F001:E100", "F001", "00001", "accounting-wait"));
+        PrescriptionOrderDoImportRequest payload = new PrescriptionOrderDoImportRequest();
+        payload.setPatientId("00001");
+        payload.setEncounterId("F001:E100");
+        payload.setEncounterDate("2026-04-03");
+        payload.setDoOrder(buildPayload());
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.doImport(servletRequest, payload));
+
+        assertEquals(409, ex.getResponse().getStatus());
+        assertTrue(String.valueOf(ex.getResponse().getEntity())
+                .contains("prescription_order_finalized_update_denied"));
+        assertEquals(0, fakeRepository.saveCalls);
+    }
+
+    @Test
+    void saveOrderRejectsEncounterPatientMismatchBeforePersisting() {
+        fakeEncounterProjectionRepository.put(row("F001:E100", "F001", "00002", "checked_in"));
+        PrescriptionOrder payload = buildPayload();
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.saveOrder(servletRequest, payload));
+
+        assertEquals(404, ex.getResponse().getStatus());
+        assertTrue(String.valueOf(ex.getResponse().getEntity()).contains("encounter_not_found"));
+        assertEquals(0, fakeRepository.saveCalls);
+    }
+
+    @Test
     void saveThenGetLatestRoundTripsFullLocalPrescriptionPayload() {
         PrescriptionOrder payload = buildPayload();
         payload.setDoctorComments(List.of(doctorComment("local doctor comment")));
@@ -354,6 +403,32 @@ class LocalPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
         payload.setPerformDate("2026-04-03");
         payload.setRps(List.of(rp));
         return payload;
+    }
+
+    private static EncounterProjectionRepository.EncounterRow row(
+            String encounterKey,
+            String facilityId,
+            String patientId,
+            String businessState) {
+        Instant now = Instant.parse("2026-04-03T00:00:00Z");
+        return new EncounterProjectionRepository.EncounterRow(
+                encounterKey,
+                facilityId,
+                patientId,
+                100L,
+                "S001",
+                "A001",
+                now,
+                businessState,
+                null,
+                null,
+                null,
+                "F001:doctor01",
+                null,
+                "{}",
+                null,
+                1L,
+                now);
     }
 
     private static PrescriptionClaimComment claimComment(String code, String text, String note) {
@@ -499,6 +574,19 @@ class LocalPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
                             LocalDate.parse(order.getEncounterDate()),
                             LocalDate.parse(order.getPerformDate()),
                             Instant.parse("2026-04-03T00:00:00Z")));
+        }
+    }
+
+    private static final class FakeEncounterProjectionRepository extends EncounterProjectionRepository {
+        private final Map<String, EncounterRow> rows = new HashMap<>();
+
+        @Override
+        public EncounterRow findByEncounterKey(String encounterKey) {
+            return rows.get(encounterKey);
+        }
+
+        void put(EncounterRow row) {
+            rows.put(row.encounterKey(), row);
         }
     }
 }

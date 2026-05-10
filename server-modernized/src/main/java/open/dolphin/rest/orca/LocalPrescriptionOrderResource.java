@@ -26,6 +26,7 @@ import java.util.Optional;
 import open.dolphin.rest.dto.orca.PrescriptionClaimComment;
 import open.dolphin.rest.dto.orca.PrescriptionDrug;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.rest.dto.orca.PrescriptionOrder;
 import open.dolphin.rest.dto.orca.PrescriptionOrderDoImportRequest;
@@ -53,6 +54,9 @@ public class LocalPrescriptionOrderResource extends AbstractOrcaRestResource {
 
     @Inject
     private PrescriptionOrderRepository prescriptionOrderRepository;
+
+    @Inject
+    EncounterProjectionRepository encounterProjectionRepository;
 
     @Inject
     AuthoritativeAuditRepository authoritativeAuditRepository;
@@ -155,6 +159,8 @@ public class LocalPrescriptionOrderResource extends AbstractOrcaRestResource {
         normalized.setEncounterId(trimToNull(normalized.getEncounterId()));
         normalized.setEncounterDate(encounterDate != null ? encounterDate.toString() : null);
         normalized.setPerformDate(performDate != null ? performDate.toString() : null);
+        ensureEncounterAllowsPrescriptionMutation(request, facilityId, patientId, normalized.getEncounterId(),
+                runId, AUDIT_SAVE_ACTION);
         validateClaimCommentCodes(request, normalized, facilityId, patientId, runId, AUDIT_SAVE_ACTION);
 
         String json = writeJsonOrThrow(request, normalized, facilityId, patientId, runId, AUDIT_SAVE_ACTION);
@@ -237,6 +243,8 @@ public class LocalPrescriptionOrderResource extends AbstractOrcaRestResource {
         LocalDate targetEncounterDate = parseOptionalDate(request, "encounterDate", payload.getEncounterDate(),
                 facilityId, patientId, runId, AUDIT_DO_IMPORT_ACTION);
         String targetEncounterId = trimToNull(payload.getEncounterId());
+        ensureEncounterAllowsPrescriptionMutation(request, facilityId, patientId, targetEncounterId,
+                runId, AUDIT_DO_IMPORT_ACTION);
         validateClaimCommentCodes(request, payload.getDoOrder(), facilityId, patientId, runId, AUDIT_DO_IMPORT_ACTION);
         return new DoImportContext(patientId, targetEncounterId, targetEncounterDate);
     }
@@ -254,6 +262,110 @@ public class LocalPrescriptionOrderResource extends AbstractOrcaRestResource {
                     details,
                     null);
         }
+    }
+
+    void ensureEncounterAllowsPrescriptionMutation(
+            HttpServletRequest request,
+            String facilityId,
+            String patientId,
+            String encounterId,
+            String runId,
+            String action) {
+        String normalizedEncounterId = trimToNull(encounterId);
+        if (normalizedEncounterId == null) {
+            return;
+        }
+        if (encounterProjectionRepository == null) {
+            Map<String, Object> details = prescriptionMutationDenyDetails(
+                    facilityId, patientId, normalizedEncounterId, runId, "encounter_projection_unavailable", null,
+                    Response.Status.SERVICE_UNAVAILABLE);
+            recordAudit(request, action, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.SERVICE_UNAVAILABLE,
+                    "encounter_projection_unavailable",
+                    "Encounter mutation authority is unavailable",
+                    details,
+                    null);
+        }
+
+        EncounterProjectionRepository.EncounterRow encounter;
+        try {
+            encounter = encounterProjectionRepository.findByEncounterKey(normalizedEncounterId);
+        } catch (RuntimeException ex) {
+            Map<String, Object> details = prescriptionMutationDenyDetails(
+                    facilityId, patientId, normalizedEncounterId, runId, "encounter_projection_unavailable", null,
+                    Response.Status.SERVICE_UNAVAILABLE);
+            recordAudit(request, action, details, AuditEventEnvelope.Outcome.FAILURE);
+            LOGGER.warn("Encounter projection lookup failed for prescription mutation (encounterId={})",
+                    normalizedEncounterId, ex);
+            throw restError(request, Response.Status.SERVICE_UNAVAILABLE,
+                    "encounter_projection_unavailable",
+                    "Encounter mutation authority is unavailable",
+                    details,
+                    ex);
+        }
+        if (encounter == null) {
+            return;
+        }
+        if (!facilityId.equals(trimToNull(encounter.facilityId()))
+                || !patientId.equals(trimToNull(encounter.patientId()))) {
+            Map<String, Object> details = prescriptionMutationDenyDetails(
+                    facilityId, patientId, normalizedEncounterId, runId, "encounter_not_found", null,
+                    Response.Status.NOT_FOUND);
+            recordAudit(request, action, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.NOT_FOUND,
+                    "encounter_not_found",
+                    "Encounter was not found",
+                    details,
+                    null);
+        }
+
+        String businessState = trimToNull(encounter.businessState());
+        if (isPrescriptionMutationBlockedState(businessState)) {
+            Map<String, Object> details = prescriptionMutationDenyDetails(
+                    facilityId, patientId, normalizedEncounterId, runId,
+                    "prescription_order_finalized_update_denied",
+                    businessState,
+                    Response.Status.CONFLICT);
+            recordAudit(request, action, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.CONFLICT,
+                    "prescription_order_finalized_update_denied",
+                    "Prescription order cannot be changed after the encounter is closed for billing",
+                    details,
+                    null);
+        }
+    }
+
+    private boolean isPrescriptionMutationBlockedState(String businessState) {
+        if (businessState == null) {
+            return false;
+        }
+        return switch (businessState.trim().toLowerCase()) {
+            case "accounting-wait", "billing-waiting", "closed", "cancelled",
+                    "chart-finalized", "orca-sent", "orca_medical_registered" -> true;
+            default -> false;
+        };
+    }
+
+    private Map<String, Object> prescriptionMutationDenyDetails(
+            String facilityId,
+            String patientId,
+            String encounterId,
+            String runId,
+            String reasonCode,
+            String encounterState,
+            Response.Status status) {
+        Map<String, Object> details = new HashMap<>();
+        details.put("facilityId", facilityId);
+        details.put("patientId", patientId);
+        details.put("encounterId", encounterId);
+        details.put("runId", runId);
+        details.put("reasonCode", reasonCode);
+        if (encounterState != null) {
+            details.put("encounterState", encounterState);
+        }
+        details.put("routeNamespace", ROUTE_NAMESPACE);
+        markFailureDetails(details, status.getStatusCode(), reasonCode, "Prescription order mutation denied");
+        return details;
     }
 
     private PrescriptionOrder loadBaseOrder(

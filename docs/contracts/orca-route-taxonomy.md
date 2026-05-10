@@ -116,6 +116,8 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 
 `/api/local/encounters/orca-transmissions/review` と `/api/local/encounters/orca-transmissions/{transmissionId}/reconcile-temporary-medical` は close-and-send billing recovery 用の local workflow です。facility は認証済み request context だけを authority とし、client 提供の patient / facility / insurance / voucher / sequential / `Medical_Uid` / URL / raw XML を受け取りません。`reconcile-temporary-medical` は保存済み snapshot から ORCA `tmedicalgetv2` を read-only で照合し、成功表示や自動再送ではなく `needsUserReview=true` の sanitized summary だけを返します。
 
+`/api/local/prescription-orders` と `/api/local/prescription-orders/do-import` は local draft prescription payload の保存口ですが、encounter に紐づく mutation では `encounter_projection` を server-side authority として参照します。projection の facility/patient が request context と一致しない場合は `encounter_not_found`、会計待ち・取消・閉鎖相当の business state では `prescription_order_finalized_update_denied` として、payload 永続化前に fail closed します。client 提供の encounter/patient/facility は確定済み処方更新可否の権威にしません。
+
 ### Admin-Internal
 
 - `/api/admin/internal/orca/patients/sync/status`
