@@ -77,6 +77,25 @@ const todayCompact = () => {
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}${month}${day}`;
 };
+const PATIENT_UPDATE_SYNC_UNCONFIRMED_MESSAGE =
+  '既存患者更新は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。時間をおいて再取得してください。';
+const PATIENT_UPDATE_SYNC_CONFIRMED_MESSAGE = '既存患者更新は ORCA正本の再取得まで完了しました。';
+const isInternalPatientSyncMessage = (message: string) => /canonical\s*再取得|完了扱い/.test(message);
+const resolvePatientUpdateNoticeMessage = (result: PatientMutationResult) => {
+  if (result.ok) {
+    if (result.message && !isInternalPatientSyncMessage(result.message)) return result.message;
+    return PATIENT_UPDATE_SYNC_CONFIRMED_MESSAGE;
+  }
+  const writeAccepted = result.writeAccepted ?? false;
+  if (writeAccepted) {
+    if (result.message && !isInternalPatientSyncMessage(result.message)) return result.message;
+    return PATIENT_UPDATE_SYNC_UNCONFIRMED_MESSAGE;
+  }
+  if (result.message) {
+    return `患者情報の更新に失敗しました。${resolveUserSafeOperationFailure(result.message)}`;
+  }
+  return '患者情報の更新に失敗しました。状態を確認してからやり直してください。';
+};
 
 export function PatientInfoEditDialog({
   open,
@@ -209,14 +228,10 @@ export function PatientInfoEditDialog({
     onSuccess: (result) => {
       onSaved?.(result);
       const writeAccepted = result.writeAccepted ?? false;
-      const failureMessage = result.message
-        ? writeAccepted
-          ? result.message
-          : `患者情報の更新に失敗しました。${resolveUserSafeOperationFailure(result.message)}`
-        : '患者情報の更新に失敗しました。状態を確認してからやり直してください。';
+      const noticeMessage = resolvePatientUpdateNoticeMessage(result);
       setNotice({
         tone: result.ok ? 'success' : writeAccepted ? 'warning' : 'error',
-        message: result.ok ? (result.message ?? '既存患者更新が完了しました。') : failureMessage,
+        message: noticeMessage,
       });
       if (result.ok) {
         recordOutpatientFunnel('charts_patient_edit', {
@@ -240,8 +255,8 @@ export function PatientInfoEditDialog({
           fallbackUsed: result.fallbackUsed ?? false,
           action: 'save',
           outcome: 'error',
-          note: writeAccepted ? `write accepted: ${failureMessage}` : failureMessage,
-          reason: failureMessage,
+          note: writeAccepted ? `write accepted: ${noticeMessage}` : noticeMessage,
+          reason: noticeMessage,
         });
       }
     },
@@ -386,7 +401,7 @@ export function PatientInfoEditDialog({
   };
 
   const title = '患者基本情報を更新';
-  const description = '実行前に差分を確認し、official update route で ORCA canonical と local sync を更新します。';
+  const description = '実行前に差分を確認し、ORCA正本の更新と再取得による同期確認を行います。';
 
   const fieldErrorMap = useMemo(() => {
     const map = new Map<keyof PatientRecord, string>();

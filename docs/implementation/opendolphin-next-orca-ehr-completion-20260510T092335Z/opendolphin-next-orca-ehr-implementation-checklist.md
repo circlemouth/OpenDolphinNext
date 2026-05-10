@@ -273,6 +273,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] `web-client` の `npm run dev` は ORCA env file を自動読込せず、`verify:no-direct-orca-proxy-config` で Vite config / env sample への生 ORCA proxy・ORCA credential config 再混入を fail する。
 - [ ] ORCA送信成功を診療録確定と同義に扱う UI 文言、ORCA送信失敗時に登録済み/反映済みと表示する文言、重要警告を初期非表示にする UI を削除または変更する。
   - [x] 2026-05-10T18:00Z: Patients の新患登録・既存患者更新・ORCA既存患者取込で、write accepted と ORCA正本再取得済みを分けて表示し、未確認時に「反映済み/登録済み」と誤認させる文言を同期確認表現へ変更した。
+  - [x] 2026-05-10T18:18Z: Charts の既存患者更新 dialog と共通患者取込 recovery で `canonical 再取得` / `完了扱い` の内部語を利用者に表示せず、ORCA正本の再取得による同期確認表現へ正規化した。
   - [x] 2026-05-10T18:08Z: DiagnosisEditPanel の diseasev3 成功後 copy を `反映しました` から `ORCA再取得結果で同期確認しました` に変更し、ORCA accepted と ORCA登録病名表示の境界を明示した。
   - [x] Charts の ORCA summary / timeline で `medicalmodv2` 送信を単純な「成功」表示にせず、`送達確認` として表示し、会計済み判定・診療録確定とは別概念であることを初期表示の説明に含める。
 

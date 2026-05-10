@@ -105,7 +105,7 @@ describe('PatientInfoEditDialog', () => {
     expect(screen.queryByText(/connection refused/i)).not.toBeInTheDocument();
   });
 
-  it('保存時は official update route を呼び出し、成功後に canonical/local sync 更新 callback を進める', async () => {
+  it('保存時は official update route を呼び出し、成功後に ORCA 正本再取得 callback を進める', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     const onSaved = vi.fn();
@@ -170,7 +170,7 @@ describe('PatientInfoEditDialog', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('canonical readback failure 時は warning を表示して close しない', async () => {
+  it('ORCA正本再取得失敗時は warning を表示して close しない', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     const onSaved = vi.fn();
@@ -207,7 +207,11 @@ describe('PatientInfoEditDialog', () => {
     await user.click(screen.getByLabelText('差分を確認しました（既存患者更新を実行します）'));
     await user.click(screen.getByRole('button', { name: '既存患者更新' }));
 
-    expect(await screen.findByText('既存患者更新は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。')).toBeInTheDocument();
+    expect(
+      await screen.findByText('既存患者更新は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。時間をおいて再取得してください。'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/canonical 再取得/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/完了扱い/)).not.toBeInTheDocument();
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ writeAccepted: true, ok: false }));
     expect(onRefetchBaseline).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();

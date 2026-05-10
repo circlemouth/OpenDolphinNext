@@ -45,7 +45,7 @@ export const buildPatientImportFailureMessage = (contextLabel: string, result: O
   }
 
   if (cause === 'canonical_refetch_failed') {
-    return `${contextLabel}の再取得前に患者取込は受け付けられましたが、canonical 再取得に失敗したため同期完了を確認できませんでした。時間をおいて再試行してください。`;
+    return `${contextLabel}の再取得前に患者取込は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。時間をおいて再取得してください。`;
   }
 
   return `${contextLabel}の再取得前に患者取込を完了できませんでした。時間をおいて再試行してください。`;
