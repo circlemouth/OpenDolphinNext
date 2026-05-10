@@ -467,4 +467,44 @@ describe('diseaseApi', () => {
     expect(body).not.toHaveProperty('rawXml');
     expect(body).not.toHaveProperty('url');
   });
+
+  it('surfaces ORCA disease mutation review status instead of treating warnings as plain success', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-OFFICIAL-DISEASE',
+          businessAccepted: true,
+          needsUserReview: true,
+          operationStatus: 'ORCA_UNMATCHED',
+          warnings: [{ code: 'W001', messageCategory: 'warning_like' }],
+          unmatchInformation: [{ code: 'U001', name: '要確認病名', messageCategory: 'unmatched_like' }],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await mutateOrcaDisease({
+      patientId: '000001',
+      operation: 'create',
+      performDate: '2026-05-08',
+      departmentCode: '01',
+      diseaseInformation: [
+        {
+          diseaseName: '高血圧症',
+          diseaseCode: 'I10',
+          diseaseStartDate: '2026-05-08',
+          components: [{ seq: 1, componentType: 'BODY', code: '8833421', name: '高血圧症' }],
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.businessAccepted).toBe(true);
+    expect(result.needsUserReview).toBe(true);
+    expect(result.operationStatus).toBe('ORCA_UNMATCHED');
+    expect(result.message).toBe('ORCA病名の処理結果に確認が必要です。警告または不一致を確認してください。');
+  });
 });

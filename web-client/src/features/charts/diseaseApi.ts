@@ -171,6 +171,8 @@ export type OrcaDiseaseMutationResult = {
   status?: number;
   apiResult?: string;
   responseClassification?: string;
+  operationStatus?: string;
+  needsUserReview?: boolean;
   runId?: string;
   traceId?: string;
   message?: string;
@@ -669,17 +671,21 @@ export async function mutateOrcaDisease(params: OrcaDiseaseMutationRequest): Pro
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: 'ORCA病名の登録に失敗しました。' });
   const json = (parsed.json ?? {}) as Record<string, unknown>;
   return {
-    ok: parsed.ok && json.businessAccepted === true,
+    ok: parsed.ok && json.businessAccepted === true && json.needsUserReview !== true,
     businessAccepted: json.businessAccepted === true,
     status: parsed.status,
     apiResult: typeof json.apiResult === 'string' ? json.apiResult : undefined,
     responseClassification: typeof json.responseClassification === 'string' ? json.responseClassification : undefined,
+    operationStatus: typeof json.operationStatus === 'string' ? json.operationStatus : undefined,
+    needsUserReview: json.needsUserReview === true,
     runId: typeof json.runId === 'string' ? json.runId : parsed.runId ?? runId,
     traceId: typeof json.traceId === 'string' ? json.traceId : undefined,
     message: parsed.ok
-      ? json.businessAccepted === true
+      ? json.businessAccepted === true && json.needsUserReview !== true
         ? undefined
-        : 'ORCA病名の処理を完了確認できませんでした。再取得後に状態を確認してください。'
+        : json.needsUserReview === true
+          ? 'ORCA病名の処理結果に確認が必要です。警告または不一致を確認してください。'
+          : 'ORCA病名の処理を完了確認できませんでした。再取得後に状態を確認してください。'
       : parsed.message,
     raw: json,
   };

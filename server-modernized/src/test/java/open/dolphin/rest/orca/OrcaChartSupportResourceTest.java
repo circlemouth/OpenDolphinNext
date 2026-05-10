@@ -496,6 +496,51 @@ class OrcaChartSupportResourceTest {
         assertTrue(response.isBusinessAccepted());
     }
 
+    @Test
+    void diseaseModV3ReturnsReviewStatusForWarningAndUnmatchWithoutRawDetails() {
+        CapturingTransport transport = new CapturingTransport("""
+                <xmlio2>
+                  <diseaseres>
+                    <Information_Date>2026-04-22</Information_Date>
+                    <Information_Time>14:25:00</Information_Time>
+                    <Api_Result>0000</Api_Result>
+                    <Api_Result_Message>正常終了</Api_Result_Message>
+                    <Disease_Warning_Info type="array">
+                      <Disease_Warning_Info_child type="record">
+                        <Disease_Warning_Code>W001</Disease_Warning_Code>
+                        <Disease_Warning_Message>警告</Disease_Warning_Message>
+                      </Disease_Warning_Info_child>
+                    </Disease_Warning_Info>
+                    <Disease_Unmatch_Information type="array">
+                      <Disease_Unmatch_Information_child type="record">
+                        <Disease_Unmatch_Code>U001</Disease_Unmatch_Code>
+                        <Disease_Unmatch_Name>要確認病名</Disease_Unmatch_Name>
+                        <Disease_Unmatch_Message>不一致</Disease_Unmatch_Message>
+                      </Disease_Unmatch_Information_child>
+                    </Disease_Unmatch_Information>
+                  </diseaseres>
+                </xmlio2>
+                """);
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        injectDiseaseModAuthority(resource);
+
+        ChartSupportDiseaseModV3Response response = resource.diseaseModV3(
+                buildRequest(),
+                newDiseasePayload());
+
+        assertTrue(response.isBusinessAccepted());
+        assertTrue(response.isNeedsUserReview());
+        assertEquals("ORCA_UNMATCHED", response.getOperationStatus());
+        assertEquals(1, response.getWarnings().size());
+        assertEquals("W001", response.getWarnings().get(0).getCode());
+        assertEquals("warning_like", response.getWarnings().get(0).getMessageCategory());
+        assertEquals(1, response.getUnmatchInformation().size());
+        assertEquals("U001", response.getUnmatchInformation().get(0).getCode());
+        assertEquals("要確認病名", response.getUnmatchInformation().get(0).getName());
+        assertEquals("present_redacted", response.getUnmatchInformation().get(0).getMessageCategory());
+    }
+
     private static HttpServletRequest buildRequest() {
         return (HttpServletRequest) Proxy.newProxyInstance(
                 OrcaChartSupportResourceTest.class.getClassLoader(),

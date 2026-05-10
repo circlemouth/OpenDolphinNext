@@ -616,6 +616,7 @@ final class OrcaChartSupportSupport {
                     "diseaseres",
                     apiOk,
                     completionEvidencePresent));
+            applyDiseaseOperationReviewStatus(response);
             if (!response.isOk() && !isBlank(apiResultMessage)) {
                 response.setError(response.getApiResultMessageCategory());
             }
@@ -625,8 +626,42 @@ final class OrcaChartSupportSupport {
             response.setBusinessAccepted(false);
             response.setResponseClassification("parserAmbiguous");
             response.setError("parser_error");
+            applyDiseaseOperationReviewStatus(response);
         }
         return response;
+    }
+
+    private void applyDiseaseOperationReviewStatus(ChartSupportDiseaseModV3Response response) {
+        boolean hasWarnings = response.getWarnings() != null && !response.getWarnings().isEmpty();
+        boolean hasUnmatches = response.getUnmatchInformation() != null && !response.getUnmatchInformation().isEmpty();
+        String classification = response.getResponseClassification();
+        if (hasUnmatches) {
+            response.setOperationStatus("ORCA_UNMATCHED");
+            response.setNeedsUserReview(true);
+            return;
+        }
+        if (hasWarnings) {
+            response.setOperationStatus("ORCA_WARNING");
+            response.setNeedsUserReview(true);
+            return;
+        }
+        if ("businessAccepted".equals(classification)) {
+            response.setOperationStatus("ORCA_ACCEPTED");
+            response.setNeedsUserReview(false);
+            return;
+        }
+        if ("businessRejected".equals(classification)) {
+            response.setOperationStatus("ORCA_REJECTED");
+            response.setNeedsUserReview(false);
+            return;
+        }
+        if ("transportRejected".equals(classification)) {
+            response.setOperationStatus("NETWORK_FAILED");
+            response.setNeedsUserReview(true);
+            return;
+        }
+        response.setOperationStatus("UNKNOWN");
+        response.setNeedsUserReview(true);
     }
 
     private void appendDiseaseSingle(StringBuilder builder, ChartSupportDiseaseModV3Request.DiseaseInformation entry) {

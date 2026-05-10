@@ -119,7 +119,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] APIごとに `OrcaPatientAdapter`, `OrcaAcceptanceAdapter`, `OrcaInsuranceAdapter`, `OrcaDiseaseAdapter`, `OrcaMedicalAdapter`, `OrcaIncomeAdapter`, `OrcaReportAdapter`, `OrcaSystemAdapter` を分離する。
 - [ ] `OrcaApiResult` を作成し、result code/message、business/transport status、warnings、errors、unmatched、ORCA only、renumbered/reassigned identifiers、needsUserReview、perform date、department、physician、insurance combination、raw hash、normalized response を持たせる。
 - [ ] ORCAレスポンスを成功/失敗だけに変換しない。
-- [ ] `Api_Result=000` でも警告・不一致があれば `needsUserReview=true` にする。
+- [x] `diseasev3` は `Api_Result=000` でも警告・不一致があれば `needsUserReview=true` にする。
 - [ ] 他端末使用中、患者不在、通信失敗、証明書異常、認証失敗、XML不正、ORCA警告、ORCA不一致を別 status として扱う。
 - [ ] xml2 / UTF-8 を明示し、XML生成時に患者番号、診療日、診療科、医師、保険組合せを必須検証する。
 - [ ] XMLパーサは未知フィールドを破棄せず、監査用に要約または hash を保存する。
@@ -169,8 +169,9 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] local prepare route と official `POST /api/orca/official/chart-support/disease-mod-v3` を組み合わせ、ORCA `diseasev3` 相当に送信する。
 - [ ] 旧 `diseasev2`、CLAIM病名送信、ORCA DB直接更新/参照を使わない。
 - [ ] `OrcaDiseaseMutationRequest` は operation、ORCA患者ID、基準月、診療日、診療科、医師、保険組合せ、病名コード、補足コード、疑い、開始/終了日、転帰、カルテ名、病名区分、レセプト表示、保険病名、主病名/副病名を持つ。
-- [ ] `OrcaDiseaseMutationResponse` は result、warnings、unmatched、orcaOnly、renumbered、needsUserReview、operationStatus を持つ。
-- [ ] 警告、不一致、ORCAのみ病名、連番付け替え情報を無視しない。
+- [x] `OrcaDiseaseMutationResponse` 相当の `ChartSupportDiseaseModV3Response` は result、warnings、unmatched、needsUserReview、operationStatus を持つ。
+- [x] `diseasev3` の警告・不一致を無視せず、`ORCA_WARNING` / `ORCA_UNMATCHED` と `needsUserReview=true` へ分類する。
+- [ ] `diseasev3` の ORCAのみ病名、連番付け替え情報を無視しない。
 - [ ] ORCA送信成功後に必ず病名を再取得し、再取得結果だけを ORCA病名表示の根拠にする。
 - [ ] 病名 UI は「ORCA登録病名」「診療録本文中の病名記載」「未送信候補」を分離し、入力だけで ORCA送信しない。
 

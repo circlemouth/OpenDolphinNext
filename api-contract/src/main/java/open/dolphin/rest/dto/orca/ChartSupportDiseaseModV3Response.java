@@ -20,6 +20,8 @@ public class ChartSupportDiseaseModV3Response {
     private String runId;
     private String traceId;
     private String error;
+    private boolean needsUserReview;
+    private String operationStatus;
     private List<DiseaseWarning> warnings = new ArrayList<>();
     private List<DiseaseUnmatchInformation> unmatchInformation = new ArrayList<>();
 
@@ -125,6 +127,22 @@ public class ChartSupportDiseaseModV3Response {
 
     public void setError(String error) {
         this.error = error;
+    }
+
+    public boolean isNeedsUserReview() {
+        return needsUserReview;
+    }
+
+    public void setNeedsUserReview(boolean needsUserReview) {
+        this.needsUserReview = needsUserReview;
+    }
+
+    public String getOperationStatus() {
+        return operationStatus;
+    }
+
+    public void setOperationStatus(String operationStatus) {
+        this.operationStatus = operationStatus;
     }
 
     public List<DiseaseWarning> getWarnings() {

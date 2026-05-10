@@ -514,6 +514,10 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
                 payload.getDiseaseInformation() != null ? payload.getDiseaseInformation().size() : 0);
         details.put("apiResult", response.getApiResult());
         details.put("responseClassification", response.getResponseClassification());
+        details.put("operationStatus", response.getOperationStatus());
+        details.put("needsUserReview", response.isNeedsUserReview());
+        details.put("warningCount", response.getWarnings() != null ? response.getWarnings().size() : 0);
+        details.put("unmatchCount", response.getUnmatchInformation() != null ? response.getUnmatchInformation().size() : 0);
         details.put("httpStatus", response.getStatus());
         details.put("routeNamespace", ROUTE_NAMESPACE);
         recordAudit(request, AUDIT_DISEASE_MOD_ACTION, details,
