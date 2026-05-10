@@ -98,8 +98,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] `chart_revision.status` は `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` に限定する。
 - [ ] `FINAL` 以降の本文、SOAP、モジュール、タイトルを直接更新不可にする。
 - [ ] 確定済み文書の訂正・追記・取消は新 revision/event として扱い、原文を物理削除しない。
-- [ ] `prescription_order`, `prescription_order_revision`, `prescription_order_event`, `prescription_order_item`, `prescription_orca_transmission` を作成または再設計する。
-- [ ] 処方状態は `DRAFT`, `FINAL`, `CHANGED`, `STOPPED`, `CANCELLED`, `REISSUED` に限定する。
+- [x] `prescription_order`, `prescription_order_revision`, `prescription_order_event`, `prescription_order_item`, `prescription_orca_transmission` を作成または再設計する。
+- [x] 処方状態は `DRAFT`, `FINAL`, `CHANGED`, `STOPPED`, `CANCELLED`, `REISSUED` に限定する。
 - [ ] 確定済み処方を直接上書き不可にし、変更・中止・取消・再発行はイベントとして保存する。
 - [ ] `orca_operation`, `orca_transmission`, `orca_response_summary`, `orca_reconciliation_result` を作成する。
 - [ ] ORCA operation status は `PREPARED`, `READY_TO_SEND`, `SENDING`, `ORCA_ACCEPTED`, `ORCA_REJECTED`, `ORCA_WARNING`, `ORCA_UNMATCHED`, `ORCA_CONFLICT`, `NETWORK_FAILED`, `CERTIFICATE_FAILED`, `AUTH_FAILED`, `UNKNOWN`, `NEEDS_REVIEW`, `CANCELLED` に限定する。

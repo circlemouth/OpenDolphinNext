@@ -29,7 +29,7 @@ Checklist count when parallel board was created:
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-01 `orca_patient_cache` + patientgetv2 wrapper | Ready | - | - | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-01 chart document/revision/event migration | Ready | - | - | - |
-| C | `codex/orca-ehr-worker-c-prescription` | C-01 prescription revision/item/event schema | Ready | - | - | - |
+| C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-01 `OrcaApiResult` common model | Ready | - | - | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-01 close Section 17 UI wording/warning parent | Ready | - | - | - |
 | F | `codex/orca-ehr-worker-f-audit-security-gates` | F-02 credential/PHI leakage guards | Done | 20260510T201318Z | this commit | - |
@@ -106,6 +106,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260510T204040Z | C | C-01 | 4.5 prescription authority schema/status; direct overwrite DB guard foundation | this commit | `PrescriptionAuthoritySchemaTest`, `FreshSchemaBaselineTest`, doc/config/runtime/finalized-write guards passed | Done | C-02 finalize/change/stop/cancel/reissue API |
 | 20260510T201318Z | F | F-01 | 4.7 audit append-only/hash-chain; 12 audit append-only; 19 hash-chain gate; Phase 5 audit/hash-chain | this commit | `check-audit-append-only.sh`, focused Maven audit/guard tests passed | Done | F-02 credential/PHI leakage guards |
 | 20260510T195822Z | G | G-01 | Parallel workstream docs | this docs commit | doc links/config/runtime lookup guards passed | Done | Start Worker F F-01 or Worker E E-01 |
 

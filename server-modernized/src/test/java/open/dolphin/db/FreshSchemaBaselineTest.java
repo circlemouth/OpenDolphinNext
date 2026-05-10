@@ -84,7 +84,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0314", appliedVersion(connection));
+                assertEquals("0315", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -119,6 +119,11 @@ class FreshSchemaBaselineTest {
                 assertTrue(tableExists(connection, "opendolphin", "audit_event"));
                 assertTrue(tableExists(connection, "opendolphin", "audit_chain_head"));
                 assertTrue(tableExists(connection, "opendolphin", "audit_export_outbox"));
+                assertTrue(tableExists(connection, "opendolphin", "prescription_order"));
+                assertTrue(tableExists(connection, "opendolphin", "prescription_order_revision"));
+                assertTrue(tableExists(connection, "opendolphin", "prescription_order_item"));
+                assertTrue(tableExists(connection, "opendolphin", "prescription_order_event"));
+                assertTrue(tableExists(connection, "opendolphin", "prescription_orca_transmission"));
                 assertFalse(tableExists(connection, "opendolphin", "d_module_payload"));
                 assertTrue(tableExists(connection, "opendolphin", "runtime_state_store"));
                 assertFalse(tableExists(connection, "opendolphin", "phr_async_job"));
@@ -155,6 +160,13 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "orca_disease_operation", "needs_user_review"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_disease_audit_event", "previous_hash"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_disease_audit_event", "event_hash"));
+                assertTrue(columnExists(connection, "opendolphin", "prescription_order", "status"));
+                assertTrue(columnExists(connection, "opendolphin", "prescription_order_revision", "content_hash"));
+                assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "drug_code"));
+                assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "usage_code"));
+                assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "generic_name_prescription"));
+                assertTrue(columnExists(connection, "opendolphin", "prescription_order_event", "event_type"));
+                assertTrue(columnExists(connection, "opendolphin", "prescription_orca_transmission", "operation_status"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_bucket"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_key"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_version_id"));
@@ -184,6 +196,11 @@ class FreshSchemaBaselineTest {
                 assertTrue(indexExists(connection, "opendolphin", "idx_audit_event_trace_id"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_audit_event_subject"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_audit_export_outbox_delivery"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_prescription_order_patient"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_prescription_order_encounter"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_prescription_order_item_revision"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_prescription_order_event_order"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_prescription_orca_transmission_order"));
                 assertTrue(indexExists(connection, "opendolphin", "uq_d_orca_user_link_facility_orca_user"));
 
                 assertEquals(1L, countRows(connection, "select count(*) from opendolphin.audit_chain_head"));

@@ -53,6 +53,7 @@ cd web-client && node scripts/runtime-ready-smoke.mjs
 - `medicalmodv2` は server 側の `encounter_projection` と server-derived `worklist_flags.officialVisitIdentifiers` を authority とし、client が送った `voucherNumber` / `sequentialNumber` / 保険組合せ等をそのまま信頼しない。WebORCA Trial の直接受付で厳密な voucher が返らない場合も、server が `acceptlstv2` から一意に再同定した provisional context だけを許容し、不一致は ORCA transport 前に拒否する。
 - ORCA 接続は施設別設定と allowlist で解決し、任意 URL 接続や implicit fallback を許容しない。
 - official patient mutation は create / update / import を別 route / 別 DTO で分離し、create は `patientmodv2 class=01`、update は `patientmodv2 class=02`、import は `patientlst2v2` / `patientgetv2` 系の canonical re-fetch + local sync を前提にする。
+- 処方指示正本は `prescription_order` / `prescription_order_revision` / `prescription_order_item` / `prescription_order_event` を authority とし、`FINAL` 以降の直接 UPDATE / DELETE は DB trigger で拒否する。変更・中止・取消・再発行は revision/event 経由に限定する。
 - 添付、患者画像、文書整合性は server 生成メタデータと fail-closed 検証を前提に扱う。
 - health / readiness / reporting は匿名公開時も sanitize 済み情報だけを返し、接続先・資格情報・内部例外は構造化ログ側でも秘匿する。
 
