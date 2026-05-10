@@ -37,6 +37,7 @@ import open.dolphin.rest.dto.PatientImageEntryResponse;
 import open.dolphin.rest.dto.PatientImageUploadResponse;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
+import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import open.dolphin.security.audit.AuditTrailService;
 import open.dolphin.session.PatientImageServiceBean;
 import open.dolphin.session.PatientServiceBean;
@@ -68,6 +69,9 @@ class PatientImagesResourceTest {
     private AuditTrailService auditTrailService;
 
     @Mock
+    private AuthoritativeAuditRepository authoritativeAuditRepository;
+
+    @Mock
     private AttachmentStorageManager attachmentStorageManager;
 
     @Mock
@@ -96,7 +100,7 @@ class PatientImagesResourceTest {
         setField(resource, "configurationResolver", configurationResolver(
                 String.valueOf(5L * 1024L * 1024L), "4096", "4096"));
 
-        when(request.getRemoteUser()).thenReturn("F001:user01");
+        lenient().when(request.getRemoteUser()).thenReturn("F001:user01");
         lenient().when(request.getRemoteAddr()).thenReturn("127.0.0.1");
         lenient().when(request.getRequestURI()).thenReturn("/openDolphin/api/patients/P001/images");
         Map<String, String> headers = new java.util.HashMap<>();
@@ -112,6 +116,7 @@ class PatientImagesResourceTest {
         lenient().when(patientServiceBean.getPatientById("F001", "P001"))
                 .thenReturn(new open.dolphin.infomodel.PatientModel());
         lenient().when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
+        lenient().when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(true);
 
         lenient().when(input.getFormDataMap()).thenReturn(Map.of("file", List.of(part)));
         MultivaluedHashMap<String, String> partHeaders = new MultivaluedHashMap<>();
@@ -219,6 +224,18 @@ class PatientImagesResourceTest {
                 .isInstanceOf(WebApplicationException.class)
                 .extracting(ex -> ((WebApplicationException) ex).getResponse().getStatus())
                 .isEqualTo(404);
+        verify(patientImageServiceBean, never()).uploadImage(anyString(), anyString(), anyString(), anyString(), anyString(), any(Path.class), any(Long.class));
+    }
+
+    @Test
+    void upload_returnsServiceUnavailableWhenAuditWritePathIsUnavailableBeforeParsingMultipart() {
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(false);
+
+        assertThatThrownBy(() -> resource.upload("P001", input))
+                .isInstanceOf(WebApplicationException.class)
+                .extracting(ex -> ((WebApplicationException) ex).getResponse().getStatus())
+                .isEqualTo(503);
+        verify(input, never()).getFormDataMap();
         verify(patientImageServiceBean, never()).uploadImage(anyString(), anyString(), anyString(), anyString(), anyString(), any(Path.class), any(Long.class));
     }
 

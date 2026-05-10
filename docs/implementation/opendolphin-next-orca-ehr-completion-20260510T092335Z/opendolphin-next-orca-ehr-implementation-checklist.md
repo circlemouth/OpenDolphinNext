@@ -258,6 +258,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] DB write path / 監査ログ書き込み degraded 時は read-only mode とし、監査不能な診療録変更・処方変更・ORCA送信・再照合反映を fail-closed にする。backup restore 後は監査ログ hash chain と診療録 content hash を検証し、ORCA再取得・差分照合が完了するまで local 状態を正本昇格しない。
   - [x] `/api/local/prescription-orders` と `/api/local/prescription-orders/do-import` は audit write path が利用できない場合、処方 payload 永続化前に `audit_log_write_unavailable` で 503 fail-closed にする。
   - [x] `/api/karte/document`、`/api/karte/document/{id}`、`/api/karte/revisions/revise`、`/api/karte/revisions/restore` は audit write path が利用できない場合、診療録 payload 永続化前に `audit_log_write_unavailable` で 503 fail-closed にする。
+  - [x] `/api/patients/{patientId}/images` の patient image upload は audit write path が利用できない場合、multipart 解析・外部保存準備・DB 永続化前に `audit_log_write_unavailable` で 503 fail-closed にする。
 
 ## 17. 旧実装・危険経路の削除チェック
 

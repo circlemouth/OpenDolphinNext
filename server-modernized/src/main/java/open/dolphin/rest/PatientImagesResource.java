@@ -14,10 +14,13 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.StreamingOutput;
 import jakarta.ws.rs.core.UriInfo;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import open.dolphin.rest.dto.PatientImageEntryResponse;
 import open.dolphin.rest.dto.PatientImageUploadResponse;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import open.dolphin.security.audit.AuditTrailService;
 import open.dolphin.session.PatientImageServiceBean;
 import open.dolphin.session.PatientServiceBean;
@@ -39,6 +42,9 @@ public class PatientImagesResource extends AbstractResource {
 
     @Inject
     private AuditTrailService auditTrailService;
+
+    @Inject
+    private AuthoritativeAuditRepository authoritativeAuditRepository;
 
     @Inject
     private UserServiceBean userServiceBean;
@@ -66,6 +72,7 @@ public class PatientImagesResource extends AbstractResource {
         PatientImagesSupport support = support();
         support.requireFeatureEnabled();
         support.requireStorageAvailable();
+        ensureAuthoritativeAuditWritePathAvailable();
         String fid = support.requireActorFacilityId();
         String actor = support.resolveActorId();
         support.requirePatientAccessible(fid, patientId);
@@ -191,5 +198,19 @@ public class PatientImagesResource extends AbstractResource {
 
     private String safeFileName(String original, String fallbackBase) {
         return support().safeFileNameForHeader(original, fallbackBase);
+    }
+
+    private void ensureAuthoritativeAuditWritePathAvailable() {
+        if (authoritativeAuditRepository != null && authoritativeAuditRepository.isWritePathAvailable()) {
+            return;
+        }
+        Map<String, Object> details = new HashMap<>();
+        details.put("reasonCode", "audit_log_write_unavailable");
+        details.put("retryable", Boolean.TRUE);
+        throw restError(httpServletRequest, Response.Status.SERVICE_UNAVAILABLE,
+                "audit_log_write_unavailable",
+                "Audit log write path is unavailable",
+                details,
+                null);
     }
 }
