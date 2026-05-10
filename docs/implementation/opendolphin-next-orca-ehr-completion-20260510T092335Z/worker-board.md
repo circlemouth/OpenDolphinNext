@@ -28,7 +28,7 @@ Checklist count when parallel board was created:
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-01 `orca_patient_cache` + patientgetv2 wrapper | Ready | - | - | - |
-| B | `codex/orca-ehr-worker-b-chart-revision` | B-01 chart document/revision/event migration | Ready | - | - | - |
+| B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-01 prescription revision/item/event schema | Ready | - | - | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-01 `OrcaApiResult` common model | Ready | - | - | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-01 close Section 17 UI wording/warning parent | Ready | - | - | - |
@@ -106,6 +106,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260510T203944Z | B | B-01 | 4.4 chart document/revision/event minimum schema; chart revision status enum | this commit | focused Maven tests and doc/config/runtime lookup guards passed | Done | B-02 FINAL direct-write denial |
 | 20260510T201318Z | F | F-01 | 4.7 audit append-only/hash-chain; 12 audit append-only; 19 hash-chain gate; Phase 5 audit/hash-chain | this commit | `check-audit-append-only.sh`, focused Maven audit/guard tests passed | Done | F-02 credential/PHI leakage guards |
 | 20260510T195822Z | G | G-01 | Parallel workstream docs | this docs commit | doc links/config/runtime lookup guards passed | Done | Start Worker F F-01 or Worker E E-01 |
 

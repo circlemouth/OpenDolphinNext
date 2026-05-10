@@ -95,7 +95,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] `orca_acceptance_cache` を作成し、ORCA患者ID、受付日/時刻/番号、診療科、担当医、保険組合せ、受付状態、source metadata、取消日時、normalized payload を保存する。
 - [ ] `encounter_insurance_snapshot` を作成し、encounter/chart revision、ORCA患者ID、受付日、保険組合せ、保険/公費要約、snapshot reason を固定する。
 - [ ] `chart_document`, `chart_revision`, `chart_revision_event`, `chart_module`, `chart_attachment` を作成または再設計する。
-- [ ] `chart_revision.status` は `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` に限定する。
+  - [x] `chart_document`, `chart_revision`, `chart_revision_event` の最小 schema と JPA entity を追加した。`chart_module` / `chart_attachment` の詳細再設計は後続 revision/export 実装で継続確認する。
+- [x] `chart_revision.status` は `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` に限定する。
 - [ ] `FINAL` 以降の本文、SOAP、モジュール、タイトルを直接更新不可にする。
 - [ ] 確定済み文書の訂正・追記・取消は新 revision/event として扱い、原文を物理削除しない。
 - [ ] `prescription_order`, `prescription_order_revision`, `prescription_order_event`, `prescription_order_item`, `prescription_orca_transmission` を作成または再設計する。
