@@ -12,6 +12,7 @@
 - Charts の主病名一覧は `GET /api/local/diagnoses/{patientId}` が返す ORCA `diseasegetv2?class=01` projection だけを表示します。ORCA `Api_Result=21` は「対象病名なし」の正常 0 件として扱い、ORCA unavailable とは分離します。
 - ORCA 取得不可時に local-only disease を主病名一覧へ fallback 表示しません。病名登録・更新・削除も disabled にします。
 - ORCA 病名の create / update / delete は `/api/orca/official/chart-support/disease-mod-v3` だけを使い、成功後の `diseasegetv2` 再取得結果が UI truth です。
+- `disease-mod-v3` response に `postMutationMirrorStatus=connected` と `postMutationMirror` が含まれる場合、Charts UI はその mirror projection を同一 query cache へ反映し、入力 payload や diseasev3 response だけで主一覧を楽観更新しません。`postMutationMirrorStatus=unavailable` の場合は ORCA accepted でも warning / 要確認として表示し、登録済み表示に昇格しません。
 - ORCA 病名の正本データは表示文字列ではなく、`Disease_Single` 相当の順序付き component 列です。`displayName` は検索・表示用であり、更新・削除対象の同定や ORCA 送信の権威情報にしません。
 - `院内未送信` は対象がある場合だけ隔離表示し、ORCAへ登録する明示 confirm がある場合だけ `diseasev3` へ送信します。
 - 診察終了時の標準導線では、`POST /api/local/encounters/{encounterKey}/close-and-send-to-billing` が server-side snapshot を作成し、ORCA連携対象として明示された病名だけを `diseasev3` 連携候補にします。候補病名、臨床メモ、local-only disease は会計送信 snapshot に自動昇格しません。
@@ -69,7 +70,7 @@
 - target 照合は表示名だけで行わない。診療科、開始日、入外、保険組合せ、現在転帰、component code 列、supplement 列、snapshot hash を使い、drift 時は fail closed にする。
 - `diseasev3` の `Disease_Warning_Info` と `Disease_Unmatch_Information` は固定フィールドだけを `warnings[]` / `unmatchInformation[]` に normalize し、患者情報、内部 URL、raw XML、資格情報、stack trace、ORCA 内部詳細は API/UI に露出しない。公式 `Disease_Unmatch_Info` は ORCA 側にだけ存在する未照合病名として code/name、補足名、入外、主病、疑い、開始日、転帰日、転帰、overflow flag を返す。`Organize_Information` は連番付け替え結果の sanitized summary として診療科と開始日だけを返す。
 - server は diseasev3 request XML から server-generated idempotency key を作り、同一 facility の同一 request を ORCA transport 前に拒否する。`orca_disease_operation` は request / response hash と固定 summary だけを保存し、raw XML、任意 URL、資格情報、患者詳細、保険詳細を保存しない。ORCA transport が通信例外で終了した場合も、raw response body なしの `NETWORK_FAILED` / `needsUserReview=true` として保存し、登録済みまたは成功として表示しない。
-- mutation 成功後は楽観更新せず、server が直後に `diseasegetv2` を再取得し、`postMutationMirrorStatus=connected` の `postMutationMirror` だけで Charts の主病名一覧を更新する。mutation が ORCA accepted でも再取得できない場合は `NEEDS_REVIEW` とし、入力 payload や diseasev3 response だけで登録済み表示にしない。
+- mutation 成功後は楽観更新せず、server が直後に `diseasegetv2` を再取得し、`postMutationMirrorStatus=connected` の `postMutationMirror` だけで Charts の主病名一覧を更新する。mutation が ORCA accepted でも再取得できない場合は `NEEDS_REVIEW` とし、入力 payload や diseasev3 response だけで登録済み表示にしない。Web client はこの状態を warning として初期表示し、既存 mirror を残したまま ORCA正本の再取得を促す。
 - 会計送信 workflow から病名を送る場合も client は `patientId` / `facilityId` / 診療科 / 保険組合せ / `Request_Number` を指定しない。server が encounter projection、保存済み病名、ORCA mirror 差分から送信対象を導出し、未確定・候補・院内メモは除外する。
 
 ## Order Set Rule

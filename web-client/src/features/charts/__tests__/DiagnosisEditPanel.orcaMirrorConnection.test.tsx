@@ -229,4 +229,91 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     });
     expect(mutateOrcaDisease).not.toHaveBeenCalledWith(expect.objectContaining({ requestNumber: expect.anything() }));
   });
+
+  it('updates the ORCA registered list from the post-mutation mirror instead of optimistic input state', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchDiseases).mockResolvedValue({
+      ok: true,
+      patientId: 'P-TEST-001',
+      karteId: 1001,
+      orcaMirrorStatus: 'connected',
+      diseases: [],
+    });
+    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('8839001');
+    vi.mocked(mutateOrcaDisease).mockResolvedValueOnce({
+      ok: true,
+      businessAccepted: true,
+      runId: 'RUN-POST-MUTATION-MIRROR',
+      postMutationMirrorStatus: 'connected',
+      postMutationMirror: {
+        ok: true,
+        patientId: 'P-TEST-001',
+        karteId: 1001,
+        orcaMirrorStatus: 'connected',
+        diseases: [
+          {
+            diagnosisId: 77,
+            diagnosisName: 'ORCA再取得病名',
+            diagnosisCode: '8839001',
+            startDate: '2026-05-08',
+            layer: 'orca-mirror',
+            readOnly: true,
+            components: [{ seq: 1, componentType: 'BODY', code: '8839001', name: 'ORCA再取得病名' }],
+          },
+        ],
+      },
+    });
+
+    renderPanel('2026-05-08');
+
+    await user.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
+    const authoring = screen.getByLabelText('ORCAへ病名登録');
+    fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: '入力病名' } });
+    await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
+    const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
+    await user.click(within(confirmDialog).getByRole('button', { name: '副病名として登録' }));
+
+    const mirrorList = await screen.findByRole('table', { name: 'ORCA登録病名（活動中）' });
+    expect(within(mirrorList).getByText('ORCA再取得病名')).toBeInTheDocument();
+    expect(within(mirrorList).queryByText('入力病名')).not.toBeInTheDocument();
+    expect(screen.getByText('ORCA病名を処理しました。ORCA再取得結果を反映しました。')).toBeInTheDocument();
+    expect(fetchDiseases).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the old mirror and shows review copy when post-mutation mirror retrieval is unavailable', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchDiseases).mockResolvedValue({
+      ok: true,
+      patientId: 'P-TEST-001',
+      karteId: 1001,
+      orcaMirrorStatus: 'connected',
+      diseases: [],
+    });
+    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('8839001');
+    vi.mocked(mutateOrcaDisease).mockResolvedValueOnce({
+      ok: false,
+      businessAccepted: true,
+      needsUserReview: true,
+      operationStatus: 'NEEDS_REVIEW',
+      runId: 'RUN-POST-MUTATION-MIRROR-UNAVAILABLE',
+      postMutationMirrorStatus: 'unavailable',
+      message: 'ORCA病名の送信は受け付けられましたが、ORCA病名の再取得が完了していません。ORCA正本を再取得して確認してください。',
+    });
+
+    renderPanel('2026-05-08');
+
+    await user.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
+    const authoring = screen.getByLabelText('ORCAへ病名登録');
+    fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: '再取得未確認病名' } });
+    await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
+    const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
+    await user.click(within(confirmDialog).getByRole('button', { name: '副病名として登録' }));
+
+    expect(
+      await screen.findByText('ORCA病名の送信は受け付けられましたが、ORCA病名の再取得が完了していません。ORCA正本を再取得して確認してください。'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'ORCA登録病名（活動中）' })).not.toBeInTheDocument();
+    expect(screen.queryByText('再取得未確認病名')).not.toBeInTheDocument();
+    expect(fetchDiseases).toHaveBeenCalledTimes(1);
+  });
 });

@@ -507,4 +507,74 @@ describe('diseaseApi', () => {
     expect(result.operationStatus).toBe('ORCA_UNMATCHED');
     expect(result.message).toBe('ORCA病名の処理結果に確認が必要です。警告または不一致を確認してください。');
   });
+
+  it('normalizes post-mutation mirror readback from disease-mod-v3 responses', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-OFFICIAL-DISEASE-MIRROR',
+          businessAccepted: true,
+          needsUserReview: false,
+          operationStatus: 'ORCA_ACCEPTED',
+          postMutationMirrorStatus: 'connected',
+          postMutationMirror: {
+            ok: true,
+            patientId: '000001',
+            orcaMirrorStatus: 'connected',
+            diseases: [
+              {
+                diagnosisName: 'ORCA再取得病名',
+                diagnosisCode: '8839001',
+                displayName: 'ORCA再取得病名',
+                layer: 'orca-mirror',
+              },
+            ],
+            pendingLocalDiseases: [
+              {
+                diagnosisName: '院内未送信病名',
+                diagnosisCode: '8839002',
+                layer: 'insurance-local',
+              },
+            ],
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await mutateOrcaDisease({
+      patientId: '000001',
+      operation: 'create',
+      performDate: '2026-05-08',
+      departmentCode: '01',
+      diseaseInformation: [
+        {
+          diseaseName: '入力病名',
+          diseaseCode: '8839001',
+          diseaseStartDate: '2026-05-08',
+          components: [{ seq: 1, componentType: 'BODY', code: '8839001', name: '入力病名' }],
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.postMutationMirrorStatus).toBe('connected');
+    expect(result.postMutationMirror?.orcaMirrorStatus).toBe('connected');
+    expect(result.postMutationMirror?.diseases).toEqual([
+      expect.objectContaining({
+        diagnosisName: 'ORCA再取得病名',
+        layer: 'orca-mirror',
+        readOnly: true,
+      }),
+    ]);
+    expect(result.postMutationMirror?.pendingLocalDiseases).toEqual([
+      expect.objectContaining({
+        diagnosisName: '院内未送信病名',
+        layer: 'insurance-local',
+      }),
+    ]);
+  });
 });

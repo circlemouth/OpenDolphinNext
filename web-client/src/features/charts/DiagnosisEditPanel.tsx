@@ -25,6 +25,7 @@ import {
   type DiseaseMasterCandidate,
   type OrcaDiseaseMutationOperation,
   type OrcaDiseaseMutationRequest,
+  type OrcaDiseaseMutationResult,
 } from './diseaseApi';
 
 export type DiagnosisEditPanelMeta = {
@@ -79,6 +80,7 @@ type FormMutationInput = {
 };
 
 type OrcaDiseaseInformation = NonNullable<OrcaDiseaseMutationRequest['diseaseInformation']>[number];
+type NoticeTone = 'info' | 'success' | 'warning' | 'error';
 
 type PendingAction =
   | { operation: 'create'; title: string; confirmLabel: string; form: DiagnosisFormState; sourceEntry?: DiseaseEntry }
@@ -89,6 +91,8 @@ type PendingAction =
 const QUICK_CANDIDATE_MIN_KEYWORD = 2;
 const QUICK_CANDIDATE_MAX_ITEMS = 20;
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const POST_MUTATION_MIRROR_UNAVAILABLE_MESSAGE =
+  'ORCA病名の送信は受け付けられましたが、ORCA病名の再取得が完了していません。ORCA正本を再取得して確認してください。';
 
 const buildEmptyForm = (today: string): DiagnosisFormState => ({
   prefix: '',
@@ -357,7 +361,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
   const [quickCandidateSelection, setQuickCandidateSelection] = useState('');
   const [quickCandidateKeyword, setQuickCandidateKeyword] = useState('');
   const [isQuickCandidateMenuOpen, setIsQuickCandidateMenuOpen] = useState(false);
-  const [notice, setNotice] = useState<{ tone: 'info' | 'success' | 'error'; message: string } | null>(null);
+  const [notice, setNotice] = useState<{ tone: NoticeTone; message: string } | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const nameInputRef = useRef<HTMLInputElement | null>(null);
@@ -504,6 +508,42 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     nameInputRef.current?.select();
   }, [isEditorOpen, form.diagnosisId]);
 
+  const applyPostMutationMirror = (result: OrcaDiseaseMutationResult) => {
+    if (result.postMutationMirrorStatus === 'connected' && result.postMutationMirror) {
+      queryClient.setQueryData(queryKey, result.postMutationMirror);
+      return true;
+    }
+    if (result.ok && result.postMutationMirrorStatus !== 'unavailable') {
+      queryClient.invalidateQueries({ queryKey });
+    }
+    return false;
+  };
+
+  const resolveMutationNotice = (result: OrcaDiseaseMutationResult, successMessage: string, fallbackFailureMessage: string) => {
+    if (result.postMutationMirrorStatus === 'unavailable') {
+      return {
+        tone: 'warning' as const,
+        message: result.message ?? POST_MUTATION_MIRROR_UNAVAILABLE_MESSAGE,
+      };
+    }
+    if (result.ok) {
+      return {
+        tone: 'success' as const,
+        message: successMessage,
+      };
+    }
+    if (result.businessAccepted && (result.needsUserReview || result.operationStatus === 'NEEDS_REVIEW')) {
+      return {
+        tone: 'warning' as const,
+        message: result.message ?? 'ORCA病名の処理結果に確認が必要です。警告または不一致を確認してください。',
+      };
+    }
+    return {
+      tone: 'error' as const,
+      message: result.message ?? fallbackFailureMessage,
+    };
+  };
+
   const formMutation = useMutation({
     mutationFn: async (input: FormMutationInput) => {
       if (!patientId) throw new Error('patientId is required');
@@ -561,10 +601,13 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     },
     onSuccess: (result, input) => {
       const failureMessage = result.message ?? 'ORCA病名の処理に失敗しました。';
-      setNotice({
-        tone: result.ok ? 'success' : 'error',
-        message: result.ok ? 'ORCA病名を処理しました。再取得結果を反映します。' : failureMessage,
-      });
+      const didApplyMirror = applyPostMutationMirror(result);
+      const notice = resolveMutationNotice(
+        result,
+        didApplyMirror ? 'ORCA病名を処理しました。ORCA再取得結果を反映しました。' : 'ORCA病名を処理しました。再取得結果を反映します。',
+        failureMessage,
+      );
+      setNotice(notice);
       setPendingAction(null);
       setIsEditorOpen(false);
       recordOutpatientFunnel('charts_action', {
@@ -599,7 +642,6 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         },
       });
       if (result.ok) {
-        queryClient.invalidateQueries({ queryKey });
         setForm(buildEmptyForm(today));
         setEditingEntry(undefined);
         setQuickAdd({ name: '', code: '', startDate: today });
@@ -654,10 +696,14 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     },
     onSuccess: (result, entry) => {
       const failureMessage = result.message ?? 'ORCA病名の削除に失敗しました。';
-      setNotice({
-        tone: result.ok ? 'success' : 'error',
-        message: result.ok ? 'ORCA病名を削除しました。再取得結果を反映します。' : failureMessage,
-      });
+      const didApplyMirror = applyPostMutationMirror(result);
+      setNotice(
+        resolveMutationNotice(
+          result,
+          didApplyMirror ? 'ORCA病名を削除しました。ORCA再取得結果を反映しました。' : 'ORCA病名を削除しました。再取得結果を反映します。',
+          failureMessage,
+        ),
+      );
       setPendingAction(null);
       logAuditEvent({
         runId: result.runId ?? meta.runId,
@@ -679,9 +725,6 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
           },
         },
       });
-      if (result.ok) {
-        queryClient.invalidateQueries({ queryKey });
-      }
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
@@ -712,14 +755,15 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     },
     onSuccess: (result) => {
       const failureMessage = result.message ?? '削除病名の整理に失敗しました。';
-      setNotice({
-        tone: result.ok ? 'success' : 'error',
-        message: result.ok ? '削除病名を整理しました。再取得結果を反映します。' : failureMessage,
-      });
+      const didApplyMirror = applyPostMutationMirror(result);
+      setNotice(
+        resolveMutationNotice(
+          result,
+          didApplyMirror ? '削除病名を整理しました。ORCA再取得結果を反映しました。' : '削除病名を整理しました。再取得結果を反映します。',
+          failureMessage,
+        ),
+      );
       setPendingAction(null);
-      if (result.ok) {
-        queryClient.invalidateQueries({ queryKey });
-      }
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);

@@ -173,6 +173,8 @@ export type OrcaDiseaseMutationResult = {
   responseClassification?: string;
   operationStatus?: string;
   needsUserReview?: boolean;
+  postMutationMirrorStatus?: 'connected' | 'unavailable';
+  postMutationMirror?: DiseaseImportResponse;
   runId?: string;
   traceId?: string;
   message?: string;
@@ -586,7 +588,9 @@ export async function fetchDiseases(params: FetchDiseasesParams): Promise<Diseas
     };
   }
   const json = (parsed.json ?? {}) as DiseaseImportResponse;
+  const normalized = normalizeDiseaseImportResponse(json, parsed.runId ?? runId);
   return {
+    ...normalized,
     ...json,
     ok: parsed.ok,
     status: parsed.status,
@@ -594,13 +598,27 @@ export async function fetchDiseases(params: FetchDiseasesParams): Promise<Diseas
     errorCode: parsed.ok ? undefined : parsed.errorCode,
     errorKind: parsed.ok ? undefined : parsed.errorKind,
     routeMismatch: parsed.ok ? false : parsed.routeMismatch,
-    runId: json.runId ?? parsed.runId ?? runId,
-    diseases: Array.isArray(json.diseases) ? json.diseases.map((entry) => normalizeDiseaseEntry(entry)) : [],
-    pendingLocalDiseases: Array.isArray(json.pendingLocalDiseases)
-      ? json.pendingLocalDiseases.map((entry) => normalizeDiseaseEntry(entry))
-      : [],
+    runId: normalized.runId,
+    diseases: normalized.diseases,
+    pendingLocalDiseases: normalized.pendingLocalDiseases,
   };
 }
+
+const normalizeDiseaseImportResponse = (json: DiseaseImportResponse, fallbackRunId?: string): DiseaseImportResponse => ({
+  ...json,
+  runId: json.runId ?? fallbackRunId,
+  diseases: Array.isArray(json.diseases) ? json.diseases.map((entry) => normalizeDiseaseEntry(entry)) : [],
+  pendingLocalDiseases: Array.isArray(json.pendingLocalDiseases)
+    ? json.pendingLocalDiseases.map((entry) => normalizeDiseaseEntry(entry))
+    : [],
+});
+
+const toDiseaseImportResponse = (value: unknown, fallbackRunId?: string): DiseaseImportResponse | undefined => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+  return normalizeDiseaseImportResponse(value as DiseaseImportResponse, fallbackRunId);
+};
 
 const normalizeBaseMonth = (value?: string): string | undefined => {
   const normalized = value?.trim();
@@ -670,21 +688,32 @@ export async function mutateOrcaDisease(params: OrcaDiseaseMutationRequest): Pro
   });
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: 'ORCA病名の登録に失敗しました。' });
   const json = (parsed.json ?? {}) as Record<string, unknown>;
+  const postMutationMirrorStatus =
+    json.postMutationMirrorStatus === 'connected' || json.postMutationMirrorStatus === 'unavailable'
+      ? json.postMutationMirrorStatus
+      : undefined;
+  const postMutationMirror = toDiseaseImportResponse(json.postMutationMirror, typeof json.runId === 'string' ? json.runId : parsed.runId ?? runId);
   return {
-    ok: parsed.ok && json.businessAccepted === true && json.needsUserReview !== true,
+    ok: parsed.ok && json.businessAccepted === true && json.needsUserReview !== true && postMutationMirrorStatus !== 'unavailable',
     businessAccepted: json.businessAccepted === true,
     status: parsed.status,
     apiResult: typeof json.apiResult === 'string' ? json.apiResult : undefined,
     responseClassification: typeof json.responseClassification === 'string' ? json.responseClassification : undefined,
     operationStatus: typeof json.operationStatus === 'string' ? json.operationStatus : undefined,
     needsUserReview: json.needsUserReview === true,
+    postMutationMirrorStatus,
+    postMutationMirror,
     runId: typeof json.runId === 'string' ? json.runId : parsed.runId ?? runId,
     traceId: typeof json.traceId === 'string' ? json.traceId : undefined,
     message: parsed.ok
       ? json.businessAccepted === true && json.needsUserReview !== true
-        ? undefined
+        ? postMutationMirrorStatus === 'unavailable'
+          ? 'ORCA病名の送信は受け付けられましたが、ORCA病名の再取得が完了していません。ORCA正本を再取得して確認してください。'
+          : undefined
         : json.needsUserReview === true
-          ? 'ORCA病名の処理結果に確認が必要です。警告または不一致を確認してください。'
+          ? postMutationMirrorStatus === 'unavailable'
+            ? 'ORCA病名の送信は受け付けられましたが、ORCA病名の再取得が完了していません。ORCA正本を再取得して確認してください。'
+            : 'ORCA病名の処理結果に確認が必要です。警告または不一致を確認してください。'
           : 'ORCA病名の処理を完了確認できませんでした。再取得後に状態を確認してください。'
       : parsed.message,
     raw: json,
