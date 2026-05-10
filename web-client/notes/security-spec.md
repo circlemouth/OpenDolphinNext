@@ -5,6 +5,7 @@
 - `.env.local` / `.env.*` に機密値を置かない。`npm run verify:no-public-secrets` は tracked active source/config/docs を検査し、client 側へ誤って公開変数の秘密名キーワードや廃止済み ORCA master 公開キーを持ち込む変更を拒否する。必要な認証情報はサーバ側または Secret Manager で管理する。
 - ORCA 接続資格情報はサーバ側設定のみで扱い、client 側へ再配置しない。
 - `VITE_ORCA_MASTER_USER` / `VITE_ORCA_MASTER_PASSWORD` は廃止済みであり、setup script や sample config でも生成・記載しない。
+- Vite dev proxy は `/api21`、`/api01rv2`、`/orca22` などの生 ORCA / WebORCA path を公開せず、ORCA Basic 認証・証明書 path・証明書 password を読み込まない。開発時も ORCA 通信は server-modernized の `/api/orca/official/*` または `/api/orca/master/*` 経由に限定する。
 - `npm run verify:no-public-secrets` を CI 必須チェックとして運用する。
 
 ## 2. CSRF

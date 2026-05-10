@@ -53,7 +53,7 @@ const resolveImportFailureMessage = (parsed: ParsedOrcaApiResponse): string => {
     return `ORCA認証エラーで患者取込に失敗しました（reason=${reason}）。ORCA認証情報を確認してください。`;
   }
   if (parsed.errorKind === 'route_not_found' || parsed.routeMismatch) {
-    return '患者取込APIの経路不一致を検知しました。Vite の /orca リライト設定と VITE_ORCA_API_PATH_PREFIX を確認してください。';
+    return '患者取込APIの経路不一致を検知しました。server-modernized の ORCA official route taxonomy を確認してください。';
   }
   return parsed.message ?? `HTTP ${parsed.status}`;
 };

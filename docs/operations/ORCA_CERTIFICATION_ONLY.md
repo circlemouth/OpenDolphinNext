@@ -66,11 +66,10 @@
 3. 未指定の場合は local/onprem fallback のみ。開発標準は WebORCA Trial だが、誤接続を避けるため Trial endpoint も暗黙 default にはせず、起動時 env またはローカル secret store で明示する。
 
 ### Web クライアント dev proxy 向け
-- 接続先: `VITE_DEV_PROXY_TARGET` をローカル secret store または環境変数から設定する。
-- 認証方式:
-  - mTLS: `ORCA_CERT_PATH=<MASKED>` / `ORCA_CERT_PASS=<MASKED>`
-  - Basic: `ORCA_BASIC_USER` / `ORCA_BASIC_PASSWORD` をローカル secret store または環境変数から設定する。
-- `web-client` の `npm run dev` は起動時に `./orca.env.local` を自動読込し、見つからない場合は `~/.config/opendolphin/orca.env` を読む。手動起動でも同じ値を使いたい場合は `ORCA_ENV_FILE` で上書きできる。
+- 接続先: `VITE_DEV_PROXY_TARGET` は server-modernized の `/api` entrypoint へ中継するためだけに使う。
+- Web クライアント dev proxy は ORCA / WebORCA の生 path (`/api21`, `/api01rv2`, `/orca22` など) を公開しない。
+- Web クライアント dev proxy は ORCA Basic 認証、クライアント証明書、証明書 password、ORCA URL を読み込まない。ORCA 接続情報は server-modernized の設定または local secret store だけで扱う。
+- `web-client` の `npm run dev` は ORCA env file を自動読込しない。`WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` で起動する場合も、ORCA secret は server-modernized 側の runtime 設定として扱い、Vite proxy の authority にしない。
 
 ## 6. 管理画面で確認する項目
 - 管理画面権限: `/api/admin/orca/connection` が 200 を返すこと。これは **設定取得権限確認** です。
@@ -81,7 +80,7 @@
 
 ## 7. ログ/証跡ポリシー
 - `setup-modernized-env.sh` / `setup-modernized-env.ps1` の `ORCA_CONFIG` ログで **set/unset** のみ記録する。
-- `setup-modernized-env.sh` / `setup-modernized-env.ps1` / `ops/tests/orca/api-smoke.sh` / `web-client` の `npm run dev` は、`./orca.env.local` と `~/.config/opendolphin/orca.env` を自動読込する。
+- `setup-modernized-env.sh` / `setup-modernized-env.ps1` / `ops/tests/orca/api-smoke.sh` は、`./orca.env.local` と `~/.config/opendolphin/orca.env` を自動読込する。`web-client` の `npm run dev` 単体起動は ORCA env file を読まず、ORCA 通信・資格情報は server-modernized 側に閉じる。
 - 機微情報は `<MASKED>` で保存し、必要であれば別途共有する。
 - 実環境接続を行った場合は `artifacts/orca-connectivity/<RUN_ID>/` に証跡を残す。
 - release cutover で使う接続確認は `docs/releases/orca-remediation-cutover.md` の事前チェック / smoke と同じ RUN_ID に束ねる。

@@ -31,5 +31,5 @@
 - 患者文脈は URL / browser storage に残さない
 - ORCA route taxonomy は `official=/api/orca/official/*`, `master=/api/orca/master/*`, `local=/api/local/*`
 - shell / topbar の ORCA 表示は sanitized readiness を参照し、step-up mutation の `/api/admin/orca/connection/test` を常時ポーリングしない
-- `npm run dev` は root の `orca.env.local` または `~/.config/opendolphin/orca.env` を自動読込する
+- `npm run dev` は ORCA URL / Basic / 証明書情報を読み込まず、Vite dev proxy は server-modernized の `/api` entrypoint だけへ中継する
 - security 規範の詳細は `notes/security-spec.md` を正本とする
