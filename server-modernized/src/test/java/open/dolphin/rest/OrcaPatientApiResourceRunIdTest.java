@@ -118,6 +118,26 @@ class OrcaPatientApiResourceRunIdTest extends RuntimeDelegateTestSupport {
         assertEquals("orca.patientget.error", auditDispatcher.payload.getDetails().get("errorCode"));
     }
 
+    @Test
+    void getPatient_doesNotReturnCurrentSourceWhenCacheWriteFails() throws Exception {
+        FailingPatientCacheStore failingStore = new FailingPatientCacheStore();
+        injectField(resource, "patientCacheStore", failingStore);
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> resource.getPatient(servletRequest, "00001", "01", "json"));
+
+        assertTrue(exception.getMessage().contains("cache unavailable"));
+        assertNotNull(auditDispatcher.payload);
+        assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
+        assertEquals("failed", auditDispatcher.payload.getDetails().get("status"));
+        assertEquals(502, auditDispatcher.payload.getDetails().get("httpStatus"));
+        assertEquals("orca.patientget.error", auditDispatcher.payload.getDetails().get("errorCode"));
+        assertEquals("00001", failingStore.command.orcaPatientId());
+        assertNull(auditDispatcher.payload.getDetails().get("sourceApi"));
+        assertNull(auditDispatcher.payload.getDetails().get("cacheStatus"));
+        assertNull(auditDispatcher.payload.getDetails().get("stale"));
+    }
+
     private static void injectField(Object target, String fieldName, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -144,6 +164,16 @@ class OrcaPatientApiResourceRunIdTest extends RuntimeDelegateTestSupport {
         public long save(PatientCacheCommand command) {
             this.command = command;
             return 100L;
+        }
+    }
+
+    private static final class FailingPatientCacheStore extends OrcaPatientCacheStore {
+        private PatientCacheCommand command;
+
+        @Override
+        public long save(PatientCacheCommand command) {
+            this.command = command;
+            throw new IllegalStateException("cache unavailable");
         }
     }
 }

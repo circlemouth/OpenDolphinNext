@@ -112,6 +112,7 @@
 - API response body は既存 ORCA official 互換を維持し、source metadata は response header と監査 details に限定して返す。`X-Orca-Cache-Status` は `CURRENT`, `NOT_FOUND`, `NEEDS_REVIEW`, `UNAVAILABLE` 等の cache state、`X-Orca-Stale` は live ORCA 取得では `false` とし、cache-only fallback を current 表示に使わない。
 - `Api_Result=10` または患者不在 wording は `ORCA_PATIENT_NOT_FOUND` business status として扱い、単純な HTTP 404 や local fallback success に変換しない。
 - `orca_patient_cache` は `source_system=ORCA`, `source_api=patientgetv2`, `source_request_id`, `source_trace_id`, `fetched_at`, `cache_expires_at`, `cache_status`, `business_status`, `raw_response_hash`, normalized payload を保存する。raw ORCA body、credential、接続先 URL、Cookie、Authorization、CSRF は保存しない。
+- `orca_patient_cache` 書き込みに失敗した場合、official patientgetv2 wrapper は current source の成功応答を返さない。失敗 audit は固定 error code と sanitized metadata だけを保持し、旧 cache を `X-Orca-Stale=false` の live ORCA 成功として返さない。
 
 ## Official Patient Mutation
 - 患者作成・更新は `/api/orca/official/patientmodv2/outpatient/create` と `/api/orca/official/patientmodv2/outpatient/update` だけを public mutation route とする。local patient mutation route、admin wrapper、browser-side ORCA direct call は復活させない。
