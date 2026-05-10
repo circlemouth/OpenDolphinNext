@@ -188,10 +188,14 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] `medicalmodv2` 相当の送信では患者番号、診療日、診療科、医師コード、保険組合せ、ORCA受付存在、患者/保険情報 freshness、会計済み衝突を検証する。
 - [ ] ORCAレスポンスを構造化保存し、送信後に ORCA側診療行為情報を再取得して差分表示する。
   - [x] 2026-05-10T21:59Z: `close-and-send-to-billing` は `medicalmodv2` response を sanitized `response_json` として保存し、送信直後に `tmedicalgetv2` で ORCA側中途終了データを再取得・照合する。UI 差分表示の完成は後続 D/E queue で継続。
-- [ ] ORCA会計情報取得 API をサーバーアダプタ経由で呼び、`orca_billing_cache` に保存する。
-- [ ] OpenDolphinNext 側で会計金額や収納済み状態を独立更新できる API を作らない。
-- [ ] 領収書・請求書は ORCA帳票取得結果として扱い、帳票取得履歴を監査ログに保存する。
-- [ ] レセプト情報を OpenDolphinNext 正本として持たず、ORCA由来キャッシュまたは帳票スナップショットとして扱う。
+- [x] ORCA会計情報取得 API をサーバーアダプタ経由で呼び、`orca_billing_cache` に保存する。
+  - [x] 2026-05-10T22:30Z: `/api/orca/official/chart-support/income-info` は `incomeinfv2` transport response を `orca_billing_cache` へ hash と sanitized summary として保存し、保存失敗時は成功応答にしない。
+- [x] OpenDolphinNext 側で会計金額や収納済み状態を独立更新できる API を作らない。
+  - [x] 2026-05-10T22:30Z: `orca_billing_cache` は `source_system=ORCA` の cache 境界とし、schema/test/docs で raw invoice/insurance や local source を拒否する。会計金額・収納済み状態を local authority として更新する resource は追加していない。
+- [x] 領収書・請求書は ORCA帳票取得結果として扱い、帳票取得履歴を監査ログに保存する。
+  - [x] 2026-05-10T22:30Z: `/api/orca/official/reports/{type}` は ORCA report response を `orca_report_snapshot` へ hash/sanitized summary として保存し、audit detail は invoice/Data_Id raw ではなく hash と存在有無に限定する。
+- [x] レセプト情報を OpenDolphinNext 正本として持たず、ORCA由来キャッシュまたは帳票スナップショットとして扱う。
+  - [x] 2026-05-10T22:30Z: `orca_report_snapshot` は `source_system=ORCA` と固定 report type/status を持つ snapshot 境界であり、restore/recovery docs でも local snapshot を正本昇格しないことを明記した。
 
 ## 11. Webクライアント医療安全UI
 

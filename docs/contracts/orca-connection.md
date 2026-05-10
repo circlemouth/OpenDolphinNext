@@ -140,6 +140,13 @@
 - `orca_response_summary` は adapter response の normalized summary だけを保持する。warning / unmatched / error / ORCA only / renumbered の JSON は code/category/field/count などの最小要約に限定し、ORCA body の再構成に使える値を入れない。
 - `orca_reconciliation_result` は post-mutation re-fetch、`tmedicalgetv2` 照合、会計/収納/帳票再取得、restore realignment の結果を保存する。照合成功は ORCA 正本の再取得結果との比較結果であり、自動再送や会計反映済みへの昇格を意味しない。
 
+## Billing / Report Cache Boundaries
+- ORCA 会計・収納・帳票は OpenDolphinNext の正本にしない。`incomeinfv2` 取得結果は server-side ORCA transport 経由の取得後に `orca_billing_cache` へ保存し、`source_system=ORCA`、`source_api=incomeinfv2`、`cache_status=CURRENT|NEEDS_REVIEW|UNAVAILABLE`、request/response hash、件数、金額サマリ、invoice hash list、sanitized normalized summary だけを保持する。
+- `orca_billing_cache` は cache/read-through 境界であり、会計金額、収納済み状態、請求状態を OpenDolphinNext 側で独立更新する API の authority ではない。再取得・照合・復旧時は ORCA adapter から再取得し、client 提供の facility / owner / role / URL / storage key / digest / voucher / sequential / insurance combination / invoice raw 値を保存 authority にしない。
+- 領収書、請求書、処方箋、薬情、カルテ1号/3号、明細書などの帳票取得は `orca_report_snapshot` に ORCA 由来 snapshot として保存する。保存するのは `source_system=ORCA`、帳票種別、snapshot status、request/response hash、invoice/data id hash、form metadata、server-generated storage object key/digest、sanitized summary に限定する。
+- `orca_report_snapshot` と audit details に raw ORCA body、帳票本文、Basic 認証、Cookie、Authorization、CSRF、ORCA URL/host、患者氏名・住所・電話番号、保険番号詳細、invoice number raw、Data_Id raw、client-provided storage key/digest は保存しない。帳票ファイルを object storage へ保存する場合も storage key/digest は server-side authority で生成・検証する。
+- `ORCA_OFFICIAL_INCOME_INFO` と `ORCA_REPORT_CREATE` は取得履歴として監査ログへ残す。監査 detail は runId/traceId、route/report type、Api_Result、HTTP status、invoice/data id の存在有無と hash などの要約に限定し、raw invoice number / raw Data_Id / raw ORCA body を出さない。
+
 ## Close And Send Billing Workflow
 - 通常外来の初回 ORCA 会計送信は `POST /api/local/encounters/{encounterKey}/close-and-send-to-billing` から行う。client payload は `idempotencyKey` と任意 precheck flag に限定し、`patientId` / `facilityId` / voucher / sequential / insurance / `Medical_Uid` / `classCode` / raw XML / URL は受け付けない。
 - server は認証 principal の facility、`encounter_projection`、保存済み order/disease から snapshot を作り、`d_billing_orca_snapshot` と `d_billing_orca_transmission` に状態を記録する。状態 enum は `DRAFT`, `READY_TO_SEND`, `ORCA_SENDING`, `ORCA_DISEASE_SYNCED`, `ORCA_MEDICAL_REGISTERED`, `ORCA_CONFIRMED`, `ORCA_FAILED`, `ORCA_UNKNOWN`, `DIRTY_AFTER_SENT`, `ORCA_LOCKED_OR_OPENED`, `CORRECTION_REQUIRED` に固定する。

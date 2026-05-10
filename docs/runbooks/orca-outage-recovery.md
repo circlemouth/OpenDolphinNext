@@ -70,6 +70,8 @@ UI は DB degraded / read-only と ORCA outage を混同しない。DB write pat
 5. 差分や `resendBlocked` がある場合は管理者確認フローに回す。
 6. 再送または追加送信が必要な場合も、server-side snapshot と server-derived encounter context から payload を再構成する。client-provided voucher、sequential、insurance combination、`Medical_Uid` は使わない。
 7. すべての再照合、再送、停止判断を監査ログに残す。監査ログは sanitized summary と固定 status/reason code に限定する。
+8. 会計・収納・帳票は復旧後に ORCA adapter から再取得し、`orca_billing_cache` または `orca_report_snapshot` を更新する。local DB 上の金額、収納済み状態、帳票 snapshot、レセプト関連 summary を ORCA 正本へ昇格しない。
+9. `orca_billing_cache` / `orca_report_snapshot` の evidence は request/response hash、件数、invoice/data id hash、sanitized summary、監査 action だけに限定する。raw ORCA body、raw invoice number、raw Data_Id、帳票本文、credential、患者詳細、HAR/trace/video/screenshot は incident evidence に含めない。
 
 ## Recovery After DB Restore
 
@@ -80,13 +82,14 @@ UI は DB degraded / read-only と ORCA outage を混同しない。DB write pat
 5. 送信系 transmission は自動再送しない。まず Reception の ORCA送信要確認一覧に出し、`tmedicalgetv2` read-only 再照合で ORCA 側状態を確認する。
 6. restore 前後の local snapshot と ORCA 再取得結果に差分がある場合は `NEEDS_REVIEW` とし、管理者確認まで再送・追加送信・置換送信を止める。
 7. `Medical_Mode` または `Medical_Mode2` が空でなく `0` 以外の場合は、restore 前の local 状態に関係なく `resendBlocked=true` とする。
-8. 復旧判断、hash chain 検証、content hash 検証、ORCA再取得、差分照合、再送可否判断を監査ログに保存する。監査ログには raw ORCA body、患者詳細、保険詳細、接続先情報を残さない。
+8. 会計 cache と帳票 snapshot は `source_system=ORCA` の取得証跡として扱い、restore 後の請求・収納・レセプト正本にはしない。復旧確認では ORCA 再取得結果と hash/sanitized summary を比較し、local-only 金額更新や帳票本文の再利用で済ませない。
+9. 復旧判断、hash chain 検証、content hash 検証、ORCA再取得、差分照合、再送可否判断を監査ログに保存する。監査ログには raw ORCA body、患者詳細、保険詳細、接続先情報を残さない。
 
 ## Evidence Policy
 
 - 記録してよいもの: RUN_ID、traceId、operationStatus、reconciliationStatus、transmissionId、snapshotId、row count、`Medical_Uid` の存在有無、`Medical_Mode` / `Medical_Mode2`、`resendBlocked`、固定 reason code。
 - 記録してはいけないもの: ORCA URL、host、port、Basic 認証、証明書、raw ORCA body、raw XML、患者氏名、住所、電話番号、保険詳細、`Medical_Uid` 値、voucher、sequential、insurance combination。
-- DB 台帳に保存してよいものも同じ allowlist に従う。`orca_operation` / `orca_transmission` / `orca_response_summary` / `orca_reconciliation_result` は raw request/response body や credential を持つ列を作らず、hash と sanitized JSON summary だけを保存する。
+- DB 台帳に保存してよいものも同じ allowlist に従う。`orca_operation` / `orca_transmission` / `orca_response_summary` / `orca_reconciliation_result` / `orca_billing_cache` / `orca_report_snapshot` は raw request/response body や credential を持つ列を作らず、hash と sanitized JSON summary だけを保存する。
 
 ## Verification
 

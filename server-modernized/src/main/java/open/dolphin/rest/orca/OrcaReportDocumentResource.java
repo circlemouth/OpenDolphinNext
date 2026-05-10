@@ -15,18 +15,23 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.orca.service.OrcaBillingCacheStore;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.OrcaReportRequest;
 import open.dolphin.rest.dto.orca.OrcaReportResponse;
+import open.dolphin.security.HashUtil;
 
 @Path("/orca/official/reports")
 public class OrcaReportDocumentResource extends AbstractOrcaRestResource {
 
     @Inject
     private OrcaTransport orcaTransport;
+
+    @Inject
+    private OrcaBillingCacheStore billingCacheStore;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -59,14 +64,17 @@ public class OrcaReportDocumentResource extends AbstractOrcaRestResource {
                 OrcaTransportRequest.post(requestXml).withAccept(MediaType.APPLICATION_JSON));
 
         OrcaReportResponse response = parseResponse(transportResult, runId, traceId);
+        persistReportSnapshotOrThrow(request, facilityId, type, payload, requestXml, transportResult, response);
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("runId", runId);
         details.put("traceId", traceId);
         details.put("reportType", type);
         details.put("patientId", payload.getPatientId());
-        details.put("invoiceNumber", payload.getInvoiceNumber());
-        details.put("dataId", response.getDataId());
+        details.put("invoiceNumberPresent", !isBlank(payload.getInvoiceNumber()));
+        details.put("invoiceNumberHash", hashNullable(payload.getInvoiceNumber()));
+        details.put("dataIdPresent", !isBlank(response.getDataId()));
+        details.put("dataIdHash", hashNullable(response.getDataId()));
         details.put("apiResult", response.getApiResult());
         details.put("httpStatus", response.getStatus());
         recordAudit(
@@ -75,6 +83,40 @@ public class OrcaReportDocumentResource extends AbstractOrcaRestResource {
                 details,
                 response.isOk() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
+    }
+
+    private void persistReportSnapshotOrThrow(
+            HttpServletRequest request,
+            String facilityId,
+            String type,
+            OrcaReportRequest payload,
+            String requestXml,
+            OrcaTransportResult transportResult,
+            OrcaReportResponse response) {
+        if (billingCacheStore == null) {
+            return;
+        }
+        try {
+            billingCacheStore.saveReportSnapshot(new OrcaBillingCacheStore.ReportSnapshotCommand(
+                    facilityId,
+                    payload.getPatientId(),
+                    type,
+                    payload.getInvoiceNumber(),
+                    requestXml,
+                    transportResult != null ? transportResult.getBody() : null,
+                    response,
+                    null));
+        } catch (RuntimeException ex) {
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("runId", resolveRunId(request));
+            details.put("traceId", resolveTraceId(request));
+            details.put("reportType", type);
+            details.put("snapshotStatus", "UNAVAILABLE");
+            details.put("reason", "report_snapshot_persist_failed");
+            recordAudit(request, "ORCA_REPORT_CREATE", details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, jakarta.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE,
+                    "orca_report_snapshot_unavailable", "ORCA report snapshot is unavailable");
+        }
     }
 
     private OrcaEndpoint resolveEndpoint(String type) {
@@ -217,6 +259,10 @@ public class OrcaReportDocumentResource extends AbstractOrcaRestResource {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private String hashNullable(String value) {
+        return !isBlank(value) ? HashUtil.sha256(value.trim()) : null;
     }
 
     private void appendTag(StringBuilder builder, String tag, String value) {

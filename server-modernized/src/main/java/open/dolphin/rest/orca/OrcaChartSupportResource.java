@@ -25,6 +25,7 @@ import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.orca.service.DiseaseProjectionService;
+import open.dolphin.orca.service.OrcaBillingCacheStore;
 import open.dolphin.orca.service.OrcaDiseaseOperationStore;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
@@ -63,6 +64,9 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
 
     @Inject
     private OrcaTransport orcaTransport;
+
+    @Inject
+    private OrcaBillingCacheStore billingCacheStore;
 
     @Inject
     private ServerConfigurationResolver configurationResolver;
@@ -418,6 +422,7 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
                 OrcaEndpoint.INCOME_INFO,
                 OrcaTransportRequest.post(requestXml));
         ChartSupportIncomeInfoResponse response = support().parseIncomeInfoResponse(result, runId, traceId);
+        persistIncomeInfoCacheOrThrow(request, facilityId, payload, requestXml, result, response);
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("runId", runId);
@@ -430,6 +435,38 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         recordAudit(request, AUDIT_INCOME_INFO_ACTION, details,
                 response.isOk() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
+    }
+
+    private void persistIncomeInfoCacheOrThrow(
+            HttpServletRequest request,
+            String facilityId,
+            ChartSupportIncomeInfoRequest payload,
+            String requestXml,
+            OrcaTransportResult result,
+            ChartSupportIncomeInfoResponse response) {
+        if (billingCacheStore == null) {
+            return;
+        }
+        try {
+            billingCacheStore.saveIncomeInfo(new OrcaBillingCacheStore.IncomeInfoCommand(
+                    facilityId,
+                    payload.getPatientId(),
+                    payload.getBaseDate(),
+                    requestXml,
+                    result != null ? result.getBody() : null,
+                    response,
+                    null));
+        } catch (RuntimeException ex) {
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("runId", resolveRunId(request));
+            details.put("traceId", resolveTraceId(request));
+            details.put("sourceApi", "incomeinfv2");
+            details.put("cacheStatus", "UNAVAILABLE");
+            details.put("reason", "billing_cache_persist_failed");
+            recordAudit(request, AUDIT_INCOME_INFO_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.SERVICE_UNAVAILABLE, "orca_billing_cache_unavailable",
+                    "ORCA billing cache is unavailable");
+        }
     }
 
     @POST
