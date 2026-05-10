@@ -3,6 +3,7 @@ package open.dolphin.rest.orca;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -37,6 +38,7 @@ import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
+import open.dolphin.rest.dto.orca.BillingOrcaTemporaryMedicalReconcileResponse;
 import open.dolphin.rest.dto.orca.BillingOrcaTransmissionReviewListResponse;
 import open.dolphin.rest.dto.orca.CloseAndSendToBillingRequest;
 import open.dolphin.rest.dto.orca.CloseAndSendToBillingResponse;
@@ -53,6 +55,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
     static final String AUDIT_ACTION = "LOCAL_ENCOUNTER_CLOSE_AND_SEND_TO_BILLING";
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalEncounterBillingWorkflowResource.class);
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+    private static final XmlMapper XML_MAPPER = new XmlMapper();
     private static final ZoneId TOKYO_ZONE = ZoneId.of("Asia/Tokyo");
     private static final int MAX_MEDICAL_INFORMATION = 40;
     private static final int MAX_MEDICATION_PER_INFORMATION = 40;
@@ -99,6 +102,70 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         }
         response.setEntries(entries);
         response.setCount(entries.size());
+        return response;
+    }
+
+    @POST
+    @Path("/orca-transmissions/{transmissionId}/reconcile-temporary-medical")
+    @Produces(MediaType.APPLICATION_JSON)
+    public BillingOrcaTemporaryMedicalReconcileResponse reconcileTemporaryMedical(
+            @Context HttpServletRequest request,
+            @PathParam("transmissionId") Long transmissionId) {
+        String runId = resolveRunId(request);
+        String traceId = resolveTraceId(request);
+        String facilityId = requireFacilityId(request);
+        if (transmissionId == null || transmissionId <= 0) {
+            throw validationError(request, "transmissionId", "transmissionId is required");
+        }
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
+                workflowRepository.findReviewTransmission(facilityId, transmissionId);
+        if (record == null) {
+            throw restError(request, Response.Status.NOT_FOUND, "orca_transmission_review_not_found",
+                    "ORCA review transmission was not found");
+        }
+
+        BillingOrcaTemporaryMedicalReconcileResponse response = baseTemporaryMedicalReconcileResponse(record, runId, traceId);
+        try {
+            String payload = buildTemporaryMedicalGetPayload(record);
+            OrcaTransportResult result = orcaTransport.invoke(
+                    facilityId,
+                    OrcaEndpoint.TEMP_MEDICAL_GET,
+                    OrcaTransportRequest.post(payload));
+            applyTemporaryMedicalGetResult(response, record, result);
+        } catch (IllegalArgumentException ex) {
+            response.setOk(false);
+            response.setOperationStatus("NEEDS_REVIEW");
+            response.setReconciliationStatus("SERVER_CONTEXT_INCOMPLETE");
+            response.setApiResult("unknown");
+            response.setApiResultMessage("temporary_medical_reconcile_context_incomplete");
+            response.setMessage("ORCA中途終了データ照合に必要なサーバー側スナップショットが不足しています");
+        } catch (RuntimeException ex) {
+            response.setOk(false);
+            response.setOperationStatus("NETWORK_FAILED");
+            response.setReconciliationStatus("RECONCILE_FAILED");
+            response.setApiResult("unknown");
+            response.setApiResultMessage("temporary_medical_reconcile_failed");
+            response.setMessage("ORCA中途終了データを再照合できませんでした");
+        }
+
+        Map<String, Object> audit = new LinkedHashMap<>();
+        audit.put("runId", runId);
+        audit.put("traceId", traceId);
+        audit.put("facilityId", facilityId);
+        audit.put("encounterKey", record.encounterKey());
+        audit.put("patientId", record.patientId());
+        audit.put("snapshotId", record.snapshotId());
+        audit.put("transmissionId", record.transmissionId());
+        audit.put("operationStatus", response.getOperationStatus());
+        audit.put("reconciliationStatus", response.getReconciliationStatus());
+        audit.put("matchingTemporaryMedicalRowCount", response.getMatchingTemporaryMedicalRowCount());
+        audit.put("medicalUidPresent", response.isMedicalUidPresent());
+        audit.put("rawSensitiveFieldsExcluded", Boolean.TRUE);
+        audit.put("routeNamespace", "local");
+        recordAudit(request, "LOCAL_ENCOUNTER_ORCA_TEMPORARY_MEDICAL_RECONCILE", audit,
+                response.getMatchingTemporaryMedicalRowCount() > 0
+                        ? AuditEventEnvelope.Outcome.SUCCESS
+                        : AuditEventEnvelope.Outcome.FAILURE);
         return response;
     }
 
@@ -473,6 +540,221 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         response.setRunId(runId);
         response.setTraceId(traceId);
         return response;
+    }
+
+    private BillingOrcaTemporaryMedicalReconcileResponse baseTemporaryMedicalReconcileResponse(
+            BillingOrcaWorkflowRepository.TransmissionReviewRecord record,
+            String runId,
+            String traceId) {
+        BillingOrcaTemporaryMedicalReconcileResponse response = new BillingOrcaTemporaryMedicalReconcileResponse();
+        response.setRunId(runId);
+        response.setTraceId(traceId);
+        response.setTransmissionId(record.transmissionId());
+        response.setSnapshotId(record.snapshotId());
+        response.setEncounterKey(record.encounterKey());
+        response.setScheduleKey(record.scheduleKey());
+        response.setPatientId(record.patientId());
+        response.setRequestClass("tmedicalgetv2_temporary_medical_reconcile_readonly");
+        response.setOperationStatus("UNKNOWN");
+        response.setNeedsUserReview(true);
+        response.setRawSensitiveFieldsExcluded(true);
+        response.setClientProvidedIdentifiersTrusted(false);
+        response.setServerDerivedAuthorityRequired(true);
+        response.setReconciliationStatus("RECONCILE_PENDING");
+        response.setMessage("ORCA中途終了データの再照合が必要です");
+        return response;
+    }
+
+    String buildTemporaryMedicalGetPayload(BillingOrcaWorkflowRepository.TransmissionReviewRecord record) {
+        JsonNode snapshot = readProjectionFlags(record != null ? record.snapshotJson() : null);
+        String performDate = textNode(snapshot, "visitDate");
+        String departmentCode = textNode(snapshot, "departmentCode");
+        if (performDate == null && record != null && record.startedAt() != null) {
+            performDate = record.startedAt().atZone(TOKYO_ZONE).toLocalDate().toString();
+        }
+        String patientId = normalize(record != null ? record.patientId() : null);
+        StringBuilder builder = new StringBuilder();
+        builder.append("<data>");
+        builder.append("<tmedicalgetreq type=\"record\">");
+        builder.append("<Perform_Date type=\"string\">").append(xmlToken(performDate, "performDate")).append("</Perform_Date>");
+        builder.append("<InOut type=\"string\">2</InOut>");
+        builder.append("<Department_Code type=\"string\">")
+                .append(departmentCode != null ? xmlToken(departmentCode, "departmentCode") : "")
+                .append("</Department_Code>");
+        builder.append("<Patient_ID type=\"string\">").append(xmlToken(patientId, "patientId")).append("</Patient_ID>");
+        builder.append("</tmedicalgetreq>");
+        builder.append("</data>");
+        return builder.toString();
+    }
+
+    void applyTemporaryMedicalGetResult(
+            BillingOrcaTemporaryMedicalReconcileResponse response,
+            BillingOrcaWorkflowRepository.TransmissionReviewRecord record,
+            OrcaTransportResult result) {
+        response.setHttpStatus(result != null ? result.getStatus() : null);
+        if (result == null || result.getStatus() < 200 || result.getStatus() >= 300) {
+            response.setOk(false);
+            response.setOperationStatus("NETWORK_FAILED");
+            response.setReconciliationStatus("RECONCILE_FAILED");
+            response.setApiResult("unknown");
+            response.setApiResultMessage("temporary_medical_reconcile_failed");
+            response.setMessage("ORCA中途終了データを再照合できませんでした");
+            return;
+        }
+        JsonNode body = readTemporaryMedicalGetBody(result.getBody());
+        String apiResult = xmlTextValue(body, "Api_Result");
+        response.setApiResult(apiResult);
+        response.setApiResultMessage(xmlTextValue(body, "Api_Result_Message"));
+        List<JsonNode> rows = arrayNodes(body.path("Tmedical_List_Information"));
+        int matches = 0;
+        String firstMode = null;
+        String firstMode2 = null;
+        boolean medicalUidPresent = false;
+        for (JsonNode row : rows) {
+            if (!temporaryMedicalRowMatches(record, row)) {
+                continue;
+            }
+            matches++;
+            if (firstMode == null) {
+                firstMode = textNodeDeep(row, "Medical_Mode");
+            }
+            if (firstMode2 == null) {
+                firstMode2 = textNodeDeep(row, "Medical_Mode2");
+            }
+            medicalUidPresent = medicalUidPresent || textNodeDeep(row, "Medical_Uid") != null;
+        }
+        response.setTemporaryMedicalRowCount(rows.size());
+        response.setMatchingTemporaryMedicalRowCount(matches);
+        response.setMedicalUidPresent(medicalUidPresent);
+        response.setMedicalMode(firstMode);
+        response.setMedicalMode2(firstMode2);
+        response.setOk("00".equals(apiResult) && matches > 0);
+        response.setOperationStatus(matches > 0 ? "ORCA_TEMPORARY_MEDICAL_FOUND" : "NEEDS_REVIEW");
+        response.setReconciliationStatus(matches > 0 ? "TEMPORARY_MEDICAL_FOUND" : "TEMPORARY_MEDICAL_NOT_FOUND");
+        response.setNeedsUserReview(true);
+        response.setMessage(matches > 0
+                ? "ORCA中途終了データに一致候補があります。内容確認後に再送可否を判断してください"
+                : "ORCA中途終了データに一致候補がありません。成功扱いにせず確認してください");
+    }
+
+    private boolean temporaryMedicalRowMatches(BillingOrcaWorkflowRepository.TransmissionReviewRecord record, JsonNode row) {
+        if (record == null || row == null || row.isMissingNode() || row.isNull()) {
+            return false;
+        }
+        String patientId = textNodeDeep(row, "Patient_ID");
+        if (patientId == null || !patientId.equals(normalize(record.patientId()))) {
+            return false;
+        }
+        JsonNode snapshot = readProjectionFlags(record.snapshotJson());
+        String departmentCode = textNode(snapshot, "departmentCode");
+        String rowDepartmentCode = textNodeDeep(row, "Department_Code");
+        return departmentCode == null || departmentCode.equals(rowDepartmentCode);
+    }
+
+    private JsonNode readTemporaryMedicalGetBody(String xml) {
+        if (xml == null || xml.isBlank()) {
+            return JSON_MAPPER.createObjectNode();
+        }
+        try {
+            JsonNode root = XML_MAPPER.readTree(xml);
+            JsonNode body = root.path("tmedicalgetres");
+            if ((body.isMissingNode() || body.isNull()) && root.has("xmlio2")) {
+                body = root.path("xmlio2").path("tmedicalgetres");
+            }
+            if ((body.isMissingNode() || body.isNull()) && root.has("Api_Result")) {
+                body = root;
+            }
+            return body.isMissingNode() || body.isNull() ? JSON_MAPPER.createObjectNode() : body;
+        } catch (JsonProcessingException | RuntimeException ex) {
+            return JSON_MAPPER.createObjectNode();
+        }
+    }
+
+    private List<JsonNode> arrayNodes(JsonNode node) {
+        List<JsonNode> result = new ArrayList<>();
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return result;
+        }
+        if (node.isArray()) {
+            node.forEach(result::add);
+            return result;
+        }
+        JsonNode child = node.path("Tmedical_List_Information_child");
+        if (child.isArray()) {
+            child.forEach(result::add);
+        } else if (!child.isMissingNode() && !child.isNull()) {
+            result.add(child);
+        } else {
+            result.add(node);
+        }
+        return result;
+    }
+
+    private String textNodeDeep(JsonNode node, String fieldName) {
+        if (node == null || fieldName == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        String direct = xmlTextValue(node, fieldName);
+        if (direct != null) {
+            return direct;
+        }
+        if (node.isObject()) {
+            var fields = node.fields();
+            while (fields.hasNext()) {
+                String value = textNodeDeep(fields.next().getValue(), fieldName);
+                if (value != null) {
+                    return value;
+                }
+            }
+        } else if (node.isArray()) {
+            for (JsonNode child : node) {
+                String value = textNodeDeep(child, fieldName);
+                if (value != null) {
+                    return value;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String xmlTextValue(JsonNode parent, String fieldName) {
+        if (parent == null || fieldName == null || parent.isMissingNode() || parent.isNull()) {
+            return null;
+        }
+        return xmlTextValue(parent.path(fieldName));
+    }
+
+    private String xmlTextValue(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        if (node.isValueNode()) {
+            return normalize(node.asText(null));
+        }
+        JsonNode textValue = node.get("");
+        if (textValue != null && !textValue.isMissingNode() && !textValue.isNull()) {
+            return normalize(textValue.asText(null));
+        }
+        textValue = node.get("#text");
+        if (textValue != null && !textValue.isMissingNode() && !textValue.isNull()) {
+            return normalize(textValue.asText(null));
+        }
+        textValue = node.get("$");
+        if (textValue != null && !textValue.isMissingNode() && !textValue.isNull()) {
+            return normalize(textValue.asText(null));
+        }
+        return normalize(node.asText(null));
+    }
+
+    private String xmlToken(String value, String label) {
+        String normalized = normalize(value);
+        if (normalized == null) {
+            throw new IllegalArgumentException(label + " is required");
+        }
+        if (!normalized.matches("[0-9A-Za-z._:-]+")) {
+            throw new IllegalArgumentException(label + " contains unsupported characters");
+        }
+        return normalized;
     }
 
     private int clampReviewLimit(Integer limit) {

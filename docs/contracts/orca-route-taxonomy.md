@@ -104,6 +104,8 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/local/charts/medical-records`
 - `/api/local/encounters/{encounterKey}/medical-summary`
 - `/api/local/encounters/{encounterKey}/close-and-send-to-billing`
+- `/api/local/encounters/orca-transmissions/review`
+- `/api/local/encounters/orca-transmissions/{transmissionId}/reconcile-temporary-medical`
 - `/api/local/diagnoses/{patientId}?baseMonth=yyyyMM`
 - `/api/local/order/bundles`
 - `/api/local/order/recommendations`
@@ -111,6 +113,8 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/local/prescription-orders/do-import`
 
 `/api/local/diagnoses/{patientId}?baseMonth=yyyyMM` は Charts 向けの ORCA disease read model です。`baseMonth` は server が `yyyyMM` として検証し、ORCA `Base_Date` と cache `base_month` の authority にします。主 `diseases` は ORCA `diseasegetv2?class=01` 再取得結果だけを返し、既存 local-only disease は `pendingLocalDiseases` に隔離します。ORCA `Api_Result=21` は正常 0 件として扱います。`includeEnded=true` は server が `Select_Mode=All` に変換します。ORCA unavailable 時に local-only disease を主 `diseases` へ fallback してはいけません。`POST /api/local/diagnoses` は公開しません。ORCA 病名 mutation は local route ではなく official `/api/orca/official/chart-support/disease-mod-v3` を使用します。
+
+`/api/local/encounters/orca-transmissions/review` と `/api/local/encounters/orca-transmissions/{transmissionId}/reconcile-temporary-medical` は close-and-send billing recovery 用の local workflow です。facility は認証済み request context だけを authority とし、client 提供の patient / facility / insurance / voucher / sequential / `Medical_Uid` / URL / raw XML を受け取りません。`reconcile-temporary-medical` は保存済み snapshot から ORCA `tmedicalgetv2` を read-only で照合し、成功表示や自動再送ではなく `needsUserReview=true` の sanitized summary だけを返します。
 
 ### Admin-Internal
 
@@ -133,7 +137,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - Charts の ORCA 病名 create / update / delete / 削除病名整理は official bridge として `/api/orca/official/chart-support/disease-mod-v3` に固定する。病名本体は `Disease_Single` component 列を正本にし、通常 CRUD は `Disease_Code` 単独や自由文字列だけで送らない。`Request_Number=01` は削除病名整理だけで server が生成し、通常 CRUD や client payload からは送らない。
 - order inputsets / interaction check は master-backed read として `/api/orca/master/order/*` に固定する。
 - order bundles / recommendations / prescription orders / chart medical summary / diagnosis read model は local-only として `/api/local/*` に固定する。病名 mutation は local-only route に置かない。
-- 通常外来の初回会計送信は local workflow `/api/local/encounters/{encounterKey}/close-and-send-to-billing` に固定する。client が `patientId` / `facilityId` / voucher / sequential / insurance / `Medical_Uid` / `classCode` を送る direct official 初回送信は通常 UI に戻さない。`/api/orca/official/chart-support/medical-mod-v2` は low-level official bridge / QA focused test 用として残す。
+- 通常外来の初回会計送信は local workflow `/api/local/encounters/{encounterKey}/close-and-send-to-billing` に固定する。結果不明・失敗・補正要確認の確認は local workflow `/api/local/encounters/orca-transmissions/*` に固定する。client が `patientId` / `facilityId` / voucher / sequential / insurance / `Medical_Uid` / `classCode` を送る direct official 初回送信は通常 UI に戻さない。`/api/orca/official/chart-support/medical-mod-v2` は low-level official bridge / QA focused test 用として残す。
 - sync status と admin wrapper label は `/api/admin/internal/*` に固定する。
 - local patient mutation route は current public taxonomy から除外する。local patient CRUD 用の DTO、JAX-RS resource、admin wrapper は production route registration へ戻さない。
 

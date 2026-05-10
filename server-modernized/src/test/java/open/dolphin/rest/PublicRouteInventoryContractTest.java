@@ -72,6 +72,7 @@ class PublicRouteInventoryContractTest {
             "POST /api/local/charts/medical-records",
             "POST /api/local/charts/subjectives",
             "POST /api/local/encounters/{*}/close-and-send-to-billing",
+            "POST /api/local/encounters/orca-transmissions/{*}/reconcile-temporary-medical",
             "POST /api/local/order/bundles",
             "POST /api/local/patients/search",
             "POST /api/local/prescription-orders",

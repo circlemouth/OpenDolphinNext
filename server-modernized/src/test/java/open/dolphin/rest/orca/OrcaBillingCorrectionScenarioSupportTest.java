@@ -93,6 +93,82 @@ class OrcaBillingCorrectionScenarioSupportTest {
     }
 
     @Test
+    void temporaryMedicalReconcileUsesServerSnapshotAndReturnsSanitizedMatch() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
+                new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                        42L,
+                        100L,
+                        "FAC-1",
+                        "encounter-1",
+                        "idem-1",
+                        "ORCA_UNKNOWN",
+                        null,
+                        "unknown",
+                        "result_unknown",
+                        200,
+                        "REQ-1",
+                        "TRACE-1",
+                        "00012",
+                        "schedule-1",
+                        java.time.Instant.parse("2026-05-10T15:00:00Z"),
+                        null,
+                        """
+                        {"visitDate":"2026-05-10","departmentCode":"01","rawSensitiveFieldsExcluded":true}
+                        """);
+
+        String payload = resource.buildTemporaryMedicalGetPayload(record);
+        assertTrue(payload.contains("<tmedicalgetreq type=\"record\">"));
+        assertTrue(payload.contains("<Perform_Date type=\"string\">2026-05-10</Perform_Date>"));
+        assertTrue(payload.contains("<InOut type=\"string\">2</InOut>"));
+        assertTrue(payload.contains("<Department_Code type=\"string\">01</Department_Code>"));
+        assertTrue(payload.contains("<Patient_ID type=\"string\">00012</Patient_ID>"));
+        assertTrue(!payload.contains("Insurance_Combination_Number"));
+        assertTrue(!payload.contains("Medical_Uid"));
+
+        var response = new open.dolphin.rest.dto.orca.BillingOrcaTemporaryMedicalReconcileResponse();
+        resource.applyTemporaryMedicalGetResult(
+                response,
+                record,
+                OrcaTransportResult.fallback("""
+                        <xmlio2>
+                          <tmedicalgetres type="record">
+                            <Api_Result type="string">00</Api_Result>
+                            <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                            <Tmedical_List_Information type="array">
+                              <Tmedical_List_Information_child type="record">
+                                <Patient_Information type="record">
+                                  <Patient_ID type="string">00012</Patient_ID>
+                                  <WholeName type="string">日医 太郎</WholeName>
+                                </Patient_Information>
+                                <Department_Code type="string">01</Department_Code>
+                                <Insurance_Combination_Number type="string">0002</Insurance_Combination_Number>
+                                <Medical_Uid type="string">secret-medical-uid</Medical_Uid>
+                                <Medical_Mode type="string">0</Medical_Mode>
+                                <Medical_Mode2 type="string">0</Medical_Mode2>
+                              </Tmedical_List_Information_child>
+                            </Tmedical_List_Information>
+                          </tmedicalgetres>
+                        </xmlio2>
+                        """, "application/xml"));
+
+        assertTrue(response.isOk(), "status=" + response.getReconciliationStatus()
+                + " rows=" + response.getTemporaryMedicalRowCount()
+                + " matches=" + response.getMatchingTemporaryMedicalRowCount()
+                + " api=" + response.getApiResult());
+        assertEquals("ORCA_TEMPORARY_MEDICAL_FOUND", response.getOperationStatus());
+        assertEquals("TEMPORARY_MEDICAL_FOUND", response.getReconciliationStatus());
+        assertEquals(1, response.getTemporaryMedicalRowCount());
+        assertEquals(1, response.getMatchingTemporaryMedicalRowCount());
+        assertTrue(response.isMedicalUidPresent());
+        assertEquals("0", response.getMedicalMode());
+        assertEquals("0", response.getMedicalMode2());
+        assertTrue(response.isRawSensitiveFieldsExcluded());
+        assertTrue(!response.isClientProvidedIdentifiersTrusted());
+        assertTrue(response.isServerDerivedAuthorityRequired());
+    }
+
+    @Test
     void incomeInfoKeepsConfirmationSourceSeparateFromMedicalModResponse() {
         OrcaChartSupportSupport support = new OrcaChartSupportSupport();
 

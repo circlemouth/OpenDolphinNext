@@ -40,7 +40,7 @@ public class BillingOrcaWorkflowRepository {
     private static final String SQL_FIND_REVIEW_TRANSMISSIONS = """
             SELECT t.transmission_id, t.snapshot_id, t.facility_id, t.encounter_key, t.idempotency_key, t.state,
                    t.medical_uid, t.api_result, t.api_result_message, t.http_status, t.request_id, t.trace_id,
-                   s.patient_id, s.schedule_key, t.started_at, t.completed_at
+                   s.patient_id, s.schedule_key, t.started_at, t.completed_at, s.snapshot_json::text
               FROM opendolphin.d_billing_orca_transmission t
               JOIN opendolphin.d_billing_orca_snapshot s
                 ON s.snapshot_id = t.snapshot_id
@@ -48,6 +48,18 @@ public class BillingOrcaWorkflowRepository {
                AND t.state IN ('ORCA_UNKNOWN', 'ORCA_FAILED', 'CORRECTION_REQUIRED')
              ORDER BY t.started_at DESC, t.transmission_id DESC
              LIMIT ?
+            """;
+
+    private static final String SQL_FIND_REVIEW_TRANSMISSION_BY_ID = """
+            SELECT t.transmission_id, t.snapshot_id, t.facility_id, t.encounter_key, t.idempotency_key, t.state,
+                   t.medical_uid, t.api_result, t.api_result_message, t.http_status, t.request_id, t.trace_id,
+                   s.patient_id, s.schedule_key, t.started_at, t.completed_at, s.snapshot_json::text
+              FROM opendolphin.d_billing_orca_transmission t
+              JOIN opendolphin.d_billing_orca_snapshot s
+                ON s.snapshot_id = t.snapshot_id
+             WHERE t.facility_id = ?
+               AND t.transmission_id = ?
+               AND t.state IN ('ORCA_UNKNOWN', 'ORCA_FAILED', 'CORRECTION_REQUIRED')
             """;
 
     private static final String SQL_INSERT_TRANSMISSION = """
@@ -144,6 +156,25 @@ public class BillingOrcaWorkflowRepository {
             }
         } catch (SQLException ex) {
             throw new IllegalStateException("Failed to load billing ORCA review transmissions", ex);
+        }
+    }
+
+    public TransmissionReviewRecord findReviewTransmission(String facilityId, long transmissionId) {
+        if (normalize(facilityId) == null || transmissionId <= 0 || dataSource == null) {
+            return null;
+        }
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(SQL_FIND_REVIEW_TRANSMISSION_BY_ID)) {
+            statement.setString(1, facilityId.trim());
+            statement.setLong(2, transmissionId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    return null;
+                }
+                return mapTransmissionReview(resultSet);
+            }
+        } catch (SQLException ex) {
+            throw new IllegalStateException("Failed to load billing ORCA review transmission", ex);
         }
     }
 
@@ -257,7 +288,8 @@ public class BillingOrcaWorkflowRepository {
                 resultSet.getString(13),
                 resultSet.getString(14),
                 startedAt != null ? startedAt.toInstant() : null,
-                completedAt != null ? completedAt.toInstant() : null);
+                completedAt != null ? completedAt.toInstant() : null,
+                resultSet.getString(17));
     }
 
     private static String require(String value, String label) {
@@ -326,7 +358,8 @@ public class BillingOrcaWorkflowRepository {
             String patientId,
             String scheduleKey,
             Instant startedAt,
-            Instant completedAt
+            Instant completedAt,
+            String snapshotJson
     ) {
     }
 }
