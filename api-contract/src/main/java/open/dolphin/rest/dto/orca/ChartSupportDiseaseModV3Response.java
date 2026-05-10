@@ -23,6 +23,8 @@ public class ChartSupportDiseaseModV3Response {
     private boolean needsUserReview;
     private String operationStatus;
     private String unmatchInformationOverflow;
+    private String postMutationMirrorStatus;
+    private DiseaseImportResponse postMutationMirror;
     private OrganizeInformation organizeInformation;
     private List<DiseaseWarning> warnings = new ArrayList<>();
     private List<DiseaseUnmatchInformation> unmatchInformation = new ArrayList<>();
@@ -153,6 +155,22 @@ public class ChartSupportDiseaseModV3Response {
 
     public void setUnmatchInformationOverflow(String unmatchInformationOverflow) {
         this.unmatchInformationOverflow = unmatchInformationOverflow;
+    }
+
+    public String getPostMutationMirrorStatus() {
+        return postMutationMirrorStatus;
+    }
+
+    public void setPostMutationMirrorStatus(String postMutationMirrorStatus) {
+        this.postMutationMirrorStatus = postMutationMirrorStatus;
+    }
+
+    public DiseaseImportResponse getPostMutationMirror() {
+        return postMutationMirror;
+    }
+
+    public void setPostMutationMirror(DiseaseImportResponse postMutationMirror) {
+        this.postMutationMirror = postMutationMirror;
     }
 
     public OrganizeInformation getOrganizeInformation() {

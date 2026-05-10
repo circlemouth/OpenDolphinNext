@@ -161,6 +161,11 @@ public class OrcaDiseaseOperationStore {
         summary.put("unmatchCount", response.getUnmatchInformation() != null ? response.getUnmatchInformation().size() : 0);
         summary.put("unmatchOverflow", normalize(response.getUnmatchInformationOverflow()));
         summary.put("organizeInformationPresent", response.getOrganizeInformation() != null);
+        summary.put("postMutationMirrorStatus", normalize(response.getPostMutationMirrorStatus()));
+        summary.put("postMutationMirrorDiseaseCount", response.getPostMutationMirror() != null
+                && response.getPostMutationMirror().getDiseases() != null
+                        ? response.getPostMutationMirror().getDiseases().size()
+                        : 0);
         return summary;
     }
 

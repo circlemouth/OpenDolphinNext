@@ -43,6 +43,7 @@ import open.dolphin.rest.dto.orca.ChartSupportMedicalModResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
 import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Request;
 import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Response;
+import open.dolphin.rest.dto.orca.DiseaseImportResponse;
 import open.dolphin.rest.dto.orca.OrcaEncounterContext;
 import open.dolphin.session.PatientServiceBean;
 
@@ -523,6 +524,7 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             throw ex;
         }
         ChartSupportDiseaseModV3Response response = support().parseDiseaseModV3Response(result, runId, traceId);
+        attachPostMutationDiseaseMirror(request, facilityId, payload, response);
         saveDiseaseOperation(request, facilityId, payload, operation, contextAuthority, idempotencyKey,
                 requestXml, result, response);
 
@@ -547,6 +549,31 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         recordAudit(request, AUDIT_DISEASE_MOD_ACTION, details,
                 response.isBusinessAccepted() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
+    }
+
+    private void attachPostMutationDiseaseMirror(
+            HttpServletRequest request,
+            String facilityId,
+            ChartSupportDiseaseModV3Request payload,
+            ChartSupportDiseaseModV3Response response) {
+        if (response == null || !response.isBusinessAccepted()) {
+            return;
+        }
+        LocalDate baseDate = requireDateOnly(request, payload.getPerformDate(), "payload.performDate");
+        try {
+            DiseaseImportResponse mirror = fetchDiseaseMirror(request, facilityId, payload.getPatientId(), baseDate);
+            response.setPostMutationMirrorStatus(mirror.getOrcaMirrorStatus());
+            if ("connected".equals(mirror.getOrcaMirrorStatus())) {
+                response.setPostMutationMirror(mirror);
+                return;
+            }
+        } catch (RuntimeException ex) {
+            response.setPostMutationMirrorStatus("unavailable");
+        }
+        response.setOk(false);
+        response.setNeedsUserReview(true);
+        response.setOperationStatus("NEEDS_REVIEW");
+        response.setError("post_mutation_mirror_unavailable");
     }
 
     private ChartSupportDiseaseModV3Response diseaseTransportFailureResponse(String runId, String traceId) {
@@ -937,25 +964,32 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             HttpServletRequest request,
             String facilityId,
             ChartSupportDiseaseModV3Request payload) {
-        DiseaseProjectionService projection = diseaseProjectionService();
         LocalDate baseDate = requireDateOnly(request, payload.getPerformDate(), "payload.performDate");
-        String requestXml = projection.buildDiseaseGetRequestXml(payload.getPatientId(), baseDate);
-        OrcaTransportResult result = orcaTransport.invoke(
-                facilityId,
-                OrcaEndpoint.DISEASE_GET,
-                OrcaTransportRequest.post(requestXml).withQuery(DiseaseProjectionService.DISEASE_GET_QUERY));
-        open.dolphin.rest.dto.orca.DiseaseImportResponse mirror =
-                projection.buildMirrorResponseFromOrca(
-                        result,
-                        resolveTraceId(request),
-                        payload.getPatientId(),
-                        java.util.Date.from(baseDate.atStartOfDay(TOKYO_ZONE).toInstant()),
-                        java.util.Date.from(baseDate.plusDays(1).atStartOfDay(TOKYO_ZONE).toInstant()));
+        DiseaseImportResponse mirror = fetchDiseaseMirror(request, facilityId, payload.getPatientId(), baseDate);
         if (!"connected".equals(mirror.getOrcaMirrorStatus())
                 || mirror.getDiseases() == null
                 || mirror.getDiseases().stream().noneMatch(entry -> sameDiseaseTarget(entry, payload))) {
             throw validationError(request, "payload.targetDisease", "target disease changed or was not found");
         }
+    }
+
+    private DiseaseImportResponse fetchDiseaseMirror(
+            HttpServletRequest request,
+            String facilityId,
+            String patientId,
+            LocalDate baseDate) {
+        DiseaseProjectionService projection = diseaseProjectionService();
+        String requestXml = projection.buildDiseaseGetRequestXml(patientId, baseDate);
+        OrcaTransportResult result = orcaTransport.invoke(
+                facilityId,
+                OrcaEndpoint.DISEASE_GET,
+                OrcaTransportRequest.post(requestXml).withQuery(DiseaseProjectionService.DISEASE_GET_QUERY));
+        return projection.buildMirrorResponseFromOrca(
+                result,
+                resolveTraceId(request),
+                patientId,
+                java.util.Date.from(baseDate.atStartOfDay(TOKYO_ZONE).toInstant()),
+                java.util.Date.from(baseDate.plusDays(1).atStartOfDay(TOKYO_ZONE).toInstant()));
     }
 
     private boolean sameDiseaseTarget(

@@ -16,10 +16,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
 import java.lang.reflect.Proxy;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.infomodel.PatientModel;
+import open.dolphin.orca.service.DiseaseProjectionService;
 import open.dolphin.orca.service.OrcaDiseaseOperationStore;
 import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.OrcaEndpoint;
@@ -151,7 +153,7 @@ class OrcaChartSupportResourceTest {
         ChartSupportMedicationGetResponse response = resource.medicationGet(request, payload);
 
         assertNotNull(response);
-        assertEquals("01", transport.requestNumber());
+        assertEquals("01", transport.requestNumbers().get(0));
         assertTrue(transport.requestXml().contains("<Request_Number type=\"string\">01</Request_Number>"));
         assertTrue(transport.requestXml().contains("<Request_Code type=\"string\">Y00001</Request_Code>"));
     }
@@ -550,13 +552,16 @@ class OrcaChartSupportResourceTest {
                 buildRequest(),
                 payload);
 
-        assertEquals(OrcaEndpoint.DISEASE_MOD_V3, transport.endpoint());
-        assertNull(transport.query());
-        assertEquals("01", transport.requestNumber());
-        assertTrue(transport.requestXml().contains("<Organize_Information type=\"record\">"));
-        assertTrue(transport.requestXml().contains("<Disease_StartDate type=\"string\">2026-04-01</Disease_StartDate>"));
-        assertTrue(!transport.requestXml().contains("<Disease_Information_child type=\"record\">"));
+        assertEquals(OrcaEndpoint.DISEASE_MOD_V3, transport.endpoints().get(0));
+        assertNull(transport.queries().get(0));
+        String mutationXml = transport.requestXmls().get(0);
+        assertTrue(mutationXml.contains("<Request_Number>01</Request_Number>")
+                || mutationXml.contains("<Request_Number type=\"string\">01</Request_Number>"));
+        assertTrue(mutationXml.contains("<Organize_Information type=\"record\">"));
+        assertTrue(mutationXml.contains("<Disease_StartDate type=\"string\">2026-04-01</Disease_StartDate>"));
+        assertTrue(!mutationXml.contains("<Disease_Information_child type=\"record\">"));
         assertTrue(response.isBusinessAccepted());
+        assertEquals(OrcaEndpoint.DISEASE_GET, transport.endpoint());
     }
 
     @Test
@@ -602,6 +607,83 @@ class OrcaChartSupportResourceTest {
         assertEquals("U001", response.getUnmatchInformation().get(0).getCode());
         assertEquals("要確認病名", response.getUnmatchInformation().get(0).getName());
         assertEquals("present_redacted", response.getUnmatchInformation().get(0).getMessageCategory());
+    }
+
+    @Test
+    void diseaseModV3RefetchesMirrorAfterAcceptedMutation() {
+        CapturingTransport transport = new CapturingTransport(List.of(
+                new OrcaTransportResult(null, "POST", 200, """
+                        <xmlio2>
+                          <diseaseres>
+                            <Information_Date>2026-04-22</Information_Date>
+                            <Information_Time>14:25:00</Information_Time>
+                            <Api_Result>0000</Api_Result>
+                            <Api_Result_Message>正常終了</Api_Result_Message>
+                          </diseaseres>
+                        </xmlio2>
+                        """, "application/xml", Map.of()),
+                new OrcaTransportResult(null, "POST", 200, """
+                        <xmlio2>
+                          <disease_inforeres>
+                            <Api_Result>000</Api_Result>
+                            <Api_Result_Message>正常終了</Api_Result_Message>
+                            <Disease_Information type="array">
+                              <Disease_Information_child type="record">
+                                <Disease_Name>皮膚腫瘍</Disease_Name>
+                                <Disease_Code>3089002</Disease_Code>
+                                <Disease_StartDate>2026-04-22</Disease_StartDate>
+                              </Disease_Information_child>
+                            </Disease_Information>
+                          </disease_inforeres>
+                        </xmlio2>
+                        """, "application/xml", Map.of())));
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        injectDiseaseModAuthority(resource);
+
+        ChartSupportDiseaseModV3Response response = resource.diseaseModV3(
+                buildRequest(),
+                newDiseasePayload());
+
+        assertTrue(response.isOk());
+        assertEquals("ORCA_ACCEPTED", response.getOperationStatus());
+        assertEquals("connected", response.getPostMutationMirrorStatus());
+        assertNotNull(response.getPostMutationMirror());
+        assertEquals(1, response.getPostMutationMirror().getDiseases().size());
+        assertEquals("皮膚腫瘍", response.getPostMutationMirror().getDiseases().get(0).getDiagnosisName());
+        assertEquals(List.of(OrcaEndpoint.DISEASE_MOD_V3, OrcaEndpoint.DISEASE_GET), transport.endpoints());
+        assertEquals(DiseaseProjectionService.DISEASE_GET_QUERY, transport.queries().get(1));
+    }
+
+    @Test
+    void diseaseModV3NeedsReviewWhenPostMutationMirrorUnavailable() {
+        CapturingTransport transport = new CapturingTransport(List.of(
+                new OrcaTransportResult(null, "POST", 200, """
+                        <xmlio2>
+                          <diseaseres>
+                            <Information_Date>2026-04-22</Information_Date>
+                            <Information_Time>14:25:00</Information_Time>
+                            <Api_Result>0000</Api_Result>
+                            <Api_Result_Message>正常終了</Api_Result_Message>
+                          </diseaseres>
+                        </xmlio2>
+                        """, "application/xml", Map.of()),
+                new OrcaTransportResult(null, "POST", 503, "Bad Gateway", "text/plain", Map.of())));
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        injectDiseaseModAuthority(resource);
+
+        ChartSupportDiseaseModV3Response response = resource.diseaseModV3(
+                buildRequest(),
+                newDiseasePayload());
+
+        assertTrue(response.isBusinessAccepted());
+        assertTrue(!response.isOk());
+        assertTrue(response.isNeedsUserReview());
+        assertEquals("NEEDS_REVIEW", response.getOperationStatus());
+        assertEquals("unavailable", response.getPostMutationMirrorStatus());
+        assertNull(response.getPostMutationMirror());
+        assertEquals("post_mutation_mirror_unavailable", response.getError());
     }
 
     @Test
@@ -810,8 +892,14 @@ class OrcaChartSupportResourceTest {
         private final String responseXml;
         private final int status;
         private final RuntimeException failure;
+        private final List<OrcaTransportResult> responseSequence;
+        private int invocationCount;
         private OrcaEndpoint endpoint;
         private String query;
+        private final List<OrcaEndpoint> endpoints = new ArrayList<>();
+        private final List<String> queries = new ArrayList<>();
+        private final List<String> requestXmls = new ArrayList<>();
+        private final List<String> requestNumbers = new ArrayList<>();
 
         CapturingTransport() {
             this("""
@@ -836,22 +924,40 @@ class OrcaChartSupportResourceTest {
             this.responseXml = responseXml;
             this.status = status;
             this.failure = null;
+            this.responseSequence = null;
+        }
+
+        CapturingTransport(List<OrcaTransportResult> responseSequence) {
+            this.responseXml = null;
+            this.status = 200;
+            this.failure = null;
+            this.responseSequence = responseSequence;
         }
 
         CapturingTransport(RuntimeException failure) {
             this.responseXml = null;
             this.status = 200;
             this.failure = failure;
+            this.responseSequence = null;
         }
 
         @Override
         public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
             this.endpoint = endpoint;
+            this.endpoints.add(endpoint);
             requestXml = request.getBody();
+            requestXmls.add(requestXml);
             requestNumber = extractTag(requestXml, "Request_Number");
+            requestNumbers.add(requestNumber);
             query = request.getQuery();
+            queries.add(query);
             if (failure != null) {
                 throw failure;
+            }
+            if (responseSequence != null) {
+                int index = Math.min(invocationCount, responseSequence.size() - 1);
+                invocationCount++;
+                return responseSequence.get(index);
             }
             return new OrcaTransportResult(null, "POST", status, responseXml, "application/xml", Map.of());
         }
@@ -870,6 +976,22 @@ class OrcaChartSupportResourceTest {
 
         String query() {
             return query;
+        }
+
+        List<OrcaEndpoint> endpoints() {
+            return endpoints;
+        }
+
+        List<String> queries() {
+            return queries;
+        }
+
+        List<String> requestXmls() {
+            return requestXmls;
+        }
+
+        List<String> requestNumbers() {
+            return requestNumbers;
         }
 
         private static String extractTag(String xml, String tagName) {
