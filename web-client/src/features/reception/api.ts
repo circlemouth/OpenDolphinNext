@@ -103,6 +103,32 @@ export type ReceptionSelectorOptions = {
   physicians: ReceptionSelectorOption[];
 };
 
+export type BillingOrcaTransmissionReviewEntry = {
+  transmissionId?: number;
+  snapshotId?: number;
+  encounterKey?: string;
+  scheduleKey?: string;
+  patientId?: string;
+  state?: 'ORCA_UNKNOWN' | 'ORCA_FAILED' | 'CORRECTION_REQUIRED' | string;
+  operationStatus?: string;
+  needsUserReview?: boolean;
+  confirmationRequired?: boolean;
+  medicalUidPresent?: boolean;
+  apiResult?: string;
+  apiResultMessage?: string;
+  httpStatus?: number;
+  startedAt?: string;
+  completedAt?: string;
+};
+
+export type BillingOrcaTransmissionReviewListResponse = {
+  ok: boolean;
+  entries: BillingOrcaTransmissionReviewEntry[];
+  limit: number;
+  count: number;
+  runId?: string;
+};
+
 export type Acceptmodv2ReadOnlyDiagnosticReadiness = {
   verdict: 'accepted' | 'rejected' | 'not_verified';
   apiResult: string;
@@ -680,6 +706,65 @@ export async function fetchReceptionSelectorOptions(): Promise<ReceptionSelector
   return {
     departments: normalizeSelectorOptions(body.departments),
     physicians: normalizeSelectorOptions(body.physicians),
+  };
+}
+
+const normalizeReviewString = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const normalizeReviewNumber = (value: unknown): number | undefined => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return value;
+};
+
+const normalizeBillingOrcaReviewEntry = (value: unknown): BillingOrcaTransmissionReviewEntry | null => {
+  if (!value || typeof value !== 'object') return null;
+  const source = value as Record<string, unknown>;
+  return {
+    transmissionId: normalizeReviewNumber(source.transmissionId),
+    snapshotId: normalizeReviewNumber(source.snapshotId),
+    encounterKey: normalizeReviewString(source.encounterKey),
+    scheduleKey: normalizeReviewString(source.scheduleKey),
+    patientId: normalizeReviewString(source.patientId),
+    state: normalizeReviewString(source.state),
+    operationStatus: normalizeReviewString(source.operationStatus),
+    needsUserReview: source.needsUserReview === true,
+    confirmationRequired: source.confirmationRequired === true,
+    medicalUidPresent: source.medicalUidPresent === true,
+    apiResult: normalizeReviewString(source.apiResult),
+    apiResultMessage: normalizeReviewString(source.apiResultMessage),
+    httpStatus: normalizeReviewNumber(source.httpStatus),
+    startedAt: normalizeReviewString(source.startedAt),
+    completedAt: normalizeReviewString(source.completedAt),
+  };
+};
+
+export async function fetchBillingOrcaTransmissionReviewList(
+  options: { limit?: number } = {},
+): Promise<BillingOrcaTransmissionReviewListResponse> {
+  const requestedLimit = Number.isFinite(options.limit) ? Math.trunc(options.limit ?? 20) : 20;
+  const safeLimit = Math.min(Math.max(requestedLimit, 1), 100);
+  const query = new URLSearchParams({ limit: String(safeLimit) });
+  const response = await httpFetch(`/api/local/encounters/orca-transmissions/review?${query.toString()}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    notifySessionExpired: false,
+  });
+  const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const entries = Array.isArray(body.entries)
+    ? body.entries
+        .map((entry) => normalizeBillingOrcaReviewEntry(entry))
+        .filter((entry): entry is BillingOrcaTransmissionReviewEntry => entry !== null)
+    : [];
+  return {
+    ok: response.ok && body.ok === true,
+    entries,
+    limit: normalizeReviewNumber(body.limit) ?? safeLimit,
+    count: normalizeReviewNumber(body.count) ?? entries.length,
+    runId: normalizeReviewString(body.runId),
   };
 }
 

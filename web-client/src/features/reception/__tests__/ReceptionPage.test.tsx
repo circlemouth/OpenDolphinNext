@@ -57,6 +57,29 @@ let mockReceptionSelectorOptions = {
   departments: [] as Array<{ code: string; name: string }>,
   physicians: [] as Array<{ code: string; name: string }>,
 };
+let mockBillingOrcaReviewData:
+  | {
+      ok: boolean;
+      entries: Array<{
+        transmissionId?: number;
+        snapshotId?: number;
+        encounterKey?: string;
+        scheduleKey?: string;
+        patientId?: string;
+        state?: string;
+        operationStatus?: string;
+        needsUserReview?: boolean;
+        confirmationRequired?: boolean;
+        medicalUidPresent?: boolean;
+        apiResult?: string;
+        apiResultMessage?: string;
+        startedAt?: string;
+      }>;
+      count: number;
+      limit: number;
+      runId?: string;
+    }
+  | undefined;
 let mockMedicalRecordsData:
   | {
       runId?: string;
@@ -391,6 +414,17 @@ vi.mock('@tanstack/react-query', () => ({
         refetch: vi.fn(),
       };
     }
+    if (key === 'billing-orca-transmission-review') {
+      return {
+        data: mockBillingOrcaReviewData,
+        dataUpdatedAt: 0,
+        isError: false,
+        error: null,
+        isFetching: false,
+        isLoading: false,
+        refetch: vi.fn(),
+      };
+    }
     return {
       data: undefined,
       dataUpdatedAt: 0,
@@ -550,6 +584,7 @@ beforeEach(() => {
   mockClaimSendCache = {};
   mockMedicalInformationOptions = [{ code: '01', name: '外来' }];
   mockReceptionSelectorOptions = { departments: [], physicians: [] };
+  mockBillingOrcaReviewData = undefined;
   mockMedicalRecordsData = undefined;
   mockSearchParams = new URLSearchParams();
   mockLocationState = undefined;
@@ -2542,6 +2577,46 @@ describe('ReceptionPage status/date/card action UX', () => {
     await expect(screen.queryByRole('tab', { name: /会計済/ })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /会計待ち/ })).toHaveAttribute('aria-selected', 'true');
     expect(within(listRegion).getByRole('row', { name: /診察終了患者/ })).toBeInTheDocument();
+  });
+
+  it('ORCA送信の要確認一覧を初期表示し、秘密系識別子を表示しない', async () => {
+    mockBillingOrcaReviewData = {
+      ok: true,
+      count: 1,
+      limit: 20,
+      runId: 'RUN-REVIEW-LIST',
+      entries: [
+        {
+          transmissionId: 42,
+          snapshotId: 101,
+          encounterKey: 'encounter-review-001',
+          scheduleKey: 'schedule-review-001',
+          patientId: 'P-REVIEW-001',
+          state: 'ORCA_UNKNOWN',
+          operationStatus: 'UNKNOWN',
+          needsUserReview: true,
+          confirmationRequired: true,
+          medicalUidPresent: false,
+          apiResult: 'UNKNOWN',
+          apiResultMessage: '送信結果が確定していません',
+          startedAt: '2026-05-10T15:00:00Z',
+        },
+      ],
+    };
+
+    renderReceptionPage();
+
+    const reviewRegion = screen.getByRole('region', { name: 'ORCA送信の要確認一覧' });
+    expect(reviewRegion).toHaveTextContent('ORCA送信の要確認が1件あります。');
+    expect(within(reviewRegion).getByText('要確認')).toBeInTheDocument();
+    expect(within(reviewRegion).getByText('患者ID: P-REVIEW-001')).toBeInTheDocument();
+    expect(within(reviewRegion).getByText('encounter-review-001')).toBeInTheDocument();
+    expect(within(reviewRegion).getAllByText('UNKNOWN').length).toBeGreaterThanOrEqual(1);
+    expect(within(reviewRegion).getByText('ORCA状態を再照合し、成功扱いにせず要確認として処理')).toBeInTheDocument();
+    expect(reviewRegion).not.toHaveTextContent(/idempotency|trace|request/i);
+    expect(screen.queryByRole('button', { name: '会計送信' })).not.toBeInTheDocument();
+    expect(vi.mocked(buildMedicalModV2RequestXml)).not.toHaveBeenCalled();
+    expect(vi.mocked(postOrcaMedicalModV2Xml)).not.toHaveBeenCalled();
   });
 
   it('keeps transmission visible in cards layout without selecting the card', async () => {

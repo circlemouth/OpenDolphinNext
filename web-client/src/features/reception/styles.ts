@@ -1039,6 +1039,70 @@ export const receptionStyles = css`
     margin-top: 1.25rem;
   }
 
+  .reception-orca-review {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .reception-orca-review__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .reception-orca-review__item {
+    border: 1px solid var(--ui-warning-border);
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .reception-orca-review__item-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: #0f172a;
+  }
+
+  .reception-orca-review__item-header strong {
+    color: var(--ui-warning-strong);
+  }
+
+  .reception-orca-review__details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.55rem 0.8rem;
+    margin: 0;
+  }
+
+  .reception-orca-review__details div {
+    min-width: 0;
+  }
+
+  .reception-orca-review__details dt {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #475569;
+  }
+
+  .reception-orca-review__details dd {
+    margin: 0.15rem 0 0;
+    color: #0f172a;
+    overflow-wrap: anywhere;
+  }
+
+  .reception-orca-review__message {
+    margin: 0;
+    color: #334155;
+    line-height: 1.5;
+  }
+
   .reception-pill {
     font-size: 0.85rem;
   }

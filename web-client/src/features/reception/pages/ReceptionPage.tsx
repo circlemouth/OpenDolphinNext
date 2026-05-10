@@ -15,10 +15,12 @@ import { ReceptionExceptionList, type ReceptionExceptionItem } from '../componen
 import { ToneBanner } from '../components/ToneBanner';
 import {
   buildVisitEntryFromMutation,
+  fetchBillingOrcaTransmissionReviewList,
   fetchAppointmentOutpatients,
   fetchClaimFlags,
   fetchMedicalInformationOptions,
   fetchReceptionSelectorOptions,
+  type BillingOrcaTransmissionReviewEntry,
   isClaimOutpatientEnabled,
   mutateVisit,
   type MedicalInformationOption,
@@ -504,6 +506,21 @@ const buildReceptionClaimSendDetail = (outcome: 'success' | 'warning' | 'error')
     return '会計送信結果に警告があります。内容を確認し、必要なら再試行してください。';
   }
   return RECEPTION_SUPPORT_GUIDE;
+};
+
+const BILLING_ORCA_REVIEW_LIMIT = 20;
+
+const billingOrcaReviewStateLabel = (state?: string) => {
+  if (state === 'ORCA_UNKNOWN') return '要確認';
+  if (state === 'ORCA_FAILED') return '送信失敗';
+  if (state === 'CORRECTION_REQUIRED') return '補正要確認';
+  return state?.trim() || '要確認';
+};
+
+const billingOrcaReviewNextAction = (entry: BillingOrcaTransmissionReviewEntry) => {
+  if (entry.state === 'ORCA_FAILED') return 'ORCA状態を再取得してから再送可否を判断';
+  if (entry.state === 'CORRECTION_REQUIRED') return '補正内容を確認してから再送可否を判断';
+  return 'ORCA状態を再照合し、成功扱いにせず要確認として処理';
 };
 
 type PhysicianNameMap = Record<string, string>;
@@ -1162,6 +1179,19 @@ export function ReceptionPage({
     meta: {
       servedFromCache: !!queryClient.getQueryState(orcaQueueQueryKey)?.dataUpdatedAt,
       retryCount: queryClient.getQueryState(orcaQueueQueryKey)?.fetchFailureCount ?? 0,
+    },
+  });
+
+  const billingOrcaReviewQueryKey = ['billing-orca-transmission-review', BILLING_ORCA_REVIEW_LIMIT] as const;
+  const billingOrcaReviewQuery = useQuery({
+    queryKey: billingOrcaReviewQueryKey,
+    queryFn: () => fetchBillingOrcaTransmissionReviewList({ limit: BILLING_ORCA_REVIEW_LIMIT }),
+    refetchInterval: OUTPATIENT_AUTO_REFRESH_INTERVAL_MS,
+    staleTime: OUTPATIENT_AUTO_REFRESH_INTERVAL_MS,
+    refetchOnWindowFocus: false,
+    meta: {
+      servedFromCache: !!queryClient.getQueryState(billingOrcaReviewQueryKey)?.dataUpdatedAt,
+      retryCount: queryClient.getQueryState(billingOrcaReviewQueryKey)?.fetchFailureCount ?? 0,
     },
   });
 
@@ -4775,6 +4805,10 @@ export function ReceptionPage({
     </button>
   );
 
+  const billingOrcaReviewEntries = billingOrcaReviewQuery.data?.entries ?? [];
+  const shouldShowBillingOrcaReview = billingOrcaReviewEntries.length > 0 || billingOrcaReviewQuery.isError;
+  const billingOrcaReviewRunId = billingOrcaReviewQuery.data?.runId ?? resolvedRunId;
+
   const receptionStatusTabs = (
     <div className="reception-status-tabs reception-status-tabs--section" role="region" aria-label="ステータスタブ">
       <div className="reception-status-tabs__list" role="tablist" aria-label="受付ステータス">
@@ -5101,7 +5135,7 @@ export function ReceptionPage({
               toolbarHost,
             )
           : null}
-          {(appointmentErrorContext || intentBanner || broadcast || appointmentQuery.data?.hasNextPage) && (
+          {(appointmentErrorContext || intentBanner || broadcast || appointmentQuery.data?.hasNextPage || shouldShowBillingOrcaReview) && (
             <div className="reception-page__alerts" role="region" aria-label="警告/通知">
               {appointmentErrorContext && (
                 <ApiFailureBanner
@@ -5135,6 +5169,77 @@ export function ReceptionPage({
                   nextAction="検索条件を絞って再取得"
                   runId={appointmentQuery.data?.runId ?? resolvedRunId}
                 />
+              ) : null}
+              {shouldShowBillingOrcaReview ? (
+                <section
+                  className="reception-orca-review"
+                  role="region"
+                  aria-label="ORCA送信の要確認一覧"
+                  data-testid="billing-orca-review-list"
+                >
+                  {billingOrcaReviewQuery.isError ? (
+                    <ToneBanner
+                      tone="error"
+                      message="ORCA送信の要確認一覧を取得できませんでした。"
+                      destination="受付"
+                      nextAction="通信状態を確認して再取得"
+                      runId={billingOrcaReviewRunId}
+                    />
+                  ) : (
+                    <>
+                      <ToneBanner
+                        tone="warning"
+                        message={`ORCA送信の要確認が${billingOrcaReviewQuery.data?.count ?? billingOrcaReviewEntries.length}件あります。`}
+                        destination="受付"
+                        nextAction="ORCA状態を再照合してから再送可否を判断"
+                        runId={billingOrcaReviewRunId}
+                      />
+                      <div className="reception-orca-review__list" role="list">
+                        {billingOrcaReviewEntries.map((entry, index) => (
+                          <article
+                            key={`${entry.transmissionId ?? 'review'}-${index}`}
+                            className="reception-orca-review__item"
+                            role="listitem"
+                          >
+                            <header className="reception-orca-review__item-header">
+                              <strong>{billingOrcaReviewStateLabel(entry.state)}</strong>
+                              <span>{entry.patientId ? `患者ID: ${entry.patientId}` : '患者ID: 未取得'}</span>
+                            </header>
+                            <dl className="reception-orca-review__details">
+                              <div>
+                                <dt>encounter</dt>
+                                <dd>{entry.encounterKey ?? '未取得'}</dd>
+                              </div>
+                              <div>
+                                <dt>schedule</dt>
+                                <dd>{entry.scheduleKey ?? '未取得'}</dd>
+                              </div>
+                              <div>
+                                <dt>operation</dt>
+                                <dd>{entry.operationStatus ?? 'NEEDS_REVIEW'}</dd>
+                              </div>
+                              <div>
+                                <dt>Api_Result</dt>
+                                <dd>{entry.apiResult ?? '未取得'}</dd>
+                              </div>
+                              <div>
+                                <dt>開始</dt>
+                                <dd>{entry.startedAt ?? '未取得'}</dd>
+                              </div>
+                              <div>
+                                <dt>次アクション</dt>
+                                <dd>{billingOrcaReviewNextAction(entry)}</dd>
+                              </div>
+                            </dl>
+                            {entry.apiResultMessage ? (
+                              <p className="reception-orca-review__message">{entry.apiResultMessage}</p>
+                            ) : null}
+                          </article>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </section>
               ) : null}
             </div>
           )}

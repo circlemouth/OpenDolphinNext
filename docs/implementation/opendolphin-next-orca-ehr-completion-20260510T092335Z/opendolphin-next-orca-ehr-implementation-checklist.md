@@ -245,6 +245,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] ORCA障害時は UI に「ORCA連携停止中」を表示しつつ、診療録正本閲覧を可能にする。
 - [ ] ORCA送信失敗、`UNKNOWN`, `NEEDS_REVIEW` の一覧画面を作る。
   - [x] `GET /api/local/encounters/orca-transmissions/review` で `ORCA_UNKNOWN` / `ORCA_FAILED` / `CORRECTION_REQUIRED` の server-side facility scoped sanitized 一覧を返す。
+  - [x] Reception が review 一覧を初期表示し、`ORCA_UNKNOWN` / `ORCA_FAILED` / `CORRECTION_REQUIRED` を折りたたまず要確認として表示する。表示は患者ID、encounter / schedule key、operation status、Api_Result、開始時刻、次アクションに限定し、idempotency key / request ID / trace ID / raw ORCA body / 保険組合せ / 伝票番号 / 連番を出さない。
 - [ ] 再送前に現在 ORCA状態、前回送信との差分、患者・受付・保険組合せを再確認し、監査ログに保存する。
 - [ ] ORCA側で会計済みの場合は再送を原則禁止し、管理者確認フローにする。
 - [ ] ORCA障害時の診療録/処方作成可否、会計送信不可表示、復旧後再照合、ネットワーク障害時の `UNKNOWN` 処理、DB障害時読み取り専用モード、復元後 ORCA再照合を文書化する。
