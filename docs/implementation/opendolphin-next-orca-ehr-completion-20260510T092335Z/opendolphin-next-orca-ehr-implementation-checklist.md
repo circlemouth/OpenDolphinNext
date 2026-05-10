@@ -278,6 +278,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-10T18:08Z: DiagnosisEditPanel の diseasev3 成功後 copy を `反映しました` から `ORCA再取得結果で同期確認しました` に変更し、ORCA accepted と ORCA登録病名表示の境界を明示した。
   - [x] Charts の ORCA summary / timeline で `medicalmodv2` 送信を単純な「成功」表示にせず、`送達確認` として表示し、会計済み判定・診療録確定とは別概念であることを初期表示の説明に含める。
   - [x] 2026-05-10T18:39Z: Reception の billing projection で `送信済` transmission signal が `会計済み` workflow と誤認されないよう、会計待ち/再計待では「送信済は会計済みではありません。収納確認まで会計待ちです。」を初期表示し、カード/詳細テストで固定した。
+  - [x] 2026-05-10T18:52Z: Patients の `missingMaster` / `fallbackUsed` / 非 server-local dataSource による患者編集停止理由を `通信詳細` disclosure の外へ出し、ORCA正本確認不能時の重要警告を初期表示するテストで固定した。
 
 ## 18. 実ORCA接続試験チェック
 

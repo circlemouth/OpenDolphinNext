@@ -1021,6 +1021,14 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     return { blockReasons: reasons, blockReasonKeys: keys };
   }, [resolvedFallbackUsed, resolvedMissingMaster, resolvedTransition]);
   const blocking = blockReasons.length > 0;
+  const operationalAlertReasons = useMemo(() => {
+    const reasons: string[] = [];
+    if (patientsErrorContext) {
+      reasons.push('患者一覧を取得できません。通信回復後に再取得してください。');
+    }
+    reasons.push(...blockReasons);
+    return reasons;
+  }, [blockReasons, patientsErrorContext]);
   const handleOrcaAddressLookup = useCallback(async () => {
     const zip = normalizeZipCode(form.zip);
     if (zip.length !== 7 || blocking || orcaAddressPending) return;
@@ -1968,6 +1976,23 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           <span className={`patients-page__ops-status${operationalStatus === 'OK' ? ' is-ok' : ' is-alert'}`}>状態: {operationalStatus}</span>
         </div>
       </header>
+
+      {operationalAlertReasons.length > 0 ? (
+        <section
+          className="patients-page__ops-alert"
+          role="alert"
+          aria-label="患者管理の同期状態に確認が必要です"
+          aria-live={resolveAriaLive('warning')}
+        >
+          <strong>患者管理の同期状態に確認が必要です</strong>
+          <ul>
+            {operationalAlertReasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+          <p>この警告は通信詳細を開かなくても確認できる必要があります。ORCA正本の再取得が完了するまで、患者基本情報の編集を進めないでください。</p>
+        </section>
+      ) : null}
 
       <details className="patients-page__network-details">
         <summary>通信詳細を表示</summary>

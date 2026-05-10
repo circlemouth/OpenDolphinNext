@@ -1119,6 +1119,23 @@ describe('PatientsPage search summary', () => {
     expect(networkScope.queryByText('OK')).not.toBeInTheDocument();
   });
 
+  it('ORCA正本確認不能の警告を通信詳細に隠さず初期表示する', () => {
+    mockPatients({
+      missingMaster: true,
+      fallbackUsed: true,
+      dataSourceTransition: 'fallback',
+    });
+
+    renderPatientsPage();
+
+    const alert = screen.getByRole('alert', { name: /患者管理の同期状態に確認が必要です/ });
+    expect(alert).toHaveTextContent('ORCA 参照が不足しているため編集を停止中です。');
+    expect(alert).toHaveTextContent('暫定データ表示中のため編集を停止中です。');
+    expect(alert).toHaveTextContent('最新データを確認できる画面へ戻ってから編集してください。');
+    expect(alert).toHaveTextContent('通信詳細を開かなくても確認できる必要があります。');
+    expect(alert.closest('details')).toBeNull();
+  });
+
   it('検索文言は利用できる条件だけを案内する', () => {
     mockPatients({
       patients: [],

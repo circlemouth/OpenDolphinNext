@@ -1548,6 +1548,28 @@
   color: var(--ui-warning-text);
 }
 
+.patients-page__ops-alert {
+  border: 1px solid var(--ui-warning-border);
+  border-radius: 12px;
+  background: var(--ui-warning-bg);
+  color: var(--ui-warning-text);
+  padding: 0.75rem 0.9rem;
+}
+
+.patients-page__ops-alert strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.patients-page__ops-alert ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.patients-page__ops-alert p {
+  margin: 0.45rem 0 0;
+}
+
 .patients-page__network-details {
   border: 1px dashed var(--ui-border-strong);
   border-radius: 12px;
