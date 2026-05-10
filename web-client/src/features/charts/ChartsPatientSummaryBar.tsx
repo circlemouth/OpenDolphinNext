@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { resolveAriaLive } from '../../libs/observability/observability';
 import type { DataSourceTransition } from '../../libs/observability/types';
 import { PatientIdentityBar } from '../shared/PatientIdentityBar';
 import { StatusPill } from '../shared/StatusPill';
@@ -154,6 +155,13 @@ export function ChartsPatientSummaryBar({
   const normalizedPhysician = normalizeValue(physician) ?? '未設定';
   const sexTone = resolvePatientSexTone(patientDisplay.sex);
   const ageGroup = resolvePatientAgeGroup(patientDisplay.age);
+  const sourceAlert = missingMaster
+    ? fallbackUsed
+      ? 'ORCA参照不足と暫定参照です。ORCA送信・会計送信前に受付で再取得してください。'
+      : 'ORCA参照不足です。ORCA送信・会計送信前に受付で再取得してください。'
+    : fallbackUsed
+      ? '暫定参照です。ORCA送信・会計送信前に最新データを再取得してください。'
+      : undefined;
 
   return (
     <div
@@ -202,6 +210,18 @@ export function ChartsPatientSummaryBar({
         }
         supporting={
           <div className="charts-patient-summary__supporting">
+            {sourceAlert ? (
+              <div
+                className="charts-patient-summary__source-alert"
+                role="alert"
+                aria-live={resolveAriaLive('warning')}
+                data-testid="charts-patient-summary-source-alert"
+                data-test-id="charts-patient-summary-source-alert"
+              >
+                <strong>ORCA正本確認が必要</strong>
+                <span>{sourceAlert}</span>
+              </div>
+            ) : null}
             <section className="charts-patient-summary__encounter-band" aria-label="来院文脈">
               <span className="charts-patient-summary__encounter-item">
                 <span className="charts-patient-summary__encounter-label">診療日</span>

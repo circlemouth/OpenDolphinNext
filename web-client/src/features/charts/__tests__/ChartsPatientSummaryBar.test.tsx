@@ -99,4 +99,28 @@ describe('ChartsPatientSummaryBar', () => {
     expect(summary).toHaveAttribute('data-source-transition', 'server');
     expect(summary).not.toHaveTextContent('server');
   });
+
+  it('ORCA参照不足と暫定参照は患者ヘッダー上の alert として表示する', () => {
+    const { container } = render(
+      <ChartsPatientSummaryBar
+        {...baseProps}
+        missingMaster
+        fallbackUsed
+        patientDisplay={{
+          ...baseProps.patientDisplay,
+          note: undefined,
+        }}
+      />,
+    );
+
+    const alert = screen.getByTestId('charts-patient-summary-source-alert');
+    expect(alert).toHaveAttribute('role', 'alert');
+    expect(alert).toHaveTextContent('ORCA正本確認が必要');
+    expect(alert).toHaveTextContent('ORCA参照不足と暫定参照です。ORCA送信・会計送信前に受付で再取得してください。');
+    expect(alert.closest('details')).toBeNull();
+
+    const summary = container.querySelector('.charts-patient-summary');
+    expect(summary).toHaveTextContent('ORCA参照不足');
+    expect(summary).toHaveTextContent('暫定参照');
+  });
 });

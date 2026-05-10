@@ -280,6 +280,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-10T18:39Z: Reception の billing projection で `送信済` transmission signal が `会計済み` workflow と誤認されないよう、会計待ち/再計待では「送信済は会計済みではありません。収納確認まで会計待ちです。」を初期表示し、カード/詳細テストで固定した。
   - [x] 2026-05-10T18:52Z: Patients の `missingMaster` / `fallbackUsed` / 非 server-local dataSource による患者編集停止理由を `通信詳細` disclosure の外へ出し、ORCA正本確認不能時の重要警告を初期表示するテストで固定した。
   - [x] 2026-05-10T18:59Z: Charts action bar の compact header collapsed 状態で `fallbackUsed` が `詳細` disclosure 内だけに隠れないよう、暫定データ警告を初期表示の alert として出し、ORCA送信・会計送信・印刷前の再取得要求をテストで固定した。
+  - [x] 2026-05-10T19:09Z: Charts の患者ヘッダーで `missingMaster` / `fallbackUsed` を pill だけにせず、ORCA正本確認が必要な alert と再取得アクションを初期表示し、`details` 外に出ることをテストで固定した。
 
 ## 18. 実ORCA接続試験チェック
 

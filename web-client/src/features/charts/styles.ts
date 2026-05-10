@@ -1000,6 +1000,24 @@ export const chartsStyles = css`
     min-width: 0;
   }
 
+  .charts-patient-summary__source-alert {
+    display: grid;
+    gap: 0.15rem;
+    min-width: min(100%, 18rem);
+    max-width: min(100%, 32rem);
+    padding: 0.42rem 0.58rem;
+    border: 1px solid rgba(251, 146, 60, 0.5);
+    border-radius: var(--charts-radius-sm);
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .charts-patient-summary__source-alert strong {
+    font-size: 0.76rem;
+  }
+
   .charts-patient-summary__encounter-item {
     display: inline-flex;
     align-items: baseline;
