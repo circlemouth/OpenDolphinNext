@@ -4939,6 +4939,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                           sendDisabledReason={sendDisabledReason}
                           patientId={patientId}
                           encounterId={encounterContext.encounterKey}
+                          chartRevisionId={encounterContext.chartRevisionId}
                           visitDate={actionVisitDate}
                           orcaEncounterContext={actionOrcaEncounterContext}
                           queueEntry={actionBarQueueEntry}

@@ -44,6 +44,8 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - candidate response は `nonAuthoritative=true`、`candidateStatus=READY_TO_SEND|NEEDS_REVIEW`、`sendable` を返す。
 - 薬剤コード、用法コード、medical class、薬剤行が未解決の場合は `NEEDS_REVIEW` / `sendable=false` とし、live `medicalmodv2` 送信へ進めない。
 - candidate と audit details に raw ORCA body、credential、患者氏名・住所・電話番号、保険詳細、voucher / sequential の client 提供値を保存しない。
+- Web client の候補確認 surface は patient / acceptance / department / physician / insurance combination を確認表示にだけ使う。candidate prepare request は `chartRevisionId` だけを route path として送り、facility / patient / insurance / voucher / sequential / URL / digest を body や query として送らない。
+- 候補確認 surface は candidate を ORCA 正本または送信完了として表示しない。live `medicalmodv2` 送信、送信後再取得、差分照合は別 workflow の責務とする。
 
 ## Misuse Cases Covered
 
@@ -61,6 +63,13 @@ Focused server verification:
 
 ```bash
 mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=PrescriptionAuthorityResourceTest,LocalOrcaMedicalCandidateResourceTest,PrescriptionAuthoritySchemaTest,FreshSchemaBaselineTest test
+```
+
+Focused web verification:
+
+```bash
+cd web-client && npm test -- --run src/features/charts/__tests__/orcaMedicalCandidateApi.test.ts src/features/charts/__tests__/OrcaMedicalCandidatePanel.test.tsx src/features/charts/__tests__/chartsActionBar.test.tsx
+cd web-client && npm run typecheck
 ```
 
 Release guard context:

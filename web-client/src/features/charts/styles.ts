@@ -5613,6 +5613,115 @@ export const chartsStyles = css`
     line-height: 1.6;
   }
 
+  .orca-medical-candidate {
+    margin-top: var(--charts-space-sm);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-radius: var(--charts-radius-md);
+    background: #f8fafc;
+    padding: var(--charts-space-md);
+    display: grid;
+    gap: var(--charts-space-sm);
+  }
+
+  .orca-medical-candidate__header,
+  .orca-medical-candidate__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--charts-space-sm);
+    flex-wrap: wrap;
+  }
+
+  .orca-medical-candidate__kicker,
+  .orca-medical-candidate__note,
+  .orca-medical-candidate__blocked,
+  .orca-medical-candidate__error {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .orca-medical-candidate__kicker {
+    color: #475569;
+    font-weight: 700;
+  }
+
+  .orca-medical-candidate h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .orca-medical-candidate__status {
+    border-radius: 999px;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    background: #e2e8f0;
+    color: #334155;
+  }
+
+  .orca-medical-candidate__status--ready {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .orca-medical-candidate__status--review {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .orca-medical-candidate__context,
+  .orca-medical-candidate__summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--charts-space-xs) var(--charts-space-md);
+    margin: 0;
+  }
+
+  .orca-medical-candidate__context div,
+  .orca-medical-candidate__summary div {
+    min-width: 0;
+  }
+
+  .orca-medical-candidate dt {
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 800;
+  }
+
+  .orca-medical-candidate dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #0f172a;
+    font-size: 0.88rem;
+    font-weight: 700;
+  }
+
+  .orca-medical-candidate__note {
+    color: #475569;
+  }
+
+  .orca-medical-candidate__blocked,
+  .orca-medical-candidate__error {
+    color: #b45309;
+    font-weight: 700;
+  }
+
+  .orca-medical-candidate__result {
+    display: grid;
+    gap: var(--charts-space-xs);
+    border-top: 1px solid rgba(148, 163, 184, 0.35);
+    padding-top: var(--charts-space-sm);
+  }
+
+  .orca-medical-candidate__issues {
+    margin: 0;
+    padding-left: 1.2rem;
+    color: #92400e;
+    font-size: 0.84rem;
+    font-weight: 700;
+  }
+
   .charts-actions__guard {
     margin: 0;
     color: #b45309;

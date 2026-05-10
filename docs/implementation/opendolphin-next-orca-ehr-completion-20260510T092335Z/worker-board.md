@@ -29,7 +29,7 @@ Checklist count when parallel board was created:
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
-| C | `codex/orca-ehr-worker-c-prescription` | C-04 candidate UI/API confirmation surface | Done | 20260510T220959Z | this commit | - |
+| C | `codex/orca-ehr-worker-c-prescription` | C-05 prescription structured item persistence reconciliation | Done | 20260510T224026Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-02 common patient header staged rollout | Done | 20260510T204142Z | this commit | - |
 | F | `codex/orca-ehr-worker-f-audit-security-gates` | F-02 credential/PHI leakage guards | Done | 20260510T201318Z | this commit | - |
@@ -63,6 +63,7 @@ Checklist count when parallel board was created:
 | C-02 | 8 | Implement finalize/change/stop/cancel/reissue APIs. | Reasons are mandatory, events are append-only, original prescription stays readable. | Focused Maven tests |
 | C-03 | 8, 10.1 | Implement chart/prescription to `orca_medical_candidate` prepare route. | Candidate is explicitly non-authoritative and unresolved items are `NEEDS_REVIEW` / unsendable. | Focused Maven tests |
 | C-04 | 8, 10.2 | Add candidate UI/API confirmation surface for medical send preparation. | Patient/acceptance/department/physician/insurance/candidate data is shown without overwriting orders. | Web focused tests + typecheck |
+| C-05 | 8 | Reconcile structured prescription item persistence checklist gap. | Drug code/name/spec/dosage/unit/days/location/category/general-name/doctor-comment are demonstrably persisted in structured columns or documented as blocked with tests. | Focused Maven + web API tests |
 
 ### Worker D Queue
 
@@ -106,6 +107,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260510T224026Z | C | C-04 | 8/10.2 candidate confirmation surface partial; checklist item remains open until send/re-fetch/diff workflow lands | this commit | `orcaMedicalCandidateApi.test.ts`, `OrcaMedicalCandidatePanel.test.tsx`, `chartsActionBar.test.tsx`, `typecheck`, web guard passed | Done | C-05 prescription structured item persistence reconciliation |
 | 20260510T220959Z | C | C-03 | 8 local medical candidate prepare route; 10.1 `orca_medical_candidate` non-authoritative candidate | this commit | `LocalOrcaMedicalCandidateResourceTest`, `FreshSchemaBaselineTest`, route inventory/exposure tests, doc/config/runtime guards passed | Done | C-04 candidate UI/API confirmation surface |
 | 20260510T211441Z | C | C-02 | 8 prescription create/finalize/change/stop/cancel/reissue API; 4.5 finalized direct overwrite event guard | this commit | `PrescriptionAuthorityResourceTest`, `PrescriptionAuthoritySchemaTest`, `FreshSchemaBaselineTest`, route inventory/exposure tests, doc/config/runtime guards passed | Done | C-03 chart/prescription to `orca_medical_candidate` prepare route |
 | 20260510T204040Z | C | C-01 | 4.5 prescription authority schema/status; direct overwrite DB guard foundation | this commit | `PrescriptionAuthoritySchemaTest`, `FreshSchemaBaselineTest`, doc/config/runtime/finalized-write guards passed | Done | C-02 finalize/change/stop/cancel/reissue API |
