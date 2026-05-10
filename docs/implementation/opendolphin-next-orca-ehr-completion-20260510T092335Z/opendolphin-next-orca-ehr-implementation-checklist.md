@@ -274,7 +274,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] `web-client/vite.config.ts` から `/api21`, `/api01rv2`, `/orca22` 等の生 ORCA/WebORCA proxy、ORCA Basic 認証 header 注入、ORCA 証明書 agent 読込、ORCA header 操作を削除し、Vite proxy は server-modernized `/api` entrypoint 中継に限定する。
   - [x] `web-client` の `npm run dev` は ORCA env file を自動読込せず、`verify:no-direct-orca-proxy-config` で Vite config / env sample への生 ORCA proxy・ORCA credential config 再混入を fail する。
   - [x] 2026-05-10T19:40Z: `verify:no-direct-orca-proxy-config` が `verify:web-guard` と release validation に含まれていることを確認し、生 ORCA/WebORCA path、ORCA credential/certificate variable、ORCA TLS bypass、ORCA header filtering config の再混入を継続検証する。
-- [ ] ORCA送信成功を診療録確定と同義に扱う UI 文言、ORCA送信失敗時に登録済み/反映済みと表示する文言、重要警告を初期非表示にする UI を削除または変更する。
+- [x] ORCA送信成功を診療録確定と同義に扱う UI 文言、ORCA送信失敗時に登録済み/反映済みと表示する文言、重要警告を初期非表示にする UI を削除または変更する。
   - [x] 2026-05-10T18:00Z: Patients の新患登録・既存患者更新・ORCA既存患者取込で、write accepted と ORCA正本再取得済みを分けて表示し、未確認時に「反映済み/登録済み」と誤認させる文言を同期確認表現へ変更した。
   - [x] 2026-05-10T18:18Z: Charts の既存患者更新 dialog と共通患者取込 recovery で `canonical 再取得` / `完了扱い` の内部語を利用者に表示せず、ORCA正本の再取得による同期確認表現へ正規化した。
   - [x] 2026-05-10T18:29Z: Patients の patientmodv2 / ORCA既存患者取込 result message、toast、監査 summary から `canonical 再取得` / `完了扱い` / 単純な取込完了表現を除き、ORCA正本再取得による同期確認表現へ統一した。
@@ -284,6 +284,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-10T18:52Z: Patients の `missingMaster` / `fallbackUsed` / 非 server-local dataSource による患者編集停止理由を `通信詳細` disclosure の外へ出し、ORCA正本確認不能時の重要警告を初期表示するテストで固定した。
   - [x] 2026-05-10T18:59Z: Charts action bar の compact header collapsed 状態で `fallbackUsed` が `詳細` disclosure 内だけに隠れないよう、暫定データ警告を初期表示の alert として出し、ORCA送信・会計送信・印刷前の再取得要求をテストで固定した。
   - [x] 2026-05-10T19:09Z: Charts の患者ヘッダーで `missingMaster` / `fallbackUsed` を pill だけにせず、ORCA正本確認が必要な alert と再取得アクションを初期表示し、`details` 外に出ることをテストで固定した。
+  - [x] 2026-05-10T20:41Z: `verify:medical-safety-ui-copy` を `verify:web-guard` に追加し、ORCA送信成功/反映/会計済み/診療録確定を混同する visible copy と重要警告を details/disclosure へ戻す文言を production UI/current docs で拒否する。`OrcaSummary` と `ChartsPage` の focused tests で送達確認・要確認 alert が初期表示かつ details 外であることを固定した。
 
 ## 18. 実ORCA接続試験チェック
 
