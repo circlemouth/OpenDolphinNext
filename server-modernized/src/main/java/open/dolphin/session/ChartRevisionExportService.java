@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.regex.Pattern;
 import open.dolphin.infomodel.ChartDocumentModel;
 import open.dolphin.infomodel.ChartRevisionEventModel;
@@ -84,6 +85,67 @@ public class ChartRevisionExportService {
         response.setRevisions(revisions.stream().map(this::toRevision).toList());
         response.setEvents(events.stream().map(this::toEvent).toList());
         return response;
+    }
+
+    public String exportChartCsv(long chartId, String facilityId) {
+        ChartRevisionExportResponse export = exportChart(chartId, facilityId);
+        StringBuilder csv = new StringBuilder();
+        appendCsvRow(csv,
+                "recordType",
+                "chartId",
+                "currentRevisionId",
+                "revisionId",
+                "revisionNumber",
+                "status",
+                "eventId",
+                "eventType",
+                "previousRevisionId",
+                "newRevisionId",
+                "actorUserId",
+                "occurredAt",
+                "reasonCode",
+                "reasonText",
+                "contentHash",
+                "summary");
+        for (ChartRevisionExportRevision revision : export.getRevisions()) {
+            appendCsvRow(csv,
+                    "revision",
+                    export.getChartId(),
+                    export.getCurrentRevisionId(),
+                    revision.getRevisionId(),
+                    revision.getRevisionNumber(),
+                    revision.getStatus(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    revision.getFinalizedAt(),
+                    null,
+                    null,
+                    revision.getContentHash(),
+                    revisionSummary(revision));
+        }
+        for (ChartRevisionExportEvent event : export.getEvents()) {
+            appendCsvRow(csv,
+                    "event",
+                    export.getChartId(),
+                    export.getCurrentRevisionId(),
+                    event.getChartRevisionId(),
+                    null,
+                    null,
+                    event.getEventId(),
+                    event.getEventType(),
+                    event.getPreviousRevisionId(),
+                    event.getNewRevisionId(),
+                    event.getActorUserId(),
+                    event.getOccurredAt(),
+                    event.getReasonCode(),
+                    event.getReasonText(),
+                    event.getEventHash(),
+                    flattenSummary(event.getBeforeSummary(), event.getAfterSummary()));
+        }
+        return csv.toString();
     }
 
     private ChartRevisionExportRevision toRevision(ChartRevisionModel revision) {
@@ -184,6 +246,68 @@ public class ChartRevisionExportService {
         sanitized = SOAP_BODY.matcher(sanitized).replaceAll("[redacted-soap-body]");
         sanitized = RAW_XML.matcher(sanitized).replaceAll("[redacted-xml-body]");
         return sanitized;
+    }
+
+    private String revisionSummary(ChartRevisionExportRevision revision) {
+        StringJoiner joiner = new StringJoiner("; ");
+        addSummary(joiner, "title", revision.getTitle());
+        addSummary(joiner, "encounterId", revision.getEncounterId());
+        addSummary(joiner, "encounterDate", revision.getEncounterDate());
+        addSummary(joiner, "departmentCode", revision.getDepartmentCode());
+        addSummary(joiner, "physicianCode", revision.getPhysicianCode());
+        addSummary(joiner, "insuranceCombinationNumber", revision.getInsuranceCombinationNumber());
+        addSummary(joiner, "enteredByUserId", revision.getEnteredByUserId());
+        addSummary(joiner, "finalizedByUserId", revision.getFinalizedByUserId());
+        return joiner.toString();
+    }
+
+    private String flattenSummary(Map<String, Object> before, Map<String, Object> after) {
+        StringJoiner joiner = new StringJoiner("; ");
+        flattenSummaryMap(joiner, "before", before);
+        flattenSummaryMap(joiner, "after", after);
+        return joiner.toString();
+    }
+
+    private void flattenSummaryMap(StringJoiner joiner, String prefix, Map<String, Object> summary) {
+        if (summary == null || summary.isEmpty()) {
+            return;
+        }
+        summary.forEach((key, value) -> addSummary(joiner, prefix + "." + key, value));
+    }
+
+    private void addSummary(StringJoiner joiner, String key, Object value) {
+        if (value != null) {
+            joiner.add(key + "=" + value);
+        }
+    }
+
+    private void appendCsvRow(StringBuilder csv, Object... values) {
+        for (int i = 0; i < values.length; i++) {
+            if (i > 0) {
+                csv.append(',');
+            }
+            csv.append(csvValue(values[i]));
+        }
+        csv.append('\n');
+    }
+
+    private String csvValue(Object value) {
+        if (value == null) {
+            return "";
+        }
+        String text = neutralizeCsvFormula(String.valueOf(value));
+        return '"' + text.replace("\"", "\"\"") + '"';
+    }
+
+    private String neutralizeCsvFormula(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        char first = value.charAt(0);
+        if (first == '=' || first == '+' || first == '-' || first == '@' || first == '\t') {
+            return "'" + value;
+        }
+        return value;
     }
 
     private WebApplicationException restError(Response.Status status, String code, String message,

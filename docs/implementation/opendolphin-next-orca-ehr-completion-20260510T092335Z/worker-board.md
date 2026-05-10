@@ -28,7 +28,7 @@ Checklist count when parallel board was created:
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
-| B | `codex/orca-ehr-worker-b-chart-revision` | B-05 chart export/reporting PDF/CSV integration | Done | 20260510T230647Z | this commit | - |
+| B | `codex/orca-ehr-worker-b-chart-revision` | B-05b chart PDF/reporting template integration | Done | 20260510T233305Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-02 common patient header staged rollout | Done | 20260510T204142Z | this commit | - |
@@ -54,7 +54,7 @@ Checklist count when parallel board was created:
 | B-02 | 4.4, 7, 17 | Enforce FINAL direct-write denial for body, SOAP, modules, and title. | Direct updates return fail-closed errors and require revision/event paths. | Finalized write guard, focused tests |
 | B-03 | 7 | Implement finalize API skeleton with required validation and content hash. | Finalize requires patient/encounter/department/physician/insurance/finalizer/content context and records hash. | Focused Maven tests |
 | B-04 | 7, 14 | Implement amend/addendum/cancel revision/event APIs and chart export inclusion contract. | Original text is never physically deleted; reasons and before/after summaries are stored. JSON export includes revision event history with redaction/summary allowlist. | Focused Maven/reporting tests |
-| B-05 | 14 | Integrate chart revision export payload into PDF/CSV reporting output after Worker C-D prescription/ORCA histories land. | PDF/CSV exports carry the same revision provenance as JSON without raw ORCA bodies or credentials. | Reporting/PDF focused tests |
+| B-05 | 14 | Integrate chart revision export payload into PDF/CSV reporting output after Worker C-D prescription/ORCA histories land. | CSV export carries the same revision provenance as JSON without raw ORCA bodies or credentials and neutralizes spreadsheet formula injection. PDF/reporting template integration remains next. | Reporting/PDF focused tests |
 
 ### Worker C Queue
 
@@ -107,6 +107,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260510T233305Z | B | B-05a | 14 chart revision CSV export; reporting provenance fixed columns; CSV injection mitigation | this commit | `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest` passed | Done | B-05b PDF/reporting template integration |
 | 20260510T230647Z | B | B-04b | 7/14 chart revision JSON export API; event history inclusion; summary allowlist/redaction | this commit | `ChartRevisionExportServiceTest`, `ChartRevisionFinalizeServiceTest`, `PublicRouteInventoryContractTest` passed | Done | B-05 PDF/CSV reporting integration after prescription/ORCA histories |
 | 20260510T221959Z | B | B-04a | 7 amend/addendum/cancel API skeleton; event/new revision recording; 14 chart export contract | this commit | `ChartRevisionFinalizeServiceTest`, `ChartRevisionAuthorityMigrationTest`, `ChartRevisionFinalizedWriteGuardSchemaTest`, `FreshSchemaBaselineTest`, `PublicRouteInventoryContractTest` passed | Done | B-04 chart export/reporting inclusion and audit-chain integration |
 | 20260510T214902Z | B | B-03 | 7 finalize API skeleton; required validation; server-side `content_hash`; FINALIZED event | this commit | `ChartRevisionAuthorityMigrationTest`, `ChartRevisionFinalizedWriteGuardSchemaTest`, `ChartRevisionFinalizeServiceTest`, `FreshSchemaBaselineTest`, `PublicRouteInventoryContractTest`, finalized-write/doc/config/runtime lookup guards passed | Done | B-04 amend/addendum/cancel + export contract |

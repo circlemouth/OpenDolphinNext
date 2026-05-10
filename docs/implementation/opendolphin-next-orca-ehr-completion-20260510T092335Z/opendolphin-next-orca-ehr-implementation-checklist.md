@@ -158,6 +158,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] PDF/CSV/JSON エクスポートは訂正・追記・取消履歴、処方指示履歴、ORCA連携履歴、診療時点スナップショットを含める。
   - [x] chart export contract に chart revision events、before/after summary、reason、actor、content hash を含めることを追加した。reporting 実装は B-04 継続。
   - [x] `GET /api/charts/{chartId}/revisions/export` を追加し、施設境界で chart revision JSON export に revision/event 履歴、reason、actor、content hash、allowlist 済み summary を含める。PDF/CSV、処方指示履歴、ORCA連携履歴の統合は Worker C-D / reporting 連携後に継続する。
+  - [x] `GET /api/charts/{chartId}/revisions/export.csv` を追加し、JSON export と同じ revision/event 履歴を固定列 CSV として出力する。raw ORCA / credential redaction と spreadsheet formula injection neutralization を通す。PDF と処方/ORCA履歴の統合は B-05 継続。
 
 ## 8. 処方指示正本実装
 

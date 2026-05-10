@@ -37,18 +37,7 @@ class ChartRevisionExportServiceTest {
 
     @Test
     void exportChartIncludesRevisionEventsAndSanitizesUnsafePayloads() {
-        ChartDocumentModel document = chartDocument();
-        when(em.find(ChartDocumentModel.class, 10L)).thenReturn(document);
-        TypedQuery<ChartRevisionModel> revisionQuery = mock(TypedQuery.class);
-        TypedQuery<ChartRevisionEventModel> eventQuery = mock(TypedQuery.class);
-        when(em.createQuery(startsWith("select r from ChartRevisionModel"), eq(ChartRevisionModel.class)))
-                .thenReturn(revisionQuery);
-        when(em.createQuery(startsWith("select e from ChartRevisionEventModel"), eq(ChartRevisionEventModel.class)))
-                .thenReturn(eventQuery);
-        when(revisionQuery.setParameter("chartId", 10L)).thenReturn(revisionQuery);
-        when(eventQuery.setParameter("chartId", 10L)).thenReturn(eventQuery);
-        when(revisionQuery.getResultList()).thenReturn(List.of(finalRevision(), amendedRevision()));
-        when(eventQuery.getResultList()).thenReturn(List.of(finalizedEvent(), amendedEvent()));
+        stubExportQueries(List.of(finalRevision(), amendedRevision()), List.of(finalizedEvent(), amendedEvent()));
 
         ChartRevisionExportResponse response = service.exportChart(10L, "F001");
 
@@ -68,6 +57,23 @@ class ChartRevisionExportServiceTest {
         assertThat(response.getEvents().get(1).getReasonText()).doesNotContain("Basic secret");
         assertThat(response.getEvents().get(1).getReasonText()).doesNotContain("<xml>");
         assertThat(response.getEvents().get(1).getBeforeSummary()).doesNotContainKey("csrfToken");
+    }
+
+    @Test
+    void exportChartCsvIncludesHistoryAndNeutralizesSpreadsheetFormulaInjection() {
+        ChartRevisionEventModel event = amendedEvent();
+        event.setReasonText("=HYPERLINK(\"https://example.test\",\"Authorization: Basic secret\")");
+        stubExportQueries(List.of(finalRevision()), List.of(event));
+
+        String csv = service.exportChartCsv(10L, "F001");
+
+        assertThat(csv).contains("\"recordType\",\"chartId\",\"currentRevisionId\"");
+        assertThat(csv).contains("\"revision\",\"10\",\"21\",\"20\",\"1\",\"FINAL\"");
+        assertThat(csv).contains("\"event\",\"10\",\"21\",\"20\",,,\"31\",\"AMENDED\"");
+        assertThat(csv).contains("\"'=HYPERLINK(\"\"https://example.test\"\",\"\"Authorization: [redacted]");
+        assertThat(csv).contains("after.eventType=AMENDED");
+        assertThat(csv).doesNotContain("Basic secret");
+        assertThat(csv).doesNotContain("csrfToken");
     }
 
     @Test
@@ -162,6 +168,20 @@ class ChartRevisionExportServiceTest {
         event.setAfterSummaryJson("{\"eventType\":\"AMENDED\",\"newRevisionCreated\":true}");
         event.setEventHash("d".repeat(64));
         return event;
+    }
+
+    private void stubExportQueries(List<ChartRevisionModel> revisions, List<ChartRevisionEventModel> events) {
+        when(em.find(ChartDocumentModel.class, 10L)).thenReturn(chartDocument());
+        TypedQuery<ChartRevisionModel> revisionQuery = mock(TypedQuery.class);
+        TypedQuery<ChartRevisionEventModel> eventQuery = mock(TypedQuery.class);
+        when(em.createQuery(startsWith("select r from ChartRevisionModel"), eq(ChartRevisionModel.class)))
+                .thenReturn(revisionQuery);
+        when(em.createQuery(startsWith("select e from ChartRevisionEventModel"), eq(ChartRevisionEventModel.class)))
+                .thenReturn(eventQuery);
+        when(revisionQuery.setParameter("chartId", 10L)).thenReturn(revisionQuery);
+        when(eventQuery.setParameter("chartId", 10L)).thenReturn(eventQuery);
+        when(revisionQuery.getResultList()).thenReturn(revisions);
+        when(eventQuery.getResultList()).thenReturn(events);
     }
 
     private void setField(Object target, String name, Object value) throws Exception {
