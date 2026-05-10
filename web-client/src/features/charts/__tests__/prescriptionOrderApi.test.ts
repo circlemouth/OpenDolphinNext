@@ -80,6 +80,8 @@ describe('prescriptionOrderApi first-class contract', () => {
             name: 'アムロジピン',
             quantity: '1',
             unit: '錠',
+            standardName: index === 0 ? '5mg' : undefined,
+            dosageForm: index === 0 ? 'tablet' : undefined,
             numberCode: index === 0 ? '001' : undefined,
             numberCodeSystem: index === 0 ? 'urn:orca:number' : undefined,
             numberCodeName: index === 0 ? 'number-name' : undefined,
@@ -135,6 +137,23 @@ describe('prescriptionOrderApi first-class contract', () => {
     expect(body.rps.map((rp: Record<string, any>) => rp.medicalClassNumber)).toEqual(
       classMatrix.map((entry) => entry.medicalClassNumber),
     );
+    expect(body.rps.map((rp: Record<string, any>) => rp.days)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(body.rps.map((rp: Record<string, any>) => rp.prescriptionLocation)).toEqual([
+      'IN_HOUSE',
+      'OUTSIDE',
+      'IN_HOUSE',
+      'OUTSIDE',
+      'IN_HOUSE',
+      'OUTSIDE',
+    ]);
+    expect(body.rps.map((rp: Record<string, any>) => rp.medicationRoute)).toEqual([
+      'ORAL',
+      'ORAL',
+      'AS_NEEDED',
+      'AS_NEEDED',
+      'TOPICAL',
+      'TOPICAL',
+    ]);
     expect(body.rps[0]).toEqual(
       expect.objectContaining({
         bundleName: '内服院内',
@@ -155,6 +174,8 @@ describe('prescriptionOrderApi first-class contract', () => {
       expect.objectContaining({
         code: '620000001',
         unit: '錠',
+        standardName: '5mg',
+        dosageForm: 'tablet',
         numberCode: '001',
         numberCodeSystem: 'urn:orca:number',
         numberCodeName: 'number-name',

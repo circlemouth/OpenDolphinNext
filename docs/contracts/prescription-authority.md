@@ -8,7 +8,7 @@ OpenDolphinNext の処方指示は、診療録や ORCA 診療行為送信候補�
 
 - `prescription_order` は処方指示の現在状態を保持する。
 - `prescription_order_revision` は DRAFT / FINAL / 変更後の revision を保持する。
-- `prescription_order_item` は薬剤コード、薬剤名、規格、剤形、用法、用量、単位、日数、院内/院外、内服/外用/注射/頓用、一般名処方フラグ、医師コメントを構造化列として保持する。
+- `prescription_order_item` は薬剤コード、薬剤名、規格、剤形、用法、用量、単位、日数、院内/院外、内服/外用/注射/頓用、一般名処方フラグ、医師コメント、server-side 入力者、作成日時を構造化列として保持する。
 - `prescription_order_event` は create / finalize / change / stop / cancel / reissue の append-only event として扱う。
 - `orca_medical_candidate` は処方正本から作った ORCA 診療行為送信候補を保持する。candidate は明示的に非正本であり、ORCA 送信前確認・未解決項目レビュー用の prepare 結果に限定する。
 - `prescription_orca_transmission` は ORCA 送信準備・送信・照合の状態を保持する。raw ORCA body、資格情報、患者詳細、保険詳細は保存しない。
@@ -32,6 +32,8 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - `POST /api/prescriptions` は server-side facility と patient existence を検証し、診療録リビジョンに紐付く `DRAFT` 処方を `prescription_order` / `prescription_order_revision` / `prescription_order_item` / `prescription_order_event` に保存する。
 - `POST /api/prescriptions/{prescriptionId}/finalize` は保存済み current revision の server-side summary から `content_hash` を計算し、`FINALIZE` event を追加する。client 提供 digest は権威値にしない。
 - `POST /api/prescriptions/{prescriptionId}/change|stop|cancel|reissue` は理由必須とし、`CHANGE` / `STOP` / `CANCEL` / `REISSUE` event を append-only で追加する。`change` / `reissue` は新しい構造化 item を持つ revision を要求する。
+- 構造化 item は first-class DTO の `standardName` / `dosageForm` / `days` / `prescriptionLocation` / `medicationRoute` を保存する。client hint が欠落している場合でも、server は `medicalClass` / `medicalClassNumber` から院内外・内服/頓服/外用・日数を再解決し、未知または不正な値は fail-open せず null / unresolved に落とす。
+- `created_by` は認証済み actor から保存し、client payload の owner / role / facility 相当値は採用しない。
 - `FINAL` / `CHANGED` / `STOPPED` / `CANCELLED` / `REISSUED` の処方 order / revision / item は直接 UPDATE / DELETE できない。
 - 確定後の変更、中止、取消、再発行は新 revision と `prescription_order_event` により表現する。
 - `prescription_order_event` は append-only で、UPDATE / DELETE は DB trigger が拒否する。
@@ -63,12 +65,14 @@ Focused server verification:
 
 ```bash
 mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=PrescriptionAuthorityResourceTest,LocalOrcaMedicalCandidateResourceTest,PrescriptionAuthoritySchemaTest,FreshSchemaBaselineTest test
+mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=PrescriptionAuthorityStructuredItemTest,PrescriptionAuthorityResourceTest,PrescriptionAuthoritySchemaTest test
 ```
 
 Focused web verification:
 
 ```bash
 cd web-client && npm test -- --run src/features/charts/__tests__/orcaMedicalCandidateApi.test.ts src/features/charts/__tests__/OrcaMedicalCandidatePanel.test.tsx src/features/charts/__tests__/chartsActionBar.test.tsx
+cd web-client && npm test -- --run src/features/charts/__tests__/prescriptionOrderApi.test.ts
 cd web-client && npm run typecheck
 ```
 

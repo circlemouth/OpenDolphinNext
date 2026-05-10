@@ -10,6 +10,9 @@ public class PrescriptionRp {
     private String bundleName;
     private String medicalClass;
     private String medicalClassNumber;
+    private Integer days;
+    private String prescriptionLocation;
+    private String medicationRoute;
     private String usageCode;
     private String usageName;
     private String memo;
@@ -58,6 +61,30 @@ public class PrescriptionRp {
 
     public void setMedicalClassNumber(String medicalClassNumber) {
         this.medicalClassNumber = medicalClassNumber;
+    }
+
+    public Integer getDays() {
+        return days;
+    }
+
+    public void setDays(Integer days) {
+        this.days = days;
+    }
+
+    public String getPrescriptionLocation() {
+        return prescriptionLocation;
+    }
+
+    public void setPrescriptionLocation(String prescriptionLocation) {
+        this.prescriptionLocation = prescriptionLocation;
+    }
+
+    public String getMedicationRoute() {
+        return medicationRoute;
+    }
+
+    public void setMedicationRoute(String medicationRoute) {
+        this.medicationRoute = medicationRoute;
     }
 
     public String getUsageCode() {

@@ -10,6 +10,8 @@ public class PrescriptionDrug {
     private String name;
     private String quantity;
     private String unit;
+    private String standardName;
+    private String dosageForm;
     private String memo;
     private String validFrom;
     private String validTo;
@@ -59,6 +61,22 @@ public class PrescriptionDrug {
 
     public void setUnit(String unit) {
         this.unit = unit;
+    }
+
+    public String getStandardName() {
+        return standardName;
+    }
+
+    public void setStandardName(String standardName) {
+        this.standardName = standardName;
+    }
+
+    public String getDosageForm() {
+        return dosageForm;
+    }
+
+    public void setDosageForm(String dosageForm) {
+        this.dosageForm = dosageForm;
     }
 
     public String getMemo() {

@@ -48,7 +48,7 @@ class PrescriptionAuthorityRepository {
                 .setParameter(8, Timestamp.from(now))
                 .getSingleResult());
         long revisionId = insertRevision(orderId, 1, "DRAFT", null, null, null, null, actor, now, order, null, order);
-        insertItems(revisionId, order);
+        insertItems(revisionId, order, actor);
         setCurrentRevision(orderId, revisionId, "DRAFT", actor, now);
         insertEvent(orderId, revisionId, "CREATE", null, null, actor, now, null, order);
         return new PrescriptionMutationResult(orderId, revisionId, "DRAFT", null, patientId, encounterId);
@@ -109,7 +109,7 @@ class PrescriptionAuthorityRepository {
                 "FINAL".equals(status) || "CHANGED".equals(status) || "REISSUED".equals(status) ? now : null,
                 actor, now, order, before, order);
         if (order != null) {
-            insertItems(revisionId, order);
+            insertItems(revisionId, order, actor);
         }
         setCurrentRevision(orderId, revisionId, status, actor, now);
         insertEvent(orderId, revisionId, eventType, reasonCode, reasonText, actor, now, before, order);
@@ -179,7 +179,7 @@ class PrescriptionAuthorityRepository {
         return number(id);
     }
 
-    private void insertItems(long revisionId, PrescriptionOrder order) {
+    private void insertItems(long revisionId, PrescriptionOrder order, String actor) {
         if (order == null || order.getRps() == null) {
             return;
         }
@@ -194,33 +194,131 @@ class PrescriptionAuthorityRepository {
                 if (drug == null) {
                     continue;
                 }
-                String drugName = trimToNull(drug.getName());
-                if (drugName == null) {
-                    drugName = "UNRESOLVED_DRUG";
-                }
+                StructuredPrescriptionItemRow row = structuredItemRow(sequence++, rpIndex + 1, rp, drug, actor);
                 entityManager.createNativeQuery("""
                                 INSERT INTO opendolphin.prescription_order_item
                                     (prescription_order_revision_id, item_sequence, rp_sequence, drug_code, drug_name,
-                                     usage_code, usage_name, dose_value, dose_unit, generic_name_prescription,
-                                     doctor_comment, unresolved_reason, item_json)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb))
+                                     standard_name, dosage_form, usage_code, usage_name, dose_value, dose_unit, days,
+                                     prescription_location, medication_route, generic_name_prescription,
+                                     doctor_comment, unresolved_reason, item_json, created_by)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?)
                                 """)
                         .setParameter(1, revisionId)
-                        .setParameter(2, sequence++)
-                        .setParameter(3, rpIndex + 1)
-                        .setParameter(4, trimToNull(drug.getCode()))
-                        .setParameter(5, drugName)
-                        .setParameter(6, trimToNull(rp.getUsageCode()))
-                        .setParameter(7, trimToNull(rp.getUsageName()))
-                        .setParameter(8, trimToNull(drug.getQuantity()))
-                        .setParameter(9, trimToNull(drug.getUnit()))
-                        .setParameter(10, Boolean.TRUE.equals(drug.getGeneralNamePrescription()))
-                        .setParameter(11, trimToNull(firstNonBlank(drug.getDrugComment(), rp.getDoctorComment())))
-                        .setParameter(12, unresolvedReason(rp, drug))
-                        .setParameter(13, json(drug))
+                        .setParameter(2, row.itemSequence())
+                        .setParameter(3, row.rpSequence())
+                        .setParameter(4, row.drugCode())
+                        .setParameter(5, row.drugName())
+                        .setParameter(6, row.standardName())
+                        .setParameter(7, row.dosageForm())
+                        .setParameter(8, row.usageCode())
+                        .setParameter(9, row.usageName())
+                        .setParameter(10, row.doseValue())
+                        .setParameter(11, row.doseUnit())
+                        .setParameter(12, row.days())
+                        .setParameter(13, row.prescriptionLocation())
+                        .setParameter(14, row.medicationRoute())
+                        .setParameter(15, row.genericNamePrescription())
+                        .setParameter(16, row.doctorComment())
+                        .setParameter(17, row.unresolvedReason())
+                        .setParameter(18, row.itemJson())
+                        .setParameter(19, row.createdBy())
                         .executeUpdate();
             }
         }
+    }
+
+    StructuredPrescriptionItemRow structuredItemRow(int itemSequence, int rpSequence, PrescriptionRp rp, PrescriptionDrug drug, String actor) {
+        String drugName = trimToNull(drug.getName());
+        if (drugName == null) {
+            drugName = "UNRESOLVED_DRUG";
+        }
+        return new StructuredPrescriptionItemRow(
+                itemSequence,
+                rpSequence,
+                trimToNull(drug.getCode()),
+                drugName,
+                trimToNull(drug.getStandardName()),
+                trimToNull(drug.getDosageForm()),
+                rp != null ? trimToNull(rp.getUsageCode()) : null,
+                rp != null ? trimToNull(rp.getUsageName()) : null,
+                trimToNull(drug.getQuantity()),
+                trimToNull(drug.getUnit()),
+                resolveDays(rp),
+                resolvePrescriptionLocation(rp),
+                resolveMedicationRoute(rp),
+                Boolean.TRUE.equals(drug.getGeneralNamePrescription()),
+                trimToNull(firstNonBlank(drug.getDrugComment(), rp != null ? rp.getDoctorComment() : null)),
+                unresolvedReason(rp, drug),
+                json(drug),
+                trimToNull(actor));
+    }
+
+    private Integer resolveDays(PrescriptionRp rp) {
+        if (rp == null) {
+            return null;
+        }
+        String classNumber = trimToNull(rp.getMedicalClassNumber());
+        if (classNumber != null && classNumber.matches("\\d{1,4}")) {
+            return Integer.valueOf(classNumber);
+        }
+        Integer explicitDays = rp.getDays();
+        return explicitDays != null && explicitDays >= 0 ? explicitDays : null;
+    }
+
+    private String resolvePrescriptionLocation(PrescriptionRp rp) {
+        if (rp == null) {
+            return null;
+        }
+        String medicalClass = trimToNull(rp.getMedicalClass());
+        if (medicalClass != null) {
+            return medicalClass.endsWith("2") ? "OUTSIDE" : "IN_HOUSE";
+        }
+        String explicit = trimToNull(rp.getPrescriptionLocation());
+        if (explicit == null) {
+            return null;
+        }
+        String normalized = explicit.replace("-", "_").toUpperCase();
+        if ("IN".equals(normalized) || "IN_HOUSE".equals(normalized)) {
+            return "IN_HOUSE";
+        }
+        if ("OUT".equals(normalized) || "OUTSIDE".equals(normalized)) {
+            return "OUTSIDE";
+        }
+        return null;
+    }
+
+    private String resolveMedicationRoute(PrescriptionRp rp) {
+        if (rp == null) {
+            return null;
+        }
+        String medicalClass = trimToNull(rp.getMedicalClass());
+        if (medicalClass != null) {
+            if (medicalClass.startsWith("22")) {
+                return "AS_NEEDED";
+            }
+            if (medicalClass.startsWith("23")) {
+                return "TOPICAL";
+            }
+            return "ORAL";
+        }
+        String explicit = trimToNull(rp.getMedicationRoute());
+        if (explicit == null) {
+            return null;
+        }
+        String normalized = explicit.replace("-", "_").toUpperCase();
+        if (List.of("ORAL", "TOPICAL", "INJECTION", "AS_NEEDED", "OTHER").contains(normalized)) {
+            return normalized;
+        }
+        if ("REGULAR".equals(normalized)) {
+            return "ORAL";
+        }
+        if ("TONYO".equals(normalized) || "PRN".equals(normalized)) {
+            return "AS_NEEDED";
+        }
+        if ("GAIYO".equals(normalized)) {
+            return "TOPICAL";
+        }
+        return null;
     }
 
     private String unresolvedReason(PrescriptionRp rp, PrescriptionDrug drug) {
@@ -330,5 +428,26 @@ class PrescriptionAuthorityRepository {
             String contentHash,
             String patientId,
             String encounterId) {
+    }
+
+    record StructuredPrescriptionItemRow(
+            int itemSequence,
+            int rpSequence,
+            String drugCode,
+            String drugName,
+            String standardName,
+            String dosageForm,
+            String usageCode,
+            String usageName,
+            String doseValue,
+            String doseUnit,
+            Integer days,
+            String prescriptionLocation,
+            String medicationRoute,
+            boolean genericNamePrescription,
+            String doctorComment,
+            String unresolvedReason,
+            String itemJson,
+            String createdBy) {
     }
 }

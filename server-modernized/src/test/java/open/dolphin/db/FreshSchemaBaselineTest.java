@@ -91,7 +91,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0318", appliedVersion(connection));
+                assertEquals("0319", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -188,6 +188,7 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "drug_code"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "usage_code"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "generic_name_prescription"));
+                assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "created_by"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_event", "event_type"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_orca_transmission", "operation_status"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_medical_candidate", "candidate_status"));
