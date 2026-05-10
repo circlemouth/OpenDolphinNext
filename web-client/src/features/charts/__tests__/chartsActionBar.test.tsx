@@ -562,7 +562,7 @@ describe('ChartsActionBar', () => {
     expect(screen.queryByRole('button', { name: 'ORCA 送信' })).not.toBeInTheDocument();
   });
 
-  it('保存・印刷・受付へ戻るは disclosure 外の補助操作として常時表示する', () => {
+  it('埋め込み時は下書き保存と印刷だけを患者情報帯の補助操作として表示する', () => {
     const onReturnToReception = vi.fn();
     const onCloseChartTab = vi.fn();
 
@@ -581,11 +581,11 @@ describe('ChartsActionBar', () => {
       </MemoryRouter>,
     );
 
-    const supportGroup = screen.getByRole('group', { name: '補助操作' });
-    expect(within(supportGroup).getByRole('button', { name: '受付へ戻る' })).toBeInTheDocument();
-    expect(within(supportGroup).getByRole('button', { name: 'ドラフト保存' })).toBeInTheDocument();
-    expect(within(supportGroup).getByRole('button', { name: '印刷/エクスポート' })).toBeInTheDocument();
-    expect(screen.getByText('その他')).toBeInTheDocument();
+    const patientInlineGroup = screen.getByRole('group', { name: '患者情報帯の補助操作' });
+    expect(within(patientInlineGroup).queryByRole('button', { name: '受付へ戻る' })).not.toBeInTheDocument();
+    expect(within(patientInlineGroup).getByRole('button', { name: '下書き保存' })).toBeInTheDocument();
+    expect(within(patientInlineGroup).getByRole('button', { name: '印刷/エクスポート' })).toBeInTheDocument();
+    expect(screen.queryByText('その他')).not.toBeInTheDocument();
     expect(screen.queryByText('補助操作', { selector: 'summary' })).toBeNull();
   });
 });

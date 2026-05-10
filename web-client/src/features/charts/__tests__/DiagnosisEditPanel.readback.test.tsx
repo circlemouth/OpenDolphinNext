@@ -98,15 +98,16 @@ describe('DiagnosisEditPanel readback contract', () => {
     renderPanel();
 
     await user.click(await screen.findByText('転帰あり（1件）'));
+    expect(screen.getByText('保険病名の確認が必要です')).toBeInTheDocument();
     const insuranceList = screen.getByLabelText('ORCA登録病名（転帰あり）');
     expect(within(insuranceList).getByText('糖尿病')).toBeInTheDocument();
-    expect(within(insuranceList).getByText('開始:2026-04-10')).toBeInTheDocument();
-    expect(within(insuranceList).getByText('終了:2026-04-20')).toBeInTheDocument();
-    expect(within(insuranceList).getByText('転帰:治癒')).toBeInTheDocument();
+    expect(within(insuranceList).getByText('2026-04-10')).toBeInTheDocument();
+    expect(within(insuranceList).getByText('終了 2026-04-20')).toBeInTheDocument();
+    expect(within(insuranceList).getByText('治癒')).toBeInTheDocument();
     expect(within(insuranceList).getByText('主')).toBeInTheDocument();
     expect(within(insuranceList).getByText('疑い')).toBeInTheDocument();
 
-    await user.click(within(insuranceList).getByRole('button', { name: 'ORCA病名を更新' }));
+    await user.click(within(insuranceList).getByRole('button', { name: '編集' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'ORCA病名の更新' });
     expect(within(dialog).getByLabelText('病名 *')).toHaveValue('糖尿病');
@@ -156,13 +157,14 @@ describe('DiagnosisEditPanel readback contract', () => {
     renderPanel();
 
     expect(await screen.findByText('ORCA参照病名')).toBeInTheDocument();
-    const mirrorList = screen.getAllByLabelText('ORCA登録病名（活動中）').find((element) => element.tagName.toLowerCase() === 'ul');
+    const mirrorList = screen.getAllByLabelText('ORCA登録病名（活動中）').find((element) => element.tagName.toLowerCase() === 'table');
     if (!mirrorList) {
-      throw new Error('ORCA mirror list was not rendered');
+      throw new Error('ORCA mirror table was not rendered');
     }
     expect(within(mirrorList).getByText('ORCA参照病名')).toBeInTheDocument();
     expect(screen.queryByLabelText(/急性/)).not.toBeInTheDocument();
 
+    await user.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
     await user.type(screen.getByLabelText('病名 *'), '高血');
     await waitFor(() => {
       expect(searchDiseaseMasterCandidates).toHaveBeenCalledWith(expect.objectContaining({ keyword: '高血' }));
@@ -178,7 +180,7 @@ describe('DiagnosisEditPanel readback contract', () => {
     expect(screen.getByLabelText(/コード/)).toHaveValue('I10');
     expect(mutateOrcaDisease).not.toHaveBeenCalled();
 
-    const authoring = screen.getByRole('region', { name: 'ORCAへ病名登録' });
+    const authoring = screen.getByLabelText('ORCAへ病名登録');
     await user.click(within(authoring).getByRole('button', { name: 'ORCAへ病名登録' }));
     const confirmDialog = await screen.findByRole('dialog', { name: 'ORCAへ病名登録' });
     await user.click(within(confirmDialog).getByRole('button', { name: 'ORCAへ病名登録' }));

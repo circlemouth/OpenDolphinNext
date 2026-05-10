@@ -111,7 +111,7 @@ public class DiseaseProjectionService {
     }
 
     public void applyMirrorDiffState(List<Map<String, Object>> localItems, List<DiseaseEntry> mirrorEntries) {
-        if (localItems == null || mirrorEntries == null || mirrorEntries.isEmpty()) {
+        if (localItems == null || localItems.isEmpty() || mirrorEntries == null || mirrorEntries.isEmpty()) {
             return;
         }
         Map<String, Boolean> mirrorKeys = new LinkedHashMap<>();
@@ -163,10 +163,9 @@ public class DiseaseProjectionService {
         entry.setCategory(model.getCategory());
         entry.setSuspectedFlag(model.getCategoryDesc());
         entry.setLayer("orca-mirror");
-        entry.setSyncState("manual-resolution");
+        entry.setSyncState("none");
         entry.setReadOnly(Boolean.TRUE);
         entry.setCandidateOnly(Boolean.FALSE);
-        entry.setNote("保険病名の確認が必要です");
         return entry;
     }
 

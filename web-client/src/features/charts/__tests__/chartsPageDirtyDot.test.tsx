@@ -343,7 +343,7 @@ vi.mock('../ChartsActionBar', () => ({
           id: 'charts-action-draft',
           onClick: runDraftSave,
         },
-        'ドラフト保存（モック）',
+        '下書き保存（モック）',
       ),
       React.createElement(
         'button',
@@ -596,7 +596,7 @@ describe('ChartsPage patient tab dirty indicator', () => {
     });
   });
 
-  it('Shift+Enter でドラフト保存ショートカット後は終了ガードを表示しない', async () => {
+  it('Shift+Enter で下書き保存ショートカット後は終了ガードを表示しない', async () => {
     seedPatientTabStorage();
     seedChartsContext();
 

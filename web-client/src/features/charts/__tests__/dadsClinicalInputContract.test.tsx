@@ -228,17 +228,18 @@ describe('DADS clinical input contract - disease', () => {
   it('keeps clinically important diagnosis state visible in active disease rows', async () => {
     renderDiagnosisPanel();
 
-    const activeList = await screen.findByRole('list', { name: 'ORCA登録病名（活動中）' });
-    const diabetesRow = within(activeList).getByText('糖尿病').closest('li');
-    expect(diabetesRow).not.toBeNull();
-    expect(within(diabetesRow as HTMLElement).getByText('糖尿病')).toBeVisible();
-    expect(within(diabetesRow as HTMLElement).getByText('主')).toBeVisible();
-    expect(within(diabetesRow as HTMLElement).getByText('開始:2026-04-01')).toBeVisible();
-    expect(within(diabetesRow as HTMLElement).getByText('転帰:継続')).toBeVisible();
-    expect(within(diabetesRow as HTMLElement).getByText('終了:-')).toBeVisible();
-    expect(within(diabetesRow as HTMLElement).getByText('コードあり')).toBeVisible();
-    expect(screen.getByText('院内未送信')).toBeVisible();
+    const activeList = await screen.findByRole('table', { name: 'ORCA登録病名（活動中）' });
+    const diabetesTableRow = within(activeList).getByText('糖尿病').closest('tr');
+    expect(diabetesTableRow).not.toBeNull();
+    const diabetesScope = diabetesTableRow as HTMLElement;
+    expect(within(diabetesScope).getByText('糖尿病')).toBeVisible();
+    expect(within(diabetesScope).getByText('主')).toBeVisible();
+    expect(within(diabetesScope).getByText('2026-04-01')).toBeVisible();
+    expect(within(diabetesScope).getByText('継続')).toBeVisible();
+    expect(within(diabetesScope).queryByText('E11.9')).not.toBeInTheDocument();
+    expect(screen.queryByText('院内未送信')).not.toBeInTheDocument();
 
+    await userEvent.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
     const quickStartDate = screen.getByLabelText(/開始日/);
     expect(quickStartDate).toHaveAttribute('type', 'date');
     expect(quickStartDate).not.toHaveAttribute('placeholder');
@@ -253,9 +254,8 @@ describe('DADS clinical input contract - disease', () => {
 
     expect(await screen.findByText(/ORCA病名操作はブロックされています: DADS contract test: 権限がないため編集できません。/)).toBeVisible();
     expect(screen.getByText('閲覧専用を解除するには、タブロック解除または権限設定を確認してください。')).toBeVisible();
-    for (const button of screen.getAllByRole('button', { name: 'ORCAへ病名登録' })) {
-      expect(button).toBeDisabled();
-    }
+    await userEvent.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
+    expect(screen.getByRole('button', { name: 'ORCAへ病名登録' })).toBeDisabled();
   });
 });
 

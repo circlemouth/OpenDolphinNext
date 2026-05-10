@@ -63,7 +63,7 @@ afterEach(() => {
 });
 
 describe('DiagnosisEditPanel ORCA mirror connection', () => {
-  it('shows neutral loading copy instead of unavailable copy while ORCA mirror retrieval is pending', () => {
+  it('shows neutral loading copy instead of unavailable copy while ORCA mirror retrieval is pending', async () => {
     vi.mocked(fetchDiseases).mockReturnValueOnce(new Promise(() => undefined));
 
     renderPanel('2026-05-08');
@@ -73,9 +73,8 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     expect(
       screen.queryByText('ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。'),
     ).not.toBeInTheDocument();
-    for (const button of screen.getAllByRole('button', { name: 'ORCAへ病名登録' })) {
-      expect(button).toBeDisabled();
-    }
+    await userEvent.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
+    expect(screen.getByRole('button', { name: 'ORCAへ病名登録' })).toBeDisabled();
   });
 
   it('shows ORCA registered diagnoses from the connected mirror without auto-authoring local diseases', async () => {
@@ -106,7 +105,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
 
     renderPanel('2026-05-08');
 
-    const mirrorList = await screen.findByRole('list', { name: 'ORCA登録病名（活動中）' });
+    const mirrorList = await screen.findByRole('table', { name: 'ORCA登録病名（活動中）' });
     expect(within(mirrorList).getByText('ORCA登録済み病名')).toBeInTheDocument();
     expect(within(mirrorList).queryByText('ローカル病名')).not.toBeInTheDocument();
     expect(screen.getByText('ORCA側と差分があります')).toBeInTheDocument();
@@ -146,9 +145,8 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
       await screen.findByText('ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。'),
     ).toBeInTheDocument();
     expect(screen.queryByText(/orca\.internal\.example/)).not.toBeInTheDocument();
-    for (const button of screen.getAllByRole('button', { name: 'ORCAへ病名登録' })) {
-      expect(button).toBeDisabled();
-    }
+    await userEvent.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
+    expect(screen.getByRole('button', { name: 'ORCAへ病名登録' })).toBeDisabled();
   });
 
   it('sends ORCA disease create only after explicit confirmation and does not call local diagnosis mutation', async () => {
@@ -163,7 +161,8 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
 
     renderPanel('2026-05-08');
 
-    const authoring = await screen.findByRole('region', { name: 'ORCAへ病名登録' });
+    await user.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
+    const authoring = screen.getByLabelText('ORCAへ病名登録');
     fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: 'HTN' } });
     fireEvent.change(within(authoring).getByLabelText('コード ※任意'), { target: { value: 'I10' } });
     await user.click(within(authoring).getByRole('button', { name: 'ORCAへ病名登録' }));

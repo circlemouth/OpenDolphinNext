@@ -895,6 +895,7 @@ export const chartsStyles = css`
     display: flex;
     flex-direction: column;
     gap: var(--charts-space-sm);
+    position: relative;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__surface {
@@ -905,6 +906,11 @@ export const chartsStyles = css`
     background: transparent;
     box-shadow: none;
     padding: 0;
+  }
+
+  .charts-patient-summary:has(.charts-patient-summary__inline-actionbar) .charts-patient-summary__identity-bar .patient-identity-bar__surface {
+    padding-left: 7.4rem;
+    padding-right: 3.2rem;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__body {
@@ -1143,12 +1149,18 @@ export const chartsStyles = css`
   }
 
   .charts-patient-summary__inline-actionbar {
-    border-top: 1px solid var(--ui-border-subtle);
-    padding-top: var(--charts-space-xs);
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    padding: 0.45rem 0.55rem;
   }
 
   .charts-patient-summary__inline-actionbar .charts-actions {
-    gap: 0.4rem;
+    width: 100%;
+    height: 100%;
+    gap: 0;
+    pointer-events: none;
   }
 
   .charts-patient-summary__inline-actionbar .charts-actions__header {
@@ -1200,6 +1212,57 @@ export const chartsStyles = css`
     display: none;
   }
 
+  .charts-patient-summary__inline-actionbar .charts-actions__patient-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .charts-actions__patient-action-slot {
+    display: flex;
+    align-items: center;
+    pointer-events: auto;
+  }
+
+  .charts-actions__patient-action-slot--left {
+    justify-content: flex-start;
+  }
+
+  .charts-actions__patient-action-slot--right {
+    justify-content: flex-end;
+  }
+
+  .charts-actions__button--patient-draft {
+    min-height: 2rem;
+    padding: 0.36rem 0.62rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    background: rgba(248, 250, 252, 0.96);
+    border-color: rgba(100, 116, 139, 0.32);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .charts-actions__button--patient-print {
+    width: 2.15rem;
+    min-width: 2.15rem;
+    height: 2.15rem;
+    padding: 0;
+    border-radius: 999px;
+    background: rgba(236, 254, 255, 0.98);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .charts-actions__button--patient-print span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
   .charts-patient-summary__inline-actionbar .charts-actions__guard-summary,
   .charts-patient-summary__inline-actionbar .charts-actions__banner,
   .charts-patient-summary__inline-actionbar .charts-actions__banner-actions,
@@ -1213,6 +1276,21 @@ export const chartsStyles = css`
   }
 
   @media (max-width: 720px) {
+    .charts-patient-summary:has(.charts-patient-summary__inline-actionbar) .charts-patient-summary__identity-bar .patient-identity-bar__surface {
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    .charts-patient-summary__inline-actionbar {
+      position: static;
+      padding: 0 0 var(--charts-space-xs);
+      order: -1;
+    }
+
+    .charts-patient-summary__inline-actionbar .charts-actions__patient-inline {
+      height: auto;
+    }
+
     .charts-patient-summary__identity-bar .patient-identity-bar__body {
       grid-template-columns: 1fr;
       grid-template-areas:
@@ -4096,41 +4174,6 @@ export const chartsStyles = css`
     gap: var(--charts-space-xs);
   }
 
-  .charts-side-panel__items.charts-diagnosis__items {
-    gap: var(--charts-space-xs);
-  }
-
-  .charts-diagnosis__list-scroll {
-    max-height: clamp(132px, 22vh, 280px);
-    overflow-y: auto;
-    padding-right: var(--charts-space-2xs);
-    scrollbar-gutter: stable both-edges;
-  }
-
-  .charts-diagnosis__item.charts-side-panel__items li,
-  .charts-side-panel__items .charts-diagnosis__item {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    gap: var(--charts-space-xs);
-    padding: var(--charts-space-xs) var(--charts-space-sm);
-  }
-
-  .charts-diagnosis__item-main {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  .charts-diagnosis__title {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--charts-space-xs);
-    align-items: baseline;
-    min-width: 0;
-  }
-
   .charts-diagnosis__name {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -4144,19 +4187,11 @@ export const chartsStyles = css`
     color: #64748b;
   }
 
-  .charts-diagnosis__meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--charts-space-xs);
-    align-items: center;
-    font-size: 0.75rem;
-    color: #64748b;
-  }
-
   .charts-diagnosis__badges {
     display: inline-flex;
     gap: 4px;
     align-items: center;
+    flex-wrap: wrap;
   }
 
   .charts-diagnosis__badge {
@@ -4180,24 +4215,10 @@ export const chartsStyles = css`
     color: #166534;
   }
 
-  .charts-diagnosis__badge--sub {
-    border-color: rgba(99, 102, 241, 0.3);
-    background: rgba(99, 102, 241, 0.12);
-    color: #3730a3;
-  }
-
   .charts-diagnosis__badge--suspected {
     border-color: rgba(234, 88, 12, 0.35);
     background: rgba(234, 88, 12, 0.12);
     color: #9a3412;
-  }
-
-  .charts-diagnosis__dates {
-    font-variant-numeric: tabular-nums;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.42rem;
-    align-items: center;
   }
 
   .charts-diagnosis__code-state {
@@ -4210,21 +4231,175 @@ export const chartsStyles = css`
     line-height: 1.2;
   }
 
-  .charts-diagnosis__code-state--ok {
-    border: 1px solid rgba(34, 197, 94, 0.42);
-    background: rgba(34, 197, 94, 0.12);
-    color: #166534;
-  }
-
   .charts-diagnosis__code-state--warn {
     border: 1px solid rgba(234, 88, 12, 0.45);
     background: rgba(255, 237, 213, 0.85);
     color: #9a3412;
   }
 
+  .charts-diagnosis__table-wrap {
+    max-height: clamp(112px, 20vh, 240px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid var(--ui-border-subtle);
+    border-radius: var(--charts-radius-sm);
+    background: #ffffff;
+    scrollbar-gutter: stable both-edges;
+  }
+
+  .charts-diagnosis__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.74rem;
+    color: #334155;
+  }
+
+  .charts-diagnosis__table th,
+  .charts-diagnosis__table td {
+    border-bottom: 1px solid var(--ui-border-subtle);
+    padding: 0.28rem 0.35rem;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .charts-diagnosis__table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .charts-diagnosis__table tbody tr:last-child th,
+  .charts-diagnosis__table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .charts-diagnosis__cell {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .charts-diagnosis__cell--name {
+    width: 32%;
+    min-width: 9rem;
+    color: #0f172a;
+  }
+
+  .charts-diagnosis__cell--attrs {
+    width: 4.4rem;
+  }
+
+  .charts-diagnosis__cell--date {
+    width: 6.2rem;
+    white-space: nowrap;
+  }
+
+  .charts-diagnosis__cell--outcome {
+    width: 6.2rem;
+  }
+
+  .charts-diagnosis__cell--actions {
+    width: 6.8rem;
+  }
+
+  .charts-diagnosis__subvalue {
+    display: block;
+    margin-top: 1px;
+    color: #64748b;
+    font-size: 0.68rem;
+    white-space: nowrap;
+  }
+
   .charts-side-panel__item-actions.charts-diagnosis__item-actions button {
-    padding: 2px var(--charts-space-sm);
-    font-size: 0.75rem;
+    padding: 2px 0.35rem;
+    font-size: 0.7rem;
+    line-height: 1.35;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__table {
+    display: block;
+    font-size: 0.68rem;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__table tbody {
+    display: grid;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name actions"
+      "attrs actions"
+      "date actions";
+    column-gap: var(--charts-space-xs);
+    row-gap: 2px;
+    padding: 0.34rem 0.4rem;
+    border-bottom: 1px solid var(--ui-border-subtle);
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__table th,
+  .charts-workbench__column--left .charts-diagnosis__table td {
+    display: flex;
+    align-items: center;
+    border-bottom: 0;
+    padding: 0;
+    min-width: 0;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__cell--name {
+    grid-area: name;
+    width: auto;
+    min-width: 0;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__cell--attrs {
+    grid-area: attrs;
+    width: auto;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__cell--date {
+    grid-area: date;
+    width: auto;
+    color: #64748b;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__cell--outcome {
+    display: none;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__cell--actions {
+    grid-area: actions;
+    width: auto;
+    align-self: center;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__item-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .charts-workbench__column--left .charts-side-panel__item-actions.charts-diagnosis__item-actions button {
+    min-width: 2.4rem;
+    padding: 1px 0.26rem;
+    font-size: 0.66rem;
   }
 
   .charts-diagnosis__ended {
@@ -4338,12 +4513,65 @@ export const chartsStyles = css`
   .charts-diagnosis__quick-add--authoring {
     border-color: rgba(37, 99, 235, 0.22);
     background: #ffffff;
+    padding: 0;
+    gap: 0;
+  }
+
+  .charts-diagnosis__quick-summary {
+    cursor: pointer;
+    display: flex;
+    gap: var(--charts-space-xs);
+    align-items: center;
+    padding: 0.42rem var(--charts-space-sm);
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .charts-diagnosis__quick-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .charts-diagnosis__quick-summary::before {
+    content: '+';
+    display: inline-grid;
+    place-items: center;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 999px;
+    border: 1px solid rgba(37, 99, 235, 0.36);
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    line-height: 1;
+  }
+
+  .charts-diagnosis__quick-add--authoring[open] .charts-diagnosis__quick-summary::before {
+    content: '-';
+  }
+
+  .charts-diagnosis__quick-summary .charts-side-panel__help {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.7rem;
+    font-weight: 700;
+    min-width: 0;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__quick-summary .charts-side-panel__help {
+    display: none;
+  }
+
+  .charts-diagnosis__quick-body {
+    display: grid;
+    gap: var(--charts-space-xs);
+    padding: 0 var(--charts-space-sm) var(--charts-space-sm);
   }
 
   .charts-diagnosis__quick-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: var(--charts-space-sm);
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--charts-space-xs);
     align-items: end;
   }
 
@@ -4374,6 +4602,24 @@ export const chartsStyles = css`
     padding: 0.35rem 0.8rem;
     font-weight: 800;
     cursor: pointer;
+  }
+
+  .charts-diagnosis__dialog-add {
+    justify-self: start;
+    border-radius: 999px;
+    border: 1px solid var(--ui-border);
+    background: #ffffff;
+    color: #475569;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .charts-diagnosis__dialog-add:disabled {
+    background: #e2e8f0;
+    color: #94a3b8;
+    cursor: not-allowed;
   }
 
   .charts-diagnosis__confirm {

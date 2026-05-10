@@ -1515,7 +1515,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     if (draftState.dirty || lockState.locked || tabLockReadOnlyRef.current) {
       setContextAlert({
         tone: 'warning',
-        message: '未保存ドラフトまたは処理中のため、URL からの患者切替をブロックしました（別患者混入防止）。',
+        message: '未保存下書きまたは処理中のため、URL からの患者切替をブロックしました（別患者混入防止）。',
       });
       const blockedReasons = [
         ...(draftState.dirty ? ['draft_dirty'] : []),
@@ -3750,7 +3750,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
           { keys: 'Alt+S', label: 'ORCA送信' },
           { keys: 'Alt+E', label: '診療終了' },
           { keys: 'Alt+I', label: '印刷' },
-          { keys: 'Shift+Enter', label: 'ドラフト保存' },
+          { keys: 'Shift+Enter', label: '下書き保存' },
         ],
       },
       {
@@ -4491,7 +4491,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         onClose={handleTabGuardCancel}
         testId="charts-tab-guard-dialog"
       >
-        <section className="charts-tab-guard" aria-label="未保存ドラフト確認">
+        <section className="charts-tab-guard" aria-label="未保存下書き確認">
           <p className="charts-tab-guard__message">
             未保存の入力があります。続行方法を選択してください。
           </p>
@@ -4528,7 +4528,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
             </div>
           </dl>
           {tabGuard?.saveError ? <p className="charts-tab-guard__message">{tabGuard.saveError}</p> : null}
-          <div className="charts-tab-guard__actions" role="group" aria-label="未保存ドラフト操作">
+          <div className="charts-tab-guard__actions" role="group" aria-label="未保存下書き操作">
             <button type="button" onClick={() => void handleTabGuardChoice('cancel')}>
               キャンセル
             </button>

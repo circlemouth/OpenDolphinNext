@@ -117,7 +117,7 @@ const ACTION_LABEL: Record<ChartAction, string> = {
   pause: '診察中断',
   finish: '診察終了して会計へ送信',
   send: 'ORCA送信',
-  draft: 'ドラフト保存',
+  draft: '下書き保存',
   cancel: 'キャンセル',
   print: '印刷',
 };
@@ -559,9 +559,9 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     if (!embedded && hasUnsavedDraft) {
       reasons.push({
         key: 'draft_unsaved',
-        summary: '未保存ドラフト: 保存前で送信不可',
-        detail: '未保存の入力があるため、送信前にドラフト保存が必要です。',
-        next: ['ドラフト保存', '不要なら入力を戻してから再送'],
+        summary: '未保存下書き: 保存前で送信不可',
+        detail: '未保存の入力があるため、送信前に下書き保存が必要です。',
+        next: ['下書き保存', '不要なら入力を戻してから再送'],
       });
     }
 
@@ -2231,21 +2231,21 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           id="charts-action-draft"
           className={`charts-actions__button charts-actions__button--draft${
             compactHeader && isHeaderCollapsed ? ' charts-actions__button--compact' : ''
-          }`}
+          }${embedded ? ' charts-actions__button--patient-draft' : ''}`}
           disabled={otherBlocked}
           data-disabled-reason={otherBlocked ? (isLocked ? 'locked' : undefined) : undefined}
           onClick={() => handleAction('draft')}
           aria-keyshortcuts="Shift+Enter"
         >
           <ClinicalIcon icon="draft-clinical" />
-          <span>ドラフト保存</span>
+          <span>下書き保存</span>
         </button>
       );
   const printActionButton = (
     <button
       type="button"
       id="charts-action-print"
-      className="charts-actions__button charts-actions__button--print"
+      className={`charts-actions__button charts-actions__button--print${embedded ? ' charts-actions__button--patient-print' : ''}`}
       disabled={printDisabled}
       aria-disabled={printDisabled}
       onClick={openPrintDialog}
@@ -2728,6 +2728,18 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         </div>
       ) : null}
 
+      {embedded ? (
+        <div className="charts-actions__patient-inline" role="group" aria-label="患者情報帯の補助操作">
+          <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--left">
+            {draftSaveButton}
+          </div>
+          <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--right">
+            {printActionButton}
+          </div>
+        </div>
+      ) : null}
+
+      {!embedded ? (
       <div className="charts-actions__controls">
         <div className="charts-actions__group" data-group="encounter" role="group" aria-label={embedded ? '診察開始' : '診察状況更新'}>
           <button
@@ -2821,7 +2833,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           {printActionButton}
         </div>
       </div>
-      {(!embedded || closeTabButton || !otherBlocked || isLocked) ? (
+      ) : null}
+      {!embedded ? (
         <details className="charts-actions__more">
           <summary className="charts-actions__more-summary">その他</summary>
           <div className="charts-actions__more-actions" role="group" aria-label="追加操作">

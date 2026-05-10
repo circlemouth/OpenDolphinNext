@@ -112,6 +112,23 @@ class LocalDiagnosisResourceTest {
     }
 
     @Test
+    void getDiagnosesDoesNotMarkOrcaMirrorWhenNoLocalPendingDisease() throws Exception {
+        setField(resource, "karteServiceBean", new EmptyDiagnosisKarteServiceBean());
+        setField(resource, "orcaTransport", new StubOrcaTransport(orcaDiseaseResponse("ORCA登録済み病名", "I10")));
+
+        Map<String, Object> response = resource.getDiagnoses(request, "00001", null, "2026-05-08", false);
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> diseases = (List<Map<String, Object>>) response.get("diseases");
+        assertEquals(1, diseases.size());
+        assertEquals("none", diseases.get(0).get("syncState"));
+        assertEquals(null, diseases.get(0).get("note"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> pending = (List<Map<String, Object>>) response.get("pendingLocalDiseases");
+        assertEquals(0, pending.size());
+    }
+
+    @Test
     void getDiagnosesDoesNotFallbackToLocalDiseasesAndSanitizesMirrorFailure() throws Exception {
         setField(resource, "orcaTransport", new FailingOrcaTransport());
 
@@ -462,6 +479,20 @@ class LocalDiagnosisResourceTest {
 
         List<Long> getRemovedDiagnosisIds() {
             return removedDiagnosisIds;
+        }
+    }
+
+    private static final class EmptyDiagnosisKarteServiceBean extends KarteServiceBean {
+        @Override
+        public KarteBean getKarte(String fid, String pid, Date fromDate) {
+            KarteBean karte = new KarteBean();
+            karte.setId(1001L);
+            return karte;
+        }
+
+        @Override
+        public List<RegisteredDiagnosisModel> getDiagnosis(long karteId, Date fromDate, boolean activeOnly) {
+            return List.of();
         }
     }
 

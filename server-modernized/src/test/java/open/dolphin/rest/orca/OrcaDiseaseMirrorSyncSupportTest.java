@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 class OrcaDiseaseMirrorSyncSupportTest {
 
     @Test
-    void buildImportResponse_marksMirrorEntriesReadOnlyAndManualResolution() {
+    void buildImportResponse_marksMirrorEntriesReadOnlyWithoutDefaultManualResolution() {
         RegisteredDiagnosisModel diagnosis = new RegisteredDiagnosisModel();
         diagnosis.setId(91L);
         diagnosis.setDiagnosis("高血圧症");
@@ -34,9 +34,9 @@ class OrcaDiseaseMirrorSyncSupportTest {
         assertEquals(1, response.getDiseases().size());
         DiseaseImportResponse.DiseaseEntry entry = response.getDiseases().get(0);
         assertEquals("orca-mirror", entry.getLayer());
-        assertEquals("manual-resolution", entry.getSyncState());
+        assertEquals("none", entry.getSyncState());
         assertTrue(Boolean.TRUE.equals(entry.getReadOnly()));
         assertTrue(Boolean.FALSE.equals(entry.getCandidateOnly()));
-        assertEquals("保険病名の確認が必要です", entry.getNote());
+        assertEquals(null, entry.getNote());
     }
 }

@@ -190,46 +190,84 @@ function DiseaseRow({
   entry: DiseaseEntry;
   actions?: ReactNode;
 }) {
+  const isMain = isMainDisease(entry);
+  const isSuspected = isSuspectedDisease(entry);
+  const hasDiagnosisCode = Boolean(entry.diagnosisCode?.trim());
+  const hasOutcome = Boolean(entry.outcome?.trim());
+  const hasEnded = Boolean(entry.endDate?.trim());
+  const hasAttributes = isMain || isSuspected || !hasDiagnosisCode;
+
   return (
-    <li className="charts-diagnosis__item">
-      <div className="charts-diagnosis__item-main">
-        <div className="charts-diagnosis__title">
-          <strong className="charts-diagnosis__name">{formatEntryName(entry)}</strong>
-          {entry.diagnosisCode ? <span className="charts-diagnosis__code">({entry.diagnosisCode})</span> : null}
-        </div>
-        <div className="charts-diagnosis__meta">
+    <tr className="charts-diagnosis__row">
+      <th scope="row" className="charts-diagnosis__cell charts-diagnosis__cell--name">
+        <span className="charts-diagnosis__name">{formatEntryName(entry)}</span>
+      </th>
+      <td className="charts-diagnosis__cell charts-diagnosis__cell--attrs">
+        {hasAttributes ? (
           <span className="charts-diagnosis__badges" role="list" aria-label="病名属性">
-            {isMainDisease(entry) ? (
+            {isMain ? (
               <span className="charts-diagnosis__badge charts-diagnosis__badge--main" role="listitem">
                 主
               </span>
-            ) : (
-              <span className="charts-diagnosis__badge charts-diagnosis__badge--sub" role="listitem">
-                副
-              </span>
-            )}
-            {isSuspectedDisease(entry) ? (
+            ) : null}
+            {isSuspected ? (
               <span className="charts-diagnosis__badge charts-diagnosis__badge--suspected" role="listitem">
                 疑い
               </span>
             ) : null}
+            {!hasDiagnosisCode ? (
+              <span className="charts-diagnosis__code-state charts-diagnosis__code-state--warn" role="listitem">
+                コード未設定
+              </span>
+            ) : null}
           </span>
-          <span className="charts-diagnosis__dates">
-            <span>開始:{entry.startDate ? entry.startDate : '-'}</span>
-            <span>転帰:{entry.outcome ? entry.outcome : '-'}</span>
-            <span>終了:{entry.endDate ? entry.endDate : '-'}</span>
-            <span className={`charts-diagnosis__code-state${entry.diagnosisCode ? ' charts-diagnosis__code-state--ok' : ' charts-diagnosis__code-state--warn'}`}>
-              {entry.diagnosisCode ? 'コードあり' : 'コード未設定'}
-            </span>
-          </span>
-        </div>
-      </div>
-      {actions ? (
-        <div className="charts-side-panel__item-actions charts-diagnosis__item-actions" role="group" aria-label="病名操作">
-          {actions}
-        </div>
-      ) : null}
-    </li>
+        ) : null}
+      </td>
+      <td className="charts-diagnosis__cell charts-diagnosis__cell--date">{entry.startDate ? entry.startDate : '-'}</td>
+      <td className="charts-diagnosis__cell charts-diagnosis__cell--outcome">
+        {hasOutcome ? <span>{entry.outcome}</span> : null}
+        {hasEnded ? <span className="charts-diagnosis__subvalue">終了 {entry.endDate}</span> : null}
+      </td>
+      <td className="charts-diagnosis__cell charts-diagnosis__cell--actions">
+        {actions ? (
+          <div className="charts-side-panel__item-actions charts-diagnosis__item-actions" role="group" aria-label={`${formatEntryName(entry)}の病名操作`}>
+            {actions}
+          </div>
+        ) : null}
+      </td>
+    </tr>
+  );
+}
+
+function DiseaseTable({
+  entries,
+  ariaLabel,
+  actions,
+}: {
+  entries: DiseaseEntry[];
+  ariaLabel: string;
+  actions?: (entry: DiseaseEntry) => ReactNode;
+}) {
+  if (entries.length === 0) return null;
+  return (
+    <div className="charts-diagnosis__table-wrap">
+      <table className="charts-diagnosis__table" aria-label={ariaLabel}>
+        <thead>
+          <tr>
+            <th scope="col">病名</th>
+            <th scope="col">属性</th>
+            <th scope="col">開始</th>
+            <th scope="col">転帰</th>
+            <th scope="col">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => (
+            <DiseaseRow key={buildEntryKey(entry)} entry={entry} actions={actions?.(entry)} />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -437,6 +475,8 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         tone: result.ok ? 'success' : 'error',
         message: result.ok ? 'ORCA病名を処理しました。再取得結果を反映します。' : failureMessage,
       });
+      setPendingAction(null);
+      setIsEditorOpen(false);
       recordOutpatientFunnel('charts_action', {
         runId: result.runId ?? meta.runId,
         cacheHit: meta.cacheHit ?? false,
@@ -470,10 +510,8 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
       });
       if (result.ok) {
         queryClient.invalidateQueries({ queryKey });
-        setPendingAction(null);
         setForm(buildEmptyForm(today));
         setEditingEntry(undefined);
-        setIsEditorOpen(false);
         setQuickAdd({ name: '', code: '', startDate: today, isMain: false, isSuspected: false });
         setQuickCandidateSelection('');
       }
@@ -481,6 +519,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     onError: (error: unknown, input) => {
       const message = error instanceof Error ? error.message : String(error);
       setNotice({ tone: 'error', message: `ORCA病名の処理に失敗しました: ${message}` });
+      setPendingAction(null);
       logAuditEvent({
         runId: meta.runId,
         cacheHit: meta.cacheHit,
@@ -528,6 +567,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         tone: result.ok ? 'success' : 'error',
         message: result.ok ? 'ORCA病名を削除しました。再取得結果を反映します。' : failureMessage,
       });
+      setPendingAction(null);
       logAuditEvent({
         runId: result.runId ?? meta.runId,
         cacheHit: meta.cacheHit,
@@ -549,13 +589,13 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         },
       });
       if (result.ok) {
-        setPendingAction(null);
         queryClient.invalidateQueries({ queryKey });
       }
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       setNotice({ tone: 'error', message: `ORCA病名の削除に失敗しました: ${message}` });
+      setPendingAction(null);
     },
   });
 
@@ -585,14 +625,15 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         tone: result.ok ? 'success' : 'error',
         message: result.ok ? '削除病名を整理しました。再取得結果を反映します。' : failureMessage,
       });
+      setPendingAction(null);
       if (result.ok) {
-        setPendingAction(null);
         queryClient.invalidateQueries({ queryKey });
       }
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       setNotice({ tone: 'error', message: `削除病名の整理に失敗しました: ${message}` });
+      setPendingAction(null);
     },
   });
 
@@ -611,7 +652,9 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     if (pendingLocalList.length > 0) {
       addNote('院内未送信の病名があります。ORCAへ登録するまで主一覧には表示しません。');
     }
-    addNote(DISEASE_MANUAL_RESOLUTION_NOTE);
+    if (list.some((entry) => entry.syncState === 'manual-resolution')) {
+      addNote(DISEASE_MANUAL_RESOLUTION_NOTE);
+    }
     for (const entry of list) {
       if (entry.note?.trim()) {
         addNote(entry.note.trim(), entry.syncState === 'conflict' || entry.syncState === 'stale' ? 'error' : 'info');
@@ -692,12 +735,9 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
       <header className="charts-side-panel__section-header">
         <div>
           <strong>ORCA登録病名</strong>
-          <p className="charts-diagnosis__lead">カルテ画面の病名は ORCA 再取得結果を正本にします。院内未送信の病名は別枠で確認します。</p>
+          <p className="charts-diagnosis__lead">ORCA再取得結果を正本として表示</p>
         </div>
         <div className="charts-diagnosis__header-actions" role="group" aria-label="病名操作">
-          <button type="button" className="charts-side-panel__ghost" onClick={openCreate} disabled={isOrcaMutationBlocked || isAnyMutationPending}>
-            ORCAへ病名登録
-          </button>
           <button
             type="button"
             className="charts-side-panel__ghost"
@@ -742,106 +782,108 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
       ) : null}
       {notice ? <div className={`charts-side-panel__notice charts-side-panel__notice--${notice.tone}`}>{notice.message}</div> : null}
 
-      <section className="charts-diagnosis__quick-add charts-diagnosis__quick-add--authoring" aria-label="ORCAへ病名登録">
-        <div className="charts-side-panel__subheader">
-          <strong>ORCAへ病名登録</strong>
+      <details className="charts-diagnosis__quick-add charts-diagnosis__quick-add--authoring" aria-label="ORCAへ病名登録">
+        <summary className="charts-diagnosis__quick-summary">
+          <span>ORCAへ病名登録</span>
           <span className="charts-side-panel__help">{DISEASE_CANDIDATE_CONFIRM_NOTE}</span>
-        </div>
-        <div className="charts-diagnosis__quick-grid">
-          <div className="charts-side-panel__field">
-            <label htmlFor="diagnosis-quick-name">病名 *</label>
-            <input
-              id="diagnosis-quick-name"
-              value={quickAdd.name}
-              onChange={(event) => {
-                setQuickCandidateSelection('');
-                setQuickAdd((prev) => ({ ...prev, name: event.target.value }));
-              }}
-              placeholder="例: 高血圧症"
-              disabled={isOrcaMutationBlocked || isAnyMutationPending}
-            />
+        </summary>
+        <div className="charts-diagnosis__quick-body">
+          <div className="charts-diagnosis__quick-grid">
+            <div className="charts-side-panel__field">
+              <label htmlFor="diagnosis-quick-name">病名 *</label>
+              <input
+                id="diagnosis-quick-name"
+                value={quickAdd.name}
+                onChange={(event) => {
+                  setQuickCandidateSelection('');
+                  setQuickAdd((prev) => ({ ...prev, name: event.target.value }));
+                }}
+                placeholder="例: 高血圧症"
+                disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              />
+            </div>
+            <div className="charts-side-panel__field charts-diagnosis__quick-candidates">
+              <label htmlFor="diagnosis-quick-candidate">病名マスター候補</label>
+              <select
+                id="diagnosis-quick-candidate"
+                value={quickCandidateSelection}
+                onChange={(event) => applyQuickCandidate(event.target.value)}
+                disabled={isOrcaMutationBlocked || isAnyMutationPending || quickCandidateOptions.length === 0}
+              >
+                <option value="">{quickCandidateOptions.length > 0 ? '候補を選択して入力へ反映' : '候補なし'}</option>
+                {quickCandidateOptions.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {quickCandidateQuery.isFetching ? <p className="charts-side-panel__help charts-diagnosis__quick-candidate-help">候補を検索中...</p> : null}
+              {!quickCandidateQuery.isFetching && quickAdd.name.trim().length >= QUICK_CANDIDATE_MIN_KEYWORD && quickCandidateOptions.length === 0 ? (
+                <p className="charts-side-panel__help charts-diagnosis__quick-candidate-help">一致する候補はありません。</p>
+              ) : null}
+            </div>
+            <div className="charts-side-panel__field">
+              <label htmlFor="diagnosis-quick-code">コード ※任意</label>
+              <input
+                id="diagnosis-quick-code"
+                value={quickAdd.code}
+                onChange={(event) => setQuickAdd((prev) => ({ ...prev, code: event.target.value }))}
+                placeholder="例: I10"
+                disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              />
+            </div>
+            <div className="charts-side-panel__field">
+              <label htmlFor="diagnosis-quick-start">開始日 ※必須</label>
+              <input
+                id="diagnosis-quick-start"
+                type="date"
+                value={quickAdd.startDate}
+                onChange={(event) => {
+                  setQuickCandidateSelection('');
+                  setQuickAdd((prev) => ({ ...prev, startDate: event.target.value }));
+                }}
+                disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              />
+            </div>
+            <label className="charts-side-panel__toggle">
+              <input
+                type="checkbox"
+                checked={quickAdd.isMain}
+                onChange={(event) => setQuickAdd((prev) => ({ ...prev, isMain: event.target.checked }))}
+                disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              />
+              主病名
+            </label>
+            <label className="charts-side-panel__toggle">
+              <input
+                type="checkbox"
+                checked={quickAdd.isSuspected}
+                onChange={(event) => setQuickAdd((prev) => ({ ...prev, isSuspected: event.target.checked }))}
+                disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              />
+              疑い
+            </label>
           </div>
-          <div className="charts-side-panel__field charts-diagnosis__quick-candidates">
-            <label htmlFor="diagnosis-quick-candidate">病名マスター候補</label>
-            <select
-              id="diagnosis-quick-candidate"
-              value={quickCandidateSelection}
-              onChange={(event) => applyQuickCandidate(event.target.value)}
-              disabled={isOrcaMutationBlocked || isAnyMutationPending || quickCandidateOptions.length === 0}
+          <div className="charts-diagnosis__quick-actions">
+            <button
+              type="button"
+              disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              onClick={() => {
+                requestFormMutation('create', {
+                  ...buildEmptyForm(today),
+                  name: quickAdd.name.trim(),
+                  code: quickAdd.code.trim(),
+                  startDate: quickAdd.startDate || today,
+                  isMain: quickAdd.isMain,
+                  isSuspected: quickAdd.isSuspected,
+                });
+              }}
             >
-              <option value="">{quickCandidateOptions.length > 0 ? '候補を選択して入力へ反映' : '候補なし'}</option>
-              {quickCandidateOptions.map((option) => (
-                <option key={option.key} value={option.key}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {quickCandidateQuery.isFetching ? <p className="charts-side-panel__help charts-diagnosis__quick-candidate-help">候補を検索中...</p> : null}
-            {!quickCandidateQuery.isFetching && quickAdd.name.trim().length >= QUICK_CANDIDATE_MIN_KEYWORD && quickCandidateOptions.length === 0 ? (
-              <p className="charts-side-panel__help charts-diagnosis__quick-candidate-help">一致する候補はありません。</p>
-            ) : null}
+              ORCAへ病名登録
+            </button>
           </div>
-          <div className="charts-side-panel__field">
-            <label htmlFor="diagnosis-quick-code">コード ※任意</label>
-            <input
-              id="diagnosis-quick-code"
-              value={quickAdd.code}
-              onChange={(event) => setQuickAdd((prev) => ({ ...prev, code: event.target.value }))}
-              placeholder="例: I10"
-              disabled={isOrcaMutationBlocked || isAnyMutationPending}
-            />
-          </div>
-          <div className="charts-side-panel__field">
-            <label htmlFor="diagnosis-quick-start">開始日 ※必須</label>
-            <input
-              id="diagnosis-quick-start"
-              type="date"
-              value={quickAdd.startDate}
-              onChange={(event) => {
-                setQuickCandidateSelection('');
-                setQuickAdd((prev) => ({ ...prev, startDate: event.target.value }));
-              }}
-              disabled={isOrcaMutationBlocked || isAnyMutationPending}
-            />
-          </div>
-          <label className="charts-side-panel__toggle">
-            <input
-              type="checkbox"
-              checked={quickAdd.isMain}
-              onChange={(event) => setQuickAdd((prev) => ({ ...prev, isMain: event.target.checked }))}
-              disabled={isOrcaMutationBlocked || isAnyMutationPending}
-            />
-            主病名
-          </label>
-          <label className="charts-side-panel__toggle">
-            <input
-              type="checkbox"
-              checked={quickAdd.isSuspected}
-              onChange={(event) => setQuickAdd((prev) => ({ ...prev, isSuspected: event.target.checked }))}
-              disabled={isOrcaMutationBlocked || isAnyMutationPending}
-            />
-            疑い
-          </label>
         </div>
-        <div className="charts-diagnosis__quick-actions">
-          <button
-            type="button"
-            disabled={isOrcaMutationBlocked || isAnyMutationPending}
-            onClick={() => {
-              requestFormMutation('create', {
-                ...buildEmptyForm(today),
-                name: quickAdd.name.trim(),
-                code: quickAdd.code.trim(),
-                startDate: quickAdd.startDate || today,
-                isMain: quickAdd.isMain,
-                isSuspected: quickAdd.isSuspected,
-              });
-            }}
-          >
-            ORCAへ病名登録
-          </button>
-        </div>
-      </section>
+      </details>
 
       <section className="charts-diagnosis__quick-add" aria-label="ORCA登録病名">
         <div className="charts-side-panel__subheader">
@@ -854,18 +896,46 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         ) : null}
         {mirrorList.length > 0 ? (
           <>
-            <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="ORCA登録病名（活動中）">
-              {activeMirrorList.map((entry) => (
-                <DiseaseRow
-                  key={buildEntryKey(entry)}
-                  entry={entry}
-                  actions={
+            <DiseaseTable
+              entries={activeMirrorList}
+              ariaLabel="ORCA登録病名（活動中）"
+              actions={(entry) => (
+                <>
+                  <button type="button" onClick={() => openEdit(entry)} disabled={isOrcaMutationBlocked || isAnyMutationPending}>
+                    編集
+                  </button>
+                  <button
+                    type="button"
+                    className="charts-side-panel__ghost--danger"
+                    onClick={() =>
+                      setPendingAction({
+                        operation: 'delete',
+                        title: 'ORCA病名を削除',
+                        confirmLabel: 'ORCA病名を削除',
+                        entry,
+                      })
+                    }
+                    disabled={isOrcaMutationBlocked || isAnyMutationPending}
+                  >
+                    削除
+                  </button>
+                </>
+              )}
+            />
+            {endedMirrorList.length > 0 ? (
+              <details className="charts-diagnosis__ended">
+                <summary className="charts-diagnosis__ended-summary">転帰あり（{endedMirrorList.length}件）</summary>
+                <DiseaseTable
+                  entries={endedMirrorList}
+                  ariaLabel="ORCA登録病名（転帰あり）"
+                  actions={(entry) => (
                     <>
                       <button type="button" onClick={() => openEdit(entry)} disabled={isOrcaMutationBlocked || isAnyMutationPending}>
-                        ORCA病名を更新
+                        編集
                       </button>
                       <button
                         type="button"
+                        className="charts-side-panel__ghost--danger"
                         onClick={() =>
                           setPendingAction({
                             operation: 'delete',
@@ -876,77 +946,42 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                         }
                         disabled={isOrcaMutationBlocked || isAnyMutationPending}
                       >
-                        ORCA病名を削除
+                        削除
                       </button>
                     </>
-                  }
+                  )}
                 />
-              ))}
-            </ul>
-            {endedMirrorList.length > 0 ? (
-              <details className="charts-diagnosis__ended">
-                <summary className="charts-diagnosis__ended-summary">転帰あり（{endedMirrorList.length}件）</summary>
-                <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="ORCA登録病名（転帰あり）">
-                  {endedMirrorList.map((entry) => (
-                    <DiseaseRow
-                      key={buildEntryKey(entry)}
-                      entry={entry}
-                      actions={
-                        <>
-                          <button type="button" onClick={() => openEdit(entry)} disabled={isOrcaMutationBlocked || isAnyMutationPending}>
-                            ORCA病名を更新
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setPendingAction({
-                                operation: 'delete',
-                                title: 'ORCA病名を削除',
-                                confirmLabel: 'ORCA病名を削除',
-                                entry,
-                              })
-                            }
-                            disabled={isOrcaMutationBlocked || isAnyMutationPending}
-                          >
-                            ORCA病名を削除
-                          </button>
-                        </>
-                      }
-                    />
-                  ))}
-                </ul>
               </details>
             ) : null}
           </>
         ) : null}
       </section>
 
-      <section className="charts-diagnosis__quick-add" aria-label="院内未送信病名">
-        <div className="charts-side-panel__subheader">
-          <strong>院内未送信</strong>
-          <span className="charts-side-panel__help">{pendingLocalList.length}件 / ORCA正本には未反映</span>
-        </div>
-        {pendingLocalList.length === 0 ? <p className="charts-side-panel__empty">院内未送信の病名はありません。</p> : null}
-        {pendingLocalList.length > 0 ? (
-          <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="院内未送信病名">
-            {pendingLocalList.map((entry) => (
-              <DiseaseRow
-                key={buildEntryKey(entry)}
-                entry={entry}
-                actions={
-                  <button
-                    type="button"
-                    onClick={() => requestFormMutation('create', toFormState(entry, today), entry)}
-                    disabled={isOrcaMutationBlocked || isAnyMutationPending}
-                  >
-                    ORCAへ病名登録
-                  </button>
-                }
-              />
-            ))}
-          </ul>
-        ) : null}
-      </section>
+      {pendingLocalList.length > 0 ? (
+        <section className="charts-diagnosis__quick-add" aria-label="院内未送信病名">
+          <div className="charts-side-panel__subheader">
+            <strong>院内未送信</strong>
+            <span className="charts-side-panel__help">{pendingLocalList.length}件 / ORCA正本には未反映</span>
+          </div>
+          <DiseaseTable
+            entries={pendingLocalList}
+            ariaLabel="院内未送信病名"
+            actions={(entry) => (
+              <button
+                type="button"
+                onClick={() => requestFormMutation('create', toFormState(entry, today), entry)}
+                disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              >
+                ORCAへ登録
+              </button>
+            )}
+          />
+        </section>
+      ) : null}
+
+      <button type="button" className="charts-diagnosis__dialog-add" onClick={openCreate} disabled={isOrcaMutationBlocked || isAnyMutationPending}>
+        詳細入力で追加
+      </button>
 
       <FocusTrapDialog
         open={isEditorOpen}

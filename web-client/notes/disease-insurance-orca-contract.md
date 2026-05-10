@@ -4,7 +4,7 @@
 
 ## Scope
 - `ORCA登録病名`: Charts の主病名一覧の source of truth。ORCA `diseasegetv2` の再取得結果だけを表示する。
-- `院内未送信`: 既存 local-only disease や ORCA 未送信の下書き。主病名一覧には混ぜない。
+- `院内未送信`: 既存 local-only disease や ORCA 未送信の下書き。主病名一覧には混ぜず、対象がある場合だけ隔離枠を表示する。
 - `候補`: master / order-set / 補助入力から来る candidate source
 - `clinical`: 外部の臨床病名 source。未接続の間は current writable surface に昇格しない
 
@@ -12,15 +12,16 @@
 - Charts の主病名一覧は `GET /api/local/diagnoses/{patientId}` が返す ORCA `diseasegetv2?class=01` projection だけを表示します。ORCA `Api_Result=21` は「対象病名なし」の正常 0 件として扱い、ORCA unavailable とは分離します。
 - ORCA 取得不可時に local-only disease を主病名一覧へ fallback 表示しません。病名登録・更新・削除も disabled にします。
 - ORCA 病名の create / update / delete は `/api/orca/official/chart-support/disease-mod-v3` だけを使い、成功後の `diseasegetv2` 再取得結果が UI truth です。
-- `院内未送信` は隔離表示し、ORCAへ登録する明示 confirm がある場合だけ `diseasev3` へ送信します。
+- `院内未送信` は対象がある場合だけ隔離表示し、ORCAへ登録する明示 confirm がある場合だけ `diseasev3` へ送信します。
 - 診察終了時の標準導線では、`POST /api/local/encounters/{encounterKey}/close-and-send-to-billing` が server-side snapshot を作成し、ORCA連携対象として明示された病名だけを `diseasev3` 連携候補にします。候補病名、臨床メモ、local-only disease は会計送信 snapshot に自動昇格しません。
 - `候補` は truth ではありません。明示 confirm なしで ORCA 登録 payload に昇格させません。
+- 病名マスター候補検索は server-side ORCA master datasource の `tbl_byomei` を参照し、画面日付は server で `yyyyMMdd` へ正規化する。ローカル開発DBで master table が無い、または ORCA master datasource が未起動の場合だけ最小 bootstrap 候補を補助表示できるが、ORCA 登録済み truth にはせず、登録は confirm と `disease-mod-v3` を必須にする。
 - 外部の臨床病名 source が未接続の間は fake list を出さず、boundary note で止めます。
 
 ## Canonical Notes
 - `同期候補があります`
 - `ORCA側と差分があります`
-- `保険病名の確認が必要です`
+- `保険病名の確認が必要です`（`manual-resolution` の対象がある時だけ表示し、通常の ORCA mirror には初期表示しない）
 - `ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。`
 - `候補は自動反映されません。内容を確認してからORCAへ病名登録してください。`
 - `院内未送信の病名があります。ORCAへ登録するまで主病名一覧には反映しません。`

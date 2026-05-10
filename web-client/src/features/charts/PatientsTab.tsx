@@ -471,7 +471,7 @@ export function PatientsTab({
   const patientEditBlockedReason = useMemo(() => {
     if (!selectedPatientId) return 'patientId が未確定のため編集できません。';
     if (switchLocked) return `他の処理が進行中のためロック中${switchLockedReason ? `: ${switchLockedReason}` : ''}`;
-    if (draftDirty) return '未保存ドラフトあり（ドラフトを保存/破棄してから患者更新してください）。';
+    if (draftDirty) return '未保存下書きあり（下書きを保存/破棄してから患者更新してください）。';
     if (editBlockedByMaster) return `編集不可（master/tone ガード）: ${editBlockedReason}`;
     if (!canEditByStatus) return `編集不可（受付ステータス=${selected?.status ?? '不明'}）`;
     return undefined;
@@ -512,7 +512,7 @@ export function PatientsTab({
       return `編集不可（受付ステータス=${selected?.status ?? '不明'}）: 会計待ち以降は編集できません。`;
     }
     if (draftDirty) {
-      return '未保存ドラフトあり（ORCA送信前にドラフト保存してください）';
+      return '未保存下書きあり（ORCA送信前に下書き保存してください）';
     }
     return '閲覧モード（ガード条件を満たす場合のみ編集可）';
   }, [
@@ -769,7 +769,7 @@ export function PatientsTab({
       const currentPatientId = resolveEntryPatientId(selected) ?? selectedContext?.patientId ?? undefined;
       const isSwitchingPatient = Boolean(currentPatientId && nextId && currentPatientId !== nextId);
       if (!requestOptions?.ignoreDraft && draftDirty && isSwitchingKey) {
-        const message = '未保存ドラフトがあるため患者切替を保留しています。保存または破棄を選択してください。';
+        const message = '未保存下書きがあるため患者切替を保留しています。保存または破棄を選択してください。';
         setDraftSwitchDialog({
           open: true,
           entry,
@@ -1151,7 +1151,7 @@ export function PatientsTab({
     const unique = Array.from(new Set(draftDirtySources)).filter(Boolean) as DraftDirtySource[];
     const labels = unique.map((source) => draftSourceLabels[source]).filter(Boolean);
     if (labels.length === 0 && draftDirty) {
-      labels.push('未保存ドラフトがあります（詳細は未判定）');
+      labels.push('未保存下書きがあります（詳細は未判定）');
     }
     return labels.slice(0, 2);
   }, [draftDirty, draftDirtySources]);
@@ -2044,8 +2044,8 @@ export function PatientsTab({
       <FocusTrapDialog
         open={draftSwitchDialog.open}
         role="alertdialog"
-        title="未保存ドラフトがあります"
-        description="患者を切り替える前に、ドラフトの扱いを選択してください。保存して切替を選ぶと、保存完了後に自動で切替します。"
+        title="未保存下書きがあります"
+        description="患者を切り替える前に、下書きの扱いを選択してください。保存して切替を選ぶと、保存完了後に自動で切替します。"
         onClose={() => {
           logPatientSwitch({
             phase: 'approval',
@@ -2064,7 +2064,7 @@ export function PatientsTab({
         }}
         testId="charts-draft-switch-dialog"
       >
-        <div className="patients-tab__draft-dialog" role="group" aria-label="ドラフト未保存の患者切替">
+        <div className="patients-tab__draft-dialog" role="group" aria-label="下書き未保存の患者切替">
           <div className="patients-tab__draft-summary">
             <div>
               <span className="patients-tab__draft-label">現在の患者</span>
@@ -2076,14 +2076,14 @@ export function PatientsTab({
             </div>
           </div>
           {draftReasonLines.length > 0 ? (
-            <ul className="patients-tab__draft-reasons" aria-label="未保存ドラフトの内容">
+            <ul className="patients-tab__draft-reasons" aria-label="未保存下書きの内容">
               {draftReasonLines.map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>
           ) : null}
           <p className="patients-tab__draft-reason">
-            未保存ドラフトがあるため切替を保留しています。保存または破棄を選択してください（Shift+Enter でドラフト保存）。
+            未保存下書きがあるため切替を保留しています。保存または破棄を選択してください（Shift+Enter で下書き保存）。
           </p>
           <div className="patients-tab__draft-actions">
             <button type="button" onClick={handleDraftDialogClose}>
