@@ -7,15 +7,18 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.orca.OrcaGatewayException;
+import open.dolphin.orca.service.OrcaPatientCacheStore;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
@@ -39,6 +42,9 @@ public class OrcaPatientApiResource extends AbstractResource {
 
     @Inject
     SessionAuditDispatcher sessionAuditDispatcher;
+
+    @Inject
+    OrcaPatientCacheStore patientCacheStore;
 
     @GET
     @Path("/patientgetv2")
@@ -76,18 +82,40 @@ public class OrcaPatientApiResource extends AbstractResource {
 
             details.put("patientId", patientId);
             String facilityId = getRemoteFacility(request != null ? request.getRemoteUser() : null);
+            if (facilityId == null || facilityId.isBlank()) {
+                throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing", "Facility is required");
+            }
             OrcaTransportResult result = orcaTransport.invoke(
                     facilityId,
                     OrcaEndpoint.PATIENT_GET,
                     OrcaTransportRequest.get(query));
+            Instant fetchedAt = Instant.now();
+            OrcaPatientCacheStore.PatientCacheCommand cacheCommand =
+                    OrcaPatientCacheStore.fromOrcaResponse(
+                            facilityId,
+                            patientId.trim(),
+                            resolveRequestId(request),
+                            resolveTraceId(request),
+                            fetchedAt,
+                            result != null ? result.getBody() : null);
+            saveCache(cacheCommand);
+            details.put("sourceSystem", "ORCA");
+            details.put("sourceApi", "patientgetv2");
+            details.put("fetchedAt", fetchedAt.toString());
+            details.put("cacheStatus", cacheCommand.cacheStatus());
+            details.put("stale", Boolean.FALSE);
+            details.put("businessStatus", cacheCommand.businessStatus());
+            details.put("rawResponseStored", Boolean.FALSE);
             markSuccess(details);
             recordAudit(request, resourcePath, AUDIT_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS, null, null);
-            return OrcaApiProxySupport.buildProxyResponse(result, runId);
+            return withPatientCacheHeaders(OrcaApiProxySupport.buildProxyResponse(result, runId), cacheCommand, fetchedAt);
         } catch (RuntimeException ex) {
             String errorCode = "orca.patientget.error";
             String errorMessage = ex.getMessage();
             int status = (ex instanceof BadRequestException)
                     ? Response.Status.BAD_REQUEST.getStatusCode()
+                    : (ex instanceof WebApplicationException webEx && webEx.getResponse() != null)
+                            ? webEx.getResponse().getStatus()
                     : Response.Status.BAD_GATEWAY.getStatusCode();
             markFailure(details, status, errorCode, errorMessage);
             recordAudit(request, resourcePath, AUDIT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE,
@@ -96,8 +124,37 @@ public class OrcaPatientApiResource extends AbstractResource {
         }
     }
 
+    private void saveCache(OrcaPatientCacheStore.PatientCacheCommand cacheCommand) {
+        if (patientCacheStore == null) {
+            return;
+        }
+        patientCacheStore.save(cacheCommand);
+    }
+
+    private Response withPatientCacheHeaders(Response response,
+            OrcaPatientCacheStore.PatientCacheCommand cacheCommand,
+            Instant fetchedAt) {
+        Response.ResponseBuilder builder = Response.fromResponse(response);
+        builder.header("X-Orca-Source-System", "ORCA");
+        builder.header("X-Orca-Source-Api", "patientgetv2");
+        builder.header("X-Orca-Fetched-At", fetchedAt.toString());
+        builder.header("X-Orca-Cache-Status", cacheCommand.cacheStatus());
+        builder.header("X-Orca-Stale", "false");
+        builder.header("X-Orca-Business-Status", cacheCommand.businessStatus());
+        return builder.build();
+    }
+
     private String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
+    private String resolveRequestId(HttpServletRequest request) {
+        String traceId = resolveTraceId(request);
+        String requestId = request != null ? request.getHeader("X-Request-Id") : null;
+        if (requestId != null && !requestId.isBlank()) {
+            return requestId.trim();
+        }
+        return traceId;
     }
 
     private Map<String, Object> buildAuditDetails(HttpServletRequest request, String resourcePath, String runId) {
