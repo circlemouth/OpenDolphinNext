@@ -151,6 +151,41 @@
   font-variant-numeric: tabular-nums;
 }
 
+.patient-identity-bar__medical-safety {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: var(--ui-radius-sm);
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.patient-identity-bar__medical-safety-item {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.patient-identity-bar__medical-safety-item dt {
+  margin: 0;
+  color: var(--ui-text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.patient-identity-bar__medical-safety-item dd {
+  margin: 0;
+  color: var(--ui-text);
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
 .patient-identity-bar__chips {
   display: flex;
   flex-wrap: wrap;

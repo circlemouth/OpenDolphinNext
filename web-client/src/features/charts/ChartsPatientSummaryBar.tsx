@@ -12,6 +12,7 @@ type PatientDisplay = {
   age?: string;
   birthDateEra?: string;
   birthDateIso?: string;
+  insurance?: string;
   zip?: string;
   address?: string;
   note?: string;
@@ -26,6 +27,7 @@ type ChartsPatientSummaryBarProps = {
   appointmentId?: string;
   department?: string;
   physician?: string;
+  insuranceCombinationNumber?: string;
   runId?: string;
   missingMaster?: boolean;
   fallbackUsed?: boolean;
@@ -131,6 +133,7 @@ export function ChartsPatientSummaryBar({
   encounterStatus,
   department,
   physician,
+  insuranceCombinationNumber,
   runId,
   missingMaster,
   fallbackUsed,
@@ -153,6 +156,8 @@ export function ChartsPatientSummaryBar({
   const normalizedEncounterStatus = normalizeValue(encounterStatus) ?? '再選択が必要';
   const normalizedDepartment = normalizeValue(department) ?? '未設定';
   const normalizedPhysician = normalizeValue(physician) ?? '未設定';
+  const normalizedInsurance = normalizeValue(patientDisplay.insurance);
+  const normalizedInsuranceCombination = normalizeValue(insuranceCombinationNumber) ?? normalizedInsurance ?? '未設定';
   const sexTone = resolvePatientSexTone(patientDisplay.sex);
   const ageGroup = resolvePatientAgeGroup(patientDisplay.age);
   const sourceAlert = missingMaster
@@ -177,6 +182,12 @@ export function ChartsPatientSummaryBar({
         patientId={patientId}
         patientName={displayName}
         patientKana={kana}
+        acceptanceDate={normalizedVisitDate}
+        department={normalizedDepartment}
+        physician={normalizedPhysician}
+        insuranceCombination={normalizedInsuranceCombination}
+        orcaSourceLabel={missingMaster ? 'ORCA正本未確認' : 'ORCA official/canonical'}
+        orcaCacheStatus={missingMaster || fallbackUsed ? 'stale' : cacheHit ? 'cache-hit' : 'fresh'}
         photo={<ChartsPatientProfileIcon sexTone={sexTone} ageGroup={ageGroup} />}
         note={undefined}
         selected
@@ -230,6 +241,10 @@ export function ChartsPatientSummaryBar({
               <span className="charts-patient-summary__encounter-item">
                 <span className="charts-patient-summary__encounter-label">状態</span>
                 <span className="charts-patient-summary__encounter-value">{normalizedEncounterStatus}</span>
+              </span>
+              <span className="charts-patient-summary__encounter-item">
+                <span className="charts-patient-summary__encounter-label">保険組合せ</span>
+                <span className="charts-patient-summary__encounter-value">{normalizedInsuranceCombination}</span>
               </span>
               <span className="charts-patient-summary__encounter-item charts-patient-summary__encounter-item--wide">
                 <span className="charts-patient-summary__encounter-label">診療科 / 担当医</span>
