@@ -90,6 +90,7 @@ cd web-client && npm run ci
 ```
 期待結果:
 - blocked route string / legacy auth drift / public secret の再混入がない。
+- `check-sensitive-evidence-redaction.sh` が review-target の browser bundle / test-results / Playwright output / test snapshots に credential、Cookie、JSESSIONID、CSRF、raw ORCA body/XML、患者氏名・住所、保険番号 field、HAR、trace、video、screenshot、`error-context.md`、raw network JSON が混入していないことを確認する。
 - `verify-no-blocked-orca-route-strings.mjs` は `server-modernized/src/test`、`web-client/src`、`web-client/scripts`、`web-client/plugins`、`tests`、`docs/contracts`、`docs/runbooks`、`docs/releases`、`docs/implementation` を走査する。存在しない root は明示 skip、存在する root の走査失敗は fail。
 - guard success message は category counts を表示し、`production fail-close sentinel`、`MSW mock/test-only legacy route surface`、`e2e/QA fixture surface`、`blocked-route detector`、`docs/reference`、`server route inventory negative assertion`、`web.xml exposure negative assertion` の分類で current tree の残存 route string を説明できる。
 - guard allowlist は `path + route + category + reason` で管理され、allowlist にない `/api/orca/queue` または `/api/orca/pusheventgetv2` は failure。`/api/orca/(official|master 以外)` の新規 route、および production source に混入した mock/test-only legacy route surface も failure。
@@ -206,6 +207,7 @@ bash server-modernized/tools/ci/check-doc-links.sh
 bash server-modernized/tools/ci/check-config-contract.sh
 bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-audit-append-only.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-sensitive-evidence-redaction.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-no-runtime-ddl.sh
 bash server-modernized/tools/ci/check-persistence-entities.sh
 bash server-modernized/tools/ci/check-no-generated-artifacts.sh --root "$(git rev-parse --show-toplevel)"
@@ -275,6 +277,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 
 ## 補足
 - `check-no-generated-artifacts.sh` は tracked / untracked の両方を検査する。
+- `check-sensitive-evidence-redaction.sh` は review-target の browser bundle / test-results / Playwright output / test snapshots を検査し、historical `artifacts/` 全体を release evidence として扱わない。reviewer packet に入れる証跡は reviewer-submission packet tool の allowlist 済み sanitized subset に限定する。
 - `check-no-direct-runtime-lookup.sh` は `ServerConfigurationResolver.java` 以外の direct runtime lookup を許可しない。
 - どれか 1 つでも失敗したら release は見送る。
 - cutover / rollback の実施順序と停止条件は [../releases/orca-remediation-cutover.md](../releases/orca-remediation-cutover.md) を正本とする。

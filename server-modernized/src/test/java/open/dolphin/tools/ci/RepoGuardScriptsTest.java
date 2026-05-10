@@ -104,6 +104,48 @@ class RepoGuardScriptsTest {
         assertThat(result.output()).contains("audit_event must remain append-only");
     }
 
+    @Test
+    void checkSensitiveEvidenceRedactionPassesForSanitizedSnapshot() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-sensitive-evidence-ok");
+        initializeGitRepository(repoRoot);
+        Files.createDirectories(repoRoot.resolve("web-client/src/features/reception/__tests__/__snapshots__"));
+        Files.writeString(
+                repoRoot.resolve("web-client/src/features/reception/__tests__/__snapshots__/safe.snap"),
+                "credentialConfigured=true rawSensitiveFieldsExcluded=true patientInformationPresent=true\n");
+        runCommand(repoRoot, "git", "add", "web-client/src/features/reception/__tests__/__snapshots__/safe.snap");
+        runCommand(repoRoot, "git", "commit", "-m", "add sanitized snapshot");
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-sensitive-evidence-redaction.sh", repoRoot);
+
+        assertThat(result.exitCode()).isZero();
+    }
+
+    @Test
+    void checkSensitiveEvidenceRedactionFailsForCredentialInTestResult() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-sensitive-evidence-credential-ng");
+        initializeGitRepository(repoRoot);
+        Files.createDirectories(repoRoot.resolve("test-results"));
+        Files.writeString(repoRoot.resolve("test-results/output.txt"), "Authorization: Basic dXNlcjpwYXNzd29yZA==\n");
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-sensitive-evidence-redaction.sh", repoRoot);
+
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.output()).contains("credential/PHI/raw ORCA markers");
+    }
+
+    @Test
+    void checkSensitiveEvidenceRedactionFailsForHarArtifact() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-sensitive-evidence-har-ng");
+        initializeGitRepository(repoRoot);
+        Files.createDirectories(repoRoot.resolve("web-client/test-results"));
+        Files.writeString(repoRoot.resolve("web-client/test-results/network.har"), "{}\n");
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-sensitive-evidence-redaction.sh", repoRoot);
+
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.output()).contains("raw browser/test artifact files");
+    }
+
     private static void createDocLinkFixture(Path repoRoot, boolean includeTarget) throws IOException {
         Files.createDirectories(repoRoot.resolve("docs/managerdocs"));
         Files.createDirectories(repoRoot.resolve("docs/architecture"));

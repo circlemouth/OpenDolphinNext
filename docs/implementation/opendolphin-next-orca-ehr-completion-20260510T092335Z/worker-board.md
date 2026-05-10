@@ -32,7 +32,7 @@ Checklist count when parallel board was created:
 | C | `codex/orca-ehr-worker-c-prescription` | C-01 prescription revision/item/event schema | Ready | - | - | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-01 `OrcaApiResult` common model | Ready | - | - | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-01 close Section 17 UI wording/warning parent | Ready | - | - | - |
-| F | `codex/orca-ehr-worker-f-audit-security-gates` | F-02 credential/PHI leakage guards | Done | 20260510T201318Z | this commit | - |
+| F | `codex/orca-ehr-worker-f-audit-security-gates` | F-03 backup/restore/hash verification runbook + CI guard hooks | Ready | 20260510T204217Z | this commit | - |
 | G | `codex/orca-ehr-integrator-g` | G-02 merge first worker batch in prescribed order | Done | 20260510T195822Z | this docs commit | - |
 
 ## Worker Queues
@@ -106,6 +106,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260510T204217Z | F | F-02 | 13 credential/PHI leakage guard slice; 15 security gate slice | this commit | `check-sensitive-evidence-redaction.sh`, `npm run verify:web-guard`, focused `RepoGuardScriptsTest`, doc/config/runtime/audit/generated-artifact guards passed | Done | F-03 backup/restore/hash verification runbook + CI guard hooks |
 | 20260510T201318Z | F | F-01 | 4.7 audit append-only/hash-chain; 12 audit append-only; 19 hash-chain gate; Phase 5 audit/hash-chain | this commit | `check-audit-append-only.sh`, focused Maven audit/guard tests passed | Done | F-02 credential/PHI leakage guards |
 | 20260510T195822Z | G | G-01 | Parallel workstream docs | this docs commit | doc links/config/runtime lookup guards passed | Done | Start Worker F F-01 or Worker E E-01 |
 
