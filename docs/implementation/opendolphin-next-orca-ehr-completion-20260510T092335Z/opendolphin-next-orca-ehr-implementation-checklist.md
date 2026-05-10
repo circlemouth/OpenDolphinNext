@@ -175,7 +175,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] `diseasev3` の ORCAのみ病名、連番付け替え情報を無視せず、sanitized response / operation summary に保存する。
 - [x] `diseasev3` ORCA accepted 後に `diseasegetv2` を再取得し、再取得結果だけを ORCA病名表示の根拠にする。再取得不可時は `NEEDS_REVIEW` として成功扱いにしない。
 - [x] Web client は `postMutationMirrorStatus=connected` の `postMutationMirror` だけを病名送信後の主一覧へ反映し、再取得不可時は warning / 要確認として登録済み表示にしない。
-- [ ] 病名 UI は「ORCA登録病名」「診療録本文中の病名記載」「未送信候補」を分離し、入力だけで ORCA送信しない。
+- [x] 病名 UI は「ORCA登録病名」「診療録本文中の病名記載」「未送信候補」を分離し、入力だけで ORCA送信しない。
 
 ## 10. 診療行為・会計・収納・レセプト
 

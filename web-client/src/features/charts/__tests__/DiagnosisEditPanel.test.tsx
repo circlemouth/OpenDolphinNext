@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { DiagnosisEditPanel, type DiagnosisEditPanelMeta } from '../DiagnosisEditPanel';
+import { DiagnosisEditPanel, type ChartTextDiseaseMention, type DiagnosisEditPanelMeta } from '../DiagnosisEditPanel';
 import { fetchDiseases, mutateOrcaDisease, resolveDiseaseCodeFromOrcaMaster, searchDiseaseMasterCandidates } from '../diseaseApi';
 
 vi.mock('../diseaseApi', async () => {
@@ -26,7 +26,7 @@ vi.mock('../../../libs/telemetry/telemetryClient', () => ({
   recordOutpatientFunnel: vi.fn(),
 }));
 
-const renderPanel = (metaOverride: Partial<DiagnosisEditPanelMeta> = {}) => {
+const renderPanel = (metaOverride: Partial<DiagnosisEditPanelMeta> = {}, chartTextDiseaseMentions?: ChartTextDiseaseMention[]) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -37,6 +37,7 @@ const renderPanel = (metaOverride: Partial<DiagnosisEditPanelMeta> = {}) => {
     <QueryClientProvider client={queryClient}>
       <DiagnosisEditPanel
         patientId="P-TEST-001"
+        chartTextDiseaseMentions={chartTextDiseaseMentions}
         meta={{
           runId: 'RUN-DIAGNOSIS-PANEL-TEST',
           cacheHit: true,
@@ -111,6 +112,21 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     expect(within(mirrorList).queryByText('副')).not.toBeInTheDocument();
     expect(screen.getByText('ORCA再取得結果を正本として表示')).toBeInTheDocument();
     expect(screen.queryByText('保険病名の確認が必要です')).not.toBeInTheDocument();
+  });
+
+  it('separates chart text disease mentions from ORCA registered diagnoses without adding mutation actions', async () => {
+    renderPanel({}, [{ sectionLabel: 'Assessment', text: '診断名: 高血圧症疑い', source: 'draft' }]);
+
+    const chartTextSection = await screen.findByRole('region', { name: '診療録本文中の病名記載' });
+    expect(within(chartTextSection).getByText('診療録本文中の病名記載')).toBeInTheDocument();
+    expect(within(chartTextSection).getByText('診断名: 高血圧症疑い')).toBeInTheDocument();
+    expect(within(chartTextSection).getByText('編集中')).toBeInTheDocument();
+    expect(within(chartTextSection).getByText('診療録本文中の病名記載はカルテ本文の正本です。ORCA登録病名へは明示確認後に登録してください。')).toBeInTheDocument();
+    expect(within(chartTextSection).queryByRole('button')).not.toBeInTheDocument();
+
+    const mirrorList = await screen.findByRole('table', { name: 'ORCA登録病名（活動中）' });
+    expect(within(mirrorList).queryByText('診断名: 高血圧症疑い')).not.toBeInTheDocument();
+    expect(mutateOrcaDisease).not.toHaveBeenCalled();
   });
 
   it('病名コードは通常表示せず、コードがない行だけ警告を表示する', async () => {

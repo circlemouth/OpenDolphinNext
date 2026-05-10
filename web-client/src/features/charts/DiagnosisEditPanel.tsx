@@ -45,9 +45,16 @@ export type DiagnosisEditPanelMeta = {
   readOnlyReason?: string;
 };
 
+export type ChartTextDiseaseMention = {
+  sectionLabel: string;
+  text: string;
+  source: 'draft' | 'saved';
+};
+
 export type DiagnosisEditPanelProps = {
   patientId?: string;
   meta: DiagnosisEditPanelMeta;
+  chartTextDiseaseMentions?: ChartTextDiseaseMention[];
 };
 
 type DiagnosisFormState = {
@@ -93,6 +100,8 @@ const QUICK_CANDIDATE_MAX_ITEMS = 20;
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const POST_MUTATION_MIRROR_UNAVAILABLE_MESSAGE =
   'ORCA病名の送信は受け付けられましたが、ORCA病名の再取得が完了していません。ORCA正本を再取得して確認してください。';
+const CHART_TEXT_DISEASE_BOUNDARY_NOTE =
+  '診療録本文中の病名記載はカルテ本文の正本です。ORCA登録病名へは明示確認後に登録してください。';
 
 const buildEmptyForm = (today: string): DiagnosisFormState => ({
   prefix: '',
@@ -348,7 +357,7 @@ function DiseaseTable({
   );
 }
 
-export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps) {
+export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions = [] }: DiagnosisEditPanelProps) {
   const queryClient = useQueryClient();
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [form, setForm] = useState<DiagnosisFormState>(() => buildEmptyForm(today));
@@ -401,6 +410,18 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
   });
 
   const list = useMemo(() => diagnosisQuery.data?.diseases ?? [], [diagnosisQuery.data?.diseases]);
+  const chartTextMentions = useMemo(
+    () =>
+      chartTextDiseaseMentions
+        .map((mention) => ({
+          ...mention,
+          sectionLabel: mention.sectionLabel.trim(),
+          text: mention.text.trim(),
+        }))
+        .filter((mention) => mention.sectionLabel && mention.text)
+        .slice(0, 5),
+    [chartTextDiseaseMentions],
+  );
   const mirrorList = useMemo(() => list.filter((entry) => resolveDiseaseLayer(entry) === 'orca-mirror'), [list]);
   const pendingLocalList = useMemo(() => {
     const pendingLocalDiseases = diagnosisQuery.data?.pendingLocalDiseases;
@@ -957,6 +978,25 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         </div>
       ) : null}
       {notice ? <div className={`charts-side-panel__notice charts-side-panel__notice--${notice.tone}`}>{notice.message}</div> : null}
+
+      {chartTextMentions.length > 0 ? (
+        <section className="charts-diagnosis__quick-add" aria-label="診療録本文中の病名記載">
+          <div className="charts-side-panel__subheader">
+            <strong>診療録本文中の病名記載</strong>
+            <span className="charts-side-panel__help">{chartTextMentions.length}件 / ORCA登録病名ではありません</span>
+          </div>
+          <div className="charts-side-panel__notice charts-side-panel__notice--info">{CHART_TEXT_DISEASE_BOUNDARY_NOTE}</div>
+          <ul className="charts-diagnosis__unblock">
+            {chartTextMentions.map((mention, index) => (
+              <li key={`${mention.sectionLabel}-${mention.source}-${index}`}>
+                <strong>{mention.sectionLabel}</strong>
+                <span className="charts-side-panel__help"> {mention.source === 'draft' ? '編集中' : '保存済み'}</span>
+                <div>{mention.text}</div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <details className="charts-diagnosis__quick-add charts-diagnosis__quick-add--authoring" aria-label="ORCAへ病名登録">
         <summary className="charts-diagnosis__quick-summary">

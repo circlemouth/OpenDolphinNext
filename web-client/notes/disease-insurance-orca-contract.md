@@ -4,12 +4,14 @@
 
 ## Scope
 - `ORCA登録病名`: Charts の主病名一覧の source of truth。ORCA `diseasegetv2` の再取得結果だけを表示する。
+- `診療録本文中の病名記載`: SOAP / カルテ本文の記載。OpenDolphinNext の診療録本文正本であり、ORCA登録病名ではない。
 - `院内未送信`: 既存 local-only disease や ORCA 未送信の下書き。主病名一覧には混ぜず、対象がある場合だけ隔離枠を表示する。
 - `候補`: master / order-set / 補助入力から来る candidate source
 - `clinical`: 外部の臨床病名 source。未接続の間は current writable surface に昇格しない
 
 ## Fixed Boundary
 - Charts の主病名一覧は `GET /api/local/diagnoses/{patientId}` が返す ORCA `diseasegetv2?class=01` projection だけを表示します。ORCA `Api_Result=21` は「対象病名なし」の正常 0 件として扱い、ORCA unavailable とは分離します。
+- SOAP / カルテ本文から検出した病名らしい記載は「診療録本文中の病名記載」枠に表示し、ORCA登録病名一覧や `diseasev3` 送信 payload へ自動昇格しません。この枠には ORCA送信ボタンを置かず、病名登録は別途 `ORCAへ病名登録` の明示 confirm を必須にします。
 - ORCA 取得不可時に local-only disease を主病名一覧へ fallback 表示しません。病名登録・更新・削除も disabled にします。
 - ORCA 病名の create / update / delete は `/api/orca/official/chart-support/disease-mod-v3` だけを使い、成功後の `diseasegetv2` 再取得結果が UI truth です。
 - `disease-mod-v3` response に `postMutationMirrorStatus=connected` と `postMutationMirror` が含まれる場合、Charts UI はその mirror projection を同一 query cache へ反映し、入力 payload や diseasev3 response だけで主一覧を楽観更新しません。`postMutationMirrorStatus=unavailable` の場合は ORCA accepted でも warning / 要確認として表示し、登録済み表示に昇格しません。
@@ -29,13 +31,14 @@
 - `院内未送信の病名があります。ORCAへ登録するまで主病名一覧には反映しません。`
 
 ## Conflict Matrix
-| 状態 | ORCA登録病名 | 院内未送信 | 候補 | UI / fallback |
-| --- | --- | --- | --- | --- |
-| normal | truth | 隔離表示 | 補助入力 | ORCA 再取得結果を主一覧に表示 |
-| candidate available | truth | 隔離表示 | truth ではない | `同期候補があります` を表示し、明示 confirm のみ許可 |
-| local-only exists | truth | ORCA未送信 | 補助入力 | `院内未送信` 枠へ隔離し、主一覧に混ぜない |
-| mirror unavailable | unavailable | 隔離表示 | 補助入力 | 主一覧は fallback せず、ORCA mutation を disabled |
-| clinical unavailable | truth または unavailable | 隔離表示 | 補助入力 | clinical unavailable note を表示し fake list を出さない |
+| 状態 | ORCA登録病名 | 診療録本文中の病名記載 | 院内未送信 | 候補 | UI / fallback |
+| --- | --- | --- | --- | --- | --- |
+| normal | truth | chart text truth | 隔離表示 | 補助入力 | ORCA 再取得結果を主一覧に表示 |
+| chart text mentions disease | truth | ORCA未登録の本文記載 | 隔離表示 | 補助入力 | 本文記載枠に表示し、送信操作を置かない |
+| candidate available | truth | chart text truth | 隔離表示 | truth ではない | `同期候補があります` を表示し、明示 confirm のみ許可 |
+| local-only exists | truth | chart text truth | ORCA未送信 | 補助入力 | `院内未送信` 枠へ隔離し、主一覧に混ぜない |
+| mirror unavailable | unavailable | chart text truth | 隔離表示 | 補助入力 | 主一覧は fallback せず、ORCA mutation を disabled |
+| clinical unavailable | truth または unavailable | chart text truth | 隔離表示 | 補助入力 | clinical unavailable note を表示し fake list を出さない |
 
 ## Fallback Gates
 - UG-04 解決: insurance-local は正本ではなく `院内未送信` 枠に隔離する。

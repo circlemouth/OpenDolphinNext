@@ -14,7 +14,7 @@ import { PatientsTab } from '../PatientsTab';
 import { TelemetryFunnelPanel } from '../TelemetryFunnelPanel';
 import { ChartsActionBar, type ChartsActionBarHandle } from '../ChartsActionBar';
 import { ChartsPatientSummaryBar } from '../ChartsPatientSummaryBar';
-import { DiagnosisEditPanel } from '../DiagnosisEditPanel';
+import { DiagnosisEditPanel, type ChartTextDiseaseMention } from '../DiagnosisEditPanel';
 import { DocumentCreatePanel } from '../DocumentCreatePanel';
 import { PastHubPanel } from '../PastHubPanel';
 import { PatientSummaryPanel } from '../PatientSummaryPanel';
@@ -207,6 +207,37 @@ const normalizeDisplayText = (value?: string | null): string | undefined => {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   return trimmed ? trimmed : undefined;
+};
+
+const CHART_TEXT_DISEASE_KEYWORD_PATTERN = /(病名|診断名|診断|疑い|鑑別)/;
+const CHART_TEXT_DISEASE_LABEL_ONLY_PATTERN = /^(病名|診断名|診断|疑い|鑑別|評価)\s*[:：]?\s*$/;
+const MAX_CHART_TEXT_DISEASE_MENTIONS = 5;
+const MAX_CHART_TEXT_DISEASE_TEXT_LENGTH = 96;
+
+const buildChartTextDiseaseMentions = (draft: SoapDraft): ChartTextDiseaseMention[] => {
+  const mentions: ChartTextDiseaseMention[] = [];
+  for (const section of SOAP_SECTIONS) {
+    const body = draft[section] ?? '';
+    const lines = body.split(/\r?\n/);
+    for (const line of lines) {
+      const normalized = normalizeDisplayText(line);
+      if (!normalized || CHART_TEXT_DISEASE_LABEL_ONLY_PATTERN.test(normalized) || !CHART_TEXT_DISEASE_KEYWORD_PATTERN.test(normalized)) {
+        continue;
+      }
+      mentions.push({
+        sectionLabel: SOAP_SECTION_LABELS[section],
+        text:
+          normalized.length > MAX_CHART_TEXT_DISEASE_TEXT_LENGTH
+            ? `${normalized.slice(0, MAX_CHART_TEXT_DISEASE_TEXT_LENGTH)}...`
+            : normalized,
+        source: 'draft',
+      });
+      if (mentions.length >= MAX_CHART_TEXT_DISEASE_MENTIONS) {
+        return mentions;
+      }
+    }
+  }
+  return mentions;
 };
 
 const pickLatestOutpatientMeta = (pages: AppointmentPayload[]): AppointmentPayload | undefined => {
@@ -3002,6 +3033,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       tabLock.readOnlyReason,
     ],
   );
+  const chartTextDiseaseMentions = useMemo(() => buildChartTextDiseaseMentions(soapDraftSnapshot), [soapDraftSnapshot]);
 
   useEffect(() => {
     if (!approvalStorageKey) {
@@ -4990,7 +5022,11 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                     <span className="charts-column-header__meta">保険病名 / Past Hub / Do</span>
                   </div>
                   <div className="charts-card" id="charts-diagnosis" tabIndex={-1} data-focus-anchor="true">
-                    <DiagnosisEditPanel patientId={encounterContext.patientId} meta={sidePanelMeta} />
+                    <DiagnosisEditPanel
+                      patientId={encounterContext.patientId}
+                      meta={sidePanelMeta}
+                      chartTextDiseaseMentions={chartTextDiseaseMentions}
+                    />
                   </div>
                   <PatientSummaryPanel
                     patientId={encounterContext.patientId}
