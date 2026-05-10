@@ -160,10 +160,12 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         audit.put("reconciliationStatus", response.getReconciliationStatus());
         audit.put("matchingTemporaryMedicalRowCount", response.getMatchingTemporaryMedicalRowCount());
         audit.put("medicalUidPresent", response.isMedicalUidPresent());
+        audit.put("resendBlocked", response.isResendBlocked());
+        audit.put("resendBlockReason", response.getResendBlockReason());
         audit.put("rawSensitiveFieldsExcluded", Boolean.TRUE);
         audit.put("routeNamespace", "local");
         recordAudit(request, "LOCAL_ENCOUNTER_ORCA_TEMPORARY_MEDICAL_RECONCILE", audit,
-                response.getMatchingTemporaryMedicalRowCount() > 0
+                response.getMatchingTemporaryMedicalRowCount() > 0 && !response.isResendBlocked()
                         ? AuditEventEnvelope.Outcome.SUCCESS
                         : AuditEventEnvelope.Outcome.FAILURE);
         return response;
@@ -560,6 +562,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         response.setRawSensitiveFieldsExcluded(true);
         response.setClientProvidedIdentifiersTrusted(false);
         response.setServerDerivedAuthorityRequired(true);
+        response.setResendBlocked(false);
         response.setReconciliationStatus("RECONCILE_PENDING");
         response.setMessage("ORCA中途終了データの再照合が必要です");
         return response;
@@ -628,13 +631,32 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         response.setMedicalUidPresent(medicalUidPresent);
         response.setMedicalMode(firstMode);
         response.setMedicalMode2(firstMode2);
-        response.setOk("00".equals(apiResult) && matches > 0);
-        response.setOperationStatus(matches > 0 ? "ORCA_TEMPORARY_MEDICAL_FOUND" : "NEEDS_REVIEW");
-        response.setReconciliationStatus(matches > 0 ? "TEMPORARY_MEDICAL_FOUND" : "TEMPORARY_MEDICAL_NOT_FOUND");
+        boolean found = matches > 0;
+        boolean resendBlocked = found && temporaryMedicalModeRequiresAdminReview(firstMode, firstMode2);
+        response.setResendBlocked(resendBlocked);
+        response.setResendBlockReason(resendBlocked ? "ORCA_TEMPORARY_MEDICAL_MODE_LOCKED" : null);
+        response.setOk("00".equals(apiResult) && found && !resendBlocked);
+        response.setOperationStatus(resendBlocked
+                ? "ORCA_RESEND_BLOCKED"
+                : found ? "ORCA_TEMPORARY_MEDICAL_FOUND" : "NEEDS_REVIEW");
+        response.setReconciliationStatus(resendBlocked
+                ? "TEMPORARY_MEDICAL_FOUND_RESEND_BLOCKED"
+                : found ? "TEMPORARY_MEDICAL_FOUND" : "TEMPORARY_MEDICAL_NOT_FOUND");
         response.setNeedsUserReview(true);
-        response.setMessage(matches > 0
+        response.setMessage(resendBlocked
+                ? "ORCA側で会計済みまたは展開済みの可能性があるため、再送は停止します。管理者確認が必要です"
+                : found
                 ? "ORCA中途終了データに一致候補があります。内容確認後に再送可否を判断してください"
                 : "ORCA中途終了データに一致候補がありません。成功扱いにせず確認してください");
+    }
+
+    private boolean temporaryMedicalModeRequiresAdminReview(String medicalMode, String medicalMode2) {
+        String normalizedMode2 = normalize(medicalMode2);
+        if (normalizedMode2 != null && !"0".equals(normalizedMode2)) {
+            return true;
+        }
+        String normalizedMode = normalize(medicalMode);
+        return normalizedMode != null && !"0".equals(normalizedMode);
     }
 
     private boolean temporaryMedicalRowMatches(BillingOrcaWorkflowRepository.TransmissionReviewRecord record, JsonNode row) {

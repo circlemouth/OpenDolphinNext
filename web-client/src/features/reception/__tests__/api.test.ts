@@ -124,6 +124,8 @@ describe('reconcileBillingOrcaTemporaryMedical', () => {
         medicalUidPresent: true,
         medicalMode: '0',
         medicalMode2: '0',
+        resendBlocked: true,
+        resendBlockReason: 'ORCA_TEMPORARY_MEDICAL_MODE_LOCKED',
         medicalUid: 'SECRET-MEDICAL-UID',
         insuranceCombinationNumber: 'SECRET-INSURANCE',
         rawResponseBody: '<xml>secret</xml>',
@@ -155,6 +157,8 @@ describe('reconcileBillingOrcaTemporaryMedical', () => {
       medicalUidPresent: true,
       medicalMode: '0',
       medicalMode2: '0',
+      resendBlocked: true,
+      resendBlockReason: 'ORCA_TEMPORARY_MEDICAL_MODE_LOCKED',
     });
     expect(response).not.toHaveProperty('medicalUid');
     expect(response).not.toHaveProperty('insuranceCombinationNumber');

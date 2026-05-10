@@ -2657,6 +2657,8 @@ describe('ReceptionPage status/date/card action UX', () => {
       medicalUidPresent: true,
       medicalMode: '0',
       medicalMode2: '0',
+      resendBlocked: true,
+      resendBlockReason: 'ORCA_TEMPORARY_MEDICAL_MODE_LOCKED',
       message: 'ORCA中途終了データに一致候補があります',
       medicalUid: 'SECRET-MEDICAL-UID',
       insuranceCombinationNumber: 'SECRET-INSURANCE',
@@ -2673,10 +2675,11 @@ describe('ReceptionPage status/date/card action UX', () => {
       expect(mockMutationCalls).toContainEqual({ transmissionId: 42 });
     });
     expect(mockMutationCalls[0]).not.toHaveProperty('patientId');
+    expect(await screen.findByText(/再送を停止します/)).toBeInTheDocument();
     expect(mockMutationCalls[0]).not.toHaveProperty('facilityId');
     expect(mockMutationCalls[0]).not.toHaveProperty('insuranceCombinationNumber');
     expect(mockMutationCalls[0]).not.toHaveProperty('medicalUid');
-    expect(within(reviewRegion).getByText('照合結果: 一致候補あり（1/2件）。再送前に内容を確認してください。')).toBeInTheDocument();
+    expect(within(reviewRegion).getByText(/再送を停止します/)).toBeInTheDocument();
     expect(mockEnqueue).toHaveBeenCalledWith(
       expect.objectContaining({
         tone: 'warning',

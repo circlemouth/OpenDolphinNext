@@ -24,6 +24,8 @@ public class BillingOrcaTemporaryMedicalReconcileResponse {
     private boolean medicalUidPresent;
     private String medicalMode;
     private String medicalMode2;
+    private boolean resendBlocked;
+    private String resendBlockReason;
     private String reconciliationStatus;
     private String message;
 
@@ -201,6 +203,22 @@ public class BillingOrcaTemporaryMedicalReconcileResponse {
 
     public void setMedicalMode2(String medicalMode2) {
         this.medicalMode2 = medicalMode2;
+    }
+
+    public boolean isResendBlocked() {
+        return resendBlocked;
+    }
+
+    public void setResendBlocked(boolean resendBlocked) {
+        this.resendBlocked = resendBlocked;
+    }
+
+    public String getResendBlockReason() {
+        return resendBlockReason;
+    }
+
+    public void setResendBlockReason(String resendBlockReason) {
+        this.resendBlockReason = resendBlockReason;
     }
 
     public String getReconciliationStatus() {

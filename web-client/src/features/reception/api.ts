@@ -150,6 +150,8 @@ export type BillingOrcaTemporaryMedicalReconcileResponse = {
   medicalUidPresent: boolean;
   medicalMode?: string;
   medicalMode2?: string;
+  resendBlocked: boolean;
+  resendBlockReason?: string;
   message?: string;
   runId?: string;
 };
@@ -830,6 +832,8 @@ export async function reconcileBillingOrcaTemporaryMedical(options: {
     medicalUidPresent: body.medicalUidPresent === true,
     medicalMode: normalizeReviewString(body.medicalMode),
     medicalMode2: normalizeReviewString(body.medicalMode2),
+    resendBlocked: body.resendBlocked === true,
+    resendBlockReason: normalizeReviewString(body.resendBlockReason),
     message: normalizeReviewString(body.message),
     runId: normalizeReviewString(body.runId),
   };

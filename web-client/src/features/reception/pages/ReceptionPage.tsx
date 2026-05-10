@@ -527,6 +527,10 @@ const billingOrcaReviewNextAction = (entry: BillingOrcaTransmissionReviewEntry) 
 
 const billingOrcaReconcileSummary = (result?: BillingOrcaTemporaryMedicalReconcileResponse) => {
   if (!result) return undefined;
+  if (result.resendBlocked) {
+    const reason = result.resendBlockReason ? `（${result.resendBlockReason}）` : '';
+    return `照合結果: ORCA側で会計済みまたは展開済みの可能性があるため再送を停止します${reason}。管理者確認が必要です。`;
+  }
   if (result.matchingTemporaryMedicalRowCount > 0) {
     return `照合結果: 一致候補あり（${result.matchingTemporaryMedicalRowCount}/${result.temporaryMedicalRowCount}件）。再送前に内容を確認してください。`;
   }
@@ -4232,6 +4236,8 @@ export function ReceptionPage({
             matchingTemporaryMedicalRowCount: result.matchingTemporaryMedicalRowCount,
             temporaryMedicalRowCount: result.temporaryMedicalRowCount,
             medicalUidPresent: result.medicalUidPresent,
+            resendBlocked: result.resendBlocked,
+            resendBlockReason: result.resendBlockReason,
             rawSensitiveFieldsExcluded: true,
             needsUserReview: true,
           },

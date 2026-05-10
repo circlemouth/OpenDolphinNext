@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModResponse;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class OrcaBillingCorrectionScenarioSupportTest {
@@ -163,9 +164,72 @@ class OrcaBillingCorrectionScenarioSupportTest {
         assertTrue(response.isMedicalUidPresent());
         assertEquals("0", response.getMedicalMode());
         assertEquals("0", response.getMedicalMode2());
+        assertTrue(!response.isResendBlocked());
         assertTrue(response.isRawSensitiveFieldsExcluded());
         assertTrue(!response.isClientProvidedIdentifiersTrusted());
         assertTrue(response.isServerDerivedAuthorityRequired());
+    }
+
+    @Test
+    void temporaryMedicalReconcileBlocksResendWhenOrcaModeIsLocked() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
+                new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                        41L,
+                        19L,
+                        "FAC-1",
+                        "encounter-billing",
+                        "idem-locked",
+                        "ORCA_UNKNOWN",
+                        null,
+                        "unknown",
+                        "result_unknown",
+                        200,
+                        "REQ-LOCKED",
+                        "TRACE-LOCKED",
+                        "00012",
+                        "schedule-billing",
+                        Instant.parse("2026-05-10T01:00:00Z"),
+                        null,
+                        """
+                                {
+                                  "visitDate":"2026-05-10",
+                                  "departmentCode":"01"
+                                }
+                                """);
+
+        var response = new open.dolphin.rest.dto.orca.BillingOrcaTemporaryMedicalReconcileResponse();
+        resource.applyTemporaryMedicalGetResult(
+                response,
+                record,
+                OrcaTransportResult.fallback("""
+                        <xmlio2>
+                          <tmedicalgetres type="record">
+                            <Api_Result type="string">00</Api_Result>
+                            <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                            <Tmedical_List_Information type="array">
+                              <Tmedical_List_Information_child type="record">
+                                <Patient_Information type="record">
+                                  <Patient_ID type="string">00012</Patient_ID>
+                                </Patient_Information>
+                                <Department_Code type="string">01</Department_Code>
+                                <Medical_Uid type="string">secret-medical-uid</Medical_Uid>
+                                <Medical_Mode type="string">0</Medical_Mode>
+                                <Medical_Mode2 type="string">2</Medical_Mode2>
+                              </Tmedical_List_Information_child>
+                            </Tmedical_List_Information>
+                          </tmedicalgetres>
+                        </xmlio2>
+                        """, "application/xml"));
+
+        assertTrue(!response.isOk());
+        assertTrue(response.isResendBlocked());
+        assertEquals("ORCA_TEMPORARY_MEDICAL_MODE_LOCKED", response.getResendBlockReason());
+        assertEquals("ORCA_RESEND_BLOCKED", response.getOperationStatus());
+        assertEquals("TEMPORARY_MEDICAL_FOUND_RESEND_BLOCKED", response.getReconciliationStatus());
+        assertEquals(1, response.getMatchingTemporaryMedicalRowCount());
+        assertEquals("2", response.getMedicalMode2());
+        assertTrue(response.getMessage().contains("再送"));
     }
 
     @Test
