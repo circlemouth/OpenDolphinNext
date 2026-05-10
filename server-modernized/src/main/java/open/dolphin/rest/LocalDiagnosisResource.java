@@ -13,6 +13,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -22,6 +23,7 @@ import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.ModelUtils;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.RegisteredDiagnosisModel;
+import open.dolphin.orca.service.OrcaDiseaseCacheStore;
 import open.dolphin.orca.service.DiseaseProjectionService;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
@@ -35,6 +37,8 @@ import open.dolphin.session.PatientServiceBean;
 @Path("/local/diagnoses")
 public class LocalDiagnosisResource extends AbstractResource {
 
+    private static final DateTimeFormatter BASE_MONTH_FORMAT = DateTimeFormatter.ofPattern("yyyyMM");
+
     @Inject
     private PatientServiceBean patientServiceBean;
 
@@ -46,6 +50,9 @@ public class LocalDiagnosisResource extends AbstractResource {
 
     @Inject
     private DiseaseProjectionService diseaseProjectionService;
+
+    @Inject
+    private OrcaDiseaseCacheStore diseaseCacheStore;
 
     @Inject
     private MasterUpdateStore masterUpdateStore;
@@ -151,10 +158,39 @@ public class LocalDiagnosisResource extends AbstractResource {
                     facilityId,
                     OrcaEndpoint.DISEASE_GET,
                     OrcaTransportRequest.post(requestXml).withQuery(DiseaseProjectionService.DISEASE_GET_QUERY));
-            return projectionService().buildMirrorResponseFromOrca(result, resolveTraceId(request), patientId, fromDate, toDate);
+            DiseaseImportResponse response =
+                    projectionService().buildMirrorResponseFromOrca(result, resolveTraceId(request), patientId, fromDate, toDate);
+            saveOrcaDiseaseCache(request, facilityId, patientId, baseDate, result, response);
+            return response;
         } catch (RuntimeException ex) {
             return unavailable;
         }
+    }
+
+    private void saveOrcaDiseaseCache(
+            HttpServletRequest request,
+            String facilityId,
+            String patientId,
+            LocalDate baseDate,
+            OrcaTransportResult result,
+            DiseaseImportResponse response) {
+        if (diseaseCacheStore == null || result == null || !"connected".equals(response.getOrcaMirrorStatus())) {
+            return;
+        }
+        String traceId = resolveTraceId(request);
+        diseaseCacheStore.save(new OrcaDiseaseCacheStore.DiseaseCacheCommand(
+                facilityId,
+                patientId,
+                BASE_MONTH_FORMAT.format(baseDate),
+                baseDate,
+                firstDepartmentCode(response),
+                firstInsuranceCombinationNumber(response),
+                traceId,
+                traceId,
+                null,
+                null,
+                result.getBody(),
+                response));
     }
 
     private String resolveDiseaseMasterVersion() {
@@ -190,6 +226,32 @@ public class LocalDiagnosisResource extends AbstractResource {
     private static LocalDate toDateOnly(Date date) {
         Date safeDate = date != null ? date : new Date();
         return safeDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+
+    private static String firstDepartmentCode(DiseaseImportResponse response) {
+        if (response == null || response.getDiseases() == null) {
+            return null;
+        }
+        for (DiseaseImportResponse.DiseaseEntry entry : response.getDiseases()) {
+            if (entry != null && entry.getDepartmentCode() != null && !entry.getDepartmentCode().isBlank()) {
+                return entry.getDepartmentCode().trim();
+            }
+        }
+        return null;
+    }
+
+    private static String firstInsuranceCombinationNumber(DiseaseImportResponse response) {
+        if (response == null || response.getDiseases() == null) {
+            return null;
+        }
+        for (DiseaseImportResponse.DiseaseEntry entry : response.getDiseases()) {
+            if (entry != null
+                    && entry.getInsuranceCombinationNumber() != null
+                    && !entry.getInsuranceCombinationNumber().isBlank()) {
+                return entry.getInsuranceCombinationNumber().trim();
+            }
+        }
+        return null;
     }
 
     private static Map<String, Object> toMirrorItem(DiseaseImportResponse.DiseaseEntry entry) {

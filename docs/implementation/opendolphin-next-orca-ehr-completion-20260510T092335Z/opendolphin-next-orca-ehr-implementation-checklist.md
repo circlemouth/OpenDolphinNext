@@ -165,7 +165,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 ## 9. 病名ORCA連携実装
 
 - [ ] `GET /api/local/diagnoses/{patientId}?baseMonth=...` の ORCA mirror read model、または official read wrapper を通じて ORCA `diseasegetv2?class=01` 相当から取得する。
-- [ ] 取得結果を `orca_disease_cache` に保存し、取得日時、基準月、診療科、保険組合せ、ORCA患者番号、stale を保持する。
+- [x] 取得結果を `orca_disease_cache` に保存し、取得日時、基準月、診療科、保険組合せ、ORCA患者番号、stale を保持する。
 - [ ] local prepare route と official `POST /api/orca/official/chart-support/disease-mod-v3` を組み合わせ、ORCA `diseasev3` 相当に送信する。
 - [ ] 旧 `diseasev2`、CLAIM病名送信、ORCA DB直接更新/参照を使わない。
 - [ ] `OrcaDiseaseMutationRequest` は operation、ORCA患者ID、基準月、診療日、診療科、医師、保険組合せ、病名コード、補足コード、疑い、開始/終了日、転帰、カルテ名、病名区分、レセプト表示、保険病名、主病名/副病名を持つ。

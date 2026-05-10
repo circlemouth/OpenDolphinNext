@@ -1,6 +1,7 @@
 package open.dolphin.rest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -17,6 +18,7 @@ import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.RegisteredDiagnosisModel;
 import open.dolphin.orca.service.DiseaseProjectionService;
+import open.dolphin.orca.service.OrcaDiseaseCacheStore;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
@@ -31,6 +33,7 @@ class LocalDiagnosisResourceTest {
     private LocalDiagnosisResource resource;
     private HttpServletRequest request;
     private StubKarteServiceBean karteServiceBean;
+    private StubDiseaseCacheStore diseaseCacheStore;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -39,6 +42,8 @@ class LocalDiagnosisResourceTest {
         karteServiceBean = new StubKarteServiceBean();
         setField(resource, "karteServiceBean", karteServiceBean);
         setField(resource, "diseaseProjectionService", new DiseaseProjectionService());
+        diseaseCacheStore = new StubDiseaseCacheStore();
+        setField(resource, "diseaseCacheStore", diseaseCacheStore);
         request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("F001:doctor01");
         when(request.getHeader("X-Trace-Id")).thenReturn("trace-100");
@@ -85,6 +90,16 @@ class LocalDiagnosisResourceTest {
         assertEquals("ORCA参照病名", mirror.get("diagnosisName"));
         assertEquals(true, mirror.get("readOnly"));
         assertEquals("conflict", mirror.get("syncState"));
+        assertEquals(1, diseaseCacheStore.saveCount());
+        OrcaDiseaseCacheStore.DiseaseCacheCommand command = diseaseCacheStore.lastCommand();
+        assertNotNull(command);
+        assertEquals("F001", command.facilityId());
+        assertEquals("00001", command.orcaPatientId());
+        assertEquals("202605", command.baseMonth());
+        assertEquals(LocalDate.parse("2026-05-08"), command.performDate());
+        assertEquals("01", command.departmentCode());
+        assertEquals("trace-100", command.sourceTraceId());
+        assertEquals("connected", command.response().getOrcaMirrorStatus());
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> pending = (List<Map<String, Object>>) response.get("pendingLocalDiseases");
         assertEquals(1, pending.size());
@@ -103,6 +118,7 @@ class LocalDiagnosisResourceTest {
         Map<String, Object> response = resource.getDiagnoses(request, "00001", null, "2026-05-08", false);
 
         assertEquals("connected", response.get("orcaMirrorStatus"));
+        assertEquals(1, diseaseCacheStore.saveCount());
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> diseases = (List<Map<String, Object>>) response.get("diseases");
         assertEquals(0, diseases.size());
@@ -141,6 +157,7 @@ class LocalDiagnosisResourceTest {
         assertEquals(1, pending.size());
         assertEquals("insurance-local", pending.get(0).get("layer"));
         org.junit.jupiter.api.Assertions.assertFalse(response.toString().contains("https://orca.internal.example"));
+        assertEquals(0, diseaseCacheStore.saveCount());
     }
 
     @Test
@@ -271,6 +288,26 @@ class LocalDiagnosisResourceTest {
         @Override
         public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
             throw new RuntimeException("https://orca.internal.example/basic-secret");
+        }
+    }
+
+    private static final class StubDiseaseCacheStore extends OrcaDiseaseCacheStore {
+        private int saveCount;
+        private DiseaseCacheCommand lastCommand;
+
+        @Override
+        public long save(DiseaseCacheCommand command) {
+            this.saveCount++;
+            this.lastCommand = command;
+            return saveCount;
+        }
+
+        int saveCount() {
+            return saveCount;
+        }
+
+        DiseaseCacheCommand lastCommand() {
+            return lastCommand;
         }
     }
 }
