@@ -26,6 +26,7 @@ rg -n "症状詳記（ORCA）|ORCAへ反映|今すぐ同期|認証済み|一括�
 rg -n "medicalInformation \\?\\? '01'|medicalInformation \\|\\| '01'" web-client/scripts
 rg -n "medicalmodv23" web-client server-modernized docs
 bash server-modernized/tools/ci/check-no-legacy-disease-authority.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-finalized-write-guards.sh --root "$(git rev-parse --show-toplevel)"
 ```
 期待結果:
 - taxonomy grep は current route と docs 正本だけを返し、legacy alias や blocked route を返さない。
@@ -34,6 +35,7 @@ bash server-modernized/tools/ci/check-no-legacy-disease-authority.sh --root "$(g
 - `medicalInformation ?? '01'` / `medicalInformation || '01'` は 0 hit。
 - `medicalmodv23` は 0 hit。
 - legacy disease authority guard が通り、active modernized roots に `diseasev2`、旧 CLAIM 病名送信、ORCA 患者病名 DB 直接参照が残っていない。
+- finalized write guard が通り、確定済み診療録タイトル直接更新は 409 `karte.document.finalized_update_denied` で拒否され、処方保存/DO import は server-side `encounter_projection` の会計待ち・取消・閉鎖相当状態を payload 永続化前に 409 `prescription_order_finalized_update_denied` で拒否する。
 
 2. server contract / inventory / exposure tests を current taxonomy で実行する。
 ```bash

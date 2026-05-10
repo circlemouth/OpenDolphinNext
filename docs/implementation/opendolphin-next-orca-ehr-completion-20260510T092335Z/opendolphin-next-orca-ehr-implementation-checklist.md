@@ -266,9 +266,10 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-10T19:20Z: active source/current docs に `/api/local/patients/mutation(s)` と `LocalPatientMutation*` が再混入しない `verify:no-local-patient-mutation` guard を `verify:web-guard` に追加した。患者作成・更新の現行導線は ORCA official patientmodv2 bridge とし、local patient search 以外の local mutation surface がないことを継続検証する。
 - [x] ローカル病名作成/更新/削除 API を削除する。
 - [x] ORCA DB直接病名参照コード、CLAIM病名送信コード、`diseasev2` 依存を削除する。
-- [ ] 診療録確定済みタイトル直接更新経路、確定済み処方 payload 直接上書き経路を削除する。
+- [x] 診療録確定済みタイトル直接更新経路、確定済み処方 payload 直接上書き経路を削除する。
   - [x] `KarteDocumentWriteService.updateTitle` は `TMP` 以外の診療録タイトル直接更新を `karte.document.finalized_update_denied` / HTTP 409 で拒否し、確定済みタイトル変更を revision/event 経由に限定する。
   - [x] `/api/local/prescription-orders` と `/api/local/prescription-orders/do-import` は server-derived `encounter_projection` が会計待ち・取消・閉鎖相当の場合、処方 payload 永続化前に `prescription_order_finalized_update_denied` / HTTP 409 で拒否する。client 提供の encounter/patient/facility は権威にせず、projection の facility/patient 不一致は `encounter_not_found` として扱う。
+  - [x] 2026-05-10T19:29Z: `check-finalized-write-guards.sh` を release validation に追加し、上記の拒否実装・保存前順序・regression test を CI guard として固定した。
 - [ ] Webクライアントの生ORCAプロキシ設定、ORCA認証情報を扱うフロント設定を削除する。
   - [x] `web-client/vite.config.ts` から `/api21`, `/api01rv2`, `/orca22` 等の生 ORCA/WebORCA proxy、ORCA Basic 認証 header 注入、ORCA 証明書 agent 読込、ORCA header 操作を削除し、Vite proxy は server-modernized `/api` entrypoint 中継に限定する。
   - [x] `web-client` の `npm run dev` は ORCA env file を自動読込せず、`verify:no-direct-orca-proxy-config` で Vite config / env sample への生 ORCA proxy・ORCA credential config 再混入を fail する。
