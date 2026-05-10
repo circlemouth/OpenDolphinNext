@@ -425,6 +425,77 @@ class OrcaChartSupportResourceTest {
     }
 
     @Test
+    void diseaseModV3OverwritesTopLevelPhysicianAndInsuranceFromServerDerivedContext() {
+        CapturingTransport transport = new CapturingTransport("""
+                <xmlio2>
+                  <diseaseres>
+                    <Api_Result>0000</Api_Result>
+                    <Api_Result_Message>正常終了</Api_Result_Message>
+                  </diseaseres>
+                </xmlio2>
+                """);
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        injectDiseaseModAuthority(resource);
+        ChartSupportDiseaseModV3Request payload = newDiseasePayload();
+        payload.setBaseMonth("202604");
+        payload.setPhysicianCode("10001");
+        payload.setInsuranceCombinationNumber("0001");
+        payload.getDiseaseInformation().get(0).setInsuranceCombinationNumber("");
+
+        resource.diseaseModV3(buildRequest(), payload);
+
+        assertEquals("11", payload.getDepartmentCode());
+        assertEquals("10001", payload.getPhysicianCode());
+        assertEquals("0001", payload.getInsuranceCombinationNumber());
+        assertEquals("0001", payload.getDiseaseInformation().get(0).getInsuranceCombinationNumber());
+        assertTrue(transport.requestXml().contains(
+                "<Insurance_Combination_Number type=\"string\">0001</Insurance_Combination_Number>"));
+    }
+
+    @Test
+    void diseaseModV3RejectsClientProvidedPhysicianOrTopLevelInsuranceMismatchBeforeOfficialInvoke() {
+        CapturingTransport transport = new CapturingTransport();
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        injectDiseaseModAuthority(resource);
+        ChartSupportDiseaseModV3Request payload = newDiseasePayload();
+        payload.setPhysicianCode("99999");
+        payload.setInsuranceCombinationNumber("9999");
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> resource.diseaseModV3(buildRequest(), payload));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
+        assertEquals("payload", body.get("field"));
+        assertEquals("server-derived disease context was not found", body.get("message"));
+        assertNull(transport.endpoint());
+    }
+
+    @Test
+    void diseaseModV3RejectsMalformedBaseMonthBeforeOfficialInvoke() {
+        CapturingTransport transport = new CapturingTransport();
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        ChartSupportDiseaseModV3Request payload = newDiseasePayload();
+        payload.setBaseMonth("2026-04");
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> resource.diseaseModV3(buildRequest(), payload));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
+        assertEquals("payload.baseMonth", body.get("field"));
+        assertEquals("baseMonth must be yyyyMM", body.get("message"));
+        assertNull(transport.endpoint());
+    }
+
+    @Test
     void diseaseModV3RejectsRequestNumber02BeforeOfficialInvoke() {
         CapturingTransport transport = new CapturingTransport();
         OrcaChartSupportResource resource = new OrcaChartSupportResource();

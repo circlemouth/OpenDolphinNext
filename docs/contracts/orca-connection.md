@@ -109,6 +109,7 @@
 ## Charts Disease Mutation
 - Charts からの ORCA 病名登録・更新・削除は `/api/orca/official/chart-support/disease-mod-v3` だけを使う。
 - server は facility / patient access / department / insurance / target disease を server-side で再検証し、クライアント提供の facilityId、任意 URL、raw XML、`Request_Number` を信用しない。
+- `baseMonth` は `yyyyMM` 形式だけを許可し、形式不正は ORCA transport 前に拒否する。payload に `physicianCode` または top-level `insuranceCombinationNumber` が含まれる場合は server-derived encounter context との完全一致を確認し、一致後も送信 XML、冪等キー、operation 保存には server-derived 値を使う。不一致は ORCA transport 前に fail closed する。
 - `create|update` は `Disease_Single` component 列を必須にし、`Disease_Code` 単独・自由文字列だけの登録は拒否する。未コード化は明示確認済みの `uncodedAccepted=true` のときだけ許可する。
 - `operation=create|update|delete|organizeDeletedDiseases` は server-owned enum とする。通常 create/update/delete は `Request_Number` を送らず、delete は `Disease_OutCome=O` を server が生成する。`Request_Number=01` は `organizeDeletedDiseases` の削除病名整理だけで生成する。
 - 転帰送信値は server allowlist で `ACTIVE=` 空、`CURED=F`、`DEATH=D`、`DISCONTINUED=P`、`DELETED=O` に固定する。`C` と `S` は送らず、`TRANSFERRED` は Trial 実送信確認まで ORCA 送信を block する。

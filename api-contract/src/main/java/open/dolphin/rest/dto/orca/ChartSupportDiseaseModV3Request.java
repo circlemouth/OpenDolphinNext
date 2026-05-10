@@ -11,9 +11,12 @@ import java.util.Locale;
 public class ChartSupportDiseaseModV3Request {
 
     private String patientId;
+    private String baseMonth;
     private String performDate;
     private String performTime;
     private String departmentCode;
+    private String physicianCode;
+    private String insuranceCombinationNumber;
     private String requestNumber;
     private String operation;
     private DiseaseInformation targetDisease;
@@ -27,6 +30,14 @@ public class ChartSupportDiseaseModV3Request {
 
     public void setPatientId(String patientId) {
         this.patientId = patientId;
+    }
+
+    public String getBaseMonth() {
+        return baseMonth;
+    }
+
+    public void setBaseMonth(String baseMonth) {
+        this.baseMonth = baseMonth;
     }
 
     public String getPerformDate() {
@@ -51,6 +62,22 @@ public class ChartSupportDiseaseModV3Request {
 
     public void setDepartmentCode(String departmentCode) {
         this.departmentCode = departmentCode;
+    }
+
+    public String getPhysicianCode() {
+        return physicianCode;
+    }
+
+    public void setPhysicianCode(String physicianCode) {
+        this.physicianCode = physicianCode;
+    }
+
+    public String getInsuranceCombinationNumber() {
+        return insuranceCombinationNumber;
+    }
+
+    public void setInsuranceCombinationNumber(String insuranceCombinationNumber) {
+        this.insuranceCombinationNumber = insuranceCombinationNumber;
     }
 
     public String getRequestNumber() {

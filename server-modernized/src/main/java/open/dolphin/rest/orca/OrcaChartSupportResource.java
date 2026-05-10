@@ -651,6 +651,7 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
                     "client-provided Request_Number, raw XML, URL, facility, or owner fields are not accepted");
         }
         requireDateOnly(request, payload.getPerformDate(), "payload.performDate");
+        requireBaseMonth(request, payload.getBaseMonth(), "payload.baseMonth");
         if ("organizeDeletedDiseases".equals(operation)) {
             ChartSupportDiseaseModV3Request.OrganizeInformation organize = payload.getOrganizeInformation();
             if (organize == null || isBlank(organize.getDiseaseStartDate())) {
@@ -736,6 +737,13 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         if (!safeEquals(departmentCode, payload.getDepartmentCode())) {
             return DiseaseModContextAuthority.rejected();
         }
+        if (!isBlank(payload.getPhysicianCode()) && !safeEquals(physicianCode, payload.getPhysicianCode())) {
+            return DiseaseModContextAuthority.rejected();
+        }
+        if (!isBlank(payload.getInsuranceCombinationNumber())
+                && !safeEquals(insuranceCombinationNumber, payload.getInsuranceCombinationNumber())) {
+            return DiseaseModContextAuthority.rejected();
+        }
         if (!"organizeDeletedDiseases".equals(operation)
                 && !payloadDiseaseInsuranceMatches(payload, insuranceCombinationNumber)) {
             return DiseaseModContextAuthority.rejected();
@@ -774,6 +782,8 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             DiseaseModContextAuthority contextAuthority,
             String operation) {
         payload.setDepartmentCode(contextAuthority.departmentCode());
+        payload.setPhysicianCode(contextAuthority.physicianCode());
+        payload.setInsuranceCombinationNumber(contextAuthority.insuranceCombinationNumber());
         if ("organizeDeletedDiseases".equals(operation)) {
             if (payload.getOrganizeInformation() != null) {
                 payload.getOrganizeInformation().setDepartmentCode(contextAuthority.departmentCode());
@@ -1065,6 +1075,21 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             return LocalDate.parse(value);
         } catch (DateTimeParseException ex) {
             throw validationError(request, field, "date must be yyyy-MM-dd");
+        }
+    }
+
+    private void requireBaseMonth(HttpServletRequest request, String value, String field) {
+        if (isBlank(value)) {
+            return;
+        }
+        String normalized = value.trim();
+        if (!normalized.matches("\\d{6}")) {
+            throw validationError(request, field, "baseMonth must be yyyyMM");
+        }
+        try {
+            java.time.YearMonth.parse(normalized, java.time.format.DateTimeFormatter.ofPattern("yyyyMM"));
+        } catch (DateTimeParseException ex) {
+            throw validationError(request, field, "baseMonth must be yyyyMM");
         }
     }
 
