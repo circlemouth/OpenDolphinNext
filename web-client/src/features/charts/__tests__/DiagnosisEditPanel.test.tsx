@@ -197,6 +197,45 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     expect(mutateOrcaDisease).not.toHaveBeenCalledWith(expect.objectContaining({ requestNumber: expect.anything() }));
   });
 
+  it('病名送信確認で患者文脈とORCA仕様コードを表示し、主病名コードを送信する', async () => {
+    const user = userEvent.setup();
+
+    renderPanel();
+
+    await user.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
+    const authoring = screen.getByLabelText('ORCAへ病名登録');
+    fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: 'MainDisease' } });
+    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('8839001');
+    await user.click(within(authoring).getByRole('button', { name: '主病名として登録' }));
+
+    const confirmDialog = await screen.findByRole('dialog', { name: '主病名として登録' });
+    expect(within(confirmDialog).getByText('P-TEST-001')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('2026-05-08')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('01')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('0001')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('主病名')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('Main_Disease_Class=01 / Disease_SuspectedFlag=送信しない')).toBeInTheDocument();
+    expect(within(confirmDialog).queryByText('Main_Disease_Class=主病名')).not.toBeInTheDocument();
+    expect(mutateOrcaDisease).not.toHaveBeenCalled();
+
+    await user.click(within(confirmDialog).getByRole('button', { name: '主病名として登録' }));
+
+    await waitFor(() => {
+      expect(mutateOrcaDisease).toHaveBeenCalledWith(
+        expect.objectContaining({
+          diseaseInformation: [
+            expect.objectContaining({
+              diseaseName: 'MainDisease',
+              diseaseCode: '8839001',
+              mainDiseaseClass: '01',
+              diseaseSuspectedFlag: undefined,
+            }),
+          ],
+        }),
+      );
+    });
+  });
+
   it('確認をキャンセルした場合は official mutation を送らない', async () => {
     const user = userEvent.setup();
 

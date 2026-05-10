@@ -247,6 +247,16 @@ const buildDiseaseInput = (input: FormMutationInput) => {
   };
 };
 
+const resolveMainDiseaseClassCode = (state?: Pick<DiagnosisFormState, 'isMain'> | null) => (state?.isMain ? '01' : undefined);
+const resolveSuspectedFlagCode = (state?: Pick<DiagnosisFormState, 'isSuspected'> | null) => (state?.isSuspected ? 'S' : undefined);
+const formatOrcaCode = (value?: string | null) => value?.trim() || '送信しない';
+const formatInsuranceCombination = (value?: string | null) => value?.trim() || 'server-side確認';
+const formatDiseaseAttributeLabel = (state?: Pick<DiagnosisFormState, 'isMain' | 'isSuspected'> | null) => {
+  if (!state) return '-';
+  const labels = [state.isMain ? '主病名' : '副病名', state.isSuspected ? '疑い' : null].filter(Boolean);
+  return labels.join(' / ');
+};
+
 const toOrcaDiseaseInformation = (entry: DiseaseEntry): OrcaDiseaseInformation => {
   const outcome = toOrcaOutcome(entry.outcome);
   return {
@@ -261,6 +271,7 @@ const toOrcaDiseaseInformation = (entry: DiseaseEntry): OrcaDiseaseInformation =
     diseaseOutCome: outcome.sendCode,
     outcome: outcome.outcome,
     orcaOutcomeSendCode: outcome.sendCode,
+    mainDiseaseClass: isMainDisease(entry) ? '01' : undefined,
     components: entry.components,
     supplements: entry.supplements,
     insuranceCombinationNumber: entry.insuranceCombinationNumber,
@@ -607,10 +618,11 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
             diseaseStartDate: disease.startDate,
             diseaseEndDate: disease.endDate,
             diseaseInOut: 'O',
-            diseaseSuspectedFlag: input.form.isSuspected ? 'S' : undefined,
+            diseaseSuspectedFlag: resolveSuspectedFlagCode(input.form),
             diseaseOutCome: outcome.sendCode,
             outcome: outcome.outcome,
             orcaOutcomeSendCode: outcome.sendCode,
+            mainDiseaseClass: resolveMainDiseaseClassCode(input.form),
             components: resolvedComponents,
             supplements: [],
             uncodedAccepted: input.form.uncodedAccepted,
@@ -1325,8 +1337,28 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
               <dd>{pendingAction?.title ?? '-'}</dd>
             </div>
             <div>
+              <dt>ORCA患者番号</dt>
+              <dd>{patientId}</dd>
+            </div>
+            <div>
+              <dt>診療日</dt>
+              <dd>{meta.visitDate ?? '-'}</dd>
+            </div>
+            <div>
+              <dt>診療科</dt>
+              <dd>{meta.departmentCode ?? '-'}</dd>
+            </div>
+            <div>
+              <dt>保険組合せ</dt>
+              <dd>{formatInsuranceCombination(meta.insuranceCombinationNumber ?? pendingEntry?.insuranceCombinationNumber)}</dd>
+            </div>
+            <div>
               <dt>病名</dt>
               <dd>{pendingForm?.name || formatEntryName(pendingEntry)}</dd>
+            </div>
+            <div>
+              <dt>病名属性</dt>
+              <dd>{pendingForm ? formatDiseaseAttributeLabel(pendingForm) : pendingEntry ? (isMainDisease(pendingEntry) ? '主病名' : '副病名') : '-'}</dd>
             </div>
             <div>
               <dt>開始日</dt>
@@ -1343,6 +1375,16 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
                   ? normalizeFormComponents(pendingForm).map((component) => component.code).join(' + ') || (pendingForm.uncodedAccepted ? '未コード化' : '-')
                   : pendingEntry
                     ? formatComponentCodeList(pendingEntry)
+                    : '-'}
+              </dd>
+            </div>
+            <div>
+              <dt>ORCA送信コード</dt>
+              <dd>
+                {pendingForm
+                  ? `Main_Disease_Class=${formatOrcaCode(resolveMainDiseaseClassCode(pendingForm))} / Disease_SuspectedFlag=${formatOrcaCode(resolveSuspectedFlagCode(pendingForm))}`
+                  : pendingEntry
+                    ? `Main_Disease_Class=${formatOrcaCode(isMainDisease(pendingEntry) ? '01' : undefined)} / Disease_SuspectedFlag=${formatOrcaCode(isSuspectedDisease(pendingEntry) ? 'S' : undefined)}`
                     : '-'}
               </dd>
             </div>
