@@ -72,6 +72,11 @@ type DiagnosisFormState = {
   isSuspected: boolean;
   receiptPrint: boolean;
   insuranceDisease: boolean;
+  diseaseInsuranceClass: '' | '1' | '0' | 'None';
+  diseaseCategory: '' | 'PD' | 'None';
+  diseaseClass: '' | '03' | '04' | '05' | '07' | '08' | '09' | 'Auto' | 'None';
+  receiptPrintPeriod: string;
+  dischargeCertificate: '' | '0' | '1' | 'None';
   subDiseaseClass: '' | '01' | '02' | '03' | '04' | '05';
 };
 
@@ -120,6 +125,11 @@ const buildEmptyForm = (today: string): DiagnosisFormState => ({
   isSuspected: false,
   receiptPrint: true,
   insuranceDisease: false,
+  diseaseInsuranceClass: '',
+  diseaseCategory: '',
+  diseaseClass: '',
+  receiptPrintPeriod: '',
+  dischargeCertificate: '',
   subDiseaseClass: '',
 });
 
@@ -161,6 +171,11 @@ const toFormState = (entry: DiseaseEntry, today: string): DiagnosisFormState => 
   isSuspected: entry.suspectedFlag?.includes('疑い') ?? entry.category?.includes('疑い') ?? false,
   receiptPrint: true,
   insuranceDisease: false,
+  diseaseInsuranceClass: '',
+  diseaseCategory: '',
+  diseaseClass: '',
+  receiptPrintPeriod: '',
+  dischargeCertificate: '',
   subDiseaseClass: '',
 });
 
@@ -217,6 +232,8 @@ const isValidDateOnly = (value: string) => {
   return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
 };
 
+const isValidDiseaseReceiptPrintPeriod = (value: string) => value === 'None' || /^\d{2}$/.test(value);
+
 const validateDiagnosisForm = (state: DiagnosisFormState): string | null => {
   if (!state.name.trim()) {
     return '病名を入力してください。';
@@ -235,6 +252,9 @@ const validateDiagnosisForm = (state: DiagnosisFormState): string | null => {
   }
   if (state.outcome.trim() === '移行(ORCA送信保留)') {
     return '移行はORCA送信仕様の確認が完了するまで、この画面からは送信できません。';
+  }
+  if (state.receiptPrintPeriod.trim() && !isValidDiseaseReceiptPrintPeriod(state.receiptPrintPeriod.trim())) {
+    return 'レセプト表示期間は 00-99 または None の ORCA 仕様コードで入力してください。';
   }
   return null;
 };
@@ -260,6 +280,11 @@ const resolveMainDiseaseClassCode = (state?: Pick<DiagnosisFormState, 'isMain'> 
 const resolveSuspectedFlagCode = (state?: Pick<DiagnosisFormState, 'isSuspected'> | null) => (state?.isSuspected ? 'S' : undefined);
 const resolveDiseaseReceiptPrintCode = (state?: Pick<DiagnosisFormState, 'receiptPrint'> | null) => (state?.receiptPrint ? '1' : 'None');
 const resolveInsuranceDiseaseCode = (state?: Pick<DiagnosisFormState, 'insuranceDisease'> | null) => (state?.insuranceDisease ? '1' : undefined);
+const resolveDiseaseInsuranceClassCode = (state?: Pick<DiagnosisFormState, 'diseaseInsuranceClass'> | null) => state?.diseaseInsuranceClass || undefined;
+const resolveDiseaseCategoryCode = (state?: Pick<DiagnosisFormState, 'diseaseCategory'> | null) => state?.diseaseCategory || undefined;
+const resolveDiseaseClassCode = (state?: Pick<DiagnosisFormState, 'diseaseClass'> | null) => state?.diseaseClass || undefined;
+const resolveDiseaseReceiptPrintPeriodCode = (state?: Pick<DiagnosisFormState, 'receiptPrintPeriod'> | null) => state?.receiptPrintPeriod.trim() || undefined;
+const resolveDischargeCertificateCode = (state?: Pick<DiagnosisFormState, 'dischargeCertificate'> | null) => state?.dischargeCertificate || undefined;
 const resolveSubDiseaseClassCode = (state?: Pick<DiagnosisFormState, 'subDiseaseClass'> | null) => state?.subDiseaseClass || undefined;
 const formatOrcaCode = (value?: string | null) => value?.trim() || '送信しない';
 const formatInsuranceCombination = (value?: string | null) => value?.trim() || 'server-side確認';
@@ -267,6 +292,57 @@ const formatDiseaseAttributeLabel = (state?: Pick<DiagnosisFormState, 'isMain' |
   if (!state) return '-';
   const labels = [state.isMain ? '主病名' : '副病名', state.isSuspected ? '疑い' : null].filter(Boolean);
   return labels.join(' / ');
+};
+const formatDiseaseInsuranceClassLabel = (value?: DiagnosisFormState['diseaseInsuranceClass'] | null) => {
+  switch (value) {
+    case '1':
+      return '保険適用';
+    case '0':
+      return '保険適用外';
+    case 'None':
+      return '指定なしコード';
+    default:
+      return '指定なし';
+  }
+};
+const formatDiseaseCategoryLabel = (value?: DiagnosisFormState['diseaseCategory'] | null) => {
+  switch (value) {
+    case 'PD':
+      return '難病等';
+    case 'None':
+      return '指定なしコード';
+    default:
+      return '指定なし';
+  }
+};
+const formatDiseaseClassLabel = (value?: DiagnosisFormState['diseaseClass'] | null) => {
+  switch (value) {
+    case '03':
+    case '04':
+    case '05':
+    case '07':
+    case '08':
+    case '09':
+      return value;
+    case 'Auto':
+      return 'Auto';
+    case 'None':
+      return '指定なしコード';
+    default:
+      return '指定なし';
+  }
+};
+const formatDischargeCertificateLabel = (value?: DiagnosisFormState['dischargeCertificate'] | null) => {
+  switch (value) {
+    case '0':
+      return '対象外';
+    case '1':
+      return '対象';
+    case 'None':
+      return '指定なしコード';
+    default:
+      return '指定なし';
+  }
 };
 const formatSubDiseaseClassLabel = (value?: DiagnosisFormState['subDiseaseClass'] | null) => {
   switch (value) {
@@ -651,9 +727,14 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
             diseaseOutCome: outcome.sendCode,
             outcome: outcome.outcome,
             orcaOutcomeSendCode: outcome.sendCode,
+            diseaseInsuranceClass: resolveDiseaseInsuranceClassCode(input.form),
+            diseaseCategory: resolveDiseaseCategoryCode(input.form),
+            diseaseClass: resolveDiseaseClassCode(input.form),
             mainDiseaseClass: resolveMainDiseaseClassCode(input.form),
             diseaseReceiptPrint: resolveDiseaseReceiptPrintCode(input.form),
+            diseaseReceiptPrintPeriod: resolveDiseaseReceiptPrintPeriodCode(input.form),
             insuranceDisease: resolveInsuranceDiseaseCode(input.form),
+            dischargeCertificate: resolveDischargeCertificateCode(input.form),
             subDiseaseClass: resolveSubDiseaseClassCode(input.form),
             components: resolvedComponents,
             supplements: [],
@@ -1325,6 +1406,104 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
                 確認画面では表示名と ORCA 仕様コードを分けて表示します。
               </p>
             </div>
+            <div className="charts-side-panel__field-row">
+              <div className="charts-side-panel__field">
+                <label htmlFor="diagnosis-disease-insurance-class">病名保険区分 ※任意</label>
+                <select
+                  id="diagnosis-disease-insurance-class"
+                  value={form.diseaseInsuranceClass}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      diseaseInsuranceClass: event.target.value as DiagnosisFormState['diseaseInsuranceClass'],
+                    }))
+                  }
+                  disabled={isOrcaMutationBlocked}
+                >
+                  <option value="">指定しない</option>
+                  <option value="1">保険適用</option>
+                  <option value="0">保険適用外</option>
+                  <option value="None">指定なしコード</option>
+                </select>
+                <p className="charts-side-panel__help">Disease_Insurance_Class は 1、0、None だけを送信します。</p>
+              </div>
+              <div className="charts-side-panel__field">
+                <label htmlFor="diagnosis-disease-category">病名カテゴリ ※任意</label>
+                <select
+                  id="diagnosis-disease-category"
+                  value={form.diseaseCategory}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      diseaseCategory: event.target.value as DiagnosisFormState['diseaseCategory'],
+                    }))
+                  }
+                  disabled={isOrcaMutationBlocked}
+                >
+                  <option value="">指定しない</option>
+                  <option value="PD">難病等</option>
+                  <option value="None">指定なしコード</option>
+                </select>
+                <p className="charts-side-panel__help">Disease_Category は PD または None だけを送信します。</p>
+              </div>
+            </div>
+            <div className="charts-side-panel__field-row">
+              <div className="charts-side-panel__field">
+                <label htmlFor="diagnosis-disease-class">病名区分 ※任意</label>
+                <select
+                  id="diagnosis-disease-class"
+                  value={form.diseaseClass}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      diseaseClass: event.target.value as DiagnosisFormState['diseaseClass'],
+                    }))
+                  }
+                  disabled={isOrcaMutationBlocked}
+                >
+                  <option value="">指定しない</option>
+                  <option value="03">03</option>
+                  <option value="04">04</option>
+                  <option value="05">05</option>
+                  <option value="07">07</option>
+                  <option value="08">08</option>
+                  <option value="09">09</option>
+                  <option value="Auto">Auto</option>
+                  <option value="None">指定なしコード</option>
+                </select>
+                <p className="charts-side-panel__help">Disease_Class は ORCA 仕様コードだけを送信します。</p>
+              </div>
+              <div className="charts-side-panel__field">
+                <label htmlFor="diagnosis-discharge-certificate">退院証明 ※任意</label>
+                <select
+                  id="diagnosis-discharge-certificate"
+                  value={form.dischargeCertificate}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      dischargeCertificate: event.target.value as DiagnosisFormState['dischargeCertificate'],
+                    }))
+                  }
+                  disabled={isOrcaMutationBlocked}
+                >
+                  <option value="">指定しない</option>
+                  <option value="0">対象外</option>
+                  <option value="1">対象</option>
+                  <option value="None">指定なしコード</option>
+                </select>
+                <p className="charts-side-panel__help">Discharge_Certificate は 0、1、None だけを送信します。</p>
+              </div>
+            </div>
+            <div className="charts-side-panel__field">
+              <label htmlFor="diagnosis-receipt-print-period">レセプト表示期間 ※任意</label>
+              <input
+                id="diagnosis-receipt-print-period"
+                value={form.receiptPrintPeriod}
+                onChange={(event) => setForm((prev) => ({ ...prev, receiptPrintPeriod: event.target.value }))}
+                disabled={isOrcaMutationBlocked}
+              />
+              <p className="charts-side-panel__help">00-99 または None。空欄なら送信しません。</p>
+            </div>
             <div className="charts-side-panel__field">
               <label htmlFor="diagnosis-code">病名構成コード ※必須</label>
               <input
@@ -1439,6 +1618,26 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
               <dd>{pendingForm ? formatSubDiseaseClassLabel(pendingForm.subDiseaseClass) : '指定なし'}</dd>
             </div>
             <div>
+              <dt>病名保険区分</dt>
+              <dd>{pendingForm ? formatDiseaseInsuranceClassLabel(pendingForm.diseaseInsuranceClass) : '指定なし'}</dd>
+            </div>
+            <div>
+              <dt>病名カテゴリ</dt>
+              <dd>{pendingForm ? formatDiseaseCategoryLabel(pendingForm.diseaseCategory) : '指定なし'}</dd>
+            </div>
+            <div>
+              <dt>病名区分</dt>
+              <dd>{pendingForm ? formatDiseaseClassLabel(pendingForm.diseaseClass) : '指定なし'}</dd>
+            </div>
+            <div>
+              <dt>レセプト表示期間</dt>
+              <dd>{pendingForm ? formatOrcaCode(resolveDiseaseReceiptPrintPeriodCode(pendingForm)) : '送信しない'}</dd>
+            </div>
+            <div>
+              <dt>退院証明</dt>
+              <dd>{pendingForm ? formatDischargeCertificateLabel(pendingForm.dischargeCertificate) : '指定なし'}</dd>
+            </div>
+            <div>
               <dt>開始日</dt>
               <dd>{pendingForm?.startDate || pendingEntry?.startDate || '-'}</dd>
             </div>
@@ -1460,9 +1659,9 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
               <dt>ORCA送信コード</dt>
               <dd>
                 {pendingForm
-                  ? `Main_Disease_Class=${formatOrcaCode(resolveMainDiseaseClassCode(pendingForm))} / Disease_SuspectedFlag=${formatOrcaCode(resolveSuspectedFlagCode(pendingForm))} / Disease_Receipt_Print=${formatOrcaCode(resolveDiseaseReceiptPrintCode(pendingForm))} / Insurance_Disease=${formatOrcaCode(resolveInsuranceDiseaseCode(pendingForm))} / Sub_Disease_Class=${formatOrcaCode(resolveSubDiseaseClassCode(pendingForm))}`
+                  ? `Disease_Insurance_Class=${formatOrcaCode(resolveDiseaseInsuranceClassCode(pendingForm))} / Disease_Category=${formatOrcaCode(resolveDiseaseCategoryCode(pendingForm))} / Disease_Class=${formatOrcaCode(resolveDiseaseClassCode(pendingForm))} / Main_Disease_Class=${formatOrcaCode(resolveMainDiseaseClassCode(pendingForm))} / Disease_SuspectedFlag=${formatOrcaCode(resolveSuspectedFlagCode(pendingForm))} / Disease_Receipt_Print=${formatOrcaCode(resolveDiseaseReceiptPrintCode(pendingForm))} / Disease_Receipt_Print_Period=${formatOrcaCode(resolveDiseaseReceiptPrintPeriodCode(pendingForm))} / Insurance_Disease=${formatOrcaCode(resolveInsuranceDiseaseCode(pendingForm))} / Discharge_Certificate=${formatOrcaCode(resolveDischargeCertificateCode(pendingForm))} / Sub_Disease_Class=${formatOrcaCode(resolveSubDiseaseClassCode(pendingForm))}`
                   : pendingEntry
-                    ? `Main_Disease_Class=${formatOrcaCode(isMainDisease(pendingEntry) ? '01' : undefined)} / Disease_SuspectedFlag=${formatOrcaCode(isSuspectedDisease(pendingEntry) ? 'S' : undefined)} / Disease_Receipt_Print=1 / Insurance_Disease=送信しない / Sub_Disease_Class=送信しない`
+                    ? `Disease_Insurance_Class=送信しない / Disease_Category=送信しない / Disease_Class=送信しない / Main_Disease_Class=${formatOrcaCode(isMainDisease(pendingEntry) ? '01' : undefined)} / Disease_SuspectedFlag=${formatOrcaCode(isSuspectedDisease(pendingEntry) ? 'S' : undefined)} / Disease_Receipt_Print=1 / Disease_Receipt_Print_Period=送信しない / Insurance_Disease=送信しない / Discharge_Certificate=送信しない / Sub_Disease_Class=送信しない`
                     : '-'}
               </dd>
             </div>
