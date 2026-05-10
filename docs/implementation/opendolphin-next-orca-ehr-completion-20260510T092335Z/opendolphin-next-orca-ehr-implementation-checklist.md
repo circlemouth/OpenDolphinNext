@@ -295,6 +295,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 ## 18. 実ORCA接続試験チェック
 
+- [x] 2026-05-10T21:59Z: `ops/tests/orca/live-trial-checklist.sh --dry-run --run-id <RUN_ID>` と `check-live-orca-trial-harness.sh` を追加し、runtime-ready、medical-information probe、candidate discovery、exact read-only preflight、approved acceptmodv2、fullflow、Phase 4 medicalmodv2、sensitive evidence guard の順序を sanitized dry-run で固定した。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
 - [ ] ORCA患者取得正常系/不在/更新成功/更新失敗を確認する。
 - [ ] ORCA受付一覧取得/受付取消/保険組合せ取得を確認する。
 - [ ] ORCA病名取得/追加/変更/削除/転帰更新/警告/不一致/ORCA側のみ病名を確認する。

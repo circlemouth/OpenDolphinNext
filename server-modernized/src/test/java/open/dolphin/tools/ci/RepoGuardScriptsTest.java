@@ -126,6 +126,27 @@ class RepoGuardScriptsTest {
     }
 
     @Test
+    void checkLiveOrcaTrialHarnessPassesForCompleteFixture() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-live-orca-ok");
+        createLiveOrcaTrialHarnessFixture(repoRoot, true);
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-live-orca-trial-harness.sh", repoRoot);
+
+        assertThat(result.exitCode()).isZero();
+    }
+
+    @Test
+    void checkLiveOrcaTrialHarnessFailsWhenSanitizedFlagIsMissing() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-live-orca-ng");
+        createLiveOrcaTrialHarnessFixture(repoRoot, false);
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-live-orca-trial-harness.sh", repoRoot);
+
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.output()).contains("sanitized evidence execution flag");
+    }
+
+    @Test
     void checkSensitiveEvidenceRedactionPassesForSanitizedSnapshot() throws Exception {
         Path repoRoot = Files.createTempDirectory("repo-guard-sensitive-evidence-ok");
         initializeGitRepository(repoRoot);
@@ -295,6 +316,38 @@ class RepoGuardScriptsTest {
         Files.writeString(
                 repoRoot.resolve("docs/contracts/audit-log.md"),
                 "[backup](../runbooks/backup-restore-hash-verification.md)\n");
+    }
+
+    private static void createLiveOrcaTrialHarnessFixture(Path repoRoot, boolean includeSanitizedFlag) throws IOException {
+        Files.createDirectories(repoRoot.resolve("ops/tests/orca"));
+        Files.createDirectories(repoRoot.resolve("docs/runbooks"));
+        Files.createDirectories(repoRoot.resolve("docs/operations"));
+        String sanitizedFlag = includeSanitizedFlag ? "QA_SANITIZED_EVIDENCE_ONLY=1\n" : "";
+        Files.writeString(
+                repoRoot.resolve("ops/tests/orca/live-trial-checklist.sh"),
+                """
+                #!/usr/bin/env bash
+                %s
+                QA_DISABLE_BROWSER_ARTIFACTS=1
+                qa-weborca-candidate-discovery.mjs
+                qa-weborca-readonly-preflight.mjs
+                qa-acceptmodv2-weborca.mjs
+                qa-fullflow-weborca.mjs
+                qa-phase4-safe-medicalmodv2.mjs
+                check-sensitive-evidence-redaction.sh
+                candidate discovery is only a proposal
+                HTTP 200 or generic zero-like apiResult alone is not mutation success
+                no raw ORCA body/XML
+                no ORCA credentials
+                patient name, address, phone number
+                """
+                        .formatted(sanitizedFlag));
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/release-validation.md"),
+                "live-trial-checklist.sh --dry-run\nQA_SANITIZED_EVIDENCE_ONLY=1\nQA_DISABLE_BROWSER_ARTIFACTS=1\n");
+        Files.writeString(
+                repoRoot.resolve("docs/operations/ORCA_CERTIFICATION_ONLY.md"),
+                "live-trial-checklist.sh --dry-run\n");
     }
 
     private static void initializeGitRepository(Path repoRoot) throws Exception {

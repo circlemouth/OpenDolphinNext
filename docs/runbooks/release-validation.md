@@ -124,15 +124,17 @@ PLAYWRIGHT_DISABLE_MSW=1 npm run --prefix web-client test:e2e:no-artifacts -- --
 
 6. runtime-ready smoke と ORCA smoke scripts を pair release 前提で実行する。
 ```bash
+ops/tests/orca/live-trial-checklist.sh --dry-run --run-id <RUN_ID>
 OPENDOLPHIN_RUNTIME_PROFILE=orca-trial-no-object-storage WEB_CLIENT_MODE=npm ./setup-modernized-env.sh
 cd web-client && node scripts/runtime-ready-smoke.mjs
 curl -sk https://127.0.0.1:8443/openDolphin/api/orca/official/appointments/medical-information
 cd web-client && node scripts/qa-weborca-candidate-discovery.mjs
 cd web-client && QA_PATIENT_ID=<discovery.selectedCandidatePatientId> node scripts/qa-weborca-readonly-preflight.mjs
-cd web-client && QA_PATIENT_ID=<readonly-preflight.phase3AttemptPatientId> node scripts/qa-acceptmodv2-weborca.mjs
-cd web-client && QA_PATIENT_ID=<summary.phase3AttemptPatientId> node scripts/qa-fullflow-weborca.mjs
+cd web-client && QA_PHASE3_APPROVED_MODE=1 QA_SANITIZED_EVIDENCE_ONLY=1 QA_DISABLE_BROWSER_ARTIFACTS=1 QA_PATIENT_ID=<readonly-preflight.phase3AttemptPatientId> node scripts/qa-acceptmodv2-weborca.mjs
+cd web-client && QA_SANITIZED_EVIDENCE_ONLY=1 QA_DISABLE_BROWSER_ARTIFACTS=1 QA_PATIENT_ID=<summary.phase3AttemptPatientId> node scripts/qa-fullflow-weborca.mjs
 ```
 期待結果:
+- `ops/tests/orca/live-trial-checklist.sh --dry-run --run-id <RUN_ID>` が live ORCA Trial の実行順、必須 script、set/unset だけの secret 状態、sanitized evidence roots、hard stop を出力し、raw credential / raw ORCA body / PHI を表示しない。
 - web-client と server-modernized を同じ remediation pair として起動した状態で成功する。
 - `OPENDOLPHIN_RUNTIME_PROFILE=orca-trial-no-object-storage` は Trial 検証専用の non-S3 runtime profile。`ATTACHMENT_STORAGE_MODE=disabled` を生成し、MinIO profile を起動せず、`ATTACHMENT_STORAGE_S3_*` / `PHR_EXPORT_S3_*` / `MINIO_*` が既に設定されている場合は値を表示せず fail closed する。
 - この profile では attachment storage / patient image storage / PHR export storage readiness は claim しない。保存系 route は fail closed、readiness は `attachment_storage_disabled` の sanitized reason を返す。RUN_ID `20260423T110051Z` 以降、storage-dependent features が disabled の場合は `attachmentStorage=DISABLED` 自体を overall readiness の失敗理由にしない。ただし patient image storage を有効化した状態で attachment storage が disabled の場合は `patient_images_storage_unavailable` で fail closed する。
@@ -210,6 +212,7 @@ bash server-modernized/tools/ci/check-config-contract.sh
 bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-audit-append-only.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-backup-restore-runbook.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-live-orca-trial-harness.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-sensitive-evidence-redaction.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-no-runtime-ddl.sh
 bash server-modernized/tools/ci/check-persistence-entities.sh
@@ -282,6 +285,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - `check-no-generated-artifacts.sh` は tracked / untracked の両方を検査する。
 - `check-sensitive-evidence-redaction.sh` は review-target の browser bundle / test-results / Playwright output / test snapshots を検査し、historical `artifacts/` 全体を release evidence として扱わない。reviewer packet に入れる証跡は reviewer-submission packet tool の allowlist 済み sanitized subset に限定する。
 - `check-backup-restore-runbook.sh` は backup / restore / hash verification runbook、release gate、outage recovery、audit contract が同じ restore fail-closed 境界を参照していることを検査する。
+- `check-live-orca-trial-harness.sh` は live ORCA Trial checklist harness と release validation が sanitized evidence / browser artifact disable / exact preflight before mutation の境界を維持していることを検査する。
 - `check-no-direct-runtime-lookup.sh` は `ServerConfigurationResolver.java` 以外の direct runtime lookup を許可しない。
 - どれか 1 つでも失敗したら release は見送る。
 - cutover / rollback の実施順序と停止条件は [../releases/orca-remediation-cutover.md](../releases/orca-remediation-cutover.md) を正本とする。
