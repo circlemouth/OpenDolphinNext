@@ -7,6 +7,7 @@ import jakarta.ws.rs.BadRequestException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.orca.service.OrcaPatientCacheStore;
 import open.dolphin.orca.transport.StubOrcaTransport;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
@@ -21,15 +22,18 @@ class OrcaPatientApiResourceRunIdTest extends RuntimeDelegateTestSupport {
 
     private OrcaPatientApiResource resource;
     private RecordingSessionAuditDispatcher auditDispatcher;
+    private RecordingPatientCacheStore patientCacheStore;
     private HttpServletRequest servletRequest;
 
     @BeforeEach
     void setUp() throws Exception {
         resource = new OrcaPatientApiResource();
         auditDispatcher = new RecordingSessionAuditDispatcher();
+        patientCacheStore = new RecordingPatientCacheStore();
 
         injectField(resource, "orcaTransport", new StubOrcaTransport());
         injectField(resource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(resource, "patientCacheStore", patientCacheStore);
 
         servletRequest = (HttpServletRequest) Proxy.newProxyInstance(
                 getClass().getClassLoader(),
@@ -63,13 +67,24 @@ class OrcaPatientApiResourceRunIdTest extends RuntimeDelegateTestSupport {
         String headerRunId = response.getHeaderString("X-Run-Id");
         assertEquals(200, response.getStatus());
         assertEquals("run-patient", headerRunId);
+        assertEquals("ORCA", response.getHeaderString("X-Orca-Source-System"));
+        assertEquals("patientgetv2", response.getHeaderString("X-Orca-Source-Api"));
+        assertEquals("NEEDS_REVIEW", response.getHeaderString("X-Orca-Cache-Status"));
+        assertEquals("false", response.getHeaderString("X-Orca-Stale"));
 
         assertNotNull(auditDispatcher.payload);
         assertEquals("run-patient", auditDispatcher.payload.getDetails().get("runId"));
         assertEquals("official", auditDispatcher.payload.getDetails().get("scope"));
         assertEquals("00001", auditDispatcher.payload.getPatientId());
+        assertEquals("patientgetv2", auditDispatcher.payload.getDetails().get("sourceApi"));
+        assertEquals("NEEDS_REVIEW", auditDispatcher.payload.getDetails().get("cacheStatus"));
+        assertEquals(Boolean.FALSE, auditDispatcher.payload.getDetails().get("stale"));
         assertEquals("req-patient", auditDispatcher.payload.getRequestId());
         assertEquals(AuditEventEnvelope.Outcome.SUCCESS, auditDispatcher.outcome);
+        assertNotNull(patientCacheStore.command);
+        assertEquals("F001", patientCacheStore.command.facilityId());
+        assertEquals("00001", patientCacheStore.command.orcaPatientId());
+        assertEquals("patientgetv2", auditDispatcher.payload.getDetails().get("sourceApi"));
     }
 
     @Test
@@ -119,6 +134,16 @@ class OrcaPatientApiResourceRunIdTest extends RuntimeDelegateTestSupport {
             this.payload = payload;
             this.outcome = overrideOutcome;
             return null;
+        }
+    }
+
+    private static final class RecordingPatientCacheStore extends OrcaPatientCacheStore {
+        private PatientCacheCommand command;
+
+        @Override
+        public long save(PatientCacheCommand command) {
+            this.command = command;
+            return 100L;
         }
     }
 }

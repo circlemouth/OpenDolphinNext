@@ -91,7 +91,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 ## 4. 新DB設計
 
-- [ ] `orca_patient_cache` を作成し、ORCA患者ID、内部患者参照、氏名、カナ、生年月日、性別、住所/電話要約、source metadata、取得日時、cache expiry、raw response hash、normalized payload を保存する。
+- [x] `orca_patient_cache` を作成し、ORCA患者ID、内部患者参照、氏名、カナ、生年月日、性別、住所/電話要約、source metadata、取得日時、cache expiry、raw response hash、normalized payload を保存する。
 - [ ] `orca_acceptance_cache` を作成し、ORCA患者ID、受付日/時刻/番号、診療科、担当医、保険組合せ、受付状態、source metadata、取消日時、normalized payload を保存する。
 - [ ] `encounter_insurance_snapshot` を作成し、encounter/chart revision、ORCA患者ID、受付日、保険組合せ、保険/公費要約、snapshot reason を固定する。
 - [ ] `chart_document`, `chart_revision`, `chart_revision_event`, `chart_module`, `chart_attachment` を作成または再設計する。
@@ -129,8 +129,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 ## 6. 患者・受付・保険実装
 
-- [ ] `GET /api/orca/official/patientgetv2?id={orcaPatientId}&format=json` または同等の official patient read wrapper を実装し、ORCA患者取得、`orca_patient_cache` 保存、取得日時、sourceSystem、cacheStatus、stale を返す。
-- [ ] 患者不在時は単純な HTTP 404 ではなく業務エラー `ORCA_PATIENT_NOT_FOUND` として扱う。
+- [x] `GET /api/orca/official/patientgetv2?id={orcaPatientId}&format=json` または同等の official patient read wrapper を実装し、ORCA患者取得、`orca_patient_cache` 保存、取得日時、sourceSystem、cacheStatus、stale を返す。
+- [x] 患者不在時は単純な HTTP 404 ではなく業務エラー `ORCA_PATIENT_NOT_FOUND` として扱う。
 - [ ] `POST /api/orca/official/patientmodv2/outpatient/create` と `POST /api/orca/official/patientmodv2/outpatient/update` を唯一の患者 mutation route とし、送信前差分と送信後再取得を強制する。
 - [ ] ORCA送信失敗時にローカル患者情報を更新済みにしない。
 - [ ] 患者削除は原則実装しない。

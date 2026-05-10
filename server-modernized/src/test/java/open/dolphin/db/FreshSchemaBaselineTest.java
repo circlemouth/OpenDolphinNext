@@ -84,7 +84,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0315", appliedVersion(connection));
+                assertEquals("0316", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -114,6 +114,7 @@ class FreshSchemaBaselineTest {
                 assertTrue(tableExists(connection, "opendolphin", "orca_disease_snapshot"));
                 assertTrue(tableExists(connection, "opendolphin", "orca_disease_operation"));
                 assertTrue(tableExists(connection, "opendolphin", "orca_disease_audit_event"));
+                assertTrue(tableExists(connection, "opendolphin", "orca_patient_cache"));
                 assertTrue(tableExists(connection, "opendolphin", "user_security_state"));
                 assertTrue(tableExists(connection, "opendolphin", "auth_session_registry"));
                 assertTrue(tableExists(connection, "opendolphin", "audit_event"));
@@ -160,6 +161,11 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "orca_disease_operation", "needs_user_review"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_disease_audit_event", "previous_hash"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_disease_audit_event", "event_hash"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_patient_cache", "source_system"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_patient_cache", "source_api"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_patient_cache", "cache_status"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_patient_cache", "business_status"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_patient_cache", "raw_response_hash"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order", "status"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_revision", "content_hash"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "drug_code"));
