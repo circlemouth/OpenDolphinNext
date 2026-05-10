@@ -2718,6 +2718,12 @@ describe('ReceptionPage status/date/card action UX', () => {
     const transmission = (card as HTMLElement).querySelector('[data-test-id="reception-billing-transmission"]');
     expect(transmission).not.toBeNull();
     expect(transmission).toHaveTextContent('送信: 送信済');
+    const transmissionNote = (card as HTMLElement).querySelector('[data-test-id="reception-billing-transmission-note"]');
+    expect(transmissionNote).not.toBeNull();
+    expect(transmissionNote).toHaveTextContent(
+      '送信済は会計済みではありません。収納確認まで会計待ちです。',
+    );
+    expect(within(card as HTMLElement).queryByText(/^請求:\s*会計済み$/)).not.toBeInTheDocument();
   });
 
   it('shows rebill note in a separate slot and projects the row into 再計待', async () => {
@@ -2738,6 +2744,7 @@ describe('ReceptionPage status/date/card action UX', () => {
     const listRegion = screen.getByRole('region', { name: '受付一覧' });
     const row = within(listRegion).getByRole('row', { name: /再計患者/ });
     expect(within(row).getByText(/送信:\s*送信済/)).toBeInTheDocument();
+    expect(within(row).getByText('送信済は会計済みではありません。収納確認まで会計待ちです。')).toBeInTheDocument();
     expect(within(row).getByText(/再計待: 会計済み後に変更があったため再会計が必要です。/)).toBeInTheDocument();
   });
 

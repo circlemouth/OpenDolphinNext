@@ -458,6 +458,12 @@ const formatCorrectionNote = (correction?: BillingCorrectionSignal) => {
   return correction.kind === '要再計' ? `再計待: ${correction.reason}` : `ORCA補正要確認: ${correction.reason}`;
 };
 
+const formatBillingTransmissionNote = (projection?: ReceptionBillingProjection) => {
+  if (!projection || projection.transmission !== '送信済') return undefined;
+  if (projection.workflow === '会計済み') return undefined;
+  return '送信済は会計済みではありません。収納確認まで会計待ちです。';
+};
+
 const resolveQueueStatus = (entry?: ClaimQueueEntry): QueueDisplayStatus => {
   if (!entry) return { label: '未取得', tone: 'warning' as const, detail: undefined };
   const label = queuePhaseLabel[entry.phase];
@@ -5591,6 +5597,7 @@ export function ReceptionPage({
                               ? resolveBillingProjectionForEntry(entry)
                               : undefined);
                           const correctionNote = formatCorrectionNote(billingProjection?.correction);
+                          const transmissionNote = formatBillingTransmissionNote(billingProjection);
                           const paymentLabel = paymentModeLabel(entry.insurance);
                           const canOpenCharts = hasHandoffEncounterKey(entry);
                           const orcaQueueEntry = entry.patientId ? orcaQueueByPatientId.get(entry.patientId) : undefined;
@@ -5716,6 +5723,11 @@ export function ReceptionPage({
                                     <small className="reception-table__sub" data-test-id="reception-billing-transmission">
                                       送信: {billingProjection.transmission}
                                     </small>
+                                    {transmissionNote ? (
+                                      <small className="reception-table__sub" data-test-id="reception-billing-transmission-note">
+                                        {transmissionNote}
+                                      </small>
+                                    ) : null}
                                   </div>
                                 ) : null}
                               </div>
@@ -5932,6 +5944,9 @@ export function ReceptionPage({
                                     {billingProjection ? (
                                       <small>送信: {billingProjection.transmission}</small>
                                     ) : null}
+                                    {transmissionNote ? (
+                                      <small data-test-id="reception-billing-transmission-note">{transmissionNote}</small>
+                                    ) : null}
                                     {debugUiEnabled && cached?.invoiceNumber ? <small>invoice: {cached.invoiceNumber}</small> : null}
                                     {debugUiEnabled && cached?.dataId ? <small>data: {cached.dataId}</small> : null}
                                     {activeQueueVisible ? (
@@ -6021,6 +6036,7 @@ export function ReceptionPage({
                                 ? resolveBillingProjectionForEntry(entry)
                                 : undefined);
                             const correctionNote = formatCorrectionNote(billingProjection?.correction);
+                            const transmissionNote = formatBillingTransmissionNote(billingProjection);
                             const canOpenCharts = hasHandoffEncounterKey(entry);
                             const orcaQueueEntry = entry.patientId ? orcaQueueByPatientId.get(entry.patientId) : undefined;
                             const orcaQueueStatus = orcaQueueErrorStatus ?? resolveOrcaQueueStatus(orcaQueueEntry);
@@ -6125,6 +6141,11 @@ export function ReceptionPage({
                                   {billingProjection ? (
                                     <small className="reception-table__sub" data-test-id="reception-billing-transmission">
                                       送信: {billingProjection.transmission}
+                                    </small>
+                                  ) : null}
+                                  {transmissionNote ? (
+                                    <small className="reception-table__sub" data-test-id="reception-billing-transmission-note">
+                                      {transmissionNote}
                                     </small>
                                   ) : null}
                                   {displayedQueueVisible ? (
