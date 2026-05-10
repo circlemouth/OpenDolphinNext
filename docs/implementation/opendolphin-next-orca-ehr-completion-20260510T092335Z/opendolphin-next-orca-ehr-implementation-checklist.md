@@ -51,7 +51,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 ### 3.1 患者ローカル正本の撤去
 
 - [x] `/api/local/patients/mutation` を廃止する。
-- [ ] OpenDolphinNext 側だけで患者を作成・更新する API を削除する。
+- [x] OpenDolphinNext 側だけで患者を作成・更新する API を削除する。
 - [x] 患者作成・更新は ORCA `patientmodv2` 相当のサーバーアダプタ経由に一本化する。
 - [x] 患者取得は ORCA `patientgetv2` または患者一覧系 API を経由する。
 - [ ] `d_patient` 相当のテーブルはローカル正本ではなく `orca_patient_cache` に再設計する。
@@ -134,7 +134,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] 患者不在時は単純な HTTP 404 ではなく業務エラー `ORCA_PATIENT_NOT_FOUND` として扱う。
 - [x] `POST /api/orca/official/patientmodv2/outpatient/create` と `POST /api/orca/official/patientmodv2/outpatient/update` を唯一の患者 mutation route とし、送信前差分と送信後再取得を強制する。
 - [x] ORCA送信失敗時にローカル患者情報を更新済みにしない。
-- [ ] 患者削除は原則実装しない。
+- [x] 患者削除は原則実装しない。
 - [ ] `GET /api/orca/official/appointments/list?date=...` と `GET /api/orca/official/appointments/patient?...` を受付取得 route として実装する。
 - [x] 受付取得結果を `orca_acceptance_cache` に保存し、ORCA患者番号、受付日、診療科、担当医、保険組合せを保持する。
 - [ ] `encounter_id` と ORCA受付情報の紐付けテーブルを作る。

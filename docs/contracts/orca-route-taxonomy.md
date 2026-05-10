@@ -48,6 +48,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - UI copy でも、`contraindicationcheckv2` の patient-aware official check と `/api/orca/master/order/interactions/check` の master-based static check を混同させない。
 - `/api/local/charts/subjectives`, `/api/local/encounters/{encounterKey}/medical-summary` は local-only surface として表示し、official ORCA write のような名称を付けない。
 - local patient create / update surface は公開しない。patient create / update は `/api/orca/official/patientmodv2/outpatient/*` の official bridge だけを使い、成功後 canonical re-fetch / local sync を行う。
+- patient delete surface は public route として実装しない。`DELETE /api/orca/official/patient*`、`DELETE /api/local/patient*`、local patient create/update/delete alias は route inventory guard で禁止する。
 - 旧 public path の alias / shim は作らない。
 
 ## Current Route Map
