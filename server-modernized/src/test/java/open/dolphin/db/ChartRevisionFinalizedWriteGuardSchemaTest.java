@@ -124,9 +124,13 @@ class ChartRevisionFinalizedWriteGuardSchemaTest {
         long revisionId = nextId(statement, """
                 INSERT INTO opendolphin.chart_revision
                     (chart_document_id, revision_number, status, source_document_id, title, content_hash,
-                     entered_by_user_id, finalized_by_user_id, finalized_at)
+                     entered_by_user_id, finalized_by_user_id, finalized_at, encounter_id, encounter_date,
+                     orca_patient_id, orca_acceptance_id, department_code, physician_code,
+                     insurance_combination_number, finalize_context_json)
                 VALUES
-                    (%d, 1, 'FINAL', %d, 'Initial title', repeat('a', 64), %d, %d, CURRENT_TIMESTAMP)
+                    (%d, 1, 'FINAL', %d, 'Initial title', repeat('a', 64), %d, %d, CURRENT_TIMESTAMP,
+                     'ENC-001', CURRENT_DATE, '00001', 'ACC-001', '01', '10001', '0001',
+                     '{"context":"present"}'::jsonb)
                 RETURNING id
                 """.formatted(chartDocumentId, legacyDocumentId, userId, userId));
         long draftRevisionId = nextId(statement, """

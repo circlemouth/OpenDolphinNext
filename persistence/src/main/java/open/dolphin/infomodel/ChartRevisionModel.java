@@ -1,6 +1,7 @@
 package open.dolphin.infomodel;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.time.Instant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +14,8 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "chart_revision")
@@ -44,6 +47,34 @@ public class ChartRevisionModel implements Serializable {
     @Column(name = "content_hash", length = 64)
     private String contentHash;
 
+    @Column(name = "encounter_id", length = 128)
+    private String encounterId;
+
+    @Column(name = "encounter_date")
+    private LocalDate encounterDate;
+
+    @Column(name = "orca_patient_id", length = 64)
+    private String orcaPatientId;
+
+    @Column(name = "orca_acceptance_id", length = 128)
+    private String orcaAcceptanceId;
+
+    @Column(name = "no_acceptance_reason", length = 255)
+    private String noAcceptanceReason;
+
+    @Column(name = "department_code", length = 64)
+    private String departmentCode;
+
+    @Column(name = "physician_code", length = 64)
+    private String physicianCode;
+
+    @Column(name = "insurance_combination_number", length = 64)
+    private String insuranceCombinationNumber;
+
+    @Column(name = "finalize_context_json", nullable = false, columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String finalizeContextJson;
+
     @Column(name = "entered_by_user_id", nullable = false)
     private Long enteredByUserId;
 
@@ -68,11 +99,17 @@ public class ChartRevisionModel implements Serializable {
         if (updatedAt == null) {
             updatedAt = now;
         }
+        if (finalizeContextJson == null || finalizeContextJson.isBlank()) {
+            finalizeContextJson = "{}";
+        }
     }
 
     @PreUpdate
     void preUpdate() {
         updatedAt = Instant.now();
+        if (finalizeContextJson == null || finalizeContextJson.isBlank()) {
+            finalizeContextJson = "{}";
+        }
     }
 
     public boolean isDirectWriteLocked() {
@@ -133,6 +170,78 @@ public class ChartRevisionModel implements Serializable {
 
     public void setContentHash(String contentHash) {
         this.contentHash = contentHash;
+    }
+
+    public String getEncounterId() {
+        return encounterId;
+    }
+
+    public void setEncounterId(String encounterId) {
+        this.encounterId = encounterId;
+    }
+
+    public LocalDate getEncounterDate() {
+        return encounterDate;
+    }
+
+    public void setEncounterDate(LocalDate encounterDate) {
+        this.encounterDate = encounterDate;
+    }
+
+    public String getOrcaPatientId() {
+        return orcaPatientId;
+    }
+
+    public void setOrcaPatientId(String orcaPatientId) {
+        this.orcaPatientId = orcaPatientId;
+    }
+
+    public String getOrcaAcceptanceId() {
+        return orcaAcceptanceId;
+    }
+
+    public void setOrcaAcceptanceId(String orcaAcceptanceId) {
+        this.orcaAcceptanceId = orcaAcceptanceId;
+    }
+
+    public String getNoAcceptanceReason() {
+        return noAcceptanceReason;
+    }
+
+    public void setNoAcceptanceReason(String noAcceptanceReason) {
+        this.noAcceptanceReason = noAcceptanceReason;
+    }
+
+    public String getDepartmentCode() {
+        return departmentCode;
+    }
+
+    public void setDepartmentCode(String departmentCode) {
+        this.departmentCode = departmentCode;
+    }
+
+    public String getPhysicianCode() {
+        return physicianCode;
+    }
+
+    public void setPhysicianCode(String physicianCode) {
+        this.physicianCode = physicianCode;
+    }
+
+    public String getInsuranceCombinationNumber() {
+        return insuranceCombinationNumber;
+    }
+
+    public void setInsuranceCombinationNumber(String insuranceCombinationNumber) {
+        this.insuranceCombinationNumber = insuranceCombinationNumber;
+    }
+
+    public String getFinalizeContextJson() {
+        return finalizeContextJson;
+    }
+
+    public void setFinalizeContextJson(String finalizeContextJson) {
+        this.finalizeContextJson = finalizeContextJson;
     }
 
     public Long getEnteredByUserId() {

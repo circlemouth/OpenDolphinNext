@@ -62,7 +62,9 @@
 - `FINAL` / `AMENDED` / `ADDENDUM` / `CANCELLED` / `VOIDED` の revision は DB trigger でも `chart_revision` の UPDATE / DELETE を拒否する。legacy `d_document` / `d_module` が locked revision に紐付く場合、title と SOAP / module payload の直接 UPDATE / DELETE も拒否する。
 - `chart_document.current_revision_id` は、現在 revision が locked 状態になった後に別 revision へ直接差し替えない。訂正・追記・取消 API は event と新 revision の作成を authority とし、current pointer の単独差し替えで履歴を隠さない。
 - `chart_revision_event` は revision chain の状態遷移、理由、変更前後 summary を保存する。summary には raw 患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token を保存しない。
-- `content_hash` は chart finalize API が確定時に server-side canonical content から計算する。client 提供 digest は検証材料であって権威値ではない。
+- `POST /api/charts/{chartId}/revisions/{revisionId}/finalize` は `DRAFT` revision だけを対象にする。確定時は ORCA患者番号、患者氏名、生年月日、性別、encounter、診療日、ORCA受付IDまたは受付なし理由、診療科、担当医、保険組合せ、確定者、canonical content JSON を必須検証する。
+- `content_hash` は chart finalize API が確定時に server-side canonical content と確定 context から計算する。client 提供 digest は採用しない。
+- finalize event summary は hash、encounter、診療科、担当医、保険組合せ、受付 context の有無だけを保存し、患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token を保存しない。
 
 ## reasonCode 一覧
 - `integrity_record_missing`
@@ -88,6 +90,7 @@
 - [x] key rotation / missing key / enforce のテストを追加する。
 - [x] `chart_document` / `chart_revision` / `chart_revision_event` の最小 schema と `ChartRevisionStatus` enum を追加する。
 - [x] locked chart revision、legacy document title、legacy SOAP / module payload、current revision pointer の直接更新拒否 trigger と regression test を追加する。
+- [x] finalize API skeleton、必須 context validation、server-side `content_hash` 生成、FINALIZED event 記録を追加する。
 
 ## 受け入れ条件
 - [x] active key を変更しても旧文書が verify できる。
@@ -95,3 +98,4 @@
 - [x] malformed keyring / active key 複数 / keyId 重複で起動失敗する。
 - [x] `chart_revision.status` は `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` のみに DB 制約と Java enum で制限される。
 - [x] locked revision の本文・SOAP / module payload・title・current revision pointer 直接更新は DB guard と service guard の両方で拒否される。
+- [x] finalize API は必須 context 欠落、chart/revision 不一致、非 DRAFT 再確定を拒否し、server-side canonical hash を記録する。

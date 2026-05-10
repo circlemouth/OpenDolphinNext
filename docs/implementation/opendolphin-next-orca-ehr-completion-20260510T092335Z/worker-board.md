@@ -28,7 +28,7 @@ Checklist count when parallel board was created:
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
-| B | `codex/orca-ehr-worker-b-chart-revision` | B-03 finalize API + content hash | Done | 20260510T211133Z | this commit | - |
+| B | `codex/orca-ehr-worker-b-chart-revision` | B-04 amend/addendum/cancel + export contract | Done | 20260510T214902Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-02 common patient header staged rollout | Done | 20260510T204142Z | this commit | - |
@@ -106,6 +106,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260510T214902Z | B | B-03 | 7 finalize API skeleton; required validation; server-side `content_hash`; FINALIZED event | this commit | `ChartRevisionAuthorityMigrationTest`, `ChartRevisionFinalizedWriteGuardSchemaTest`, `ChartRevisionFinalizeServiceTest`, `FreshSchemaBaselineTest`, `PublicRouteInventoryContractTest`, finalized-write/doc/config/runtime lookup guards passed | Done | B-04 amend/addendum/cancel + export contract |
 | 20260510T211133Z | B | B-02 | 4.4 / 7 FINAL direct-write denial for chart revision, legacy document title, SOAP/module payload, current revision pointer | this commit | `ChartRevisionAuthorityMigrationTest`, `ChartRevisionFinalizedWriteGuardSchemaTest`, `FreshSchemaBaselineTest`, finalized-write/doc/config/runtime lookup guards passed | Done | B-03 finalize API + content hash |
 | 20260510T204040Z | C | C-01 | 4.5 prescription authority schema/status; direct overwrite DB guard foundation | this commit | `PrescriptionAuthoritySchemaTest`, `FreshSchemaBaselineTest`, doc/config/runtime/finalized-write guards passed | Done | C-02 finalize/change/stop/cancel/reissue API |
 | 20260510T204142Z | E | E-01 | 17 UI wording/warning parent; 20 Phase 4 guard foundation | this commit | `verify:medical-safety-ui-copy`, `verify:web-guard`, focused Charts Vitest, `typecheck` passed | Done | E-02 common patient header staged rollout |

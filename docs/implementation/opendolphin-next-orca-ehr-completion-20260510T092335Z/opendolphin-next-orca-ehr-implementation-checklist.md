@@ -147,9 +147,11 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 診療録状態 `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` を実装する。
 - [ ] `FINAL` は本文、SOAP、所見、説明内容、添付文書、タイトルを直接編集不可にする。
   - [x] 本文 / SOAP / module payload / title / current revision pointer の直接 UPDATE / DELETE は service guard と DB trigger で拒否する。添付文書の詳細 revision/export 連携は B-04 で継続する。
-- [ ] `POST /api/charts/{chartId}/revisions/{revisionId}/finalize` を実装する。
+- [x] `POST /api/charts/{chartId}/revisions/{revisionId}/finalize` を実装する。
 - [ ] 確定時に患者番号、氏名、生年月日、性別、診療日、ORCA受付IDまたは受付なし理由、診療科、担当医、保険組合せ、確定者、代行入力者、本体内容を必須検証する。
+  - [x] finalize API skeleton は ORCA患者番号、氏名、生年月日、性別、encounter、診療日、受付IDまたは受付なし理由、診療科、担当医、保険組合せ、確定者、canonical content JSON を必須検証する。代行入力者の永続項目は後続 revision context 拡張で継続する。
 - [ ] 確定時に患者・受付・保険・病名・処方候補・算定候補のスナップショットと `content_hash` を作る。
+  - [x] server-side canonical content/context から `content_hash` を生成し、FINALIZED event と `chart_revision` に記録する。患者・受付・保険・病名・処方候補・算定候補の full snapshot は B-04 / Worker C-D 連携後に継続する。
 - [ ] `entered_by` と `finalized_by` を分離し、代行入力時は `entry_mode=DELEGATED` を保存する。
 - [ ] `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` を実装し、理由必須、変更前後要約、監査ログを保存する。
 - [ ] PDF/CSV/JSON エクスポートは訂正・追記・取消履歴、処方指示履歴、ORCA連携履歴、診療時点スナップショットを含める。
