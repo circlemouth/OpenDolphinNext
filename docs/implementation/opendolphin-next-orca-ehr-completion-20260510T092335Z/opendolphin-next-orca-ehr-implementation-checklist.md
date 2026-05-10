@@ -262,7 +262,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 ## 17. 旧実装・危険経路の削除チェック
 
-- [ ] ローカル患者作成/更新 API を削除する。
+- [x] ローカル患者作成/更新 API を削除する。
+  - [x] 2026-05-10T19:20Z: active source/current docs に `/api/local/patients/mutation(s)` と `LocalPatientMutation*` が再混入しない `verify:no-local-patient-mutation` guard を `verify:web-guard` に追加した。患者作成・更新の現行導線は ORCA official patientmodv2 bridge とし、local patient search 以外の local mutation surface がないことを継続検証する。
 - [x] ローカル病名作成/更新/削除 API を削除する。
 - [x] ORCA DB直接病名参照コード、CLAIM病名送信コード、`diseasev2` 依存を削除する。
 - [ ] 診療録確定済みタイトル直接更新経路、確定済み処方 payload 直接上書き経路を削除する。
