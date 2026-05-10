@@ -70,6 +70,9 @@ type DiagnosisFormState = {
   outcome: string;
   isMain: boolean;
   isSuspected: boolean;
+  receiptPrint: boolean;
+  insuranceDisease: boolean;
+  subDiseaseClass: '' | '01' | '02' | '03' | '04' | '05';
 };
 
 type QuickCandidateOption = {
@@ -115,6 +118,9 @@ const buildEmptyForm = (today: string): DiagnosisFormState => ({
   outcome: '',
   isMain: false,
   isSuspected: false,
+  receiptPrint: true,
+  insuranceDisease: false,
+  subDiseaseClass: '',
 });
 
 const formatOutcomeForForm = (outcome?: string) => {
@@ -153,6 +159,9 @@ const toFormState = (entry: DiseaseEntry, today: string): DiagnosisFormState => 
   outcome: formatOutcomeForForm(entry.outcome),
   isMain: entry.category?.includes('主') ?? false,
   isSuspected: entry.suspectedFlag?.includes('疑い') ?? entry.category?.includes('疑い') ?? false,
+  receiptPrint: true,
+  insuranceDisease: false,
+  subDiseaseClass: '',
 });
 
 const resolveDiseaseLayer = (entry: DiseaseEntry): DiseaseLayer => entry.layer ?? 'insurance-local';
@@ -249,12 +258,31 @@ const buildDiseaseInput = (input: FormMutationInput) => {
 
 const resolveMainDiseaseClassCode = (state?: Pick<DiagnosisFormState, 'isMain'> | null) => (state?.isMain ? '01' : undefined);
 const resolveSuspectedFlagCode = (state?: Pick<DiagnosisFormState, 'isSuspected'> | null) => (state?.isSuspected ? 'S' : undefined);
+const resolveDiseaseReceiptPrintCode = (state?: Pick<DiagnosisFormState, 'receiptPrint'> | null) => (state?.receiptPrint ? '1' : 'None');
+const resolveInsuranceDiseaseCode = (state?: Pick<DiagnosisFormState, 'insuranceDisease'> | null) => (state?.insuranceDisease ? '1' : undefined);
+const resolveSubDiseaseClassCode = (state?: Pick<DiagnosisFormState, 'subDiseaseClass'> | null) => state?.subDiseaseClass || undefined;
 const formatOrcaCode = (value?: string | null) => value?.trim() || '送信しない';
 const formatInsuranceCombination = (value?: string | null) => value?.trim() || 'server-side確認';
 const formatDiseaseAttributeLabel = (state?: Pick<DiagnosisFormState, 'isMain' | 'isSuspected'> | null) => {
   if (!state) return '-';
   const labels = [state.isMain ? '主病名' : '副病名', state.isSuspected ? '疑い' : null].filter(Boolean);
   return labels.join(' / ');
+};
+const formatSubDiseaseClassLabel = (value?: DiagnosisFormState['subDiseaseClass'] | null) => {
+  switch (value) {
+    case '01':
+      return '原疾患';
+    case '02':
+      return '合併症';
+    case '03':
+      return '続発症';
+    case '04':
+      return '関連病名';
+    case '05':
+      return 'その他';
+    default:
+      return '指定なし';
+  }
 };
 
 const toOrcaDiseaseInformation = (entry: DiseaseEntry): OrcaDiseaseInformation => {
@@ -272,6 +300,7 @@ const toOrcaDiseaseInformation = (entry: DiseaseEntry): OrcaDiseaseInformation =
     outcome: outcome.outcome,
     orcaOutcomeSendCode: outcome.sendCode,
     mainDiseaseClass: isMainDisease(entry) ? '01' : undefined,
+    diseaseReceiptPrint: '1',
     components: entry.components,
     supplements: entry.supplements,
     insuranceCombinationNumber: entry.insuranceCombinationNumber,
@@ -623,6 +652,9 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
             outcome: outcome.outcome,
             orcaOutcomeSendCode: outcome.sendCode,
             mainDiseaseClass: resolveMainDiseaseClassCode(input.form),
+            diseaseReceiptPrint: resolveDiseaseReceiptPrintCode(input.form),
+            insuranceDisease: resolveInsuranceDiseaseCode(input.form),
+            subDiseaseClass: resolveSubDiseaseClassCode(input.form),
             components: resolvedComponents,
             supplements: [],
             uncodedAccepted: input.form.uncodedAccepted,
@@ -1257,8 +1289,42 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
               疑い
             </label>
           </div>
+          <div className="charts-side-panel__field-row">
+            <label className="charts-side-panel__toggle">
+              <input type="checkbox" checked={form.receiptPrint} onChange={(event) => setForm((prev) => ({ ...prev, receiptPrint: event.target.checked }))} disabled={isOrcaMutationBlocked} />
+              レセプト表示
+            </label>
+            <label className="charts-side-panel__toggle">
+              <input type="checkbox" checked={form.insuranceDisease} onChange={(event) => setForm((prev) => ({ ...prev, insuranceDisease: event.target.checked }))} disabled={isOrcaMutationBlocked} />
+              保険病名
+            </label>
+          </div>
           <details className="charts-diagnosis__advanced">
             <summary className="charts-diagnosis__advanced-summary">詳細（コード/開始/転帰）</summary>
+            <div className="charts-side-panel__field">
+              <label htmlFor="diagnosis-sub-disease-class">副病名区分 ※任意</label>
+              <select
+                id="diagnosis-sub-disease-class"
+                value={form.subDiseaseClass}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    subDiseaseClass: event.target.value as DiagnosisFormState['subDiseaseClass'],
+                  }))
+                }
+                disabled={isOrcaMutationBlocked}
+              >
+                <option value="">指定しない</option>
+                <option value="01">原疾患</option>
+                <option value="02">合併症</option>
+                <option value="03">続発症</option>
+                <option value="04">関連病名</option>
+                <option value="05">その他</option>
+              </select>
+              <p className="charts-side-panel__help">
+                確認画面では表示名と ORCA 仕様コードを分けて表示します。
+              </p>
+            </div>
             <div className="charts-side-panel__field">
               <label htmlFor="diagnosis-code">病名構成コード ※必須</label>
               <input
@@ -1361,6 +1427,18 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
               <dd>{pendingForm ? formatDiseaseAttributeLabel(pendingForm) : pendingEntry ? (isMainDisease(pendingEntry) ? '主病名' : '副病名') : '-'}</dd>
             </div>
             <div>
+              <dt>レセプト表示</dt>
+              <dd>{pendingForm ? (pendingForm.receiptPrint ? '表示する' : '表示しない') : '表示する'}</dd>
+            </div>
+            <div>
+              <dt>保険病名</dt>
+              <dd>{pendingForm ? (pendingForm.insuranceDisease ? '指定する' : '指定しない') : '指定しない'}</dd>
+            </div>
+            <div>
+              <dt>副病名区分</dt>
+              <dd>{pendingForm ? formatSubDiseaseClassLabel(pendingForm.subDiseaseClass) : '指定なし'}</dd>
+            </div>
+            <div>
               <dt>開始日</dt>
               <dd>{pendingForm?.startDate || pendingEntry?.startDate || '-'}</dd>
             </div>
@@ -1382,9 +1460,9 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
               <dt>ORCA送信コード</dt>
               <dd>
                 {pendingForm
-                  ? `Main_Disease_Class=${formatOrcaCode(resolveMainDiseaseClassCode(pendingForm))} / Disease_SuspectedFlag=${formatOrcaCode(resolveSuspectedFlagCode(pendingForm))}`
+                  ? `Main_Disease_Class=${formatOrcaCode(resolveMainDiseaseClassCode(pendingForm))} / Disease_SuspectedFlag=${formatOrcaCode(resolveSuspectedFlagCode(pendingForm))} / Disease_Receipt_Print=${formatOrcaCode(resolveDiseaseReceiptPrintCode(pendingForm))} / Insurance_Disease=${formatOrcaCode(resolveInsuranceDiseaseCode(pendingForm))} / Sub_Disease_Class=${formatOrcaCode(resolveSubDiseaseClassCode(pendingForm))}`
                   : pendingEntry
-                    ? `Main_Disease_Class=${formatOrcaCode(isMainDisease(pendingEntry) ? '01' : undefined)} / Disease_SuspectedFlag=${formatOrcaCode(isSuspectedDisease(pendingEntry) ? 'S' : undefined)}`
+                    ? `Main_Disease_Class=${formatOrcaCode(isMainDisease(pendingEntry) ? '01' : undefined)} / Disease_SuspectedFlag=${formatOrcaCode(isSuspectedDisease(pendingEntry) ? 'S' : undefined)} / Disease_Receipt_Print=1 / Insurance_Disease=送信しない / Sub_Disease_Class=送信しない`
                     : '-'}
               </dd>
             </div>
