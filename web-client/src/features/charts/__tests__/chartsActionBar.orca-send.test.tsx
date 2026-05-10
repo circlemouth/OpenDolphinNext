@@ -332,16 +332,21 @@ describe('ChartsActionBar ORCA send', () => {
   });
 
   it('blocks missing physician code', async () => {
+    const user = userEvent.setup();
     renderActionBar({ department: '01', physician: undefined, physicianCode: undefined, patientId: '000001' });
 
     const sendButton = screen.getByRole('button', { name: 'ORCA 送信' });
-    expect(sendButton).toBeDisabled();
+    expect(sendButton).not.toBeDisabled();
+    expect(sendButton).toHaveAttribute('aria-disabled', 'true');
     expect(sendButton).toHaveAttribute('data-disabled-reason', expect.stringContaining('missing_encounter_context'));
     expect(screen.getAllByText(/Physician_Code/).length).toBeGreaterThan(0);
+    await user.click(sendButton);
+    expect(screen.getByText(/ORCA送信を停止:/)).toBeInTheDocument();
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
   it('blocks chart send when visitptlstv2 identifiers are missing even if canonical handoff keys exist', async () => {
+    const user = userEvent.setup();
     renderActionBar({
       scheduleKey: 'F001:S100',
       encounterKey: 'F001:E100',
@@ -350,10 +355,13 @@ describe('ChartsActionBar ORCA send', () => {
     });
 
     const sendButton = screen.getByRole('button', { name: 'ORCA 送信' });
-    expect(sendButton).toBeDisabled();
+    expect(sendButton).not.toBeDisabled();
+    expect(sendButton).toHaveAttribute('aria-disabled', 'true');
     expect(sendButton).toHaveAttribute('data-disabled-reason', expect.stringContaining('missing_encounter_context'));
     expect(screen.getAllByText(/Voucher_Number/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Sequential_Number/).length).toBeGreaterThan(0);
+    await user.click(sendButton);
+    expect(screen.getByText(/ORCA送信を停止:/)).toBeInTheDocument();
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 

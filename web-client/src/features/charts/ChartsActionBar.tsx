@@ -2758,15 +2758,17 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                 type="button"
                 id="charts-action-finish"
                 className={`charts-actions__button charts-actions__button--encounter-finish${primaryAction === 'finish' ? ' charts-actions__button--primary-route' : ''}`}
-                disabled={otherBlocked || !resolvedPatientId}
+                disabled={otherBlocked}
                 data-disabled-reason={
                   otherBlocked
                     ? (isLocked ? 'locked' : undefined)
-                    : !resolvedPatientId
-                      ? 'patient_not_selected'
+                    : finishPrecheckReasons.length > 0
+                      ? finishPrecheckReasons.map((reason) => reason.key).join(',')
                       : undefined
                 }
-                title={!resolvedPatientId ? '患者未選択のため会計送信できません。' : otherBlocked ? statusLine : undefined}
+                aria-disabled={finishPrecheckReasons.length > 0}
+                aria-describedby={!isRunning && finishPrecheckReasons.length > 0 ? 'charts-actions-finish-guard' : undefined}
+                title={finishPrecheckReasons.length > 0 ? `会計送信不可: ${finishPrecheckReasons.map((reason) => reason.summary).join(' / ')}` : otherBlocked ? statusLine : undefined}
                 onClick={() => handleAction('finish')}
                 aria-keyshortcuts="Alt+E"
               >
