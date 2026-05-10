@@ -15,6 +15,13 @@ public class OfficialPatientMutationResponse extends OrcaApiResponse {
     private PatientOutpatientResponse.PatientRecord patient;
     private Boolean idempotent;
     private String idempotentReason;
+    private Boolean orcaMutationPrepared;
+    private Boolean orcaMutationSent;
+    private Boolean canonicalRefetched;
+    private Boolean localSynced;
+    private String canonicalSourceApi;
+    private String canonicalCacheStatus;
+    private String canonicalBusinessStatus;
     private OutpatientFlagResponse.AuditEvent auditEvent;
 
     public Long getPatientDbId() {
@@ -55,6 +62,62 @@ public class OfficialPatientMutationResponse extends OrcaApiResponse {
 
     public void setIdempotentReason(String idempotentReason) {
         this.idempotentReason = idempotentReason;
+    }
+
+    public Boolean getOrcaMutationPrepared() {
+        return orcaMutationPrepared;
+    }
+
+    public void setOrcaMutationPrepared(Boolean orcaMutationPrepared) {
+        this.orcaMutationPrepared = orcaMutationPrepared;
+    }
+
+    public Boolean getOrcaMutationSent() {
+        return orcaMutationSent;
+    }
+
+    public void setOrcaMutationSent(Boolean orcaMutationSent) {
+        this.orcaMutationSent = orcaMutationSent;
+    }
+
+    public Boolean getCanonicalRefetched() {
+        return canonicalRefetched;
+    }
+
+    public void setCanonicalRefetched(Boolean canonicalRefetched) {
+        this.canonicalRefetched = canonicalRefetched;
+    }
+
+    public Boolean getLocalSynced() {
+        return localSynced;
+    }
+
+    public void setLocalSynced(Boolean localSynced) {
+        this.localSynced = localSynced;
+    }
+
+    public String getCanonicalSourceApi() {
+        return canonicalSourceApi;
+    }
+
+    public void setCanonicalSourceApi(String canonicalSourceApi) {
+        this.canonicalSourceApi = canonicalSourceApi;
+    }
+
+    public String getCanonicalCacheStatus() {
+        return canonicalCacheStatus;
+    }
+
+    public void setCanonicalCacheStatus(String canonicalCacheStatus) {
+        this.canonicalCacheStatus = canonicalCacheStatus;
+    }
+
+    public String getCanonicalBusinessStatus() {
+        return canonicalBusinessStatus;
+    }
+
+    public void setCanonicalBusinessStatus(String canonicalBusinessStatus) {
+        this.canonicalBusinessStatus = canonicalBusinessStatus;
     }
 
     public OutpatientFlagResponse.AuditEvent getAuditEvent() {

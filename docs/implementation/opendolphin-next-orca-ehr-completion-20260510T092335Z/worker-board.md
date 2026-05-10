@@ -27,7 +27,7 @@ Checklist count when parallel board was created:
 
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
-| A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
+| A | `codex/orca-ehr-worker-a-patient-boundary` | A-03 `orca_acceptance_cache` + cancellation/diff detection | Done | 20260510T211011Z | this commit | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
@@ -106,6 +106,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260510T211011Z | A | A-02 | 3.1/6 patientmodv2唯一mutation route、送信前差分、送信後patientgetv2 canonical re-fetch、ORCA失敗時local未更新 | this commit | focused Maven patient tests, web patient API/UI tests, web guard, doc/config/runtime guards passed | Done | A-03 `orca_acceptance_cache` + cancellation/diff detection |
 | 20260510T204040Z | C | C-01 | 4.5 prescription authority schema/status; direct overwrite DB guard foundation | this commit | `PrescriptionAuthoritySchemaTest`, `FreshSchemaBaselineTest`, doc/config/runtime/finalized-write guards passed | Done | C-02 finalize/change/stop/cancel/reissue API |
 | 20260510T204142Z | E | E-01 | 17 UI wording/warning parent; 20 Phase 4 guard foundation | this commit | `verify:medical-safety-ui-copy`, `verify:web-guard`, focused Charts Vitest, `typecheck` passed | Done | E-02 common patient header staged rollout |
 | 20260510T204050Z | D | D-01 | Section 5 `OrcaApiResult` common model | this commit | `mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=OrcaApiResultTest,OrcaHttpClientSupportTest,OrcaHttpClientLogTest,OrcaChartSupportResourceTest,OrcaBillingCorrectionScenarioSupportTest test` passed | Done | D-02 `orca_operation` / `orca_transmission` migration |

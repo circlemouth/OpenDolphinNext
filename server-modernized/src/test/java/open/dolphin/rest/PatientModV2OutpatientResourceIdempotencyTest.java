@@ -14,9 +14,17 @@ import java.lang.reflect.Modifier;
 import java.time.LocalDate;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.SimpleAddressModel;
+import open.dolphin.orca.service.OrcaLiveGateway;
+import open.dolphin.orca.service.OrcaPatientCacheStore;
+import open.dolphin.orca.sync.OrcaPatientSyncService;
+import open.dolphin.orca.transport.OrcaEndpoint;
+import open.dolphin.orca.transport.OrcaTransport;
+import open.dolphin.orca.transport.OrcaTransportRequest;
+import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.OfficialPatientCreateRequest;
 import open.dolphin.rest.dto.orca.OfficialPatientMutationResponse;
 import open.dolphin.rest.dto.orca.OfficialPatientPayload;
+import open.dolphin.rest.dto.orca.PatientImportResponse;
 import open.dolphin.session.PatientServiceBean;
 import org.junit.jupiter.api.Test;
 
@@ -36,6 +44,10 @@ class PatientModV2OutpatientResourceIdempotencyTest {
 
         PatientModV2OutpatientResource resource = new PatientModV2OutpatientResource();
         resource.setPatientServiceBean(service);
+        resource.setOrcaTransport(new PatientGetOnlyTransport());
+        resource.setOrcaLiveGateway(org.mockito.Mockito.mock(OrcaLiveGateway.class));
+        resource.setOrcaPatientSyncService(new SuccessfulImportService());
+        resource.setPatientCacheStore(new RecordingPatientCacheStore());
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
@@ -48,6 +60,13 @@ class PatientModV2OutpatientResourceIdempotencyTest {
         assertEquals(Boolean.TRUE, body.getIdempotent());
         assertEquals("existing_patient", body.getIdempotentReason());
         assertEquals(99L, body.getPatientDbId());
+        assertEquals(Boolean.FALSE, body.getOrcaMutationPrepared());
+        assertEquals(Boolean.FALSE, body.getOrcaMutationSent());
+        assertEquals(Boolean.TRUE, body.getCanonicalRefetched());
+        assertEquals(Boolean.TRUE, body.getLocalSynced());
+        assertEquals("patientgetv2", body.getCanonicalSourceApi());
+        assertEquals("CURRENT", body.getCanonicalCacheStatus());
+        assertEquals("ORCA_PATIENT_FOUND", body.getCanonicalBusinessStatus());
         assertFalse(service.addCalled);
         assertNotNull(body.getRunId());
     }
@@ -154,6 +173,36 @@ class PatientModV2OutpatientResourceIdempotencyTest {
         @Override
         public int update(PatientModel patient) {
             return 1;
+        }
+    }
+
+    private static final class PatientGetOnlyTransport implements OrcaTransport {
+        @Override
+        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
+            if (endpoint != OrcaEndpoint.PATIENT_GET) {
+                throw new AssertionError("idempotent existing create must not send patientmodv2");
+            }
+            return new OrcaTransportResult(null, "GET", 200,
+                    "{\"Api_Result\":\"00\",\"Api_Result_Message\":\"OK\",\"Patient_Information\":{\"Patient_ID\":\"00001\",\"WholeName\":\"山田 太郎\",\"WholeName_inKana\":\"ヤマダ タロウ\",\"BirthDate\":\"1980-01-01\",\"Sex\":\"1\"}}",
+                    "application/json", java.util.Map.of());
+        }
+    }
+
+    private static final class SuccessfulImportService extends OrcaPatientSyncService {
+        @Override
+        public PatientImportResponse importPatients(String facilityId, open.dolphin.rest.dto.orca.PatientImportRequest request,
+                String runId) {
+            PatientImportResponse response = new PatientImportResponse();
+            response.setApiResult("00");
+            response.setFetchedCount(1);
+            return response;
+        }
+    }
+
+    private static final class RecordingPatientCacheStore extends OrcaPatientCacheStore {
+        @Override
+        public long save(PatientCacheCommand command) {
+            return 315L;
         }
     }
 }

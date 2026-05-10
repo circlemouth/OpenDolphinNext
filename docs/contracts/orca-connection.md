@@ -113,6 +113,14 @@
 - `Api_Result=10` または患者不在 wording は `ORCA_PATIENT_NOT_FOUND` business status として扱い、単純な HTTP 404 や local fallback success に変換しない。
 - `orca_patient_cache` は `source_system=ORCA`, `source_api=patientgetv2`, `source_request_id`, `source_trace_id`, `fetched_at`, `cache_expires_at`, `cache_status`, `business_status`, `raw_response_hash`, normalized payload を保存する。raw ORCA body、credential、接続先 URL、Cookie、Authorization、CSRF は保存しない。
 
+## Official Patient Mutation
+- 患者作成・更新は `/api/orca/official/patientmodv2/outpatient/create` と `/api/orca/official/patientmodv2/outpatient/update` だけを public mutation route とする。local patient mutation route、admin wrapper、browser-side ORCA direct call は復活させない。
+- create は server が `patientmodv2 class=01`、update は server が `patientmodv2 class=02` を選ぶ。client が class、facility、owner、role、任意 URL、storage key、digest を送っても authority にしない。
+- update は送信前に ORCA から現 baseline を server-side に取得し、editable field の差分を解決する。client の `changedKeys` は UX hint であり、server allowlist にない key は捨てる。
+- ORCA mutation が失敗した場合、local patient sync や `d_patient` 投影更新を実行しない。failure response / audit details は固定 error code と safe metadata だけにし、raw XML、接続先 URL、credential、患者住所・電話などの詳細は含めない。
+- ORCA mutation が受け付けられた後も、`patientgetv2` canonical re-fetch が `ORCA_PATIENT_FOUND` / `CURRENT` を返し、`orca_patient_cache` 保存と local sync が終わるまで同期確認済み応答にしない。応答は `orcaMutationPrepared`、`orcaMutationSent`、`canonicalRefetched`、`localSynced`、`canonicalSourceApi=patientgetv2`、`canonicalCacheStatus`、`canonicalBusinessStatus` の allowlist field だけを返す。
+- 既存 local patient と同一内容で create が idempotent と判断される場合も、local row を ORCA 正本として扱わない。patientmodv2 は送らず、`patientgetv2` canonical re-fetch と local sync 確認を必須にする。
+
 ## Charts Disease Mutation
 - Charts からの ORCA 病名登録・更新・削除は `/api/orca/official/chart-support/disease-mod-v3` だけを使う。
 - server は facility / patient access / department / insurance / target disease を server-side で再検証し、クライアント提供の facilityId、任意 URL、raw XML、`Request_Number` を信用しない。

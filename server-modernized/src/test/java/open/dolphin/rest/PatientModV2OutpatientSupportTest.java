@@ -7,7 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import jakarta.ws.rs.WebApplicationException;
@@ -16,10 +17,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import open.dolphin.orca.service.OrcaPatientCacheStore;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.SimpleAddressModel;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.sync.OrcaPatientSyncService;
+import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.orca.transport.OrcaTransport;
@@ -101,8 +104,9 @@ class PatientModV2OutpatientSupportTest {
         OrcaTransport orcaTransport = mock(OrcaTransport.class);
         OrcaLiveGateway orcaWrapperService = mock(OrcaLiveGateway.class);
         OrcaPatientSyncService orcaPatientSyncService = mock(OrcaPatientSyncService.class);
+        RecordingPatientCacheStore patientCacheStore = new RecordingPatientCacheStore();
         PatientModV2OutpatientOrcaCoordinator coordinator = new PatientModV2OutpatientOrcaCoordinator(
-                patientServiceBean, orcaTransport, orcaWrapperService, orcaPatientSyncService);
+                patientServiceBean, orcaTransport, orcaWrapperService, orcaPatientSyncService, patientCacheStore);
 
         PatientModV2OutpatientSupport.PatientPatch patch = new PatientModV2OutpatientSupport.PatientPatch();
         patch.patientId = "00001";
@@ -136,6 +140,7 @@ class PatientModV2OutpatientSupportTest {
         PatientModel synced = buildPatient("facility", "00001");
 
         when(orcaWrapperService.getPatientBatch(anyString(), any())).thenReturn(batchResponse);
+        when(orcaTransport.invoke(anyString(), any(), any())).thenReturn(patientGetResult("00001"));
         when(orcaPatientSyncService.importPatients(any(), any(), any())).thenReturn(importResponse);
         when(patientServiceBean.getPatientById("facility", "00001")).thenReturn(synced);
 
@@ -148,7 +153,13 @@ class PatientModV2OutpatientSupportTest {
         assertSame(synced, result.patient);
         assertEquals(List.of(), details.get("appliedKeys"));
         assertEquals(1, details.get("importFetchedCount"));
-        verifyNoInteractions(orcaTransport);
+        assertEquals(Boolean.TRUE, result.canonicalRefetched);
+        assertEquals(Boolean.TRUE, result.localSynced);
+        assertEquals("patientgetv2", result.canonicalSourceApi);
+        assertEquals("CURRENT", result.canonicalCacheStatus);
+        assertEquals("ORCA_PATIENT_FOUND", result.canonicalBusinessStatus);
+        assertEquals("00001", patientCacheStore.command.orcaPatientId());
+        verify(orcaTransport).invoke(anyString(), org.mockito.ArgumentMatchers.eq(OrcaEndpoint.PATIENT_GET), any());
     }
 
     @Test
@@ -157,8 +168,9 @@ class PatientModV2OutpatientSupportTest {
         OrcaTransport orcaTransport = mock(OrcaTransport.class);
         OrcaLiveGateway orcaWrapperService = mock(OrcaLiveGateway.class);
         OrcaPatientSyncService orcaPatientSyncService = mock(OrcaPatientSyncService.class);
+        RecordingPatientCacheStore patientCacheStore = new RecordingPatientCacheStore();
         PatientModV2OutpatientOrcaCoordinator coordinator = new PatientModV2OutpatientOrcaCoordinator(
-                patientServiceBean, orcaTransport, orcaWrapperService, orcaPatientSyncService);
+                patientServiceBean, orcaTransport, orcaWrapperService, orcaPatientSyncService, patientCacheStore);
 
         PatientImportResponse importResponse = new PatientImportResponse();
         importResponse.setApiResult("00");
@@ -166,11 +178,17 @@ class PatientModV2OutpatientSupportTest {
         PatientModel synced = buildPatient("facility", "00099");
 
         when(orcaTransport.invoke(anyString(), any(), any())).thenAnswer(invocation -> {
+            OrcaEndpoint endpoint = invocation.getArgument(1);
             OrcaTransportRequest request = invocation.getArgument(2);
-            assertTrue(request.getBody().contains("query=class=01"));
-            return new OrcaTransportResult(null, "POST", 200,
-                    "<xmlio2><patientmodres><Api_Result>00</Api_Result><Api_Result_Message>OK</Api_Result_Message><Patient_ID>00099</Patient_ID></patientmodres></xmlio2>",
-                    "application/xml", Map.of());
+            if (endpoint == OrcaEndpoint.PATIENT_MOD) {
+                assertTrue(request.getBody().contains("query=class=01"));
+                return new OrcaTransportResult(null, "POST", 200,
+                        "<xmlio2><patientmodres><Api_Result>00</Api_Result><Api_Result_Message>OK</Api_Result_Message><Patient_ID>00099</Patient_ID></patientmodres></xmlio2>",
+                        "application/xml", Map.of());
+            }
+            assertEquals(OrcaEndpoint.PATIENT_GET, endpoint);
+            assertEquals("id=00099&format=json", request.getQuery());
+            return patientGetResult("00099");
         });
         when(orcaPatientSyncService.importPatients(any(), any(), any())).thenReturn(importResponse);
         when(patientServiceBean.getPatientById("facility", "00099")).thenReturn(synced);
@@ -186,6 +204,11 @@ class PatientModV2OutpatientSupportTest {
                 coordinator.createOrcaAndSyncLocal("facility", patch, "20260321T221345Z", new LinkedHashMap<>());
 
         assertEquals("00099", result.patient.getPatientId());
+        assertEquals(Boolean.TRUE, result.orcaMutationPrepared);
+        assertEquals(Boolean.TRUE, result.orcaMutationSent);
+        assertEquals(Boolean.TRUE, result.canonicalRefetched);
+        assertEquals(Boolean.TRUE, result.localSynced);
+        assertEquals("00099", patientCacheStore.command.orcaPatientId());
     }
 
     @Test
@@ -194,8 +217,9 @@ class PatientModV2OutpatientSupportTest {
         OrcaTransport orcaTransport = mock(OrcaTransport.class);
         OrcaLiveGateway orcaWrapperService = mock(OrcaLiveGateway.class);
         OrcaPatientSyncService orcaPatientSyncService = mock(OrcaPatientSyncService.class);
+        RecordingPatientCacheStore patientCacheStore = new RecordingPatientCacheStore();
         PatientModV2OutpatientOrcaCoordinator coordinator = new PatientModV2OutpatientOrcaCoordinator(
-                patientServiceBean, orcaTransport, orcaWrapperService, orcaPatientSyncService);
+                patientServiceBean, orcaTransport, orcaWrapperService, orcaPatientSyncService, patientCacheStore);
 
         PatientBatchResponse batchResponse = new PatientBatchResponse();
         batchResponse.setApiResult("00");
@@ -216,11 +240,17 @@ class PatientModV2OutpatientSupportTest {
 
         when(orcaWrapperService.getPatientBatch(anyString(), any())).thenReturn(batchResponse);
         when(orcaTransport.invoke(anyString(), any(), any())).thenAnswer(invocation -> {
+            OrcaEndpoint endpoint = invocation.getArgument(1);
             OrcaTransportRequest request = invocation.getArgument(2);
-            assertTrue(request.getBody().contains("query=class=02"));
-            return new OrcaTransportResult(null, "POST", 200,
-                    "<xmlio2><patientmodres><Api_Result>00</Api_Result><Api_Result_Message>OK</Api_Result_Message></patientmodres></xmlio2>",
-                    "application/xml", Map.of());
+            if (endpoint == OrcaEndpoint.PATIENT_MOD) {
+                assertTrue(request.getBody().contains("query=class=02"));
+                return new OrcaTransportResult(null, "POST", 200,
+                        "<xmlio2><patientmodres><Api_Result>00</Api_Result><Api_Result_Message>OK</Api_Result_Message></patientmodres></xmlio2>",
+                        "application/xml", Map.of());
+            }
+            assertEquals(OrcaEndpoint.PATIENT_GET, endpoint);
+            assertEquals("id=00001&format=json", request.getQuery());
+            return patientGetResult("00001");
         });
         when(orcaPatientSyncService.importPatients(any(), any(), any())).thenReturn(importResponse);
         when(patientServiceBean.getPatientById("facility", "00001")).thenReturn(synced);
@@ -237,6 +267,62 @@ class PatientModV2OutpatientSupportTest {
                 coordinator.updateOrcaAndSyncLocal("facility", patch, "20260321T221345Z", new LinkedHashMap<>());
 
         assertEquals("00001", result.patient.getPatientId());
+        assertEquals(Boolean.TRUE, result.orcaMutationPrepared);
+        assertEquals(Boolean.TRUE, result.orcaMutationSent);
+        assertEquals(Boolean.TRUE, result.canonicalRefetched);
+        assertEquals(Boolean.TRUE, result.localSynced);
+        assertEquals("00001", patientCacheStore.command.orcaPatientId());
+    }
+
+    @Test
+    void updateDoesNotImportLocalPatientWhenCanonicalRefetchFails() {
+        PatientServiceBean patientServiceBean = mock(PatientServiceBean.class);
+        OrcaTransport orcaTransport = mock(OrcaTransport.class);
+        OrcaLiveGateway orcaWrapperService = mock(OrcaLiveGateway.class);
+        OrcaPatientSyncService orcaPatientSyncService = mock(OrcaPatientSyncService.class);
+        RecordingPatientCacheStore patientCacheStore = new RecordingPatientCacheStore();
+        PatientModV2OutpatientOrcaCoordinator coordinator = new PatientModV2OutpatientOrcaCoordinator(
+                patientServiceBean, orcaTransport, orcaWrapperService, orcaPatientSyncService, patientCacheStore);
+
+        PatientBatchResponse batchResponse = new PatientBatchResponse();
+        batchResponse.setApiResult("00");
+        PatientSummary summary = new PatientSummary();
+        summary.setPatientId("00001");
+        summary.setWholeName("山田 太郎");
+        summary.setWholeNameKana("ヤマダ タロウ");
+        summary.setBirthDate("1980-01-01");
+        summary.setSex("1");
+        PatientDetail detail = new PatientDetail();
+        detail.setSummary(summary);
+        batchResponse.getPatients().add(detail);
+
+        when(orcaWrapperService.getPatientBatch(anyString(), any())).thenReturn(batchResponse);
+        when(orcaTransport.invoke(anyString(), any(), any())).thenAnswer(invocation -> {
+            OrcaEndpoint endpoint = invocation.getArgument(1);
+            if (endpoint == OrcaEndpoint.PATIENT_MOD) {
+                return new OrcaTransportResult(null, "POST", 200,
+                        "<xmlio2><patientmodres><Api_Result>00</Api_Result><Api_Result_Message>OK</Api_Result_Message></patientmodres></xmlio2>",
+                        "application/xml", Map.of());
+            }
+            return new OrcaTransportResult(null, "GET", 200,
+                    "{\"Api_Result\":\"10\",\"Api_Result_Message\":\"患者がありません\"}",
+                    "application/json", Map.of());
+        });
+
+        PatientModV2OutpatientSupport.PatientPatch patch = new PatientModV2OutpatientSupport.PatientPatch();
+        patch.patientId = "00001";
+        patch.name = "山田 次郎";
+        patch.kana = "ヤマダ タロウ";
+        patch.birthDate = "1980-01-01";
+        patch.sex = "M";
+        patch.changedKeys = Set.of("name");
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> coordinator.updateOrcaAndSyncLocal("facility", patch, "20260321T221345Z", new LinkedHashMap<>()));
+
+        assertEquals(502, ex.getResponse().getStatus());
+        assertEquals("ORCA_PATIENT_NOT_FOUND", patientCacheStore.command.businessStatus());
+        verify(orcaPatientSyncService, never()).importPatients(any(), any(), any());
     }
 
     private static PatientModel buildPatient(String facilityId, String patientId) {
@@ -253,5 +339,23 @@ class PatientModV2OutpatientSupportTest {
         address.setAddress("東京都千代田区");
         model.setAddress(address);
         return model;
+    }
+
+    private static OrcaTransportResult patientGetResult(String patientId) {
+        return new OrcaTransportResult(null, "GET", 200,
+                "{\"Api_Result\":\"00\",\"Api_Result_Message\":\"OK\",\"Patient_Information\":{\"Patient_ID\":\""
+                        + patientId
+                        + "\",\"WholeName\":\"山田 太郎\",\"WholeName_inKana\":\"ヤマダ タロウ\",\"BirthDate\":\"1980-01-01\",\"Sex\":\"1\"}}",
+                "application/json", Map.of());
+    }
+
+    private static final class RecordingPatientCacheStore extends OrcaPatientCacheStore {
+        private PatientCacheCommand command;
+
+        @Override
+        public long save(PatientCacheCommand command) {
+            this.command = command;
+            return 315L;
+        }
     }
 }

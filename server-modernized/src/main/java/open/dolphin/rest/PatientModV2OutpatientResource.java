@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.orca.service.OrcaPatientCacheStore;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.sync.OrcaPatientSyncService;
 import open.dolphin.orca.transport.OrcaTransport;
@@ -56,6 +57,9 @@ public class PatientModV2OutpatientResource extends AbstractResource {
     @Inject
     private OrcaPatientSyncService orcaPatientSyncService;
 
+    @Inject
+    private OrcaPatientCacheStore patientCacheStore;
+
     void setPatientServiceBean(PatientServiceBean patientServiceBean) {
         this.patientServiceBean = patientServiceBean;
     }
@@ -70,6 +74,10 @@ public class PatientModV2OutpatientResource extends AbstractResource {
 
     void setOrcaPatientSyncService(OrcaPatientSyncService orcaPatientSyncService) {
         this.orcaPatientSyncService = orcaPatientSyncService;
+    }
+
+    void setPatientCacheStore(OrcaPatientCacheStore patientCacheStore) {
+        this.patientCacheStore = patientCacheStore;
     }
 
     @POST
@@ -103,6 +111,8 @@ public class PatientModV2OutpatientResource extends AbstractResource {
         PatientModV2OutpatientSupport.PatientPatch patch = PatientModV2OutpatientSupport.toCreatePatch(body);
         OfficialPatientMutationResponse response = createBaseResponse(runId, traceId, requestId);
         Map<String, Object> details = createAuditDetails(request, "create", patch, runId, facilityId, response.getFetchedAt());
+        details.put("traceId", traceId);
+        details.put("requestId", requestId);
         PatientModV2OutpatientSupport.applyAuditMeta(details, body != null ? body.getAuditMeta() : null);
 
         try {
@@ -135,6 +145,8 @@ public class PatientModV2OutpatientResource extends AbstractResource {
 
         OfficialPatientMutationResponse response = createBaseResponse(runId, traceId, requestId);
         Map<String, Object> details = createAuditDetails(request, "update", patch, runId, facilityId, response.getFetchedAt());
+        details.put("traceId", traceId);
+        details.put("requestId", requestId);
         PatientModV2OutpatientSupport.applyAuditMeta(details, body != null ? body.getAuditMeta() : null);
 
         try {
@@ -157,7 +169,8 @@ public class PatientModV2OutpatientResource extends AbstractResource {
                 patientServiceBean,
                 orcaTransport,
                 orcaWrapperService,
-                orcaPatientSyncService);
+                orcaPatientSyncService,
+                patientCacheStore);
     }
 
     private OfficialPatientMutationResponse createBaseResponse(String runId, String traceId, String requestId) {
@@ -219,6 +232,13 @@ public class PatientModV2OutpatientResource extends AbstractResource {
         response.setPatient(result.patient != null ? PatientModV2OutpatientSupport.toPatientRecord(result.patient) : null);
         response.setIdempotent(result.idempotent);
         response.setIdempotentReason(result.idempotentReason);
+        response.setOrcaMutationPrepared(result.orcaMutationPrepared);
+        response.setOrcaMutationSent(result.orcaMutationSent);
+        response.setCanonicalRefetched(result.canonicalRefetched);
+        response.setLocalSynced(result.localSynced);
+        response.setCanonicalSourceApi(result.canonicalSourceApi);
+        response.setCanonicalCacheStatus(result.canonicalCacheStatus);
+        response.setCanonicalBusinessStatus(result.canonicalBusinessStatus);
         response.setAuditEvent(createAuditEvent(action, details, traceId, requestId));
     }
 
