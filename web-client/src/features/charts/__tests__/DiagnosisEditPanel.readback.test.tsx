@@ -169,21 +169,17 @@ describe('DiagnosisEditPanel readback contract', () => {
     await waitFor(() => {
       expect(searchDiseaseMasterCandidates).toHaveBeenCalledWith(expect.objectContaining({ keyword: '高血' }));
     });
-    const candidateSelect = await screen.findByLabelText('病名マスター候補');
-    await waitFor(() => expect(candidateSelect).not.toBeDisabled());
-    const selected = Array.from((candidateSelect as HTMLSelectElement).options).find((option) => option.text.includes('高血圧症'));
-    expect(selected?.value).toBeTruthy();
-
-    await user.selectOptions(candidateSelect, selected?.value ?? '');
+    const candidateList = await screen.findByRole('listbox', { name: '病名マスター候補' });
+    await user.click(within(candidateList).getByRole('option', { name: /高血圧症/ }));
 
     expect(screen.getByLabelText('病名 *')).toHaveValue('高血圧症');
-    expect(screen.getByLabelText(/コード/)).toHaveValue('I10');
+    expect(screen.getByText('コードに紐づく病名です。')).toBeInTheDocument();
     expect(mutateOrcaDisease).not.toHaveBeenCalled();
 
     const authoring = screen.getByLabelText('ORCAへ病名登録');
-    await user.click(within(authoring).getByRole('button', { name: 'ORCAへ病名登録' }));
-    const confirmDialog = await screen.findByRole('dialog', { name: 'ORCAへ病名登録' });
-    await user.click(within(confirmDialog).getByRole('button', { name: 'ORCAへ病名登録' }));
+    await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
+    const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
+    await user.click(within(confirmDialog).getByRole('button', { name: '副病名として登録' }));
 
     await waitFor(() => {
       expect(mutateOrcaDisease).toHaveBeenCalledWith(

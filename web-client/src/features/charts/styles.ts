@@ -4570,14 +4570,63 @@ export const chartsStyles = css`
 
   .charts-diagnosis__quick-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    grid-template-columns: minmax(180px, 1fr) minmax(130px, 0.45fr);
     gap: var(--charts-space-xs);
     align-items: end;
   }
 
-  .charts-diagnosis__quick-candidates {
+  .charts-diagnosis__quick-namebox {
+    position: relative;
     display: grid;
-    gap: 4px;
+  }
+
+  .charts-diagnosis__quick-candidate-menu {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    display: grid;
+    max-height: 12rem;
+    overflow-y: auto;
+    border: 1px solid rgba(37, 99, 235, 0.32);
+    background: #ffffff;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
+  }
+
+  .charts-diagnosis__quick-candidate-menu button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--charts-space-xs);
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #0f172a;
+    padding: 0.38rem 0.5rem;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .charts-diagnosis__quick-candidate-menu button:hover,
+  .charts-diagnosis__quick-candidate-menu button[aria-selected='true'] {
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .charts-diagnosis__quick-candidate-state {
+    flex: 0 0 auto;
+    color: #166534;
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+
+  .charts-diagnosis__quick-code-state {
+    margin: 0.2rem 0 0;
   }
 
   .charts-diagnosis__quick-candidate-help {
@@ -4591,6 +4640,8 @@ export const chartsStyles = css`
 
   .charts-diagnosis__quick-actions {
     display: flex;
+    flex-wrap: wrap;
+    gap: var(--charts-space-xs);
     justify-content: flex-end;
   }
 
@@ -4600,8 +4651,15 @@ export const chartsStyles = css`
     background: #eff6ff;
     color: #1d4ed8;
     padding: 0.35rem 0.8rem;
+    font-size: 0.76rem;
     font-weight: 800;
     cursor: pointer;
+  }
+
+  @media (max-width: 900px) {
+    .charts-diagnosis__quick-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   .charts-diagnosis__dialog-add {

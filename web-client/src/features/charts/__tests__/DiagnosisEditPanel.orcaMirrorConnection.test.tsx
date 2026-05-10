@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event';
 
 import { DiagnosisEditPanel } from '../DiagnosisEditPanel';
-import { fetchDiseases, mutateOrcaDisease, searchDiseaseMasterCandidates } from '../diseaseApi';
+import { fetchDiseases, mutateOrcaDisease, resolveDiseaseCodeFromOrcaMaster, searchDiseaseMasterCandidates } from '../diseaseApi';
 
 vi.mock('../diseaseApi', async () => {
   const actual = await vi.importActual<typeof import('../diseaseApi')>('../diseaseApi');
@@ -55,6 +55,7 @@ const renderPanel = (visitDate?: string) => {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(mutateOrcaDisease).mockResolvedValue({ ok: true });
+  vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValue(undefined);
   vi.mocked(searchDiseaseMasterCandidates).mockResolvedValue([]);
 });
 
@@ -74,7 +75,9 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
       screen.queryByText('ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。'),
     ).not.toBeInTheDocument();
     await userEvent.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
-    expect(screen.getByRole('button', { name: 'ORCAへ病名登録' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '主病名として登録' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '副病名として登録' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '疑い病名として登録' })).toBeDisabled();
   });
 
   it('shows ORCA registered diagnoses from the connected mirror without auto-authoring local diseases', async () => {
@@ -146,7 +149,9 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/orca\.internal\.example/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
-    expect(screen.getByRole('button', { name: 'ORCAへ病名登録' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '主病名として登録' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '副病名として登録' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '疑い病名として登録' })).toBeDisabled();
   });
 
   it('sends ORCA disease create only after explicit confirmation and does not call local diagnosis mutation', async () => {
@@ -164,10 +169,10 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     await user.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
     const authoring = screen.getByLabelText('ORCAへ病名登録');
     fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: 'HTN' } });
-    fireEvent.change(within(authoring).getByLabelText('コード ※任意'), { target: { value: 'I10' } });
-    await user.click(within(authoring).getByRole('button', { name: 'ORCAへ病名登録' }));
-    const confirmDialog = await screen.findByRole('dialog', { name: 'ORCAへ病名登録' });
-    await user.click(within(confirmDialog).getByRole('button', { name: 'ORCAへ病名登録' }));
+    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('I10');
+    await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
+    const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
+    await user.click(within(confirmDialog).getByRole('button', { name: '副病名として登録' }));
 
     await waitFor(() => {
       expect(mutateOrcaDisease).toHaveBeenCalledWith(

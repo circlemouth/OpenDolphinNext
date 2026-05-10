@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event';
 
 import { DiagnosisEditPanel, type DiagnosisEditPanelMeta } from '../DiagnosisEditPanel';
-import { fetchDiseases, mutateOrcaDisease, searchDiseaseMasterCandidates } from '../diseaseApi';
+import { fetchDiseases, mutateOrcaDisease, resolveDiseaseCodeFromOrcaMaster, searchDiseaseMasterCandidates } from '../diseaseApi';
 
 vi.mock('../diseaseApi', async () => {
   const actual = await vi.importActual<typeof import('../diseaseApi')>('../diseaseApi');
@@ -84,6 +84,7 @@ beforeEach(() => {
     ok: true,
     runId: 'RUN-ORCA-DISEASE-MUTATION',
   });
+  vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValue(undefined);
   vi.mocked(searchDiseaseMasterCandidates).mockResolvedValue([]);
 });
 
@@ -138,13 +139,13 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     await user.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
     const authoring = screen.getByLabelText('ORCAへ病名登録');
     fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: 'HTN' } });
-    fireEvent.change(within(authoring).getByLabelText('コード ※任意'), { target: { value: 'I10' } });
+    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('I10');
     expect(mutateOrcaDisease).not.toHaveBeenCalled();
-    await user.click(within(authoring).getByRole('button', { name: 'ORCAへ病名登録' }));
-    const confirmDialog = await screen.findByRole('dialog', { name: 'ORCAへ病名登録' });
+    await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
+    const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
     expect(within(confirmDialog).getByText('HTN')).toBeInTheDocument();
     expect(mutateOrcaDisease).not.toHaveBeenCalled();
-    await user.click(within(confirmDialog).getByRole('button', { name: 'ORCAへ病名登録' }));
+    await user.click(within(confirmDialog).getByRole('button', { name: '副病名として登録' }));
 
     await waitFor(() => {
       expect(mutateOrcaDisease).toHaveBeenCalledWith(
@@ -174,9 +175,9 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     await user.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
     const authoring = screen.getByLabelText('ORCAへ病名登録');
     fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: 'DM' } });
-    fireEvent.change(within(authoring).getByLabelText('コード ※任意'), { target: { value: 'E11' } });
-    await user.click(within(authoring).getByRole('button', { name: 'ORCAへ病名登録' }));
-    const confirmDialog = await screen.findByRole('dialog', { name: 'ORCAへ病名登録' });
+    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('E11');
+    await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
+    const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
     await user.click(within(confirmDialog).getByRole('button', { name: 'キャンセル' }));
 
     expect(mutateOrcaDisease).not.toHaveBeenCalled();

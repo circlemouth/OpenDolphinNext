@@ -66,6 +66,8 @@ type QuickCandidateOption = {
   candidate: DiseaseMasterCandidate;
 };
 
+type QuickCreateMode = 'main' | 'sub' | 'suspected';
+
 type FormMutationInput = {
   operation: Extract<OrcaDiseaseMutationOperation, 'create' | 'update'>;
   form: DiagnosisFormState;
@@ -117,14 +119,7 @@ const buildEntryKey = (entry: DiseaseEntry) =>
   `${resolveDiseaseLayer(entry)}:${entry.diagnosisId ?? `${entry.diagnosisName ?? 'unknown'}-${entry.startDate ?? 'na'}`}`;
 
 const formatQuickCandidateLabel = (candidate: DiseaseMasterCandidate) => {
-  const codeParts: string[] = [];
-  if (candidate.icdTen?.trim()) {
-    codeParts.push(`ICD:${candidate.icdTen.trim()}`);
-  }
-  if (candidate.code?.trim()) {
-    codeParts.push(`病名:${candidate.code.trim()}`);
-  }
-  return codeParts.length > 0 ? `${candidate.name}（${codeParts.join(' / ')}）` : candidate.name;
+  return candidate.name;
 };
 
 const isValidDateOnly = (value: string) => {
@@ -280,11 +275,10 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     name: '',
     code: '',
     startDate: today,
-    isMain: false,
-    isSuspected: false,
   });
   const [quickCandidateSelection, setQuickCandidateSelection] = useState('');
   const [quickCandidateKeyword, setQuickCandidateKeyword] = useState('');
+  const [isQuickCandidateMenuOpen, setIsQuickCandidateMenuOpen] = useState(false);
   const [notice, setNotice] = useState<{ tone: 'info' | 'success' | 'error'; message: string } | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
@@ -402,6 +396,12 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
   }, [quickCandidateMap, quickCandidateSelection]);
 
   useEffect(() => {
+    if (quickCandidateOptions.length === 0) {
+      setIsQuickCandidateMenuOpen(false);
+    }
+  }, [quickCandidateOptions.length]);
+
+  useEffect(() => {
     logUiState({
       action: 'navigate',
       screen: 'charts/diagnosis-edit',
@@ -512,8 +512,9 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         queryClient.invalidateQueries({ queryKey });
         setForm(buildEmptyForm(today));
         setEditingEntry(undefined);
-        setQuickAdd({ name: '', code: '', startDate: today, isMain: false, isSuspected: false });
+        setQuickAdd({ name: '', code: '', startDate: today });
         setQuickCandidateSelection('');
+        setIsQuickCandidateMenuOpen(false);
       }
     },
     onError: (error: unknown, input) => {
@@ -707,7 +708,36 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
       name: option.candidate.name,
       code: selectedCode || prev.code,
     }));
-    setNotice({ tone: 'info', message: `候補「${option.candidate.name}」を反映しました。` });
+    setIsQuickCandidateMenuOpen(false);
+    setNotice({ tone: 'info', message: `候補「${option.candidate.name}」を反映しました。コードに紐づく病名です。` });
+  };
+
+  const requestQuickCreate = (mode: QuickCreateMode) => {
+    const title =
+      mode === 'main'
+        ? '主病名として登録'
+        : mode === 'suspected'
+          ? '疑い病名として登録'
+          : '副病名として登録';
+    const nextForm: DiagnosisFormState = {
+      ...buildEmptyForm(today),
+      name: quickAdd.name.trim(),
+      code: quickAdd.code.trim(),
+      startDate: quickAdd.startDate || today,
+      isMain: mode === 'main',
+      isSuspected: mode === 'suspected',
+    };
+    const validationMessage = validateDiagnosisForm(nextForm);
+    if (validationMessage) {
+      setNotice({ tone: 'error', message: validationMessage });
+      return;
+    }
+    setPendingAction({
+      operation: 'create',
+      title,
+      confirmLabel: title,
+      form: nextForm,
+    });
   };
 
   const confirmPendingAction = () => {
@@ -791,46 +821,52 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
           <div className="charts-diagnosis__quick-grid">
             <div className="charts-side-panel__field">
               <label htmlFor="diagnosis-quick-name">病名 *</label>
-              <input
-                id="diagnosis-quick-name"
-                value={quickAdd.name}
-                onChange={(event) => {
-                  setQuickCandidateSelection('');
-                  setQuickAdd((prev) => ({ ...prev, name: event.target.value }));
-                }}
-                placeholder="例: 高血圧症"
-                disabled={isOrcaMutationBlocked || isAnyMutationPending}
-              />
-            </div>
-            <div className="charts-side-panel__field charts-diagnosis__quick-candidates">
-              <label htmlFor="diagnosis-quick-candidate">病名マスター候補</label>
-              <select
-                id="diagnosis-quick-candidate"
-                value={quickCandidateSelection}
-                onChange={(event) => applyQuickCandidate(event.target.value)}
-                disabled={isOrcaMutationBlocked || isAnyMutationPending || quickCandidateOptions.length === 0}
-              >
-                <option value="">{quickCandidateOptions.length > 0 ? '候補を選択して入力へ反映' : '候補なし'}</option>
-                {quickCandidateOptions.map((option) => (
-                  <option key={option.key} value={option.key}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <div className="charts-diagnosis__quick-namebox">
+                <input
+                  id="diagnosis-quick-name"
+                  value={quickAdd.name}
+                  onChange={(event) => {
+                    setQuickCandidateSelection('');
+                    setIsQuickCandidateMenuOpen(true);
+                    setQuickAdd((prev) => ({ ...prev, name: event.target.value, code: '' }));
+                  }}
+                  onFocus={() => {
+                    if (quickCandidateOptions.length > 0) setIsQuickCandidateMenuOpen(true);
+                  }}
+                  placeholder="例: 高血圧症"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={isQuickCandidateMenuOpen && quickCandidateOptions.length > 0}
+                  aria-controls="diagnosis-quick-candidate-list"
+                  aria-describedby="diagnosis-quick-code-state"
+                  disabled={isOrcaMutationBlocked || isAnyMutationPending}
+                />
+                {isQuickCandidateMenuOpen && quickCandidateOptions.length > 0 ? (
+                  <div id="diagnosis-quick-candidate-list" className="charts-diagnosis__quick-candidate-menu" role="listbox" aria-label="病名マスター候補">
+                    {quickCandidateOptions.map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        role="option"
+                        aria-selected={quickCandidateSelection === option.key}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => applyQuickCandidate(option.key)}
+                        disabled={isOrcaMutationBlocked || isAnyMutationPending}
+                      >
+                        <span>{option.label}</span>
+                        <span className="charts-diagnosis__quick-candidate-state">コード紐づき</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <p id="diagnosis-quick-code-state" className="charts-side-panel__help charts-diagnosis__quick-code-state">
+                {quickAdd.code.trim() ? 'コードに紐づく病名です。' : '候補を選ぶとコードに紐づく病名として登録できます。'}
+              </p>
               {quickCandidateQuery.isFetching ? <p className="charts-side-panel__help charts-diagnosis__quick-candidate-help">候補を検索中...</p> : null}
               {!quickCandidateQuery.isFetching && quickAdd.name.trim().length >= QUICK_CANDIDATE_MIN_KEYWORD && quickCandidateOptions.length === 0 ? (
                 <p className="charts-side-panel__help charts-diagnosis__quick-candidate-help">一致する候補はありません。</p>
               ) : null}
-            </div>
-            <div className="charts-side-panel__field">
-              <label htmlFor="diagnosis-quick-code">コード ※任意</label>
-              <input
-                id="diagnosis-quick-code"
-                value={quickAdd.code}
-                onChange={(event) => setQuickAdd((prev) => ({ ...prev, code: event.target.value }))}
-                placeholder="例: I10"
-                disabled={isOrcaMutationBlocked || isAnyMutationPending}
-              />
             </div>
             <div className="charts-side-panel__field">
               <label htmlFor="diagnosis-quick-start">開始日 ※必須</label>
@@ -845,41 +881,28 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                 disabled={isOrcaMutationBlocked || isAnyMutationPending}
               />
             </div>
-            <label className="charts-side-panel__toggle">
-              <input
-                type="checkbox"
-                checked={quickAdd.isMain}
-                onChange={(event) => setQuickAdd((prev) => ({ ...prev, isMain: event.target.checked }))}
-                disabled={isOrcaMutationBlocked || isAnyMutationPending}
-              />
-              主病名
-            </label>
-            <label className="charts-side-panel__toggle">
-              <input
-                type="checkbox"
-                checked={quickAdd.isSuspected}
-                onChange={(event) => setQuickAdd((prev) => ({ ...prev, isSuspected: event.target.checked }))}
-                disabled={isOrcaMutationBlocked || isAnyMutationPending}
-              />
-              疑い
-            </label>
           </div>
-          <div className="charts-diagnosis__quick-actions">
+          <div className="charts-diagnosis__quick-actions" aria-label="病名登録種別">
             <button
               type="button"
               disabled={isOrcaMutationBlocked || isAnyMutationPending}
-              onClick={() => {
-                requestFormMutation('create', {
-                  ...buildEmptyForm(today),
-                  name: quickAdd.name.trim(),
-                  code: quickAdd.code.trim(),
-                  startDate: quickAdd.startDate || today,
-                  isMain: quickAdd.isMain,
-                  isSuspected: quickAdd.isSuspected,
-                });
-              }}
+              onClick={() => requestQuickCreate('main')}
             >
-              ORCAへ病名登録
+              主病名として登録
+            </button>
+            <button
+              type="button"
+              disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              onClick={() => requestQuickCreate('sub')}
+            >
+              副病名として登録
+            </button>
+            <button
+              type="button"
+              disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              onClick={() => requestQuickCreate('suspected')}
+            >
+              疑い病名として登録
             </button>
           </div>
         </div>

@@ -255,7 +255,9 @@ describe('DADS clinical input contract - disease', () => {
     expect(await screen.findByText(/ORCA病名操作はブロックされています: DADS contract test: 権限がないため編集できません。/)).toBeVisible();
     expect(screen.getByText('閲覧専用を解除するには、タブロック解除または権限設定を確認してください。')).toBeVisible();
     await userEvent.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
-    expect(screen.getByRole('button', { name: 'ORCAへ病名登録' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '主病名として登録' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '副病名として登録' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '疑い病名として登録' })).toBeDisabled();
   });
 });
 
