@@ -107,6 +107,9 @@ class PublicRouteInventoryContractTest {
                 .filteredOn(route -> route.path().startsWith("/api/orca/"))
                 .allMatch(route -> route.path().startsWith("/api/orca/official/")
                         || route.path().startsWith("/api/orca/master/"));
+        assertThat(routeKeys)
+                .filteredOn(routeKey -> routeKey.contains(" /api/local/diagnoses"))
+                .containsExactly("GET /api/local/diagnoses/{*}");
         assertThat(localRoutes)
                 .allMatch(routeKey -> !isOfficialLike(routeKey));
     }

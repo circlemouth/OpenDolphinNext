@@ -474,43 +474,6 @@ public class KarteServiceBean {
     }
     
     /**
-     * 新規病名保存、病名更新を一括して実行する。
-     * @param wrapper DiagnosisSendWrapper
-     * @return 新規病名のPKリスト
-     */
-    public List<Long> postPutSendDiagnosis(DiagnosisSendWrapper wrapper) {
-        return karteDiagnosisService.postPutSendDiagnosis(wrapper);
-    }
-    
-
-    /**
-     * 傷病名を追加する。
-     * @param addList 追加する傷病名のリスト
-     * @return idのリスト
-     */
-    public List<Long> addDiagnosis(List<RegisteredDiagnosisModel> addList) {
-        return karteDiagnosisService.addDiagnosis(addList);
-    }
-
-    /**
-     * 傷病名を更新する。
-     * @param updateList
-     * @return 更新数
-     */
-    public int updateDiagnosis(List<RegisteredDiagnosisModel> updateList) {
-        return karteDiagnosisService.updateDiagnosis(updateList);
-    }
-
-    /**
-     * 傷病名を削除する。
-     * @param removeList 削除する傷病名のidリスト
-     * @return 削除数
-     */
-    public int removeDiagnosis(List<Long> removeList) {
-        return karteDiagnosisService.removeDiagnosis(removeList);
-    }
-
-    /**
      * Observationを取得する。
      * @param karteId
      * @param observation
