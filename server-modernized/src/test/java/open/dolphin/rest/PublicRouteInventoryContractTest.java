@@ -65,6 +65,7 @@ class PublicRouteInventoryContractTest {
     private static final Set<String> EXPECTED_LOCAL_ROUTE_KEYS = Set.of(
             "GET /api/local/diagnoses/{*}",
             "GET /api/local/encounters/{*}/medical-summary",
+            "GET /api/local/encounters/orca-transmissions/review",
             "GET /api/local/order/bundles",
             "GET /api/local/order/recommendations",
             "GET /api/local/prescription-orders",

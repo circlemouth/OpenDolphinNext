@@ -8,10 +8,12 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -35,6 +37,7 @@ import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
+import open.dolphin.rest.dto.orca.BillingOrcaTransmissionReviewListResponse;
 import open.dolphin.rest.dto.orca.CloseAndSendToBillingRequest;
 import open.dolphin.rest.dto.orca.CloseAndSendToBillingResponse;
 import open.dolphin.rest.dto.orca.OrcaEncounterContext;
@@ -71,6 +74,33 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    @GET
+    @Path("/orca-transmissions/review")
+    @Produces(MediaType.APPLICATION_JSON)
+    public BillingOrcaTransmissionReviewListResponse listReviewTransmissions(
+            @Context HttpServletRequest request,
+            @QueryParam("limit") Integer limit) {
+        String runId = resolveRunId(request);
+        String traceId = resolveTraceId(request);
+        String facilityId = requireFacilityId(request);
+        int safeLimit = clampReviewLimit(limit);
+        List<BillingOrcaWorkflowRepository.TransmissionReviewRecord> records =
+                workflowRepository.findReviewTransmissions(facilityId, safeLimit);
+
+        BillingOrcaTransmissionReviewListResponse response = new BillingOrcaTransmissionReviewListResponse();
+        response.setOk(true);
+        response.setLimit(safeLimit);
+        response.setRunId(runId);
+        response.setTraceId(traceId);
+        List<BillingOrcaTransmissionReviewListResponse.Entry> entries = new ArrayList<>();
+        for (BillingOrcaWorkflowRepository.TransmissionReviewRecord record : records) {
+            entries.add(toReviewEntry(record));
+        }
+        response.setEntries(entries);
+        response.setCount(entries.size());
+        return response;
+    }
 
     @POST
     @Path("/{encounterKey}/close-and-send-to-billing")
@@ -402,6 +432,30 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         return response;
     }
 
+    private BillingOrcaTransmissionReviewListResponse.Entry toReviewEntry(
+            BillingOrcaWorkflowRepository.TransmissionReviewRecord record) {
+        BillingOrcaTransmissionReviewListResponse.Entry entry = new BillingOrcaTransmissionReviewListResponse.Entry();
+        entry.setTransmissionId(record.transmissionId());
+        entry.setSnapshotId(record.snapshotId());
+        entry.setEncounterKey(record.encounterKey());
+        entry.setScheduleKey(record.scheduleKey());
+        entry.setPatientId(record.patientId());
+        entry.setState(record.state());
+        entry.setOperationStatus(operationStatusForTransmissionState(record.state()));
+        entry.setNeedsUserReview(true);
+        entry.setConfirmationRequired("ORCA_UNKNOWN".equals(record.state()) || "CORRECTION_REQUIRED".equals(record.state()));
+        entry.setIdempotencyKey(record.idempotencyKey());
+        entry.setMedicalUidPresent(normalize(record.medicalUid()) != null);
+        entry.setApiResult(record.apiResult());
+        entry.setApiResultMessage(record.apiResultMessage());
+        entry.setHttpStatus(record.httpStatus());
+        entry.setStartedAt(record.startedAt() != null ? record.startedAt().toString() : null);
+        entry.setCompletedAt(record.completedAt() != null ? record.completedAt().toString() : null);
+        entry.setRequestId(record.requestId());
+        entry.setTraceId(record.traceId());
+        return entry;
+    }
+
     private CloseAndSendToBillingResponse baseResponse(EncounterProjectionRepository.EncounterRow row,
             BillingOrcaWorkflowRepository.SnapshotRecord snapshot,
             String runId,
@@ -419,6 +473,13 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         response.setRunId(runId);
         response.setTraceId(traceId);
         return response;
+    }
+
+    private int clampReviewLimit(Integer limit) {
+        if (limit == null) {
+            return 50;
+        }
+        return Math.max(1, Math.min(limit, 100));
     }
 
     ChartSupportMedicalModResponse unknownMedicalResponse(String runId, String traceId) {

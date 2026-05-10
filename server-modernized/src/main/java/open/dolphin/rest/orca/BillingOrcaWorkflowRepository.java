@@ -8,6 +8,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import javax.sql.DataSource;
 
 @ApplicationScoped
@@ -33,6 +35,19 @@ public class BillingOrcaWorkflowRepository {
              WHERE facility_id = ?
                AND encounter_key = ?
                AND idempotency_key = ?
+            """;
+
+    private static final String SQL_FIND_REVIEW_TRANSMISSIONS = """
+            SELECT t.transmission_id, t.snapshot_id, t.facility_id, t.encounter_key, t.idempotency_key, t.state,
+                   t.medical_uid, t.api_result, t.api_result_message, t.http_status, t.request_id, t.trace_id,
+                   s.patient_id, s.schedule_key, t.started_at, t.completed_at
+              FROM opendolphin.d_billing_orca_transmission t
+              JOIN opendolphin.d_billing_orca_snapshot s
+                ON s.snapshot_id = t.snapshot_id
+             WHERE t.facility_id = ?
+               AND t.state IN ('ORCA_UNKNOWN', 'ORCA_FAILED', 'CORRECTION_REQUIRED')
+             ORDER BY t.started_at DESC, t.transmission_id DESC
+             LIMIT ?
             """;
 
     private static final String SQL_INSERT_TRANSMISSION = """
@@ -108,6 +123,27 @@ public class BillingOrcaWorkflowRepository {
             }
         } catch (SQLException ex) {
             throw new IllegalStateException("Failed to load billing ORCA transmission", ex);
+        }
+    }
+
+    public List<TransmissionReviewRecord> findReviewTransmissions(String facilityId, int limit) {
+        if (normalize(facilityId) == null || dataSource == null) {
+            return List.of();
+        }
+        int safeLimit = Math.max(1, Math.min(limit, 100));
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(SQL_FIND_REVIEW_TRANSMISSIONS)) {
+            statement.setString(1, facilityId.trim());
+            statement.setInt(2, safeLimit);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                List<TransmissionReviewRecord> records = new ArrayList<>();
+                while (resultSet.next()) {
+                    records.add(mapTransmissionReview(resultSet));
+                }
+                return records;
+            }
+        } catch (SQLException ex) {
+            throw new IllegalStateException("Failed to load billing ORCA review transmissions", ex);
         }
     }
 
@@ -202,6 +238,28 @@ public class BillingOrcaWorkflowRepository {
                 resultSet.getString(12));
     }
 
+    private TransmissionReviewRecord mapTransmissionReview(ResultSet resultSet) throws SQLException {
+        Timestamp startedAt = resultSet.getTimestamp(15);
+        Timestamp completedAt = resultSet.getTimestamp(16);
+        return new TransmissionReviewRecord(
+                resultSet.getLong(1),
+                resultSet.getLong(2),
+                resultSet.getString(3),
+                resultSet.getString(4),
+                resultSet.getString(5),
+                resultSet.getString(6),
+                resultSet.getString(7),
+                resultSet.getString(8),
+                resultSet.getString(9),
+                (Integer) resultSet.getObject(10),
+                resultSet.getString(11),
+                resultSet.getString(12),
+                resultSet.getString(13),
+                resultSet.getString(14),
+                startedAt != null ? startedAt.toInstant() : null,
+                completedAt != null ? completedAt.toInstant() : null);
+    }
+
     private static String require(String value, String label) {
         String normalized = normalize(value);
         if (normalized == null) {
@@ -249,6 +307,26 @@ public class BillingOrcaWorkflowRepository {
             Integer httpStatus,
             String requestId,
             String traceId
+    ) {
+    }
+
+    public record TransmissionReviewRecord(
+            long transmissionId,
+            long snapshotId,
+            String facilityId,
+            String encounterKey,
+            String idempotencyKey,
+            String state,
+            String medicalUid,
+            String apiResult,
+            String apiResultMessage,
+            Integer httpStatus,
+            String requestId,
+            String traceId,
+            String patientId,
+            String scheduleKey,
+            Instant startedAt,
+            Instant completedAt
     ) {
     }
 }
