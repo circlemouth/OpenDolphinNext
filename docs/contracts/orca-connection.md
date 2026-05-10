@@ -133,3 +133,5 @@
 - ORCA outage 中も OpenDolphinNext 正本である診療録本文、SOAP、所見、説明内容、処方指示下書き、既存スナップショット、監査ログは閲覧・運用設定に応じた作成を許可できる。
 - ORCA outage 中は ORCA患者作成・更新、ORCA病名送信、ORCA診療行為送信、会計送信、再送、追加送信、置換送信を fail-closed にする。local-only 患者、病名、保険、会計情報を ORCA 正本へ fallback 表示しない。
 - 復旧後は `ORCA_UNKNOWN`、`ORCA_FAILED`、`CORRECTION_REQUIRED` を Reception の要確認一覧で再取得し、`tmedicalgetv2` read-only 再照合を行ってから再送可否を判断する。再送前の payload authority は server-side snapshot と server-derived encounter context だけとし、client-provided voucher、sequential、insurance combination、`Medical_Uid` は使わない。
+- DB write path または監査ログ書き込みが degraded の場合は、ORCA readiness が `UP` でも read-only mode とする。監査不能な診療録変更、処方変更、添付変更、ORCA送信、再送、追加送信、置換送信、再照合結果の永続反映は fail-closed にする。
+- backup restore 後は local DB 上の `ORCA_SENT` / `ORCA_CONFIRMED` / `ORCA_UNKNOWN` / `ORCA_FAILED` / `CORRECTION_REQUIRED` を ORCA 正本として昇格しない。監査ログ hash chain と診療録 content hash を検証し、ORCA患者・受付・保険・病名・診療行為・会計を server adapter 経由で再取得してから差分照合する。
