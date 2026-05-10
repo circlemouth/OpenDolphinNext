@@ -103,6 +103,7 @@
 - `診察終了して会計へ送信` は canonical encounter context (`patientId`, `visitDate`, `departmentCode`, `physicianCode`, `insuranceCombinationNumber`, `voucherNumber`, `sequentialNumber`) が揃わない限り進めません。未保存、来院文脈不足、ORCA unavailable、送信後変更などの理由は disabled だけにせず guard summary / visible note に出します。
 - `visitDate` の `today` fallback や display string parsing は ORCA 送信文脈に使いません。
 - chart flow 後続の旧 follow-up route は current contract に含めません。通常の初回会計送信は `/api/local/encounters/{encounterKey}/close-and-send-to-billing` を使い、server が encounter projection と保存済み order/disease から ORCA payload を導出します。低レベル official outbound は `medicalmodv2` / `diseasev3` / `incomeinfv2` の bridge として残します。
+- `close-and-send-to-billing` が `ORCA_UNKNOWN`、`operationStatus=UNKNOWN`、`needsUserReview=true`、または `confirmationRequired=true` を返した場合、Charts は診察終了成功や会計待ち遷移に潰さず、患者タブを閉じずに要確認 banner を初期表示します。再送や状態確定は Reception 側 recovery / ORCA 連携一覧で `tmedicalgetv2` 再照合後に扱います。
 
 ### Terminology
 - 「参照カルテ」と「参照パネル」は current docs 上で完全同義とは断定しません。

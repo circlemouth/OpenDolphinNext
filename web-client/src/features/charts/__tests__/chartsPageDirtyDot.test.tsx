@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 
 import { AuthServiceProvider } from '../authService';
 import { fetchChartsMedicalSummary } from '../api';
+import { closeAndSendToBilling } from '../closeAndSendBillingApi';
 import { clearChartsEncounterContext, storeChartsEncounterContext } from '../encounterContext';
 import { fetchDiseasesWithPatientImportRecovery } from '../diseaseApi';
 import { fetchKarteIdByPatientId } from '../letterApi';
@@ -385,7 +386,9 @@ vi.mock('../../shared/AdminBroadcastBanner', () => ({ AdminBroadcastBanner: () =
 vi.mock('../../shared/RunIdBadge', () => ({ RunIdBadge: () => null }));
 vi.mock('../../shared/StatusPill', () => ({ StatusPill: () => null }));
 vi.mock('../../shared/AuditSummaryInline', () => ({ AuditSummaryInline: () => null }));
-vi.mock('../../reception/components/ToneBanner', () => ({ ToneBanner: () => null }));
+vi.mock('../../reception/components/ToneBanner', () => ({
+  ToneBanner: ({ message }: { message: string }) => React.createElement('div', { role: 'status' }, message),
+}));
 vi.mock('../styles', () => ({ chartsStyles: '' }));
 vi.mock('../../reception/styles', () => ({ receptionStyles: '' }));
 vi.mock('../../outpatient/appointmentDataBanner', () => ({ getAppointmentDataBanner: () => null }));
@@ -647,6 +650,38 @@ describe('ChartsPage patient tab dirty indicator', () => {
 
     await user.click(screen.getByRole('button', { name: '診察終了（モック）' }));
     await waitFor(() => expect(fetchCounters.summary).toBe(initialSummaryCalls));
+  });
+
+  it('診察終了の ORCA 会計送信が結果不明なら会計待ちへ進めず要確認を表示する', async () => {
+    seedPatientTabStorage();
+    seedChartsContext();
+    soapMockState.dirty = false;
+    soapMockState.dirtySources = [];
+    soapMockState.serverSynced = true;
+    vi.mocked(closeAndSendToBilling).mockResolvedValueOnce({
+      ok: true,
+      state: 'ORCA_UNKNOWN',
+      operationStatus: 'UNKNOWN',
+      needsUserReview: true,
+      encounterKey: 'F001:E100',
+      idempotencyKey: 'idem-close-send-unknown',
+      runId: 'RUN-BILLING-UNKNOWN',
+      traceId: 'TRACE-BILLING-UNKNOWN',
+    });
+
+    renderChartsPage();
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '診察終了（モック）' }));
+
+    expect(
+      await screen.findByText('ORCA送信結果が不明または要確認です。受付または ORCA 連携一覧で状態を確認してください。'),
+    ).toBeInTheDocument();
+    expect(closeAndSendToBilling).toHaveBeenCalledWith('F001:E100', {
+      idempotencyKey: expect.stringMatching(/^close-send:F001:E100:/),
+      runPrecheck: false,
+    });
+    expect(screen.getByTestId('active-patient-id')).toHaveTextContent('P-001');
   });
 
   it('workspace tab の active switch は保存成功後だけ切り替える', async () => {

@@ -106,6 +106,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] `diseasev3` は server-generated `idempotency_key` の二重送信をサーバー側で拒否する。
 - [x] `diseasev3` の transport 例外は `NETWORK_FAILED` / `needsUserReview=true` として operation に保存し、成功扱いにしない。
 - [ ] `UNKNOWN` は成功扱いせず、ORCA再照合完了まで UI に要確認として表示する。
+  - [x] `close-and-send-to-billing` の `ORCA_UNKNOWN` / `operationStatus=UNKNOWN` / `needsUserReview=true` は Charts の診察終了成功に潰さず、会計待ち遷移と患者タブ終了を停止して要確認を初期表示する。
 - [ ] `authoritative_audit_event` を append-only / hash chain 付きに再設計または拡張する。
 - [ ] 監査ログに ORCA認証情報、証明書パスワード、Basic認証文字列を保存しない。
 - [ ] ORCA raw XML を保存する場合は暗号化し、アクセス権限を限定する。

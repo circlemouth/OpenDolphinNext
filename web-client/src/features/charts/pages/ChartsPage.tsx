@@ -130,6 +130,29 @@ import {
   type WorkspaceChartsTabRequest,
 } from '../../workspaceTabs/workspaceTabEvents';
 
+const CLOSE_AND_SEND_REVIEW_STATES = new Set(['ORCA_UNKNOWN', 'ORCA_FAILED', 'CORRECTION_REQUIRED']);
+const CLOSE_AND_SEND_REVIEW_OPERATION_STATUSES = new Set(['UNKNOWN', 'NETWORK_FAILED', 'ORCA_WARNING', 'ORCA_UNMATCHED', 'NEEDS_REVIEW']);
+
+const needsCloseAndSendReview = (result: Awaited<ReturnType<typeof closeAndSendToBilling>>) =>
+  result.needsUserReview === true ||
+  result.confirmationRequired === true ||
+  (typeof result.operationStatus === 'string' && CLOSE_AND_SEND_REVIEW_OPERATION_STATUSES.has(result.operationStatus)) ||
+  (typeof result.state === 'string' && CLOSE_AND_SEND_REVIEW_STATES.has(result.state));
+
+const createCloseAndSendReviewError = (result: Awaited<ReturnType<typeof closeAndSendToBilling>>) => {
+  const error = new Error('診察終了と会計送信は要確認です。ORCA送信状態を確認してください。') as Error & {
+    apiDetails?: Record<string, unknown>;
+  };
+  error.apiDetails = {
+    runId: result.runId,
+    traceId: result.traceId,
+    outcome: result.operationStatus ?? result.state ?? 'NEEDS_REVIEW',
+    apiResult: result.apiResult,
+    apiResultMessage: result.apiResultMessage,
+  };
+  return error;
+};
+
 const parseDate = (value?: string): Date | null => {
   if (!value) return null;
   const date = new Date(value);
@@ -3577,6 +3600,13 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     });
     if (!billingResult.ok) {
       throw new Error('診察終了と会計送信に失敗しました。ORCA送信状態を確認してください。');
+    }
+    if (needsCloseAndSendReview(billingResult)) {
+      setContextAlert({
+        tone: 'warning',
+        message: 'ORCA送信結果が不明または要確認です。受付または ORCA 連携一覧で状態を確認してください。',
+      });
+      throw createCloseAndSendReviewError(billingResult);
     }
     if (patientId && actionVisitDate) {
       upsertReceptionStatusOverride({
