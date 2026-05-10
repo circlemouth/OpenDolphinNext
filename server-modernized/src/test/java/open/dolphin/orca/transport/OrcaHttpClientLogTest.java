@@ -4,13 +4,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import open.dolphin.orca.model.OrcaApiResult;
 import org.junit.jupiter.api.Test;
 
 class OrcaHttpClientLogTest {
 
     @Test
     void summaryLog_masksPhiAndKeepsHashes() {
-        OrcaHttpClient.OrcaApiResult result = OrcaHttpClient.OrcaApiResult.of(
+        OrcaApiResult result = OrcaApiResult.of(
                 "00",
                 "患者番号0000123 山田太郎 生年月日1978-01-02",
                 List.of("住所:東京都新宿区", "電話:09012345678"));
@@ -29,7 +30,7 @@ class OrcaHttpClientLogTest {
 
     @Test
     void numericOnlyMessage_isLoggedAsIs() {
-        OrcaHttpClient.OrcaApiResult result = OrcaHttpClient.OrcaApiResult.of(
+        OrcaApiResult result = OrcaApiResult.of(
                 "99",
                 "0001",
                 List.of());
@@ -44,7 +45,7 @@ class OrcaHttpClientLogTest {
     @Test
     void summaryLog_doesNotRenderRawTargetMaterial() {
         String rawTarget = "https://" + "admin:pass@" + "facility.example.orca/secret-prefix";
-        OrcaHttpClient.OrcaApiResult result = OrcaHttpClient.OrcaApiResult.of(
+        OrcaApiResult result = OrcaApiResult.of(
                 "98",
                 "Invalid target " + rawTarget,
                 List.of("baseUrl=" + rawTarget, "userinfo=admin:pass"));
@@ -63,7 +64,7 @@ class OrcaHttpClientLogTest {
     @Test
     void detailLog_reflectivePathDoesNotRenderRawTargetMaterial() throws Exception {
         String rawTarget = "https://" + "admin:pass@" + "facility.example.orca/secret-prefix";
-        OrcaHttpClient.OrcaApiResult result = OrcaHttpClient.OrcaApiResult.of(
+        OrcaApiResult result = OrcaApiResult.of(
                 "98",
                 "Invalid target " + rawTarget,
                 List.of("baseUrl=" + rawTarget, "userinfo=admin:pass"));
@@ -74,7 +75,7 @@ class OrcaHttpClientLogTest {
                 String.class,
                 String.class,
                 int.class,
-                OrcaHttpClient.OrcaApiResult.class,
+                OrcaApiResult.class,
                 OrcaHttpClient.OrcaLogMode.class);
         formatDetailLog.setAccessible(true);
         String log = (String) formatDetailLog.invoke(
@@ -97,7 +98,7 @@ class OrcaHttpClientLogTest {
     @Test
     void detailLog_doesNotRenderRawTargetMaterial() {
         String rawTarget = "https://" + "admin:pass@" + "facility.example.orca/secret-prefix";
-        OrcaHttpClient.OrcaApiResult result = OrcaHttpClient.OrcaApiResult.of(
+        OrcaApiResult result = OrcaApiResult.of(
                 "98",
                 "Invalid target " + rawTarget,
                 List.of("userinfo=admin:pass", "host=facility.example.orca"));

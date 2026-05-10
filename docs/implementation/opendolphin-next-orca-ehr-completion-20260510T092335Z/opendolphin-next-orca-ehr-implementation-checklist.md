@@ -119,7 +119,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] ORCA接続URL、Basic認証、クライアント証明書、証明書パスワードはサーバー側設定だけに置く。
 - [ ] ORCA通信はすべてサーバー側の監査対象にする。
 - [ ] APIごとに `OrcaPatientAdapter`, `OrcaAcceptanceAdapter`, `OrcaInsuranceAdapter`, `OrcaDiseaseAdapter`, `OrcaMedicalAdapter`, `OrcaIncomeAdapter`, `OrcaReportAdapter`, `OrcaSystemAdapter` を分離する。
-- [ ] `OrcaApiResult` を作成し、result code/message、business/transport status、warnings、errors、unmatched、ORCA only、renumbered/reassigned identifiers、needsUserReview、perform date、department、physician、insurance combination、raw hash、normalized response を持たせる。
+- [x] `OrcaApiResult` を作成し、result code/message、business/transport status、warnings、errors、unmatched、ORCA only、renumbered/reassigned identifiers、needsUserReview、perform date、department、physician、insurance combination、raw hash、normalized response を持たせる。
 - [ ] ORCAレスポンスを成功/失敗だけに変換しない。
 - [x] `diseasev3` は `Api_Result=000` でも警告・不一致があれば `needsUserReview=true` にする。
 - [ ] 他端末使用中、患者不在、通信失敗、証明書異常、認証失敗、XML不正、ORCA警告、ORCA不一致を別 status として扱う。

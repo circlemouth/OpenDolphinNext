@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import open.dolphin.orca.model.OrcaApiResult;
 import org.junit.jupiter.api.Test;
 
 class OrcaHttpClientSupportTest {
@@ -20,7 +21,7 @@ class OrcaHttpClientSupportTest {
                 </data>
                 """;
 
-        OrcaHttpClient.OrcaApiResult result = support.extractApiResult(xml, "application/xml");
+        OrcaApiResult result = support.extractApiResult(xml, "application/xml");
 
         assertEquals("0000", result.apiResult());
         assertEquals("OK", result.message());
@@ -34,7 +35,7 @@ class OrcaHttpClientSupportTest {
                 {"response":{"Api_Result":"0100","Api_Result_Message":"ERR","Api_Warning_Message":"warn"}}
                 """;
 
-        OrcaHttpClient.OrcaApiResult result = support.extractApiResult(json, "application/json");
+        OrcaApiResult result = support.extractApiResult(json, "application/json");
 
         assertEquals("0100", result.apiResult());
         assertEquals("ERR", result.message());
@@ -44,10 +45,10 @@ class OrcaHttpClientSupportTest {
 
     @Test
     void isTransientOrcaErrorRecognizesLockMessages() {
-        OrcaHttpClient.OrcaApiResult result =
-                OrcaHttpClient.OrcaApiResult.of("0100", "他端末で処理中", java.util.List.of());
+        OrcaApiResult result =
+                OrcaApiResult.of("0100", "他端末で処理中", java.util.List.of());
 
         assertTrue(support.isTransientOrcaError(result));
-        assertFalse(support.isTransientOrcaError(OrcaHttpClient.OrcaApiResult.of("0000", "OK", java.util.List.of())));
+        assertFalse(support.isTransientOrcaError(OrcaApiResult.of("0000", "OK", java.util.List.of())));
     }
 }

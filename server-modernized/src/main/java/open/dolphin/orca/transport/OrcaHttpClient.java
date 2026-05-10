@@ -26,6 +26,7 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import open.dolphin.orca.OrcaGatewayException;
+import open.dolphin.orca.model.OrcaApiResult;
 import open.dolphin.rest.OrcaApiProxySupport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.ServerRuntimeConfiguration;
@@ -393,10 +394,10 @@ public class OrcaHttpClient {
         String resolvedId = requestId != null && !requestId.isBlank() ? requestId : "-";
         String resolvedMethod = method != null && !method.isBlank() ? method : "POST";
         String resolvedPath = path != null && !path.isBlank() ? path : "-";
-        String apiResultCode = apiResult != null && apiResult.apiResult != null ? apiResult.apiResult : "-";
-        SanitizedText apiMessage = sanitizeLogText(apiResult != null ? apiResult.message : null);
-        String warningsRaw = (apiResult != null && apiResult.warnings != null && !apiResult.warnings.isEmpty())
-                ? String.join(" | ", apiResult.warnings)
+        String apiResultCode = apiResult != null && apiResult.apiResult() != null ? apiResult.apiResult() : "-";
+        SanitizedText apiMessage = sanitizeLogText(apiResult != null ? apiResult.message() : null);
+        String warningsRaw = (apiResult != null && !apiResult.warnings().isEmpty())
+                ? String.join(" | ", apiResult.warnings())
                 : null;
         SanitizedText warnings = sanitizeLogText(warningsRaw);
         StringBuilder builder = new StringBuilder();
@@ -413,9 +414,9 @@ public class OrcaHttpClient {
 
     static String formatDetailLog(String requestId, String method, String path, int status,
             OrcaApiResult apiResult, OrcaLogMode logMode) {
-        SanitizedText apiMessage = sanitizeLogText(apiResult != null ? apiResult.message : null);
-        String warningsRaw = (apiResult != null && apiResult.warnings != null && !apiResult.warnings.isEmpty())
-                ? String.join(" | ", apiResult.warnings)
+        SanitizedText apiMessage = sanitizeLogText(apiResult != null ? apiResult.message() : null);
+        String warningsRaw = (apiResult != null && !apiResult.warnings().isEmpty())
+                ? String.join(" | ", apiResult.warnings())
                 : null;
         SanitizedText warnings = sanitizeLogText(warningsRaw);
         StringBuilder builder = new StringBuilder();
@@ -595,34 +596,6 @@ public class OrcaHttpClient {
         }
     }
 
-    public static final class OrcaApiResult {
-        private final String apiResult;
-        private final String message;
-        private final List<String> warnings;
-
-        private OrcaApiResult(String apiResult, String message, List<String> warnings) {
-            this.apiResult = apiResult;
-            this.message = message;
-            this.warnings = copyWarnings(warnings);
-        }
-
-        static OrcaApiResult of(String apiResult, String message, List<String> warnings) {
-            return new OrcaApiResult(apiResult, message, warnings);
-        }
-
-        public String apiResult() {
-            return apiResult;
-        }
-
-        public String message() {
-            return message;
-        }
-
-        public List<String> warnings() {
-            return copyWarnings(warnings);
-        }
-    }
-
     public static final class OrcaHttpResponse {
         private final String url;
         private final String method;
@@ -676,10 +649,6 @@ public class OrcaHttpClient {
         public OrcaApiResult apiResult() {
             return apiResult;
         }
-    }
-
-    private static List<String> copyWarnings(List<String> source) {
-        return source == null || source.isEmpty() ? List.of() : List.copyOf(source);
     }
 
     private static Map<String, List<String>> copyHeaders(Map<String, List<String>> source) {
