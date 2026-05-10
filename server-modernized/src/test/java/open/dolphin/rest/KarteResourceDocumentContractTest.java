@@ -83,6 +83,16 @@ class KarteResourceDocumentContractTest {
         verify(karteServiceBean, never()).addDocument(any());
     }
 
+    @Test
+    void putTitleReturnsServiceUnavailableWhenAuditWritePathIsUnavailable() {
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(false);
+
+        assertThatThrownBy(() -> resource.putTitle("300", "after"))
+                .isInstanceOf(WebApplicationException.class)
+                .satisfies(ex -> assertThat(((WebApplicationException) ex).getResponse().getStatus()).isEqualTo(503));
+        verify(karteServiceBean, never()).updateTitle(300L, "after");
+    }
+
     private static void assertProducesTextPlain(String methodName, Class<?>... parameterTypes) throws Exception {
         Method method = KarteDocumentWriteResource.class.getMethod(methodName, parameterTypes);
         Produces produces = method.getAnnotation(Produces.class);

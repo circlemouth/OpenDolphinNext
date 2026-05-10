@@ -217,6 +217,13 @@ public class KarteDocumentWriteService {
 
     public int updateTitle(long pk, String title) {
         DocumentModel update = em.find(DocumentModel.class, pk);
+        if (update == null) {
+            throw new IllegalArgumentException("Document not found: " + pk);
+        }
+        String currentStatus = normalizeStatus(update.getStatus());
+        if (!IInfoModel.STATUS_TMP.equals(currentStatus)) {
+            throw finalizedUpdateDenied(pk, currentStatus, currentStatus);
+        }
         update.getDocInfoModel().setTitle(title);
         return 1;
     }

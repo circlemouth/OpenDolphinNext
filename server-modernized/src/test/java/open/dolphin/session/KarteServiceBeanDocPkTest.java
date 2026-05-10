@@ -169,6 +169,40 @@ class KarteServiceBeanDocPkTest {
     }
 
     @Test
+    void updateTitle_rejectsFinalizedDocumentWithConflictPayload() {
+        DocumentModel current = buildDocumentWithModule();
+        current.setId(301L);
+        current.setStatus(IInfoModel.STATUS_FINAL);
+        current.getDocInfoModel().setTitle("before");
+        when(em.find(DocumentModel.class, 301L)).thenReturn(current);
+
+        Throwable thrown = catchThrowable(() -> service.updateTitle(301L, "after"));
+        assertThat(thrown).isNotNull();
+
+        ProblemSnapshot problem = extractProblem(thrown);
+        assertThat(problem.status()).isEqualTo(409);
+        assertThat(problem.errorCode()).isEqualTo("karte.document.finalized_update_denied");
+        assertThat(asLong(problem.details().get("documentId"))).isEqualTo(301L);
+        assertThat(String.valueOf(problem.details().get("currentStatus"))).isEqualTo(IInfoModel.STATUS_FINAL);
+        assertThat(String.valueOf(problem.details().get("requestedStatus"))).isEqualTo(IInfoModel.STATUS_FINAL);
+        assertThat(current.getDocInfoModel().getTitle()).isEqualTo("before");
+    }
+
+    @Test
+    void updateTitle_allowsDraftDocument() {
+        DocumentModel current = buildDocumentWithModule();
+        current.setId(302L);
+        current.setStatus(IInfoModel.STATUS_TMP);
+        current.getDocInfoModel().setTitle("before");
+        when(em.find(DocumentModel.class, 302L)).thenReturn(current);
+
+        int result = service.updateTitle(302L, "after");
+
+        assertThat(result).isEqualTo(1);
+        assertThat(current.getDocInfoModel().getTitle()).isEqualTo("after");
+    }
+
+    @Test
     void addDocument_sealsIntegrityAfterPersist() {
         DocumentModel document = buildDocumentWithModule();
         document.setId(0L);
