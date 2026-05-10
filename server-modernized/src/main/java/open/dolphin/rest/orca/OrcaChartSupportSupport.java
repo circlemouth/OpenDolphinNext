@@ -8,6 +8,7 @@ import java.util.Map;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import open.dolphin.orca.model.OrcaApiResult;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckRequest;
 import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckResponse;
@@ -189,23 +190,18 @@ final class OrcaChartSupportSupport {
 
     private void applyMedicalModOperationStatus(ChartSupportMedicalModResponse response, boolean transportOk, boolean apiOk) {
         boolean hasWarnings = response.getMedicalWarnings() != null && !response.getMedicalWarnings().isEmpty();
-        if (hasWarnings) {
-            response.setOperationStatus("ORCA_WARNING");
-            response.setNeedsUserReview(true);
-            return;
-        }
-        if (transportOk && apiOk) {
-            response.setOperationStatus("ORCA_ACCEPTED");
-            response.setNeedsUserReview(false);
-            return;
-        }
-        if (transportOk) {
-            response.setOperationStatus("ORCA_REJECTED");
-            response.setNeedsUserReview(true);
-            return;
-        }
-        response.setOperationStatus("NETWORK_FAILED");
-        response.setNeedsUserReview(true);
+        boolean completionEvidencePresent = !isBlank(response.getMedicalUid())
+                || !isBlank(response.getInvoiceNumber())
+                || !isBlank(response.getDataId())
+                || (!isBlank(response.getInformationDate()) && !isBlank(response.getInformationTime()));
+        OrcaApiResult.OperationStatus status = OrcaApiResult.classifyMutation(
+                transportOk,
+                response.getApiResult(),
+                hasWarnings,
+                false,
+                apiOk && completionEvidencePresent);
+        response.setOperationStatus(status.name());
+        response.setNeedsUserReview(OrcaApiResult.needsUserReview(status));
     }
 
     ChartSupportMedicationGetResponse parseMedicationGetResponse(
@@ -671,33 +667,16 @@ final class OrcaChartSupportSupport {
         boolean hasWarnings = response.getWarnings() != null && !response.getWarnings().isEmpty();
         boolean hasUnmatches = response.getUnmatchInformation() != null && !response.getUnmatchInformation().isEmpty();
         String classification = response.getResponseClassification();
-        if (hasUnmatches) {
-            response.setOperationStatus("ORCA_UNMATCHED");
-            response.setNeedsUserReview(true);
-            return;
-        }
-        if (hasWarnings) {
-            response.setOperationStatus("ORCA_WARNING");
-            response.setNeedsUserReview(true);
-            return;
-        }
-        if ("businessAccepted".equals(classification)) {
-            response.setOperationStatus("ORCA_ACCEPTED");
-            response.setNeedsUserReview(false);
-            return;
-        }
-        if ("businessRejected".equals(classification)) {
-            response.setOperationStatus("ORCA_REJECTED");
-            response.setNeedsUserReview(false);
-            return;
-        }
-        if ("transportRejected".equals(classification)) {
-            response.setOperationStatus("NETWORK_FAILED");
-            response.setNeedsUserReview(true);
-            return;
-        }
-        response.setOperationStatus("UNKNOWN");
-        response.setNeedsUserReview(true);
+        boolean transportOk = !"transportRejected".equals(classification);
+        boolean completionEvidencePresent = "businessAccepted".equals(classification);
+        OrcaApiResult.OperationStatus status = OrcaApiResult.classifyMutation(
+                transportOk,
+                response.getApiResult(),
+                hasWarnings,
+                hasUnmatches,
+                completionEvidencePresent);
+        response.setOperationStatus(status.name());
+        response.setNeedsUserReview(OrcaApiResult.needsUserReview(status));
     }
 
     private void appendDiseaseSingle(StringBuilder builder, ChartSupportDiseaseModV3Request.DiseaseInformation entry) {

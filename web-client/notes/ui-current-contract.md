@@ -189,6 +189,7 @@
 - test: Reception の ORCA送信再照合で `resendBlocked=true` が返った場合は再送停止と管理者確認を表示し、`Medical_Uid` 値や保険組合せを表示しないこと
 - test: 会計送信成功が workflow `会計済み` を直ちに意味せず、`送信済` は transmission signal として別表示されること
 - test: 会計済み後の編集は `再計待` へ移り、correction note を generic memo と分離して表示すること
+- guard: `verify:medical-safety-ui-copy` は production UI/current docs 上の ORCA送信を単純成功・反映・登録完了として見せる visible copy、送信完了と診療録確定/会計済みを結び付ける copy、および重要警告を初期表示から外す記述を拒否します。
 - manual: Reception 画面文言が既存患者受付限定で、新患は Patients へ誘導すること
 
 ## Patients Surface

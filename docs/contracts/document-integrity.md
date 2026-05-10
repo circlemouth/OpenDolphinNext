@@ -55,6 +55,13 @@
 - `mode=enforce` 固定のため、検証失敗時は 409 を返す。
 - attachment canonicalization には `linkId` / `linkRelation` も含め、asset owner と reference row を同一視しない。
 
+## Chart revision authority 契約
+- `chart_document` は診療録正本チェーンの単位を表す。`document_key` は server 生成値を保存し、client 提供の key / owner / facility を権威情報として採用しない。
+- `chart_revision` は本文、SOAP、所見、説明内容、タイトル、添付参照を固定する revision を表す。`status` は `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` のみに制限する。
+- `DRAFT` 以外の revision は直接更新不可の対象であり、後続の訂正・追記・取消は `chart_revision_event` と新 revision で表す。既存 revision の本文や title を物理上書きしない。
+- `chart_revision_event` は revision chain の状態遷移、理由、変更前後 summary を保存する。summary には raw 患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token を保存しない。
+- `content_hash` は chart finalize API が確定時に server-side canonical content から計算する。client 提供 digest は検証材料であって権威値ではない。
+
 ## reasonCode 一覧
 - `integrity_record_missing`
 - `key_not_found`
@@ -77,8 +84,10 @@
 - [x] `ServerConfigurationValidator` に keyring validation を追加する。
 - [x] 監査 payload から raw secret と不要な差分情報を除く。
 - [x] key rotation / missing key / enforce のテストを追加する。
+- [x] `chart_document` / `chart_revision` / `chart_revision_event` の最小 schema と `ChartRevisionStatus` enum を追加する。
 
 ## 受け入れ条件
 - [x] active key を変更しても旧文書が verify できる。
 - [x] `mode=enforce` で only 409 を返す。
 - [x] malformed keyring / active key 複数 / keyId 重複で起動失敗する。
+- [x] `chart_revision.status` は `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` のみに DB 制約と Java enum で制限される。

@@ -13,6 +13,9 @@
         <class>open.dolphin.infomodel.ByteModule</class>
         <class>open.dolphin.infomodel.CarePlanItem</class>
         <class>open.dolphin.infomodel.CarePlanModel</class>
+        <class>open.dolphin.infomodel.ChartDocumentModel</class>
+        <class>open.dolphin.infomodel.ChartRevisionEventModel</class>
+        <class>open.dolphin.infomodel.ChartRevisionModel</class>
         <class>open.dolphin.infomodel.CompositeImageModel</class>
         <class>open.dolphin.infomodel.DemoDisease</class>
         <class>open.dolphin.infomodel.DemoPatient</class>

@@ -155,6 +155,7 @@ describe('OrcaSummary semantics', () => {
     expect(settingNote).toHaveTextContent('収納情報の確認前です');
     expect(screen.getByText('ORCA送信応答: 送達確認')).toBeVisible();
     expect(screen.queryByText('ORCA送信: 成功')).not.toBeInTheDocument();
+    expect(screen.queryByText(/ORCA送信成功|ORCAへ反映|会計へ反映/)).not.toBeInTheDocument();
 
     const details = container.querySelector('.orca-summary__details-fold');
     expect(details?.querySelector('[data-test-id="orca-billing-correction-note"]')).toBeNull();
@@ -289,6 +290,7 @@ describe('OrcaSummary semantics', () => {
     expectVisibleOutsideDetails('院内編集中のローカル集計です。ORCA の請求・収納記録ではありません。');
     expectVisibleOutsideDetails('Transmission / medical-mod-v2');
     expectVisibleOutsideDetails('medical-mod-v2 の送信結果です。会計済み判定や診療録確定とは別に扱ってください。');
+    expect(screen.queryByText(/medical-mod-v2.*診療録確定.*完了/)).not.toBeInTheDocument();
     expectVisibleOutsideDetails('ORCA収納情報');
     expectVisibleOutsideDetails('official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。');
     expectVisibleOutsideDetails('対象日: 2026-03-09');
