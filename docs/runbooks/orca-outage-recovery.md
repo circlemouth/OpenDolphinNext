@@ -53,12 +53,13 @@ UI は DB degraded / read-only と ORCA outage を混同しない。DB write pat
 ## UNKNOWN Handling
 
 1. `medicalmodv2` の通信断、`Medical_Uid` 欠落、parse ambiguity は `ORCA_UNKNOWN` とし、成功扱いにしない。
-2. 同じ snapshot を即時再送しない。
-3. Reception の ORCA送信要確認一覧から `ORCA状態を再照合` を実行する。
-4. 再照合 request は server-side transmission ID だけを使う。patient、facility、insurance、voucher、sequential、`Medical_Uid`、URL、raw XML は client から受け取らない。
-5. `tmedicalgetv2` の一致候補がある場合も、再送成功や会計反映済みとは扱わず、内容確認後の明示操作まで `needsUserReview=true` を維持する。
-6. `Medical_Mode` または `Medical_Mode2` が空でなく `0` 以外の場合は `resendBlocked=true` とし、管理者確認なしに再送しない。
-7. 共通 ORCA 台帳では、元操作を `orca_operation`、各 transport attempt を `orca_transmission`、sanitized ORCA response を `orca_response_summary`、復旧照合を `orca_reconciliation_result` に記録する。記録は request/response hash、固定 status/reason code、件数、`Medical_Uid` の存在有無、`Medical_Mode` / `Medical_Mode2` の分類値に限定し、raw body や raw identifier を保存しない。
+2. `medicalmodv2` が zero-like result と `Medical_Uid` を返した場合でも、server は `tmedicalgetv2` read-only 再取得・照合が成功するまで `ORCA_MEDICAL_REGISTERED` に昇格しない。
+3. 同じ snapshot を即時再送しない。
+4. Reception の ORCA送信要確認一覧から `ORCA状態を再照合` を実行する。
+5. 再照合 request は server-side transmission ID だけを使う。patient、facility、insurance、voucher、sequential、`Medical_Uid`、URL、raw XML は client から受け取らない。
+6. `tmedicalgetv2` の一致候補がある場合も、再送成功や会計反映済みとは扱わず、内容確認後の明示操作まで `needsUserReview=true` を維持する。
+7. `Medical_Mode` または `Medical_Mode2` が空でなく `0` 以外の場合は `resendBlocked=true` とし、管理者確認なしに再送しない。
+8. 共通 ORCA 台帳では、元操作を `orca_operation`、各 transport attempt を `orca_transmission`、sanitized ORCA response を `orca_response_summary`、復旧照合を `orca_reconciliation_result` に記録する。記録は request/response hash、固定 status/reason code、件数、`Medical_Uid` の存在有無、`Medical_Mode` / `Medical_Mode2` の分類値に限定し、raw body や raw identifier を保存しない。
 
 ## Recovery After ORCA Restores
 

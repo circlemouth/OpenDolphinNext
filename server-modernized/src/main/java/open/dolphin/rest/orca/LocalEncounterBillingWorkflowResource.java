@@ -263,6 +263,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         medicalRequest.setMedicalInformation(medicalInformation);
 
         ChartSupportMedicalModResponse medicalResponse;
+        BillingOrcaTemporaryMedicalReconcileResponse reconcileResponse = null;
         String finalState;
         String errorCode = null;
         String errorMessage = null;
@@ -275,13 +276,32 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
                     OrcaTransportRequest.post(xml).withQuery("class=01"));
             medicalResponse = support().parseMedicalModResponse(result, runId, traceId);
             if (medicalResponse.isOk() && normalize(medicalResponse.getMedicalUid()) != null) {
-                finalState = "ORCA_MEDICAL_REGISTERED";
+                reconcileResponse = reconcileTemporaryMedicalAfterSend(transmission, snapshot, row, runId, traceId);
+                if (reconcileResponse.isOk()
+                        && reconcileResponse.getMatchingTemporaryMedicalRowCount() > 0
+                        && !reconcileResponse.isResendBlocked()) {
+                    finalState = "ORCA_MEDICAL_REGISTERED";
+                } else if (reconcileResponse.isResendBlocked()) {
+                    finalState = "CORRECTION_REQUIRED";
+                    confirmationRequired = true;
+                    errorCode = "orca_temporary_medical_locked";
+                    errorMessage = reconcileResponse.getResendBlockReason();
+                    medicalResponse.setNeedsUserReview(true);
+                    medicalResponse.setOperationStatus("NEEDS_REVIEW");
+                } else {
+                    finalState = "ORCA_UNKNOWN";
+                    confirmationRequired = true;
+                    errorCode = "post_send_reconcile_incomplete";
+                    errorMessage = "medicalmodv2 accepted candidate was not confirmed by tmedicalgetv2";
+                    markMedicalResponseUnknown(medicalResponse);
+                }
             } else if (medicalResponse.isOk()) {
                 finalState = "ORCA_UNKNOWN";
                 confirmationRequired = true;
                 errorCode = "medical_uid_missing";
                 errorMessage = "ORCA response did not include Medical_Uid";
                 markMedicalResponseUnknown(medicalResponse);
+                reconcileResponse = tryTemporaryMedicalReconcileAfterUnknown(transmission, snapshot, row, runId, traceId);
             } else {
                 finalState = "ORCA_FAILED";
                 errorCode = "orca_business_rejected";
@@ -304,7 +324,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
                 medicalResponse.getStatus(),
                 errorCode,
                 errorMessage,
-                serializeResponse(medicalResponse, confirmationRequired));
+                serializeResponse(medicalResponse, confirmationRequired, reconcileResponse));
         workflowRepository.updateSnapshotState(snapshot.snapshotId(), finalState);
         if ("ORCA_MEDICAL_REGISTERED".equals(finalState)) {
             encounterProjectionRepository.transitionState(
@@ -332,6 +352,9 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         audit.put("operationStatus", medicalResponse.getOperationStatus());
         audit.put("needsUserReview", medicalResponse.isNeedsUserReview());
         audit.put("medicalUidPresent", normalize(medicalResponse.getMedicalUid()) != null);
+        audit.put("postSendReconciliationStatus", reconcileResponse != null ? reconcileResponse.getReconciliationStatus() : null);
+        audit.put("postSendReconciliationMatchCount",
+                reconcileResponse != null ? reconcileResponse.getMatchingTemporaryMedicalRowCount() : null);
         audit.put("routeNamespace", "local");
         recordAudit(request, AUDIT_ACTION, audit,
                 "ORCA_MEDICAL_REGISTERED".equals(finalState)
@@ -671,6 +694,88 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
                 : "ORCA中途終了データに一致候補がありません。成功扱いにせず確認してください");
     }
 
+    private BillingOrcaTemporaryMedicalReconcileResponse reconcileTemporaryMedicalAfterSend(
+            BillingOrcaWorkflowRepository.TransmissionRecord transmission,
+            BillingOrcaWorkflowRepository.SnapshotRecord snapshot,
+            EncounterProjectionRepository.EncounterRow row,
+            String runId,
+            String traceId) {
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
+                postSendReconcileRecord(transmission, snapshot, row);
+        BillingOrcaTemporaryMedicalReconcileResponse response =
+                baseTemporaryMedicalReconcileResponse(record, runId, traceId);
+        try {
+            OrcaTransportResult result = orcaTransport.invoke(
+                    record.facilityId(),
+                    OrcaEndpoint.TEMP_MEDICAL_GET,
+                    OrcaTransportRequest.post(buildTemporaryMedicalGetPayload(record)));
+            applyTemporaryMedicalGetResult(response, record, result);
+        } catch (IllegalArgumentException ex) {
+            response.setOk(false);
+            response.setOperationStatus("NEEDS_REVIEW");
+            response.setReconciliationStatus("SERVER_CONTEXT_INCOMPLETE");
+            response.setApiResult("unknown");
+            response.setApiResultMessage("temporary_medical_reconcile_context_incomplete");
+            response.setMessage("ORCA中途終了データ照合に必要なサーバー側スナップショットが不足しています");
+        } catch (RuntimeException ex) {
+            response.setOk(false);
+            response.setOperationStatus("UNKNOWN");
+            response.setReconciliationStatus("RECONCILE_FAILED");
+            response.setApiResult("unknown");
+            response.setApiResultMessage("temporary_medical_reconcile_failed");
+            response.setMessage("ORCA中途終了データを再照合できませんでした");
+        }
+        response.setNeedsUserReview(true);
+        return response;
+    }
+
+    private BillingOrcaTemporaryMedicalReconcileResponse tryTemporaryMedicalReconcileAfterUnknown(
+            BillingOrcaWorkflowRepository.TransmissionRecord transmission,
+            BillingOrcaWorkflowRepository.SnapshotRecord snapshot,
+            EncounterProjectionRepository.EncounterRow row,
+            String runId,
+            String traceId) {
+        try {
+            return reconcileTemporaryMedicalAfterSend(transmission, snapshot, row, runId, traceId);
+        } catch (RuntimeException ex) {
+            BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
+                    postSendReconcileRecord(transmission, snapshot, row);
+            BillingOrcaTemporaryMedicalReconcileResponse response =
+                    baseTemporaryMedicalReconcileResponse(record, runId, traceId);
+            response.setOk(false);
+            response.setOperationStatus("UNKNOWN");
+            response.setReconciliationStatus("RECONCILE_FAILED");
+            response.setApiResult("unknown");
+            response.setApiResultMessage("temporary_medical_reconcile_failed");
+            response.setMessage("ORCA中途終了データを再照合できませんでした");
+            return response;
+        }
+    }
+
+    private BillingOrcaWorkflowRepository.TransmissionReviewRecord postSendReconcileRecord(
+            BillingOrcaWorkflowRepository.TransmissionRecord transmission,
+            BillingOrcaWorkflowRepository.SnapshotRecord snapshot,
+            EncounterProjectionRepository.EncounterRow row) {
+        return new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                transmission.transmissionId(),
+                snapshot.snapshotId(),
+                transmission.facilityId(),
+                transmission.encounterKey(),
+                transmission.idempotencyKey(),
+                transmission.state(),
+                transmission.medicalUid(),
+                transmission.apiResult(),
+                transmission.apiResultMessage(),
+                transmission.httpStatus(),
+                transmission.requestId(),
+                transmission.traceId(),
+                row.patientId(),
+                row.scheduleKey(),
+                Instant.now(),
+                null,
+                snapshotJsonForReconcile(row));
+    }
+
     private boolean temporaryMedicalModeRequiresAdminReview(String medicalMode, String medicalMode2) {
         String normalizedMode2 = normalize(medicalMode2);
         if (normalizedMode2 != null && !"0".equals(normalizedMode2)) {
@@ -823,6 +928,13 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
     }
 
     String serializeResponse(ChartSupportMedicalModResponse response, boolean confirmationRequired) {
+        return serializeResponse(response, confirmationRequired, null);
+    }
+
+    String serializeResponse(
+            ChartSupportMedicalModResponse response,
+            boolean confirmationRequired,
+            BillingOrcaTemporaryMedicalReconcileResponse reconcileResponse) {
         Map<String, Object> safe = new LinkedHashMap<>();
         safe.put("ok", response != null && response.isOk());
         safe.put("status", response != null ? response.getStatus() : null);
@@ -832,6 +944,19 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         safe.put("needsUserReview", response != null && response.isNeedsUserReview());
         safe.put("medicalUidPresent", response != null && normalize(response.getMedicalUid()) != null);
         safe.put("confirmationRequired", confirmationRequired);
+        if (reconcileResponse != null) {
+            Map<String, Object> reconcile = new LinkedHashMap<>();
+            reconcile.put("requestClass", reconcileResponse.getRequestClass());
+            reconcile.put("operationStatus", reconcileResponse.getOperationStatus());
+            reconcile.put("reconciliationStatus", reconcileResponse.getReconciliationStatus());
+            reconcile.put("temporaryMedicalRowCount", reconcileResponse.getTemporaryMedicalRowCount());
+            reconcile.put("matchingTemporaryMedicalRowCount", reconcileResponse.getMatchingTemporaryMedicalRowCount());
+            reconcile.put("medicalUidPresent", reconcileResponse.isMedicalUidPresent());
+            reconcile.put("resendBlocked", reconcileResponse.isResendBlocked());
+            reconcile.put("resendBlockReason", reconcileResponse.getResendBlockReason());
+            reconcile.put("rawSensitiveFieldsExcluded", reconcileResponse.isRawSensitiveFieldsExcluded());
+            safe.put("postSendReconciliation", reconcile);
+        }
         try {
             return JSON_MAPPER.writeValueAsString(safe);
         } catch (JsonProcessingException ex) {
@@ -888,6 +1013,22 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
                 && flags.path("rawSensitiveFieldsExcluded").asBoolean(false)
                 && !flags.path("clientProvidedIdentifiersTrusted").asBoolean(true)
                 && flags.path("serverDerivedAuthorityRequired").asBoolean(false);
+    }
+
+    private String snapshotJsonForReconcile(EncounterProjectionRepository.EncounterRow row) {
+        JsonNode flags = readProjectionFlags(row.worklistFlagsJson());
+        JsonNode identifiers = flags.path("officialVisitIdentifiers");
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("visitDate", row.acceptanceDatetime() != null
+                ? row.acceptanceDatetime().atZone(TOKYO_ZONE).toLocalDate().toString()
+                : null);
+        snapshot.put("departmentCode", textNode(identifiers, "departmentCode"));
+        snapshot.put("rawSensitiveFieldsExcluded", Boolean.TRUE);
+        try {
+            return JSON_MAPPER.writeValueAsString(snapshot);
+        } catch (JsonProcessingException ex) {
+            return "{}";
+        }
     }
 
     private String textNode(JsonNode node, String fieldName) {

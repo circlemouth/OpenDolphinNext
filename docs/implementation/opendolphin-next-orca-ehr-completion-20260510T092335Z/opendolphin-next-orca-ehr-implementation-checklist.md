@@ -108,8 +108,9 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-10T21:15Z: `orca_operation` の check constraint と `OrcaOperationLedgerSchemaTest` で不正 status を拒否することを固定した。
 - [x] `diseasev3` は server-generated `idempotency_key` の二重送信をサーバー側で拒否する。
 - [x] `diseasev3` の transport 例外は `NETWORK_FAILED` / `needsUserReview=true` として operation に保存し、成功扱いにしない。
-- [ ] `UNKNOWN` は成功扱いせず、ORCA再照合完了まで UI に要確認として表示する。
+- [x] `UNKNOWN` は成功扱いせず、ORCA再照合完了まで UI に要確認として表示する。
   - [x] `close-and-send-to-billing` の `ORCA_UNKNOWN` / `operationStatus=UNKNOWN` / `needsUserReview=true` は Charts の診察終了成功に潰さず、会計待ち遷移と患者タブ終了を停止して要確認を初期表示する。
+  - [x] 2026-05-10T21:59Z: `medicalmodv2` zero-like response も completion evidence 欠落時は `UNKNOWN` とし、`Medical_Uid` が返った場合も `tmedicalgetv2` read-only 再取得・照合を通過するまで `ORCA_MEDICAL_REGISTERED` に昇格しない server-side fail-closed path を固定した。
 - [x] `authoritative_audit_event` を append-only / hash chain 付きに再設計または拡張する。
 - [ ] 監査ログに ORCA認証情報、証明書パスワード、Basic認証文字列を保存しない。
 - [ ] ORCA raw XML を保存する場合は暗号化し、アクセス権限を限定する。
@@ -186,6 +187,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 診療録・処方指示から `orca_medical_candidate` を作成し、ORCA正本ではないことを明示する。
 - [ ] `medicalmodv2` 相当の送信では患者番号、診療日、診療科、医師コード、保険組合せ、ORCA受付存在、患者/保険情報 freshness、会計済み衝突を検証する。
 - [ ] ORCAレスポンスを構造化保存し、送信後に ORCA側診療行為情報を再取得して差分表示する。
+  - [x] 2026-05-10T21:59Z: `close-and-send-to-billing` は `medicalmodv2` response を sanitized `response_json` として保存し、送信直後に `tmedicalgetv2` で ORCA側中途終了データを再取得・照合する。UI 差分表示の完成は後続 D/E queue で継続。
 - [ ] ORCA会計情報取得 API をサーバーアダプタ経由で呼び、`orca_billing_cache` に保存する。
 - [ ] OpenDolphinNext 側で会計金額や収納済み状態を独立更新できる API を作らない。
 - [ ] 領収書・請求書は ORCA帳票取得結果として扱い、帳票取得履歴を監査ログに保存する。

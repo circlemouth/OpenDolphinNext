@@ -202,6 +202,9 @@ final class OrcaChartSupportSupport {
                 apiOk && completionEvidencePresent);
         response.setOperationStatus(status.name());
         response.setNeedsUserReview(OrcaApiResult.needsUserReview(status));
+        if (status == OrcaApiResult.OperationStatus.UNKNOWN) {
+            response.setOk(false);
+        }
     }
 
     ChartSupportMedicationGetResponse parseMedicationGetResponse(

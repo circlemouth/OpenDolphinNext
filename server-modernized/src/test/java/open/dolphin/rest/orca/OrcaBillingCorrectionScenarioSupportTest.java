@@ -98,6 +98,56 @@ class OrcaBillingCorrectionScenarioSupportTest {
     }
 
     @Test
+    void medicalModZeroLikeWithoutCompletionEvidenceIsUnknownUntilReconciled() {
+        OrcaChartSupportSupport support = new OrcaChartSupportSupport();
+
+        ChartSupportMedicalModResponse response = support.parseMedicalModResponse(
+                OrcaTransportResult.fallback("""
+                        <data>
+                          <medicalres type="record">
+                            <Api_Result type="string">00</Api_Result>
+                            <Api_Result_Message type="string">OK</Api_Result_Message>
+                          </medicalres>
+                        </data>
+                        """, "application/xml"),
+                "RUN-NO-EVIDENCE",
+                "TRACE-NO-EVIDENCE");
+
+        assertTrue(!response.isOk());
+        assertEquals("UNKNOWN", response.getOperationStatus());
+        assertTrue(response.isNeedsUserReview());
+    }
+
+    @Test
+    void closeAndSendResponseStoresPostSendReconciliationSummaryWithoutRawIdentifiers() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        ChartSupportMedicalModResponse medical = new ChartSupportMedicalModResponse();
+        medical.setOk(true);
+        medical.setStatus(200);
+        medical.setApiResult("00");
+        medical.setApiResultMessage("OK");
+        medical.setOperationStatus("ORCA_ACCEPTED");
+        medical.setNeedsUserReview(false);
+        medical.setMedicalUid("secret-medical-uid");
+        var reconcile = new open.dolphin.rest.dto.orca.BillingOrcaTemporaryMedicalReconcileResponse();
+        reconcile.setRequestClass("tmedicalgetv2_temporary_medical_reconcile_readonly");
+        reconcile.setOperationStatus("ORCA_TEMPORARY_MEDICAL_FOUND");
+        reconcile.setReconciliationStatus("TEMPORARY_MEDICAL_FOUND");
+        reconcile.setTemporaryMedicalRowCount(1);
+        reconcile.setMatchingTemporaryMedicalRowCount(1);
+        reconcile.setMedicalUidPresent(true);
+        reconcile.setRawSensitiveFieldsExcluded(true);
+
+        String serialized = resource.serializeResponse(medical, false, reconcile);
+
+        assertTrue(serialized.contains("\"postSendReconciliation\""));
+        assertTrue(serialized.contains("\"reconciliationStatus\":\"TEMPORARY_MEDICAL_FOUND\""));
+        assertTrue(serialized.contains("\"medicalUidPresent\":true"));
+        assertTrue(!serialized.contains("secret-medical-uid"));
+        assertTrue(!serialized.contains("Medical_Uid"));
+    }
+
+    @Test
     void billingMutationsFailClosedWhenAuditWritePathIsUnavailable() {
         LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
         resource.authoritativeAuditRepository = new StubAuditRepository(false);
