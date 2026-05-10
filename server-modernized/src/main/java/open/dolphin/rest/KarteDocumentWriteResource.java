@@ -37,6 +37,7 @@ import open.dolphin.infomodel.UserModel;
 import open.dolphin.rest.support.LegacyJsonSupport;
 import open.dolphin.security.audit.AuditDetailSanitizer;
 import open.dolphin.security.audit.AuditEventPayload;
+import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import open.dolphin.security.audit.AuditTrailService;
 import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientImageServiceBean;
@@ -67,6 +68,9 @@ public class KarteDocumentWriteResource extends AbstractResource {
     private AuditTrailService auditTrailService;
 
     @Inject
+    private AuthoritativeAuditRepository authoritativeAuditRepository;
+
+    @Inject
     private SessionTraceManager sessionTraceManager;
 
     @Inject
@@ -86,6 +90,7 @@ public class KarteDocumentWriteResource extends AbstractResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
     public String postDocument(String json) throws IOException {
+        ensureAuthoritativeAuditWritePathAvailable();
         DocumentModel document = readJson(json, DocumentModel.class);
         normalizeAttachmentReferencePayload(document, null);
         ensureDocumentPayloadFacility(document, null);
@@ -103,6 +108,7 @@ public class KarteDocumentWriteResource extends AbstractResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
     public String putDocument(String json) throws IOException {
+        ensureAuthoritativeAuditWritePathAvailable();
         DocumentModel document = readJson(json, DocumentModel.class);
         normalizeAttachmentReferencePayload(document, null);
         ensureDocumentPayloadFacility(document, null);
@@ -117,6 +123,7 @@ public class KarteDocumentWriteResource extends AbstractResource {
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.TEXT_PLAIN)
     public String putTitle(@PathParam("id") String idStr, String title) {
+        ensureAuthoritativeAuditWritePathAvailable();
 
         long id = Long.parseLong(idStr);
         ensureDocumentFacilityAccess(id, null);
@@ -130,6 +137,7 @@ public class KarteDocumentWriteResource extends AbstractResource {
     @Path("/document/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public StringListConverter deleteDocument(@PathParam("id") String idStr) {
+        ensureAuthoritativeAuditWritePathAvailable();
 
         long id = Long.parseLong(idStr);
         ensureDocumentFacilityAccess(id, null);
@@ -211,6 +219,20 @@ public class KarteDocumentWriteResource extends AbstractResource {
         if (document.getKarteBean() != null && document.getKarteBean().getId() > 0) {
             ensureKarteFacilityAccess(document.getKarteBean().getId(), request);
         }
+    }
+
+    private void ensureAuthoritativeAuditWritePathAvailable() {
+        if (authoritativeAuditRepository != null && authoritativeAuditRepository.isWritePathAvailable()) {
+            return;
+        }
+        Map<String, Object> details = new HashMap<>();
+        details.put("reasonCode", "audit_log_write_unavailable");
+        details.put("retryable", Boolean.TRUE);
+        throw AbstractResource.restError(resolveRequest(null), Response.Status.SERVICE_UNAVAILABLE,
+                "audit_log_write_unavailable",
+                "Audit log write path is unavailable",
+                details,
+                null);
     }
 
     private void ensureFacilityMatch(String actorFacility,

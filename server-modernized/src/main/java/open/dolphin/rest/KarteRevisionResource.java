@@ -36,6 +36,7 @@ import open.dolphin.rest.support.KarteRevisionResponseMapper;
 import open.dolphin.rest.support.LegacyJsonSupport;
 import open.dolphin.security.audit.AuditDetailSanitizer;
 import open.dolphin.security.audit.AuditEventPayload;
+import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import open.dolphin.security.audit.AuditTrailService;
 import open.dolphin.session.KarteRevisionServiceBean;
 import open.dolphin.session.UserServiceBean;
@@ -55,6 +56,9 @@ public class KarteRevisionResource extends AbstractResource {
 
     @Inject
     private AuditTrailService auditTrailService;
+
+    @Inject
+    private AuthoritativeAuditRepository authoritativeAuditRepository;
 
     @Inject
     private SessionTraceManager sessionTraceManager;
@@ -173,6 +177,7 @@ public class KarteRevisionResource extends AbstractResource {
     }
 
     private KarteRevisionWriteResponse writeRevision(String operation, String json, String ifMatch) throws Exception {
+        ensureAuthoritativeAuditWritePathAvailable();
         validateRevisionOperation(operation);
         KarteRevisionWriteRequest request = LegacyJsonSupport.readBody(json, KarteRevisionWriteRequest.class, objectMapper);
         long sourceRevisionId = resolveSourceRevisionId(request);
@@ -363,6 +368,20 @@ public class KarteRevisionResource extends AbstractResource {
                             idType, idValue),
                     null);
         }
+    }
+
+    private void ensureAuthoritativeAuditWritePathAvailable() {
+        if (authoritativeAuditRepository != null && authoritativeAuditRepository.isWritePathAvailable()) {
+            return;
+        }
+        Map<String, Object> details = new HashMap<>();
+        details.put("reasonCode", "audit_log_write_unavailable");
+        details.put("retryable", Boolean.TRUE);
+        throw restError(httpServletRequest, jakarta.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE,
+                "audit_log_write_unavailable",
+                "Audit log write path is unavailable",
+                details,
+                null);
     }
 
     private LocalDate parseLocalDateOrThrow(String value, String fieldName) {

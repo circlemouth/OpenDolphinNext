@@ -15,6 +15,7 @@ import open.dolphin.infomodel.AttachmentModel;
 import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.UserModel;
+import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientImageServiceBean;
 import open.dolphin.session.UserServiceBean;
@@ -37,6 +38,9 @@ class KarteDocumentSnapshotContractTest {
     private UserServiceBean userServiceBean;
 
     @Mock
+    private AuthoritativeAuditRepository authoritativeAuditRepository;
+
+    @Mock
     private HttpServletRequest request;
 
     @Mock
@@ -50,11 +54,13 @@ class KarteDocumentSnapshotContractTest {
         resource = new KarteDocumentWriteResource();
         setField(resource, "karteServiceBean", karteServiceBean);
         setField(resource, "userServiceBean", userServiceBean);
+        setField(resource, "authoritativeAuditRepository", authoritativeAuditRepository);
         setField(resource, "objectMapper", new ObjectMapper());
         setField(resource, "httpServletRequest", request);
         setField(resource, "em", em);
 
         when(request.getRemoteUser()).thenReturn("F001:user01");
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(true);
         when(karteServiceBean.findFacilityIdByAttachmentId(901L)).thenReturn("F001");
         when(karteServiceBean.findFacilityIdByKarteId(77L)).thenReturn("F001");
         when(em.createQuery(anyString(), eq(AttachmentModel.class))).thenReturn(attachmentQuery);

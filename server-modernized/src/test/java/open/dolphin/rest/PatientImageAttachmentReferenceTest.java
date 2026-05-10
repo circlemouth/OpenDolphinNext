@@ -15,6 +15,7 @@ import java.lang.reflect.Field;
 import open.dolphin.infomodel.AttachmentModel;
 import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.PatientModel;
+import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.UserServiceBean;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,9 @@ class PatientImageAttachmentReferenceTest {
     private UserServiceBean userServiceBean;
 
     @Mock
+    private AuthoritativeAuditRepository authoritativeAuditRepository;
+
+    @Mock
     private HttpServletRequest request;
 
     @Mock
@@ -48,11 +52,13 @@ class PatientImageAttachmentReferenceTest {
         resource = new KarteDocumentWriteResource();
         setField(resource, "karteServiceBean", karteServiceBean);
         setField(resource, "userServiceBean", userServiceBean);
+        setField(resource, "authoritativeAuditRepository", authoritativeAuditRepository);
         setField(resource, "objectMapper", new ObjectMapper());
         setField(resource, "httpServletRequest", request);
         setField(resource, "em", em);
 
         when(request.getRemoteUser()).thenReturn("F001:user01");
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(true);
     }
 
     @Test
