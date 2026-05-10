@@ -468,6 +468,100 @@ describe('diseaseApi', () => {
     expect(body).not.toHaveProperty('url');
   });
 
+  it('preserves ORCA spec code fields in official disease mutation payloads', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ runId: 'RUN-OFFICIAL-DISEASE', businessAccepted: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await mutateOrcaDisease({
+      patientId: '000001',
+      operation: 'create',
+      baseMonth: '202605',
+      performDate: '2026-05-08',
+      departmentCode: '01',
+      physicianCode: '10001',
+      insuranceCombinationNumber: '0001',
+      diseaseInformation: [
+        {
+          diseaseName: '高血圧症',
+          diseaseStartDate: '2026-05-08',
+          components: [{ seq: 1, componentType: 'BODY', code: '8833421', name: '高血圧症' }],
+          diseaseInsuranceClass: '1',
+          diseaseCategory: 'PD',
+          diseaseClass: '03',
+          diseaseReceiptPrint: '1',
+          diseaseReceiptPrintPeriod: '12',
+          insuranceDisease: '1',
+          dischargeCertificate: '0',
+          mainDiseaseClass: '01',
+          subDiseaseClass: '05',
+        },
+      ],
+    });
+
+    const requestInit = vi.mocked(httpFetch).mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(String(requestInit.body)) as {
+      diseaseInformation?: Array<Record<string, unknown>>;
+    };
+    expect(body.diseaseInformation?.[0]).toMatchObject({
+      diseaseInsuranceClass: '1',
+      diseaseCategory: 'PD',
+      diseaseClass: '03',
+      diseaseReceiptPrint: '1',
+      diseaseReceiptPrintPeriod: '12',
+      insuranceDisease: '1',
+      dischargeCertificate: '0',
+      mainDiseaseClass: '01',
+      subDiseaseClass: '05',
+    });
+  });
+
+  it('rejects UI labels before sending official disease mutation attribute fields', async () => {
+    await expect(
+      mutateOrcaDisease({
+        patientId: '000001',
+        operation: 'create',
+        performDate: '2026-05-08',
+        departmentCode: '01',
+        diseaseInformation: [
+          {
+            diseaseName: '高血圧症',
+            diseaseStartDate: '2026-05-08',
+            components: [{ seq: 1, componentType: 'BODY', code: '8833421', name: '高血圧症' }],
+            diseaseReceiptPrint: 'レセプト表示',
+            mainDiseaseClass: '主病名',
+          },
+        ],
+      }),
+    ).rejects.toThrow('diseaseInformation[0].diseaseReceiptPrint');
+
+    expect(httpFetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid disease receipt print periods before official transport', async () => {
+    await expect(
+      mutateOrcaDisease({
+        patientId: '000001',
+        operation: 'create',
+        performDate: '2026-05-08',
+        departmentCode: '01',
+        diseaseInformation: [
+          {
+            diseaseName: '高血圧症',
+            diseaseStartDate: '2026-05-08',
+            components: [{ seq: 1, componentType: 'BODY', code: '8833421', name: '高血圧症' }],
+            diseaseReceiptPrintPeriod: '100',
+          },
+        ],
+      }),
+    ).rejects.toThrow('diseaseInformation[0].diseaseReceiptPrintPeriod');
+
+    expect(httpFetch).not.toHaveBeenCalled();
+  });
+
   it('surfaces ORCA disease mutation review status instead of treating warnings as plain success', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(

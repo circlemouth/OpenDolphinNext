@@ -119,46 +119,44 @@ type FetchDiseasesParams = {
 
 export type OrcaDiseaseMutationOperation = 'create' | 'update' | 'delete' | 'organizeDeletedDiseases';
 
+type OrcaDiseaseMutationEntry = {
+  diseaseCode?: string;
+  diseaseName?: string;
+  displayName?: string;
+  karteName?: string;
+  diseaseStartDate?: string;
+  diseaseEndDate?: string;
+  diseaseInOut?: string;
+  diseaseSuspectedFlag?: string;
+  diseaseOutCome?: string;
+  outcome?: string;
+  orcaOutcomeSendCode?: string;
+  components?: DiseaseComponent[];
+  supplements?: DiseaseSupplement[];
+  uncodedAccepted?: boolean;
+  insuranceCombinationNumber?: string;
+  diseaseInsuranceClass?: string;
+  diseaseCategory?: string;
+  diseaseClass?: string;
+  diseaseReceiptPrint?: string;
+  diseaseReceiptPrintPeriod?: string;
+  insuranceDisease?: string;
+  dischargeCertificate?: string;
+  mainDiseaseClass?: string;
+  subDiseaseClass?: string;
+};
+
 export type OrcaDiseaseMutationRequest = {
   operation: OrcaDiseaseMutationOperation;
   patientId: string;
   performDate: string;
   performTime?: string;
+  baseMonth?: string;
   departmentCode: string;
-  diseaseInformation?: Array<{
-    diseaseCode?: string;
-    diseaseName?: string;
-    displayName?: string;
-    karteName?: string;
-    diseaseStartDate?: string;
-    diseaseEndDate?: string;
-    diseaseInOut?: string;
-    diseaseSuspectedFlag?: string;
-    diseaseOutCome?: string;
-    outcome?: string;
-    orcaOutcomeSendCode?: string;
-    components?: DiseaseComponent[];
-    supplements?: DiseaseSupplement[];
-    uncodedAccepted?: boolean;
-    insuranceCombinationNumber?: string;
-  }>;
-  targetDisease?: {
-    diseaseCode?: string;
-    diseaseName?: string;
-    displayName?: string;
-    karteName?: string;
-    diseaseStartDate?: string;
-    diseaseEndDate?: string;
-    diseaseInOut?: string;
-    diseaseSuspectedFlag?: string;
-    diseaseOutCome?: string;
-    outcome?: string;
-    orcaOutcomeSendCode?: string;
-    components?: DiseaseComponent[];
-    supplements?: DiseaseSupplement[];
-    uncodedAccepted?: boolean;
-    insuranceCombinationNumber?: string;
-  };
+  physicianCode?: string;
+  insuranceCombinationNumber?: string;
+  diseaseInformation?: OrcaDiseaseMutationEntry[];
+  targetDisease?: OrcaDiseaseMutationEntry;
   organizeInformation?: {
     departmentCode?: string;
     diseaseStartDate: string;
@@ -180,6 +178,136 @@ export type OrcaDiseaseMutationResult = {
   message?: string;
   raw?: unknown;
 };
+
+type DiseaseAttributeRule = {
+  field: OrcaDiseaseAttributeField;
+  allowed: ReadonlySet<string>;
+  message: string;
+};
+
+type OrcaDiseaseAttributeField =
+  | 'diseaseInsuranceClass'
+  | 'diseaseCategory'
+  | 'diseaseClass'
+  | 'diseaseReceiptPrint'
+  | 'insuranceDisease'
+  | 'dischargeCertificate'
+  | 'mainDiseaseClass'
+  | 'subDiseaseClass';
+
+const ORCA_DISEASE_ATTRIBUTE_RULES: DiseaseAttributeRule[] = [
+  {
+    field: 'diseaseInsuranceClass',
+    allowed: new Set(['1', '0', 'None']),
+    message: 'diseaseInsuranceClass は ORCA 仕様コード 1、0、None のいずれかで指定してください。',
+  },
+  {
+    field: 'diseaseCategory',
+    allowed: new Set(['PD', 'None']),
+    message: 'diseaseCategory は ORCA 仕様コード PD または None で指定してください。',
+  },
+  {
+    field: 'diseaseClass',
+    allowed: new Set(['03', '04', '05', '07', '08', '09', 'Auto', 'None']),
+    message: 'diseaseClass は ORCA 仕様コード 03、04、05、07、08、09、Auto、None のいずれかで指定してください。',
+  },
+  {
+    field: 'diseaseReceiptPrint',
+    allowed: new Set(['1', 'None']),
+    message: 'diseaseReceiptPrint は ORCA 仕様コード 1 または None で指定してください。',
+  },
+  {
+    field: 'insuranceDisease',
+    allowed: new Set(['1', 'None']),
+    message: 'insuranceDisease は ORCA 仕様コード 1 または None で指定してください。',
+  },
+  {
+    field: 'dischargeCertificate',
+    allowed: new Set(['0', '1', 'None']),
+    message: 'dischargeCertificate は ORCA 仕様コード 0、1、None のいずれかで指定してください。',
+  },
+  {
+    field: 'mainDiseaseClass',
+    allowed: new Set(['01', '02', '03', '04', '05', 'None']),
+    message: 'mainDiseaseClass は ORCA 仕様コード 01、02、03、04、05、None のいずれかで指定してください。',
+  },
+  {
+    field: 'subDiseaseClass',
+    allowed: new Set(['01', '02', '03', '04', '05', 'None']),
+    message: 'subDiseaseClass は ORCA 仕様コード 01、02、03、04、05、None のいずれかで指定してください。',
+  },
+];
+
+function normalizeOptionalOrcaCode(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function assertOrcaDiseaseAttributeCode(
+  fieldPath: string,
+  value: string | undefined,
+  allowed: ReadonlySet<string>,
+  message: string,
+): string | undefined {
+  const normalized = normalizeOptionalOrcaCode(value);
+  if (normalized === undefined) return undefined;
+  if (!allowed.has(normalized)) {
+    throw new Error(`${fieldPath}: ${message}`);
+  }
+  return normalized;
+}
+
+function assertDiseaseReceiptPrintPeriod(fieldPath: string, value: string | undefined): string | undefined {
+  const normalized = normalizeOptionalOrcaCode(value);
+  if (normalized === undefined) return undefined;
+  if (normalized !== 'None' && !/^\d{2}$/.test(normalized)) {
+    throw new Error(`${fieldPath}: diseaseReceiptPrintPeriod は ORCA 仕様コード None または 00-99 で指定してください。`);
+  }
+  return normalized;
+}
+
+function normalizeOrcaDiseaseMutationEntry(
+  entry: OrcaDiseaseMutationEntry,
+  fieldPath: string,
+): OrcaDiseaseMutationEntry {
+  const normalized: OrcaDiseaseMutationEntry = { ...entry };
+  for (const rule of ORCA_DISEASE_ATTRIBUTE_RULES) {
+    const value = assertOrcaDiseaseAttributeCode(
+      `${fieldPath}.${rule.field}`,
+      entry[rule.field],
+      rule.allowed,
+      rule.message,
+    );
+    if (value === undefined) {
+      delete normalized[rule.field];
+    } else {
+      normalized[rule.field] = value;
+    }
+  }
+  const diseaseReceiptPrintPeriod = assertDiseaseReceiptPrintPeriod(
+    `${fieldPath}.diseaseReceiptPrintPeriod`,
+    entry.diseaseReceiptPrintPeriod,
+  );
+  if (diseaseReceiptPrintPeriod === undefined) {
+    delete normalized.diseaseReceiptPrintPeriod;
+  } else {
+    normalized.diseaseReceiptPrintPeriod = diseaseReceiptPrintPeriod;
+  }
+  return normalized;
+}
+
+function normalizeOrcaDiseaseMutationRequest(params: OrcaDiseaseMutationRequest): OrcaDiseaseMutationRequest {
+  return {
+    ...params,
+    diseaseInformation: params.diseaseInformation?.map((entry, index) =>
+      normalizeOrcaDiseaseMutationEntry(entry, `diseaseInformation[${index}]`),
+    ),
+    targetDisease: params.targetDisease
+      ? normalizeOrcaDiseaseMutationEntry(params.targetDisease, 'targetDisease')
+      : undefined,
+  };
+}
 
 type DiseaseMasterEntry = {
   code?: string;
@@ -681,10 +809,11 @@ export async function fetchDiseasesWithPatientImportRecovery(
 export async function mutateOrcaDisease(params: OrcaDiseaseMutationRequest): Promise<OrcaDiseaseMutationResult> {
   const runId = getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
+  const requestBody = normalizeOrcaDiseaseMutationRequest(params);
   const response = await httpFetch('/api/orca/official/chart-support/disease-mod-v3', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+    body: JSON.stringify(requestBody),
   });
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: 'ORCA病名の登録に失敗しました。' });
   const json = (parsed.json ?? {}) as Record<string, unknown>;
