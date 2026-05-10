@@ -44,6 +44,7 @@ import open.dolphin.rest.dto.orca.CloseAndSendToBillingRequest;
 import open.dolphin.rest.dto.orca.CloseAndSendToBillingResponse;
 import open.dolphin.rest.dto.orca.OrcaEncounterContext;
 import open.dolphin.rest.dto.orca.OrderBundleFetchResponse;
+import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import org.slf4j.Logger;
@@ -74,6 +75,9 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
 
     @Inject
     private OrcaTransport orcaTransport;
+
+    @Inject
+    AuthoritativeAuditRepository authoritativeAuditRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -117,6 +121,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         if (transmissionId == null || transmissionId <= 0) {
             throw validationError(request, "transmissionId", "transmissionId is required");
         }
+        requireAuditWritePathAvailable(request);
         BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
                 workflowRepository.findReviewTransmission(facilityId, transmissionId);
         if (record == null) {
@@ -199,6 +204,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         if (normalizedEncounterKey == null) {
             throw validationError(request, "encounterKey", "encounterKey is required");
         }
+        requireAuditWritePathAvailable(request);
 
         EncounterProjectionRepository.EncounterRow row = encounterProjectionRepository.findByEncounterKey(normalizedEncounterKey);
         if (row == null || !facilityId.equals(normalize(row.facilityId()))) {
@@ -348,6 +354,21 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
                 ? "会計送信用の中途終了データを登録しました"
                 : "ORCA送信結果の確認が必要です");
         return response;
+    }
+
+    void requireAuditWritePathAvailable(HttpServletRequest request) {
+        boolean available = authoritativeAuditRepository != null
+                && authoritativeAuditRepository.isWritePathAvailable();
+        if (!available) {
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("reasonCode", "audit_log_write_unavailable");
+            details.put("retryable", Boolean.TRUE);
+            throw restError(request, Response.Status.SERVICE_UNAVAILABLE,
+                    "audit_log_write_unavailable",
+                    "Audit log write path is unavailable",
+                    details,
+                    null);
+        }
     }
 
     private OrcaEncounterContext requireServerDerivedContext(HttpServletRequest request,

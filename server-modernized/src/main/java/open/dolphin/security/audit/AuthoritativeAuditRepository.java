@@ -125,6 +125,33 @@ public class AuthoritativeAuditRepository {
         }
     }
 
+    public boolean isWritePathAvailable() {
+        try (Connection connection = requireDataSource().getConnection()) {
+            boolean manageLocalTransaction = connection.getAutoCommit();
+            if (manageLocalTransaction) {
+                connection.setAutoCommit(false);
+            }
+            try {
+                lockChainHead(connection);
+                if (manageLocalTransaction) {
+                    connection.rollback();
+                }
+                return true;
+            } catch (Exception ex) {
+                if (manageLocalTransaction) {
+                    connection.rollback();
+                }
+                return false;
+            } finally {
+                if (manageLocalTransaction) {
+                    connection.setAutoCommit(true);
+                }
+            }
+        } catch (SQLException | RuntimeException ex) {
+            return false;
+        }
+    }
+
     private ChainHead lockChainHead(Connection connection) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(SQL_LOCK_CHAIN_HEAD)) {
             statement.setShort(1, CHAIN_HEAD_KEY);

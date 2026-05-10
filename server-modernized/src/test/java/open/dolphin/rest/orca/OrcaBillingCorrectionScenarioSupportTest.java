@@ -1,11 +1,15 @@
 package open.dolphin.rest.orca;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModResponse;
+import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
@@ -91,6 +95,18 @@ class OrcaBillingCorrectionScenarioSupportTest {
         assertTrue(serialized.contains("\"operationStatus\":\"UNKNOWN\""));
         assertTrue(serialized.contains("\"needsUserReview\":true"));
         assertTrue(serialized.contains("\"confirmationRequired\":true"));
+    }
+
+    @Test
+    void billingMutationsFailClosedWhenAuditWritePathIsUnavailable() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        resource.authoritativeAuditRepository = new StubAuditRepository(false);
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.requireAuditWritePathAvailable(null));
+
+        assertEquals(Response.Status.SERVICE_UNAVAILABLE.getStatusCode(), ex.getResponse().getStatus());
+        assertTrue(String.valueOf(ex.getResponse().getEntity()).contains("audit_log_write_unavailable"));
     }
 
     @Test
@@ -264,5 +280,18 @@ class OrcaBillingCorrectionScenarioSupportTest {
         assertEquals("INV-001", response.getEntries().get(0).getInvoiceNumber());
         assertEquals(1200.0, response.getEntries().get(0).getIcMoney(), 0.0001);
         assertEquals("RUN-2", response.getRunId());
+    }
+
+    private static final class StubAuditRepository extends AuthoritativeAuditRepository {
+        private final boolean available;
+
+        private StubAuditRepository(boolean available) {
+            this.available = available;
+        }
+
+        @Override
+        public boolean isWritePathAvailable() {
+            return available;
+        }
     }
 }

@@ -19,6 +19,7 @@ import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 import open.dolphin.rest.dto.OperationsReadinessCheck;
 import open.dolphin.rest.dto.OperationsReadinessResponse;
+import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import open.dolphin.storage.attachment.AttachmentStorageManager;
 import open.dolphin.storage.attachment.AttachmentStorageMode;
 
@@ -31,6 +32,7 @@ public class OperationsReadinessEvaluator {
     static final String CHECK_ATTACHMENT_STORAGE = "attachmentStorage";
     static final String CHECK_PVT_QUEUE = "pvtQueue";
     static final String CHECK_PATIENT_IMAGES = "patientImages";
+    static final String CHECK_AUDIT_LOG = "auditLog";
 
     private static final String DB_PING_SQL = "select 1";
     private static final String STATUS_UP = "UP";
@@ -38,6 +40,7 @@ public class OperationsReadinessEvaluator {
     private static final String STATUS_DISABLED = "DISABLED";
     private static final String STATUS_DEGRADED = "DEGRADED";
     private static final String REASON_DATABASE_UNREACHABLE = "database_unreachable";
+    private static final String REASON_AUDIT_LOG_WRITE_UNAVAILABLE = "audit_log_write_unavailable";
     private static final String REASON_ATTACHMENT_STORAGE_NOT_READY = "attachment_storage_not_ready";
     private static final String REASON_ATTACHMENT_STORAGE_DISABLED = "attachment_storage_disabled";
     private static final String REASON_ATTACHMENT_STORAGE_BACKEND_UNREACHABLE = "attachment_storage_backend_unreachable";
@@ -69,9 +72,13 @@ public class OperationsReadinessEvaluator {
     @Inject
     OrcaPushConnectionStateStore orcaPushStateStore;
 
+    @Inject
+    AuthoritativeAuditRepository authoritativeAuditRepository;
+
     public ReadinessSnapshot evaluate() {
         Map<String, OperationsReadinessCheck> checks = new LinkedHashMap<>();
         boolean databaseReady = checkDatabase(checks);
+        boolean auditLogReady = checkAuditLog(checks);
         boolean orcaReady = checkOrca(checks);
         boolean orcaPushReady = checkOrcaPush(checks);
         boolean storageAvailable = checkAttachmentStorage(checks);
@@ -79,7 +86,7 @@ public class OperationsReadinessEvaluator {
         boolean pvtQueueReady = checkPvtQueue(checks);
         boolean patientImagesReady = checkPatientImages(checks, storageAvailable);
 
-        boolean overallReady = databaseReady && orcaReady && orcaPushReady && storageReady && pvtQueueReady && patientImagesReady;
+        boolean overallReady = databaseReady && auditLogReady && orcaReady && orcaPushReady && storageReady && pvtQueueReady && patientImagesReady;
         OperationsReadinessResponse body = new OperationsReadinessResponse();
         body.setStatus(overallReady ? STATUS_UP : STATUS_DOWN);
         body.setChecks(checks);
@@ -104,6 +111,25 @@ public class OperationsReadinessEvaluator {
             detail.setStatus(STATUS_DOWN);
             detail.setReasonCode(REASON_DATABASE_UNREACHABLE);
             checks.put(CHECK_DATABASE, detail);
+            return false;
+        }
+    }
+
+    private boolean checkAuditLog(Map<String, OperationsReadinessCheck> checks) {
+        OperationsReadinessCheck detail = new OperationsReadinessCheck();
+        try {
+            boolean up = authoritativeAuditRepository != null
+                    && authoritativeAuditRepository.isWritePathAvailable();
+            detail.setStatus(up ? STATUS_UP : STATUS_DOWN);
+            if (!up) {
+                detail.setReasonCode(REASON_AUDIT_LOG_WRITE_UNAVAILABLE);
+            }
+            checks.put(CHECK_AUDIT_LOG, detail);
+            return up;
+        } catch (RuntimeException ex) {
+            detail.setStatus(STATUS_DOWN);
+            detail.setReasonCode(REASON_AUDIT_LOG_WRITE_UNAVAILABLE);
+            checks.put(CHECK_AUDIT_LOG, detail);
             return false;
         }
     }

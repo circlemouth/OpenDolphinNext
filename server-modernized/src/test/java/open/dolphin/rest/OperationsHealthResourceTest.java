@@ -22,6 +22,7 @@ import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import open.dolphin.rest.dto.OperationsHealthResponse;
 import open.dolphin.rest.dto.OperationsReadinessResponse;
+import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import open.dolphin.storage.attachment.AttachmentStorageManager;
 import open.dolphin.storage.attachment.AttachmentStorageMode;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,7 @@ class OperationsHealthResourceTest {
     private AttachmentStorageManager attachmentStorageManager;
     private PvtService pvtService;
     private OrcaConnectionConfigStore orcaConnectionConfigStore;
+    private AuthoritativeAuditRepository authoritativeAuditRepository;
     private OperationsReadinessEvaluator evaluator;
     private OperationsHealthResource resource;
 
@@ -45,6 +47,7 @@ class OperationsHealthResourceTest {
         attachmentStorageManager = org.mockito.Mockito.mock(AttachmentStorageManager.class);
         pvtService = org.mockito.Mockito.mock(PvtService.class);
         orcaConnectionConfigStore = org.mockito.Mockito.mock(OrcaConnectionConfigStore.class);
+        authoritativeAuditRepository = org.mockito.Mockito.mock(AuthoritativeAuditRepository.class);
         restOrcaTransport = new StubRestOrcaTransport();
 
         evaluator = new OperationsReadinessEvaluator();
@@ -57,6 +60,7 @@ class OperationsHealthResourceTest {
         setField(OperationsReadinessEvaluator.class, evaluator, "orcaConnectionConfigStore", orcaConnectionConfigStore);
         setField(OperationsReadinessEvaluator.class, evaluator, "orcaPushClientRegistry", new StubPushClientRegistry(false));
         setField(OperationsReadinessEvaluator.class, evaluator, "orcaPushStateStore", new StubPushStateStore());
+        setField(OperationsReadinessEvaluator.class, evaluator, "authoritativeAuditRepository", authoritativeAuditRepository);
 
         resource = new OperationsHealthResource();
         setField(OperationsHealthResource.class, resource, "readinessEvaluator", evaluator);
@@ -81,6 +85,7 @@ class OperationsHealthResourceTest {
                 new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
         when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(true);
         when(pvtService.workerHealthBody()).thenReturn(Map.of(
                 "status", "UP",
                 "reasonCodes", List.of()));
@@ -92,6 +97,7 @@ class OperationsHealthResourceTest {
         assertThat(body.getStatus()).isEqualTo("UP");
         assertThat(body.getChecks()).containsKeys(
                 OperationsReadinessEvaluator.CHECK_DATABASE,
+                OperationsReadinessEvaluator.CHECK_AUDIT_LOG,
                 OperationsReadinessEvaluator.CHECK_ORCA,
                 OperationsReadinessEvaluator.CHECK_ORCA_PUSH,
                 OperationsReadinessEvaluator.CHECK_ATTACHMENT_STORAGE,
@@ -123,6 +129,7 @@ class OperationsHealthResourceTest {
                 null));
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
         when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(true);
         when(pvtService.workerHealthBody()).thenReturn(Map.of(
                 "status", "UP",
                 "reasonCodes", List.of()));
@@ -149,6 +156,7 @@ class OperationsHealthResourceTest {
                         RestOrcaTransport.REASON_CODE_PROBE_FAILED);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
         when(attachmentStorageManager.isBackendReachable()).thenReturn(false);
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(false);
         when(pvtService.workerHealthBody()).thenReturn(Map.of(
                 "status", "DEGRADED",
                 "reasonCodes", List.of(PvtService.REASON_CODE_PVT_QUEUE_OVER_CAPACITY)));
@@ -162,6 +170,8 @@ class OperationsHealthResourceTest {
                 .isEqualTo("database_unreachable");
         assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA).getReasonCode())
                 .isEqualTo(RestOrcaTransport.REASON_CODE_PROBE_FAILED);
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_AUDIT_LOG).getReasonCode())
+                .isEqualTo("audit_log_write_unavailable");
     }
 
     @Test
@@ -172,6 +182,7 @@ class OperationsHealthResourceTest {
         ((StubRestOrcaTransport) restOrcaTransport).probeResult =
                 new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.DISABLED);
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(true);
         when(pvtService.workerHealthBody()).thenReturn(Map.of(
                 "status", "UP",
                 "reasonCodes", List.of()));
@@ -205,6 +216,7 @@ class OperationsHealthResourceTest {
         ((StubRestOrcaTransport) restOrcaTransport).probeResult =
                 new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.DISABLED);
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(true);
         when(pvtService.workerHealthBody()).thenReturn(Map.of(
                 "status", "UP",
                 "reasonCodes", List.of()));
@@ -235,6 +247,7 @@ class OperationsHealthResourceTest {
                 new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
         when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(true);
         when(pvtService.workerHealthBody()).thenReturn(Map.of(
                 "status", "UP",
                 "reasonCodes", List.of()));
@@ -274,6 +287,7 @@ class OperationsHealthResourceTest {
                 new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
         when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(true);
         when(pvtService.workerHealthBody()).thenReturn(Map.of(
                 "status", "UP",
                 "reasonCodes", List.of()));
@@ -298,6 +312,7 @@ class OperationsHealthResourceTest {
         when(query.getSingleResult()).thenReturn(1);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
         when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(true);
         when(pvtService.workerHealthBody()).thenReturn(Map.of(
                 "status", "UP",
                 "reasonCodes", List.of()));
@@ -310,6 +325,31 @@ class OperationsHealthResourceTest {
         assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA).getReasonCode())
                 .isEqualTo("facility_configuration_missing");
         assertThat(((StubRestOrcaTransport) restOrcaTransport).probeCalls).isZero();
+    }
+
+    @Test
+    void readinessFailsClosedWhenAuditLogWritePathIsUnavailable() {
+        when(em.createNativeQuery(anyString())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(1);
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(false);
+        when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn("F001");
+        ((StubRestOrcaTransport) restOrcaTransport).probeResult =
+                new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
+        when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
+        when(pvtService.workerHealthBody()).thenReturn(Map.of(
+                "status", "UP",
+                "reasonCodes", List.of()));
+
+        Response response = resource.readiness();
+
+        assertThat(response.getStatus()).isEqualTo(503);
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getStatus()).isEqualTo("DOWN");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_AUDIT_LOG).getStatus())
+                .isEqualTo("DOWN");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_AUDIT_LOG).getReasonCode())
+                .isEqualTo("audit_log_write_unavailable");
     }
 
     private static void setField(Class<?> owner, Object target, String fieldName, Object value) throws Exception {

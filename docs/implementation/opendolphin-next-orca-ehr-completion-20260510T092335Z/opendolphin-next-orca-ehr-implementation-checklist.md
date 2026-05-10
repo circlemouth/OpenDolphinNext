@@ -242,6 +242,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] ORCA接続URL、Basic認証、クライアント証明書、証明書パスワード、timeout、retry、APIごとの有効/無効をサーバー設定にする。
 - [ ] 開発環境でもブラウザに ORCA認証情報を渡さない。
 - [ ] ORCA接続、証明書期限、DB、監査ログ書き込みの health check を実装する。
+  - [x] `/api/health/readiness` に sanitized `auditLog` check を追加し、authoritative audit chain head の write path lock が取れない場合は `audit_log_write_unavailable` で全体 readiness を fail-closed にする。会計送信と `tmedicalgetv2` 再照合は audit write path が利用できない場合、ORCA transport 前に 503 を返す。
 - [ ] ORCA障害時は UI に「ORCA連携停止中」を表示しつつ、診療録正本閲覧を可能にする。
   - [x] App shell は `/api/health/readiness` の sanitized ORCA check が `DOWN` または取得失敗の場合、全ロールに `ORCA連携停止中` の compact status だけを表示する。正常時は非表示とし、URL、host、credential、raw error は表示しない。
 - [ ] ORCA送信失敗、`UNKNOWN`, `NEEDS_REVIEW` の一覧画面を作る。
