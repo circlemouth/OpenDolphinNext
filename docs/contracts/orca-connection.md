@@ -99,7 +99,7 @@
 - [x] ログと readiness 応答に接続先詳細が含まれない。
 
 ## Charts Disease Mirror
-- Charts の病名正本は ORCA `diseasegetv2?class=01` の再取得結果です。`/api/local/diagnoses/{patientId}` の server-side projection から `diseasegetv2` を呼ぶ。呼び出し施設は認証済み request context の facilityId で解決し、クライアント提供の facilityId / owner / URL は使わない。
+- Charts の病名正本は ORCA `diseasegetv2?class=01` の再取得結果です。`/api/local/diagnoses/{patientId}?baseMonth=yyyyMM` の server-side projection から `diseasegetv2` を呼ぶ。`baseMonth` は server が `yyyyMM` として検証し、ORCA `Base_Date` と cache `base_month` の authority にする。呼び出し施設は認証済み request context の facilityId で解決し、クライアント提供の facilityId / owner / URL は使わない。
 - `diseasegetv2` は既存の ORCA transport / runtime config / allowlist に従い、任意 URL 入力から接続しない。失敗時は `orcaMirrorStatus=unavailable` の sanitized state だけを返し、base URL、host、credential、raw XML、stack trace は返さない。ORCA `Api_Result=21`（対象病名なし）は取得成功の 0 件として扱い、unavailable と混同しない。`includeEnded=true` は server が `Select_Mode=All` に変換し、client は raw XML / raw query を指定しない。
 - mirror response は ORCA projection を `diseases`、既存 local-only disease を `pendingLocalDiseases` として分離する。ORCA unavailable 時に local-only disease を `diseases` へ fallback しない。ORCA projection は表示名だけでなく `Disease_Single` component 列、`Disease_Supplement_Single`、転帰受信 code、server 計算 `orcaSnapshotHash` を保持する。
 - `POST /api/local/diagnoses` は公開しない。病名の作成・更新・削除は local table mutation ではなく ORCA `diseasev3` official bridge と送信後 `diseasegetv2` 再取得で扱う。

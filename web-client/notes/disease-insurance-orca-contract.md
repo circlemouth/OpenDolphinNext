@@ -43,7 +43,7 @@
 - UG-07 未解決: outcome preset は input assist のみ
 
 ## Charts ORCA Mirror API
-- Charts の病名欄は `GET /api/local/diagnoses/{patientId}` を使用する。クライアントは `facilityId` / owner / storage key / ORCA URL を送らず、サーバーは認証済みセッションの施設で患者とカルテを解決してから ORCA mirror を取得する。
+- Charts の病名欄は `GET /api/local/diagnoses/{patientId}?baseMonth=yyyyMM` を使用する。クライアントは `facilityId` / owner / storage key / ORCA URL を送らず、サーバーは認証済みセッションの施設で患者とカルテを解決してから ORCA mirror を取得する。`baseMonth` は server-side で `yyyyMM` として検証し、ORCA `Base_Date` と cache `base_month` の根拠にする。
 - `POST /api/local/diagnoses` は使用しません。Web クライアントからの病名 create / update / delete は、確認後に `/api/orca/official/chart-support/disease-mod-v3` へ送信し、成功後の再取得結果だけを主一覧へ反映します。
 - ORCA mirror の取得は server-side ORCA transport の allowlist / runtime config に従い、任意 URL は受け付けない。ORCA response は外部入力として XML secure parser で読み、allowlist 済みの病名名、`Disease_Single` component 列、補足コメント、開始日、転帰、診療科、保険組合せ番号だけを projection する。
 - ORCA mirror の取得成功時は server が `orca_disease_cache` に `source_system=ORCA`、`diseasegetv2` source metadata、取得時刻、cache expiry、raw response hash、normalized payload を保存する。Web クライアントは cache の facility / patient / URL / digest を指定しない。cache 書き込み失敗時は主一覧を成功扱いせず、sanitized unavailable state として扱う。

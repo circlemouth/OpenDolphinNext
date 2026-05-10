@@ -107,6 +107,37 @@ class LocalDiagnosisResourceTest {
     }
 
     @Test
+    void getDiagnosesUsesServerValidatedBaseMonthForOrcaMirrorAndCache() throws Exception {
+        StubOrcaTransport transport = new StubOrcaTransport(orcaDiseaseResponse("ORCA参照病名", "I10"));
+        setField(resource, "orcaTransport", transport);
+
+        Map<String, Object> response =
+                resource.getDiagnoses(request, "00001", null, "2026-05-08", "202604", false, false);
+
+        assertEquals("202604", response.get("baseMonth"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                transport.requestBody().contains("<Base_Date type=\"string\">2026-04-30</Base_Date>"));
+        assertEquals(1, diseaseCacheStore.saveCount());
+        OrcaDiseaseCacheStore.DiseaseCacheCommand command = diseaseCacheStore.lastCommand();
+        assertNotNull(command);
+        assertEquals("202604", command.baseMonth());
+        assertEquals(LocalDate.parse("2026-04-30"), command.performDate());
+    }
+
+    @Test
+    void getDiagnosesRejectsMalformedBaseMonthBeforeOrcaMirrorLookup() throws Exception {
+        StubOrcaTransport transport = new StubOrcaTransport(orcaDiseaseResponse("ORCA参照病名", "I10"));
+        setField(resource, "orcaTransport", transport);
+
+        WebApplicationException exception = assertThrows(WebApplicationException.class,
+                () -> resource.getDiagnoses(request, "00001", null, "2026-05-08", "2026-04", false, false));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        assertEquals(null, transport.requestBody());
+        assertEquals(0, diseaseCacheStore.saveCount());
+    }
+
+    @Test
     void getDiagnosesTreatsOrcaNoDiseaseAsConnectedEmptyMirror() throws Exception {
         setField(resource, "orcaTransport", new StubOrcaTransport(
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"

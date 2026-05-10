@@ -13,7 +13,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -65,9 +67,11 @@ public class LocalDiagnosisResource extends AbstractResource {
             @PathParam("patientId") String patientId,
             @QueryParam("from") String from,
             @QueryParam("to") String to,
+            @QueryParam("baseMonth") String baseMonth,
             @QueryParam("activeOnly") @DefaultValue("false") boolean activeOnly,
             @QueryParam("includeEnded") @DefaultValue("false") boolean includeEnded) {
         String facilityId = requireActorFacility(request);
+        YearMonth requestedBaseMonth = parseBaseMonth(request, baseMonth);
         PatientModel patient = patientServiceBean.getPatientById(facilityId, patientId);
         if (patient == null) {
             throw restError(request, Response.Status.NOT_FOUND, "patient_not_found", "Patient not found");
@@ -99,7 +103,8 @@ public class LocalDiagnosisResource extends AbstractResource {
             item.put("candidateOnly", Boolean.FALSE);
             pendingLocalItems.add(item);
         }
-        DiseaseImportResponse mirrorResponse = fetchOrcaMirror(request, facilityId, patientId, fromDate, toDate, includeEnded);
+        DiseaseImportResponse mirrorResponse =
+                fetchOrcaMirror(request, facilityId, patientId, fromDate, toDate, requestedBaseMonth, includeEnded);
         String diseaseMasterVersion = resolveDiseaseMasterVersion();
         if (mirrorResponse.getMasterVersion() == null) {
             mirrorResponse.setMasterVersion(diseaseMasterVersion);
@@ -118,6 +123,9 @@ public class LocalDiagnosisResource extends AbstractResource {
         response.put("patientId", patientId);
         response.put("karteId", karte.getId());
         response.put("runId", resolveTraceId(request));
+        response.put("baseMonth", mirrorResponse.getBaseDate() != null
+                ? mirrorResponse.getBaseDate().replace("-", "").substring(0, 6)
+                : null);
         response.put("sourceOfTruth", "orca");
         response.put("orcaMirrorStatus", mirrorResponse.getOrcaMirrorStatus());
         response.put("masterVersion", mirrorResponse.getMasterVersion());
@@ -132,7 +140,7 @@ public class LocalDiagnosisResource extends AbstractResource {
             String from,
             String to,
             boolean activeOnly) {
-        return getDiagnoses(request, patientId, from, to, activeOnly, false);
+        return getDiagnoses(request, patientId, from, to, null, activeOnly, false);
     }
 
     private DiseaseImportResponse fetchOrcaMirror(
@@ -141,10 +149,15 @@ public class LocalDiagnosisResource extends AbstractResource {
             String patientId,
             Date fromDate,
             Date toDate,
+            YearMonth requestedBaseMonth,
             boolean includeEnded) {
+        LocalDate baseDate = requestedBaseMonth != null
+                ? requestedBaseMonth.atEndOfMonth()
+                : toDateOnly(toDate);
         DiseaseImportResponse unavailable = new DiseaseImportResponse();
         unavailable.setRunId(resolveTraceId(request));
         unavailable.setPatientId(patientId);
+        unavailable.setBaseDate(baseDate.toString());
         unavailable.setOrcaMirrorStatus("unavailable");
         unavailable.setMasterVersion(resolveDiseaseMasterVersion());
         unavailable.setDiseases(List.of());
@@ -152,14 +165,14 @@ public class LocalDiagnosisResource extends AbstractResource {
             return unavailable;
         }
         try {
-            LocalDate baseDate = toDateOnly(toDate);
+            Date mirrorBaseDate = Date.from(baseDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
             String requestXml = projectionService().buildDiseaseGetRequestXml(patientId, baseDate, includeEnded);
             OrcaTransportResult result = orcaTransport.invoke(
                     facilityId,
                     OrcaEndpoint.DISEASE_GET,
                     OrcaTransportRequest.post(requestXml).withQuery(DiseaseProjectionService.DISEASE_GET_QUERY));
             DiseaseImportResponse response =
-                    projectionService().buildMirrorResponseFromOrca(result, resolveTraceId(request), patientId, fromDate, toDate);
+                    projectionService().buildMirrorResponseFromOrca(result, resolveTraceId(request), patientId, mirrorBaseDate, toDate);
             saveOrcaDiseaseCache(request, facilityId, patientId, baseDate, result, response);
             return response;
         } catch (RuntimeException ex) {
@@ -226,6 +239,21 @@ public class LocalDiagnosisResource extends AbstractResource {
     private static LocalDate toDateOnly(Date date) {
         Date safeDate = date != null ? date : new Date();
         return safeDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+
+    private YearMonth parseBaseMonth(HttpServletRequest request, String baseMonth) {
+        if (baseMonth == null || baseMonth.isBlank()) {
+            return null;
+        }
+        String normalized = baseMonth.trim();
+        if (!normalized.matches("\\d{6}")) {
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_base_month", "baseMonth must be yyyyMM");
+        }
+        try {
+            return YearMonth.parse(normalized, BASE_MONTH_FORMAT);
+        } catch (DateTimeParseException ex) {
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_base_month", "baseMonth must be yyyyMM");
+        }
     }
 
     private static String firstDepartmentCode(DiseaseImportResponse response) {
