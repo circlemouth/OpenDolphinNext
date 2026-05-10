@@ -631,11 +631,11 @@ const performOfficialPatientMutation = async (
     writeAccepted
       ? result.ok
         ? (operation === 'create'
-          ? '新患登録と canonical 再取得が完了しました。'
-          : '既存患者更新と canonical 再取得が完了しました。')
+          ? '新患登録は ORCA正本の再取得で同期確認しました。'
+          : '既存患者更新は ORCA正本の再取得で同期確認しました。')
         : (operation === 'create'
-          ? '新患登録は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。'
-          : '既存患者更新は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。')
+          ? '新患登録は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。'
+          : '既存患者更新は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。')
       : ((json.apiResultMessage as string | undefined)
         ?? (operation === 'create' ? '新患登録に失敗しました。' : '既存患者更新に失敗しました。'));
   result.errorCategory =

@@ -105,7 +105,7 @@ const resolveImportPartialMessage = (
   expectedPatientIdsCount: number,
   reason: string,
 ) => {
-  return `ORCA既存患者取込は ${reason}ため完了扱いにできません（${formatImportSummaryMetrics(summary, expectedPatientIdsCount)}）。`;
+  return `ORCA既存患者取込は ${reason}ため同期確認済みにできません（${formatImportSummaryMetrics(summary, expectedPatientIdsCount)}）。`;
 };
 
 const evaluateImportBusinessSuccess = (options: {
@@ -310,7 +310,7 @@ export async function importPatientsFromOrca(params: {
     },
     error: canonicalReadbackOk
       ? undefined
-      : 'ORCA既存患者取込は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。',
+      : 'ORCA既存患者取込は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。',
     errorCategory: canonicalReadbackOk ? undefined : 'canonical_refetch_failed',
     importSummary,
   };

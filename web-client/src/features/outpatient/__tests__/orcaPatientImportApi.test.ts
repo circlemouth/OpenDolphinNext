@@ -156,7 +156,9 @@ describe('importPatientsFromOrca', () => {
     expect(result.writeAccepted).toBe(true);
     expect(result.ok).toBe(false);
     expect(result.errorCategory).toBe('canonical_refetch_failed');
-    expect(result.error).toContain('canonical 再取得に失敗');
+    expect(result.error).toBe('ORCA既存患者取込は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。');
+    expect(result.error).not.toContain('canonical');
+    expect(result.error).not.toContain('完了扱い');
     expect(result.canonicalRefetch).toMatchObject({
       source: 'patientlst2v2',
       ok: false,

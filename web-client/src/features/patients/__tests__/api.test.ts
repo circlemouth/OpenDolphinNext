@@ -422,7 +422,9 @@ describe('patients api official mutation', () => {
 
     expect(result.writeAccepted).toBe(true);
     expect(result.ok).toBe(false);
-    expect(result.message).toBe('既存患者更新は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。');
+    expect(result.message).toBe('既存患者更新は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。');
+    expect(result.message).not.toContain('canonical');
+    expect(result.message).not.toContain('完了扱い');
     expect(result.canonicalRefetch).toMatchObject({
       source: 'patientlst2v2',
       ok: false,
@@ -472,7 +474,9 @@ describe('patients api official mutation', () => {
     expect(result.writeAccepted).toBe(true);
     expect(result.ok).toBe(false);
     expect(result.errorCategory).toBe('canonical_refetch_failed');
-    expect(result.message).toBe('新患登録は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。');
+    expect(result.message).toBe('新患登録は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。');
+    expect(result.message).not.toContain('canonical');
+    expect(result.message).not.toContain('完了扱い');
     expect(result.canonicalRefetch).toMatchObject({
       source: 'patientlst2v2',
       ok: false,

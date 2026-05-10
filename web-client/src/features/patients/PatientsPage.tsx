@@ -228,7 +228,7 @@ const buildImportAuditEvent = (patientId: string, result: OrcaPatientImportResul
       canonicalRefetchExpectedPatientIds: result.canonicalRefetch?.expectedPatientIds,
       canonicalRefetchMatchedPatientIds: result.canonicalRefetch?.matchedPatientIds,
       canonicalRefetchMissingPatientIds: result.canonicalRefetch?.missingPatientIds,
-      message: result.ok ? 'ORCA既存患者取込が完了しました。' : toSafePatientFeedbackMessage(result.error, fallbackMessage),
+      message: result.ok ? 'ORCA既存患者取込は ORCA正本の再取得で同期確認しました。' : toSafePatientFeedbackMessage(result.error, fallbackMessage),
     },
   } satisfies Record<string, unknown>;
 };
@@ -253,7 +253,7 @@ const toImportSaveResult = (result: OrcaPatientImportResult): PatientMutationRes
     status: result.status,
     message:
       result.ok
-        ? 'ORCA既存患者取込が完了しました。'
+        ? 'ORCA既存患者取込は ORCA正本の再取得で同期確認しました。'
         : toSafePatientFeedbackMessage(result.error, fallbackMessage),
     canonicalRefetch: result.canonicalRefetch,
   };
@@ -705,7 +705,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       if (result.ok) {
         enqueue({
           tone: 'success',
-          message: 'ORCA既存患者取込が完了しました',
+          message: 'ORCA既存患者取込は ORCA正本の再取得で同期確認しました',
           detail: `患者番号=${patientId}`,
         });
         const refreshed = await refetchPatients();
@@ -724,13 +724,13 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           setPendingImportSelectionPatientId(patientId);
           setSelectionNotice({
             tone: 'warning',
-            message: `ORCA既存患者取込は完了しましたが、現在の検索条件では患者番号 ${patientId} が一覧に見つかりません。`,
+            message: `ORCA既存患者取込は ORCA正本の再取得で同期確認しましたが、現在の検索条件では患者番号 ${patientId} が一覧に見つかりません。`,
           });
         }
       } else if (result.writeAccepted && result.errorCategory === 'business_partial') {
         enqueue({
           tone: 'warning',
-          message: 'ORCA既存患者取込は一部のみ処理され、完了扱いにできませんでした',
+          message: 'ORCA既存患者取込は一部のみ処理され、同期確認済みにできませんでした',
           detail: `患者番号=${patientId}`,
         });
         setSelectionNotice({
@@ -1400,8 +1400,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             tone: 'info',
             message:
               variables.operation === 'create'
-                ? `新患登録が完了し、患者 ${syncedPatientId ?? '—'} を選択しました。`
-                : `既存患者更新が完了し、患者 ${syncedPatientId ?? '—'} を再読込しました。`,
+                ? `新患登録は ORCA正本の再取得で同期確認し、患者 ${syncedPatientId ?? '—'} を選択しました。`
+                : `既存患者更新は ORCA正本の再取得で同期確認し、患者 ${syncedPatientId ?? '—'} を再読込しました。`,
           });
         } else if (canonicalOrSyncedPatient) {
           setEditorMode('update');
@@ -1413,8 +1413,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             tone: 'warning',
             message:
               variables.operation === 'create'
-                ? '新患登録は完了しましたが、現在の検索条件では一覧に見つかりません。登録した患者を詳細表示しています。'
-                : '既存患者更新は完了しましたが、現在の検索条件では一覧に見つかりません。更新した患者を詳細表示しています。',
+                ? '新患登録は ORCA正本の再取得で同期確認しましたが、現在の検索条件では一覧に見つかりません。登録した患者を詳細表示しています。'
+                : '既存患者更新は ORCA正本の再取得で同期確認しましたが、現在の検索条件では一覧に見つかりません。更新した患者を詳細表示しています。',
           });
         }
         setValidationErrors([]);
@@ -2963,11 +2963,11 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                   <small>
                     {lastSaveResult.ok
                       ? lastOfficialAction === 'import'
-                        ? '取込処理は完了しました。'
-                        : '保存処理は完了しました。'
+                        ? '取込処理は ORCA正本の再取得で同期確認しました。'
+                        : '保存処理は ORCA正本の再取得で同期確認しました。'
                       : lastSaveResult.writeAccepted
                         ? lastSaveResult.errorCategory === 'business_partial'
-                          ? '一部のみ処理されたため完了扱いにしていません。'
+                          ? '一部のみ処理されたため同期確認済みにしていません。'
                           : '保存は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。'
                         : '保存に失敗しました。時間をおいて再試行してください。'}
                   </small>
