@@ -154,7 +154,9 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] server-side canonical content/context から `content_hash` を生成し、FINALIZED event と `chart_revision` に記録する。患者・受付・保険・病名・処方候補・算定候補の full snapshot は B-04 / Worker C-D 連携後に継続する。
 - [ ] `entered_by` と `finalized_by` を分離し、代行入力時は `entry_mode=DELEGATED` を保存する。
 - [ ] `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` を実装し、理由必須、変更前後要約、監査ログを保存する。
+  - [x] amend/addendum/cancel API skeleton は locked revision のみを対象にし、理由・actor を必須化し、訂正/追記は新 revision と event、取消は event として元 revision を物理更新しない。authoritative audit log 連携は Worker F の audit chain と合わせて継続する。
 - [ ] PDF/CSV/JSON エクスポートは訂正・追記・取消履歴、処方指示履歴、ORCA連携履歴、診療時点スナップショットを含める。
+  - [x] chart export contract に chart revision events、before/after summary、reason、actor、content hash を含めることを追加した。reporting 実装は B-04 継続。
 
 ## 8. 処方指示正本実装
 

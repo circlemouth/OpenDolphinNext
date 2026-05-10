@@ -24,6 +24,8 @@ import open.dolphin.infomodel.ChartRevisionEventType;
 import open.dolphin.infomodel.ChartRevisionModel;
 import open.dolphin.infomodel.ChartRevisionStatus;
 import open.dolphin.rest.AbstractResource;
+import open.dolphin.rest.dto.chart.ChartRevisionChangeRequest;
+import open.dolphin.rest.dto.chart.ChartRevisionChangeResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionFinalizeRequest;
 import open.dolphin.rest.dto.chart.ChartRevisionFinalizeResponse;
 
@@ -33,6 +35,7 @@ public class ChartRevisionFinalizeService {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
     private static final String FINALIZE_DENIED = "chart_revision_finalize_denied";
+    private static final String REVISION_EVENT_DENIED = "chart_revision_event_denied";
     private static final String INVALID_REQUEST = "chart_revision_finalize_invalid_request";
 
     @PersistenceContext(unitName = "opendolphinPU")
@@ -134,6 +137,135 @@ public class ChartRevisionFinalizeService {
         return response;
     }
 
+    public ChartRevisionChangeResponse amendRevision(long chartId, long revisionId, String facilityId,
+            ChartRevisionChangeRequest request) {
+        return createRevisionEvent(chartId, revisionId, facilityId, request, ChartRevisionEventType.AMENDED,
+                ChartRevisionStatus.AMENDED);
+    }
+
+    public ChartRevisionChangeResponse addAddendum(long chartId, long revisionId, String facilityId,
+            ChartRevisionChangeRequest request) {
+        return createRevisionEvent(chartId, revisionId, facilityId, request, ChartRevisionEventType.ADDENDUM_ADDED,
+                ChartRevisionStatus.ADDENDUM);
+    }
+
+    public ChartRevisionChangeResponse cancelRevision(long chartId, long revisionId, String facilityId,
+            ChartRevisionChangeRequest request) {
+        return createRevisionEvent(chartId, revisionId, facilityId, request, ChartRevisionEventType.CANCELLED,
+                ChartRevisionStatus.CANCELLED);
+    }
+
+    private ChartRevisionChangeResponse createRevisionEvent(long chartId, long revisionId, String facilityId,
+            ChartRevisionChangeRequest request, ChartRevisionEventType eventType, ChartRevisionStatus newStatus) {
+        requireChangeRequest(request);
+        Long actorUserId = request.getActorUserId();
+        if (actorUserId == null || actorUserId <= 0L) {
+            throw badRequest("actorUserId", "actorUserId is required");
+        }
+        String reasonText = requireText(request.getReasonText(), "reasonText");
+        String reasonCode = trimToNull(request.getReasonCode());
+
+        ChartDocumentModel document = em.find(ChartDocumentModel.class, chartId);
+        ChartRevisionModel source = em.find(ChartRevisionModel.class, revisionId);
+        ensureLockedRevisionTarget(chartId, revisionId, facilityId, document, source);
+
+        ChartRevisionModel newRevision = null;
+        String contentHash = null;
+        if (newStatus != ChartRevisionStatus.CANCELLED) {
+            String contentJson = requireText(request.getContentJson(), "contentJson");
+            String canonicalContent = canonicalizeContent(contentJson);
+            int nextRevisionNumber = nextRevisionNumber(chartId);
+            String title = firstNonBlank(request.getTitle(), source.getTitle());
+            contentHash = sha256(writeHashMaterial(chartId, 0L, title, source.getFinalizeContextJson(),
+                    canonicalContent));
+            Instant now = Instant.now();
+
+            newRevision = new ChartRevisionModel();
+            newRevision.setChartDocumentId(chartId);
+            newRevision.setRevisionNumber(nextRevisionNumber);
+            newRevision.setStatus(newStatus);
+            newRevision.setSourceDocumentId(source.getSourceDocumentId());
+            newRevision.setTitle(title);
+            newRevision.setContentHash(contentHash);
+            newRevision.setEnteredByUserId(source.getEnteredByUserId());
+            newRevision.setFinalizedByUserId(actorUserId);
+            newRevision.setFinalizedAt(now);
+            newRevision.setEncounterId(source.getEncounterId());
+            newRevision.setEncounterDate(source.getEncounterDate());
+            newRevision.setOrcaPatientId(source.getOrcaPatientId());
+            newRevision.setOrcaAcceptanceId(source.getOrcaAcceptanceId());
+            newRevision.setNoAcceptanceReason(source.getNoAcceptanceReason());
+            newRevision.setDepartmentCode(source.getDepartmentCode());
+            newRevision.setPhysicianCode(source.getPhysicianCode());
+            newRevision.setInsuranceCombinationNumber(source.getInsuranceCombinationNumber());
+            newRevision.setFinalizeContextJson(source.getFinalizeContextJson());
+            em.persist(newRevision);
+            em.flush();
+            contentHash = sha256(writeHashMaterial(chartId, newRevision.getId(), title, source.getFinalizeContextJson(),
+                    canonicalContent));
+            newRevision.setContentHash(contentHash);
+        }
+
+        ChartRevisionEventModel event = new ChartRevisionEventModel();
+        event.setChartDocumentId(chartId);
+        event.setChartRevisionId(revisionId);
+        event.setPreviousRevisionId(revisionId);
+        event.setNewRevisionId(newRevision != null ? newRevision.getId() : null);
+        event.setEventType(eventType);
+        event.setActorUserId(actorUserId);
+        event.setReasonCode(reasonCode != null ? reasonCode : eventType.name());
+        event.setReasonText(reasonText);
+        event.setBeforeSummaryJson(writeBeforeSummary(source));
+        event.setAfterSummaryJson(writeChangeSummary(eventType, newStatus, contentHash, newRevision != null,
+                reasonCode != null));
+        event.setEventHash(sha256(event.getAfterSummaryJson()));
+        em.persist(event);
+        em.flush();
+
+        ChartRevisionChangeResponse response = new ChartRevisionChangeResponse();
+        response.setChartId(chartId);
+        response.setSourceRevisionId(revisionId);
+        response.setNewRevisionId(newRevision != null ? newRevision.getId() : null);
+        response.setEventId(event.getId() != null ? event.getId() : 0L);
+        response.setEventType(eventType.name());
+        response.setStatus(newStatus.name());
+        response.setContentHash(contentHash);
+        return response;
+    }
+
+    private void requireChangeRequest(ChartRevisionChangeRequest request) {
+        if (request == null) {
+            throw badRequest("payload", "payload is required");
+        }
+    }
+
+    private void ensureLockedRevisionTarget(long chartId, long revisionId, String facilityId, ChartDocumentModel document,
+            ChartRevisionModel revision) {
+        if (document == null || revision == null || !Long.valueOf(chartId).equals(revision.getChartDocumentId())) {
+            throw restError(Response.Status.NOT_FOUND, "chart_revision_not_found", "Chart revision was not found",
+                    Map.of("chartId", chartId, "revisionId", revisionId));
+        }
+        if (facilityId != null && !facilityId.isBlank() && !facilityId.equals(document.getFacilityId())) {
+            throw restError(Response.Status.FORBIDDEN, "chart_revision_facility_mismatch",
+                    "Chart revision is not available for this facility",
+                    Map.of("chartId", chartId, "revisionId", revisionId));
+        }
+        if (revision.getStatus() == ChartRevisionStatus.DRAFT) {
+            throw restError(Response.Status.CONFLICT, REVISION_EVENT_DENIED,
+                    "Only locked chart revisions can create revision events",
+                    Map.of("chartId", chartId, "revisionId", revisionId, "status", revision.getStatus().name()));
+        }
+    }
+
+    private int nextRevisionNumber(long chartId) {
+        Integer max = em.createQuery(
+                        "select max(r.revisionNumber) from ChartRevisionModel r where r.chartDocumentId = :chartId",
+                        Integer.class)
+                .setParameter("chartId", chartId)
+                .getSingleResult();
+        return max != null ? max + 1 : 1;
+    }
+
     private void requireRequest(ChartRevisionFinalizeRequest request) {
         if (request == null) {
             throw badRequest("payload", "payload is required");
@@ -199,6 +331,26 @@ public class ChartRevisionFinalizeService {
         return writeJson(summary);
     }
 
+    private String writeBeforeSummary(ChartRevisionModel source) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("revisionId", source.getId());
+        summary.put("revisionNumber", source.getRevisionNumber());
+        summary.put("status", source.getStatus().name());
+        summary.put("contentHash", source.getContentHash());
+        return writeJson(summary);
+    }
+
+    private String writeChangeSummary(ChartRevisionEventType eventType, ChartRevisionStatus status, String contentHash,
+            boolean newRevisionCreated, boolean hasReasonCode) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("eventType", eventType.name());
+        summary.put("status", status.name());
+        summary.put("contentHash", contentHash);
+        summary.put("newRevisionCreated", newRevisionCreated);
+        summary.put("hasReasonCode", hasReasonCode);
+        return writeJson(summary);
+    }
+
     private String writeHashMaterial(long chartId, long revisionId, String title, String contextJson,
             String canonicalContent) {
         Map<String, Object> material = new LinkedHashMap<>();
@@ -240,6 +392,14 @@ public class ChartRevisionFinalizeService {
             return null;
         }
         return value.trim();
+    }
+
+    private String firstNonBlank(String first, String second) {
+        String normalized = trimToNull(first);
+        if (normalized != null) {
+            return normalized;
+        }
+        return trimToNull(second);
     }
 
     private WebApplicationException badRequest(String field, String message) {

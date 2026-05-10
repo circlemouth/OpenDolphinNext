@@ -65,6 +65,8 @@
 - `POST /api/charts/{chartId}/revisions/{revisionId}/finalize` は `DRAFT` revision だけを対象にする。確定時は ORCA患者番号、患者氏名、生年月日、性別、encounter、診療日、ORCA受付IDまたは受付なし理由、診療科、担当医、保険組合せ、確定者、canonical content JSON を必須検証する。
 - `content_hash` は chart finalize API が確定時に server-side canonical content と確定 context から計算する。client 提供 digest は採用しない。
 - finalize event summary は hash、encounter、診療科、担当医、保険組合せ、受付 context の有無だけを保存し、患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token を保存しない。
+- `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` は locked revision だけを対象にし、理由と actor を必須にする。訂正・追記は新 revision と event を作成し、元 revision は物理更新しない。取消は取消 event を追加し、元 revision 本文を物理削除しない。
+- chart PDF / CSV / JSON export は、current revision だけでなく `chart_revision_event` の `FINALIZED` / `AMENDED` / `ADDENDUM_ADDED` / `CANCELLED` / `VOIDED`、before/after summary、reason、actor、content hash を含める。export payload に raw ORCA body、credential、Cookie、Authorization、CSRF token、患者住所・電話などの不要 PHI を含めない。
 
 ## reasonCode 一覧
 - `integrity_record_missing`
@@ -91,6 +93,7 @@
 - [x] `chart_document` / `chart_revision` / `chart_revision_event` の最小 schema と `ChartRevisionStatus` enum を追加する。
 - [x] locked chart revision、legacy document title、legacy SOAP / module payload、current revision pointer の直接更新拒否 trigger と regression test を追加する。
 - [x] finalize API skeleton、必須 context validation、server-side `content_hash` 生成、FINALIZED event 記録を追加する。
+- [x] amend/addendum/cancel API skeleton、理由必須 validation、before/after summary、event/new revision 記録を追加する。
 
 ## 受け入れ条件
 - [x] active key を変更しても旧文書が verify できる。
@@ -99,3 +102,4 @@
 - [x] `chart_revision.status` は `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` のみに DB 制約と Java enum で制限される。
 - [x] locked revision の本文・SOAP / module payload・title・current revision pointer 直接更新は DB guard と service guard の両方で拒否される。
 - [x] finalize API は必須 context 欠落、chart/revision 不一致、非 DRAFT 再確定を拒否し、server-side canonical hash を記録する。
+- [x] amend/addendum/cancel API は理由欠落、chart/revision 不一致、DRAFT 対象を拒否し、元 revision を物理更新せず event を記録する。
