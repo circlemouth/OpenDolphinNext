@@ -131,6 +131,15 @@
 - `Api_Result` が zero-like でも completion evidence が欠ける場合は `UNKNOWN` とし、ORCA 再照合または post-mutation re-fetch が完了するまで成功扱いにしない。HTTP 401/403 は `AUTH_FAILED`、TLS/certificate 系 failure は `CERTIFICATE_FAILED`、その他 transport failure は `NETWORK_FAILED` として区別する。
 - diseasev3 と medicalmodv2 の response parser はこの分類を使い、病名の ORCA only / unmatch / warning、診療行為の warning / completion evidence 欠落を共通 status に正規化する。
 
+## ORCA Operation Ledger
+- ORCA 送信・取得・照合の共通台帳は `orca_operation`, `orca_transmission`, `orca_response_summary`, `orca_reconciliation_result` に分離する。既存の disease / billing / prescription 個別テーブルは domain-specific state を保持し、共通台帳は API 横断の idempotency、status、retry、request/response hash、sanitized summary、post-send reconciliation を保持する。
+- `orca_operation.operation_status` と `orca_transmission.transmission_status` は `PREPARED`, `READY_TO_SEND`, `SENDING`, `ORCA_ACCEPTED`, `ORCA_REJECTED`, `ORCA_WARNING`, `ORCA_UNMATCHED`, `ORCA_CONFLICT`, `NETWORK_FAILED`, `CERTIFICATE_FAILED`, `AUTH_FAILED`, `UNKNOWN`, `NEEDS_REVIEW`, `CANCELLED` の固定分類に従う。`UNKNOWN` は成功扱いにせず、`orca_reconciliation_result` による再取得・照合が完了するまで `needs_user_review=true` を維持する。
+- idempotency は server-generated `idempotency_key` と `request_hash` で固定し、client 提供の facility / owner / role / URL / voucher / sequential / insurance combination / `Medical_Uid` は台帳 authority として採用しない。operation context は認証 principal、server-side encounter projection、保存済み snapshot、ORCA adapter で解決した値から作る。
+- 台帳に保存してよいのは hash、固定 status/reason code、request/trace ID、警告・不一致・ORCA only・連番付け替えの sanitized summary、件数、`Medical_Uid` の存在有無、`Medical_Mode` / `Medical_Mode2` の分類値、`resendBlocked` などの allowlist field に限定する。
+- 台帳に保存してはいけないもの: raw request/response body、raw XML、ORCA URL / host / port / pathPrefix、Basic 認証、Cookie、Authorization、CSRF、証明書/秘密鍵/パスフレーズ、患者氏名・住所・電話番号、保険番号詳細、voucher / sequential / insurance combination の raw 値、`Medical_Uid` の raw 値。
+- `orca_response_summary` は adapter response の normalized summary だけを保持する。warning / unmatched / error / ORCA only / renumbered の JSON は code/category/field/count などの最小要約に限定し、ORCA body の再構成に使える値を入れない。
+- `orca_reconciliation_result` は post-mutation re-fetch、`tmedicalgetv2` 照合、会計/収納/帳票再取得、restore realignment の結果を保存する。照合成功は ORCA 正本の再取得結果との比較結果であり、自動再送や会計反映済みへの昇格を意味しない。
+
 ## Close And Send Billing Workflow
 - 通常外来の初回 ORCA 会計送信は `POST /api/local/encounters/{encounterKey}/close-and-send-to-billing` から行う。client payload は `idempotencyKey` と任意 precheck flag に限定し、`patientId` / `facilityId` / voucher / sequential / insurance / `Medical_Uid` / `classCode` / raw XML / URL は受け付けない。
 - server は認証 principal の facility、`encounter_projection`、保存済み order/disease から snapshot を作り、`d_billing_orca_snapshot` と `d_billing_orca_transmission` に状態を記録する。状態 enum は `DRAFT`, `READY_TO_SEND`, `ORCA_SENDING`, `ORCA_DISEASE_SYNCED`, `ORCA_MEDICAL_REGISTERED`, `ORCA_CONFIRMED`, `ORCA_FAILED`, `ORCA_UNKNOWN`, `DIRTY_AFTER_SENT`, `ORCA_LOCKED_OR_OPENED`, `CORRECTION_REQUIRED` に固定する。

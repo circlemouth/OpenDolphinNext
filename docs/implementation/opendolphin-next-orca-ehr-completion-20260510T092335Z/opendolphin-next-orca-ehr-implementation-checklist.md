@@ -102,8 +102,10 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] `prescription_order`, `prescription_order_revision`, `prescription_order_event`, `prescription_order_item`, `prescription_orca_transmission` を作成または再設計する。
 - [x] 処方状態は `DRAFT`, `FINAL`, `CHANGED`, `STOPPED`, `CANCELLED`, `REISSUED` に限定する。
 - [ ] 確定済み処方を直接上書き不可にし、変更・中止・取消・再発行はイベントとして保存する。
-- [ ] `orca_operation`, `orca_transmission`, `orca_response_summary`, `orca_reconciliation_result` を作成する。
-- [ ] ORCA operation status は `PREPARED`, `READY_TO_SEND`, `SENDING`, `ORCA_ACCEPTED`, `ORCA_REJECTED`, `ORCA_WARNING`, `ORCA_UNMATCHED`, `ORCA_CONFLICT`, `NETWORK_FAILED`, `CERTIFICATE_FAILED`, `AUTH_FAILED`, `UNKNOWN`, `NEEDS_REVIEW`, `CANCELLED` に限定する。
+- [x] `orca_operation`, `orca_transmission`, `orca_response_summary`, `orca_reconciliation_result` を作成する。
+  - [x] 2026-05-10T21:15Z: 共通 ORCA operation ledger migration を追加し、status / retry / idempotency / request-response hash / sanitized response summary / reconciliation result を raw body・credential なしで永続化する schema test を固定した。
+- [x] ORCA operation status は `PREPARED`, `READY_TO_SEND`, `SENDING`, `ORCA_ACCEPTED`, `ORCA_REJECTED`, `ORCA_WARNING`, `ORCA_UNMATCHED`, `ORCA_CONFLICT`, `NETWORK_FAILED`, `CERTIFICATE_FAILED`, `AUTH_FAILED`, `UNKNOWN`, `NEEDS_REVIEW`, `CANCELLED` に限定する。
+  - [x] 2026-05-10T21:15Z: `orca_operation` の check constraint と `OrcaOperationLedgerSchemaTest` で不正 status を拒否することを固定した。
 - [x] `diseasev3` は server-generated `idempotency_key` の二重送信をサーバー側で拒否する。
 - [x] `diseasev3` の transport 例外は `NETWORK_FAILED` / `needsUserReview=true` として operation に保存し、成功扱いにしない。
 - [ ] `UNKNOWN` は成功扱いせず、ORCA再照合完了まで UI に要確認として表示する。

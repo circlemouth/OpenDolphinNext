@@ -58,6 +58,7 @@ UI は DB degraded / read-only と ORCA outage を混同しない。DB write pat
 4. 再照合 request は server-side transmission ID だけを使う。patient、facility、insurance、voucher、sequential、`Medical_Uid`、URL、raw XML は client から受け取らない。
 5. `tmedicalgetv2` の一致候補がある場合も、再送成功や会計反映済みとは扱わず、内容確認後の明示操作まで `needsUserReview=true` を維持する。
 6. `Medical_Mode` または `Medical_Mode2` が空でなく `0` 以外の場合は `resendBlocked=true` とし、管理者確認なしに再送しない。
+7. 共通 ORCA 台帳では、元操作を `orca_operation`、各 transport attempt を `orca_transmission`、sanitized ORCA response を `orca_response_summary`、復旧照合を `orca_reconciliation_result` に記録する。記録は request/response hash、固定 status/reason code、件数、`Medical_Uid` の存在有無、`Medical_Mode` / `Medical_Mode2` の分類値に限定し、raw body や raw identifier を保存しない。
 
 ## Recovery After ORCA Restores
 
@@ -84,6 +85,7 @@ UI は DB degraded / read-only と ORCA outage を混同しない。DB write pat
 
 - 記録してよいもの: RUN_ID、traceId、operationStatus、reconciliationStatus、transmissionId、snapshotId、row count、`Medical_Uid` の存在有無、`Medical_Mode` / `Medical_Mode2`、`resendBlocked`、固定 reason code。
 - 記録してはいけないもの: ORCA URL、host、port、Basic 認証、証明書、raw ORCA body、raw XML、患者氏名、住所、電話番号、保険詳細、`Medical_Uid` 値、voucher、sequential、insurance combination。
+- DB 台帳に保存してよいものも同じ allowlist に従う。`orca_operation` / `orca_transmission` / `orca_response_summary` / `orca_reconciliation_result` は raw request/response body や credential を持つ列を作らず、hash と sanitized JSON summary だけを保存する。
 
 ## Verification
 
