@@ -8,6 +8,7 @@
 - `docs/architecture/` の summary が current contract と矛盾していない。
 - `docs/managerdocs/` の release/readiness 説明が gate と矛盾していない。
 - ORCA outage / UNKNOWN recovery / DB read-only / backup restore reconciliation の運用手順は [orca-outage-recovery.md](./orca-outage-recovery.md) と `docs/contracts/orca-connection.md` が一致している。
+- backup / restore / hash verification の運用手順は [backup-restore-hash-verification.md](./backup-restore-hash-verification.md) と `docs/contracts/audit-log.md` が一致し、restore 後の read-only 解除前に audit hash chain と chart/prescription content hash を検証する。
 - `config/server-modernized.env.sample` が設定契約と一致している。
 - `target/` / `*.war` / `__MACOSX` / `.DS_Store` / `Thumbs.db` をレビュー対象に含めない。
 
@@ -208,6 +209,7 @@ bash server-modernized/tools/ci/check-doc-links.sh
 bash server-modernized/tools/ci/check-config-contract.sh
 bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-audit-append-only.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-backup-restore-runbook.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-sensitive-evidence-redaction.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-no-runtime-ddl.sh
 bash server-modernized/tools/ci/check-persistence-entities.sh
@@ -279,6 +281,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 ## 補足
 - `check-no-generated-artifacts.sh` は tracked / untracked の両方を検査する。
 - `check-sensitive-evidence-redaction.sh` は review-target の browser bundle / test-results / Playwright output / test snapshots を検査し、historical `artifacts/` 全体を release evidence として扱わない。reviewer packet に入れる証跡は reviewer-submission packet tool の allowlist 済み sanitized subset に限定する。
+- `check-backup-restore-runbook.sh` は backup / restore / hash verification runbook、release gate、outage recovery、audit contract が同じ restore fail-closed 境界を参照していることを検査する。
 - `check-no-direct-runtime-lookup.sh` は `ServerConfigurationResolver.java` 以外の direct runtime lookup を許可しない。
 - どれか 1 つでも失敗したら release は見送る。
 - cutover / rollback の実施順序と停止条件は [../releases/orca-remediation-cutover.md](../releases/orca-remediation-cutover.md) を正本とする。

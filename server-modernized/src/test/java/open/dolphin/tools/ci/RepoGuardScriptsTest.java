@@ -105,6 +105,27 @@ class RepoGuardScriptsTest {
     }
 
     @Test
+    void checkBackupRestoreRunbookPassesForCompleteFixture() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-backup-restore-ok");
+        createBackupRestoreFixture(repoRoot, true);
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-backup-restore-runbook.sh", repoRoot);
+
+        assertThat(result.exitCode()).isZero();
+    }
+
+    @Test
+    void checkBackupRestoreRunbookFailsWhenRestoreHashGateIsMissing() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-backup-restore-ng");
+        createBackupRestoreFixture(repoRoot, false);
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-backup-restore-runbook.sh", repoRoot);
+
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.output()).contains("chart/prescription content hash verification gate");
+    }
+
+    @Test
     void checkSensitiveEvidenceRedactionPassesForSanitizedSnapshot() throws Exception {
         Path repoRoot = Files.createTempDirectory("repo-guard-sensitive-evidence-ok");
         initializeGitRepository(repoRoot);
@@ -165,6 +186,7 @@ class RepoGuardScriptsTest {
         Files.writeString(repoRoot.resolve("docs/contracts/orca-master-api.md"), "# contract\n");
         Files.writeString(repoRoot.resolve("docs/contracts/patient-images.md"), "# contract\n");
         Files.writeString(repoRoot.resolve("docs/contracts/runtime-config.md"), "# contract\n");
+        Files.writeString(repoRoot.resolve("docs/runbooks/backup-restore-hash-verification.md"), "# backup\n");
         Files.writeString(repoRoot.resolve("docs/runbooks/release-validation.md"), "# runbook\n");
         Files.writeString(repoRoot.resolve("docs/runbooks/pull-request-checklist.md"), "# pr\n");
         Files.writeString(repoRoot.resolve("docs/operations/ORCA_CERTIFICATION_ONLY.md"), "# orca\n");
@@ -240,6 +262,39 @@ class RepoGuardScriptsTest {
                     }
                     """);
         }
+    }
+
+    private static void createBackupRestoreFixture(Path repoRoot, boolean includeContentHashGate) throws IOException {
+        Files.createDirectories(repoRoot.resolve("docs/runbooks"));
+        Files.createDirectories(repoRoot.resolve("docs/contracts"));
+        String contentHashLine = includeContentHashGate
+                ? "content hash verification confirms restored authoritative payloads.\n"
+                : "";
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/backup-restore-hash-verification.md"),
+                """
+                # Backup / Restore / Hash Verification Runbook
+
+                AuditChainVerifier.verifyAll()
+                %s
+                read-only mode
+                ORCA re-alignment
+                Do not auto-resend after restore
+                raw ORCA body and raw XML are forbidden
+                HAR, trace, video, screenshot are forbidden
+                patient name, address, phone number are forbidden
+                check-backup-restore-runbook.sh
+                """
+                        .formatted(contentHashLine));
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/release-validation.md"),
+                "[backup](./backup-restore-hash-verification.md)\ncheck-backup-restore-runbook.sh\n");
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/orca-outage-recovery.md"),
+                "[backup](./backup-restore-hash-verification.md)\n");
+        Files.writeString(
+                repoRoot.resolve("docs/contracts/audit-log.md"),
+                "[backup](../runbooks/backup-restore-hash-verification.md)\n");
     }
 
     private static void initializeGitRepository(Path repoRoot) throws Exception {

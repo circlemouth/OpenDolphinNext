@@ -32,6 +32,7 @@ FILES=(
   "docs/contracts/orca-master-api.md"
   "docs/contracts/patient-images.md"
   "docs/contracts/runtime-config.md"
+  "docs/runbooks/backup-restore-hash-verification.md"
   "docs/runbooks/release-validation.md"
   "docs/runbooks/pull-request-checklist.md"
   "docs/operations/ORCA_CERTIFICATION_ONLY.md"

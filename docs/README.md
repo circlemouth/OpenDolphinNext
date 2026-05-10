@@ -10,6 +10,7 @@
 - [architecture/](architecture/)
 - [architecture/repository-doc-taxonomy.md](architecture/repository-doc-taxonomy.md)
 - [runbooks/](runbooks/)
+- [runbooks/backup-restore-hash-verification.md](runbooks/backup-restore-hash-verification.md)
 - [runbooks/orca-outage-recovery.md](runbooks/orca-outage-recovery.md)
 - [operations/](operations/)
 - [releases/](releases/)
