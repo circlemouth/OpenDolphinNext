@@ -214,7 +214,9 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [ ] ORCA接続URL、Basic認証、クライアント証明書、証明書パスワードはサーバー秘密情報ストアに限定する。
 - [ ] ORCA認証情報をフロント環境変数、ブラウザログ、サーバーログ、監査ログ、テストスナップショットに出さない。
+  - [x] 2026-05-10T20:42Z: `check-sensitive-evidence-redaction.sh` を追加し、review-target の browser bundle / test-results / Playwright output / test snapshots に `Authorization` / Cookie / JSESSIONID / CSRF / Basic 値 / ORCA credential env assignment / raw ORCA body/XML / HAR / trace / video / screenshot / `error-context.md` が混入した場合に fail する。既存の `verify:no-public-secrets` と `verify:no-direct-orca-proxy-config` は web-client の公開 Vite env と生 ORCA proxy/credential config を継続検査する。
 - [ ] サーバーログ、ブラウザコンソール、エラーレスポンス、監査ログに患者情報を過剰に出さない。
+  - [x] 2026-05-10T20:42Z: `check-sensitive-evidence-redaction.sh` は review-target の text output/snapshot に raw ORCA response markers、`Patient_Name` / `WholeName` / `Home_Address`、保険番号系 field が残る場合も fail する。release validation と audit-log contract に guard を追加し、reviewer packet は sanitized extracted subset だけを同梱する方針へ固定した。
 - [ ] PHI を含むテーブル、PDF/エクスポート、添付文書の権限を制御する。
 - [ ] 患者閲覧、診療録作成/確定/訂正、処方入力/確定、ORCA患者更新、ORCA病名送信、ORCA診療行為送信、ORCA会計情報閲覧、監査ログ閲覧の権限を定義する。
 
@@ -237,6 +239,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] E2E で患者選択、患者ヘッダー、下書き保存、確定確認、確定後直接編集不可、訂正/追記/取消、処方作成/確定/中止、ORCA送信前確認、成功/失敗/警告/不一致表示、患者取り違え防止、PDF、期間エクスポートを確認する。
 - [ ] UI/a11y でラベル、プレースホルダー説明代用禁止、重大操作確認、重要警告初期表示、disabled 理由、キーボード操作、フォーカス、コントラスト、ボタン配置、患者ヘッダー視認性をテストする。
 - [ ] セキュリティテストで bundle への ORCA URL/Basic/証明書情報混入、生ORCAパス到達、ログ/監査ログ credential 混入、患者情報過剰エラー、権限なし操作を拒否できることを確認する。
+  - [x] 2026-05-10T20:42Z: `verify:no-public-secrets`、`verify:no-direct-orca-proxy-config`、`verify:no-blocked-orca-route-strings`、`check-audit-append-only.sh`、`check-sensitive-evidence-redaction.sh`、`RepoGuardScriptsTest` で bundle/test output/snapshot/audit guard の credential/PHI leakage regression を固定した。権限なし操作の full authorization matrix は各 owning worker の server resource tests と release gate で継続確認する。
 
 ## 16. 運用・設定
 

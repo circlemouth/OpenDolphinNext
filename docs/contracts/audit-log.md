@@ -46,11 +46,18 @@ Each event stores:
 
 The guard intentionally scans production source only. Tests may deliberately tamper with `audit_event` to prove verifier failure detection.
 
+`server-modernized/tools/ci/check-sensitive-evidence-redaction.sh` enforces the tracked evidence boundary for browser bundles, Playwright/test output, and test snapshots:
+
+- review-target output paths must not contain HAR, trace, video, screenshot, `error-context.md`, raw network JSON, request XML, or raw XML/body files.
+- output and snapshot text must not contain credential-bearing `Authorization` / `Cookie` / `JSESSIONID` / CSRF markers, raw Basic values, ORCA credential env assignments, raw ORCA body/XML keys, patient name/address fields, or insurance number fields.
+- historical `artifacts/` are not release evidence by default; reviewer packets must copy only sanitized extracted subsets under the reviewer-submission packet runbook.
+
 ## Verification
 
 Focused checks:
 
 ```bash
 bash server-modernized/tools/ci/check-audit-append-only.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-sensitive-evidence-redaction.sh --root "$(git rev-parse --show-toplevel)"
 mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=AuditChainVerifierTest,AuthoritativeAuditRepositoryTest,RepoGuardScriptsTest test
 ```

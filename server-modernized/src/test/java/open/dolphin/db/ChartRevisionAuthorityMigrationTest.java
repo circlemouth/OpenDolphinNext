@@ -18,7 +18,7 @@ class ChartRevisionAuthorityMigrationTest {
             "tools",
             "flyway",
             "sql",
-            "V0315__chart_revision_authority_tables.sql");
+            "V0316__chart_revision_authority_tables.sql");
 
     @Test
     void migrationCreatesMinimumChartRevisionAuthorityTables() throws Exception {
