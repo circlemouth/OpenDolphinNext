@@ -160,8 +160,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] `POST /api/prescriptions/{prescriptionId}/finalize` を実装し、確定者、確定日時、処方内容 hash を保存する。
 - [x] 確定済み処方の直接更新を禁止し、処方確定は診療録確定とは別操作にする。
 - [x] `change`, `stop`, `cancel`, `reissue` をイベントとして実装し、理由と変更前後内容を保存する。
-- [ ] `POST /api/local/orca/medical-candidates/from-chart/{chartRevisionId}` を local candidate route として実装し、診療録・処方指示から ORCA送信候補を作る。
-- [ ] 送信候補作成時に変換不能項目や ORCAコード未解決項目を `NEEDS_REVIEW` / 送信不可にする。
+- [x] `POST /api/local/orca/medical-candidates/from-chart/{chartRevisionId}` を local candidate route として実装し、診療録・処方指示から ORCA送信候補を作る。
+- [x] 送信候補作成時に変換不能項目や ORCAコード未解決項目を `NEEDS_REVIEW` / 送信不可にする。
 - [ ] `POST /api/local/orca/medical-operations/prepare` と official `POST /api/orca/official/chart-support/medical-mod-v2` を組み合わせ、prepare/send の分離と `medicalmodv2` 相当の送信を実装する。
 - [ ] 送信前確認に患者、受付、診療科、医師、保険組合せ、候補を表示し、送信後に ORCA側結果を再取得・差分照合する。
 
@@ -181,7 +181,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 ## 10. 診療行為・会計・収納・レセプト
 
-- [ ] 診療録・処方指示から `orca_medical_candidate` を作成し、ORCA正本ではないことを明示する。
+- [x] 診療録・処方指示から `orca_medical_candidate` を作成し、ORCA正本ではないことを明示する。
 - [ ] `medicalmodv2` 相当の送信では患者番号、診療日、診療科、医師コード、保険組合せ、ORCA受付存在、患者/保険情報 freshness、会計済み衝突を検証する。
 - [ ] ORCAレスポンスを構造化保存し、送信後に ORCA側診療行為情報を再取得して差分表示する。
 - [ ] ORCA会計情報取得 API をサーバーアダプタ経由で呼び、`orca_billing_cache` に保存する。

@@ -109,6 +109,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/local/diagnoses/{patientId}?baseMonth=yyyyMM`
 - `/api/local/order/bundles`
 - `/api/local/order/recommendations`
+- `/api/local/orca/medical-candidates/from-chart/{chartRevisionId}`
 - `/api/local/prescription-orders`
 - `/api/local/prescription-orders/do-import`
 
@@ -117,6 +118,8 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 `/api/orca/official/patientgetv2` は ORCA 患者正本の read wrapper です。facility は認証済み request context から解決し、client 提供の facility / owner / URL / storage key / digest は受け取りません。成功応答 body は既存の ORCA official JSON/XML 互換を維持し、source metadata は `X-Orca-Source-System=ORCA`、`X-Orca-Source-Api=patientgetv2`、`X-Orca-Fetched-At`、`X-Orca-Cache-Status`、`X-Orca-Stale`、`X-Orca-Business-Status` の response header と監査 details に固定して返します。取得結果は `orca_patient_cache` に `source_system=ORCA`、`source_api=patientgetv2`、`fetched_at`、`cache_expires_at`、`cache_status`、`business_status`、`raw_response_hash`、normalized payload として保存します。raw ORCA body、ORCA credential、接続先 URL、Cookie、CSRF、Authorization は保存しません。`Api_Result=10` または患者不在 wording は HTTP 404 ではなく `ORCA_PATIENT_NOT_FOUND` business status として扱います。local cache は表示用 cache であり、ORCA 障害時に current source として昇格してはいけません。
 
 `/api/local/encounters/orca-transmissions/review` と `/api/local/encounters/orca-transmissions/{transmissionId}/reconcile-temporary-medical` は close-and-send billing recovery 用の local workflow です。facility は認証済み request context だけを authority とし、client 提供の patient / facility / insurance / voucher / sequential / `Medical_Uid` / URL / raw XML を受け取りません。`reconcile-temporary-medical` は保存済み snapshot から ORCA `tmedicalgetv2` を read-only で照合し、成功表示や自動再送ではなく `needsUserReview=true` の sanitized summary だけを返します。
+
+`/api/local/orca/medical-candidates/from-chart/{chartRevisionId}` は chart revision に紐付く処方正本から ORCA 診療行為送信候補を作る local prepare route です。candidate は `orca_medical_candidate` に `source_system=LOCAL_PRESCRIPTION` として保存され、ORCA 正本ではありません。facility は認証済み request context、patient / encounter / prescription revision は DB 上の処方正本から解決します。client 提供の patient / facility / insurance / voucher / sequential / URL / raw XML / digest は受け取りません。薬剤コード・用法コード・medical class が未解決の項目は `NEEDS_REVIEW` かつ `sendable=false` として返し、live `medicalmodv2` 送信は行いません。
 
 `/api/local/prescription-orders` と `/api/local/prescription-orders/do-import` は local draft prescription payload の保存口ですが、encounter に紐づく mutation では `encounter_projection` を server-side authority として参照します。projection の facility/patient が request context と一致しない場合は `encounter_not_found`、会計待ち・取消・閉鎖相当の business state では `prescription_order_finalized_update_denied` として、payload 永続化前に fail closed します。client 提供の encounter/patient/facility は確定済み処方更新可否の権威にしません。
 

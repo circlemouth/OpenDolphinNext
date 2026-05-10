@@ -50,6 +50,7 @@ public final class OpenDolphinRestApplication extends Application {
                 open.dolphin.rest.orca.LocalPatientSearchResource.class,
                 open.dolphin.rest.orca.LocalChartSubjectiveResource.class,
                 open.dolphin.rest.orca.LocalEncounterBillingWorkflowResource.class,
+                open.dolphin.rest.orca.LocalOrcaMedicalCandidateResource.class,
                 open.dolphin.rest.orca.LocalOrderBundleResource.class,
                 open.dolphin.rest.orca.LocalPrescriptionOrderResource.class,
                 open.dolphin.rest.orca.PrescriptionAuthorityResource.class,
