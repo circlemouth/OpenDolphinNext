@@ -19,6 +19,11 @@ class ChartRevisionAuthorityMigrationTest {
             "flyway",
             "sql",
             "V0316__chart_revision_authority_tables.sql");
+    private static final Path FINALIZED_GUARD_MIGRATION = Path.of(
+            "tools",
+            "flyway",
+            "sql",
+            "V0318__chart_revision_finalized_write_guards.sql");
 
     @Test
     void migrationCreatesMinimumChartRevisionAuthorityTables() throws Exception {
@@ -63,5 +68,20 @@ class ChartRevisionAuthorityMigrationTest {
         assertTrue(sql.contains("ck_chart_revision_finalized_metadata"));
         assertTrue(sql.contains("status <> 'DRAFT' AND finalized_at IS NOT NULL AND finalized_by_user_id IS NOT NULL"));
         assertTrue(sql.contains("status = 'DRAFT' AND finalized_at IS NULL AND finalized_by_user_id IS NULL"));
+    }
+
+    @Test
+    void finalizedWriteGuardsCoverRevisionDocumentAndModules() throws Exception {
+        String sql = Files.readString(FINALIZED_GUARD_MIGRATION);
+
+        assertThat(sql).contains("reject_locked_chart_revision_mutation");
+        assertThat(sql).contains("chart_revision_finalized_update_denied");
+        assertThat(sql).contains("trg_chart_revision_finalized_guard");
+        assertThat(sql).contains("reject_locked_chart_document_current_revision_repoint");
+        assertThat(sql).contains("chart_document_finalized_revision_repoint_denied");
+        assertThat(sql).contains("reject_locked_legacy_chart_document_mutation");
+        assertThat(sql).contains("chart_document_finalized_update_denied");
+        assertThat(sql).contains("reject_locked_legacy_chart_module_mutation");
+        assertThat(sql).contains("chart_module_finalized_update_denied");
     }
 }

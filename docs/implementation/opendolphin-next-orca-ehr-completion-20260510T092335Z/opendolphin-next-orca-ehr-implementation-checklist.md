@@ -97,7 +97,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] `chart_document`, `chart_revision`, `chart_revision_event`, `chart_module`, `chart_attachment` を作成または再設計する。
   - [x] `chart_document`, `chart_revision`, `chart_revision_event` の最小 schema と JPA entity を追加した。`chart_module` / `chart_attachment` の詳細再設計は後続 revision/export 実装で継続確認する。
 - [x] `chart_revision.status` は `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` に限定する。
-- [ ] `FINAL` 以降の本文、SOAP、モジュール、タイトルを直接更新不可にする。
+- [x] `FINAL` 以降の本文、SOAP、モジュール、タイトルを直接更新不可にする。
 - [ ] 確定済み文書の訂正・追記・取消は新 revision/event として扱い、原文を物理削除しない。
 - [x] `prescription_order`, `prescription_order_revision`, `prescription_order_event`, `prescription_order_item`, `prescription_orca_transmission` を作成または再設計する。
 - [x] 処方状態は `DRAFT`, `FINAL`, `CHANGED`, `STOPPED`, `CANCELLED`, `REISSUED` に限定する。
@@ -146,6 +146,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [ ] 診療録状態 `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` を実装する。
 - [ ] `FINAL` は本文、SOAP、所見、説明内容、添付文書、タイトルを直接編集不可にする。
+  - [x] 本文 / SOAP / module payload / title / current revision pointer の直接 UPDATE / DELETE は service guard と DB trigger で拒否する。添付文書の詳細 revision/export 連携は B-04 で継続する。
 - [ ] `POST /api/charts/{chartId}/revisions/{revisionId}/finalize` を実装する。
 - [ ] 確定時に患者番号、氏名、生年月日、性別、診療日、ORCA受付IDまたは受付なし理由、診療科、担当医、保険組合せ、確定者、代行入力者、本体内容を必須検証する。
 - [ ] 確定時に患者・受付・保険・病名・処方候補・算定候補のスナップショットと `content_hash` を作る。

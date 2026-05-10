@@ -27,6 +27,8 @@ fi
 
 karte_service="server-modernized/src/main/java/open/dolphin/session/KarteDocumentWriteService.java"
 karte_test="server-modernized/src/test/java/open/dolphin/session/KarteServiceBeanDocPkTest.java"
+chart_revision_migration="server-modernized/tools/flyway/sql/V0318__chart_revision_finalized_write_guards.sql"
+chart_revision_test="server-modernized/src/test/java/open/dolphin/db/ChartRevisionFinalizedWriteGuardSchemaTest.java"
 prescription_resource="server-modernized/src/main/java/open/dolphin/rest/orca/LocalPrescriptionOrderResource.java"
 prescription_test="server-modernized/src/test/java/open/dolphin/rest/orca/LocalPrescriptionOrderResourceTest.java"
 
@@ -71,6 +73,22 @@ require_pattern "finalized chart title denial regression test exists" \
   "$karte_test" 'updateTitle_rejectsFinalizedDocumentWithConflictPayload'
 require_pattern "finalized chart title denial preserves original title" \
   "$karte_test" 'getTitle\(\)\)\.isEqualTo\("before"\)'
+require_pattern "finalized chart revision direct mutation trigger exists" \
+  "$chart_revision_migration" 'trg_chart_revision_finalized_guard'
+require_pattern "finalized chart revision direct mutation raises fixed code" \
+  "$chart_revision_migration" 'chart_revision_finalized_update_denied'
+require_pattern "finalized legacy chart document title mutation trigger exists" \
+  "$chart_revision_migration" 'trg_legacy_chart_document_finalized_guard'
+require_pattern "finalized legacy chart module mutation trigger exists" \
+  "$chart_revision_migration" 'trg_legacy_chart_module_finalized_guard'
+require_pattern "finalized chart current revision repoint trigger exists" \
+  "$chart_revision_migration" 'trg_chart_document_current_revision_guard'
+require_pattern "finalized chart revision direct mutation regression test exists" \
+  "$chart_revision_test" 'finalizedChartRevisionRejectsDirectRevisionDocumentAndModuleMutation'
+require_pattern "finalized chart module payload denial regression test exists" \
+  "$chart_revision_test" 'chart_module_finalized_update_denied'
+require_pattern "finalized chart current revision repoint denial regression test exists" \
+  "$chart_revision_test" 'chart_document_finalized_revision_repoint_denied'
 
 require_pattern "prescription mutation uses server-side encounter projection" \
   "$prescription_resource" 'ensureEncounterAllowsPrescriptionMutation'
