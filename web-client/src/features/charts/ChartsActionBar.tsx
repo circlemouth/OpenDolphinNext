@@ -2410,6 +2410,19 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         </div>
       </header>
 
+      {headerMetaCollapsed && fallbackUsed ? (
+        <div
+          className="charts-actions__guard-summary"
+          role="alert"
+          aria-live={resolveAriaLive('warning')}
+          data-testid="charts-actions-fallback-alert"
+          data-test-id="charts-actions-fallback-alert"
+        >
+          <strong>暫定データ表示中</strong>
+          <span>ORCA送信・会計送信・印刷前に最新データを再取得してください。</span>
+        </div>
+      ) : null}
+
       <div id="charts-actionbar-details" hidden={compactHeader && isHeaderCollapsed}>
         {guardSummaries.length > 0 ? (
           <div className="charts-actions__guard-summary" role="status" aria-live="polite">

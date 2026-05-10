@@ -333,6 +333,28 @@ describe('ChartsActionBar', () => {
     expect(printGuard).toHaveTextContent('印刷不可');
   });
 
+  it('compact header の fallbackUsed 警告を詳細 disclosure 外に表示する', () => {
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          compactHeader
+          defaultCollapsed
+          fallbackUsed
+          patientId="P-203"
+          visitDate="2026-01-04"
+          selectedEntry={{ patientId: 'P-203', visitDate: '2026-01-04', departmentCode: '01' } as any}
+        />
+      </MemoryRouter>,
+    );
+
+    const alert = screen.getByTestId('charts-actions-fallback-alert');
+    expect(alert).toHaveAttribute('role', 'alert');
+    expect(alert).toHaveTextContent('暫定データ表示中');
+    expect(alert).toHaveTextContent('ORCA送信・会計送信・印刷前に最新データを再取得してください。');
+    expect(alert.closest('details')).toBeNull();
+  });
+
   it('診察開始は afterStart 成功後のみ success toast を出す', async () => {
     const user = userEvent.setup();
     const onAfterStart = vi.fn().mockResolvedValue({
