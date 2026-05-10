@@ -29,6 +29,7 @@ public class OperationsReadinessEvaluator {
     static final String CHECK_DATABASE = "database";
     static final String CHECK_ORCA = "orca";
     static final String CHECK_ORCA_PUSH = "orcaPush";
+    static final String CHECK_ORCA_BILLING_CACHE = "orcaBillingCache";
     static final String CHECK_ATTACHMENT_STORAGE = "attachmentStorage";
     static final String CHECK_PVT_QUEUE = "pvtQueue";
     static final String CHECK_PATIENT_IMAGES = "patientImages";
@@ -47,6 +48,7 @@ public class OperationsReadinessEvaluator {
     private static final String REASON_PATIENT_IMAGES_STORAGE_UNAVAILABLE = "patient_images_storage_unavailable";
     private static final String REASON_ORCA_PUSH_NOT_CONFIGURED = "orca_push_not_configured";
     private static final String REASON_ORCA_PUSH_RUNTIME_UNAVAILABLE = "orca_push_runtime_unavailable";
+    private static final String REASON_ORCA_BILLING_CACHE_UNAVAILABLE = "orca_billing_cache_unavailable";
 
     @PersistenceContext
     EntityManager em;
@@ -81,12 +83,14 @@ public class OperationsReadinessEvaluator {
         boolean auditLogReady = checkAuditLog(checks);
         boolean orcaReady = checkOrca(checks);
         boolean orcaPushReady = checkOrcaPush(checks);
+        boolean orcaBillingCacheReady = checkOrcaBillingCache(checks);
         boolean storageAvailable = checkAttachmentStorage(checks);
         boolean storageReady = storageAvailable || isDisabled(checks.get(CHECK_ATTACHMENT_STORAGE));
         boolean pvtQueueReady = checkPvtQueue(checks);
         boolean patientImagesReady = checkPatientImages(checks, storageAvailable);
 
-        boolean overallReady = databaseReady && auditLogReady && orcaReady && orcaPushReady && storageReady && pvtQueueReady && patientImagesReady;
+        boolean overallReady = databaseReady && auditLogReady && orcaReady && orcaPushReady && orcaBillingCacheReady
+                && storageReady && pvtQueueReady && patientImagesReady;
         OperationsReadinessResponse body = new OperationsReadinessResponse();
         body.setStatus(overallReady ? STATUS_UP : STATUS_DOWN);
         body.setChecks(checks);
@@ -225,6 +229,31 @@ public class OperationsReadinessEvaluator {
             detail.setConnected(Boolean.FALSE);
             detail.setReasonCode(REASON_ORCA_PUSH_RUNTIME_UNAVAILABLE);
             checks.put(CHECK_ORCA_PUSH, detail);
+            return false;
+        }
+    }
+
+    private boolean checkOrcaBillingCache(Map<String, OperationsReadinessCheck> checks) {
+        OperationsReadinessCheck detail = new OperationsReadinessCheck();
+        try {
+            Object result = em != null ? em.createNativeQuery("""
+                    SELECT CASE WHEN COUNT(*) = 2 THEN 1 ELSE 0 END
+                      FROM information_schema.tables
+                     WHERE table_schema = 'opendolphin'
+                       AND table_name IN ('orca_billing_cache', 'orca_report_snapshot')
+                    """).getSingleResult() : null;
+            long count = result instanceof Number number ? number.longValue() : 0L;
+            boolean up = count == 1L;
+            detail.setStatus(up ? STATUS_UP : STATUS_DOWN);
+            if (!up) {
+                detail.setReasonCode(REASON_ORCA_BILLING_CACHE_UNAVAILABLE);
+            }
+            checks.put(CHECK_ORCA_BILLING_CACHE, detail);
+            return up;
+        } catch (RuntimeException ex) {
+            detail.setStatus(STATUS_DOWN);
+            detail.setReasonCode(REASON_ORCA_BILLING_CACHE_UNAVAILABLE);
+            checks.put(CHECK_ORCA_BILLING_CACHE, detail);
             return false;
         }
     }

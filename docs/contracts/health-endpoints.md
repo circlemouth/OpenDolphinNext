@@ -42,6 +42,7 @@
       "facilityCount": 0,
       "recoveryEnabled": false
     },
+    "orcaBillingCache": {"status": "UP"},
     "attachmentStorage": {
       "status": "UP",
       "mode": "s3",
@@ -59,7 +60,7 @@
 }
 ```
 - `OperationsReadinessResponse` として、全体 `status` と sanitized `checks` を返す。
-- `checks` の key は `database`, `auditLog`, `orca`, `orcaPush`, `attachmentStorage`, `pvtQueue`, `patientImages` を current contract とする。
+- `checks` の key は `database`, `auditLog`, `orca`, `orcaPush`, `orcaBillingCache`, `attachmentStorage`, `pvtQueue`, `patientImages` を current contract とする。
 - detailed checks は匿名で返るため、値は抽象化済み状態・boolean truth・固定 reasonCode に限定する。
 - component 名は上記 key だけを許可し、接続先・資格情報・内部例外・詳細設定値を返さない。
 
@@ -101,6 +102,7 @@
 - `orca_probe_failed`
 - `orca_push_not_configured`
 - `orca_push_runtime_unavailable`
+- `orca_billing_cache_unavailable`
 - `attachment_storage_not_ready`
 - `attachment_storage_disabled`
 - `attachment_storage_backend_unreachable`
@@ -114,6 +116,7 @@
 - [x] `OperationsHealthResource` を liveness / sanitized detailed readiness の 2 契約に分離する。
 - [x] `auditLog` check は authoritative audit chain head の write path lock を確認し、DB read-only / audit table 欠落 / chain head 欠落を `audit_log_write_unavailable` として fail-closed にする。
 - [x] `RestOrcaTransport.ProbeResult` から URL / statusCode / raw message 依存を外し、sanitized reasonCode を返す。
+- [x] `orcaBillingCache` check は `orca_billing_cache` と `orca_report_snapshot` の schema availability だけを確認し、table 不在や query failure を `orca_billing_cache_unavailable` として fail-closed にする。
 - [x] `AttachmentStorageManager` または専用 health probe に backend 疎通 API を追加する。
 - [x] `PvtService.workerHealthBody()` の reason を fixed reasonCode に正規化する。
 - [x] JSON 契約テストを追加する。
@@ -123,6 +126,7 @@
 - [x] readiness payload に URL / host / port / scheme / username / statusCode / raw exception / stack trace / secret path が含まれない。
 - [x] 監査ログ write path が利用できない場合、readiness は `checks.auditLog.status=DOWN` / `reasonCode=audit_log_write_unavailable` を返し、全体 `status=DOWN` にする。
 - [x] default facility 未設定時は `facility_configuration_missing` で fail-close し、runtime ORCA config へ fallback しない。
+- [x] `orcaBillingCache` が DOWN の場合、readiness は全体 `DOWN` とし、SQL、内部例外、raw table detail は返さない。
 - [x] ORCA / storage / PVT / patient images の DOWN ケースを固定 reasonCode で返す。
 - [x] `attachment.storage.mode=disabled` は `attachmentStorage.status=DISABLED` / `reasonCode=attachment_storage_disabled` のみを返し、bucket / endpoint / prefix / secret reference は返さない。
 - [x] ログと API 応答の双方で secret と接続先詳細を出力しない。

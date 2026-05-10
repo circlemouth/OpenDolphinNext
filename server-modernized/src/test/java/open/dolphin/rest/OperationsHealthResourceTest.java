@@ -100,6 +100,7 @@ class OperationsHealthResourceTest {
                 OperationsReadinessEvaluator.CHECK_AUDIT_LOG,
                 OperationsReadinessEvaluator.CHECK_ORCA,
                 OperationsReadinessEvaluator.CHECK_ORCA_PUSH,
+                OperationsReadinessEvaluator.CHECK_ORCA_BILLING_CACHE,
                 OperationsReadinessEvaluator.CHECK_ATTACHMENT_STORAGE,
                 OperationsReadinessEvaluator.CHECK_PVT_QUEUE,
                 OperationsReadinessEvaluator.CHECK_PATIENT_IMAGES);
@@ -350,6 +351,37 @@ class OperationsHealthResourceTest {
                 .isEqualTo("DOWN");
         assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_AUDIT_LOG).getReasonCode())
                 .isEqualTo("audit_log_write_unavailable");
+    }
+
+    @Test
+    void readinessFailsClosedWhenOrcaBillingCacheSchemaIsUnavailable() throws Exception {
+        Query schemaQuery = org.mockito.Mockito.mock(Query.class);
+        when(em.createNativeQuery(anyString())).thenReturn(query, schemaQuery);
+        when(query.getSingleResult()).thenReturn(1);
+        when(schemaQuery.getSingleResult()).thenReturn(0L);
+        when(authoritativeAuditRepository.isWritePathAvailable()).thenReturn(true);
+        when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn("F001");
+        ((StubRestOrcaTransport) restOrcaTransport).probeResult =
+                new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
+        when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
+        when(pvtService.workerHealthBody()).thenReturn(Map.of(
+                "status", "UP",
+                "reasonCodes", List.of()));
+
+        Response response = resource.readiness();
+
+        assertThat(response.getStatus()).isEqualTo(503);
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getStatus()).isEqualTo("DOWN");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA_BILLING_CACHE).getStatus())
+                .isEqualTo("DOWN");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA_BILLING_CACHE).getReasonCode())
+                .isEqualTo("orca_billing_cache_unavailable");
+        String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);
+        assertThat(rendered).doesNotContain("information_schema");
+        assertThat(rendered).doesNotContain("select count");
+        assertThat(rendered).doesNotContain("Exception");
     }
 
     private static void setField(Class<?> owner, Object target, String fieldName, Object value) throws Exception {
