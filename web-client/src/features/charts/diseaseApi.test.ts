@@ -44,6 +44,49 @@ describe('diseaseApi', () => {
     expect(result.routeMismatch).toBe(true);
   });
 
+  it('sends server-validated baseMonth derived from visit date for ORCA disease mirror', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-DISEASE',
+          patientId: '000001',
+          orcaMirrorStatus: 'connected',
+          diseases: [],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    await fetchDiseases({ patientId: '000001', to: '2026-05-08' });
+
+    expect(httpFetch).toHaveBeenCalledWith('/api/local/diagnoses/000001?to=2026-05-08&baseMonth=202605');
+  });
+
+  it('uses explicit sanitized baseMonth and ignores malformed client baseMonth', async () => {
+    vi.mocked(httpFetch)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ runId: 'RUN-DISEASE', diseases: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ runId: 'RUN-DISEASE', diseases: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+    await fetchDiseases({ patientId: '000001', to: '2026-05-08', baseMonth: '202604' });
+    await fetchDiseases({ patientId: '000001', to: '2026-05-08', baseMonth: '2026-04' });
+
+    expect(httpFetch).toHaveBeenNthCalledWith(1, '/api/local/diagnoses/000001?to=2026-05-08&baseMonth=202604');
+    expect(httpFetch).toHaveBeenNthCalledWith(2, '/api/local/diagnoses/000001?to=2026-05-08&baseMonth=202605');
+  });
+
   it('normalizes disease layer metadata from API response', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(

@@ -80,6 +80,26 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     expect(screen.getByRole('button', { name: '疑い病名として登録' })).toBeDisabled();
   });
 
+  it('passes visit-date baseMonth explicitly to the ORCA mirror read model', async () => {
+    vi.mocked(fetchDiseases).mockResolvedValueOnce({
+      ok: true,
+      patientId: 'P-TEST-001',
+      karteId: 1001,
+      orcaMirrorStatus: 'connected',
+      diseases: [],
+    });
+
+    renderPanel('2026-05-08');
+
+    await waitFor(() => {
+      expect(fetchDiseases).toHaveBeenCalledWith({
+        patientId: 'P-TEST-001',
+        to: '2026-05-08',
+        baseMonth: '202605',
+      });
+    });
+  });
+
   it('shows ORCA registered diagnoses from the connected mirror without auto-authoring local diseases', async () => {
     vi.mocked(fetchDiseases).mockResolvedValueOnce({
       ok: true,

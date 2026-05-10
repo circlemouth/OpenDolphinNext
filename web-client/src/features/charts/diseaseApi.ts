@@ -112,6 +112,7 @@ type FetchDiseasesParams = {
   patientId: string;
   from?: string;
   to?: string;
+  baseMonth?: string;
   activeOnly?: boolean;
   includeEnded?: boolean;
 };
@@ -564,6 +565,8 @@ export async function fetchDiseases(params: FetchDiseasesParams): Promise<Diseas
   const query = new URLSearchParams();
   if (params.from) query.set('from', params.from);
   if (params.to) query.set('to', params.to);
+  const baseMonth = normalizeBaseMonth(params.baseMonth) ?? baseMonthFromVisitDate(params.to);
+  if (baseMonth) query.set('baseMonth', baseMonth);
   if (params.activeOnly) query.set('activeOnly', 'true');
   if (params.includeEnded) query.set('includeEnded', 'true');
   const queryString = query.toString();
@@ -596,6 +599,17 @@ export async function fetchDiseases(params: FetchDiseasesParams): Promise<Diseas
       : [],
   };
 }
+
+const normalizeBaseMonth = (value?: string): string | undefined => {
+  const normalized = value?.trim();
+  return normalized && /^\d{6}$/.test(normalized) ? normalized : undefined;
+};
+
+const baseMonthFromVisitDate = (value?: string): string | undefined => {
+  const normalized = value?.trim();
+  if (!normalized || !/^\d{4}-\d{2}-\d{2}/.test(normalized)) return undefined;
+  return normalized.slice(0, 7).replace('-', '');
+};
 
 export async function fetchDiseasesWithPatientImportRecovery(
   params: FetchDiseasesParams,

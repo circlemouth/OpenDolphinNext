@@ -385,12 +385,13 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     [meta],
   );
 
-  const queryKey = ['charts-diagnosis', patientId, meta.visitDate];
+  const diagnosisBaseMonth = meta.visitDate?.slice(0, 7).replace('-', '');
+  const queryKey = ['charts-diagnosis', patientId, diagnosisBaseMonth, meta.visitDate];
   const diagnosisQuery = useQuery({
     queryKey,
     queryFn: () => {
       if (!patientId) throw new Error('patientId is required');
-      return fetchDiseases({ patientId, to: meta.visitDate });
+      return fetchDiseases({ patientId, to: meta.visitDate, baseMonth: diagnosisBaseMonth });
     },
     enabled: !!patientId,
   });
