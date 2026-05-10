@@ -87,11 +87,16 @@ class OrcaBillingCacheStoreTest {
                 assertFalse(summary.contains("DATA-SECRET-001"));
                 assertTrue(summary.contains("dataIdHash"));
                 assertTrue(summary.contains("serverStorageObjectKey"));
+                assertTrue(summary.contains("storageUploadStatus"));
+                assertTrue(summary.contains("reportBinaryAvailable"));
+                assertTrue(summary.contains("storageRetentionEnforced"));
                 assertFalse(summary.contains("00001"));
                 assertEquals("INVOICE_RECEIPT", singleText(connection,
                         "select report_type from opendolphin.orca_report_snapshot"));
                 assertEquals("ORCA", singleText(connection,
                         "select source_system from opendolphin.orca_report_snapshot"));
+                assertEquals("NOT_UPLOADED", singleText(connection,
+                        "select storage_upload_status from opendolphin.orca_report_snapshot"));
                 String storageKey = singleText(connection,
                         "select server_storage_object_key from opendolphin.orca_report_snapshot");
                 String storageDigest = singleText(connection,
@@ -122,6 +127,16 @@ class OrcaBillingCacheStoreTest {
                         INSERT INTO opendolphin.orca_report_snapshot (
                             facility_id, source_api, report_type, snapshot_status, orca_patient_id, request_hash
                         ) VALUES ('F001', 'invoice_receiptv2', 'INVOICE_RECEIPT', 'CURRENT', '00001', 'raw-request-body')
+                        """));
+                assertThrows(Exception.class, () -> execute(connection, """
+                        INSERT INTO opendolphin.orca_report_snapshot (
+                            facility_id, source_api, report_type, snapshot_status, orca_patient_id,
+                            request_hash, storage_upload_status, storage_uploaded_at, storage_retention_until
+                        ) VALUES (
+                            'F001', 'invoice_receiptv2', 'INVOICE_RECEIPT', 'CURRENT', '00001',
+                            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+                            'UPLOADED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '7 days'
+                        )
                         """));
             }
         }

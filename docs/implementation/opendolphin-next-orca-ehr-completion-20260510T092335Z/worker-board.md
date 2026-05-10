@@ -30,7 +30,7 @@ Checklist count when parallel board was created:
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
-| D | `codex/orca-ehr-worker-d-orca-operation` | D-04 follow-up report binary upload/retention gate | Done | 20260510T231812Z | this commit | - |
+| D | `codex/orca-ehr-worker-d-orca-operation` | D-04 follow-up report binary object uploader | Done | 20260510T232258Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-02 common patient header staged rollout | Done | 20260510T204142Z | this commit | - |
 | F | `codex/orca-ehr-worker-f-audit-security-gates` | F-02 credential/PHI leakage guards | Done | 20260510T201318Z | this commit | - |
 | G | `codex/orca-ehr-integrator-g` | G-02 merge first worker batch in prescribed order | Done | 20260510T195822Z | this docs commit | - |
@@ -106,6 +106,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260510T232258Z | D | D-04 follow-up | 10.3/10.4 `storage_upload_status` / retention metadata gate for ORCA report snapshots | this commit | `OrcaBillingCacheStoreTest`, `FreshSchemaBaselineTest`, `OrcaReportDocumentResourceTest`, doc/config/runtime lookup guards passed | Done | D-04 follow-up report binary object uploader |
 | 20260510T231812Z | D | D-04 follow-up | 10.3/10.4 server-generated `server_storage_object_key` / `server_storage_digest` for ORCA report snapshots | this commit | `OrcaBillingCacheStoreTest`, `FreshSchemaBaselineTest`, `OrcaReportDocumentResourceTest`, doc/config/runtime lookup guards passed | Done | D-04 follow-up report binary upload/retention gate |
 | 20260510T230649Z | D | D-04 follow-up | 16 sanitized `orcaBillingCache` readiness gate for `orca_billing_cache` / `orca_report_snapshot` availability | this commit | `OperationsHealthResourceTest`, doc/config/runtime lookup guards passed | Done | D-04 follow-up report storage authority |
 | 20260510T223031Z | D | D-04 | 10.3/10.4 `orca_billing_cache`; no local billing authority API; ORCA report snapshot/audit history; receipt/report data as ORCA-derived cache/snapshot | this commit | `OrcaBillingCacheStoreTest`, `FreshSchemaBaselineTest`, `OrcaChartSupportResourceTest`, `OrcaReportDocumentResourceTest`, doc/config/runtime lookup guards passed | Done | D-04 follow-up report storage authority + health/billing gates |

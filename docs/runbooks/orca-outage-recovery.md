@@ -73,6 +73,7 @@ UI は DB degraded / read-only と ORCA outage を混同しない。DB write pat
 8. 会計・収納・帳票は復旧後に ORCA adapter から再取得し、`orca_billing_cache` または `orca_report_snapshot` を更新する。local DB 上の金額、収納済み状態、帳票 snapshot、レセプト関連 summary を ORCA 正本へ昇格しない。
 9. `orca_billing_cache` / `orca_report_snapshot` の evidence は request/response hash、件数、invoice/data id hash、sanitized summary、監査 action だけに限定する。raw ORCA body、raw invoice number、raw Data_Id、帳票本文、credential、患者詳細、HAR/trace/video/screenshot は incident evidence に含めない。
 10. 帳票 object storage の key/digest は server-generated `server_storage_object_key` / `server_storage_digest` だけを使う。手元メモ、client payload、復旧作業者入力、raw Data_Id から object key を組み立てない。
+11. `storage_upload_status` が `UPLOADED` / `RETENTION_BLOCKED` 以外、または `storage_retention_until` が欠落・期限切れの帳票 binary は復旧 evidence として再利用しない。必要なら ORCA から再取得し、新しい snapshot として保存する。
 
 ## Recovery After DB Restore
 
@@ -85,7 +86,8 @@ UI は DB degraded / read-only と ORCA outage を混同しない。DB write pat
 7. `Medical_Mode` または `Medical_Mode2` が空でなく `0` 以外の場合は、restore 前の local 状態に関係なく `resendBlocked=true` とする。
 8. 会計 cache と帳票 snapshot は `source_system=ORCA` の取得証跡として扱い、restore 後の請求・収納・レセプト正本にはしない。復旧確認では ORCA 再取得結果と hash/sanitized summary を比較し、local-only 金額更新や帳票本文の再利用で済ませない。
 9. `server_storage_object_key` / `server_storage_digest` が欠落または再取得結果と一致しない帳票 snapshot は `NEEDS_REVIEW` とし、restore 後の帳票再利用には使わない。
-10. 復旧判断、hash chain 検証、content hash 検証、ORCA再取得、差分照合、再送可否判断を監査ログに保存する。監査ログには raw ORCA body、患者詳細、保険詳細、接続先情報を残さない。
+10. `storage_upload_status` が `UPLOADED` / `RETENTION_BLOCKED` でない、または `storage_uploaded_at` / `storage_retention_until` が揃わない帳票 snapshot は binary object 未利用として扱い、restore 後の帳票再利用には使わない。
+11. 復旧判断、hash chain 検証、content hash 検証、ORCA再取得、差分照合、再送可否判断を監査ログに保存する。監査ログには raw ORCA body、患者詳細、保険詳細、接続先情報を残さない。
 
 ## Evidence Policy
 

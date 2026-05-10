@@ -63,13 +63,14 @@ public class OrcaBillingCacheStore {
                 form_name,
                 server_storage_object_key,
                 server_storage_digest,
+                storage_upload_status,
                 http_status,
                 api_result,
                 api_result_message_category,
                 summary_json,
                 fetched_at,
                 snapshot_reason
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, 'ORCA_REPORT_FETCH')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'NOT_UPLOADED', ?, ?, ?, cast(? as jsonb), ?, 'ORCA_REPORT_FETCH')
             """;
 
     @Resource(lookup = "java:jboss/datasources/PostgresDS")
@@ -230,6 +231,9 @@ public class OrcaBillingCacheStore {
         summary.put("formName", response != null ? normalize(response.getFormName()) : null);
         summary.put("serverStorageObjectKey", serverStorageObjectKey);
         summary.put("serverStorageDigest", serverStorageDigest);
+        summary.put("storageUploadStatus", "NOT_UPLOADED");
+        summary.put("reportBinaryAvailable", false);
+        summary.put("storageRetentionEnforced", false);
         return summary;
     }
 

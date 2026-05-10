@@ -91,7 +91,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0319", appliedVersion(connection));
+                assertEquals("0320", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -213,6 +213,9 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "source_system"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "summary_json"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "server_storage_object_key"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "storage_upload_status"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "storage_uploaded_at"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "storage_retention_until"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_bucket"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_key"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_version_id"));
@@ -256,6 +259,7 @@ class FreshSchemaBaselineTest {
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_reconciliation_status"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_billing_cache_patient"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_report_snapshot_patient"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_orca_report_snapshot_storage_upload"));
                 assertTrue(indexExists(connection, "opendolphin", "uq_d_orca_user_link_facility_orca_user"));
 
                 assertEquals(1L, countRows(connection, "select count(*) from opendolphin.audit_chain_head"));
