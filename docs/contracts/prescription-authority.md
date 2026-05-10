@@ -28,6 +28,9 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 ## Mutation Boundary
 
 - `DRAFT` から `FINAL` などへの遷移は server-side authority API だけが行う。
+- `POST /api/prescriptions` は server-side facility と patient existence を検証し、診療録リビジョンに紐付く `DRAFT` 処方を `prescription_order` / `prescription_order_revision` / `prescription_order_item` / `prescription_order_event` に保存する。
+- `POST /api/prescriptions/{prescriptionId}/finalize` は保存済み current revision の server-side summary から `content_hash` を計算し、`FINALIZE` event を追加する。client 提供 digest は権威値にしない。
+- `POST /api/prescriptions/{prescriptionId}/change|stop|cancel|reissue` は理由必須とし、`CHANGE` / `STOP` / `CANCEL` / `REISSUE` event を append-only で追加する。`change` / `reissue` は新しい構造化 item を持つ revision を要求する。
 - `FINAL` / `CHANGED` / `STOPPED` / `CANCELLED` / `REISSUED` の処方 order / revision / item は直接 UPDATE / DELETE できない。
 - 確定後の変更、中止、取消、再発行は新 revision と `prescription_order_event` により表現する。
 - `prescription_order_event` は append-only で、UPDATE / DELETE は DB trigger が拒否する。
@@ -39,13 +42,15 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - DO import や local draft 保存経路が、会計待ち・閉鎖済み encounter の処方 payload を上書きする。
 - client が event を UPDATE / DELETE して変更・取消履歴を消す。
 - client が構造化 item ではなく payload JSON だけで ORCA candidate を作らせ、未解決薬剤や用法を隠す。
+- client が change/reissue payload の `patientId` / `encounterId` を別患者・別受付へ改ざんし、確定済み処方を横展開する。
+- client が finalize 時に偽 digest を送信し、保存済み処方内容とは異なる hash を正本化する。
 
 ## Verification
 
 Focused server verification:
 
 ```bash
-mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=PrescriptionAuthoritySchemaTest,FreshSchemaBaselineTest test
+mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=PrescriptionAuthorityResourceTest,PrescriptionAuthoritySchemaTest,FreshSchemaBaselineTest test
 ```
 
 Release guard context:

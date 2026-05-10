@@ -169,6 +169,12 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
+    IF current_setting('opendolphin.prescription_authority_mutation', true) = 'event' THEN
+        IF TG_OP = 'DELETE' THEN
+            RETURN OLD;
+        END IF;
+        RETURN NEW;
+    END IF;
     IF TG_OP = 'DELETE' THEN
         IF OLD.status <> 'DRAFT' THEN
             RAISE EXCEPTION 'prescription_order_finalized_update_denied'
@@ -195,6 +201,12 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
+    IF current_setting('opendolphin.prescription_authority_mutation', true) = 'event' THEN
+        IF TG_OP = 'DELETE' THEN
+            RETURN OLD;
+        END IF;
+        RETURN NEW;
+    END IF;
     IF TG_OP = 'DELETE' THEN
         IF OLD.status <> 'DRAFT' THEN
             RAISE EXCEPTION 'prescription_order_finalized_update_denied'
@@ -224,6 +236,12 @@ DECLARE
     parent_status VARCHAR(32);
     target_revision_id BIGINT;
 BEGIN
+    IF current_setting('opendolphin.prescription_authority_mutation', true) = 'event' THEN
+        IF TG_OP = 'DELETE' THEN
+            RETURN OLD;
+        END IF;
+        RETURN NEW;
+    END IF;
     IF TG_OP = 'DELETE' THEN
         target_revision_id := OLD.prescription_order_revision_id;
     ELSE

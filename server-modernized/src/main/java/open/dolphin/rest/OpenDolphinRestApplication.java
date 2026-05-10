@@ -52,6 +52,7 @@ public final class OpenDolphinRestApplication extends Application {
                 open.dolphin.rest.orca.LocalEncounterBillingWorkflowResource.class,
                 open.dolphin.rest.orca.LocalOrderBundleResource.class,
                 open.dolphin.rest.orca.LocalPrescriptionOrderResource.class,
+                open.dolphin.rest.orca.PrescriptionAuthorityResource.class,
                 // Official routes live under /api/orca/official/* and master-backed reads live under /api/orca/master/*.
                 open.dolphin.rest.orca.OrcaLiveDiseaseMasterResource.class,
                 open.dolphin.rest.orca.OrcaReportDocumentResource.class,
