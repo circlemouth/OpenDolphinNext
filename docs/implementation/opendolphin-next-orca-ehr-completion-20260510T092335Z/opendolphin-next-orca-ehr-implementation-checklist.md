@@ -270,9 +270,10 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] `KarteDocumentWriteService.updateTitle` は `TMP` 以外の診療録タイトル直接更新を `karte.document.finalized_update_denied` / HTTP 409 で拒否し、確定済みタイトル変更を revision/event 経由に限定する。
   - [x] `/api/local/prescription-orders` と `/api/local/prescription-orders/do-import` は server-derived `encounter_projection` が会計待ち・取消・閉鎖相当の場合、処方 payload 永続化前に `prescription_order_finalized_update_denied` / HTTP 409 で拒否する。client 提供の encounter/patient/facility は権威にせず、projection の facility/patient 不一致は `encounter_not_found` として扱う。
   - [x] 2026-05-10T19:29Z: `check-finalized-write-guards.sh` を release validation に追加し、上記の拒否実装・保存前順序・regression test を CI guard として固定した。
-- [ ] Webクライアントの生ORCAプロキシ設定、ORCA認証情報を扱うフロント設定を削除する。
+- [x] Webクライアントの生ORCAプロキシ設定、ORCA認証情報を扱うフロント設定を削除する。
   - [x] `web-client/vite.config.ts` から `/api21`, `/api01rv2`, `/orca22` 等の生 ORCA/WebORCA proxy、ORCA Basic 認証 header 注入、ORCA 証明書 agent 読込、ORCA header 操作を削除し、Vite proxy は server-modernized `/api` entrypoint 中継に限定する。
   - [x] `web-client` の `npm run dev` は ORCA env file を自動読込せず、`verify:no-direct-orca-proxy-config` で Vite config / env sample への生 ORCA proxy・ORCA credential config 再混入を fail する。
+  - [x] 2026-05-10T19:40Z: `verify:no-direct-orca-proxy-config` が `verify:web-guard` と release validation に含まれていることを確認し、生 ORCA/WebORCA path、ORCA credential/certificate variable、ORCA TLS bypass、ORCA header filtering config の再混入を継続検証する。
 - [ ] ORCA送信成功を診療録確定と同義に扱う UI 文言、ORCA送信失敗時に登録済み/反映済みと表示する文言、重要警告を初期非表示にする UI を削除または変更する。
   - [x] 2026-05-10T18:00Z: Patients の新患登録・既存患者更新・ORCA既存患者取込で、write accepted と ORCA正本再取得済みを分けて表示し、未確認時に「反映済み/登録済み」と誤認させる文言を同期確認表現へ変更した。
   - [x] 2026-05-10T18:18Z: Charts の既存患者更新 dialog と共通患者取込 recovery で `canonical 再取得` / `完了扱い` の内部語を利用者に表示せず、ORCA正本の再取得による同期確認表現へ正規化した。

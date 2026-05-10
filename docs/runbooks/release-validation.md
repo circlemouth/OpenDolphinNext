@@ -94,6 +94,7 @@ cd web-client && npm run ci
 - guard success message は category counts を表示し、`production fail-close sentinel`、`MSW mock/test-only legacy route surface`、`e2e/QA fixture surface`、`blocked-route detector`、`docs/reference`、`server route inventory negative assertion`、`web.xml exposure negative assertion` の分類で current tree の残存 route string を説明できる。
 - guard allowlist は `path + route + category + reason` で管理され、allowlist にない `/api/orca/queue` または `/api/orca/pusheventgetv2` は failure。`/api/orca/(official|master 以外)` の新規 route、および production source に混入した mock/test-only legacy route surface も failure。
 - public route は `/api/orca/official/*` と `/api/orca/master/*` だけを意味する。production fail-close sentinel、MSW mock/test-only legacy route surface、e2e/QA fixture surface、blocked-route detector、docs/reference、server route inventory negative assertion、web.xml exposure negative assertion は public route ではない。
+- `verify:no-direct-orca-proxy-config` が Vite config / env sample / tracked env files を検査し、生 ORCA/WebORCA path、ORCA credential/certificate variable、ORCA TLS bypass、ORCA header filtering config の web-client 再混入を failure にする。
 - typecheck / test / build まで成功する。
 
 ### Browser / fullflow artifact policy
