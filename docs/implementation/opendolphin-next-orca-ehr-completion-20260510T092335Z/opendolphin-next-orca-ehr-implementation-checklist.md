@@ -203,6 +203,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 全フォームにラベル、必須/任意、サポートテキスト、具体的エラーを持たせる。
 - [ ] 入力値変更だけで ORCA送信、突然のダイアログ、画面遷移をしない。
 - [ ] `disabled` に頼らず、押下後に不足条件を表示する。やむを得ず `disabled` を使う場合は理由と有効化条件を近くに表示する。
+  - [x] 2026-05-10T22:30Z: Charts の低レベル `ORCA 送信` は precheck 不足だけでは native disabled にせず、近傍 guard note / `aria-disabled=true` / 押下時 warning banner で不足条件を表示し、確認 modal と transport へ進まないことを focused test で固定した。
 - [ ] ボタン優先度、配置、44px以上の押下領域を DADS に沿って統一する。
 
 ## 12. 監査ログ・真正性

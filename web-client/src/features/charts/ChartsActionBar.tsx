@@ -2783,8 +2783,12 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               className={`charts-actions__button charts-actions__button--send${
                 primaryAction === 'send' || primaryAction === 'sending' ? ' charts-actions__button--primary-route' : ''
               }`}
-              disabled={sendDisabled}
+              disabled={isRunning}
               onClick={() => {
+                if (sendPrecheckReasons.length > 0) {
+                  void handleAction('send');
+                  return;
+                }
                 setConfirmAction('send');
                 approvalSessionRef.current = { action: 'send', closed: false };
                 logApproval('send', 'open');

@@ -84,6 +84,7 @@
 - `ChartsPatientSummaryBar` は患者文脈を常時見せる encounter context band として扱います。画面種別の装飾ラベル（例: `CHARTS`）は表示しません。
 - 共通 `PatientIdentityBar` の医療安全患者ヘッダーは、患者識別情報に加えて、内部参照ID、受付日、診療科、担当医、保険組合せ、ORCA取得 source/fetched/cache status を同じ visible band に表示できる共通 component です。Charts の患者ヘッダーはこの共通 contract を使い、ORCA取得が未確認・暫定参照の場合は `stale` として見せ、警告を details 内へ隠しません。
 - 共通 `CriticalOperationConfirmDialog` は重大操作の確認 surface として、実行操作名、患者名、患者ID、診療日などの患者識別情報、対象サマリ、cancel/confirm CTA を同一 modal 内に再掲します。Charts の低レベル ORCA 送信確認では title / operation を `診療行為ORCA送信`、confirm CTA を `ORCAへ送信する` とし、診療録確定、診察終了、会計済み確認の label と混同させません。
+- Charts の低レベル `ORCA 送信` は送信前 precheck 理由だけでは native disabled にせず、`aria-disabled=true` と近傍 guard note で理由を示したうえで、押下時に同じ fail-closed precheck を実行して warning banner / audit に不足条件を出します。実行中など二重実行防止が必要な場合だけ native disabled を使います。
 - `SoapNotePanel` の利用者向け見出しは `カルテ本文` とし、内部向けの `Primary Workspace` や折りたたみの記載メタ情報は通常表示に置きません。
 - page CTA の owner は `ChartsActionBar` です。通常 UI の primary は `診察終了して会計へ送信` で、`ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。低レベル `ORCA送信` direct bridge は debug / QA / focused test 用に限定し、通常画面の初回会計送信導線には出しません。
 - `PastHubPanel` は左列の historical reference / Do 補助 surface であり、comparison 専用主面ではありません。
@@ -118,6 +119,7 @@
 - guard minimum:
   - `PatientIdentityBar` の医療安全患者ヘッダーは患者ID、受付/診療日、診療科、担当医、保険組合せ、ORCA取得状態を同じ visible region に表示し、重大操作前の患者取り違え防止に使える状態を維持する
   - `CriticalOperationConfirmDialog` は backdrop click で閉じず、患者識別情報と実行操作名を alertdialog 内に再掲し、操作ごとに distinct な confirm label を使う
+  - Charts `ORCA 送信` は missing master / encounter context 不足などの precheck failure でも押下可能に見せ、押下時に理由を表示して確認 modal と transport へ進まないこと
   - right rail は chooser-only を維持し、`document` / `ORCA` tool や embedded editor を再混入させない
   - canonical encounter context 不足時は `診察終了して会計へ送信` を fail-close
   - canonical encounter context 不足時は report print / incomeinfv2 取得も fail-close

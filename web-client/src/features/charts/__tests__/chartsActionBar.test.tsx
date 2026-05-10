@@ -208,6 +208,52 @@ describe('ChartsActionBar', () => {
     expect(screen.getByText('2件')).toBeInTheDocument();
   });
 
+  it('ORCA送信の不足条件は disabled だけにせず押下時に理由を表示する', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          showLegacyOrcaSend
+          missingMaster
+          patientId="P-300"
+          visitDate="2026-01-09"
+          orcaEncounterContext={{
+            patientId: 'P-300',
+            visitDate: '2026-01-09',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          }}
+          selectedEntry={{
+            patientId: 'P-300',
+            visitDate: '2026-01-09',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          } as any}
+        />
+      </MemoryRouter>,
+    );
+
+    const sendButton = screen.getByRole('button', { name: 'ORCA 送信' });
+    expect(sendButton).not.toBeDisabled();
+    expect(sendButton).toHaveAttribute('aria-disabled', 'true');
+    expect(sendButton).toHaveAttribute('aria-describedby', 'charts-actions-send-guard');
+    expect(document.getElementById('charts-actions-send-guard')).toHaveTextContent('ORCA 参照不足: 送信不可');
+
+    await user.click(sendButton);
+
+    expect(screen.getByText(/ORCA送信を停止:/)).toBeInTheDocument();
+    expect(screen.getAllByText(/マスタ欠損を検知したため、送信は実施できません。/).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('alertdialog', { name: '診療行為ORCA送信の確認' })).not.toBeInTheDocument();
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
   it('診察終了は ORCA 追加送信を行わず local after-finish フローを完了する', async () => {
     const user = userEvent.setup();
     const onAfterFinish = vi.fn();
@@ -258,7 +304,8 @@ describe('ChartsActionBar', () => {
     );
   });
 
-  it('encounter context が不足している場合は ORCA 送信を disable し不足理由を表示する', async () => {
+  it('encounter context が不足している場合は ORCA 送信を押下時に停止し不足理由を表示する', async () => {
+    const user = userEvent.setup();
     render(
       <MemoryRouter>
         <ChartsActionBar
@@ -272,14 +319,19 @@ describe('ChartsActionBar', () => {
     );
 
     const sendButton = screen.getByRole('button', { name: 'ORCA 送信' });
-    expect(sendButton).toBeDisabled();
+    expect(sendButton).not.toBeDisabled();
+    expect(sendButton).toHaveAttribute('aria-disabled', 'true');
     expect(sendButton).toHaveAttribute('data-disabled-reason', expect.stringContaining('missing_encounter_context'));
     expect(screen.getAllByText(/Physician_Code/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Insurance_Combination_Number/).length).toBeGreaterThan(0);
+    await user.click(sendButton);
+    expect(screen.getByText(/ORCA送信を停止:/)).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog', { name: '診療行為ORCA送信の確認' })).not.toBeInTheDocument();
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
-  it('official visit row 実値が不足している場合は Voucher/Sequential を補完せず fail-close する', async () => {
+  it('official visit row 実値が不足している場合は Voucher/Sequential を補完せず push-time で fail-close する', async () => {
+    const user = userEvent.setup();
     render(
       <MemoryRouter>
         <ChartsActionBar
@@ -308,11 +360,15 @@ describe('ChartsActionBar', () => {
     );
 
     const sendButton = screen.getByRole('button', { name: 'ORCA 送信' });
-    expect(sendButton).toBeDisabled();
+    expect(sendButton).not.toBeDisabled();
+    expect(sendButton).toHaveAttribute('aria-disabled', 'true');
     expect(sendButton).toHaveAttribute('data-disabled-reason', expect.stringContaining('missing_encounter_context'));
     expect(screen.getAllByText(/Insurance_Combination_Number/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Voucher_Number/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Sequential_Number/).length).toBeGreaterThan(0);
+    await user.click(sendButton);
+    expect(screen.getByText(/ORCA送信を停止:/)).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog', { name: '診療行為ORCA送信の確認' })).not.toBeInTheDocument();
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
