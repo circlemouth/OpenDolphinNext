@@ -387,7 +387,8 @@ vi.mock('../../shared/RunIdBadge', () => ({ RunIdBadge: () => null }));
 vi.mock('../../shared/StatusPill', () => ({ StatusPill: () => null }));
 vi.mock('../../shared/AuditSummaryInline', () => ({ AuditSummaryInline: () => null }));
 vi.mock('../../reception/components/ToneBanner', () => ({
-  ToneBanner: ({ message }: { message: string }) => React.createElement('div', { role: 'status' }, message),
+  ToneBanner: ({ message, tone }: { message: string; tone?: string }) =>
+    React.createElement('div', { role: tone === 'info' ? 'status' : 'alert' }, message),
 }));
 vi.mock('../styles', () => ({ chartsStyles: '' }));
 vi.mock('../../reception/styles', () => ({ receptionStyles: '' }));
@@ -677,6 +678,10 @@ describe('ChartsPage patient tab dirty indicator', () => {
     expect(
       await screen.findByText('ORCA送信結果が不明または要確認です。受付または ORCA 連携一覧で状態を確認してください。'),
     ).toBeInTheDocument();
+    const reviewAlert = screen.getByRole('alert');
+    expect(reviewAlert).toHaveTextContent('ORCA送信結果が不明または要確認です。受付または ORCA 連携一覧で状態を確認してください。');
+    expect(reviewAlert.closest('details')).toBeNull();
+    expect(screen.queryByText(/ORCA送信成功|会計済み|診療録確定を完了/)).not.toBeInTheDocument();
     expect(closeAndSendToBilling).toHaveBeenCalledWith('F001:E100', {
       idempotencyKey: expect.stringMatching(/^close-send:F001:E100:/),
       runPrecheck: false,

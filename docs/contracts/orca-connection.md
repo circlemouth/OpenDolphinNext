@@ -125,6 +125,12 @@
 - server は diseasev3 送信前に server-generated request hash から冪等キーを作成し、同一 facility の同一 diseasev3 request を二重送信として ORCA transport 前に拒否する。送信後は `orca_disease_operation` に request / response hash、固定 `operationStatus`、`needsUserReview`、warning/unmatch summary を保存し、raw XML や資格情報は保存しない。ORCA transport が例外で終了した場合も、raw response body なしの `NETWORK_FAILED` / `needsUserReview=true` summary を operation に保存し、成功扱いにしない。ORCA が mutation を受け付けた場合も、直後の `diseasegetv2` 再取得が `connected` になるまで `postMutationMirrorStatus=unavailable` / `NEEDS_REVIEW` とし、local optimistic result を正本表示にしない。
 - mutation 成功後の Charts 表示は ORCA `diseasegetv2` 再取得結果だけを正本とし、楽観更新や local fallback で成功扱いにしない。
 
+## ORCA API Result Classification
+- ORCA adapter は `open.dolphin.orca.model.OrcaApiResult` を共通の sanitized result summary として使う。保存・監査・API 応答に載せるのは result code/message category、固定 operation status、warnings/errors/unmatched/orca-only/renumbered summary、`needsUserReview`、perform date、department、physician、insurance combination、request/response hash などの allowlist field に限定し、raw ORCA body、資格情報、接続先 URL、患者詳細、保険詳細は含めない。
+- mutation 系分類は `ORCA_ACCEPTED`, `ORCA_REJECTED`, `ORCA_WARNING`, `ORCA_UNMATCHED`, `ORCA_CONFLICT`, `NETWORK_FAILED`, `CERTIFICATE_FAILED`, `AUTH_FAILED`, `UNKNOWN`, `NEEDS_REVIEW` の固定 status を使う。warning/unmatched は `Api_Result` が正常でも `needsUserReview=true` とし、成功表示に潰さない。
+- `Api_Result` が zero-like でも completion evidence が欠ける場合は `UNKNOWN` とし、ORCA 再照合または post-mutation re-fetch が完了するまで成功扱いにしない。HTTP 401/403 は `AUTH_FAILED`、TLS/certificate 系 failure は `CERTIFICATE_FAILED`、その他 transport failure は `NETWORK_FAILED` として区別する。
+- diseasev3 と medicalmodv2 の response parser はこの分類を使い、病名の ORCA only / unmatch / warning、診療行為の warning / completion evidence 欠落を共通 status に正規化する。
+
 ## Close And Send Billing Workflow
 - 通常外来の初回 ORCA 会計送信は `POST /api/local/encounters/{encounterKey}/close-and-send-to-billing` から行う。client payload は `idempotencyKey` と任意 precheck flag に限定し、`patientId` / `facilityId` / voucher / sequential / insurance / `Medical_Uid` / `classCode` / raw XML / URL は受け付けない。
 - server は認証 principal の facility、`encounter_projection`、保存済み order/disease から snapshot を作り、`d_billing_orca_snapshot` と `d_billing_orca_transmission` に状態を記録する。状態 enum は `DRAFT`, `READY_TO_SEND`, `ORCA_SENDING`, `ORCA_DISEASE_SYNCED`, `ORCA_MEDICAL_REGISTERED`, `ORCA_CONFIRMED`, `ORCA_FAILED`, `ORCA_UNKNOWN`, `DIRTY_AFTER_SENT`, `ORCA_LOCKED_OR_OPENED`, `CORRECTION_REQUIRED` に固定する。

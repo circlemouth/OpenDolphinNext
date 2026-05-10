@@ -30,8 +30,13 @@ Checklist count when parallel board was created:
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-01 chart document/revision/event migration | Ready | - | - | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-01 prescription revision/item/event schema | Ready | - | - | - |
-| D | `codex/orca-ehr-worker-d-orca-operation` | D-01 `OrcaApiResult` common model | Ready | - | - | - |
+<<<<<<< ours
+| D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-01 close Section 17 UI wording/warning parent | Ready | - | - | - |
+=======
+| D | `codex/orca-ehr-worker-d-orca-operation` | D-01 `OrcaApiResult` common model | Ready | - | - | - |
+| E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-02 common patient header staged rollout | Done | 20260510T204142Z | this commit | - |
+>>>>>>> theirs
 | F | `codex/orca-ehr-worker-f-audit-security-gates` | F-02 credential/PHI leakage guards | Done | 20260510T201318Z | this commit | - |
 | G | `codex/orca-ehr-integrator-g` | G-02 merge first worker batch in prescribed order | Done | 20260510T195822Z | this docs commit | - |
 
@@ -106,7 +111,12 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+<<<<<<< ours
+| 20260510T204050Z | D | D-01 | Section 5 `OrcaApiResult` common model | this commit | `mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=OrcaApiResultTest,OrcaHttpClientSupportTest,OrcaHttpClientLogTest,OrcaChartSupportResourceTest,OrcaBillingCorrectionScenarioSupportTest test` passed | Done | D-02 `orca_operation` / `orca_transmission` migration |
 | 20260510T203921Z | A | A-01 | 4 `orca_patient_cache`; 6 official patientgetv2 wrapper; 6 `ORCA_PATIENT_NOT_FOUND` business status | this commit | Focused Maven patient cache/resource/schema tests passed; doc/config/runtime lookup guards passed | Done | A-02 patientmodv2 prepare/send + canonical re-fetch |
+=======
+| 20260510T204142Z | E | E-01 | 17 UI wording/warning parent; 20 Phase 4 guard foundation | this commit | `verify:medical-safety-ui-copy`, `verify:web-guard`, focused Charts Vitest, `typecheck` passed | Done | E-02 common patient header staged rollout |
+>>>>>>> theirs
 | 20260510T201318Z | F | F-01 | 4.7 audit append-only/hash-chain; 12 audit append-only; 19 hash-chain gate; Phase 5 audit/hash-chain | this commit | `check-audit-append-only.sh`, focused Maven audit/guard tests passed | Done | F-02 credential/PHI leakage guards |
 | 20260510T195822Z | G | G-01 | Parallel workstream docs | this docs commit | doc links/config/runtime lookup guards passed | Done | Start Worker F F-01 or Worker E E-01 |
 

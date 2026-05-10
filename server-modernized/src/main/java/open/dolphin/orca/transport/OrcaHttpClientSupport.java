@@ -12,13 +12,14 @@ import java.util.Optional;
 import java.util.concurrent.locks.LockSupport;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import open.dolphin.orca.model.OrcaApiResult;
 import open.dolphin.rest.OrcaApiProxySupport;
 
 final class OrcaHttpClientSupport {
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
-    OrcaHttpClient.OrcaApiResult extractApiResult(String body, String contentType) {
+    OrcaApiResult extractApiResult(String body, String contentType) {
         if (body == null || body.isBlank()) {
             return null;
         }
@@ -29,14 +30,14 @@ final class OrcaHttpClientSupport {
         return extractApiResultFromXml(body);
     }
 
-    private OrcaHttpClient.OrcaApiResult extractApiResultFromXml(String body) {
+    private OrcaApiResult extractApiResultFromXml(String body) {
         String apiResult = extractTagValue(body, "Api_Result");
         String apiMessage = extractTagValue(body, "Api_Result_Message");
         List<String> warnings = extractWarningsFromXml(body);
-        return OrcaHttpClient.OrcaApiResult.of(apiResult, apiMessage, warnings);
+        return OrcaApiResult.of(apiResult, apiMessage, warnings);
     }
 
-    private OrcaHttpClient.OrcaApiResult extractApiResultFromJson(String body) {
+    private OrcaApiResult extractApiResultFromJson(String body) {
         try {
             JsonNode root = JSON.readTree(body);
             Optional<JsonNode> resultNode = findJsonValue(root, "Api_Result");
@@ -44,7 +45,7 @@ final class OrcaHttpClientSupport {
             String apiResult = resultNode.map(JsonNode::asText).orElse(null);
             String apiMessage = messageNode.map(JsonNode::asText).orElse(null);
             List<String> warnings = extractWarningsFromJson(root);
-            return OrcaHttpClient.OrcaApiResult.of(apiResult, apiMessage, warnings);
+            return OrcaApiResult.of(apiResult, apiMessage, warnings);
         } catch (IOException ex) {
             return null;
         }
@@ -116,7 +117,7 @@ final class OrcaHttpClientSupport {
         return null;
     }
 
-    boolean isTransientOrcaError(OrcaHttpClient.OrcaApiResult result) {
+    boolean isTransientOrcaError(OrcaApiResult result) {
         if (result == null || result.apiResult() == null) {
             return false;
         }
