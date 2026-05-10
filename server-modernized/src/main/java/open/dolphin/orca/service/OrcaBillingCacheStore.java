@@ -61,13 +61,15 @@ public class OrcaBillingCacheStore {
                 data_id_hash,
                 form_id,
                 form_name,
+                server_storage_object_key,
+                server_storage_digest,
                 http_status,
                 api_result,
                 api_result_message_category,
                 summary_json,
                 fetched_at,
                 snapshot_reason
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, 'ORCA_REPORT_FETCH')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, 'ORCA_REPORT_FETCH')
             """;
 
     @Resource(lookup = "java:jboss/datasources/PostgresDS")
@@ -133,7 +135,11 @@ public class OrcaBillingCacheStore {
         String dataIdHash = response != null && normalize(response.getDataId()) != null
                 ? HashUtil.sha256(response.getDataId().trim())
                 : null;
-        String summaryJson = toJson(reportSummary(response, invoiceHash, dataIdHash));
+        String serverStorageDigest = responseHash;
+        String serverStorageObjectKey = serverStorageDigest != null
+                ? reportStorageObjectKey(command.facilityId(), normalizedType, requestHash, serverStorageDigest)
+                : null;
+        String summaryJson = toJson(reportSummary(response, invoiceHash, dataIdHash, serverStorageObjectKey, serverStorageDigest));
 
         try (Connection connection = requireDataSource().getConnection();
              PreparedStatement statement = connection.prepareStatement(SQL_INSERT_REPORT_SNAPSHOT)) {
@@ -148,11 +154,13 @@ public class OrcaBillingCacheStore {
             statement.setString(9, dataIdHash);
             statement.setString(10, response != null ? normalize(response.getFormId()) : null);
             statement.setString(11, response != null ? normalize(response.getFormName()) : null);
-            statement.setObject(12, response != null ? response.getStatus() : null);
-            statement.setString(13, response != null ? normalize(response.getApiResult()) : null);
-            statement.setString(14, response != null ? normalize(response.getApiResultMessage()) : null);
-            statement.setString(15, summaryJson);
-            statement.setTimestamp(16, Timestamp.from(fetchedAt));
+            statement.setString(12, serverStorageObjectKey);
+            statement.setString(13, serverStorageDigest);
+            statement.setObject(14, response != null ? response.getStatus() : null);
+            statement.setString(15, response != null ? normalize(response.getApiResult()) : null);
+            statement.setString(16, response != null ? normalize(response.getApiResultMessage()) : null);
+            statement.setString(17, summaryJson);
+            statement.setTimestamp(18, Timestamp.from(fetchedAt));
             statement.executeUpdate();
         } catch (SQLException ex) {
             throw new IllegalStateException("Failed to persist sanitized ORCA report snapshot", ex);
@@ -205,7 +213,12 @@ public class OrcaBillingCacheStore {
         return entries;
     }
 
-    private static Map<String, Object> reportSummary(OrcaReportResponse response, String invoiceHash, String dataIdHash) {
+    private static Map<String, Object> reportSummary(
+            OrcaReportResponse response,
+            String invoiceHash,
+            String dataIdHash,
+            String serverStorageObjectKey,
+            String serverStorageDigest) {
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("source", "ORCA");
         summary.put("ok", response != null && response.isOk());
@@ -215,6 +228,8 @@ public class OrcaBillingCacheStore {
         summary.put("dataIdHash", dataIdHash);
         summary.put("formId", response != null ? normalize(response.getFormId()) : null);
         summary.put("formName", response != null ? normalize(response.getFormName()) : null);
+        summary.put("serverStorageObjectKey", serverStorageObjectKey);
+        summary.put("serverStorageDigest", serverStorageDigest);
         return summary;
     }
 
@@ -259,6 +274,20 @@ public class OrcaBillingCacheStore {
             case "STATEMENT" -> "statementv2";
             default -> throw new IllegalArgumentException("unsupported ORCA report type");
         };
+    }
+
+    private static String reportStorageObjectKey(
+            String facilityId,
+            String normalizedReportType,
+            String requestHash,
+            String responseHash) {
+        String facilityHash = HashUtil.sha256(requireText(facilityId, "facilityId"));
+        String type = requireText(normalizedReportType, "reportType").toLowerCase(Locale.ROOT);
+        return "orca-reports/%s/%s/%s-%s.json".formatted(
+                facilityHash.substring(0, 16),
+                type,
+                requireText(requestHash, "requestHash"),
+                requireText(responseHash, "responseHash"));
     }
 
     private static String toJson(Object value) {

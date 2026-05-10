@@ -86,10 +86,23 @@ class OrcaBillingCacheStoreTest {
                 assertFalse(summary.contains("INV-SECRET-002"));
                 assertFalse(summary.contains("DATA-SECRET-001"));
                 assertTrue(summary.contains("dataIdHash"));
+                assertTrue(summary.contains("serverStorageObjectKey"));
+                assertFalse(summary.contains("00001"));
                 assertEquals("INVOICE_RECEIPT", singleText(connection,
                         "select report_type from opendolphin.orca_report_snapshot"));
                 assertEquals("ORCA", singleText(connection,
                         "select source_system from opendolphin.orca_report_snapshot"));
+                String storageKey = singleText(connection,
+                        "select server_storage_object_key from opendolphin.orca_report_snapshot");
+                String storageDigest = singleText(connection,
+                        "select server_storage_digest from opendolphin.orca_report_snapshot");
+                assertTrue(storageKey.startsWith("orca-reports/"));
+                assertTrue(storageKey.endsWith(".json"));
+                assertFalse(storageKey.contains("F001"));
+                assertFalse(storageKey.contains("00001"));
+                assertFalse(storageKey.contains("INV-SECRET-002"));
+                assertFalse(storageKey.contains("DATA-SECRET-001"));
+                assertEquals(64, storageDigest.length());
             }
         }
     }

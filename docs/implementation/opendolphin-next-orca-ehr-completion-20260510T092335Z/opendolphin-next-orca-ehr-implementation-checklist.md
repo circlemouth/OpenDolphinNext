@@ -194,6 +194,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-10T22:30Z: `orca_billing_cache` は `source_system=ORCA` の cache 境界とし、schema/test/docs で raw invoice/insurance や local source を拒否する。会計金額・収納済み状態を local authority として更新する resource は追加していない。
 - [x] 領収書・請求書は ORCA帳票取得結果として扱い、帳票取得履歴を監査ログに保存する。
   - [x] 2026-05-10T22:30Z: `/api/orca/official/reports/{type}` は ORCA report response を `orca_report_snapshot` へ hash/sanitized summary として保存し、audit detail は invoice/Data_Id raw ではなく hash と存在有無に限定する。
+  - [x] 2026-05-10T23:18Z: `orca_report_snapshot.server_storage_object_key` / `server_storage_digest` は server が request/response hash と report type から生成し、raw patient / invoice / Data_Id / client-provided key を保存しない。
 - [x] レセプト情報を OpenDolphinNext 正本として持たず、ORCA由来キャッシュまたは帳票スナップショットとして扱う。
   - [x] 2026-05-10T22:30Z: `orca_report_snapshot` は `source_system=ORCA` と固定 report type/status を持つ snapshot 境界であり、restore/recovery docs でも local snapshot を正本昇格しないことを明記した。
 
