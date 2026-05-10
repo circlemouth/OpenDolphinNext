@@ -129,6 +129,14 @@
 - 同じ受付 key の患者番号、受付時刻、診療科、担当医、診療情報、保険組合せが変化した場合は `DIFF_DETECTED` / `ORCA_ACCEPTANCE_DIFF_DETECTED` として保存し、変更 field 名だけを sanitized summary に入れる。必須 server-derived field が欠落した行は `NEEDS_REVIEW` とし、成功表示に潰さない。
 - cache 書き込みに失敗した場合は official wrapper 全体を成功扱いせず、古い受付 cache を current source として返さない。
 
+## Official Insurance Cache And Snapshot
+- 保険組合せ取得は `/api/orca/official/insurance/combinations` から ORCA `insuranceinf1v2` を呼び、取得ごとに `orca_insurance_cache` を更新する。cache は表示・照合・送信前確認用であり、OpenDolphinNext 側の保険正本ではない。
+- 施設は認証済み request context の facilityId で解決し、client 提供の facilityId、owner、role、任意 URL、storage key、digest は使わない。ORCA 患者番号と基準日は wrapper request と ORCA response から server-side に正規化し、ORCA 接続先は接続設定 allowlist / runtime contract に従う。
+- `orca_insurance_cache` は `source_system=ORCA`, `source_api=insuranceinf1v2`, `source_request_id`, `source_trace_id`, `fetched_at`, `cache_expires_at`, `orca_patient_id`, `base_date`, `insurance_combination_number`, provider class/name, 負担率, 有効期間, public insurance count, row hash, normalized payload, sanitized response summary を保存する。raw ORCA body、credential、接続先 URL、患者氏名・住所・電話、被保険者番号、保険詳細、Cookie、Authorization、CSRF は保存しない。
+- 同一 facility/patient/baseDate/combination の要約 hash が変化した場合は `DIFF_DETECTED` として保存する。保険組合せ番号など必須 field が欠落した行は `NEEDS_REVIEW` とし、成功表示に潰さない。
+- `encounter_insurance_snapshot` は encounter/chart revision、ORCA 患者番号、受付日、受付 ID、診療科、担当医、保険組合せ、snapshot reason、snapshot 作成時刻、source cache を固定する。既存 snapshot と同じ encounter/slot への再作成は上書きせず、現在候補との差分 field だけを返す。
+- 過去 snapshot は ORCA 保険変更後も更新しない。再送・送信前確認では immutable snapshot と current ORCA cache の差分を表示または review state に反映する。
+
 ## Charts Disease Mutation
 - Charts からの ORCA 病名登録・更新・削除は `/api/orca/official/chart-support/disease-mod-v3` だけを使う。
 - server は facility / patient access / department / insurance / target disease を server-side で再検証し、クライアント提供の facilityId、任意 URL、raw XML、`Request_Number` を信用しない。

@@ -62,9 +62,9 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 ### 3.2 保険・公費・保険組合せローカル正本の撤去
 
 - [ ] `d_health_insurance` 相当のテーブルをローカル正本として使用しない。
-- [ ] 保険情報は `orca_insurance_cache` と `encounter_insurance_snapshot` に分離する。
-- [ ] 保険組合せ番号を診療日、受付、診療科、患者番号とセットで保持する。
-- [ ] 保険変更後に過去の診療録スナップショットを上書きしない。
+- [x] 保険情報は `orca_insurance_cache` と `encounter_insurance_snapshot` に分離する。
+- [x] 保険組合せ番号を診療日、受付、診療科、患者番号とセットで保持する。
+- [x] 保険変更後に過去の診療録スナップショットを上書きしない。
 - [ ] 保険変更後の ORCA送信では、送信前に保険組合せ差分を表示する。
 
 ### 3.3 受付ローカル正本の撤去
@@ -93,7 +93,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [x] `orca_patient_cache` を作成し、ORCA患者ID、内部患者参照、氏名、カナ、生年月日、性別、住所/電話要約、source metadata、取得日時、cache expiry、raw response hash、normalized payload を保存する。
 - [x] `orca_acceptance_cache` を作成し、ORCA患者ID、受付日/時刻/番号、診療科、担当医、保険組合せ、受付状態、source metadata、取消日時、normalized payload を保存する。
-- [ ] `encounter_insurance_snapshot` を作成し、encounter/chart revision、ORCA患者ID、受付日、保険組合せ、保険/公費要約、snapshot reason を固定する。
+- [x] `encounter_insurance_snapshot` を作成し、encounter/chart revision、ORCA患者ID、受付日、保険組合せ、保険/公費要約、snapshot reason を固定する。
 - [ ] `chart_document`, `chart_revision`, `chart_revision_event`, `chart_module`, `chart_attachment` を作成または再設計する。
   - [x] `chart_document`, `chart_revision`, `chart_revision_event` の最小 schema と JPA entity を追加した。`chart_module` / `chart_attachment` の詳細再設計は後続 revision/export 実装で継続確認する。
 - [x] `chart_revision.status` は `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` に限定する。

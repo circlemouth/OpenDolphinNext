@@ -11,6 +11,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.orca.service.OrcaInsuranceCacheStore;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.rest.dto.orca.FormerNameHistoryRequest;
 import open.dolphin.rest.dto.orca.FormerNameHistoryResponse;
@@ -32,6 +33,8 @@ import open.dolphin.session.framework.SessionOperation;
 public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
 
     private OrcaLiveGateway wrapperService;
+    @Inject
+    OrcaInsuranceCacheStore insuranceCacheStore;
 
     public OrcaPatientBatchResource() {
     }
@@ -239,7 +242,12 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
         }
         try {
             InsuranceCombinationResponse response = wrapperService.getInsuranceCombinations(facilityId, body);
+            OrcaInsuranceCacheStore.InsuranceCacheResult cacheResult =
+                    saveInsuranceCache(facilityId, body, response, details);
             applyResponseAuditDetails(response, details);
+            details.put("insuranceCacheUpsertedCount", cacheResult.upsertedCount());
+            details.put("insuranceCacheDiffDetectedCount", cacheResult.diffDetectedCount());
+            details.put("insuranceCacheNeedsReviewCount", cacheResult.needsReviewCount());
             markSuccessDetails(details);
             recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
@@ -288,6 +296,34 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
         this.wrapperService = wrapperService;
     }
 
+    void setInsuranceCacheStoreForTest(OrcaInsuranceCacheStore insuranceCacheStore) {
+        this.insuranceCacheStore = insuranceCacheStore;
+    }
+
+    private OrcaInsuranceCacheStore.InsuranceCacheResult saveInsuranceCache(String facilityId,
+            InsuranceCombinationRequest body,
+            InsuranceCombinationResponse response,
+            Map<String, Object> details) {
+        if (insuranceCacheStore == null) {
+            return new OrcaInsuranceCacheStore.InsuranceCacheResult(0, 0, 0);
+        }
+        String patientId = response != null && response.getPatient() != null
+                && response.getPatient().getPatientId() != null
+                && !response.getPatient().getPatientId().isBlank()
+                        ? response.getPatient().getPatientId()
+                        : body.getPatientId();
+        java.time.Instant fetchedAt = java.time.Instant.now();
+        return insuranceCacheStore.saveInsuranceCombinations(new OrcaInsuranceCacheStore.InsuranceCacheCommand(
+                facilityId,
+                patientId,
+                body.getBaseDate(),
+                stringDetail(details, "requestId"),
+                stringDetail(details, "traceId"),
+                fetchedAt,
+                fetchedAt.plusSeconds(900),
+                response));
+    }
+
     private java.time.LocalDate parseIsoDate(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -297,5 +333,13 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
         } catch (RuntimeException ex) {
             return null;
         }
+    }
+
+    private String stringDetail(Map<String, Object> details, String key) {
+        if (details == null || key == null) {
+            return null;
+        }
+        Object value = details.get(key);
+        return value != null ? String.valueOf(value) : null;
     }
 }
