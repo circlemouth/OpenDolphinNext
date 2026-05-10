@@ -276,7 +276,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     const mirrorList = await screen.findByRole('table', { name: 'ORCA登録病名（活動中）' });
     expect(within(mirrorList).getByText('ORCA再取得病名')).toBeInTheDocument();
     expect(within(mirrorList).queryByText('入力病名')).not.toBeInTheDocument();
-    expect(screen.getByText('ORCA病名を処理しました。ORCA再取得結果を反映しました。')).toBeInTheDocument();
+    expect(screen.getByText('ORCA病名を処理しました。ORCA再取得結果で同期確認しました。')).toBeInTheDocument();
     expect(fetchDiseases).toHaveBeenCalledTimes(1);
   });
 

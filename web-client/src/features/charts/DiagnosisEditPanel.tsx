@@ -806,7 +806,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
       const didApplyMirror = applyPostMutationMirror(result);
       const notice = resolveMutationNotice(
         result,
-        didApplyMirror ? 'ORCA病名を処理しました。ORCA再取得結果を反映しました。' : 'ORCA病名を処理しました。再取得結果を反映します。',
+        didApplyMirror ? 'ORCA病名を処理しました。ORCA再取得結果で同期確認しました。' : 'ORCA病名を処理しました。ORCA再取得結果を確認中です。',
         failureMessage,
       );
       setNotice(notice);
@@ -904,7 +904,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
       setNotice(
         resolveMutationNotice(
           result,
-          didApplyMirror ? 'ORCA病名を削除しました。ORCA再取得結果を反映しました。' : 'ORCA病名を削除しました。再取得結果を反映します。',
+          didApplyMirror ? 'ORCA病名を削除しました。ORCA再取得結果で同期確認しました。' : 'ORCA病名を削除しました。ORCA再取得結果を確認中です。',
           failureMessage,
         ),
       );
@@ -965,7 +965,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
       setNotice(
         resolveMutationNotice(
           result,
-          didApplyMirror ? '削除病名を整理しました。ORCA再取得結果を反映しました。' : '削除病名を整理しました。再取得結果を反映します。',
+          didApplyMirror ? '削除病名を整理しました。ORCA再取得結果で同期確認しました。' : '削除病名を整理しました。ORCA再取得結果を確認中です。',
           failureMessage,
         ),
       );
@@ -1686,7 +1686,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
       <FocusTrapDialog
         open={Boolean(pendingAction)}
         title={pendingAction?.title ?? 'ORCA病名操作'}
-        description="この操作は ORCA へ送信し、成功後に再取得した結果だけを画面へ反映します。"
+        description="この操作は ORCA へ送信し、成功後に再取得した結果だけを ORCA登録病名として表示します。"
         onClose={() => setPendingAction(null)}
         initialFocus="none"
         testId="charts-diagnosis-confirm-dialog"
