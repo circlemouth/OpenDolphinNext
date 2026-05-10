@@ -4,6 +4,7 @@ import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -12,9 +13,11 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import open.dolphin.rest.dto.chart.ChartRevisionChangeRequest;
 import open.dolphin.rest.dto.chart.ChartRevisionChangeResponse;
+import open.dolphin.rest.dto.chart.ChartRevisionExportResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionFinalizeRequest;
 import open.dolphin.rest.dto.chart.ChartRevisionFinalizeResponse;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
+import open.dolphin.session.ChartRevisionExportService;
 import open.dolphin.session.ChartRevisionFinalizeService;
 
 @Path("/charts")
@@ -23,6 +26,20 @@ public class ChartRevisionResource extends AbstractOrcaRestResource {
 
     @Inject
     private ChartRevisionFinalizeService finalizeService;
+
+    @Inject
+    private ChartRevisionExportService exportService;
+
+    @GET
+    @Path("/{chartId}/revisions/export")
+    @Transactional
+    public ChartRevisionExportResponse exportChart(
+            @Context HttpServletRequest request,
+            @PathParam("chartId") long chartId) {
+        requireRemoteUser(request);
+        String facilityId = requireFacilityId(request);
+        return exportService.exportChart(chartId, facilityId);
+    }
 
     @POST
     @Path("/{chartId}/revisions/{revisionId}/finalize")

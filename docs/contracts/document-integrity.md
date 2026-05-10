@@ -67,6 +67,7 @@
 - finalize event summary は hash、encounter、診療科、担当医、保険組合せ、受付 context の有無だけを保存し、患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token を保存しない。
 - `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` は locked revision だけを対象にし、理由と actor を必須にする。訂正・追記は新 revision と event を作成し、元 revision は物理更新しない。取消は取消 event を追加し、元 revision 本文を物理削除しない。
 - chart PDF / CSV / JSON export は、current revision だけでなく `chart_revision_event` の `FINALIZED` / `AMENDED` / `ADDENDUM_ADDED` / `CANCELLED` / `VOIDED`、before/after summary、reason、actor、content hash を含める。export payload に raw ORCA body、credential、Cookie、Authorization、CSRF token、患者住所・電話などの不要 PHI を含めない。
+- `GET /api/charts/{chartId}/revisions/export` は chart revision JSON export の最小 contract とする。施設 ID は server-side session から解決し、request body / query の owner/facility は採用しない。応答は revision list と event list を時系列で返し、summary JSON は allowlist された scalar key のみを投影する。reason/title/context 文字列に Authorization / Cookie / raw XML / SOAP body が混入している場合は redaction して返す。
 
 ## reasonCode 一覧
 - `integrity_record_missing`
@@ -94,6 +95,7 @@
 - [x] locked chart revision、legacy document title、legacy SOAP / module payload、current revision pointer の直接更新拒否 trigger と regression test を追加する。
 - [x] finalize API skeleton、必須 context validation、server-side `content_hash` 生成、FINALIZED event 記録を追加する。
 - [x] amend/addendum/cancel API skeleton、理由必須 validation、before/after summary、event/new revision 記録を追加する。
+- [x] chart revision JSON export API を追加し、event 履歴、before/after summary、reason、actor、content hash を allowlist/redaction 付きで返す。
 
 ## 受け入れ条件
 - [x] active key を変更しても旧文書が verify できる。
