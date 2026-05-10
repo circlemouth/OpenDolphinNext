@@ -2619,6 +2619,76 @@ describe('ReceptionPage status/date/card action UX', () => {
     expect(vi.mocked(postOrcaMedicalModV2Xml)).not.toHaveBeenCalled();
   });
 
+  it('ORCA送信の要確認一覧から server-side 再照合を実行し、秘密系識別子を表示しない', async () => {
+    mockBillingOrcaReviewData = {
+      ok: true,
+      count: 1,
+      limit: 20,
+      runId: 'RUN-REVIEW-LIST',
+      entries: [
+        {
+          transmissionId: 42,
+          snapshotId: 101,
+          encounterKey: 'encounter-review-001',
+          scheduleKey: 'schedule-review-001',
+          patientId: 'P-REVIEW-001',
+          state: 'ORCA_UNKNOWN',
+          operationStatus: 'UNKNOWN',
+          needsUserReview: true,
+          confirmationRequired: true,
+          medicalUidPresent: false,
+          apiResult: 'UNKNOWN',
+          apiResultMessage: '送信結果が確定していません',
+          startedAt: '2026-05-10T15:00:00Z',
+        },
+      ],
+    };
+    mockMutationResult = {
+      ok: true,
+      transmissionId: 42,
+      operationStatus: 'ORCA_TEMPORARY_MEDICAL_FOUND',
+      reconciliationStatus: 'TEMPORARY_MEDICAL_FOUND',
+      needsUserReview: true,
+      rawSensitiveFieldsExcluded: true,
+      clientProvidedIdentifiersTrusted: false,
+      serverDerivedAuthorityRequired: true,
+      temporaryMedicalRowCount: 2,
+      matchingTemporaryMedicalRowCount: 1,
+      medicalUidPresent: true,
+      medicalMode: '0',
+      medicalMode2: '0',
+      message: 'ORCA中途終了データに一致候補があります',
+      medicalUid: 'SECRET-MEDICAL-UID',
+      insuranceCombinationNumber: 'SECRET-INSURANCE',
+      rawResponseBody: '<xml>secret</xml>',
+    };
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const reviewRegion = screen.getByRole('region', { name: 'ORCA送信の要確認一覧' });
+    await user.click(within(reviewRegion).getByRole('button', { name: 'ORCA状態を再照合' }));
+
+    await waitFor(() => {
+      expect(mockMutationCalls).toContainEqual({ transmissionId: 42 });
+    });
+    expect(mockMutationCalls[0]).not.toHaveProperty('patientId');
+    expect(mockMutationCalls[0]).not.toHaveProperty('facilityId');
+    expect(mockMutationCalls[0]).not.toHaveProperty('insuranceCombinationNumber');
+    expect(mockMutationCalls[0]).not.toHaveProperty('medicalUid');
+    expect(within(reviewRegion).getByText('照合結果: 一致候補あり（1/2件）。再送前に内容を確認してください。')).toBeInTheDocument();
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tone: 'warning',
+        message: 'ORCA状態を再照合しました',
+      }),
+    );
+    expect(reviewRegion).not.toHaveTextContent(/SECRET|rawResponseBody|insuranceCombinationNumber|medicalUid/i);
+    expect(screen.queryByRole('button', { name: '会計送信' })).not.toBeInTheDocument();
+    expect(vi.mocked(buildMedicalModV2RequestXml)).not.toHaveBeenCalled();
+    expect(vi.mocked(postOrcaMedicalModV2Xml)).not.toHaveBeenCalled();
+  });
+
   it('keeps transmission visible in cards layout without selecting the card', async () => {
     mockAppointmentData.entries = [createBillingEntry()];
     mockClaimSendCache = {

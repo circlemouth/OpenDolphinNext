@@ -165,7 +165,7 @@
 - 受付一覧の通常表示では患者ID列に ORCA 患者IDの値だけを表示し、行内で `患者ID` ラベルは繰り返しません。受付ID/予約IDは通常列に出しません。受付ID/予約IDは取消・handoff・debug/meta 用の row-local key として扱い、患者IDの代替表示にしません。氏名列はふりがなを患者名の上に置き、生年月日は表示せず、受付日時点の年齢は独立した `年齢` 列に表示します。診療科は canonical `departmentCode` を保持しつつ、表示では ORCA selector / raw visit data 由来の診療科名を優先し、`01` や `01 内科` のようなコード主導表示に戻しません。性別と小児/成人区分は、男性/女性/未登録の色と小児/成人の形状が分かるプロフィールバッジ型の患者アイコンで表示します。
 - 受付一覧の右端は `カルテ` と `その他` の行操作に使います。各ボタンの label が操作内容を示すため、画面上の列見出し `操作` は表示しません。支援技術向けには `行操作` の列名を維持します。
 - 受付一覧の表表示は `支払` / `請求` / `直近` 列を通常列から外し、ORCA状態・補正メモなど必要な操作情報だけを残します。標準の初回 `会計送信` 操作は Reception から出さず、医師画面の `診察終了して会計へ送信` を起点にします。Reception 側は再送・確認・明示的追加送信など recovery 操作の owner です。
-- Reception は `GET /api/local/encounters/orca-transmissions/review` の server-side facility scoped 一覧を初期表示し、`ORCA_UNKNOWN` / `ORCA_FAILED` / `CORRECTION_REQUIRED` を重要警告として折りたたまず出します。この recovery 一覧は表示専用で、初回会計送信ボタンを復活させません。画面表示は患者ID、encounter / schedule key、operation status、Api_Result、開始時刻、次アクションに限定し、idempotency key、request ID、trace ID、ORCA raw body、保険組合せ、伝票番号、連番を表示しません。
+- Reception は `GET /api/local/encounters/orca-transmissions/review` の server-side facility scoped 一覧を初期表示し、`ORCA_UNKNOWN` / `ORCA_FAILED` / `CORRECTION_REQUIRED` を重要警告として折りたたまず出します。この recovery 一覧は初回会計送信ボタンを復活させません。画面表示は患者ID、encounter / schedule key、operation status、Api_Result、開始時刻、次アクションに限定し、idempotency key、request ID、trace ID、ORCA raw body、保険組合せ、伝票番号、連番を表示しません。`ORCA状態を再照合` は `POST /api/local/encounters/orca-transmissions/{transmissionId}/reconcile-temporary-medical` へ transmission ID だけを渡し、照合結果は一致件数、総件数、`Medical_Uid` 存在有無、要確認状態の sanitized summary として表示します。`Medical_Uid` 値、保険組合せ、raw ORCA body、患者氏名、住所、電話番号は表示しません。照合成功は再送成功や会計済みを意味せず、引き続き要確認として扱います。
 - 受付一覧の通常表では ORCA 連携を専用列にしません。ORCA 連携は成立している前提のため `—` などの正常プレースホルダーを出さず、queue / error などユーザー対応が必要な状態だけメモ/参照列に補助情報として出します。
 - ORCA 公式来院一覧に runtime projection を補完表示する場合は、server-derived `Voucher_Number` / `Sequential_Number` / `Insurance_Combination_Number` 相当が projection に揃った行だけを扱います。旧 local smoke seed など ORCA 正式識別子の無い projection や、`0000001 / スモーク 患者` の legacy local smoke seed は受付一覧の official row として表示しません。
 - 受付一覧の workflow state は `受付中 / 診療中 / 会計待ち / 再計待 / 会計済み / 予約` で扱い、ORCA workflow 表示は `診察中 / 送信待ち / ORCA送信中 / 会計可 / 要確認 / 送信後変更あり / ORCA側展開済み` に寄せます。`送信済` は transmission signal として別表示します。会計送信成功だけで `会計済み` へ遷移させません。
@@ -185,6 +185,7 @@
 - test: accept 成功後の charts handoff は `scheduleKey` / `encounterKey` を持つ canonical context だけで成立し、mutation response または refreshed entry のどちらでも同じ contract を使うこと
 - test: Reception は標準の初回 `会計送信` direct button を出さず、医師画面から送信する案内と recovery-only surface に寄せること
 - test: Reception の ORCA送信要確認一覧は `ORCA_UNKNOWN` を初期表示し、idempotency key / request ID / trace ID を visible text に出さず、初回 `会計送信` direct button を出さないこと
+- test: Reception の ORCA送信要確認一覧から `ORCA状態を再照合` を押しても client は transmission ID だけを送り、patient / facility / insurance / voucher / sequential / `Medical_Uid` / raw ORCA body を送らず、結果表示にも秘密系識別子を出さないこと
 - test: 会計送信成功が workflow `会計済み` を直ちに意味せず、`送信済` は transmission signal として別表示されること
 - test: 会計済み後の編集は `再計待` へ移り、correction note を generic memo と分離して表示すること
 - manual: Reception 画面文言が既存患者受付限定で、新患は Patients へ誘導すること

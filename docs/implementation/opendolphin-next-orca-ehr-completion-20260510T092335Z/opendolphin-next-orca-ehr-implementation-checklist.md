@@ -248,6 +248,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] Reception が review 一覧を初期表示し、`ORCA_UNKNOWN` / `ORCA_FAILED` / `CORRECTION_REQUIRED` を折りたたまず要確認として表示する。表示は患者ID、encounter / schedule key、operation status、Api_Result、開始時刻、次アクションに限定し、idempotency key / request ID / trace ID / raw ORCA body / 保険組合せ / 伝票番号 / 連番を出さない。
 - [ ] 再送前に現在 ORCA状態、前回送信との差分、患者・受付・保険組合せを再確認し、監査ログに保存する。
   - [x] `POST /api/local/encounters/orca-transmissions/{transmissionId}/reconcile-temporary-medical` で review transmission を server-side facility scoped に限定し、保存済み snapshot から `tmedicalgetv2` read-only 再照合を行う。client 提供の patient / facility / insurance / voucher / sequential / `Medical_Uid` / URL / raw XML は受け取らず、照合結果は `needsUserReview=true` の sanitized summary と監査ログに限定する。
+  - [x] Reception の ORCA送信要確認一覧から `ORCA状態を再照合` を実行し、client は transmission ID だけを送る。画面は一致件数/総件数と要確認状態だけを表示し、`Medical_Uid` 値、保険組合せ、raw ORCA body、trace/request/idempotency を表示しない。
 - [ ] ORCA側で会計済みの場合は再送を原則禁止し、管理者確認フローにする。
 - [ ] ORCA障害時の診療録/処方作成可否、会計送信不可表示、復旧後再照合、ネットワーク障害時の `UNKNOWN` 処理、DB障害時読み取り専用モード、復元後 ORCA再照合を文書化する。
 

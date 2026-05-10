@@ -1103,6 +1103,12 @@ export const receptionStyles = css`
     line-height: 1.5;
   }
 
+  .reception-orca-review__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
   .reception-pill {
     font-size: 0.85rem;
   }

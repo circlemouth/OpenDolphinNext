@@ -16,11 +16,13 @@ import { ToneBanner } from '../components/ToneBanner';
 import {
   buildVisitEntryFromMutation,
   fetchBillingOrcaTransmissionReviewList,
+  reconcileBillingOrcaTemporaryMedical,
   fetchAppointmentOutpatients,
   fetchClaimFlags,
   fetchMedicalInformationOptions,
   fetchReceptionSelectorOptions,
   type BillingOrcaTransmissionReviewEntry,
+  type BillingOrcaTemporaryMedicalReconcileResponse,
   isClaimOutpatientEnabled,
   mutateVisit,
   type MedicalInformationOption,
@@ -521,6 +523,17 @@ const billingOrcaReviewNextAction = (entry: BillingOrcaTransmissionReviewEntry) 
   if (entry.state === 'ORCA_FAILED') return 'ORCA状態を再取得してから再送可否を判断';
   if (entry.state === 'CORRECTION_REQUIRED') return '補正内容を確認してから再送可否を判断';
   return 'ORCA状態を再照合し、成功扱いにせず要確認として処理';
+};
+
+const billingOrcaReconcileSummary = (result?: BillingOrcaTemporaryMedicalReconcileResponse) => {
+  if (!result) return undefined;
+  if (result.matchingTemporaryMedicalRowCount > 0) {
+    return `照合結果: 一致候補あり（${result.matchingTemporaryMedicalRowCount}/${result.temporaryMedicalRowCount}件）。再送前に内容を確認してください。`;
+  }
+  if (result.reconciliationStatus === 'SERVER_CONTEXT_INCOMPLETE') {
+    return '照合結果: サーバー側スナップショット不足。成功扱いにせず運用確認してください。';
+  }
+  return `照合結果: 一致候補なし（0/${result.temporaryMedicalRowCount}件）。成功扱いにせず確認してください。`;
 };
 
 type PhysicianNameMap = Record<string, string>;
@@ -1132,6 +1145,10 @@ export function ReceptionPage({
   } | null>(null);
   const [retryingPatientId, setRetryingPatientId] = useState<string | null>(null);
   const [claimSendingPatientId, setClaimSendingPatientId] = useState<string | null>(null);
+  const [reconcilingTransmissionId, setReconcilingTransmissionId] = useState<number | null>(null);
+  const [billingOrcaReconcileByTransmissionId, setBillingOrcaReconcileByTransmissionId] = useState<
+    Record<number, BillingOrcaTemporaryMedicalReconcileResponse>
+  >({});
   const [dailyStateRevision, setDailyStateRevision] = useState(0);
   const [openCardActionMenuKey, setOpenCardActionMenuKey] = useState<string | null>(null);
   const [, setReceptionRealtimeStatus] = useState<ReceptionRealtimeConnectionStatus>('connecting');
@@ -1399,6 +1416,13 @@ export function ReceptionPage({
 
   const visitMutation = useMutation<VisitMutationPayload, Error, VisitMutationParams>({
     mutationFn: (params) => mutateVisit(params),
+  });
+  const billingOrcaReconcileMutation = useMutation<
+    BillingOrcaTemporaryMedicalReconcileResponse,
+    Error,
+    { transmissionId: number }
+  >({
+    mutationFn: (params) => reconcileBillingOrcaTemporaryMedical(params),
   });
   const patientSearchMutation = useMutation<
     PatientListResponse,
@@ -4171,6 +4195,69 @@ export function ReceptionPage({
     ],
   );
 
+  const handleReconcileBillingOrcaTransmission = useCallback(
+    async (entry: BillingOrcaTransmissionReviewEntry) => {
+      const transmissionId = entry.transmissionId;
+      const baseRunId = mergedMeta.runId ?? initialRunId ?? flags.runId;
+      if (!Number.isFinite(transmissionId) || !transmissionId || transmissionId <= 0) {
+        enqueue({
+          tone: 'warning',
+          message: 'ORCA状態を再照合できません',
+          detail: 'transmission ID が未取得です。',
+        });
+        return;
+      }
+      setReconcilingTransmissionId(transmissionId);
+      try {
+        const result = await billingOrcaReconcileMutation.mutateAsync({ transmissionId });
+        setBillingOrcaReconcileByTransmissionId((previous) => ({
+          ...previous,
+          [transmissionId]: result,
+        }));
+        enqueue({
+          tone: result.matchingTemporaryMedicalRowCount > 0 ? 'warning' : 'info',
+          message: 'ORCA状態を再照合しました',
+          detail: billingOrcaReconcileSummary(result),
+        });
+        logAuditEvent({
+          runId: result.runId ?? baseRunId,
+          source: 'reception/billing-orca-review',
+          patientId: entry.patientId,
+          payload: {
+            action: 'RECEPTION_BILLING_ORCA_TEMPORARY_MEDICAL_RECONCILE',
+            result: result.matchingTemporaryMedicalRowCount > 0 ? 'review_required' : 'not_found',
+            transmissionId,
+            operationStatus: result.operationStatus,
+            reconciliationStatus: result.reconciliationStatus,
+            matchingTemporaryMedicalRowCount: result.matchingTemporaryMedicalRowCount,
+            temporaryMedicalRowCount: result.temporaryMedicalRowCount,
+            medicalUidPresent: result.medicalUidPresent,
+            rawSensitiveFieldsExcluded: true,
+            needsUserReview: true,
+          },
+        });
+        void queryClient.invalidateQueries({ queryKey: billingOrcaReviewQueryKey }).catch(() => undefined);
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        enqueue({ tone: 'error', message: 'ORCA状態の再照合に失敗しました', detail });
+        logAuditEvent({
+          runId: baseRunId,
+          source: 'reception/billing-orca-review',
+          patientId: entry.patientId,
+          payload: {
+            action: 'RECEPTION_BILLING_ORCA_TEMPORARY_MEDICAL_RECONCILE',
+            result: 'error',
+            transmissionId,
+            error: detail,
+          },
+        });
+      } finally {
+        setReconcilingTransmissionId(null);
+      }
+    },
+    [billingOrcaReconcileMutation, billingOrcaReviewQueryKey, enqueue, flags.runId, initialRunId, mergedMeta.runId, queryClient],
+  );
+
   const handleSendBilling = useCallback(
     async (entry: ReceptionEntry) => {
       const sendGuard = resolveBillingSendGuard({
@@ -5195,47 +5282,76 @@ export function ReceptionPage({
                         runId={billingOrcaReviewRunId}
                       />
                       <div className="reception-orca-review__list" role="list">
-                        {billingOrcaReviewEntries.map((entry, index) => (
-                          <article
-                            key={`${entry.transmissionId ?? 'review'}-${index}`}
-                            className="reception-orca-review__item"
-                            role="listitem"
-                          >
-                            <header className="reception-orca-review__item-header">
-                              <strong>{billingOrcaReviewStateLabel(entry.state)}</strong>
-                              <span>{entry.patientId ? `患者ID: ${entry.patientId}` : '患者ID: 未取得'}</span>
-                            </header>
-                            <dl className="reception-orca-review__details">
-                              <div>
-                                <dt>encounter</dt>
-                                <dd>{entry.encounterKey ?? '未取得'}</dd>
-                              </div>
-                              <div>
-                                <dt>schedule</dt>
-                                <dd>{entry.scheduleKey ?? '未取得'}</dd>
-                              </div>
-                              <div>
-                                <dt>operation</dt>
-                                <dd>{entry.operationStatus ?? 'NEEDS_REVIEW'}</dd>
-                              </div>
-                              <div>
-                                <dt>Api_Result</dt>
-                                <dd>{entry.apiResult ?? '未取得'}</dd>
-                              </div>
-                              <div>
-                                <dt>開始</dt>
-                                <dd>{entry.startedAt ?? '未取得'}</dd>
-                              </div>
-                              <div>
-                                <dt>次アクション</dt>
-                                <dd>{billingOrcaReviewNextAction(entry)}</dd>
-                              </div>
-                            </dl>
-                            {entry.apiResultMessage ? (
-                              <p className="reception-orca-review__message">{entry.apiResultMessage}</p>
-                            ) : null}
-                          </article>
-                        ))}
+                        {billingOrcaReviewEntries.map((entry, index) => {
+                            const reconcileResult =
+                              typeof entry.transmissionId === 'number'
+                                ? billingOrcaReconcileByTransmissionId[entry.transmissionId]
+                                : undefined;
+                            return (
+                              <article
+                                key={`${entry.transmissionId ?? 'review'}-${index}`}
+                                className="reception-orca-review__item"
+                                role="listitem"
+                              >
+                                <header className="reception-orca-review__item-header">
+                                  <strong>{billingOrcaReviewStateLabel(entry.state)}</strong>
+                                  <span>{entry.patientId ? `患者ID: ${entry.patientId}` : '患者ID: 未取得'}</span>
+                                </header>
+                                <dl className="reception-orca-review__details">
+                                  <div>
+                                    <dt>encounter</dt>
+                                    <dd>{entry.encounterKey ?? '未取得'}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>schedule</dt>
+                                    <dd>{entry.scheduleKey ?? '未取得'}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>operation</dt>
+                                    <dd>{entry.operationStatus ?? 'NEEDS_REVIEW'}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>Api_Result</dt>
+                                    <dd>{entry.apiResult ?? '未取得'}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>開始</dt>
+                                    <dd>{entry.startedAt ?? '未取得'}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>次アクション</dt>
+                                    <dd>{billingOrcaReviewNextAction(entry)}</dd>
+                                  </div>
+                                </dl>
+                                {entry.apiResultMessage ? (
+                                  <p className="reception-orca-review__message">{entry.apiResultMessage}</p>
+                                ) : null}
+                                {reconcileResult ? (
+                                  <p className="reception-orca-review__message">
+                                    {billingOrcaReconcileSummary(reconcileResult)}
+                                  </p>
+                                ) : null}
+                                {entry.transmissionId ? (
+                                  <div className="reception-orca-review__actions">
+                                    <button
+                                      type="button"
+                                      className="reception-search__button"
+                                      onClick={() => void handleReconcileBillingOrcaTransmission(entry)}
+                                      disabled={reconcilingTransmissionId === entry.transmissionId}
+                                    >
+                                      {reconcilingTransmissionId === entry.transmissionId
+                                        ? '再照合中'
+                                        : 'ORCA状態を再照合'}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <p className="reception-orca-review__message">
+                                    再照合できません: transmission ID未取得
+                                  </p>
+                                )}
+                              </article>
+                            );
+                          })}
                       </div>
                     </>
                   )}

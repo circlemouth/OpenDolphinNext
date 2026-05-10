@@ -129,6 +129,31 @@ export type BillingOrcaTransmissionReviewListResponse = {
   runId?: string;
 };
 
+export type BillingOrcaTemporaryMedicalReconcileResponse = {
+  ok: boolean;
+  transmissionId?: number;
+  snapshotId?: number;
+  encounterKey?: string;
+  scheduleKey?: string;
+  patientId?: string;
+  operationStatus?: string;
+  reconciliationStatus?: string;
+  needsUserReview: boolean;
+  rawSensitiveFieldsExcluded: boolean;
+  clientProvidedIdentifiersTrusted: boolean;
+  serverDerivedAuthorityRequired: boolean;
+  apiResult?: string;
+  apiResultMessage?: string;
+  httpStatus?: number;
+  temporaryMedicalRowCount: number;
+  matchingTemporaryMedicalRowCount: number;
+  medicalUidPresent: boolean;
+  medicalMode?: string;
+  medicalMode2?: string;
+  message?: string;
+  runId?: string;
+};
+
 export type Acceptmodv2ReadOnlyDiagnosticReadiness = {
   verdict: 'accepted' | 'rejected' | 'not_verified';
   apiResult: string;
@@ -764,6 +789,48 @@ export async function fetchBillingOrcaTransmissionReviewList(
     entries,
     limit: normalizeReviewNumber(body.limit) ?? safeLimit,
     count: normalizeReviewNumber(body.count) ?? entries.length,
+    runId: normalizeReviewString(body.runId),
+  };
+}
+
+export async function reconcileBillingOrcaTemporaryMedical(options: {
+  transmissionId: number;
+}): Promise<BillingOrcaTemporaryMedicalReconcileResponse> {
+  const transmissionId = Number.isFinite(options.transmissionId) ? Math.trunc(options.transmissionId) : 0;
+  if (transmissionId <= 0) {
+    throw new Error('transmissionId is required');
+  }
+  const response = await httpFetch(
+    `/api/local/encounters/orca-transmissions/${encodeURIComponent(String(transmissionId))}/reconcile-temporary-medical`,
+    {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      notifySessionExpired: false,
+    },
+  );
+  const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  return {
+    ok: response.ok && body.ok === true,
+    transmissionId: normalizeReviewNumber(body.transmissionId) ?? transmissionId,
+    snapshotId: normalizeReviewNumber(body.snapshotId),
+    encounterKey: normalizeReviewString(body.encounterKey),
+    scheduleKey: normalizeReviewString(body.scheduleKey),
+    patientId: normalizeReviewString(body.patientId),
+    operationStatus: normalizeReviewString(body.operationStatus),
+    reconciliationStatus: normalizeReviewString(body.reconciliationStatus),
+    needsUserReview: body.needsUserReview !== false,
+    rawSensitiveFieldsExcluded: body.rawSensitiveFieldsExcluded === true,
+    clientProvidedIdentifiersTrusted: body.clientProvidedIdentifiersTrusted === true,
+    serverDerivedAuthorityRequired: body.serverDerivedAuthorityRequired !== false,
+    apiResult: normalizeReviewString(body.apiResult),
+    apiResultMessage: normalizeReviewString(body.apiResultMessage),
+    httpStatus: normalizeReviewNumber(body.httpStatus),
+    temporaryMedicalRowCount: normalizeReviewNumber(body.temporaryMedicalRowCount) ?? 0,
+    matchingTemporaryMedicalRowCount: normalizeReviewNumber(body.matchingTemporaryMedicalRowCount) ?? 0,
+    medicalUidPresent: body.medicalUidPresent === true,
+    medicalMode: normalizeReviewString(body.medicalMode),
+    medicalMode2: normalizeReviewString(body.medicalMode2),
+    message: normalizeReviewString(body.message),
     runId: normalizeReviewString(body.runId),
   };
 }
