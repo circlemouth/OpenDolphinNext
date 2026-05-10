@@ -66,7 +66,7 @@
 - 通常トップバーには session 操作として `ユーザー切替` と `ログアウト` を置き、admin 権限がある場合だけ `管理画面` を同じ session 操作群に置きます。
 - 通常トップバーの session 情報は、ユーザー名と権限を 1 つの compact summary にまとめ、session 操作群と可能な限り 1 行で表示します。ユーザー名と権限の詳細は accessible label / title で保持します。
 - 通常トップバーには施設IDと RUN_ID copy CTA を常時表示しません。RUN_ID / traceId は障害時や support surface の safe support ID として扱います。
-- ORCA readiness は管理画面/運用監視を正本とし、App shell では warning/error の時だけ compact status を出します。正常時の `ORCA: readiness OK` は常時表示しません。
+- ORCA readiness は管理画面/運用監視を正本とし、App shell では warning/error の時だけ全ロールに compact status を出します。正常時の `ORCA: readiness OK` は常時表示しません。ORCA check が `DOWN` または readiness 取得失敗の場合は `ORCA連携停止中` を表示し、URL、host、credential、raw error は表示しません。
 - `受付` / `患者管理` は workspace tab の固定導線で、現在画面は active tab の強調表示で示します。
 - Charts の患者 workspace tab は画面上では患者名だけを表示します。患者ID、受付/予約キー、診療日などは通常の tab label に出しません。
 

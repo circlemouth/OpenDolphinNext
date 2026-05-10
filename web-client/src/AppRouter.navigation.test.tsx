@@ -238,7 +238,7 @@ describe('AppRouter navigation guard', () => {
     sessionStorage.clear();
   });
 
-  it('non system_admin は管理画面ボタン/ORCAステータスが表示されず、受付/患者管理タブで遷移できる', async () => {
+  it('non system_admin は正常時のORCAステータスと管理画面ボタンを表示せず、受付/患者管理タブで遷移できる', async () => {
     prepareSession('doctor');
     const user = userEvent.setup();
 
@@ -255,6 +255,28 @@ describe('AppRouter navigation guard', () => {
     await user.click(screen.getByRole('tab', { name: '受付' }));
     expect(window.location.pathname).toBe('/f/0001/reception');
     await screen.findByTestId('reception-page');
+  });
+
+  it('non system_admin でも ORCA DOWN 時は連携停止中だけを表示する', async () => {
+    vi.mocked(fetchOperationsReadiness).mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      summaryStatus: 'DOWN',
+      checks: { orca: { status: 'DOWN' } },
+      runId: '20260307T000003Z',
+      traceId: 'trace-router-orca-down',
+      raw: {},
+    });
+    prepareSession('doctor');
+
+    render(<AppRouter />);
+
+    await screen.findByTestId('reception-page');
+    expect(await screen.findByText('ORCA連携停止中')).toBeInTheDocument();
+    expect(screen.getByText('ORCA連携停止中')).toHaveAttribute('title', expect.stringContaining('readiness status=DOWN'));
+    expect(screen.queryByText(/https?:\/\//)).not.toBeInTheDocument();
+    expect(screen.queryByText(/credential|Basic|Authorization|password/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '管理画面を開く' })).not.toBeInTheDocument();
   });
 
   it('route render error 時も raw error.message を画面に表示しない', async () => {

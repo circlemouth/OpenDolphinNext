@@ -283,7 +283,7 @@ const ORCA_TOP_STATUS_CHECKING: OrcaTopStatus = {
 
 const ORCA_TOP_STATUS_FETCH_ERROR: OrcaTopStatus = {
   tone: 'error',
-  label: 'ORCA: 確認失敗',
+  label: 'ORCA連携停止中',
   detail: 'readiness API の呼び出しに失敗しました。',
   checkedAt: null,
 };
@@ -324,7 +324,7 @@ const resolveOrcaTopStatus = (result: OperationsReadinessResponse): OrcaTopStatu
   }
   return {
     tone: 'error',
-    label: 'ORCA: 接続NG',
+    label: 'ORCA連携停止中',
     detail: `readiness status=${orcaStatus ?? result.summaryStatus ?? `HTTP ${result.status}`}`,
     checkedAt,
   };
@@ -1495,10 +1495,6 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   }, [resolvedRunId, session]);
 
   useEffect(() => {
-    if (!isSystemAdmin) {
-      setOrcaTopStatus(ORCA_TOP_STATUS_CHECKING);
-      return;
-    }
     let cancelled = false;
     let timerId: number | null = null;
     const refreshOrcaTopStatus = async (showPending: boolean) => {
@@ -1524,7 +1520,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
         window.clearInterval(timerId);
       }
     };
-  }, [isSystemAdmin]);
+  }, []);
 
   useEffect(() => {
     if (!resolvedRunId || runIdNoticeRef.current === resolvedRunId) return;
@@ -1544,7 +1540,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
     return `${orcaTopStatus.detail} / 最終確認: ${checkedAt}`;
   }, [orcaTopStatus.checkedAt, orcaTopStatus.detail]);
   const visibleOrcaTopStatus =
-    isSystemAdmin && (orcaTopStatus.tone === 'warning' || orcaTopStatus.tone === 'error') ? orcaTopStatus : null;
+    orcaTopStatus.tone === 'warning' || orcaTopStatus.tone === 'error' ? orcaTopStatus : null;
 
   const handleOpenAdministration = useCallback(() => {
     navigate(buildFacilityPath(session.facilityId, '/administration'));

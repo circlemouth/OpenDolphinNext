@@ -243,6 +243,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 開発環境でもブラウザに ORCA認証情報を渡さない。
 - [ ] ORCA接続、証明書期限、DB、監査ログ書き込みの health check を実装する。
 - [ ] ORCA障害時は UI に「ORCA連携停止中」を表示しつつ、診療録正本閲覧を可能にする。
+  - [x] App shell は `/api/health/readiness` の sanitized ORCA check が `DOWN` または取得失敗の場合、全ロールに `ORCA連携停止中` の compact status だけを表示する。正常時は非表示とし、URL、host、credential、raw error は表示しない。
 - [ ] ORCA送信失敗、`UNKNOWN`, `NEEDS_REVIEW` の一覧画面を作る。
   - [x] `GET /api/local/encounters/orca-transmissions/review` で `ORCA_UNKNOWN` / `ORCA_FAILED` / `CORRECTION_REQUIRED` の server-side facility scoped sanitized 一覧を返す。
   - [x] Reception が review 一覧を初期表示し、`ORCA_UNKNOWN` / `ORCA_FAILED` / `CORRECTION_REQUIRED` を折りたたまず要確認として表示する。表示は患者ID、encounter / schedule key、operation status、Api_Result、開始時刻、次アクションに限定し、idempotency key / request ID / trace ID / raw ORCA body / 保険組合せ / 伝票番号 / 連番を出さない。
