@@ -604,6 +604,67 @@ class OrcaChartSupportResourceTest {
         assertEquals("present_redacted", response.getUnmatchInformation().get(0).getMessageCategory());
     }
 
+    @Test
+    void diseaseModV3ParsesOfficialOrcaOnlyAndOrganizeInformation() {
+        CapturingTransport transport = new CapturingTransport("""
+                <xmlio2>
+                  <diseaseres>
+                    <Information_Date>2026-04-22</Information_Date>
+                    <Information_Time>14:25:00</Information_Time>
+                    <Api_Result>0000</Api_Result>
+                    <Api_Result_Message>正常終了</Api_Result_Message>
+                    <Disease_Unmatch_Information type="record">
+                      <Disease_Unmatch_Information_Overflow>False</Disease_Unmatch_Information_Overflow>
+                      <Disease_Unmatch_Info type="array">
+                        <Disease_Unmatch_Info_child type="record">
+                          <Disease_Code>7840024</Disease_Code>
+                          <Disease_Name>頭痛</Disease_Name>
+                          <Disease_Supplement_Name>右片側</Disease_Supplement_Name>
+                          <Disease_InOut>O</Disease_InOut>
+                          <Disease_Category>PD</Disease_Category>
+                          <Disease_SuspectedFlag>S</Disease_SuspectedFlag>
+                          <Disease_StartDate>2026-04-01</Disease_StartDate>
+                          <Disease_EndDate>2026-04-10</Disease_EndDate>
+                          <Disease_OutCome>1</Disease_OutCome>
+                        </Disease_Unmatch_Info_child>
+                      </Disease_Unmatch_Info>
+                    </Disease_Unmatch_Information>
+                    <Organize_Information type="record">
+                      <Department_Code>01</Department_Code>
+                      <Disease_StartDate>2026-04-01</Disease_StartDate>
+                    </Organize_Information>
+                  </diseaseres>
+                </xmlio2>
+                """);
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        injectDiseaseModAuthority(resource);
+
+        ChartSupportDiseaseModV3Response response = resource.diseaseModV3(
+                buildRequest(),
+                newDiseasePayload());
+
+        assertTrue(response.isBusinessAccepted());
+        assertTrue(response.isNeedsUserReview());
+        assertEquals("ORCA_UNMATCHED", response.getOperationStatus());
+        assertEquals("False", response.getUnmatchInformationOverflow());
+        assertEquals(1, response.getUnmatchInformation().size());
+        ChartSupportDiseaseModV3Response.DiseaseUnmatchInformation unmatch =
+                response.getUnmatchInformation().get(0);
+        assertEquals("7840024", unmatch.getCode());
+        assertEquals("頭痛", unmatch.getName());
+        assertEquals("右片側", unmatch.getSupplementName());
+        assertEquals("O", unmatch.getInOut());
+        assertEquals("PD", unmatch.getCategory());
+        assertEquals("S", unmatch.getSuspectedFlag());
+        assertEquals("2026-04-01", unmatch.getStartDate());
+        assertEquals("2026-04-10", unmatch.getEndDate());
+        assertEquals("1", unmatch.getOutcome());
+        assertNotNull(response.getOrganizeInformation());
+        assertEquals("01", response.getOrganizeInformation().getDepartmentCode());
+        assertEquals("2026-04-01", response.getOrganizeInformation().getDiseaseStartDate());
+    }
+
     private static HttpServletRequest buildRequest() {
         return (HttpServletRequest) Proxy.newProxyInstance(
                 OrcaChartSupportResourceTest.class.getClassLoader(),

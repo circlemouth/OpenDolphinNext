@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.Instant;
 import java.time.LocalDate;
 import javax.sql.DataSource;
@@ -35,6 +38,16 @@ class OrcaDiseaseOperationStoreTest {
             warning.setCode("W001");
             warning.setMessageCategory("warning_like");
             response.setWarnings(java.util.List.of(warning));
+            ChartSupportDiseaseModV3Response.DiseaseUnmatchInformation unmatch =
+                    new ChartSupportDiseaseModV3Response.DiseaseUnmatchInformation();
+            unmatch.setCode("7840024");
+            response.setUnmatchInformation(java.util.List.of(unmatch));
+            response.setUnmatchInformationOverflow("False");
+            ChartSupportDiseaseModV3Response.OrganizeInformation organize =
+                    new ChartSupportDiseaseModV3Response.OrganizeInformation();
+            organize.setDepartmentCode("01");
+            organize.setDiseaseStartDate("2026-04-01");
+            response.setOrganizeInformation(organize);
 
             String requestXml = "<data><diseasereq><Patient_ID>00001</Patient_ID></diseasereq></data>";
             String responseBody = "<xmlio2><diseaseres><Api_Result>0000</Api_Result></diseaseres></xmlio2>";
@@ -70,6 +83,29 @@ class OrcaDiseaseOperationStoreTest {
             assertEquals(64, row.responseHash().length());
             assertFalse(row.requestHash().contains("Patient_ID"));
             assertFalse(row.responseHash().contains("Api_Result"));
+            assertStoredResponseSummary(dataSource, id, "unmatchCount", "1");
+            assertStoredResponseSummary(dataSource, id, "unmatchOverflow", "False");
+            assertStoredResponseSummary(dataSource, id, "organizeInformationPresent", "true");
+        }
+    }
+
+    private static void assertStoredResponseSummary(
+            DataSource dataSource,
+            long id,
+            String field,
+            String expected) throws Exception {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT response_summary_json ->> ?
+                       FROM opendolphin.orca_disease_operation
+                      WHERE orca_disease_operation_id = ?
+                     """)) {
+            statement.setString(1, field);
+            statement.setLong(2, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                assertTrue(resultSet.next());
+                assertEquals(expected, resultSet.getString(1));
+            }
         }
     }
 

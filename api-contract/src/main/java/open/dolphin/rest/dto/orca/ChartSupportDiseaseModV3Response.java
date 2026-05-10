@@ -22,6 +22,8 @@ public class ChartSupportDiseaseModV3Response {
     private String error;
     private boolean needsUserReview;
     private String operationStatus;
+    private String unmatchInformationOverflow;
+    private OrganizeInformation organizeInformation;
     private List<DiseaseWarning> warnings = new ArrayList<>();
     private List<DiseaseUnmatchInformation> unmatchInformation = new ArrayList<>();
 
@@ -145,6 +147,22 @@ public class ChartSupportDiseaseModV3Response {
         this.operationStatus = operationStatus;
     }
 
+    public String getUnmatchInformationOverflow() {
+        return unmatchInformationOverflow;
+    }
+
+    public void setUnmatchInformationOverflow(String unmatchInformationOverflow) {
+        this.unmatchInformationOverflow = unmatchInformationOverflow;
+    }
+
+    public OrganizeInformation getOrganizeInformation() {
+        return organizeInformation;
+    }
+
+    public void setOrganizeInformation(OrganizeInformation organizeInformation) {
+        this.organizeInformation = organizeInformation;
+    }
+
     public List<DiseaseWarning> getWarnings() {
         return warnings;
     }
@@ -196,6 +214,13 @@ public class ChartSupportDiseaseModV3Response {
     public static class DiseaseUnmatchInformation {
         private String code;
         private String name;
+        private String supplementName;
+        private String inOut;
+        private String category;
+        private String suspectedFlag;
+        private String startDate;
+        private String endDate;
+        private String outcome;
         private String messageCategory;
 
         public String getCode() {
@@ -214,12 +239,90 @@ public class ChartSupportDiseaseModV3Response {
             this.name = name;
         }
 
+        public String getSupplementName() {
+            return supplementName;
+        }
+
+        public void setSupplementName(String supplementName) {
+            this.supplementName = supplementName;
+        }
+
+        public String getInOut() {
+            return inOut;
+        }
+
+        public void setInOut(String inOut) {
+            this.inOut = inOut;
+        }
+
+        public String getCategory() {
+            return category;
+        }
+
+        public void setCategory(String category) {
+            this.category = category;
+        }
+
+        public String getSuspectedFlag() {
+            return suspectedFlag;
+        }
+
+        public void setSuspectedFlag(String suspectedFlag) {
+            this.suspectedFlag = suspectedFlag;
+        }
+
+        public String getStartDate() {
+            return startDate;
+        }
+
+        public void setStartDate(String startDate) {
+            this.startDate = startDate;
+        }
+
+        public String getEndDate() {
+            return endDate;
+        }
+
+        public void setEndDate(String endDate) {
+            this.endDate = endDate;
+        }
+
+        public String getOutcome() {
+            return outcome;
+        }
+
+        public void setOutcome(String outcome) {
+            this.outcome = outcome;
+        }
+
         public String getMessageCategory() {
             return messageCategory;
         }
 
         public void setMessageCategory(String messageCategory) {
             this.messageCategory = messageCategory;
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class OrganizeInformation {
+        private String departmentCode;
+        private String diseaseStartDate;
+
+        public String getDepartmentCode() {
+            return departmentCode;
+        }
+
+        public void setDepartmentCode(String departmentCode) {
+            this.departmentCode = departmentCode;
+        }
+
+        public String getDiseaseStartDate() {
+            return diseaseStartDate;
+        }
+
+        public void setDiseaseStartDate(String diseaseStartDate) {
+            this.diseaseStartDate = diseaseStartDate;
         }
     }
 }

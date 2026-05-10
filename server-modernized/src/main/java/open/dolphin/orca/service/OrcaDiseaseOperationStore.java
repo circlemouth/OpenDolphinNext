@@ -159,6 +159,8 @@ public class OrcaDiseaseOperationStore {
         summary.put("needsUserReview", response.isNeedsUserReview());
         summary.put("warningCount", response.getWarnings() != null ? response.getWarnings().size() : 0);
         summary.put("unmatchCount", response.getUnmatchInformation() != null ? response.getUnmatchInformation().size() : 0);
+        summary.put("unmatchOverflow", normalize(response.getUnmatchInformationOverflow()));
+        summary.put("organizeInformationPresent", response.getOrganizeInformation() != null);
         return summary;
     }
 

@@ -172,7 +172,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] `OrcaDiseaseMutationRequest` は operation、ORCA患者ID、基準月、診療日、診療科、医師、保険組合せ、病名コード、補足コード、疑い、開始/終了日、転帰、カルテ名、病名区分、レセプト表示、保険病名、主病名/副病名を持つ。
 - [x] `OrcaDiseaseMutationResponse` 相当の `ChartSupportDiseaseModV3Response` は result、warnings、unmatched、needsUserReview、operationStatus を持つ。
 - [x] `diseasev3` の警告・不一致を無視せず、`ORCA_WARNING` / `ORCA_UNMATCHED` と `needsUserReview=true` へ分類する。
-- [ ] `diseasev3` の ORCAのみ病名、連番付け替え情報を無視しない。
+- [x] `diseasev3` の ORCAのみ病名、連番付け替え情報を無視せず、sanitized response / operation summary に保存する。
 - [ ] ORCA送信成功後に必ず病名を再取得し、再取得結果だけを ORCA病名表示の根拠にする。
 - [ ] 病名 UI は「ORCA登録病名」「診療録本文中の病名記載」「未送信候補」を分離し、入力だけで ORCA送信しない。
 

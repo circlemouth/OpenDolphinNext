@@ -603,6 +603,8 @@ final class OrcaChartSupportSupport {
             response.setInformationTime(readFirst(document, "Information_Time"));
             response.setWarnings(parseDiseaseWarnings(document));
             response.setUnmatchInformation(parseDiseaseUnmatchInformation(document));
+            response.setUnmatchInformationOverflow(readFirst(document, "Disease_Unmatch_Information_Overflow"));
+            response.setOrganizeInformation(parseDiseaseOrganizeInformation(document));
             boolean transportOk = response.getStatus() >= 200 && response.getStatus() < 300;
             boolean apiOk = response.getApiResult() != null && response.getApiResult().matches("0+");
             boolean completionEvidencePresent = !isBlank(response.getInformationDate())
@@ -723,17 +725,41 @@ final class OrcaChartSupportSupport {
 
     private List<ChartSupportDiseaseModV3Response.DiseaseUnmatchInformation> parseDiseaseUnmatchInformation(Document document) {
         List<ChartSupportDiseaseModV3Response.DiseaseUnmatchInformation> unmatches = new ArrayList<>();
-        for (Element element : elements(document, "Disease_Unmatch_Information_child")) {
+        List<Element> elements = new ArrayList<>(elements(document, "Disease_Unmatch_Information_child"));
+        elements.addAll(elements(document, "Disease_Unmatch_Info_child"));
+        for (Element element : elements) {
             ChartSupportDiseaseModV3Response.DiseaseUnmatchInformation unmatch =
                     new ChartSupportDiseaseModV3Response.DiseaseUnmatchInformation();
             unmatch.setCode(firstNonBlank(readFirst(element, "Disease_Unmatch_Code"), readFirst(element, "Disease_Code")));
             unmatch.setName(firstNonBlank(readFirst(element, "Disease_Unmatch_Name"), readFirst(element, "Disease_Name")));
+            unmatch.setSupplementName(readFirst(element, "Disease_Supplement_Name"));
+            unmatch.setInOut(readFirst(element, "Disease_InOut"));
+            unmatch.setCategory(readFirst(element, "Disease_Category"));
+            unmatch.setSuspectedFlag(readFirst(element, "Disease_SuspectedFlag"));
+            unmatch.setStartDate(readFirst(element, "Disease_StartDate"));
+            unmatch.setEndDate(readFirst(element, "Disease_EndDate"));
+            unmatch.setOutcome(readFirst(element, "Disease_OutCome"));
             unmatch.setMessageCategory(classifySafeMessage(firstNonBlank(
                     readFirst(element, "Disease_Unmatch_Message"),
                     readFirst(element, "Message"))));
             unmatches.add(unmatch);
         }
         return unmatches;
+    }
+
+    private ChartSupportDiseaseModV3Response.OrganizeInformation parseDiseaseOrganizeInformation(Document document) {
+        Element element = elements(document, "Organize_Information").stream().findFirst().orElse(null);
+        if (element == null) {
+            return null;
+        }
+        ChartSupportDiseaseModV3Response.OrganizeInformation information =
+                new ChartSupportDiseaseModV3Response.OrganizeInformation();
+        information.setDepartmentCode(readFirst(element, "Department_Code"));
+        information.setDiseaseStartDate(readFirst(element, "Disease_StartDate"));
+        if (isBlank(information.getDepartmentCode()) && isBlank(information.getDiseaseStartDate())) {
+            return null;
+        }
+        return information;
     }
 
     private String classifyOfficialMutationResult(
