@@ -33,6 +33,7 @@ import open.dolphin.rest.dto.orca.PrescriptionOrderDoImportResponse;
 import open.dolphin.rest.dto.orca.PrescriptionOrderFetchResponse;
 import open.dolphin.rest.dto.orca.PrescriptionRp;
 import open.dolphin.rest.dto.orca.PrescriptionOrderSaveResponse;
+import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import open.dolphin.session.PatientServiceBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +53,9 @@ public class LocalPrescriptionOrderResource extends AbstractOrcaRestResource {
 
     @Inject
     private PrescriptionOrderRepository prescriptionOrderRepository;
+
+    @Inject
+    AuthoritativeAuditRepository authoritativeAuditRepository;
 
     @GET
     public PrescriptionOrderFetchResponse getLatestOrder(
@@ -126,6 +130,7 @@ public class LocalPrescriptionOrderResource extends AbstractOrcaRestResource {
         String runId = resolveRunId(request);
         String remoteUser = requireRemoteUser(request);
         String facilityId = requireFacilityId(request);
+        requireAuditWritePathAvailable(request);
 
         if (payload == null) {
             recordValidationFailure(request, facilityId, null, runId, "payload", "payload is required",
@@ -197,6 +202,7 @@ public class LocalPrescriptionOrderResource extends AbstractOrcaRestResource {
         String runId = resolveRunId(request);
         String remoteUser = requireRemoteUser(request);
         String facilityId = requireFacilityId(request);
+        requireAuditWritePathAvailable(request);
         DoImportContext context = validateDoImportRequest(request, payload, runId, facilityId);
         PrescriptionOrder baseOrder = loadBaseOrder(request, context, facilityId, runId);
         DoImportResult result = mergeDoImportOrder(request, payload, context, baseOrder, facilityId, remoteUser, runId);
@@ -233,6 +239,21 @@ public class LocalPrescriptionOrderResource extends AbstractOrcaRestResource {
         String targetEncounterId = trimToNull(payload.getEncounterId());
         validateClaimCommentCodes(request, payload.getDoOrder(), facilityId, patientId, runId, AUDIT_DO_IMPORT_ACTION);
         return new DoImportContext(patientId, targetEncounterId, targetEncounterDate);
+    }
+
+    void requireAuditWritePathAvailable(HttpServletRequest request) {
+        boolean available = authoritativeAuditRepository != null
+                && authoritativeAuditRepository.isWritePathAvailable();
+        if (!available) {
+            Map<String, Object> details = new HashMap<>();
+            details.put("reasonCode", "audit_log_write_unavailable");
+            details.put("retryable", Boolean.TRUE);
+            throw restError(request, Response.Status.SERVICE_UNAVAILABLE,
+                    "audit_log_write_unavailable",
+                    "Audit log write path is unavailable",
+                    details,
+                    null);
+        }
     }
 
     private PrescriptionOrder loadBaseOrder(

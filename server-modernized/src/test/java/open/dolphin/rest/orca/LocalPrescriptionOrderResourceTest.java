@@ -23,12 +23,14 @@ import open.dolphin.rest.dto.orca.PrescriptionClaimComment;
 import open.dolphin.rest.dto.orca.PrescriptionDoctorComment;
 import open.dolphin.rest.dto.orca.PrescriptionDrug;
 import open.dolphin.rest.dto.orca.PrescriptionOrder;
+import open.dolphin.rest.dto.orca.PrescriptionOrderDoImportRequest;
 import open.dolphin.rest.dto.orca.PrescriptionOrderFetchResponse;
 import open.dolphin.rest.dto.orca.PrescriptionOrderSaveResponse;
 import open.dolphin.rest.dto.orca.PrescriptionRemark;
 import open.dolphin.rest.dto.orca.PrescriptionRp;
 import open.dolphin.rest.dto.orca.PrescriptionSetting;
 import open.dolphin.security.audit.AuditEventPayload;
+import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.testsupport.RuntimeDelegateTestSupport;
@@ -51,6 +53,7 @@ class LocalPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
         injectField(resource, "sessionAuditDispatcher", new RecordingSessionAuditDispatcher());
         injectField(resource, "patientServiceBean", new FakePatientServiceBean());
         injectField(resource, "prescriptionOrderRepository", fakeRepository);
+        injectField(resource, "authoritativeAuditRepository", new StubAuditRepository(true));
 
         Map<String, Object> attributes = new HashMap<>();
         servletRequest = (HttpServletRequest) Proxy.newProxyInstance(
@@ -101,6 +104,32 @@ class LocalPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
                 () -> resource.saveOrder(servletRequest, payload));
 
         assertValidationError(ex, "rps[0].drugs[0].claimComments[0].code");
+        assertEquals(0, fakeRepository.saveCalls);
+    }
+
+    @Test
+    void prescriptionMutationsFailClosedWhenAuditWritePathIsUnavailable() throws Exception {
+        injectField(resource, "authoritativeAuditRepository", new StubAuditRepository(false));
+        PrescriptionOrder payload = buildPayload();
+
+        WebApplicationException saveError = assertThrows(WebApplicationException.class,
+                () -> resource.saveOrder(servletRequest, payload));
+
+        assertEquals(503, saveError.getResponse().getStatus());
+        assertTrue(String.valueOf(saveError.getResponse().getEntity()).contains("audit_log_write_unavailable"));
+        assertEquals(0, fakeRepository.saveCalls);
+
+        PrescriptionOrderDoImportRequest doImport = new PrescriptionOrderDoImportRequest();
+        doImport.setPatientId("00001");
+        doImport.setEncounterId("F001:E100");
+        doImport.setEncounterDate("2026-04-03");
+        doImport.setDoOrder(buildPayload());
+
+        WebApplicationException doImportError = assertThrows(WebApplicationException.class,
+                () -> resource.doImport(servletRequest, doImport));
+
+        assertEquals(503, doImportError.getResponse().getStatus());
+        assertTrue(String.valueOf(doImportError.getResponse().getEntity()).contains("audit_log_write_unavailable"));
         assertEquals(0, fakeRepository.saveCalls);
     }
 
@@ -404,6 +433,19 @@ class LocalPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
             patient.setKanaName("Test Kana");
             patient.setBirthday(LocalDate.parse("1990-01-01"));
             return patient;
+        }
+    }
+
+    private static final class StubAuditRepository extends AuthoritativeAuditRepository {
+        private final boolean available;
+
+        private StubAuditRepository(boolean available) {
+            this.available = available;
+        }
+
+        @Override
+        public boolean isWritePathAvailable() {
+            return available;
         }
     }
 
