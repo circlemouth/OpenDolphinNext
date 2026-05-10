@@ -18,6 +18,7 @@
 
 ## Workflow Docs
 - [implementation/README.md](implementation/README.md)
+- [implementation/opendolphin-next-orca-ehr-completion-20260510T092335Z/README.md](implementation/opendolphin-next-orca-ehr-completion-20260510T092335Z/README.md)
 - [implementation/orca-trial-phase3-retry-20260421T060636Z/MAIN_AGENT_REPORT.md](implementation/orca-trial-phase3-retry-20260421T060636Z/MAIN_AGENT_REPORT.md)
 - [implementation/orca-trial-readonly-contract-fix-20260420T000000Z/subagent-A-orca-wrapper-contract-report.md](implementation/orca-trial-readonly-contract-fix-20260420T000000Z/subagent-A-orca-wrapper-contract-report.md)
 - [implementation/orca-trial-readonly-contract-fix-20260420T000000Z/subagent-B-readiness-classifier-report.md](implementation/orca-trial-readonly-contract-fix-20260420T000000Z/subagent-B-readiness-classifier-report.md)
