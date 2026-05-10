@@ -16,6 +16,8 @@ export type CloseAndSendBillingResponse = {
   apiResultMessage?: string;
   message?: string;
   confirmationRequired?: boolean;
+  operationStatus?: string;
+  needsUserReview?: boolean;
   orderBundleCount?: number;
   medicalInformationCount?: number;
   diseaseSyncCount?: number;
@@ -59,6 +61,8 @@ export async function closeAndSendToBilling(
     apiResultMessage: typeof json.apiResultMessage === 'string' ? json.apiResultMessage : undefined,
     message: typeof json.message === 'string' ? json.message : undefined,
     confirmationRequired: typeof json.confirmationRequired === 'boolean' ? json.confirmationRequired : undefined,
+    operationStatus: typeof json.operationStatus === 'string' ? json.operationStatus : undefined,
+    needsUserReview: typeof json.needsUserReview === 'boolean' ? json.needsUserReview : undefined,
     orderBundleCount: typeof json.orderBundleCount === 'number' ? json.orderBundleCount : undefined,
     medicalInformationCount: typeof json.medicalInformationCount === 'number' ? json.medicalInformationCount : undefined,
     diseaseSyncCount: typeof json.diseaseSyncCount === 'number' ? json.diseaseSyncCount : undefined,

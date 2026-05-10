@@ -79,6 +79,20 @@ class OrcaBillingCorrectionScenarioSupportTest {
     }
 
     @Test
+    void closeAndSendUnknownResponsePersistsSanitizedReviewClassification() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+
+        ChartSupportMedicalModResponse response = resource.unknownMedicalResponse("RUN-UNKNOWN", "TRACE-UNKNOWN");
+        String serialized = resource.serializeResponse(response, true);
+
+        assertEquals("UNKNOWN", response.getOperationStatus());
+        assertTrue(response.isNeedsUserReview());
+        assertTrue(serialized.contains("\"operationStatus\":\"UNKNOWN\""));
+        assertTrue(serialized.contains("\"needsUserReview\":true"));
+        assertTrue(serialized.contains("\"confirmationRequired\":true"));
+    }
+
+    @Test
     void incomeInfoKeepsConfirmationSourceSeparateFromMedicalModResponse() {
         OrcaChartSupportSupport support = new OrcaChartSupportSupport();
 

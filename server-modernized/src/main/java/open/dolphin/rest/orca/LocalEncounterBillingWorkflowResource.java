@@ -176,6 +176,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
                 confirmationRequired = true;
                 errorCode = "medical_uid_missing";
                 errorMessage = "ORCA response did not include Medical_Uid";
+                markMedicalResponseUnknown(medicalResponse);
             } else {
                 finalState = "ORCA_FAILED";
                 errorCode = "orca_business_rejected";
@@ -223,6 +224,8 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         audit.put("snapshotId", snapshot.snapshotId());
         audit.put("transmissionId", transmission.transmissionId());
         audit.put("state", finalState);
+        audit.put("operationStatus", medicalResponse.getOperationStatus());
+        audit.put("needsUserReview", medicalResponse.isNeedsUserReview());
         audit.put("medicalUidPresent", normalize(medicalResponse.getMedicalUid()) != null);
         audit.put("routeNamespace", "local");
         recordAudit(request, AUDIT_ACTION, audit,
@@ -240,6 +243,8 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         response.setApiResult(medicalResponse.getApiResult());
         response.setApiResultMessage(medicalResponse.getApiResultMessage());
         response.setConfirmationRequired(confirmationRequired);
+        response.setOperationStatus(medicalResponse.getOperationStatus());
+        response.setNeedsUserReview(medicalResponse.isNeedsUserReview() || confirmationRequired);
         response.setMessage("ORCA_MEDICAL_REGISTERED".equals(finalState)
                 ? "会計送信用の中途終了データを登録しました"
                 : "ORCA送信結果の確認が必要です");
@@ -391,6 +396,8 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         response.setApiResult(transmission.apiResult());
         response.setApiResultMessage(transmission.apiResultMessage());
         response.setConfirmationRequired("ORCA_UNKNOWN".equals(transmission.state()));
+        response.setOperationStatus(operationStatusForTransmissionState(transmission.state()));
+        response.setNeedsUserReview(!response.isOk());
         response.setMessage("同じ冪等キーの送信履歴を返しました");
         return response;
     }
@@ -414,7 +421,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         return response;
     }
 
-    private ChartSupportMedicalModResponse unknownMedicalResponse(String runId, String traceId) {
+    ChartSupportMedicalModResponse unknownMedicalResponse(String runId, String traceId) {
         ChartSupportMedicalModResponse response = new ChartSupportMedicalModResponse();
         response.setRunId(runId);
         response.setTraceId(traceId);
@@ -423,16 +430,20 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         response.setApiOk(false);
         response.setApiResult("unknown");
         response.setApiResultMessage("result_unknown");
+        response.setOperationStatus("UNKNOWN");
+        response.setNeedsUserReview(true);
         response.setError("ORCA result is unknown");
         return response;
     }
 
-    private String serializeResponse(ChartSupportMedicalModResponse response, boolean confirmationRequired) {
+    String serializeResponse(ChartSupportMedicalModResponse response, boolean confirmationRequired) {
         Map<String, Object> safe = new LinkedHashMap<>();
         safe.put("ok", response != null && response.isOk());
         safe.put("status", response != null ? response.getStatus() : null);
         safe.put("apiResult", response != null ? response.getApiResult() : null);
         safe.put("apiResultMessage", response != null ? response.getApiResultMessage() : null);
+        safe.put("operationStatus", response != null ? response.getOperationStatus() : null);
+        safe.put("needsUserReview", response != null && response.isNeedsUserReview());
         safe.put("medicalUidPresent", response != null && normalize(response.getMedicalUid()) != null);
         safe.put("confirmationRequired", confirmationRequired);
         try {
@@ -440,6 +451,31 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         } catch (JsonProcessingException ex) {
             return "{}";
         }
+    }
+
+    private void markMedicalResponseUnknown(ChartSupportMedicalModResponse response) {
+        if (response == null) {
+            return;
+        }
+        response.setOperationStatus("UNKNOWN");
+        response.setNeedsUserReview(true);
+    }
+
+    private String operationStatusForTransmissionState(String state) {
+        String normalized = normalize(state);
+        if ("ORCA_MEDICAL_REGISTERED".equals(normalized) || "ORCA_CONFIRMED".equals(normalized)) {
+            return "ORCA_ACCEPTED";
+        }
+        if ("ORCA_UNKNOWN".equals(normalized)) {
+            return "UNKNOWN";
+        }
+        if ("CORRECTION_REQUIRED".equals(normalized)) {
+            return "NEEDS_REVIEW";
+        }
+        if ("ORCA_FAILED".equals(normalized)) {
+            return "ORCA_REJECTED";
+        }
+        return normalized != null ? normalized : "UNKNOWN";
     }
 
     private BundleDolphin decodeBundle(ModuleModel module) {

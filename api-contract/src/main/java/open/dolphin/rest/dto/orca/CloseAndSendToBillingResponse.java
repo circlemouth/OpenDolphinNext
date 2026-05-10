@@ -16,6 +16,8 @@ public class CloseAndSendToBillingResponse {
     private String apiResultMessage;
     private String message;
     private boolean confirmationRequired;
+    private boolean needsUserReview;
+    private String operationStatus;
     private int orderBundleCount;
     private int medicalInformationCount;
     private int diseaseSyncCount;
@@ -132,6 +134,22 @@ public class CloseAndSendToBillingResponse {
 
     public void setConfirmationRequired(boolean confirmationRequired) {
         this.confirmationRequired = confirmationRequired;
+    }
+
+    public boolean isNeedsUserReview() {
+        return needsUserReview;
+    }
+
+    public void setNeedsUserReview(boolean needsUserReview) {
+        this.needsUserReview = needsUserReview;
+    }
+
+    public String getOperationStatus() {
+        return operationStatus;
+    }
+
+    public void setOperationStatus(String operationStatus) {
+        this.operationStatus = operationStatus;
     }
 
     public int getOrderBundleCount() {
