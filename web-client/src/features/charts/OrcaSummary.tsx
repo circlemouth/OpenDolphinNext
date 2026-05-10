@@ -815,7 +815,7 @@ export function OrcaSummary({
               {invoiceIdentifier && <li>{invoiceIdentifier}</li>}
               {claimDataIdIdentifier && <li>{claimDataIdIdentifier}</li>}
               {lastSendCache?.sendStatus && (
-                <li>ORCA送信: {lastSendCache.sendStatus === 'success' ? '成功' : '失敗'}</li>
+                <li>ORCA送信応答: {lastSendCache.sendStatus === 'success' ? '送達確認' : '送信失敗'}</li>
               )}
               {!effectiveClaim?.invoiceNumber && lastSendInvoiceIdentifier && (
                 <li>直近送信: {lastSendInvoiceIdentifier}（runId={lastSendCache?.runId ?? '—'}）</li>
@@ -832,7 +832,7 @@ export function OrcaSummary({
               <strong>Transmission / medical-mod-v2</strong>
               <span className="orca-summary__card-meta">{billingDecision.transmissionState}</span>
             </header>
-            <p className="orca-summary__help">medical-mod-v2 の送信結果です。会計済み判定とは別に扱ってください。</p>
+            <p className="orca-summary__help">medical-mod-v2 の送信結果です。会計済み判定や診療録確定とは別に扱ってください。</p>
             <ul>
               <li>送信状態: {billingDecision.transmissionState}</li>
               <li>確認状態: {billingDecision.statusText ?? billingDecision.status ?? '未確認'}</li>

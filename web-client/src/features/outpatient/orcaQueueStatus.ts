@@ -5,7 +5,7 @@ export type OrcaSendStatusKey = 'waiting' | 'processing' | 'success' | 'failure'
 
 export type OrcaSendStatus = {
   key: OrcaSendStatusKey;
-  label: '待ち' | '処理中' | '成功' | '失敗' | '不明';
+  label: '待ち' | '処理中' | '送達確認' | '失敗' | '不明';
   tone: 'info' | 'warning' | 'success' | 'error';
   isStalled: boolean;
   lastDispatchAt?: string;
@@ -59,7 +59,7 @@ export const resolveOrcaSendStatus = (entry: OrcaQueueEntry | undefined, nowMs =
   const elapsedMs = lastMs === undefined ? undefined : Math.max(0, nowMs - lastMs);
 
   if (phase === 'ack') {
-    return { key: 'success', label: '成功', tone: 'success', isStalled: false, lastDispatchAt, error: entry.error };
+    return { key: 'success', label: '送達確認', tone: 'success', isStalled: false, lastDispatchAt, error: entry.error };
   }
   if (phase === 'failed') {
     return { key: 'failure', label: '失敗', tone: 'error', isStalled: false, lastDispatchAt, error: entry.error };

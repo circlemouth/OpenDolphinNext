@@ -137,13 +137,13 @@ const deriveNextAction = (
   if (sendStatus?.key === 'waiting' || sendStatus?.key === 'processing') {
     return sendStatus.isStalled
       ? '送信が滞留：ORCA再送を試行'
-      : '送信待ち/処理中：反映を確認してから会計へ進む';
+      : '送信待ち/処理中：送信結果を確認してから会計へ進む';
   }
   if (queuePhase === 'error') {
     return claimEnabled ? '請求キューを再取得し、失敗理由を確認' : '送信キューを再取得し、失敗理由を確認';
   }
   if (queuePhase === 'retrying') return '再取得完了まで待機し、結果を確認';
-  if (queuePhase === 'pending') return 'ORCA キューへの反映を確認してから会計へ進む';
+  if (queuePhase === 'pending') return 'ORCAキュー状態を確認してから会計へ進む';
   switch (status) {
     case '受付中':
       return '診療開始を知らせ、受付情報を確定';

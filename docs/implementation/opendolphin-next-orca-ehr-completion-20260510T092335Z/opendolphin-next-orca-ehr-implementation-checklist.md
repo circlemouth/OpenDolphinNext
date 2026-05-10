@@ -272,6 +272,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] `web-client/vite.config.ts` から `/api21`, `/api01rv2`, `/orca22` 等の生 ORCA/WebORCA proxy、ORCA Basic 認証 header 注入、ORCA 証明書 agent 読込、ORCA header 操作を削除し、Vite proxy は server-modernized `/api` entrypoint 中継に限定する。
   - [x] `web-client` の `npm run dev` は ORCA env file を自動読込せず、`verify:no-direct-orca-proxy-config` で Vite config / env sample への生 ORCA proxy・ORCA credential config 再混入を fail する。
 - [ ] ORCA送信成功を診療録確定と同義に扱う UI 文言、ORCA送信失敗時に登録済み/反映済みと表示する文言、重要警告を初期非表示にする UI を削除または変更する。
+  - [x] Charts の ORCA summary / timeline で `medicalmodv2` 送信を単純な「成功」表示にせず、`送達確認` として表示し、会計済み判定・診療録確定とは別概念であることを初期表示の説明に含める。
 
 ## 18. 実ORCA接続試験チェック
 

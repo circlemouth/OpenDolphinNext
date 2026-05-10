@@ -313,5 +313,6 @@ describe('DocumentTimeline recovery order', () => {
     );
 
     expect(screen.queryByText('送信:成功')).not.toBeInTheDocument();
+    expect(screen.queryByText('送信:送達確認')).not.toBeInTheDocument();
   });
 });
