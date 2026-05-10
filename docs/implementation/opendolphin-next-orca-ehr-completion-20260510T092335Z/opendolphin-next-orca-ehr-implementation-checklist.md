@@ -107,7 +107,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] `diseasev3` の transport 例外は `NETWORK_FAILED` / `needsUserReview=true` として operation に保存し、成功扱いにしない。
 - [ ] `UNKNOWN` は成功扱いせず、ORCA再照合完了まで UI に要確認として表示する。
   - [x] `close-and-send-to-billing` の `ORCA_UNKNOWN` / `operationStatus=UNKNOWN` / `needsUserReview=true` は Charts の診察終了成功に潰さず、会計待ち遷移と患者タブ終了を停止して要確認を初期表示する。
-- [ ] `authoritative_audit_event` を append-only / hash chain 付きに再設計または拡張する。
+- [x] `authoritative_audit_event` を append-only / hash chain 付きに再設計または拡張する。
 - [ ] 監査ログに ORCA認証情報、証明書パスワード、Basic認証文字列を保存しない。
 - [ ] ORCA raw XML を保存する場合は暗号化し、アクセス権限を限定する。
 
@@ -205,7 +205,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [ ] ログイン、ログアウト、患者閲覧、診療録作成/保存/確定/訂正/追記/取消、文書添付/削除、処方作成/確定/変更/中止/取消/再発行、ORCA患者/受付/保険/病名取得、ORCA病名/診療行為送信、ORCA会計/帳票取得、ORCA送信失敗/再送/取消、エラー、権限拒否を記録する。
 - [ ] 監査ログは操作者、ロール、対象患者、ORCA患者番号、診療録、処方、ORCA操作、時刻、操作種別、変更前後要約、端末情報、IP/user-agent hash、request/trace ID、ORCA連携結果、警告/エラー/不一致要約、event hash、previous hash を保存する。
-- [ ] 監査ログは append-only とし、削除/更新 API を作らない。
+- [x] 監査ログは append-only とし、削除/更新 API を作らない。
 - [ ] 一般ユーザーと管理者のいずれも監査ログ改ざんができない設計にする。
 - [ ] hash chain 検証バッチ、バックアップ、復元手順を実装・文書化する。
 
@@ -302,7 +302,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] ORCA警告・エラー・不一致が UI と監査ログに保存される。
 - [ ] 患者ヘッダーが主要画面に表示され、重大操作に確認フローがある。
 - [ ] 診療録 PDF 出力と期間エクスポートができる。
-- [ ] 監査ログ hash chain 検証ができる。
+- [x] 監査ログ hash chain 検証ができる。
 - [ ] 実ORCA接続試験、ORCAモック試験、DADS観点 UI テストが完了している。
 - [ ] 本番運用前に ORCA接続情報、証明書期限監視、DB/監査/添付バックアップ、復元試験、障害時/再送/照合手順、患者取り違え防止 UI、ロール権限、監査ログ閲覧権限を確認する。
 
@@ -344,8 +344,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 ### Phase 5: 保存性・監査・運用
 
-- [ ] 監査ログをappend-only化する。
-- [ ] hash chain検証を実装する。
+- [x] 監査ログをappend-only化する。
+- [x] hash chain検証を実装する。
 - [ ] PDF・印刷・期間エクスポートを完成させる。
 - [ ] バックアップ・復元手順を整備する。
 - [ ] 実ORCA接続試験を完了する。

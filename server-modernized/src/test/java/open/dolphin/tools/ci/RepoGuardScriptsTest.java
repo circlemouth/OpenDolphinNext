@@ -83,6 +83,27 @@ class RepoGuardScriptsTest {
         assertThat(result.output()).contains("generated artifacts");
     }
 
+    @Test
+    void checkAuditAppendOnlyPassesForAppendOnlyFixture() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-audit-ok");
+        createAuditAppendOnlyFixture(repoRoot, false);
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-audit-append-only.sh", repoRoot);
+
+        assertThat(result.exitCode()).isZero();
+    }
+
+    @Test
+    void checkAuditAppendOnlyFailsWhenProductionCodeMutatesAuditEvent() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-audit-ng");
+        createAuditAppendOnlyFixture(repoRoot, true);
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-audit-append-only.sh", repoRoot);
+
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.output()).contains("audit_event must remain append-only");
+    }
+
     private static void createDocLinkFixture(Path repoRoot, boolean includeTarget) throws IOException {
         Files.createDirectories(repoRoot.resolve("docs/managerdocs"));
         Files.createDirectories(repoRoot.resolve("docs/architecture"));
@@ -128,6 +149,55 @@ class RepoGuardScriptsTest {
                 ? "OPENDOLPHIN_ENVIRONMENT=dev\nOPENDOLPHIN_TIMEZONE=Asia/Tokyo\n"
                 : "OPENDOLPHIN_ENVIRONMENT=dev\n";
         Files.writeString(repoRoot.resolve("server-modernized/config/server-modernized.env.sample"), sample);
+    }
+
+    private static void createAuditAppendOnlyFixture(Path repoRoot, boolean includeForbiddenMutation) throws IOException {
+        Path auditDir = repoRoot.resolve("server-modernized/src/main/java/open/dolphin/security/audit");
+        Files.createDirectories(auditDir);
+        Files.createDirectories(repoRoot.resolve("domain/src/main/java"));
+        Files.writeString(
+                auditDir.resolve("AuthoritativeAuditRepository.java"),
+                """
+                package open.dolphin.security.audit;
+
+                public class AuthoritativeAuditRepository {
+                    public AuditWriteResult append(AuditWriteCommand command) {
+                        return null;
+                    }
+
+                    private void updateChainHead() {
+                    }
+
+                    public record AuditWriteCommand() {
+                    }
+
+                    public record AuditWriteResult() {
+                    }
+                }
+                """);
+        Files.writeString(
+                auditDir.resolve("AuditChainVerifier.java"),
+                """
+                package open.dolphin.security.audit;
+
+                public class AuditChainVerifier {
+                    public VerificationResult verifyAll() {
+                        return null;
+                    }
+
+                    public record VerificationResult() {
+                    }
+                }
+                """);
+        if (includeForbiddenMutation) {
+            Files.writeString(
+                    repoRoot.resolve("domain/src/main/java/UnsafeAuditMutation.java"),
+                    """
+                    class UnsafeAuditMutation {
+                        static final String SQL = "update opendolphin.audit_event set event_hash = ?";
+                    }
+                    """);
+        }
     }
 
     private static void initializeGitRepository(Path repoRoot) throws Exception {

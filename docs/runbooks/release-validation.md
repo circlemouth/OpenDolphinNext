@@ -205,6 +205,7 @@ cd web-client && node scripts/verify-no-blocked-orca-route-strings.mjs
 bash server-modernized/tools/ci/check-doc-links.sh
 bash server-modernized/tools/ci/check-config-contract.sh
 bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-audit-append-only.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-no-runtime-ddl.sh
 bash server-modernized/tools/ci/check-persistence-entities.sh
 bash server-modernized/tools/ci/check-no-generated-artifacts.sh --root "$(git rev-parse --show-toplevel)"
