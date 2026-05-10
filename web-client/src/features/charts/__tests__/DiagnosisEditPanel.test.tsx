@@ -71,12 +71,20 @@ beforeEach(() => {
       {
         diagnosisId: 2,
         diagnosisName: 'ORCA登録済み病名',
-        diagnosisCode: 'I10',
+        diagnosisCode: '8839001',
         startDate: '2026-04-02',
         layer: 'orca-mirror',
         readOnly: true,
         syncState: 'conflict',
         note: 'ORCA側と差分があります',
+        components: [
+          {
+            seq: 1,
+            componentType: 'BODY',
+            code: '8839001',
+            name: 'ORCA登録済み病名',
+          },
+        ],
       },
     ],
   });
@@ -99,7 +107,7 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     const mirrorList = await screen.findByRole('table', { name: 'ORCA登録病名（活動中）' });
     expect(within(mirrorList).getByText('ORCA登録済み病名')).toBeInTheDocument();
     expect(within(mirrorList).queryByText('院内未送信病名')).not.toBeInTheDocument();
-    expect(within(mirrorList).queryByText('I10')).not.toBeInTheDocument();
+    expect(within(mirrorList).getByText('8839001')).toBeInTheDocument();
     expect(within(mirrorList).queryByText('副')).not.toBeInTheDocument();
     expect(screen.getByText('ORCA再取得結果を正本として表示')).toBeInTheDocument();
     expect(screen.queryByText('保険病名の確認が必要です')).not.toBeInTheDocument();
@@ -139,7 +147,7 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     await user.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
     const authoring = screen.getByLabelText('ORCAへ病名登録');
     fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: 'HTN' } });
-    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('I10');
+    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('8839001');
     expect(mutateOrcaDisease).not.toHaveBeenCalled();
     await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
     const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
@@ -157,7 +165,13 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
           diseaseInformation: [
             expect.objectContaining({
               diseaseName: 'HTN',
-              diseaseCode: 'I10',
+              diseaseCode: '8839001',
+              components: [
+                expect.objectContaining({
+                  code: '8839001',
+                  componentType: 'BODY',
+                }),
+              ],
               insuranceCombinationNumber: '0001',
             }),
           ],
@@ -175,7 +189,7 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     await user.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
     const authoring = screen.getByLabelText('ORCAへ病名登録');
     fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: 'DM' } });
-    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('E11');
+    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('8839002');
     await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
     const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
     await user.click(within(confirmDialog).getByRole('button', { name: 'キャンセル' }));
@@ -191,7 +205,7 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     await user.click(await screen.findByRole('button', { name: '詳細入力で追加' }));
     const dialog = await screen.findByRole('dialog', { name: 'ORCA病名の追加' });
     fireEvent.change(within(dialog).getByLabelText('病名 *'), { target: { value: 'ReverseDate' } });
-    fireEvent.change(within(dialog).getByLabelText('病名コード ※任意'), { target: { value: 'I10' } });
+    fireEvent.change(within(dialog).getByLabelText('病名構成コード ※必須'), { target: { value: '8839001' } });
     await user.click(within(dialog).getByText('詳細（コード/開始/転帰）'));
     fireEvent.change(within(dialog).getByLabelText(/開始日/), { target: { value: '2026-04-20' } });
     fireEvent.change(within(dialog).getByLabelText(/転帰日/), { target: { value: '2026-04-10' } });
@@ -209,13 +223,13 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     await user.click(await screen.findByRole('button', { name: '詳細入力で追加' }));
     const dialog = await screen.findByRole('dialog', { name: 'ORCA病名の追加' });
     fireEvent.change(within(dialog).getByLabelText('病名 *'), { target: { value: 'UnknownOutcome' } });
-    fireEvent.change(within(dialog).getByLabelText('病名コード ※任意'), { target: { value: 'I10' } });
+    fireEvent.change(within(dialog).getByLabelText('病名構成コード ※必須'), { target: { value: '8839001' } });
     await user.click(within(dialog).getByText('詳細（コード/開始/転帰）'));
     fireEvent.change(within(dialog).getByLabelText(/転帰 ※任意/), { target: { value: '想定外の転帰' } });
     await user.click(within(dialog).getByRole('button', { name: 'ORCAへ病名登録' }));
 
     expect(
-      (await screen.findAllByText('転帰は 継続、治癒、中止、再発、死亡、転院、不明 のいずれかを入力してください。')).length,
+      (await screen.findAllByText('転帰は 継続中、治癒、中止、死亡、移行(ORCA送信保留) のいずれかを入力してください。')).length,
     ).toBeGreaterThan(0);
     expect(mutateOrcaDisease).not.toHaveBeenCalled();
   });

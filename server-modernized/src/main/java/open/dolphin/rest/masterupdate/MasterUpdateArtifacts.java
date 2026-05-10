@@ -48,11 +48,15 @@ final class MasterUpdateArtifacts {
     }
 
     UpdateArtifact fetchDatasetArtifact(MasterUpdateStore store, String datasetCode) {
-        if ("orca_master_core".equals(datasetCode)) {
+        if (isOrcaMasterLastUpdateDataset(datasetCode)) {
             return fetchOrcaMasterArtifact();
         }
         MasterUpdateStore.DatasetState state = MasterUpdateStateSupport.requireDataset(store.getSnapshot(), datasetCode);
         return fetchExternalArtifact(state.sourceUrl);
+    }
+
+    private static boolean isOrcaMasterLastUpdateDataset(String datasetCode) {
+        return "orca_master_core".equals(datasetCode) || "disease_master".equals(datasetCode);
     }
 
     String writeArtifact(String datasetCode,

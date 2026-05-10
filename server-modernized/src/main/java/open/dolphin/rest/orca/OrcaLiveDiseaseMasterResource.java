@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import open.dolphin.orca.read.OrcaLiveDiseaseMasterReadService;
+import open.dolphin.rest.masterupdate.MasterUpdateStore;
 import open.orca.rest.ORCAConnection;
 
 @Path("/orca/official/disease-master")
@@ -19,6 +20,9 @@ public class OrcaLiveDiseaseMasterResource extends AbstractOrcaRestResource {
 
     @Inject
     private ORCAConnection orcaConnection;
+
+    @Inject
+    private MasterUpdateStore masterUpdateStore;
 
     @GET
     @Path("/name/{param}/")
@@ -38,7 +42,31 @@ public class OrcaLiveDiseaseMasterResource extends AbstractOrcaRestResource {
         response.put("layer", "candidate");
         response.put("readOnly", Boolean.TRUE);
         response.put("candidateOnly", Boolean.TRUE);
+        response.put("masterVersion", resolveDiseaseMasterVersion());
         response.put("list", list);
         return response;
+    }
+
+    private String resolveDiseaseMasterVersion() {
+        if (masterUpdateStore == null) {
+            return null;
+        }
+        try {
+            MasterUpdateStore.Snapshot snapshot = masterUpdateStore.getSnapshot();
+            MasterUpdateStore.DatasetState state = MasterUpdateStore.findDataset(snapshot, "disease_master");
+            if (state == null) {
+                state = MasterUpdateStore.findDataset(snapshot, "orca_master_core");
+            }
+            if (state == null) {
+                return null;
+            }
+            MasterUpdateStore.DatasetVersion version = state.currentVersion();
+            if (version != null && version.summary != null && !version.summary.isBlank()) {
+                return version.summary;
+            }
+            return state.currentVersionId;
+        } catch (RuntimeException ex) {
+            return null;
+        }
     }
 }

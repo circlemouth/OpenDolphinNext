@@ -163,12 +163,23 @@ public class ChartSupportDiseaseModV3Request {
     public static class DiseaseInformation {
         private String diseaseCode;
         private String diseaseName;
+        private String displayName;
+        private String karteName;
         private String diseaseStartDate;
         private String diseaseEndDate;
         private String diseaseInOut;
         private String diseaseSuspectedFlag;
         private String diseaseOutCome;
+        private String outcome;
+        private String orcaOutcomeSendCode;
+        private String orcaOutcomeReceivedCode;
         private String insuranceCombinationNumber;
+        private String masterVersion;
+        private String orcaSnapshotHash;
+        private String syncStatus;
+        private boolean uncodedAccepted;
+        private List<DiseaseComponent> components = new ArrayList<>();
+        private List<DiseaseSupplement> supplements = new ArrayList<>();
         private final List<String> forbiddenClientFields = new ArrayList<>();
 
         public String getDiseaseCode() {
@@ -185,6 +196,22 @@ public class ChartSupportDiseaseModV3Request {
 
         public void setDiseaseName(String diseaseName) {
             this.diseaseName = diseaseName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        public void setDisplayName(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getKarteName() {
+            return karteName;
+        }
+
+        public void setKarteName(String karteName) {
+            this.karteName = karteName;
         }
 
         public String getDiseaseStartDate() {
@@ -227,12 +254,84 @@ public class ChartSupportDiseaseModV3Request {
             this.diseaseOutCome = diseaseOutCome;
         }
 
+        public String getOutcome() {
+            return outcome;
+        }
+
+        public void setOutcome(String outcome) {
+            this.outcome = outcome;
+        }
+
+        public String getOrcaOutcomeSendCode() {
+            return orcaOutcomeSendCode;
+        }
+
+        public void setOrcaOutcomeSendCode(String orcaOutcomeSendCode) {
+            this.orcaOutcomeSendCode = orcaOutcomeSendCode;
+        }
+
+        public String getOrcaOutcomeReceivedCode() {
+            return orcaOutcomeReceivedCode;
+        }
+
+        public void setOrcaOutcomeReceivedCode(String orcaOutcomeReceivedCode) {
+            this.orcaOutcomeReceivedCode = orcaOutcomeReceivedCode;
+        }
+
         public String getInsuranceCombinationNumber() {
             return insuranceCombinationNumber;
         }
 
         public void setInsuranceCombinationNumber(String insuranceCombinationNumber) {
             this.insuranceCombinationNumber = insuranceCombinationNumber;
+        }
+
+        public String getMasterVersion() {
+            return masterVersion;
+        }
+
+        public void setMasterVersion(String masterVersion) {
+            this.masterVersion = masterVersion;
+        }
+
+        public String getOrcaSnapshotHash() {
+            return orcaSnapshotHash;
+        }
+
+        public void setOrcaSnapshotHash(String orcaSnapshotHash) {
+            this.orcaSnapshotHash = orcaSnapshotHash;
+        }
+
+        public String getSyncStatus() {
+            return syncStatus;
+        }
+
+        public void setSyncStatus(String syncStatus) {
+            this.syncStatus = syncStatus;
+        }
+
+        public boolean isUncodedAccepted() {
+            return uncodedAccepted;
+        }
+
+        public void setUncodedAccepted(boolean uncodedAccepted) {
+            this.uncodedAccepted = uncodedAccepted;
+        }
+
+        public List<DiseaseComponent> getComponents() {
+            return components;
+        }
+
+        public void setComponents(List<DiseaseComponent> components) {
+            this.components = components;
+        }
+
+        public List<DiseaseSupplement> getSupplements() {
+            return supplements;
+        }
+
+        public void setSupplements(List<DiseaseSupplement> supplements) {
+            this.supplements = supplements;
         }
 
         public List<String> getForbiddenClientFields() {
@@ -244,6 +343,113 @@ public class ChartSupportDiseaseModV3Request {
             if (ChartSupportDiseaseModV3Request.isForbiddenClientAuthorityField(name)) {
                 forbiddenClientFields.add(name);
             }
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class DiseaseComponent {
+        private Integer seq;
+        private String componentType;
+        private String code;
+        private String name;
+        private String sourceMaster;
+        private String validFrom;
+        private String validTo;
+        private String condition;
+
+        public Integer getSeq() {
+            return seq;
+        }
+
+        public void setSeq(Integer seq) {
+            this.seq = seq;
+        }
+
+        public String getComponentType() {
+            return componentType;
+        }
+
+        public void setComponentType(String componentType) {
+            this.componentType = componentType;
+        }
+
+        public String getCode() {
+            return code;
+        }
+
+        public void setCode(String code) {
+            this.code = code;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getSourceMaster() {
+            return sourceMaster;
+        }
+
+        public void setSourceMaster(String sourceMaster) {
+            this.sourceMaster = sourceMaster;
+        }
+
+        public String getValidFrom() {
+            return validFrom;
+        }
+
+        public void setValidFrom(String validFrom) {
+            this.validFrom = validFrom;
+        }
+
+        public String getValidTo() {
+            return validTo;
+        }
+
+        public void setValidTo(String validTo) {
+            this.validTo = validTo;
+        }
+
+        public String getCondition() {
+            return condition;
+        }
+
+        public void setCondition(String condition) {
+            this.condition = condition;
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class DiseaseSupplement {
+        private Integer seq;
+        private String supplementCode;
+        private String supplementName;
+
+        public Integer getSeq() {
+            return seq;
+        }
+
+        public void setSeq(Integer seq) {
+            this.seq = seq;
+        }
+
+        public String getSupplementCode() {
+            return supplementCode;
+        }
+
+        public void setSupplementCode(String supplementCode) {
+            this.supplementCode = supplementCode;
+        }
+
+        public String getSupplementName() {
+            return supplementName;
+        }
+
+        public void setSupplementName(String supplementName) {
+            this.supplementName = supplementName;
         }
     }
 }

@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.infomodel.PatientModel;
@@ -55,6 +56,8 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
     private static final String AUDIT_INCOME_INFO_ACTION = "ORCA_OFFICIAL_INCOME_INFO";
     private static final String AUDIT_SUBJECTIVES_MOD_ACTION = "ORCA_OFFICIAL_SUBJECTIVES_MOD_V2";
     private static final String AUDIT_DISEASE_MOD_ACTION = "ORCA_OFFICIAL_DISEASE_MOD_V3";
+    private static final Set<String> DISEASE_COMPONENT_TYPES =
+            Set.of("PREFIX", "SITE", "BODY", "SUFFIX", "UNKNOWN");
 
     @Inject
     private OrcaTransport orcaTransport;
@@ -706,22 +709,127 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         if ("delete".equals(operation)) {
             payload.setDiseaseInformation(List.of(copyDiseaseForDelete(payload.getTargetDisease())));
         }
+        if (!"organizeDeletedDiseases".equals(operation)) {
+            List<ChartSupportDiseaseModV3Request.DiseaseInformation> entries =
+                    payload.getDiseaseInformation() != null ? payload.getDiseaseInformation() : List.of();
+            for (ChartSupportDiseaseModV3Request.DiseaseInformation entry : entries) {
+                applyUncodedDiseaseDefault(entry);
+                applyOutcomeSendCode(request, entry, operation);
+            }
+            if (payload.getTargetDisease() != null) {
+                applyUncodedDiseaseDefault(payload.getTargetDisease());
+                applyOutcomeSendCode(request, payload.getTargetDisease(), "target");
+            }
+        }
         if ("update".equals(operation) || "delete".equals(operation)) {
             requireCurrentOrcaDiseaseTarget(request, facilityId, payload);
         }
+    }
+
+    private void applyUncodedDiseaseDefault(ChartSupportDiseaseModV3Request.DiseaseInformation entry) {
+        if (entry != null
+                && entry.isUncodedAccepted()
+                && (entry.getComponents() == null || entry.getComponents().isEmpty())
+                && isBlank(entry.getDiseaseCode())) {
+            entry.setDiseaseCode("0000999");
+        }
+    }
+
+    private void applyOutcomeSendCode(
+            HttpServletRequest request,
+            ChartSupportDiseaseModV3Request.DiseaseInformation entry,
+            String operation) {
+        if (entry == null) {
+            return;
+        }
+        if ("delete".equals(operation)) {
+            entry.setOrcaOutcomeSendCode("O");
+            entry.setDiseaseOutCome("O");
+            entry.setOutcome("DELETED");
+            return;
+        }
+        String outcome = firstNonBlank(entry.getOutcome(), entry.getDiseaseOutCome(), entry.getOrcaOutcomeSendCode());
+        if (isBlank(outcome) || "ACTIVE".equalsIgnoreCase(outcome) || "継続中".equals(outcome) || "継続".equals(outcome)) {
+            entry.setOrcaOutcomeSendCode("");
+            entry.setDiseaseOutCome("");
+            entry.setOutcome("ACTIVE");
+            return;
+        }
+        String code = switch (outcome.trim().toUpperCase(Locale.ROOT)) {
+            case "CURED", "F", "治癒" -> "F";
+            case "DEATH", "D", "死亡" -> "D";
+            case "DISCONTINUED", "P", "中止" -> "P";
+            case "DELETED", "O", "削除" -> "O";
+            case "TRANSFERRED", "移行", "転院" -> throw validationError(request, "payload.diseaseInformation.outcome",
+                    "TRANSFERRED is retained locally until ORCA Trial diseasev3 send semantics are verified");
+            case "C", "S" -> throw validationError(request, "payload.diseaseInformation.outcome",
+                    "Disease_OutCome C/S is not accepted for diseasev3 send");
+            default -> throw validationError(request, "payload.diseaseInformation.outcome",
+                    "outcome must be ACTIVE, CURED, DEATH, DISCONTINUED, TRANSFERRED, or DELETED");
+        };
+        entry.setOrcaOutcomeSendCode(code);
+        entry.setDiseaseOutCome(code);
     }
 
     private void validateDiseaseEntry(
             HttpServletRequest request,
             ChartSupportDiseaseModV3Request.DiseaseInformation entry,
             String field) {
-        if (entry == null || isBlank(entry.getDiseaseCode()) || isBlank(entry.getDiseaseStartDate())) {
+        if (entry == null || isBlank(entry.getDiseaseStartDate())) {
             throw validationError(request, field,
-                    "diseaseCode and diseaseStartDate are required");
+                    "diseaseStartDate is required");
         }
         requireDateOnly(request, entry.getDiseaseStartDate(), field + ".diseaseStartDate");
         if (!isBlank(entry.getDiseaseEndDate())) {
             requireDateOnly(request, entry.getDiseaseEndDate(), field + ".diseaseEndDate");
+        }
+        String outcomeCode = firstNonBlank(entry.getOrcaOutcomeSendCode(), entry.getDiseaseOutCome());
+        if ("C".equals(outcomeCode) || "S".equals(outcomeCode)) {
+            throw validationError(request, field + ".outcome",
+                    "Disease_OutCome C/S is not accepted for diseasev3 send; use P/F/D/O or keep TRANSFERRED local-only");
+        }
+        List<ChartSupportDiseaseModV3Request.DiseaseComponent> components =
+                entry.getComponents() != null ? entry.getComponents() : List.of();
+        if (components.isEmpty()) {
+            if (entry.isUncodedAccepted() && !isBlank(entry.getDiseaseName())) {
+                return;
+            }
+            throw validationError(request, field + ".components",
+                    "components are required for ORCA disease mutation");
+        }
+        if (components.size() > 21) {
+            throw validationError(request, field + ".components", "components must contain at most 21 entries");
+        }
+        boolean bodyPresent = false;
+        int expectedSeq = 1;
+        for (ChartSupportDiseaseModV3Request.DiseaseComponent component : components) {
+            if (component == null) {
+                throw validationError(request, field + ".components", "component must not be null");
+            }
+            if (component.getSeq() == null || component.getSeq() != expectedSeq) {
+                throw validationError(request, field + ".components.seq", "component seq must be contiguous from 1");
+            }
+            expectedSeq++;
+            String type = normalizeComponentType(component.getComponentType());
+            if (!DISEASE_COMPONENT_TYPES.contains(type)) {
+                throw validationError(request, field + ".components.componentType",
+                        "componentType must be PREFIX, SITE, BODY, SUFFIX, or UNKNOWN");
+            }
+            if (isBlank(component.getCode()) || isBlank(component.getName())) {
+                throw validationError(request, field + ".components",
+                        "component code and name are required");
+            }
+            if (!isAcceptableDiseaseComponentCode(component.getCode())) {
+                throw validationError(request, field + ".components.code",
+                        "component code must be a 7-digit ORCA disease code or ZZZ modifier code");
+            }
+            if ("BODY".equals(type)) {
+                bodyPresent = true;
+            }
+        }
+        if (!bodyPresent) {
+            throw validationError(request, field + ".components",
+                    "one BODY disease component is required");
         }
     }
 
@@ -731,12 +839,18 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
                 new ChartSupportDiseaseModV3Request.DiseaseInformation();
         copy.setDiseaseCode(target.getDiseaseCode());
         copy.setDiseaseName(target.getDiseaseName());
+        copy.setDisplayName(target.getDisplayName());
+        copy.setKarteName(target.getKarteName());
         copy.setDiseaseStartDate(target.getDiseaseStartDate());
         copy.setDiseaseEndDate(target.getDiseaseEndDate());
         copy.setDiseaseInOut(target.getDiseaseInOut());
         copy.setDiseaseSuspectedFlag(target.getDiseaseSuspectedFlag());
         copy.setDiseaseOutCome("O");
+        copy.setOrcaOutcomeSendCode("O");
         copy.setInsuranceCombinationNumber(target.getInsuranceCombinationNumber());
+        copy.setComponents(target.getComponents());
+        copy.setSupplements(target.getSupplements());
+        copy.setUncodedAccepted(target.isUncodedAccepted());
         return copy;
     }
 
@@ -772,8 +886,7 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
                 payload != null ? payload.getTargetDisease() : null;
         return current != null
                 && target != null
-                && safeEquals(normalizeDiseaseKeyPart(current.getDiagnosisCode()),
-                        normalizeDiseaseKeyPart(target.getDiseaseCode()))
+                && sameDiseaseComponents(current, target)
                 && safeEquals(normalizeDiseaseKeyPart(current.getStartDate()),
                         normalizeDiseaseKeyPart(target.getDiseaseStartDate()))
                 && safeEquals(normalizeDiseaseKeyPart(current.getDepartmentCode()),
@@ -786,8 +899,52 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
                                 normalizeDiseaseKeyPart(target.getDiseaseName())));
     }
 
+    private boolean sameDiseaseComponents(
+            open.dolphin.rest.dto.orca.DiseaseImportResponse.DiseaseEntry current,
+            ChartSupportDiseaseModV3Request.DiseaseInformation target) {
+        if (target.getComponents() != null && !target.getComponents().isEmpty()) {
+            List<String> targetCodes = target.getComponents().stream()
+                    .map(ChartSupportDiseaseModV3Request.DiseaseComponent::getCode)
+                    .map(this::normalizeDiseaseKeyPart)
+                    .toList();
+            List<String> currentCodes = current.getComponents() != null
+                    ? current.getComponents().stream()
+                            .map(open.dolphin.rest.dto.orca.DiseaseImportResponse.DiseaseComponent::getCode)
+                            .map(this::normalizeDiseaseKeyPart)
+                            .toList()
+                    : List.of();
+            return !currentCodes.isEmpty() && currentCodes.equals(targetCodes);
+        }
+        return safeEquals(normalizeDiseaseKeyPart(current.getDiagnosisCode()),
+                normalizeDiseaseKeyPart(target.getDiseaseCode()));
+    }
+
     private String normalizeDiseaseKeyPart(String value) {
         return value == null ? "" : value.trim().replace("　", "").replace(" ", "");
+    }
+
+    private String normalizeComponentType(String value) {
+        return isBlank(value) ? "UNKNOWN" : value.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private boolean isAcceptableDiseaseComponentCode(String code) {
+        if (isBlank(code)) {
+            return false;
+        }
+        String normalized = code.trim();
+        return normalized.matches("\\d{7}") || normalized.matches("ZZZ\\d{4}");
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (!isBlank(value)) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 
     private LocalDate requireDateOnly(HttpServletRequest request, String value, String field) {

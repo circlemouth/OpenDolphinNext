@@ -84,7 +84,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0312", appliedVersion(connection));
+                assertEquals("0313", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -106,6 +106,10 @@ class FreshSchemaBaselineTest {
                 assertTrue(tableExists(connection, "opendolphin", "d_orca_push_connection_state"));
                 assertTrue(tableExists(connection, "opendolphin", "d_billing_orca_snapshot"));
                 assertTrue(tableExists(connection, "opendolphin", "d_billing_orca_transmission"));
+                assertTrue(tableExists(connection, "opendolphin", "d_diagnosis_entry"));
+                assertTrue(tableExists(connection, "opendolphin", "d_diagnosis_component"));
+                assertTrue(tableExists(connection, "opendolphin", "d_diagnosis_supplement"));
+                assertTrue(tableExists(connection, "opendolphin", "d_diagnosis_orca_sync_log"));
                 assertTrue(tableExists(connection, "opendolphin", "user_security_state"));
                 assertTrue(tableExists(connection, "opendolphin", "auth_session_registry"));
                 assertTrue(tableExists(connection, "opendolphin", "audit_event"));
@@ -133,6 +137,11 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "d_billing_orca_snapshot", "snapshot_json"));
                 assertTrue(columnExists(connection, "opendolphin", "d_billing_orca_transmission", "idempotency_key"));
                 assertTrue(columnExists(connection, "opendolphin", "d_billing_orca_transmission", "medical_uid"));
+                assertTrue(columnExists(connection, "opendolphin", "d_diagnosis_entry", "orca_snapshot_hash"));
+                assertTrue(columnExists(connection, "opendolphin", "d_diagnosis_entry", "outcome"));
+                assertTrue(columnExists(connection, "opendolphin", "d_diagnosis_component", "component_type"));
+                assertTrue(columnExists(connection, "opendolphin", "d_diagnosis_supplement", "supplement_code"));
+                assertTrue(columnExists(connection, "opendolphin", "d_diagnosis_orca_sync_log", "request_hash"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_bucket"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_key"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_version_id"));
@@ -152,6 +161,10 @@ class FreshSchemaBaselineTest {
                 assertTrue(indexExists(connection, "opendolphin", "idx_reconciliation_task_open"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_d_orca_sync_run_facility_time"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_d_orca_push_event_inbox_status"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_diagnosis_entry_patient"));
+                assertTrue(indexExists(connection, "opendolphin", "uk_diagnosis_component_seq"));
+                assertTrue(indexExists(connection, "opendolphin", "uk_diagnosis_supplement_seq"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_diagnosis_orca_sync_log_patient"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_auth_session_registry_user_active"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_auth_session_registry_session_active"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_audit_event_time_desc"));

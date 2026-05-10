@@ -197,7 +197,7 @@ describe('diseaseApi', () => {
     expect(vi.mocked(httpFetch).mock.calls[0]?.[0]).toContain('/api/orca/official/disease-master/name/');
   });
 
-  it('resolves ICD-10 when exact-name ORCA codes are ambiguous but ICD-10 is unique', async () => {
+  it('does not fall back to ICD-10 when ORCA disease codes are ambiguous', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -218,7 +218,7 @@ describe('diseaseApi', () => {
       referenceDate: '2026-02-23',
     });
 
-    expect(code).toBe('I10');
+    expect(code).toBeUndefined();
     expect(httpFetch).toHaveBeenCalledTimes(1);
   });
 
@@ -259,7 +259,7 @@ describe('diseaseApi', () => {
     expect(httpFetch).toHaveBeenCalledTimes(1);
   });
 
-  it('resolves exact composite code when ORCA master directly returns combined disease code', async () => {
+  it('does not accept dotted composite codes as a single ORCA disease code', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -277,7 +277,7 @@ describe('diseaseApi', () => {
       referenceDate: '2026-02-23',
     });
 
-    expect(code).toBe('2056.8832114');
+    expect(code).toBeUndefined();
     expect(httpFetch).toHaveBeenCalledTimes(1);
   });
 
@@ -323,7 +323,7 @@ describe('diseaseApi', () => {
       referenceDate: '2026-02-23',
     });
 
-    expect(code).toBe('2056.8832114');
+    expect(code).toBeUndefined();
   });
 
   it('returns undefined when multiple composite candidates exist', async () => {
@@ -458,7 +458,7 @@ describe('diseaseApi', () => {
           },
         ],
       }),
-    ).rejects.toThrow('転帰は 継続、治癒、中止、再発、死亡、転院、不明 のいずれかを入力してください。');
+    ).rejects.toThrow('転帰は 継続中、治癒、中止、死亡、移行(ORCA送信保留) のいずれかを入力してください。');
 
     expect(httpFetch).not.toHaveBeenCalled();
   });

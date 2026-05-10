@@ -24,6 +24,17 @@ public final class MasterUpdateCatalog {
                         15
                 ),
                 new DatasetDefinition(
+                        "disease_master",
+                        "ORCA disease master",
+                        "orca:masterlastupdatev3",
+                        "起動時 + 日次確認",
+                        "XML/DB",
+                        "病名候補と Disease_Single component 検証用。ORCA disease_master 更新日を監視する",
+                        true,
+                        false,
+                        24 * 60
+                ),
+                new DatasetDefinition(
                         "drug_package_medhot",
                         "MEDHOT package unit",
                         "https://medhot.medd.jp/view_download",

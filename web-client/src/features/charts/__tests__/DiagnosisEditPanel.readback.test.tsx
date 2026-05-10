@@ -63,7 +63,7 @@ beforeEach(() => {
       {
         diagnosisId: 11,
         diagnosisName: '糖尿病',
-        diagnosisCode: 'E11',
+        diagnosisCode: '8839101',
         startDate: '2026-04-10',
         endDate: '2026-04-20',
         outcome: '治癒',
@@ -71,16 +71,32 @@ beforeEach(() => {
         suspectedFlag: '疑い',
         layer: 'orca-mirror',
         readOnly: true,
+        components: [
+          {
+            seq: 1,
+            componentType: 'BODY',
+            code: '8839101',
+            name: '糖尿病',
+          },
+        ],
       },
       {
         diagnosisId: 12,
         diagnosisName: 'ORCA参照病名',
-        diagnosisCode: 'I10',
+        diagnosisCode: '8839002',
         startDate: '2026-04-12',
         outcome: '継続',
         layer: 'orca-mirror',
         readOnly: true,
         syncState: 'manual-resolution',
+        components: [
+          {
+            seq: 1,
+            componentType: 'BODY',
+            code: '8839002',
+            name: 'ORCA参照病名',
+          },
+        ],
       },
     ],
   });
@@ -120,7 +136,7 @@ describe('DiagnosisEditPanel readback contract', () => {
     expect(within(dialog).getByLabelText(/転帰 ※任意/)).toHaveValue('治癒');
 
     await user.clear(within(dialog).getByLabelText(/転帰 ※任意/));
-    await user.type(within(dialog).getByLabelText(/転帰 ※任意/), '継続');
+    await user.type(within(dialog).getByLabelText(/転帰 ※任意/), '継続中');
     await user.click(within(dialog).getByRole('button', { name: 'ORCA病名を更新' }));
     const confirmDialog = await screen.findByRole('dialog', { name: 'ORCA病名を更新' });
     await user.click(within(confirmDialog).getByRole('button', { name: 'ORCA病名を更新' }));
@@ -135,13 +151,22 @@ describe('DiagnosisEditPanel readback contract', () => {
           diseaseInformation: [
             expect.objectContaining({
               diseaseName: '糖尿病',
-              diseaseCode: 'E11',
-              diseaseOutCome: '継続',
+              diseaseCode: '8839101',
+              outcome: 'ACTIVE',
+              orcaOutcomeSendCode: undefined,
+              components: [
+                expect.objectContaining({
+                  seq: 1,
+                  componentType: 'BODY',
+                  code: '8839101',
+                  name: '糖尿病',
+                }),
+              ],
             }),
           ],
           targetDisease: expect.objectContaining({
             diseaseName: '糖尿病',
-            diseaseCode: 'E11',
+            diseaseCode: '8839101',
             diseaseStartDate: '2026-04-10',
           }),
         }),
@@ -191,7 +216,15 @@ describe('DiagnosisEditPanel readback contract', () => {
           diseaseInformation: [
             expect.objectContaining({
               diseaseName: '高血圧症',
-              diseaseCode: 'I10',
+              diseaseCode: '8839001',
+              components: [
+                expect.objectContaining({
+                  seq: 1,
+                  componentType: 'BODY',
+                  code: '8839001',
+                  name: '高血圧症',
+                }),
+              ],
             }),
           ],
         }),

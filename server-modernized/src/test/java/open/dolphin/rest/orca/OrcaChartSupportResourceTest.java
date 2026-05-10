@@ -409,7 +409,9 @@ class OrcaChartSupportResourceTest {
         assertTrue(transport.requestXml().contains("<diseasereq type=\"record\">"));
         assertTrue(!transport.requestXml().contains("<Request_Number"));
         assertTrue(transport.requestXml().contains("<Patient_ID type=\"string\">00001</Patient_ID>"));
-        assertTrue(transport.requestXml().contains("<Disease_Code type=\"string\">3089002</Disease_Code>"));
+        assertTrue(transport.requestXml().contains("<Disease_Single type=\"array\">"));
+        assertTrue(transport.requestXml().contains("<Disease_Single_Code type=\"string\">3089002</Disease_Single_Code>"));
+        assertTrue(!transport.requestXml().contains("<Disease_Code type=\"string\">3089002</Disease_Code>"));
         assertEquals("0000", response.getApiResult());
         assertEquals("notVerified", response.getResponseClassification());
         assertTrue(!response.isBusinessAccepted());
@@ -616,10 +618,19 @@ class OrcaChartSupportResourceTest {
         ChartSupportDiseaseModV3Request.DiseaseInformation disease =
                 new ChartSupportDiseaseModV3Request.DiseaseInformation();
         disease.setDiseaseCode("3089002");
+        disease.setDiseaseName("皮膚腫瘍");
         disease.setDiseaseStartDate("2026-04-22");
         disease.setDiseaseInOut("O");
         disease.setDiseaseSuspectedFlag("S");
         disease.setInsuranceCombinationNumber("0001");
+        ChartSupportDiseaseModV3Request.DiseaseComponent component =
+                new ChartSupportDiseaseModV3Request.DiseaseComponent();
+        component.setSeq(1);
+        component.setComponentType("BODY");
+        component.setCode("3089002");
+        component.setName("皮膚腫瘍");
+        component.setSourceMaster("ORCA disease master");
+        disease.setComponents(List.of(component));
         payload.setDiseaseInformation(List.of(disease));
         return payload;
     }

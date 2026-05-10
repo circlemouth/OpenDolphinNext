@@ -61,13 +61,31 @@ public class AbstractResource {
     public static final String ERROR_STATUS_ATTRIBUTE = AbstractResource.class.getName() + ".ERROR_STATUS";
     public static final String ERROR_DETAILS_ATTRIBUTE = AbstractResource.class.getName() + ".ERROR_DETAILS";
     private static final Set<String> RESPONSE_DETAIL_KEYS = Set.of(
+            "apiResult",
+            "apiResultMessage",
+            "classification",
+            "currentStatus",
+            "documentId",
             "field",
+            "precondition",
+            "preconditionStatus",
             "reason",
+            "reasonCode",
+            "requestedStatus",
             "retryable",
             "validationError");
     private static final Set<String> RESPONSE_TOP_LEVEL_DETAIL_KEYS = Set.of(
+            "apiResult",
+            "apiResultMessage",
+            "classification",
+            "currentStatus",
+            "documentId",
             "field",
+            "precondition",
+            "preconditionStatus",
             "reason",
+            "reasonCode",
+            "requestedStatus",
             "retryable",
             "validationError");
 
@@ -497,6 +515,10 @@ public class AbstractResource {
         if ("validationError".equals(key) || "retryable".equals(key)) {
             return value instanceof Boolean booleanValue ? booleanValue : null;
         }
+        if ("documentId".equals(key) && value instanceof Number number) {
+            long longValue = number.longValue();
+            return longValue >= 0 ? Long.toString(longValue) : null;
+        }
         if (!(value instanceof CharSequence sequence)) {
             return null;
         }
@@ -504,7 +526,21 @@ public class AbstractResource {
         if (text.isEmpty() || text.length() > 128) {
             return null;
         }
-        if ("reason".equals(key) || "field".equals(key)) {
+        if ("apiResult".equals(key)) {
+            return text.matches("[A-Za-z0-9_-]{1,16}") ? text : null;
+        }
+        if ("apiResultMessage".equals(key)) {
+            return "該当データなし".equals(text) ? text : null;
+        }
+        if ("documentId".equals(key)) {
+            return text.matches("[0-9]{1,19}") ? text : null;
+        }
+        if ("field".equals(key)) {
+            return text.matches("[A-Za-z0-9_.:\\[\\]-]+") ? text : null;
+        }
+        if ("reason".equals(key) || "reasonCode".equals(key) || "classification".equals(key)
+                || "precondition".equals(key) || "preconditionStatus".equals(key)
+                || "currentStatus".equals(key) || "requestedStatus".equals(key)) {
             return text.matches("[A-Za-z0-9_.:-]+") ? text : null;
         }
         return null;
@@ -524,8 +560,17 @@ public class AbstractResource {
         }
         return switch (normalized.toString()) {
             case "validationerror" -> "validationError";
+            case "apiresult" -> "apiResult";
+            case "apiresultmessage" -> "apiResultMessage";
+            case "classification" -> "classification";
+            case "currentstatus" -> "currentStatus";
+            case "documentid" -> "documentId";
             case "field" -> "field";
+            case "precondition" -> "precondition";
+            case "preconditionstatus" -> "preconditionStatus";
             case "reason" -> "reason";
+            case "reasoncode" -> "reasonCode";
+            case "requestedstatus" -> "requestedStatus";
             case "retryable" -> "retryable";
             default -> "";
         };

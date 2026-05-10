@@ -1,6 +1,8 @@
 package open.dolphin.rest.dto.orca;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.ArrayList;
+import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ChartSupportDiseaseModV3Response {
@@ -18,6 +20,8 @@ public class ChartSupportDiseaseModV3Response {
     private String runId;
     private String traceId;
     private String error;
+    private List<DiseaseWarning> warnings = new ArrayList<>();
+    private List<DiseaseUnmatchInformation> unmatchInformation = new ArrayList<>();
 
     public boolean isOk() {
         return ok;
@@ -121,5 +125,83 @@ public class ChartSupportDiseaseModV3Response {
 
     public void setError(String error) {
         this.error = error;
+    }
+
+    public List<DiseaseWarning> getWarnings() {
+        return warnings;
+    }
+
+    public void setWarnings(List<DiseaseWarning> warnings) {
+        this.warnings = warnings;
+    }
+
+    public List<DiseaseUnmatchInformation> getUnmatchInformation() {
+        return unmatchInformation;
+    }
+
+    public void setUnmatchInformation(List<DiseaseUnmatchInformation> unmatchInformation) {
+        this.unmatchInformation = unmatchInformation;
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class DiseaseWarning {
+        private String code;
+        private String messageCategory;
+        private Integer position;
+
+        public String getCode() {
+            return code;
+        }
+
+        public void setCode(String code) {
+            this.code = code;
+        }
+
+        public String getMessageCategory() {
+            return messageCategory;
+        }
+
+        public void setMessageCategory(String messageCategory) {
+            this.messageCategory = messageCategory;
+        }
+
+        public Integer getPosition() {
+            return position;
+        }
+
+        public void setPosition(Integer position) {
+            this.position = position;
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class DiseaseUnmatchInformation {
+        private String code;
+        private String name;
+        private String messageCategory;
+
+        public String getCode() {
+            return code;
+        }
+
+        public void setCode(String code) {
+            this.code = code;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getMessageCategory() {
+            return messageCategory;
+        }
+
+        public void setMessageCategory(String messageCategory) {
+            this.messageCategory = messageCategory;
+        }
     }
 }

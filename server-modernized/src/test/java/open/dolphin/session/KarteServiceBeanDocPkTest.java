@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import java.lang.reflect.Field;
@@ -67,6 +68,9 @@ class KarteServiceBeanDocPkTest {
         setField(karteDocumentWriteService, "imageStorageManager", imageStorageManager);
         setField(karteDocumentWriteService, "documentIntegrityService", documentIntegrityService);
         setField(service, "karteDocumentWriteService", karteDocumentWriteService);
+        Query nativeQuery = mock(Query.class);
+        when(em.createNativeQuery(any(String.class))).thenReturn(nativeQuery);
+        when(nativeQuery.executeUpdate()).thenReturn(1);
         doAnswer(invocation -> {
             DocumentModel document = invocation.getArgument(0);
             if (document.getId() <= 0) {

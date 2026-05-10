@@ -89,8 +89,9 @@ final class MasterUpdatePayloads {
     private static Map<String, Object> toOfficialSource(MasterUpdateStore.DatasetState state) {
         MasterUpdateStore.DatasetVersion referenceVersion = resolveLatestOfficialVersion(state);
         Map<String, Object> official = new LinkedHashMap<>();
-        official.put("kind", "orca_master_core".equals(state.code) ? "masterlastupdatev3" : "external_source");
-        official.put("label", "orca_master_core".equals(state.code) ? "official masterlastupdatev3" : "official source metadata");
+        boolean masterLastUpdateDataset = isOrcaMasterLastUpdateDataset(state.code);
+        official.put("kind", masterLastUpdateDataset ? "masterlastupdatev3" : "external_source");
+        official.put("label", masterLastUpdateDataset ? "official masterlastupdatev3" : "official source metadata");
         official.put("sourceUrl", state.sourceUrl);
         official.put("updateFrequency", state.updateFrequency);
         official.put("format", state.format);
@@ -104,6 +105,10 @@ final class MasterUpdatePayloads {
         official.put("officialCapturedAt", referenceVersion != null ? referenceVersion.capturedAt : null);
         official.put("officialSummary", referenceVersion != null ? referenceVersion.summary : null);
         return official;
+    }
+
+    private static boolean isOrcaMasterLastUpdateDataset(String datasetCode) {
+        return "orca_master_core".equals(datasetCode) || "disease_master".equals(datasetCode);
     }
 
     private static Map<String, Object> toLocalArtifactSummary(MasterUpdateStore.DatasetState state) {

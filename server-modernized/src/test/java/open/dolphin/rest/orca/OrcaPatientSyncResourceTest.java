@@ -81,7 +81,7 @@ class OrcaPatientSyncResourceTest {
         assertEquals(503, ex.getResponse().getStatus());
         Map<?, ?> body = assertInstanceOf(Map.class, ex.getResponse().getEntity());
         assertEquals("orca.patient.import.local_sync_unavailable", body.get("code"));
-        assertEquals("患者取り込みのローカル同期に失敗しました。ローカル患者テーブルの整合性を確認してください。", body.get("message"));
+        assertEquals("Service unavailable", body.get("message"));
     }
 
     @Test
@@ -101,7 +101,7 @@ class OrcaPatientSyncResourceTest {
         assertEquals(Response.Status.SERVICE_UNAVAILABLE.getStatusCode(), ex.getResponse().getStatus());
         Map<?, ?> body = assertInstanceOf(Map.class, ex.getResponse().getEntity());
         assertEquals("orca.patient.import.gateway", body.get("code"));
-        assertEquals("ORCA settings are not available", body.get("message"));
+        assertEquals("Service unavailable", body.get("message"));
     }
 
     @Test

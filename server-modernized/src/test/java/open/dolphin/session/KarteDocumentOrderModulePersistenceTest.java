@@ -64,6 +64,9 @@ class KarteDocumentOrderModulePersistenceTest {
         setField(writeService, "attachmentStorageManager", mock(AttachmentStorageManager.class));
         setField(writeService, "imageStorageManager", mock(ImageStorageManager.class));
         setField(writeService, "documentIntegrityService", documentIntegrityService);
+        Query nativeQuery = mock(Query.class);
+        when(em.createNativeQuery(any(String.class))).thenReturn(nativeQuery);
+        when(nativeQuery.executeUpdate()).thenReturn(1);
     }
 
     // Local chart/document persistence only; this does not execute ORCA medicalmodv2 live mutations.

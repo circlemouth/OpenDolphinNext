@@ -68,7 +68,7 @@ class OrcaGatewayExceptionMapperTest {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) response.getEntity();
-        assertEquals("ORCA upstream authentication failed", body.get("message"));
+        assertEquals("Service unavailable", body.get("message"));
         assertFalse(String.valueOf(body.get("message")).contains("401"));
     }
 
@@ -88,7 +88,7 @@ class OrcaGatewayExceptionMapperTest {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) response.getEntity();
-        assertEquals("Invalid ORCA API URL", body.get("message"));
+        assertEquals("Upstream service failure", body.get("message"));
         assertFalse(String.valueOf(body.get("message")).contains("bad host.example.invalid"));
         assertFalse(String.valueOf(body.get("message")).contains("admin:pass"));
         String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);

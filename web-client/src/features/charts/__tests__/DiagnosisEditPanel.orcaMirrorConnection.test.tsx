@@ -96,12 +96,20 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
         },
         {
           diagnosisName: 'ORCA登録済み病名',
-          diagnosisCode: 'I10',
+          diagnosisCode: '8839001',
           startDate: '2026-05-01',
           layer: 'orca-mirror',
           readOnly: true,
           syncState: 'conflict',
           note: 'ORCA側と差分があります',
+          components: [
+            {
+              seq: 1,
+              componentType: 'BODY',
+              code: '8839001',
+              name: 'ORCA登録済み病名',
+            },
+          ],
         },
       ],
     });
@@ -169,7 +177,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     await user.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
     const authoring = screen.getByLabelText('ORCAへ病名登録');
     fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: 'HTN' } });
-    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('I10');
+    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('8839001');
     await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
     const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
     await user.click(within(confirmDialog).getByRole('button', { name: '副病名として登録' }));
@@ -184,8 +192,16 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
           diseaseInformation: [
             expect.objectContaining({
               diseaseName: 'HTN',
-              diseaseCode: 'I10',
+              diseaseCode: '8839001',
               diseaseStartDate: expect.any(String),
+              components: [
+                expect.objectContaining({
+                  seq: 1,
+                  componentType: 'BODY',
+                  code: '8839001',
+                  name: 'HTN',
+                }),
+              ],
             }),
           ],
         }),

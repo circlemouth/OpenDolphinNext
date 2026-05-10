@@ -555,13 +555,18 @@ final class OrcaChartSupportSupport {
                 }
                 builder.append("<Disease_Information_child type=\"record\">");
                 appendTag(builder, "Disease_InOut", fallback(entry.getDiseaseInOut(), "O"));
-                appendTag(builder, "Disease_Code", entry.getDiseaseCode());
-                appendTag(builder, "Disease_Name", entry.getDiseaseName());
+                if (entry.getComponents() == null || entry.getComponents().isEmpty()) {
+                    appendTag(builder, "Disease_Code", entry.getDiseaseCode());
+                }
+                appendTag(builder, "Disease_Name", firstNonBlank(entry.getDiseaseName(), entry.getDisplayName()));
+                appendDiseaseSingle(builder, entry);
                 appendTag(builder, "Disease_StartDate", entry.getDiseaseStartDate());
                 appendTag(builder, "Disease_EndDate", entry.getDiseaseEndDate());
                 appendTag(builder, "Disease_SuspectedFlag", entry.getDiseaseSuspectedFlag());
                 appendTag(builder, "Disease_OutCome",
-                        "delete".equals(operation) ? "O" : entry.getDiseaseOutCome());
+                        "delete".equals(operation) ? "O" : firstNonBlank(entry.getOrcaOutcomeSendCode(), entry.getDiseaseOutCome()));
+                appendTag(builder, "Disease_Karte_Name", entry.getKarteName());
+                appendDiseaseSupplements(builder, entry);
                 appendTag(builder, "Insurance_Combination_Number", entry.getInsuranceCombinationNumber());
                 builder.append("</Disease_Information_child>");
             }
@@ -596,6 +601,8 @@ final class OrcaChartSupportSupport {
             response.setApiResultMessageCategory(classifySafeMessage(apiResultMessage));
             response.setInformationDate(readFirst(document, "Information_Date"));
             response.setInformationTime(readFirst(document, "Information_Time"));
+            response.setWarnings(parseDiseaseWarnings(document));
+            response.setUnmatchInformation(parseDiseaseUnmatchInformation(document));
             boolean transportOk = response.getStatus() >= 200 && response.getStatus() < 300;
             boolean apiOk = response.getApiResult() != null && response.getApiResult().matches("0+");
             boolean completionEvidencePresent = !isBlank(response.getInformationDate())
@@ -620,6 +627,78 @@ final class OrcaChartSupportSupport {
             response.setError("parser_error");
         }
         return response;
+    }
+
+    private void appendDiseaseSingle(StringBuilder builder, ChartSupportDiseaseModV3Request.DiseaseInformation entry) {
+        if (entry.getComponents() == null || entry.getComponents().isEmpty()) {
+            return;
+        }
+        builder.append("<Disease_Single type=\"array\">");
+        entry.getComponents().stream()
+                .filter(component -> component != null && !isBlank(component.getCode()))
+                .sorted(java.util.Comparator.comparing(
+                        ChartSupportDiseaseModV3Request.DiseaseComponent::getSeq,
+                        java.util.Comparator.nullsLast(Integer::compareTo)))
+                .limit(21)
+                .forEach(component -> {
+                    builder.append("<Disease_Single_child type=\"record\">");
+                    appendTag(builder, "Disease_Single_Code", component.getCode());
+                    appendTag(builder, "Disease_Single_Name", component.getName());
+                    builder.append("</Disease_Single_child>");
+                });
+        builder.append("</Disease_Single>");
+    }
+
+    private void appendDiseaseSupplements(StringBuilder builder, ChartSupportDiseaseModV3Request.DiseaseInformation entry) {
+        if (entry.getSupplements() == null || entry.getSupplements().isEmpty()) {
+            return;
+        }
+        builder.append("<Disease_Supplement_Single type=\"array\">");
+        entry.getSupplements().stream()
+                .filter(supplement -> supplement != null
+                        && (!isBlank(supplement.getSupplementCode()) || !isBlank(supplement.getSupplementName())))
+                .sorted(java.util.Comparator.comparing(
+                        ChartSupportDiseaseModV3Request.DiseaseSupplement::getSeq,
+                        java.util.Comparator.nullsLast(Integer::compareTo)))
+                .forEach(supplement -> {
+                    builder.append("<Disease_Supplement_Single_child type=\"record\">");
+                    appendTag(builder, "Disease_Supplement_Single_Code", supplement.getSupplementCode());
+                    appendTag(builder, "Disease_Supplement_Single_Name", supplement.getSupplementName());
+                    builder.append("</Disease_Supplement_Single_child>");
+                });
+        builder.append("</Disease_Supplement_Single>");
+    }
+
+    private List<ChartSupportDiseaseModV3Response.DiseaseWarning> parseDiseaseWarnings(Document document) {
+        List<ChartSupportDiseaseModV3Response.DiseaseWarning> warnings = new ArrayList<>();
+        for (Element element : elements(document, "Disease_Warning_Info_child")) {
+            ChartSupportDiseaseModV3Response.DiseaseWarning warning =
+                    new ChartSupportDiseaseModV3Response.DiseaseWarning();
+            warning.setCode(firstNonBlank(readFirst(element, "Disease_Warning_Code"), readFirst(element, "Warning_Code")));
+            warning.setPosition(parseInteger(firstNonBlank(
+                    readFirst(element, "Disease_Warning_Position"),
+                    readFirst(element, "Warning_Position"))));
+            warning.setMessageCategory(classifySafeMessage(firstNonBlank(
+                    readFirst(element, "Disease_Warning_Message"),
+                    readFirst(element, "Warning_Message"))));
+            warnings.add(warning);
+        }
+        return warnings;
+    }
+
+    private List<ChartSupportDiseaseModV3Response.DiseaseUnmatchInformation> parseDiseaseUnmatchInformation(Document document) {
+        List<ChartSupportDiseaseModV3Response.DiseaseUnmatchInformation> unmatches = new ArrayList<>();
+        for (Element element : elements(document, "Disease_Unmatch_Information_child")) {
+            ChartSupportDiseaseModV3Response.DiseaseUnmatchInformation unmatch =
+                    new ChartSupportDiseaseModV3Response.DiseaseUnmatchInformation();
+            unmatch.setCode(firstNonBlank(readFirst(element, "Disease_Unmatch_Code"), readFirst(element, "Disease_Code")));
+            unmatch.setName(firstNonBlank(readFirst(element, "Disease_Unmatch_Name"), readFirst(element, "Disease_Name")));
+            unmatch.setMessageCategory(classifySafeMessage(firstNonBlank(
+                    readFirst(element, "Disease_Unmatch_Message"),
+                    readFirst(element, "Message"))));
+            unmatches.add(unmatch);
+        }
+        return unmatches;
     }
 
     private String classifyOfficialMutationResult(

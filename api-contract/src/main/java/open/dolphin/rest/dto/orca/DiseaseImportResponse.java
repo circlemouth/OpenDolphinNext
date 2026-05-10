@@ -20,6 +20,7 @@ public class DiseaseImportResponse {
     private String orcaMirrorStatus;
     private List<DiseaseEntry> diseases;
     private List<String> warnings;
+    private String masterVersion;
 
     public String getApiResult() {
         return apiResult;
@@ -101,6 +102,14 @@ public class DiseaseImportResponse {
         this.warnings = warnings;
     }
 
+    public String getMasterVersion() {
+        return masterVersion;
+    }
+
+    public void setMasterVersion(String masterVersion) {
+        this.masterVersion = masterVersion;
+    }
+
     public void addDisease(DiseaseEntry entry) {
         if (diseases == null) {
             diseases = new ArrayList<>();
@@ -120,18 +129,29 @@ public class DiseaseImportResponse {
         private Long diagnosisId;
         private String diagnosisName;
         private String diagnosisCode;
+        private String displayName;
+        private String karteName;
         private String departmentCode;
         private String insuranceCombinationNumber;
         private String startDate;
         private String endDate;
         private String outcome;
+        private String orcaOutcomeSendCode;
+        private String orcaOutcomeReceivedCode;
         private String category;
         private String suspectedFlag;
         private String note;
         private String layer;
         private String syncState;
+        private String syncStatus;
+        private String masterVersion;
+        private String orcaSnapshotHash;
         private Boolean readOnly;
         private Boolean candidateOnly;
+        private List<DiseaseComponent> components;
+        private List<DiseaseSupplement> supplements;
+        private List<DiseaseWarning> warnings;
+        private List<DiseaseUnmatchInformation> unmatchInformation;
 
         public Long getDiagnosisId() {
             return diagnosisId;
@@ -155,6 +175,22 @@ public class DiseaseImportResponse {
 
         public void setDiagnosisCode(String diagnosisCode) {
             this.diagnosisCode = diagnosisCode;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        public void setDisplayName(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getKarteName() {
+            return karteName;
+        }
+
+        public void setKarteName(String karteName) {
+            this.karteName = karteName;
         }
 
         public String getDepartmentCode() {
@@ -197,6 +233,22 @@ public class DiseaseImportResponse {
             this.outcome = outcome;
         }
 
+        public String getOrcaOutcomeSendCode() {
+            return orcaOutcomeSendCode;
+        }
+
+        public void setOrcaOutcomeSendCode(String orcaOutcomeSendCode) {
+            this.orcaOutcomeSendCode = orcaOutcomeSendCode;
+        }
+
+        public String getOrcaOutcomeReceivedCode() {
+            return orcaOutcomeReceivedCode;
+        }
+
+        public void setOrcaOutcomeReceivedCode(String orcaOutcomeReceivedCode) {
+            this.orcaOutcomeReceivedCode = orcaOutcomeReceivedCode;
+        }
+
         public String getCategory() {
             return category;
         }
@@ -237,6 +289,30 @@ public class DiseaseImportResponse {
             this.syncState = syncState;
         }
 
+        public String getSyncStatus() {
+            return syncStatus;
+        }
+
+        public void setSyncStatus(String syncStatus) {
+            this.syncStatus = syncStatus;
+        }
+
+        public String getMasterVersion() {
+            return masterVersion;
+        }
+
+        public void setMasterVersion(String masterVersion) {
+            this.masterVersion = masterVersion;
+        }
+
+        public String getOrcaSnapshotHash() {
+            return orcaSnapshotHash;
+        }
+
+        public void setOrcaSnapshotHash(String orcaSnapshotHash) {
+            this.orcaSnapshotHash = orcaSnapshotHash;
+        }
+
         public Boolean getReadOnly() {
             return readOnly;
         }
@@ -251,6 +327,207 @@ public class DiseaseImportResponse {
 
         public void setCandidateOnly(Boolean candidateOnly) {
             this.candidateOnly = candidateOnly;
+        }
+
+        public List<DiseaseComponent> getComponents() {
+            return components;
+        }
+
+        public void setComponents(List<DiseaseComponent> components) {
+            this.components = components;
+        }
+
+        public List<DiseaseSupplement> getSupplements() {
+            return supplements;
+        }
+
+        public void setSupplements(List<DiseaseSupplement> supplements) {
+            this.supplements = supplements;
+        }
+
+        public List<DiseaseWarning> getWarnings() {
+            return warnings;
+        }
+
+        public void setWarnings(List<DiseaseWarning> warnings) {
+            this.warnings = warnings;
+        }
+
+        public List<DiseaseUnmatchInformation> getUnmatchInformation() {
+            return unmatchInformation;
+        }
+
+        public void setUnmatchInformation(List<DiseaseUnmatchInformation> unmatchInformation) {
+            this.unmatchInformation = unmatchInformation;
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class DiseaseComponent {
+        private Integer seq;
+        private String componentType;
+        private String code;
+        private String name;
+        private String sourceMaster;
+        private String validFrom;
+        private String validTo;
+        private String condition;
+
+        public Integer getSeq() {
+            return seq;
+        }
+
+        public void setSeq(Integer seq) {
+            this.seq = seq;
+        }
+
+        public String getComponentType() {
+            return componentType;
+        }
+
+        public void setComponentType(String componentType) {
+            this.componentType = componentType;
+        }
+
+        public String getCode() {
+            return code;
+        }
+
+        public void setCode(String code) {
+            this.code = code;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getSourceMaster() {
+            return sourceMaster;
+        }
+
+        public void setSourceMaster(String sourceMaster) {
+            this.sourceMaster = sourceMaster;
+        }
+
+        public String getValidFrom() {
+            return validFrom;
+        }
+
+        public void setValidFrom(String validFrom) {
+            this.validFrom = validFrom;
+        }
+
+        public String getValidTo() {
+            return validTo;
+        }
+
+        public void setValidTo(String validTo) {
+            this.validTo = validTo;
+        }
+
+        public String getCondition() {
+            return condition;
+        }
+
+        public void setCondition(String condition) {
+            this.condition = condition;
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class DiseaseSupplement {
+        private Integer seq;
+        private String supplementCode;
+        private String supplementName;
+
+        public Integer getSeq() {
+            return seq;
+        }
+
+        public void setSeq(Integer seq) {
+            this.seq = seq;
+        }
+
+        public String getSupplementCode() {
+            return supplementCode;
+        }
+
+        public void setSupplementCode(String supplementCode) {
+            this.supplementCode = supplementCode;
+        }
+
+        public String getSupplementName() {
+            return supplementName;
+        }
+
+        public void setSupplementName(String supplementName) {
+            this.supplementName = supplementName;
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class DiseaseWarning {
+        private String code;
+        private String messageCategory;
+        private Integer position;
+
+        public String getCode() {
+            return code;
+        }
+
+        public void setCode(String code) {
+            this.code = code;
+        }
+
+        public String getMessageCategory() {
+            return messageCategory;
+        }
+
+        public void setMessageCategory(String messageCategory) {
+            this.messageCategory = messageCategory;
+        }
+
+        public Integer getPosition() {
+            return position;
+        }
+
+        public void setPosition(Integer position) {
+            this.position = position;
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class DiseaseUnmatchInformation {
+        private String code;
+        private String name;
+        private String messageCategory;
+
+        public String getCode() {
+            return code;
+        }
+
+        public void setCode(String code) {
+            this.code = code;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getMessageCategory() {
+            return messageCategory;
+        }
+
+        public void setMessageCategory(String messageCategory) {
+            this.messageCategory = messageCategory;
         }
     }
 }

@@ -1,6 +1,8 @@
 package open.dolphin.infomodel;
 
 import jakarta.persistence.*;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 診断履歴クラス。
@@ -42,6 +44,15 @@ public class RegisteredDiagnosisModel extends KarteEntryBean implements java.io.
     // 担当医情報（=ログインユーザー）
     @Transient
     private UserLiteModel userLiteModel;
+
+    @Transient
+    private List<Map<String, String>> transientDiseaseComponents;
+
+    @Transient
+    private List<Map<String, String>> transientDiseaseSupplements;
+
+    @Transient
+    private String transientOrcaSnapshotHash;
     
 //s.oh^ 2014/03/13 傷病名削除診療科対応
     private String department;
@@ -108,6 +119,30 @@ public class RegisteredDiagnosisModel extends KarteEntryBean implements java.io.
      */
     public void setDiagnosisCodeSystem(String diagnosisCodeSystem) {
         this.diagnosisCodeSystem = diagnosisCodeSystem;
+    }
+
+    public List<Map<String, String>> getTransientDiseaseComponents() {
+        return transientDiseaseComponents;
+    }
+
+    public void setTransientDiseaseComponents(List<Map<String, String>> transientDiseaseComponents) {
+        this.transientDiseaseComponents = transientDiseaseComponents;
+    }
+
+    public List<Map<String, String>> getTransientDiseaseSupplements() {
+        return transientDiseaseSupplements;
+    }
+
+    public void setTransientDiseaseSupplements(List<Map<String, String>> transientDiseaseSupplements) {
+        this.transientDiseaseSupplements = transientDiseaseSupplements;
+    }
+
+    public String getTransientOrcaSnapshotHash() {
+        return transientOrcaSnapshotHash;
+    }
+
+    public void setTransientOrcaSnapshotHash(String transientOrcaSnapshotHash) {
+        this.transientOrcaSnapshotHash = transientOrcaSnapshotHash;
     }
     
     /**

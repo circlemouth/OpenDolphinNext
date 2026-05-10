@@ -108,7 +108,7 @@ describe('PatientsTab draft dialog', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /患者B/ }));
 
-    expect(screen.getByRole('alertdialog', { name: '未保存ドラフトがあります' })).toBeInTheDocument();
+    expect(screen.getByRole('alertdialog', { name: '未保存下書きがあります' })).toBeInTheDocument();
     expect(screen.getByText('SOAPドラフトが未保存')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '保存して切替' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '破棄して切替' })).toBeInTheDocument();

@@ -151,12 +151,20 @@ beforeEach(() => {
       {
         diagnosisId: 1,
         diagnosisName: '糖尿病',
-        diagnosisCode: 'E11.9',
+        diagnosisCode: '8839101',
         startDate: '2026-04-01',
         outcome: '継続',
         layer: 'orca-mirror',
         readOnly: true,
         category: '主病名',
+        components: [
+          {
+            seq: 1,
+            componentType: 'BODY',
+            code: '8839101',
+            name: '糖尿病',
+          },
+        ],
       },
       {
         diagnosisId: 2,
@@ -235,8 +243,8 @@ describe('DADS clinical input contract - disease', () => {
     expect(within(diabetesScope).getByText('糖尿病')).toBeVisible();
     expect(within(diabetesScope).getByText('主')).toBeVisible();
     expect(within(diabetesScope).getByText('2026-04-01')).toBeVisible();
-    expect(within(diabetesScope).getByText('継続')).toBeVisible();
-    expect(within(diabetesScope).queryByText('E11.9')).not.toBeInTheDocument();
+    expect(within(diabetesScope).getByText('継続中')).toBeVisible();
+    expect(within(diabetesScope).getByText('8839101')).toBeVisible();
     expect(screen.queryByText('院内未送信')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));

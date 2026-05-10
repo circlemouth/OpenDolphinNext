@@ -69,6 +69,8 @@ class KarteServiceBeanRevisionBulkUpdateTest {
         when(em.createQuery(QUERY_MARK_MODULES_MODIFIED)).thenReturn(moduleUpdateQuery);
         when(em.createQuery(QUERY_MARK_SCHEMAS_MODIFIED)).thenReturn(schemaUpdateQuery);
         when(em.createQuery(QUERY_MARK_ATTACHMENTS_MODIFIED)).thenReturn(attachmentUpdateQuery);
+        Query nativeQuery = bulkQuery();
+        when(em.createNativeQuery(any(String.class))).thenReturn(nativeQuery);
 
         doAnswer(invocation -> {
             DocumentModel document = invocation.getArgument(0);

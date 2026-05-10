@@ -18,6 +18,8 @@ import {
   mutateOrcaDisease,
   resolveDiseaseCodeFromOrcaMaster,
   searchDiseaseMasterCandidates,
+  toOrcaOutcome,
+  type DiseaseComponent,
   type DiseaseEntry,
   type DiseaseLayer,
   type DiseaseMasterCandidate,
@@ -53,6 +55,8 @@ type DiagnosisFormState = {
   name: string;
   suffix: string;
   code: string;
+  components: DiseaseComponent[];
+  uncodedAccepted: boolean;
   startDate: string;
   endDate: string;
   outcome: string;
@@ -91,6 +95,8 @@ const buildEmptyForm = (today: string): DiagnosisFormState => ({
   name: '',
   suffix: '',
   code: '',
+  components: [],
+  uncodedAccepted: false,
   startDate: today,
   endDate: '',
   outcome: '',
@@ -98,15 +104,40 @@ const buildEmptyForm = (today: string): DiagnosisFormState => ({
   isSuspected: false,
 });
 
+const formatOutcomeForForm = (outcome?: string) => {
+  switch (outcome) {
+    case 'ACTIVE':
+    case '継続':
+      return '継続中';
+    case 'CURED':
+    case 'F':
+      return '治癒';
+    case 'DEATH':
+    case 'D':
+      return '死亡';
+    case 'DISCONTINUED':
+    case 'P':
+    case 'C':
+      return '中止';
+    case 'TRANSFERRED':
+    case 'S':
+      return '移行(ORCA送信保留)';
+    default:
+      return outcome ?? '';
+  }
+};
+
 const toFormState = (entry: DiseaseEntry, today: string): DiagnosisFormState => ({
   diagnosisId: entry.diagnosisId,
   prefix: '',
   name: entry.diagnosisName ?? '',
   suffix: '',
   code: entry.diagnosisCode ?? '',
+  components: entry.components ?? [],
+  uncodedAccepted: false,
   startDate: entry.startDate ?? today,
   endDate: entry.endDate ?? '',
-  outcome: entry.outcome ?? '',
+  outcome: formatOutcomeForForm(entry.outcome),
   isMain: entry.category?.includes('主') ?? false,
   isSuspected: entry.suspectedFlag?.includes('疑い') ?? entry.category?.includes('疑い') ?? false,
 });
@@ -120,6 +151,38 @@ const buildEntryKey = (entry: DiseaseEntry) =>
 
 const formatQuickCandidateLabel = (candidate: DiseaseMasterCandidate) => {
   return candidate.name;
+};
+
+const ORCA_DISEASE_BODY_CODE_PATTERN = /^\d{7}$/;
+
+const buildBodyComponent = (code: string, name: string): DiseaseComponent | null => {
+  const normalizedCode = code.trim();
+  const normalizedName = name.trim();
+  if (!ORCA_DISEASE_BODY_CODE_PATTERN.test(normalizedCode) || !normalizedName) {
+    return null;
+  }
+  return {
+    seq: 1,
+    componentType: 'BODY',
+    code: normalizedCode,
+    name: normalizedName,
+    sourceMaster: 'ORCA disease master',
+  };
+};
+
+const normalizeFormComponents = (state: DiagnosisFormState): DiseaseComponent[] => {
+  if (state.components.length > 0) {
+    return state.components.map((component, index) => ({ ...component, seq: index + 1 })).slice(0, 21);
+  }
+  const component = buildBodyComponent(state.code, state.name);
+  return component ? [component] : [];
+};
+
+const formatComponentCodeList = (entry: DiseaseEntry) => {
+  if (entry.components && entry.components.length > 0) {
+    return entry.components.map((component) => component.code).join(' + ');
+  }
+  return entry.diagnosisCode?.trim() || '-';
 };
 
 const isValidDateOnly = (value: string) => {
@@ -148,6 +211,9 @@ const validateDiagnosisForm = (state: DiagnosisFormState): string | null => {
   if (state.outcome.trim() && !(DISEASE_OUTCOME_PRESETS as readonly string[]).includes(state.outcome.trim())) {
     return `転帰は ${DISEASE_OUTCOME_PRESETS.join('、')} のいずれかを入力してください。`;
   }
+  if (state.outcome.trim() === '移行(ORCA送信保留)') {
+    return '移行はORCA送信仕様の確認が完了するまで、この画面からは送信できません。';
+  }
   return null;
 };
 
@@ -157,6 +223,7 @@ const buildDiseaseInput = (input: FormMutationInput) => {
     diagnosisId: input.sourceEntry?.diagnosisId ?? input.form.diagnosisId,
     diagnosisName: combinedName,
     diagnosisCode: input.form.code.trim() || undefined,
+    components: normalizeFormComponents(input.form),
     departmentCode: input.sourceEntry?.departmentCode,
     insuranceCombinationNumber: input.sourceEntry?.insuranceCombinationNumber,
     startDate: input.form.startDate || undefined,
@@ -167,16 +234,25 @@ const buildDiseaseInput = (input: FormMutationInput) => {
   };
 };
 
-const toOrcaDiseaseInformation = (entry: DiseaseEntry): OrcaDiseaseInformation => ({
-  diseaseCode: entry.diagnosisCode,
-  diseaseName: entry.diagnosisName,
-  diseaseStartDate: entry.startDate,
-  diseaseEndDate: entry.endDate,
-  diseaseInOut: 'O',
-  diseaseSuspectedFlag: isSuspectedDisease(entry) ? 'S' : undefined,
-  diseaseOutCome: entry.outcome,
-  insuranceCombinationNumber: entry.insuranceCombinationNumber,
-});
+const toOrcaDiseaseInformation = (entry: DiseaseEntry): OrcaDiseaseInformation => {
+  const outcome = toOrcaOutcome(entry.outcome);
+  return {
+    diseaseCode: entry.diagnosisCode,
+    diseaseName: entry.diagnosisName,
+    displayName: entry.displayName ?? entry.diagnosisName,
+    karteName: entry.karteName,
+    diseaseStartDate: entry.startDate,
+    diseaseEndDate: entry.endDate,
+    diseaseInOut: 'O',
+    diseaseSuspectedFlag: isSuspectedDisease(entry) ? 'S' : undefined,
+    diseaseOutCome: outcome.sendCode,
+    outcome: outcome.outcome,
+    orcaOutcomeSendCode: outcome.sendCode,
+    components: entry.components,
+    supplements: entry.supplements,
+    insuranceCombinationNumber: entry.insuranceCombinationNumber,
+  };
+};
 
 function DiseaseRow({
   entry,
@@ -218,9 +294,10 @@ function DiseaseRow({
           </span>
         ) : null}
       </td>
+      <td className="charts-diagnosis__cell charts-diagnosis__cell--code">{formatComponentCodeList(entry)}</td>
       <td className="charts-diagnosis__cell charts-diagnosis__cell--date">{entry.startDate ? entry.startDate : '-'}</td>
       <td className="charts-diagnosis__cell charts-diagnosis__cell--outcome">
-        {hasOutcome ? <span>{entry.outcome}</span> : null}
+        {hasOutcome ? <span>{formatOutcomeForForm(entry.outcome)}</span> : null}
         {hasEnded ? <span className="charts-diagnosis__subvalue">終了 {entry.endDate}</span> : null}
       </td>
       <td className="charts-diagnosis__cell charts-diagnosis__cell--actions">
@@ -251,6 +328,7 @@ function DiseaseTable({
           <tr>
             <th scope="col">病名</th>
             <th scope="col">属性</th>
+            <th scope="col">構成コード</th>
             <th scope="col">開始</th>
             <th scope="col">転帰</th>
             <th scope="col">操作</th>
@@ -436,11 +514,15 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
           diagnosisName: combinedName,
           prefix: input.form.prefix,
           mainName: input.form.name,
-          suffix: input.form.suffix,
-          referenceDate: input.form.startDate,
-        }));
-      if (!resolvedCode) {
-        throw new Error('ORCA病名登録には病名コードが必要です。病名マスター候補を選択するかコードを入力してください。');
+            suffix: input.form.suffix,
+            referenceDate: input.form.startDate,
+          }));
+      const resolvedComponents = normalizeFormComponents({
+        ...input.form,
+        code: resolvedCode ?? input.form.code,
+      });
+      if (resolvedComponents.length === 0 && !input.form.uncodedAccepted) {
+        throw new Error('ORCA病名登録には病名マスター候補から選択した構成コードが必要です。');
       }
       if (!meta.visitDate) {
         throw new Error('ORCA病名登録には診療日が必要です。');
@@ -449,6 +531,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         throw new Error('ORCA病名登録には診療科コードが必要です。');
       }
       const disease = buildDiseaseInput(input);
+      const outcome = toOrcaOutcome(disease.outcome);
       return mutateOrcaDisease({
         patientId,
         operation: input.operation,
@@ -458,11 +541,17 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
           {
             diseaseCode: resolvedCode,
             diseaseName: disease.diagnosisName,
+            displayName: disease.diagnosisName,
             diseaseStartDate: disease.startDate,
             diseaseEndDate: disease.endDate,
             diseaseInOut: 'O',
             diseaseSuspectedFlag: input.form.isSuspected ? 'S' : undefined,
-            diseaseOutCome: disease.outcome,
+            diseaseOutCome: outcome.sendCode,
+            outcome: outcome.outcome,
+            orcaOutcomeSendCode: outcome.sendCode,
+            components: resolvedComponents,
+            supplements: [],
+            uncodedAccepted: input.form.uncodedAccepted,
             insuranceCombinationNumber: meta.insuranceCombinationNumber ?? disease.insuranceCombinationNumber,
           },
         ],
@@ -702,11 +791,19 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     if (!optionKey) return;
     const option = quickCandidateMap.get(optionKey);
     if (!option) return;
-    const selectedCode = option.candidate.icdTen?.trim() || option.candidate.code?.trim() || '';
+    const selectedCode = option.candidate.code?.trim() || '';
+    const component = buildBodyComponent(selectedCode, option.candidate.name);
     setQuickAdd((prev) => ({
       ...prev,
       name: option.candidate.name,
       code: selectedCode || prev.code,
+    }));
+    setForm((prev) => ({
+      ...prev,
+      name: option.candidate.name,
+      code: selectedCode || prev.code,
+      components: component ? [component] : prev.components,
+      uncodedAccepted: false,
     }));
     setIsQuickCandidateMenuOpen(false);
     setNotice({ tone: 'info', message: `候補「${option.candidate.name}」を反映しました。コードに紐づく病名です。` });
@@ -723,6 +820,10 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
       ...buildEmptyForm(today),
       name: quickAdd.name.trim(),
       code: quickAdd.code.trim(),
+      components: (() => {
+        const component = buildBodyComponent(quickAdd.code.trim(), quickAdd.name.trim());
+        return component ? [component] : [];
+      })(),
       startDate: quickAdd.startDate || today,
       isMain: mode === 'main',
       isSuspected: mode === 'suspected',
@@ -1034,8 +1135,13 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                 id="diagnosis-name"
                 ref={nameInputRef}
                 value={form.name}
-                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                placeholder="例: 高血圧症"
+                onChange={(event) => {
+                  const nextName = event.target.value;
+                  setForm((prev) => {
+                    const component = buildBodyComponent(prev.code, nextName);
+                    return { ...prev, name: nextName, components: component ? [component] : [] };
+                  });
+                }}
                 disabled={isOrcaMutationBlocked}
               />
             </div>
@@ -1057,8 +1163,27 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
           <details className="charts-diagnosis__advanced">
             <summary className="charts-diagnosis__advanced-summary">詳細（コード/開始/転帰）</summary>
             <div className="charts-side-panel__field">
-              <label htmlFor="diagnosis-code">病名コード ※任意</label>
-              <input id="diagnosis-code" value={form.code} onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))} placeholder="例: I10" disabled={isOrcaMutationBlocked} />
+              <label htmlFor="diagnosis-code">病名構成コード ※必須</label>
+              <input
+                id="diagnosis-code"
+                value={form.code}
+                onChange={(event) => {
+                  const nextCode = event.target.value;
+                  const component = buildBodyComponent(nextCode, form.name);
+                  setForm((prev) => ({
+                    ...prev,
+                    code: nextCode,
+                    components: component ? [component] : [],
+                    uncodedAccepted: false,
+                  }));
+                }}
+                disabled={isOrcaMutationBlocked}
+              />
+              <p className="charts-side-panel__help">
+                {normalizeFormComponents(form).length > 0
+                  ? `送信する構成コード: ${normalizeFormComponents(form).map((component) => component.code).join(' + ')}`
+                  : '病名マスター候補を選択するか、ORCAの7桁傷病名コードを入力してください。'}
+              </p>
             </div>
             <div className="charts-side-panel__field-row">
               <div className="charts-side-panel__field">
@@ -1072,13 +1197,22 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
             </div>
             <div className="charts-side-panel__field">
               <label htmlFor="diagnosis-outcome">転帰 ※任意</label>
-              <input id="diagnosis-outcome" list="diagnosis-outcome-options" value={form.outcome} onChange={(event) => setForm((prev) => ({ ...prev, outcome: event.target.value }))} placeholder="例: 継続" disabled={isOrcaMutationBlocked} />
+              <input id="diagnosis-outcome" list="diagnosis-outcome-options" value={form.outcome} onChange={(event) => setForm((prev) => ({ ...prev, outcome: event.target.value }))} disabled={isOrcaMutationBlocked} />
               <datalist id="diagnosis-outcome-options">
                 {DISEASE_OUTCOME_PRESETS.map((option) => (
                   <option key={option} value={option} />
                 ))}
               </datalist>
             </div>
+            <label className="charts-side-panel__toggle">
+              <input
+                type="checkbox"
+                checked={form.uncodedAccepted}
+                onChange={(event) => setForm((prev) => ({ ...prev, uncodedAccepted: event.target.checked, components: event.target.checked ? [] : prev.components }))}
+                disabled={isOrcaMutationBlocked || normalizeFormComponents(form).length > 0}
+              />
+              未コード化病名として警告を確認した
+            </label>
           </details>
           <div className="charts-diagnosis__editor-actions" role="group" aria-label="病名保存">
             <button type="submit" disabled={isAnyMutationPending || isOrcaMutationBlocked}>
@@ -1116,6 +1250,16 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
             <div>
               <dt>転帰</dt>
               <dd>{pendingForm?.outcome || pendingEntry?.outcome || '-'}</dd>
+            </div>
+            <div>
+              <dt>構成コード</dt>
+              <dd>
+                {pendingForm
+                  ? normalizeFormComponents(pendingForm).map((component) => component.code).join(' + ') || (pendingForm.uncodedAccepted ? '未コード化' : '-')
+                  : pendingEntry
+                    ? formatComponentCodeList(pendingEntry)
+                    : '-'}
+              </dd>
             </div>
           </dl>
           <div className="charts-side-panel__notice charts-side-panel__notice--info">ORCA再取得が完了するまで一覧は更新しません。</div>

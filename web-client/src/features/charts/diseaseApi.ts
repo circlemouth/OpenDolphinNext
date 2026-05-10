@@ -9,21 +9,64 @@ export type DiseaseEntry = {
   diagnosisId?: number;
   diagnosisName?: string;
   diagnosisCode?: string;
+  displayName?: string;
+  karteName?: string;
   departmentCode?: string;
   insuranceCombinationNumber?: string;
   startDate?: string;
   endDate?: string;
   outcome?: string;
+  orcaOutcomeSendCode?: string;
+  orcaOutcomeReceivedCode?: string;
   category?: string;
   suspectedFlag?: string;
   layer?: DiseaseLayer;
   syncState?: DiseaseSyncState;
+  syncStatus?: DiseaseSyncStatus;
+  masterVersion?: string;
+  orcaSnapshotHash?: string;
+  components?: DiseaseComponent[];
+  supplements?: DiseaseSupplement[];
+  warnings?: DiseaseWarning[];
+  unmatchInformation?: DiseaseUnmatchInformation[];
   readOnly?: boolean;
   candidateOnly?: boolean;
   note?: string;
 };
 
+export type DiseaseComponentType = 'PREFIX' | 'SITE' | 'BODY' | 'SUFFIX' | 'UNKNOWN';
+
+export type DiseaseComponent = {
+  seq: number;
+  componentType: DiseaseComponentType;
+  code: string;
+  name: string;
+  sourceMaster?: string;
+  validFrom?: string;
+  validTo?: string;
+  condition?: string;
+};
+
+export type DiseaseSupplement = {
+  seq: number;
+  supplementCode?: string;
+  supplementName?: string;
+};
+
+export type DiseaseWarning = {
+  code?: string;
+  messageCategory?: string;
+  position?: number;
+};
+
+export type DiseaseUnmatchInformation = {
+  code?: string;
+  name?: string;
+  messageCategory?: string;
+};
+
 export type DiseaseLayer = 'insurance-local' | 'orca-mirror' | 'candidate';
+export type DiseaseSyncStatus = 'PENDING' | 'SYNCED' | 'WARNING' | 'ERROR';
 export type DiseaseSyncState =
   | 'none'
   | 'candidate'
@@ -43,7 +86,7 @@ export const DISEASE_CLINICAL_UNAVAILABLE_NOTE =
   '外部の臨床病名ソースは未接続です。ここでは院内の保険病名を登録・編集し、候補は確認後に反映します。';
 export const DISEASE_CANDIDATE_CONFIRM_NOTE = '候補は自動反映されません。内容を確認してからORCAへ病名登録してください。';
 export const ORDER_SET_CANDIDATE_NOTE = '候補です。オーダーセット適用時も保険病名へ自動登録しません。';
-export const DISEASE_OUTCOME_PRESETS = ['継続', '治癒', '中止', '再発', '死亡', '転院', '不明'] as const;
+export const DISEASE_OUTCOME_PRESETS = ['継続中', '治癒', '中止', '死亡', '移行(ORCA送信保留)'] as const;
 
 export type DiseaseImportResponse = {
   ok?: boolean;
@@ -70,6 +113,7 @@ type FetchDiseasesParams = {
   from?: string;
   to?: string;
   activeOnly?: boolean;
+  includeEnded?: boolean;
 };
 
 export type DiseaseMutationOperation = {
@@ -108,21 +152,35 @@ export type OrcaDiseaseMutationRequest = {
   diseaseInformation?: Array<{
     diseaseCode?: string;
     diseaseName?: string;
+    displayName?: string;
+    karteName?: string;
     diseaseStartDate?: string;
     diseaseEndDate?: string;
     diseaseInOut?: string;
     diseaseSuspectedFlag?: string;
     diseaseOutCome?: string;
+    outcome?: string;
+    orcaOutcomeSendCode?: string;
+    components?: DiseaseComponent[];
+    supplements?: DiseaseSupplement[];
+    uncodedAccepted?: boolean;
     insuranceCombinationNumber?: string;
   }>;
   targetDisease?: {
     diseaseCode?: string;
     diseaseName?: string;
+    displayName?: string;
+    karteName?: string;
     diseaseStartDate?: string;
     diseaseEndDate?: string;
     diseaseInOut?: string;
     diseaseSuspectedFlag?: string;
     diseaseOutCome?: string;
+    outcome?: string;
+    orcaOutcomeSendCode?: string;
+    components?: DiseaseComponent[];
+    supplements?: DiseaseSupplement[];
+    uncodedAccepted?: boolean;
     insuranceCombinationNumber?: string;
   };
   organizeInformation?: {
@@ -180,6 +238,7 @@ type ResolveDiseaseCodeParams = {
 };
 
 const ORCA_DISEASE_CODE_REGEX = /^[0-9]{7}$/;
+const ORCA_MODIFIER_CODE_REGEX = /^ZZZ[0-9]{4}$/;
 
 const normalizeTerm = (value?: string | null) => (value ?? '').trim();
 const normalizeNameKey = (value?: string | null) => normalizeTerm(value).replaceAll(' ', '').replaceAll('　', '');
@@ -209,10 +268,45 @@ const validateOutcome = (value?: string) => {
   if (!normalized) {
     return undefined;
   }
+  if (normalized === '継続') {
+    return normalized;
+  }
   if (!(DISEASE_OUTCOME_PRESETS as readonly string[]).includes(normalized)) {
     throw new Error(`転帰は ${DISEASE_OUTCOME_PRESETS.join('、')} のいずれかを入力してください。`);
   }
   return normalized;
+};
+
+export const toOrcaOutcome = (value?: string): { outcome: string; sendCode?: string } => {
+  const normalized = normalizeTerm(value);
+  switch (normalized) {
+    case '':
+    case '継続':
+    case '継続中':
+    case 'ACTIVE':
+      return { outcome: 'ACTIVE', sendCode: undefined };
+    case '治癒':
+    case 'CURED':
+    case 'F':
+      return { outcome: 'CURED', sendCode: 'F' };
+    case '死亡':
+    case 'DEATH':
+    case 'D':
+      return { outcome: 'DEATH', sendCode: 'D' };
+    case '中止':
+    case 'DISCONTINUED':
+    case 'P':
+      return { outcome: 'DISCONTINUED', sendCode: 'P' };
+    case '移行(ORCA送信保留)':
+    case 'TRANSFERRED':
+      return { outcome: 'TRANSFERRED', sendCode: undefined };
+    case '削除':
+    case 'DELETED':
+    case 'O':
+      return { outcome: 'DELETED', sendCode: 'O' };
+    default:
+      throw new Error(`転帰は ${DISEASE_OUTCOME_PRESETS.join('、')} のいずれかを入力してください。`);
+  }
 };
 
 const toMutationRequestOperation = (operation: DiseaseMutationOperation): DiseaseMutationOperation => {
@@ -270,14 +364,81 @@ const normalizeDiseaseSyncState = (value?: string | null): DiseaseSyncState => {
 
 const normalizeDiseaseEntry = (entry: DiseaseEntry): DiseaseEntry => {
   const layer = normalizeDiseaseLayer(entry.layer);
+  const components = normalizeDiseaseComponents(entry.components, entry.diagnosisCode, entry.diagnosisName);
   return {
     ...entry,
+    diagnosisName: normalizeTerm(entry.displayName) || entry.diagnosisName,
+    components,
+    supplements: normalizeDiseaseSupplements(entry.supplements),
+    warnings: Array.isArray(entry.warnings) ? entry.warnings : [],
+    unmatchInformation: Array.isArray(entry.unmatchInformation) ? entry.unmatchInformation : [],
     layer,
     syncState: normalizeDiseaseSyncState(entry.syncState),
+    syncStatus: normalizeDiseaseSyncStatus(entry.syncStatus),
     readOnly: typeof entry.readOnly === 'boolean' ? entry.readOnly : layer === 'orca-mirror',
     candidateOnly: typeof entry.candidateOnly === 'boolean' ? entry.candidateOnly : layer === 'candidate',
     note: normalizeTerm(entry.note) || undefined,
   };
+};
+
+const normalizeDiseaseSyncStatus = (value?: string | null): DiseaseSyncStatus => {
+  switch (normalizeTerm(value)) {
+    case 'PENDING':
+    case 'WARNING':
+    case 'ERROR':
+      return normalizeTerm(value) as DiseaseSyncStatus;
+    default:
+      return 'SYNCED';
+  }
+};
+
+const normalizeComponentType = (value?: string | null): DiseaseComponentType => {
+  switch (normalizeTerm(value).toUpperCase()) {
+    case 'PREFIX':
+    case 'SITE':
+    case 'BODY':
+    case 'SUFFIX':
+      return normalizeTerm(value).toUpperCase() as DiseaseComponentType;
+    default:
+      return 'UNKNOWN';
+  }
+};
+
+const normalizeDiseaseComponents = (
+  components?: DiseaseComponent[],
+  diagnosisCode?: string,
+  diagnosisName?: string,
+): DiseaseComponent[] => {
+  if (Array.isArray(components) && components.length > 0) {
+    return components
+      .map((component, index) => ({
+        ...component,
+        seq: Number.isFinite(component.seq) ? Number(component.seq) : index + 1,
+        componentType: normalizeComponentType(component.componentType),
+        code: normalizeTerm(component.code),
+        name: normalizeTerm(component.name),
+      }))
+      .filter((component) => component.code && component.name)
+      .slice(0, 21);
+  }
+  const code = normalizeTerm(diagnosisCode);
+  const name = normalizeTerm(diagnosisName);
+  if (ORCA_DISEASE_CODE_REGEX.test(code) && name) {
+    return [{ seq: 1, componentType: 'BODY', code, name, sourceMaster: 'ORCA disease master' }];
+  }
+  return [];
+};
+
+const normalizeDiseaseSupplements = (supplements?: DiseaseSupplement[]): DiseaseSupplement[] => {
+  if (!Array.isArray(supplements)) return [];
+  return supplements
+    .map((supplement, index) => ({
+      ...supplement,
+      seq: Number.isFinite(supplement.seq) ? Number(supplement.seq) : index + 1,
+      supplementCode: normalizeTerm(supplement.supplementCode) || undefined,
+      supplementName: normalizeTerm(supplement.supplementName) || undefined,
+    }))
+    .filter((supplement) => supplement.supplementCode || supplement.supplementName);
 };
 
 const normalizeMasterReferenceDate = (referenceDate?: string) => {
@@ -420,71 +581,7 @@ export async function searchDiseaseMasterCandidates(params: {
 const toUniqueCodes = (entries: DiseaseMasterEntry[], matcher: (code: string) => boolean) =>
   [...new Set(entries.map((entry) => (entry.code ?? '').trim()).filter((code) => code && matcher(code)))];
 
-const toUniqueIcdTenCodes = (entries: DiseaseMasterEntry[]) =>
-  [
-    ...new Set(
-      entries
-        .map((entry) => normalizeTerm(entry.icdTen))
-        .filter((code): code is string => Boolean(code)),
-    ),
-  ];
-
 const pickCode = (codes: string[]) => (codes.length === 1 ? codes[0] : undefined);
-
-const buildCompositeCode = (prefixCode: string | null | undefined, baseCode: string, suffixCode: string | null | undefined) =>
-  [prefixCode, baseCode, suffixCode].filter((part): part is string => !!part && part.trim().length > 0).join('.');
-
-const collectCompositeCandidates = async (
-  diagnosisName: string,
-  lookupExactCodes: (term: string, codeType: 'base' | 'modifier') => Promise<string[]>,
-): Promise<Set<string>> => {
-  const candidates = new Set<string>();
-  const length = diagnosisName.length;
-
-  for (let split = 1; split < length; split += 1) {
-    const prefix = diagnosisName.slice(0, split);
-    const base = diagnosisName.slice(split);
-    const prefixCodes = await lookupExactCodes(prefix, 'modifier');
-    const baseCodes = await lookupExactCodes(base, 'base');
-    for (const prefixCode of prefixCodes) {
-      for (const baseCode of baseCodes) {
-        candidates.add(buildCompositeCode(prefixCode, baseCode, null));
-      }
-    }
-  }
-
-  for (let split = length - 1; split > 0; split -= 1) {
-    const base = diagnosisName.slice(0, split);
-    const suffix = diagnosisName.slice(split);
-    const baseCodes = await lookupExactCodes(base, 'base');
-    const suffixCodes = await lookupExactCodes(suffix, 'modifier');
-    for (const baseCode of baseCodes) {
-      for (const suffixCode of suffixCodes) {
-        candidates.add(buildCompositeCode(null, baseCode, suffixCode));
-      }
-    }
-  }
-
-  for (let left = 1; left < length - 1; left += 1) {
-    for (let right = left + 1; right < length; right += 1) {
-      const prefix = diagnosisName.slice(0, left);
-      const base = diagnosisName.slice(left, right);
-      const suffix = diagnosisName.slice(right);
-      const prefixCodes = await lookupExactCodes(prefix, 'modifier');
-      const baseCodes = await lookupExactCodes(base, 'base');
-      const suffixCodes = await lookupExactCodes(suffix, 'modifier');
-      for (const prefixCode of prefixCodes) {
-        for (const baseCode of baseCodes) {
-          for (const suffixCode of suffixCodes) {
-            candidates.add(buildCompositeCode(prefixCode, baseCode, suffixCode));
-          }
-        }
-      }
-    }
-  }
-
-  return candidates;
-};
 
 export async function resolveDiseaseCodeFromOrcaMaster(params: ResolveDiseaseCodeParams): Promise<string | undefined> {
   const diagnosisName = normalizeTerm(params.diagnosisName);
@@ -535,45 +632,29 @@ export async function resolveDiseaseCodeFromOrcaMaster(params: ResolveDiseaseCod
       return [] as string[];
     }
     const exactByName = await lookupExactEntriesByName(normalized);
-    return [...new Set(exactByName.map((entry) => (entry.code ?? '').trim()).filter((code) => code.length > 0))];
-  };
-
-  const lookupExactIcdTenCodes = async (term: string) => {
-    const exactByName = await lookupExactEntriesByName(term);
-    return toUniqueIcdTenCodes(exactByName);
+    return [
+      ...new Set(
+        exactByName
+          .map((entry) => (entry.code ?? '').trim())
+          .filter((code) => ORCA_DISEASE_CODE_REGEX.test(code) || ORCA_MODIFIER_CODE_REGEX.test(code)),
+      ),
+    ];
   };
 
   try {
-    const hintedPrefix = normalizeTerm(params.prefix);
     const hintedMainName = normalizeTerm(params.mainName);
-    const hintedSuffix = normalizeTerm(params.suffix);
 
     const exactAnyCode = pickCode(await lookupExactCodesAny(diagnosisName));
     if (exactAnyCode) {
       return exactAnyCode;
     }
-    const exactIcdTenCode = pickCode(await lookupExactIcdTenCodes(diagnosisName));
-    if (exactIcdTenCode) {
-      return exactIcdTenCode;
-    }
 
-    if (hintedMainName && (hintedPrefix || hintedSuffix)) {
+    if (hintedMainName && !normalizeTerm(params.prefix) && !normalizeTerm(params.suffix)) {
       const baseCode = pickCode(await lookupExactCodes(hintedMainName, 'base'));
-      const prefixCode = hintedPrefix ? pickCode(await lookupExactCodes(hintedPrefix, 'modifier')) : null;
-      const suffixCode = hintedSuffix ? pickCode(await lookupExactCodes(hintedSuffix, 'modifier')) : null;
-      const hintedResolved =
-        baseCode &&
-        (hintedPrefix ? !!prefixCode : true) &&
-        (hintedSuffix ? !!suffixCode : true)
-          ? buildCompositeCode(prefixCode, baseCode, suffixCode)
-          : undefined;
-      if (hintedResolved) {
-        return hintedResolved;
-      }
+      if (baseCode) return baseCode;
     }
 
-    const compositeCandidates = await collectCompositeCandidates(diagnosisName, lookupExactCodes);
-    return compositeCandidates.size === 1 ? [...compositeCandidates][0] : undefined;
+    return undefined;
   } catch {
     return undefined;
   }
@@ -586,6 +667,7 @@ export async function fetchDiseases(params: FetchDiseasesParams): Promise<Diseas
   if (params.from) query.set('from', params.from);
   if (params.to) query.set('to', params.to);
   if (params.activeOnly) query.set('activeOnly', 'true');
+  if (params.includeEnded) query.set('includeEnded', 'true');
   const queryString = query.toString();
   const response = await httpFetch(`/api/local/diagnoses/${encodeURIComponent(params.patientId)}${queryString ? `?${queryString}` : ''}`);
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: '病名情報の取得に失敗しました。' });

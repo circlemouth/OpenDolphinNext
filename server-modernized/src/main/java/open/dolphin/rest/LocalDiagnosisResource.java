@@ -34,6 +34,7 @@ import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.DiseaseImportResponse;
+import open.dolphin.rest.masterupdate.MasterUpdateStore;
 import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.UserServiceBean;
@@ -58,6 +59,9 @@ public class LocalDiagnosisResource extends AbstractResource {
     @Inject
     private DiseaseProjectionService diseaseProjectionService;
 
+    @Inject
+    private MasterUpdateStore masterUpdateStore;
+
     @GET
     @Path("/{patientId}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -66,7 +70,8 @@ public class LocalDiagnosisResource extends AbstractResource {
             @PathParam("patientId") String patientId,
             @QueryParam("from") String from,
             @QueryParam("to") String to,
-            @QueryParam("activeOnly") @DefaultValue("false") boolean activeOnly) {
+            @QueryParam("activeOnly") @DefaultValue("false") boolean activeOnly,
+            @QueryParam("includeEnded") @DefaultValue("false") boolean includeEnded) {
         String facilityId = requireActorFacility(request);
         PatientModel patient = patientServiceBean.getPatientById(facilityId, patientId);
         if (patient == null) {
@@ -99,12 +104,19 @@ public class LocalDiagnosisResource extends AbstractResource {
             item.put("candidateOnly", Boolean.FALSE);
             pendingLocalItems.add(item);
         }
-        DiseaseImportResponse mirrorResponse = fetchOrcaMirror(request, facilityId, patientId, fromDate, toDate);
+        DiseaseImportResponse mirrorResponse = fetchOrcaMirror(request, facilityId, patientId, fromDate, toDate, includeEnded);
+        String diseaseMasterVersion = resolveDiseaseMasterVersion();
+        if (mirrorResponse.getMasterVersion() == null) {
+            mirrorResponse.setMasterVersion(diseaseMasterVersion);
+        }
         List<DiseaseImportResponse.DiseaseEntry> mirrorEntries =
                 mirrorResponse.getDiseases() != null ? mirrorResponse.getDiseases() : List.of();
         projectionService().applyMirrorDiffState(pendingLocalItems, mirrorEntries);
         List<Map<String, Object>> mirrorItems = new ArrayList<>();
         for (DiseaseImportResponse.DiseaseEntry entry : mirrorEntries) {
+            if (entry.getMasterVersion() == null) {
+                entry.setMasterVersion(diseaseMasterVersion);
+            }
             mirrorItems.add(toMirrorItem(entry));
         }
         Map<String, Object> response = new LinkedHashMap<>();
@@ -113,9 +125,19 @@ public class LocalDiagnosisResource extends AbstractResource {
         response.put("runId", resolveTraceId(request));
         response.put("sourceOfTruth", "orca");
         response.put("orcaMirrorStatus", mirrorResponse.getOrcaMirrorStatus());
+        response.put("masterVersion", mirrorResponse.getMasterVersion());
         response.put("diseases", mirrorItems);
         response.put("pendingLocalDiseases", pendingLocalItems);
         return response;
+    }
+
+    Map<String, Object> getDiagnoses(
+            HttpServletRequest request,
+            String patientId,
+            String from,
+            String to,
+            boolean activeOnly) {
+        return getDiagnoses(request, patientId, from, to, activeOnly, false);
     }
 
     @POST
@@ -299,18 +321,20 @@ public class LocalDiagnosisResource extends AbstractResource {
             String facilityId,
             String patientId,
             Date fromDate,
-            Date toDate) {
+            Date toDate,
+            boolean includeEnded) {
         DiseaseImportResponse unavailable = new DiseaseImportResponse();
         unavailable.setRunId(resolveTraceId(request));
         unavailable.setPatientId(patientId);
         unavailable.setOrcaMirrorStatus("unavailable");
+        unavailable.setMasterVersion(resolveDiseaseMasterVersion());
         unavailable.setDiseases(List.of());
         if (orcaTransport == null) {
             return unavailable;
         }
         try {
             LocalDate baseDate = toDateOnly(toDate);
-            String requestXml = projectionService().buildDiseaseGetRequestXml(patientId, baseDate);
+            String requestXml = projectionService().buildDiseaseGetRequestXml(patientId, baseDate, includeEnded);
             OrcaTransportResult result = orcaTransport.invoke(
                     facilityId,
                     OrcaEndpoint.DISEASE_GET,
@@ -318,6 +342,29 @@ public class LocalDiagnosisResource extends AbstractResource {
             return projectionService().buildMirrorResponseFromOrca(result, resolveTraceId(request), patientId, fromDate, toDate);
         } catch (RuntimeException ex) {
             return unavailable;
+        }
+    }
+
+    private String resolveDiseaseMasterVersion() {
+        if (masterUpdateStore == null) {
+            return null;
+        }
+        try {
+            MasterUpdateStore.Snapshot snapshot = masterUpdateStore.getSnapshot();
+            MasterUpdateStore.DatasetState state = MasterUpdateStore.findDataset(snapshot, "disease_master");
+            if (state == null) {
+                state = MasterUpdateStore.findDataset(snapshot, "orca_master_core");
+            }
+            if (state == null) {
+                return null;
+            }
+            MasterUpdateStore.DatasetVersion version = state.currentVersion();
+            if (version != null && version.summary != null && !version.summary.isBlank()) {
+                return version.summary;
+            }
+            return state.currentVersionId;
+        } catch (RuntimeException ex) {
+            return null;
         }
     }
 
@@ -343,10 +390,21 @@ public class LocalDiagnosisResource extends AbstractResource {
         item.put("startDate", entry.getStartDate());
         item.put("endDate", entry.getEndDate());
         item.put("outcome", entry.getOutcome());
+        item.put("orcaOutcomeSendCode", entry.getOrcaOutcomeSendCode());
+        item.put("orcaOutcomeReceivedCode", entry.getOrcaOutcomeReceivedCode());
         item.put("category", entry.getCategory());
         item.put("suspectedFlag", entry.getSuspectedFlag());
+        item.put("displayName", entry.getDisplayName());
+        item.put("karteName", entry.getKarteName());
         item.put("layer", "orca-mirror");
         item.put("syncState", entry.getSyncState());
+        item.put("syncStatus", entry.getSyncStatus());
+        item.put("masterVersion", entry.getMasterVersion());
+        item.put("orcaSnapshotHash", entry.getOrcaSnapshotHash());
+        item.put("components", entry.getComponents());
+        item.put("supplements", entry.getSupplements());
+        item.put("warnings", entry.getWarnings());
+        item.put("unmatchInformation", entry.getUnmatchInformation());
         item.put("readOnly", Boolean.TRUE);
         item.put("candidateOnly", Boolean.FALSE);
         item.put("note", entry.getNote());
