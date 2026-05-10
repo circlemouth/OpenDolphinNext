@@ -17,6 +17,10 @@ import javax.sql.DataSource;
 import open.dolphin.infomodel.AppointmentModel;
 import open.dolphin.infomodel.AttachmentModel;
 import open.dolphin.infomodel.AuditEvent;
+import open.dolphin.infomodel.ChartDocumentModel;
+import open.dolphin.infomodel.ChartRevisionEventModel;
+import open.dolphin.infomodel.ChartRevisionModel;
+import open.dolphin.infomodel.ChartRevisionStatus;
 import open.dolphin.infomodel.DocumentModel;
 import open.dolphin.infomodel.FacilityModel;
 import open.dolphin.infomodel.Factor2BackupKey;
@@ -69,6 +73,9 @@ class FreshSchemaBaselineTest {
     void emptyDatabaseCanMigrateAndBootstrapAgainstFreshBaseline() throws Exception {
         try (EmbeddedPostgres postgres = EmbeddedPostgres.builder().start()) {
             DataSource dataSource = postgres.getPostgresDatabase();
+            long nextUserId;
+            long patientPk;
+            long kartePk;
             long insurancePk;
             long documentPk;
             long modulePk;
@@ -84,7 +91,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0315", appliedVersion(connection));
+                assertEquals("0316", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -115,6 +122,9 @@ class FreshSchemaBaselineTest {
                 assertTrue(tableExists(connection, "opendolphin", "orca_disease_operation"));
                 assertTrue(tableExists(connection, "opendolphin", "orca_disease_audit_event"));
                 assertTrue(tableExists(connection, "opendolphin", "orca_patient_cache"));
+                assertTrue(tableExists(connection, "opendolphin", "chart_document"));
+                assertTrue(tableExists(connection, "opendolphin", "chart_revision"));
+                assertTrue(tableExists(connection, "opendolphin", "chart_revision_event"));
                 assertTrue(tableExists(connection, "opendolphin", "user_security_state"));
                 assertTrue(tableExists(connection, "opendolphin", "auth_session_registry"));
                 assertTrue(tableExists(connection, "opendolphin", "audit_event"));
@@ -161,6 +171,12 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "orca_patient_cache", "cache_status"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_patient_cache", "business_status"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_patient_cache", "raw_response_hash"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_document", "document_key"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_document", "current_revision_id"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_revision", "status"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_revision", "content_hash"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_revision_event", "event_type"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_revision_event", "before_summary_json"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_bucket"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_key"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_version_id"));
@@ -184,6 +200,9 @@ class FreshSchemaBaselineTest {
                 assertTrue(indexExists(connection, "opendolphin", "uk_diagnosis_component_seq"));
                 assertTrue(indexExists(connection, "opendolphin", "uk_diagnosis_supplement_seq"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_diagnosis_orca_sync_log_patient"));
+                assertTrue(indexExists(connection, "opendolphin", "uk_chart_document_key"));
+                assertTrue(indexExists(connection, "opendolphin", "uk_chart_revision_number"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_chart_revision_event_document"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_auth_session_registry_user_active"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_auth_session_registry_session_active"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_audit_event_time_desc"));
@@ -195,15 +214,15 @@ class FreshSchemaBaselineTest {
                 assertEquals(1L, countRows(connection, "select count(*) from opendolphin.audit_chain_head"));
 
                 long nextFacilityNumber = nextVal(connection, "opendolphin.facility_num");
-                long nextUserId = nextVal(connection, "opendolphin.d_users_seq");
+                nextUserId = nextVal(connection, "opendolphin.d_users_seq");
                 long nextEventId = nextVal(connection, "opendolphin.chart_event_seq");
                 assertTrue(nextFacilityNumber > 0);
                 assertTrue(nextUserId > 0);
                 assertTrue(nextEventId > 0);
 
                 long facilityPk = nextHibernateId(connection);
-                long patientPk = nextHibernateId(connection);
-                long kartePk = nextHibernateId(connection);
+                patientPk = nextHibernateId(connection);
+                kartePk = nextHibernateId(connection);
                 insurancePk = nextHibernateId(connection);
                 documentPk = nextHibernateId(connection);
                 modulePk = nextHibernateId(connection);
@@ -300,6 +319,37 @@ class FreshSchemaBaselineTest {
                     assertEquals("schema.png", schema.getStorageKey());
                     assertEquals("v1", schema.getStorageVersionId());
                     assertEquals("etag-schema", schema.getStorageEtag());
+
+                    ChartDocumentModel chartDocument = new ChartDocumentModel();
+                    chartDocument.setDocumentKey("server-generated-key-001");
+                    chartDocument.setFacilityId("F001");
+                    chartDocument.setKarteId(kartePk);
+                    chartDocument.setPatientId(patientPk);
+                    chartDocument.setLegacyDocumentId(documentPk);
+                    chartDocument.setCreatedByUserId(nextUserId);
+                    session.getTransaction().begin();
+                    session.persist(chartDocument);
+
+                    ChartRevisionModel chartRevision = new ChartRevisionModel();
+                    chartRevision.setChartDocumentId(chartDocument.getId());
+                    chartRevision.setRevisionNumber(1);
+                    chartRevision.setStatus(ChartRevisionStatus.DRAFT);
+                    chartRevision.setTitle("Initial Document");
+                    chartRevision.setEnteredByUserId(nextUserId);
+                    session.persist(chartRevision);
+
+                    ChartRevisionEventModel chartRevisionEvent = new ChartRevisionEventModel();
+                    chartRevisionEvent.setChartDocumentId(chartDocument.getId());
+                    chartRevisionEvent.setChartRevisionId(chartRevision.getId());
+                    chartRevisionEvent.setEventType(open.dolphin.infomodel.ChartRevisionEventType.DRAFT_CREATED);
+                    chartRevisionEvent.setActorUserId(nextUserId);
+                    session.persist(chartRevisionEvent);
+                    session.getTransaction().commit();
+
+                    assertNotNull(chartDocument.getId());
+                    assertNotNull(chartRevision.getId());
+                    assertEquals(ChartRevisionStatus.DRAFT, chartRevision.getStatus());
+                    assertFalse(chartRevision.isDirectWriteLocked());
                 }
             }
         }
@@ -352,6 +402,9 @@ class FreshSchemaBaselineTest {
                     .addAnnotatedClass(Factor2Challenge.class)
                     .addAnnotatedClass(Factor2Credential.class)
                     .addAnnotatedClass(AuditEvent.class)
+                    .addAnnotatedClass(ChartDocumentModel.class)
+                    .addAnnotatedClass(ChartRevisionModel.class)
+                    .addAnnotatedClass(ChartRevisionEventModel.class)
                     .addAnnotatedClass(UserAccessProfile.class)
                     .addAnnotatedClass(DocumentIntegrityEntity.class);
             return metadataSources.buildMetadata().buildSessionFactory();
