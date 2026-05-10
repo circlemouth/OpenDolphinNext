@@ -192,15 +192,24 @@ public class ChartSupportDiseaseModV3Request {
         private String diseaseName;
         private String displayName;
         private String karteName;
+        private String diseaseInsuranceClass;
         private String diseaseStartDate;
         private String diseaseEndDate;
         private String diseaseInOut;
+        private String diseaseCategory;
         private String diseaseSuspectedFlag;
         private String diseaseOutCome;
         private String outcome;
         private String orcaOutcomeSendCode;
         private String orcaOutcomeReceivedCode;
+        private String diseaseClass;
         private String insuranceCombinationNumber;
+        private String diseaseReceiptPrint;
+        private String diseaseReceiptPrintPeriod;
+        private String insuranceDisease;
+        private String dischargeCertificate;
+        private String mainDiseaseClass;
+        private String subDiseaseClass;
         private String masterVersion;
         private String orcaSnapshotHash;
         private String syncStatus;
@@ -241,6 +250,14 @@ public class ChartSupportDiseaseModV3Request {
             this.karteName = karteName;
         }
 
+        public String getDiseaseInsuranceClass() {
+            return diseaseInsuranceClass;
+        }
+
+        public void setDiseaseInsuranceClass(String diseaseInsuranceClass) {
+            this.diseaseInsuranceClass = diseaseInsuranceClass;
+        }
+
         public String getDiseaseStartDate() {
             return diseaseStartDate;
         }
@@ -263,6 +280,14 @@ public class ChartSupportDiseaseModV3Request {
 
         public void setDiseaseInOut(String diseaseInOut) {
             this.diseaseInOut = diseaseInOut;
+        }
+
+        public String getDiseaseCategory() {
+            return diseaseCategory;
+        }
+
+        public void setDiseaseCategory(String diseaseCategory) {
+            this.diseaseCategory = diseaseCategory;
         }
 
         public String getDiseaseSuspectedFlag() {
@@ -305,12 +330,68 @@ public class ChartSupportDiseaseModV3Request {
             this.orcaOutcomeReceivedCode = orcaOutcomeReceivedCode;
         }
 
+        public String getDiseaseClass() {
+            return diseaseClass;
+        }
+
+        public void setDiseaseClass(String diseaseClass) {
+            this.diseaseClass = diseaseClass;
+        }
+
         public String getInsuranceCombinationNumber() {
             return insuranceCombinationNumber;
         }
 
         public void setInsuranceCombinationNumber(String insuranceCombinationNumber) {
             this.insuranceCombinationNumber = insuranceCombinationNumber;
+        }
+
+        public String getDiseaseReceiptPrint() {
+            return diseaseReceiptPrint;
+        }
+
+        public void setDiseaseReceiptPrint(String diseaseReceiptPrint) {
+            this.diseaseReceiptPrint = diseaseReceiptPrint;
+        }
+
+        public String getDiseaseReceiptPrintPeriod() {
+            return diseaseReceiptPrintPeriod;
+        }
+
+        public void setDiseaseReceiptPrintPeriod(String diseaseReceiptPrintPeriod) {
+            this.diseaseReceiptPrintPeriod = diseaseReceiptPrintPeriod;
+        }
+
+        public String getInsuranceDisease() {
+            return insuranceDisease;
+        }
+
+        public void setInsuranceDisease(String insuranceDisease) {
+            this.insuranceDisease = insuranceDisease;
+        }
+
+        public String getDischargeCertificate() {
+            return dischargeCertificate;
+        }
+
+        public void setDischargeCertificate(String dischargeCertificate) {
+            this.dischargeCertificate = dischargeCertificate;
+        }
+
+        public String getMainDiseaseClass() {
+            return mainDiseaseClass;
+        }
+
+        public void setMainDiseaseClass(String mainDiseaseClass) {
+            this.mainDiseaseClass = mainDiseaseClass;
+        }
+
+        public String getSubDiseaseClass() {
+            return subDiseaseClass;
+        }
+
+        public void setSubDiseaseClass(String subDiseaseClass) {
+            this.subDiseaseClass = subDiseaseClass;
         }
 
         public String getMasterVersion() {

@@ -533,6 +533,7 @@ final class OrcaChartSupportSupport {
             appendTag(builder, "Request_Number", "01");
         }
         appendTag(builder, "Patient_ID", payload.getPatientId());
+        appendTag(builder, "Base_Month", payload.getBaseMonth());
         appendTag(builder, "Perform_Date", payload.getPerformDate());
         appendTag(builder, "Perform_Time", fallback(payload.getPerformTime(), "00:00:00"));
         ChartSupportDiseaseModV3Request.OrganizeInformation organizeInformation = payload.getOrganizeInformation();
@@ -554,6 +555,7 @@ final class OrcaChartSupportSupport {
                     continue;
                 }
                 builder.append("<Disease_Information_child type=\"record\">");
+                appendTag(builder, "Disease_Insurance_Class", entry.getDiseaseInsuranceClass());
                 appendTag(builder, "Disease_InOut", fallback(entry.getDiseaseInOut(), "O"));
                 if (entry.getComponents() == null || entry.getComponents().isEmpty()) {
                     appendTag(builder, "Disease_Code", entry.getDiseaseCode());
@@ -562,12 +564,20 @@ final class OrcaChartSupportSupport {
                 appendDiseaseSingle(builder, entry);
                 appendTag(builder, "Disease_StartDate", entry.getDiseaseStartDate());
                 appendTag(builder, "Disease_EndDate", entry.getDiseaseEndDate());
+                appendTag(builder, "Disease_Category", entry.getDiseaseCategory());
                 appendTag(builder, "Disease_SuspectedFlag", entry.getDiseaseSuspectedFlag());
                 appendTag(builder, "Disease_OutCome",
                         "delete".equals(operation) ? "O" : firstNonBlank(entry.getOrcaOutcomeSendCode(), entry.getDiseaseOutCome()));
                 appendTag(builder, "Disease_Karte_Name", entry.getKarteName());
+                appendTag(builder, "Disease_Class", entry.getDiseaseClass());
                 appendDiseaseSupplements(builder, entry);
                 appendTag(builder, "Insurance_Combination_Number", entry.getInsuranceCombinationNumber());
+                appendTag(builder, "Disease_Receipt_Print", entry.getDiseaseReceiptPrint());
+                appendTag(builder, "Disease_Receipt_Print_Period", entry.getDiseaseReceiptPrintPeriod());
+                appendTag(builder, "Insurance_Disease", entry.getInsuranceDisease());
+                appendTag(builder, "Discharge_Certificate", entry.getDischargeCertificate());
+                appendTag(builder, "Main_Disease_Class", entry.getMainDiseaseClass());
+                appendTag(builder, "Sub_Disease_Class", entry.getSubDiseaseClass());
                 builder.append("</Disease_Information_child>");
             }
         }

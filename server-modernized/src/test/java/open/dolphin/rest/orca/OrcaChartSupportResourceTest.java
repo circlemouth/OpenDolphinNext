@@ -454,6 +454,67 @@ class OrcaChartSupportResourceTest {
     }
 
     @Test
+    void diseaseModV3EmitsValidatedDiseaseClassificationFields() {
+        CapturingTransport transport = new CapturingTransport("""
+                <xmlio2>
+                  <diseaseres>
+                    <Api_Result>0000</Api_Result>
+                    <Api_Result_Message>正常終了</Api_Result_Message>
+                  </diseaseres>
+                </xmlio2>
+                """);
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        injectDiseaseModAuthority(resource);
+        ChartSupportDiseaseModV3Request payload = newDiseasePayload();
+        payload.setBaseMonth("202604");
+        ChartSupportDiseaseModV3Request.DiseaseInformation disease = payload.getDiseaseInformation().get(0);
+        disease.setDiseaseInsuranceClass("1");
+        disease.setDiseaseCategory("PD");
+        disease.setDiseaseClass("03");
+        disease.setDiseaseReceiptPrint("1");
+        disease.setDiseaseReceiptPrintPeriod("12");
+        disease.setInsuranceDisease("1");
+        disease.setDischargeCertificate("0");
+        disease.setMainDiseaseClass("01");
+        disease.setSubDiseaseClass("05");
+
+        resource.diseaseModV3(buildRequest(), payload);
+
+        String requestXml = transport.requestXml();
+        assertTrue(requestXml.contains("<Base_Month type=\"string\">202604</Base_Month>"));
+        assertTrue(requestXml.contains("<Disease_Insurance_Class type=\"string\">1</Disease_Insurance_Class>"));
+        assertTrue(requestXml.contains("<Disease_Category type=\"string\">PD</Disease_Category>"));
+        assertTrue(requestXml.contains("<Disease_Class type=\"string\">03</Disease_Class>"));
+        assertTrue(requestXml.contains("<Disease_Receipt_Print type=\"string\">1</Disease_Receipt_Print>"));
+        assertTrue(requestXml.contains("<Disease_Receipt_Print_Period type=\"string\">12</Disease_Receipt_Print_Period>"));
+        assertTrue(requestXml.contains("<Insurance_Disease type=\"string\">1</Insurance_Disease>"));
+        assertTrue(requestXml.contains("<Discharge_Certificate type=\"string\">0</Discharge_Certificate>"));
+        assertTrue(requestXml.contains("<Main_Disease_Class type=\"string\">01</Main_Disease_Class>"));
+        assertTrue(requestXml.contains("<Sub_Disease_Class type=\"string\">05</Sub_Disease_Class>"));
+    }
+
+    @Test
+    void diseaseModV3RejectsInvalidDiseaseClassificationFieldsBeforeOfficialInvoke() {
+        CapturingTransport transport = new CapturingTransport();
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        ChartSupportDiseaseModV3Request payload = newDiseasePayload();
+        payload.getDiseaseInformation().get(0).setDiseaseReceiptPrintPeriod("100");
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> resource.diseaseModV3(buildRequest(), payload));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
+        assertEquals("payload.diseaseInformation.diseaseReceiptPrintPeriod", body.get("field"));
+        assertEquals("diseaseReceiptPrintPeriod must be blank, None, or 00-99", body.get("message"));
+        assertNull(transport.endpoint());
+    }
+
+    @Test
     void diseaseModV3RejectsClientProvidedPhysicianOrTopLevelInsuranceMismatchBeforeOfficialInvoke() {
         CapturingTransport transport = new CapturingTransport();
         OrcaChartSupportResource resource = new OrcaChartSupportResource();

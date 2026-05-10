@@ -895,6 +895,7 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             throw validationError(request, field,
                     "diseaseStartDate is required");
         }
+        validateDiseaseAttributeCodes(request, entry, field);
         requireDateOnly(request, entry.getDiseaseStartDate(), field + ".diseaseStartDate");
         if (!isBlank(entry.getDiseaseEndDate())) {
             requireDateOnly(request, entry.getDiseaseEndDate(), field + ".diseaseEndDate");
@@ -949,6 +950,81 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         }
     }
 
+    private void validateDiseaseAttributeCodes(
+            HttpServletRequest request,
+            ChartSupportDiseaseModV3Request.DiseaseInformation entry,
+            String field) {
+        requireAllowedDiseaseValue(
+                request,
+                field + ".diseaseInsuranceClass",
+                entry.getDiseaseInsuranceClass(),
+                Set.of("1", "0", "None"),
+                "diseaseInsuranceClass must be blank, 1, 0, or None");
+        requireAllowedDiseaseValue(
+                request,
+                field + ".diseaseCategory",
+                entry.getDiseaseCategory(),
+                Set.of("PD", "None"),
+                "diseaseCategory must be blank, PD, or None");
+        requireAllowedDiseaseValue(
+                request,
+                field + ".diseaseClass",
+                entry.getDiseaseClass(),
+                Set.of("03", "04", "05", "07", "08", "09", "Auto", "None"),
+                "diseaseClass must be blank, 03, 04, 05, 07, 08, 09, Auto, or None");
+        requireAllowedDiseaseValue(
+                request,
+                field + ".diseaseReceiptPrint",
+                entry.getDiseaseReceiptPrint(),
+                Set.of("1", "None"),
+                "diseaseReceiptPrint must be blank, 1, or None");
+        if (!isBlank(entry.getDiseaseReceiptPrintPeriod())
+                && !"None".equals(entry.getDiseaseReceiptPrintPeriod().trim())
+                && !entry.getDiseaseReceiptPrintPeriod().trim().matches("\\d{2}")) {
+            throw validationError(request, field + ".diseaseReceiptPrintPeriod",
+                    "diseaseReceiptPrintPeriod must be blank, None, or 00-99");
+        }
+        requireAllowedDiseaseValue(
+                request,
+                field + ".insuranceDisease",
+                entry.getInsuranceDisease(),
+                Set.of("1", "None"),
+                "insuranceDisease must be blank, 1, or None");
+        requireAllowedDiseaseValue(
+                request,
+                field + ".dischargeCertificate",
+                entry.getDischargeCertificate(),
+                Set.of("0", "1", "None"),
+                "dischargeCertificate must be blank, 0, 1, or None");
+        requireAllowedDiseaseValue(
+                request,
+                field + ".mainDiseaseClass",
+                entry.getMainDiseaseClass(),
+                Set.of("01", "02", "03", "04", "05", "None"),
+                "mainDiseaseClass must be blank, 01, 02, 03, 04, 05, or None");
+        requireAllowedDiseaseValue(
+                request,
+                field + ".subDiseaseClass",
+                entry.getSubDiseaseClass(),
+                Set.of("01", "02", "03", "04", "05", "None"),
+                "subDiseaseClass must be blank, 01, 02, 03, 04, 05, or None");
+    }
+
+    private void requireAllowedDiseaseValue(
+            HttpServletRequest request,
+            String field,
+            String value,
+            Set<String> allowed,
+            String message) {
+        if (isBlank(value)) {
+            return;
+        }
+        String normalized = value.trim();
+        if (!allowed.contains(normalized)) {
+            throw validationError(request, field, message);
+        }
+    }
+
     private ChartSupportDiseaseModV3Request.DiseaseInformation copyDiseaseForDelete(
             ChartSupportDiseaseModV3Request.DiseaseInformation target) {
         ChartSupportDiseaseModV3Request.DiseaseInformation copy =
@@ -957,13 +1033,22 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         copy.setDiseaseName(target.getDiseaseName());
         copy.setDisplayName(target.getDisplayName());
         copy.setKarteName(target.getKarteName());
+        copy.setDiseaseInsuranceClass(target.getDiseaseInsuranceClass());
         copy.setDiseaseStartDate(target.getDiseaseStartDate());
         copy.setDiseaseEndDate(target.getDiseaseEndDate());
         copy.setDiseaseInOut(target.getDiseaseInOut());
+        copy.setDiseaseCategory(target.getDiseaseCategory());
         copy.setDiseaseSuspectedFlag(target.getDiseaseSuspectedFlag());
         copy.setDiseaseOutCome("O");
         copy.setOrcaOutcomeSendCode("O");
+        copy.setDiseaseClass(target.getDiseaseClass());
         copy.setInsuranceCombinationNumber(target.getInsuranceCombinationNumber());
+        copy.setDiseaseReceiptPrint(target.getDiseaseReceiptPrint());
+        copy.setDiseaseReceiptPrintPeriod(target.getDiseaseReceiptPrintPeriod());
+        copy.setInsuranceDisease(target.getInsuranceDisease());
+        copy.setDischargeCertificate(target.getDischargeCertificate());
+        copy.setMainDiseaseClass(target.getMainDiseaseClass());
+        copy.setSubDiseaseClass(target.getSubDiseaseClass());
         copy.setComponents(target.getComponents());
         copy.setSupplements(target.getSupplements());
         copy.setUncodedAccepted(target.isUncodedAccepted());

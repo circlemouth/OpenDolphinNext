@@ -66,6 +66,7 @@
 - client は `operation=create|update|delete|organizeDeletedDiseases` と入力内容だけを送る。`Request_Number`、raw XML、任意 URL、facilityId は受け付けない。
 - `baseMonth` は任意の client echo として受け取れるが、server は `yyyyMM` だけを許可し、ORCA 接続先や患者・保険文脈の authority にはしない。`physicianCode` と top-level `insuranceCombinationNumber` が payload に含まれる場合も、server-derived encounter context と完全一致する時だけ precheck hints として許容し、送信 XML / idempotency / operation 保存には server-derived 値で上書きする。不一致または形式不正は ORCA transport 前に fail closed する。
 - `create|update` は `components[]` を必須にする。各 component は `seq=1..21`、`componentType=PREFIX|SITE|BODY|SUFFIX|UNKNOWN`、ORCA master 由来の `code` と `name` を持つ。server は code 形式、順序、BODY component の存在、転帰送信値を再検証し、client 提供の component 種別・表示名・保険組合せを権威情報にしない。
+- 病名区分、レセプト表示、保険病名、主病名、原疾患、合併症などの UI 表示値は、server-side DTO の `diseaseInsuranceClass`、`diseaseCategory`、`diseaseClass`、`diseaseReceiptPrint`、`diseaseReceiptPrintPeriod`、`insuranceDisease`、`dischargeCertificate`、`mainDiseaseClass`、`subDiseaseClass` に入る ORCA 仕様コードへ変換済みであることを server が allowlist 検証する。自由文字列や未確認コードは ORCA transport 前に拒否する。
 - 未コード化病名は最後の例外です。`uncodedAccepted=true` と登録前確認がある場合だけ許可し、通常の自由文字列登録は拒否する。未コード化送信時も server が `0000999` 相当の未コード化コードを補完し、警告を伴う。
 - 補足説明は `supplements[]` から `Disease_Supplement_Single` へ送る。部位、接頭語、接尾語、傷病名本体は supplement に逃がさず `components[]` に置く。
 - server は `Request_Number` を server-owned にする。通常 `create|update|delete` は `Request_Number` を送らず、`delete` は `Disease_OutCome=O` を server が生成する。
