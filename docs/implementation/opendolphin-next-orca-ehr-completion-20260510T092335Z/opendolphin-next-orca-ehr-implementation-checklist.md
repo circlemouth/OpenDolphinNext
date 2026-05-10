@@ -104,6 +104,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] `orca_operation`, `orca_transmission`, `orca_response_summary`, `orca_reconciliation_result` を作成する。
 - [ ] ORCA operation status は `PREPARED`, `READY_TO_SEND`, `SENDING`, `ORCA_ACCEPTED`, `ORCA_REJECTED`, `ORCA_WARNING`, `ORCA_UNMATCHED`, `ORCA_CONFLICT`, `NETWORK_FAILED`, `CERTIFICATE_FAILED`, `AUTH_FAILED`, `UNKNOWN`, `NEEDS_REVIEW`, `CANCELLED` に限定する。
 - [x] `diseasev3` は server-generated `idempotency_key` の二重送信をサーバー側で拒否する。
+- [x] `diseasev3` の transport 例外は `NETWORK_FAILED` / `needsUserReview=true` として operation に保存し、成功扱いにしない。
 - [ ] `UNKNOWN` は成功扱いせず、ORCA再照合完了まで UI に要確認として表示する。
 - [ ] `authoritative_audit_event` を append-only / hash chain 付きに再設計または拡張する。
 - [ ] 監査ログに ORCA認証情報、証明書パスワード、Basic認証文字列を保存しない。

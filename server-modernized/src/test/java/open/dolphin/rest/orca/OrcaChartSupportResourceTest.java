@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +39,7 @@ import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Request;
 import open.dolphin.rest.dto.orca.ChartSupportSubjectivesModV2Response;
 import open.dolphin.session.PatientServiceBean;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class OrcaChartSupportResourceTest {
 
@@ -487,6 +489,37 @@ class OrcaChartSupportResourceTest {
         Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
         assertEquals("duplicate_orca_disease_operation", body.get("error"));
         assertNull(transport.endpoint());
+    }
+
+    @Test
+    void diseaseModV3PersistsNetworkFailedOperationWhenTransportThrows() {
+        RuntimeException failure = new RuntimeException("connection refused at internal-host.invalid");
+        CapturingTransport transport = new CapturingTransport(failure);
+        OrcaDiseaseOperationStore operationStore = mock(OrcaDiseaseOperationStore.class);
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+        injectField(resource, "diseaseOperationStore", operationStore);
+        injectDiseaseModAuthority(resource);
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> resource.diseaseModV3(buildRequest(), newDiseasePayload()));
+
+        assertEquals(failure, exception);
+        ArgumentCaptor<OrcaDiseaseOperationStore.OperationCommand> captor =
+                ArgumentCaptor.forClass(OrcaDiseaseOperationStore.OperationCommand.class);
+        verify(operationStore).saveCompleted(captor.capture());
+        OrcaDiseaseOperationStore.OperationCommand command = captor.getValue();
+        assertEquals("F001", command.facilityId());
+        assertEquals("create", command.operation());
+        assertEquals("00001", command.orcaPatientId());
+        assertTrue(command.idempotencyKey().startsWith("diseasev3:create:"));
+        assertTrue(command.requestXml().contains("<diseasereq type=\"record\">"));
+        assertNull(command.responseBody());
+        assertEquals("NETWORK_FAILED", command.response().getOperationStatus());
+        assertTrue(command.response().isNeedsUserReview());
+        assertEquals("transportRejected", command.response().getResponseClassification());
+        assertEquals("transport_error", command.response().getError());
     }
 
     @Test

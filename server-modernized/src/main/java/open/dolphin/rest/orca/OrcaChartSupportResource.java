@@ -507,10 +507,21 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             throw restError(request, Response.Status.CONFLICT, "duplicate_orca_disease_operation",
                     "Duplicate ORCA disease operation was rejected");
         }
-        OrcaTransportResult result = orcaTransport.invoke(
-                facilityId,
-                OrcaEndpoint.DISEASE_MOD_V3,
-                OrcaTransportRequest.post(requestXml));
+        OrcaTransportResult result;
+        try {
+            result = orcaTransport.invoke(
+                    facilityId,
+                    OrcaEndpoint.DISEASE_MOD_V3,
+                    OrcaTransportRequest.post(requestXml));
+        } catch (RuntimeException ex) {
+            try {
+                saveDiseaseOperation(request, facilityId, payload, operation, contextAuthority, idempotencyKey,
+                        requestXml, null, diseaseTransportFailureResponse(runId, traceId));
+            } catch (RuntimeException storeFailure) {
+                ex.addSuppressed(storeFailure);
+            }
+            throw ex;
+        }
         ChartSupportDiseaseModV3Response response = support().parseDiseaseModV3Response(result, runId, traceId);
         saveDiseaseOperation(request, facilityId, payload, operation, contextAuthority, idempotencyKey,
                 requestXml, result, response);
@@ -535,6 +546,21 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("routeNamespace", ROUTE_NAMESPACE);
         recordAudit(request, AUDIT_DISEASE_MOD_ACTION, details,
                 response.isBusinessAccepted() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
+        return response;
+    }
+
+    private ChartSupportDiseaseModV3Response diseaseTransportFailureResponse(String runId, String traceId) {
+        ChartSupportDiseaseModV3Response response = new ChartSupportDiseaseModV3Response();
+        response.setRunId(runId);
+        response.setTraceId(traceId);
+        response.setStatus(502);
+        response.setOk(false);
+        response.setApiOk(false);
+        response.setBusinessAccepted(false);
+        response.setNeedsUserReview(true);
+        response.setOperationStatus("NETWORK_FAILED");
+        response.setResponseClassification("transportRejected");
+        response.setError("transport_error");
         return response;
     }
 
