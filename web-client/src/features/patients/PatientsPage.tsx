@@ -146,14 +146,14 @@ const buildPatientsOrcaStatus = (options: {
   const actionLabel = options.action === 'import' ? 'ORCA既存患者取込' : '患者情報の登録・更新';
   if (options.missingMaster) {
     return {
-      state: '反映停止',
-      detail: `ORCA 参照が不足しているため反映を停止中です。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。`,
+      state: '同期停止',
+      detail: `ORCA 参照が不足しているため同期確認を停止中です。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。`,
     };
   }
   if (options.fallbackUsed) {
     return {
-      state: '反映停止',
-      detail: `暫定データ表示中のため反映を停止中です。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。`,
+      state: '同期停止',
+      detail: `暫定データ表示中のため同期確認を停止中です。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。`,
     };
   }
   if (options.dataSourceTransition === 'local') {
@@ -164,13 +164,13 @@ const buildPatientsOrcaStatus = (options: {
   }
   if ((options.dataSourceTransition ?? 'server') !== 'server') {
     return {
-      state: '反映停止',
-      detail: '最新データを確認できる画面へ戻ってから反映状況を確認してください。',
+      state: '同期停止',
+      detail: '最新データを確認できる画面へ戻ってから同期状態を確認してください。',
     };
   }
   if (options.lastSaveFailed) {
     return {
-      state: '反映失敗',
+      state: '同期失敗',
       detail: `${actionLabel}に失敗しました。時間をおいて再試行してください。`,
     };
   }
@@ -183,24 +183,24 @@ const buildPatientsOrcaStatus = (options: {
     }
     return {
       state: '同期確認失敗',
-      detail: `${actionLabel}は受け付けられましたが、反映結果を確認できていません。`,
+      detail: `${actionLabel}は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。`,
     };
   }
   if (options.lastSaveSucceeded) {
     return {
-      state: '反映完了',
-      detail: `${actionLabel}が完了しました。必要なら監査ログで結果を確認してください。`,
+      state: '同期確認済',
+      detail: `${actionLabel}は ORCA正本の再取得まで完了しました。必要なら監査ログで結果を確認してください。`,
     };
   }
   return {
-    state: '反映可能',
+    state: '同期可能',
     detail: options.action === 'import' ? 'ORCA既存患者取込を実行できます。' : '患者情報を登録・更新できます。',
   };
 };
 
 const buildImportAuditEvent = (patientId: string, result: OrcaPatientImportResult) => {
   const fallbackMessage = result.writeAccepted
-    ? 'ORCA既存患者取込は受け付けられましたが、反映結果を確認できませんでした。'
+    ? 'ORCA既存患者取込は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。'
     : 'ORCA既存患者取込に失敗しました。';
   return {
     action: 'ORCA_OFFICIAL_IMPORT_PATIENT',
@@ -243,7 +243,7 @@ const toSafePatientFeedbackMessage = (message: string | undefined, fallback: str
 
 const toImportSaveResult = (result: OrcaPatientImportResult): PatientMutationResult => {
   const fallbackMessage = result.writeAccepted
-    ? 'ORCA既存患者取込は受け付けられましたが、反映結果を確認できませんでした。'
+    ? 'ORCA既存患者取込は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。'
     : 'ORCA既存患者取込に失敗しました。';
   return {
     ok: result.ok,
@@ -740,12 +740,12 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       } else if (result.writeAccepted) {
         enqueue({
           tone: 'warning',
-          message: 'ORCA既存患者取込は受け付けられましたが、反映結果を確認できませんでした',
+          message: 'ORCA既存患者取込は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。',
           detail: `患者番号=${patientId}`,
         });
         setSelectionNotice({
           tone: 'warning',
-          message: `ORCA既存患者取込は受け付けられましたが、患者番号 ${patientId} の反映結果を確認できませんでした。`,
+          message: `ORCA既存患者取込は受け付けられましたが、患者番号 ${patientId} の ORCA正本の再取得による同期確認が完了していません。`,
         });
       } else {
         enqueue({
@@ -940,8 +940,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     return undefined;
   }, [form.patientId]);
   const isUnlinkedStopNotice = resolvedMissingMaster || resolvedFallbackUsed;
-  const unlinkedAlertLabel = isUnlinkedStopNotice ? '反映停止注意' : '未紐付警告';
-  const unlinkedBadgeLabel = isUnlinkedStopNotice ? '反映停止' : '未紐付';
+  const unlinkedAlertLabel = isUnlinkedStopNotice ? '同期停止注意' : '未紐付警告';
+  const unlinkedBadgeLabel = isUnlinkedStopNotice ? '同期停止' : '未紐付';
   const patientsUpdatedAtLabel = useMemo(() => {
     if (!patientsQuery.dataUpdatedAt) return '—';
     return formatAutoRefreshTimestamp(patientsQuery.dataUpdatedAt);
@@ -1351,7 +1351,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       const defaultMutationMessage = fullSuccess
         ? '保存しました'
         : writeAccepted
-          ? '保存は受け付けられましたが、反映結果を確認できませんでした。'
+          ? '保存は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。'
           : '保存に失敗しました。内容を確認して再試行してください。';
       const resultDisplayMessage = toSafePatientFeedbackMessage(result.message, defaultMutationMessage);
       setLastAuditEvent(result.auditEvent);
@@ -1424,8 +1424,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           tone: 'warning',
           message:
             variables.operation === 'create'
-              ? '新患登録は受け付けられましたが、反映結果を確認できませんでした。'
-              : '既存患者更新は受け付けられましたが、反映結果を確認できませんでした。',
+              ? '新患登録は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。'
+              : '既存患者更新は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。',
         });
         setLastAttempt(null);
       } else {
@@ -1619,14 +1619,14 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     const operation = (details?.operation as string | undefined) ?? (payload?.operation as string | undefined);
     const orcaStatus =
       record.missingMaster || record.fallbackUsed || record.dataSourceTransition !== 'server'
-        ? '反映停止'
+        ? '同期停止'
         : outcome === 'success'
-          ? '反映完了'
+          ? '同期確認済'
           : outcome === 'warning'
             ? '同期確認失敗'
           : outcome === 'error'
-            ? '反映失敗'
-            : '反映待ち';
+            ? '同期失敗'
+            : '同期待ち';
     return {
       action,
       outcome,
@@ -2561,7 +2561,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 </ul>
               </div>
               <small>
-                現在の患者情報反映状態: {currentOrcaStatus.state}（{currentOrcaStatus.detail}）
+                現在の患者情報同期確認状態: {currentOrcaStatus.state}（{currentOrcaStatus.detail}）
               </small>
             </div>
           )}
@@ -2968,7 +2968,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                       : lastSaveResult.writeAccepted
                         ? lastSaveResult.errorCategory === 'business_partial'
                           ? '一部のみ処理されたため完了扱いにしていません。'
-                          : '保存は受け付けられましたが、反映結果を確認できていません。'
+                          : '保存は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。'
                         : '保存に失敗しました。時間をおいて再試行してください。'}
                   </small>
                 ) : null}
@@ -2984,7 +2984,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 <small>患者画面から ORCA 原本/保険/メモの XML 補助 UI を撤去しました。</small>
               </div>
               <div className="patients-page__audit-card">
-                <span>現在の患者情報反映可否</span>
+                <span>現在の患者情報同期可否</span>
                 <strong>{currentOrcaStatus.state}</strong>
                 <small>{currentOrcaStatus.detail}</small>
               </div>
@@ -3006,7 +3006,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             <div className="patients-page__audit-list" role="list" aria-label="保存履歴">
               {auditRows.items.length === 0 ? (
                 <p className="patients-page__audit-empty" role="status" aria-live={infoLive}>
-                  まだ保存履歴がありません（患者管理/カルテで保存すると反映されます）。
+                  まだ保存履歴がありません（患者管理/カルテで保存すると同期確認の結果を表示します）。
                 </p>
               ) : (
                 auditRows.items.map((record, index) => {

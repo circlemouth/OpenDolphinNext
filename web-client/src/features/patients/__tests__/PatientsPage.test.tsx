@@ -442,7 +442,7 @@ describe('PatientsPage canonical feedback', () => {
 
     await user.click(screen.getByRole('tab', { name: '監査/ログ' }));
 
-    expect(screen.getAllByText(/ORCA 参照が不足しているため反映を停止中です/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/ORCA 参照が不足しているため同期確認を停止中です/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/missingMaster=true/)).not.toBeInTheDocument();
     expect(screen.queryByText(/fallbackUsed=true/)).not.toBeInTheDocument();
     expect(screen.queryByText(/dataSourceTransition=/)).not.toBeInTheDocument();
@@ -669,7 +669,7 @@ describe('PatientsPage official patient flows', () => {
     expect(screen.getByRole('region', { name: '患者識別帯' })).toHaveTextContent('新規患者');
   });
 
-  it('write accepted でも反映確認失敗なら完了 copy を出さない', async () => {
+  it('write accepted でも同期確認失敗なら完了 copy を出さない', async () => {
     mockMutationResult = {
       ok: false,
       writeAccepted: true,
@@ -694,7 +694,7 @@ describe('PatientsPage official patient flows', () => {
     expect(screen.queryByText('保存を再試行できます')).not.toBeInTheDocument();
   });
 
-  it('create 200 + 反映確認失敗でも完了 copy を出さない', async () => {
+  it('create 200 + 同期確認失敗でも完了 copy を出さない', async () => {
     mockMutationResult = {
       ok: false,
       writeAccepted: true,
@@ -718,10 +718,10 @@ describe('PatientsPage official patient flows', () => {
     await user.click(screen.getByRole('button', { name: '新患登録を実行' }));
 
     expect(screen.queryByText(/同期済み患者/)).not.toBeInTheDocument();
-    expect(screen.getByText('保存は受け付けられましたが、反映結果を確認できませんでした。')).toBeInTheDocument();
+    expect(screen.getAllByText('保存は受け付けられましたが、ORCA正本の再取得による同期確認が完了していません。').length).toBeGreaterThan(0);
   });
 
-  it('import flow も反映確認失敗を success 扱いしない', async () => {
+  it('import flow も同期確認失敗を success 扱いしない', async () => {
     mockMutationResult = {
       ok: false,
       writeAccepted: true,
@@ -739,7 +739,7 @@ describe('PatientsPage official patient flows', () => {
     await user.type(getInputById('patients-orca-import-patient-id'), '00001234');
     await user.click(screen.getAllByRole('button', { name: 'ORCA既存患者取込' })[0]);
 
-    expect(await screen.findByText('ORCA既存患者取込は受け付けられましたが、患者番号 00001234 の反映結果を確認できませんでした。')).toBeInTheDocument();
+    expect(await screen.findByText('ORCA既存患者取込は受け付けられましたが、患者番号 00001234 の ORCA正本の再取得による同期確認が完了していません。')).toBeInTheDocument();
     expect(screen.queryByText('ORCA既存患者取込が完了しました')).not.toBeInTheDocument();
   });
 
@@ -813,7 +813,7 @@ describe('PatientsPage unlinked warnings', () => {
     expect(screen.getAllByText('氏名欠損').length).toBeGreaterThan(0);
   });
 
-  it('missingMaster 時は反映停止注意として表示する', async () => {
+  it('missingMaster 時は同期停止注意として表示する', async () => {
     mockAuthFlags.missingMaster = true;
     mockAuthFlags.fallbackUsed = false;
     mockPatients({
@@ -825,8 +825,8 @@ describe('PatientsPage unlinked warnings', () => {
     renderPatientsPage();
     await screen.findAllByText('患者ID欠損');
 
-    await screen.findAllByText('反映停止注意');
-    expect(screen.getAllByText('反映停止').length).toBeGreaterThan(0);
+    await screen.findAllByText('同期停止注意');
+    expect(screen.getAllByText('同期停止').length).toBeGreaterThan(0);
     expect(screen.getByText('復旧導線（再取得 → 受付 → 管理者共有）')).toBeTruthy();
     expect(screen.getByRole('button', { name: '管理者共有（管理者共有）' })).toBeTruthy();
   });
