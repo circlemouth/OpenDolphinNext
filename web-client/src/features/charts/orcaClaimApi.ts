@@ -24,6 +24,8 @@ export type OrcaClaimSendResult = {
   runId?: string;
   traceId?: string;
   error?: string;
+  operationStatus?: string;
+  needsUserReview?: boolean;
 };
 
 export const ORCA_OFFICIAL_MEDICAL_MOD_V2_PATH = '/api/orca/official/chart-support/medical-mod-v2';
@@ -127,5 +129,7 @@ export async function postOrcaMedicalModV2Xml(
     runId: typeof json.runId === 'string' ? json.runId : getObservabilityMeta().runId ?? runId,
     traceId: typeof json.traceId === 'string' ? json.traceId : getObservabilityMeta().traceId,
     error: responseError,
+    operationStatus: typeof json.operationStatus === 'string' ? json.operationStatus : undefined,
+    needsUserReview: json.needsUserReview === true,
   };
 }

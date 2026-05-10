@@ -21,6 +21,8 @@ public class ChartSupportMedicalModResponse {
     private String runId;
     private String traceId;
     private String error;
+    private boolean needsUserReview;
+    private String operationStatus;
 
     public boolean isOk() {
         return ok;
@@ -132,6 +134,22 @@ public class ChartSupportMedicalModResponse {
 
     public void setError(String error) {
         this.error = error;
+    }
+
+    public boolean isNeedsUserReview() {
+        return needsUserReview;
+    }
+
+    public void setNeedsUserReview(boolean needsUserReview) {
+        this.needsUserReview = needsUserReview;
+    }
+
+    public String getOperationStatus() {
+        return operationStatus;
+    }
+
+    public void setOperationStatus(String operationStatus) {
+        this.operationStatus = operationStatus;
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

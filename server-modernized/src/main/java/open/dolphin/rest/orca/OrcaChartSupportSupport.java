@@ -173,15 +173,39 @@ final class OrcaChartSupportSupport {
             boolean apiOk = response.getApiResult() != null && response.getApiResult().matches("0+");
             response.setApiOk(apiOk);
             response.setOk(transportOk && apiOk);
+            applyMedicalModOperationStatus(response, transportOk, apiOk);
             if ((!transportOk || !apiOk) && !isBlank(response.getApiResultMessage())) {
                 response.setError(response.getApiResultMessage());
             }
         } catch (Exception ex) {
             response.setOk(false);
             response.setApiOk(false);
-            response.setError(ex.getMessage());
+            response.setNeedsUserReview(true);
+            response.setOperationStatus("UNKNOWN");
+            response.setError("parser_error");
         }
         return response;
+    }
+
+    private void applyMedicalModOperationStatus(ChartSupportMedicalModResponse response, boolean transportOk, boolean apiOk) {
+        boolean hasWarnings = response.getMedicalWarnings() != null && !response.getMedicalWarnings().isEmpty();
+        if (hasWarnings) {
+            response.setOperationStatus("ORCA_WARNING");
+            response.setNeedsUserReview(true);
+            return;
+        }
+        if (transportOk && apiOk) {
+            response.setOperationStatus("ORCA_ACCEPTED");
+            response.setNeedsUserReview(false);
+            return;
+        }
+        if (transportOk) {
+            response.setOperationStatus("ORCA_REJECTED");
+            response.setNeedsUserReview(true);
+            return;
+        }
+        response.setOperationStatus("NETWORK_FAILED");
+        response.setNeedsUserReview(true);
     }
 
     ChartSupportMedicationGetResponse parseMedicationGetResponse(

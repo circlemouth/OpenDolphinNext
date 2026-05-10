@@ -23,7 +23,7 @@ export interface OutpatientFunnelPayload {
   dataSourceTransition: DataSourceTransition;
   fallbackUsed?: boolean;
   action?: string;
-  outcome?: 'success' | 'error' | 'blocked' | 'started';
+  outcome?: 'success' | 'warning' | 'error' | 'blocked' | 'started';
   durationMs?: number;
   note?: string;
   reason?: string;

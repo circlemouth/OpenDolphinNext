@@ -837,12 +837,14 @@ describe('ChartsActionBar ORCA send', () => {
     vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
       ok: true,
       status: 200,
-      apiResult: '80',
+      apiResult: '00',
       apiResultMessage: 'warning',
       runId: 'RUN-API-WARN',
       traceId: 'TRACE-API-WARN',
       rawXml: '<xml></xml>',
       missingTags: [],
+      operationStatus: 'ORCA_WARNING',
+      needsUserReview: true,
       medicalWarnings: [
         {
           medicalWarning: 'body-part-warning',
@@ -881,11 +883,14 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText('ORCA送信に警告')).toBeInTheDocument());
     await waitFor(() =>
       expect(getOrcaClaimSendEntry({ facilityId: 'F-1', userId: 'U-1' }, '000001')?.medicalWarnings).toBeDefined(),
     );
 
     const entry = getOrcaClaimSendEntry({ facilityId: 'F-1', userId: 'U-1' }, '000001');
+    expect(entry?.sendStatus).toBe('success');
+    expect(entry?.errorMessage).toContain('operationStatus=ORCA_WARNING');
     expect(entry?.medicalWarnings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ sourceKind: 'body_part', sourceItemIndex: undefined }),

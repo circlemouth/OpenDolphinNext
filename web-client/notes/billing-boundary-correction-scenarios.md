@@ -22,6 +22,7 @@
 - `medical-mod-v2` warning の補正メモ。
 - 画面上では note として見せる。
 - workflow state や rebill clear を自動変更しない。
+- official bridge response の `operationStatus=ORCA_WARNING` または `needsUserReview=true` は、送達成功とは別の要確認として banner / toast / correction note に出す。
 
 ### setting
 - `incomeinfv2` 未確認、もしくは paid source 未確定時の確認条件メモ。
@@ -32,6 +33,7 @@
 - transmission source は `medical-mod-v2` のみ。
 - `paid=true` は invoice と `incomeinfv2` の照合でのみ成立する。
 - `medical-mod-v2` warning は correction note に留める。
+- `medical-mod-v2` warning を成功通知だけに潰さない。ただし `Api_Result` 正常で送達済みの場合、transmission は `送信済` として保持し、会計確定は `incomeinfv2` 照合まで未判定にする。
 - setting note と correction note は別 card / 別文言で表示する。
 
 ## Fallback

@@ -40,8 +40,42 @@ class OrcaBillingCorrectionScenarioSupportTest {
         assertTrue(response.isOk());
         assertEquals("INV-001", response.getInvoiceNumber());
         assertEquals("DATA-001", response.getDataId());
+        assertEquals("ORCA_WARNING", response.getOperationStatus());
+        assertTrue(response.isNeedsUserReview());
         assertEquals(1, response.getMedicalWarnings().size());
         assertEquals("補正候補あり", response.getMedicalWarnings().get(0).getMedicalWarningMessage());
+    }
+
+    @Test
+    void medicalModBusinessRejectAndTransportFailureUseFixedReviewStatuses() {
+        OrcaChartSupportSupport support = new OrcaChartSupportSupport();
+
+        ChartSupportMedicalModResponse businessRejected = support.parseMedicalModResponse(
+                OrcaTransportResult.fallback("""
+                        <data>
+                          <medicalres type="record">
+                            <Api_Result type="string">80</Api_Result>
+                            <Api_Result_Message type="string">受付できません</Api_Result_Message>
+                          </medicalres>
+                        </data>
+                        """, "application/xml"),
+                "RUN-REJECT",
+                "TRACE-REJECT");
+        assertEquals("ORCA_REJECTED", businessRejected.getOperationStatus());
+        assertTrue(businessRejected.isNeedsUserReview());
+
+        ChartSupportMedicalModResponse transportFailed = support.parseMedicalModResponse(
+                new OrcaTransportResult(null, "POST", 503, """
+                        <data>
+                          <medicalres type="record">
+                            <Api_Result type="string">00</Api_Result>
+                          </medicalres>
+                        </data>
+                        """, "application/xml", java.util.Map.of()),
+                "RUN-NET",
+                "TRACE-NET");
+        assertEquals("NETWORK_FAILED", transportFailed.getOperationStatus());
+        assertTrue(transportFailed.isNeedsUserReview());
     }
 
     @Test

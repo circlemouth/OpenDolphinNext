@@ -147,6 +147,9 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("medicalPush", payload.getMedicalPush());
         details.put("medicalUidPresent", !isBlank(payload.getMedicalUid()));
         details.put("apiResult", response.getApiResult());
+        details.put("operationStatus", response.getOperationStatus());
+        details.put("needsUserReview", response.isNeedsUserReview());
+        details.put("medicalWarningCount", response.getMedicalWarnings() != null ? response.getMedicalWarnings().size() : 0);
         details.put("httpStatus", response.getStatus());
         details.put("routeNamespace", ROUTE_NAMESPACE);
         recordAudit(request, AUDIT_MEDICAL_MOD_ACTION, details,

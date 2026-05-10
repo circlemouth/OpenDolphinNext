@@ -122,5 +122,6 @@
 - 通常外来の初回 ORCA 会計送信は `POST /api/local/encounters/{encounterKey}/close-and-send-to-billing` から行う。client payload は `idempotencyKey` と任意 precheck flag に限定し、`patientId` / `facilityId` / voucher / sequential / insurance / `Medical_Uid` / `classCode` / raw XML / URL は受け付けない。
 - server は認証 principal の facility、`encounter_projection`、保存済み order/disease から snapshot を作り、`d_billing_orca_snapshot` と `d_billing_orca_transmission` に状態を記録する。状態 enum は `DRAFT`, `READY_TO_SEND`, `ORCA_SENDING`, `ORCA_DISEASE_SYNCED`, `ORCA_MEDICAL_REGISTERED`, `ORCA_CONFIRMED`, `ORCA_FAILED`, `ORCA_UNKNOWN`, `DIRTY_AFTER_SENT`, `ORCA_LOCKED_OR_OPENED`, `CORRECTION_REQUIRED` に固定する。
 - `medicalmodv2 class=01` 成功時は `Medical_Uid` を保存する。通信断や `Medical_Uid` 欠落など結果不明時は `ORCA_UNKNOWN` とし、無条件再送せず `tmedicalgetv2` で中途終了データを確認してから recovery 操作へ進める。
+- `medicalmodv2` response は `operationStatus` と `needsUserReview` を返す。警告を含む場合は `Api_Result` が正常でも `ORCA_WARNING` / `needsUserReview=true` とし、Web client は成功バナーに潰さず要確認として表示する。業務拒否は `ORCA_REJECTED`、transport failure は `NETWORK_FAILED`、parse ambiguity は `UNKNOWN` として扱い、raw XML、内部 URL、資格情報、患者詳細、保険詳細は response / audit / tracked evidence に残さない。
 - `medicalmodv2 class=03` は ORCA 側で未展開・未変更と確認できた置換専用、`class=04` は明示的な追加送信専用とし、自動追加送信には使わない。
 - PushAPI / `pusheventgetv2` は補助情報に限る。Push が来ないことを失敗・成功の正本にせず、永続状態と `Medical_Uid` / `tmedicalgetv2` 確認を正とする。

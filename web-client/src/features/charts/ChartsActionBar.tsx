@@ -920,7 +920,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
 
   const logTelemetry = (
     action: ChartAction,
-    outcome: 'success' | 'error' | 'blocked' | 'started',
+    outcome: 'success' | 'warning' | 'error' | 'blocked' | 'started',
     durationMs?: number,
     note?: string,
     reason?: string,
@@ -952,7 +952,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
 
   const logAudit = (
     action: ChartAction,
-    outcome: 'success' | 'error' | 'blocked' | 'started',
+    outcome: 'success' | 'warning' | 'error' | 'blocked' | 'started',
     detail?: string,
     durationMs?: number,
     options?: { phase?: ChartsOperationPhase; details?: Record<string, unknown> },
@@ -1448,7 +1448,15 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           const apiOk = result.apiOk ?? isOrcaSuccessResult(result.apiResult);
           const hasMissingTags = Boolean(result.missingTags?.length);
           const allowMissingTags = false;
-          const outcome = transportOk && apiOk && (!hasMissingTags || allowMissingTags) ? 'success' : transportOk ? 'warning' : 'error';
+          const requiresMedicalReview = result.needsUserReview === true
+            || result.operationStatus === 'ORCA_WARNING'
+            || result.operationStatus === 'ORCA_UNMATCHED'
+            || Boolean(result.medicalWarnings?.length);
+          const outcome = transportOk && apiOk && (!hasMissingTags || allowMissingTags) && !requiresMedicalReview
+            ? 'success'
+            : transportOk && apiOk
+              ? 'warning'
+              : 'error';
           const durationMs = Math.round(performance.now() - startedAt);
           const nextRunId = result.runId ?? getObservabilityMeta().runId ?? runId;
           const nextTraceId = result.traceId ?? getObservabilityMeta().traceId ?? resolvedTraceId;
@@ -1457,6 +1465,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             `traceId=${nextTraceId ?? 'unknown'}`,
             result.apiResult ? `Api_Result=${result.apiResult}` : undefined,
             result.apiResultMessage ? `Api_Result_Message=${result.apiResultMessage}` : undefined,
+            result.operationStatus ? `operationStatus=${result.operationStatus}` : undefined,
             result.invoiceNumber ? `Invoice_Number=${result.invoiceNumber}` : undefined,
             result.dataId ? `Data_Id=${result.dataId}` : undefined,
           ].filter((part): part is string => Boolean(part));
@@ -1534,19 +1543,21 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
 
           logTelemetry(
             action,
-            outcome === 'success' ? 'success' : 'error',
+            outcome,
             durationMs,
             detailParts.join(' / '),
             result.apiResult,
             { runId: nextRunId, traceId: nextTraceId ?? undefined },
           );
-          logAudit(action, outcome === 'success' ? 'success' : 'error', detailParts.join(' / '), durationMs, {
+          logAudit(action, outcome, detailParts.join(' / '), durationMs, {
             phase: 'do',
             details: {
               endpoint: '/api/orca/official/chart-support/medical-mod-v2',
               httpStatus: result.status,
               apiResult: result.apiResult,
               apiResultMessage: result.apiResultMessage,
+              operationStatus: result.operationStatus,
+              needsUserReview: result.needsUserReview,
               departmentCode: resolvedOrcaEncounterContext.departmentCode,
               physicianCode: resolvedOrcaEncounterContext.physicianCode,
               insuranceCombinationNumber: resolvedOrcaEncounterContext.insuranceCombinationNumber,
@@ -1580,8 +1591,12 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                 runId: nextRunId,
                 traceId: nextTraceId ?? undefined,
                 apiResult: result.apiResult,
-                sendStatus: outcome === 'success' ? 'success' : 'error',
-                errorMessage: outcome === 'success' ? undefined : detailParts.join(' / '),
+                sendStatus: transportOk && apiOk ? 'success' : 'error',
+                errorMessage: outcome === 'error'
+                  ? detailParts.join(' / ')
+                  : outcome === 'warning'
+                    ? `operationStatus=${result.operationStatus ?? 'NEEDS_REVIEW'}`
+                    : undefined,
                 medicalWarnings: mappedWarnings,
               },
               storageScope,
