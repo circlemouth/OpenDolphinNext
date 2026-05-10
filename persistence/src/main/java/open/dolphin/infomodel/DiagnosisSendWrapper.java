@@ -4,8 +4,8 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * 病名を送信（DB保存＆CLAIM送信）をするためのラッパークラス。
- * 
+ * 病名のローカル更新リクエストを運ぶ互換ラッパークラス。
+ *
  * @author kazushi Minagawa.
  */
 public class DiagnosisSendWrapper extends InfoModel implements Serializable {
@@ -74,7 +74,7 @@ public class DiagnosisSendWrapper extends InfoModel implements Serializable {
     // 認証済みユーザー（facility:user 形式）
     private String remoteUser;
 
-    // 監査対象リソースパス（例: /karte/diagnosis/claim）
+    // 監査対象リソースパス
     private String auditResource;
     
     public List<RegisteredDiagnosisModel> getDeletedDiagnosis() {

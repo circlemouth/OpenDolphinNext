@@ -85,7 +85,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] 病名は `orca_disease_cache`, `orca_disease_snapshot`, `orca_disease_operation`, `orca_disease_audit_event` に分離する。
 - [ ] ORCA病名取得は `diseasegetv2?class=01` 相当に統一する。
 - [ ] ORCA病名更新は `diseasev3` 相当に統一する。
-- [ ] `diseasev2`、CLAIM、ORCA DB直接参照による病名正本化を廃止する。
+- [x] `diseasev2`、CLAIM、ORCA DB直接参照による病名正本化を廃止する。
 - [ ] ORCA送信失敗時にローカル病名を登録済みと表示しない。
 - [ ] 診療録本文中の病名記載と ORCA病名を UI/API/DB で分離する。
 
@@ -168,7 +168,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] `GET /api/local/diagnoses/{patientId}?baseMonth=...` の ORCA mirror read model、または official read wrapper を通じて ORCA `diseasegetv2?class=01` 相当から取得する。
 - [x] 取得結果を `orca_disease_cache` に保存し、取得日時、基準月、診療科、保険組合せ、ORCA患者番号、stale を保持する。
 - [x] official `POST /api/orca/official/chart-support/disease-mod-v3` で ORCA `diseasev3` 相当の送信、server-derived context、冪等キー、operation 保存を行う。
-- [ ] 旧 `diseasev2`、CLAIM病名送信、ORCA DB直接更新/参照を使わない。
+- [x] 旧 `diseasev2`、CLAIM病名送信、ORCA DB直接更新/参照を使わない。
 - [ ] `OrcaDiseaseMutationRequest` は operation、ORCA患者ID、基準月、診療日、診療科、医師、保険組合せ、病名コード、補足コード、疑い、開始/終了日、転帰、カルテ名、病名区分、レセプト表示、保険病名、主病名/副病名を持つ。
 - [x] `OrcaDiseaseMutationResponse` 相当の `ChartSupportDiseaseModV3Response` は result、warnings、unmatched、needsUserReview、operationStatus を持つ。
 - [x] `diseasev3` の警告・不一致を無視せず、`ORCA_WARNING` / `ORCA_UNMATCHED` と `needsUserReview=true` へ分類する。
@@ -251,7 +251,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [ ] ローカル患者作成/更新 API を削除する。
 - [ ] ローカル病名作成/更新/削除 API を削除する。
-- [ ] ORCA DB直接病名参照コード、CLAIM病名送信コード、`diseasev2` 依存を削除する。
+- [x] ORCA DB直接病名参照コード、CLAIM病名送信コード、`diseasev2` 依存を削除する。
 - [ ] 診療録確定済みタイトル直接更新経路、確定済み処方 payload 直接上書き経路を削除する。
 - [ ] Webクライアントの生ORCAプロキシ設定、ORCA認証情報を扱うフロント設定を削除する。
 - [ ] ORCA送信成功を診療録確定と同義に扱う UI 文言、ORCA送信失敗時に登録済み/反映済みと表示する文言、重要警告を初期非表示にする UI を削除または変更する。

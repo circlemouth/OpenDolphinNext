@@ -24,6 +24,7 @@ rg -n "/api/orca/official/|/api/orca/master/|/api/local/" web-client server-mode
 rg -n "症状詳記（ORCA）|ORCAへ反映|今すぐ同期|認証済み|一括疎通（グループ）" web-client docs
 rg -n "medicalInformation \\?\\? '01'|medicalInformation \\|\\| '01'" web-client/scripts
 rg -n "medicalmodv23" web-client server-modernized docs
+bash server-modernized/tools/ci/check-no-legacy-disease-authority.sh --root "$(git rev-parse --show-toplevel)"
 ```
 期待結果:
 - taxonomy grep は current route と docs 正本だけを返し、legacy alias や blocked route を返さない。
@@ -31,6 +32,7 @@ rg -n "medicalmodv23" web-client server-modernized docs
 - wording grep は deny/assertion test 以外に stale wording を返さない。
 - `medicalInformation ?? '01'` / `medicalInformation || '01'` は 0 hit。
 - `medicalmodv23` は 0 hit。
+- legacy disease authority guard が通り、active modernized roots に `diseasev2`、旧 CLAIM 病名送信、ORCA 患者病名 DB 直接参照が残っていない。
 
 2. server contract / inventory / exposure tests を current taxonomy で実行する。
 ```bash

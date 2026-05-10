@@ -14,6 +14,7 @@
 - SOAP / カルテ本文から検出した病名らしい記載は「診療録本文中の病名記載」枠に表示し、ORCA登録病名一覧や `diseasev3` 送信 payload へ自動昇格しません。この枠には ORCA送信ボタンを置かず、病名登録は別途 `ORCAへ病名登録` の明示 confirm を必須にします。
 - ORCA 取得不可時に local-only disease を主病名一覧へ fallback 表示しません。病名登録・更新・削除も disabled にします。
 - ORCA 病名の create / update / delete は `/api/orca/official/chart-support/disease-mod-v3` だけを使い、成功後の `diseasegetv2` 再取得結果が UI truth です。
+- Modernized scope は ORCA 病名正本を `diseasev2`、旧 CLAIM 病名送信、または ORCA 患者病名 DB の直接参照から作りません。`server-modernized/tools/ci/check-no-legacy-disease-authority.sh` が active source / test / runner roots の再混入を検出します。
 - `disease-mod-v3` response に `postMutationMirrorStatus=connected` と `postMutationMirror` が含まれる場合、Charts UI はその mirror projection を同一 query cache へ反映し、入力 payload や diseasev3 response だけで主一覧を楽観更新しません。`postMutationMirrorStatus=unavailable` の場合は ORCA accepted でも warning / 要確認として表示し、登録済み表示に昇格しません。
 - ORCA 病名の正本データは表示文字列ではなく、`Disease_Single` 相当の順序付き component 列です。`displayName` は検索・表示用であり、更新・削除対象の同定や ORCA 送信の権威情報にしません。
 - `院内未送信` は対象がある場合だけ隔離表示し、ORCAへ登録する明示 confirm がある場合だけ `diseasev3` へ送信します。
