@@ -29,6 +29,7 @@ import open.dolphin.encounter.ProjectionPatientSummaryRepository;
 import open.dolphin.infomodel.KarteBean;
 import open.dolphin.orca.converter.OrcaXmlMapper;
 import open.dolphin.orca.service.DefaultOrcaLiveGateway;
+import open.dolphin.orca.service.OrcaAcceptanceCacheStore;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.transport.StubOrcaTransport;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
@@ -50,6 +51,16 @@ class OrcaVisitResourceTest {
 
     private OrcaLiveGateway createService() {
         return new DefaultOrcaLiveGateway(new StubOrcaTransport(), new OrcaXmlMapper());
+    }
+
+    private static final class RecordingAcceptanceCacheStore extends OrcaAcceptanceCacheStore {
+        private AcceptanceInventoryCommand command;
+
+        @Override
+        public AcceptanceCacheResult saveInventory(AcceptanceInventoryCommand command) {
+            this.command = command;
+            return new AcceptanceCacheResult(1, 0, 0, 0);
+        }
     }
 
     @Test
@@ -124,6 +135,8 @@ class OrcaVisitResourceTest {
 
         OrcaVisitResource resource = new OrcaVisitResource();
         resource.setWrapperService(wrapperService);
+        RecordingAcceptanceCacheStore cacheStore = new RecordingAcceptanceCacheStore();
+        resource.setAcceptanceCacheStoreForTest(cacheStore);
         resource.encounterProjectionRepository = encounterProjectionRepository;
         resource.projectionPatientSummaryRepository = projectionPatientSummaryRepository;
 
@@ -372,6 +385,8 @@ class OrcaVisitResourceTest {
 
         OrcaVisitResource resource = new OrcaVisitResource();
         resource.setWrapperService(wrapperService);
+        RecordingAcceptanceCacheStore cacheStore = new RecordingAcceptanceCacheStore();
+        resource.setAcceptanceCacheStoreForTest(cacheStore);
 
         AcceptanceInventoryRequest request = new AcceptanceInventoryRequest();
         request.setAcceptanceDate(LocalDate.of(2026, 4, 27));
@@ -385,6 +400,9 @@ class OrcaVisitResourceTest {
         assertTrue(response.isRawSensitiveFieldsExcluded());
         assertEquals(1, response.getRows().size());
         assertEquals("01", request.getClassCode());
+        assertEquals("F001", cacheStore.command.facilityId());
+        assertEquals("2026-04-27", cacheStore.command.acceptanceDate());
+        assertEquals(1, cacheStore.command.response().getRows().size());
         verify(wrapperService).getAcceptanceInventory("F001", request);
     }
 

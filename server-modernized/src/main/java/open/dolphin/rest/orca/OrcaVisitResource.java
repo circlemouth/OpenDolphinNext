@@ -31,6 +31,7 @@ import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.encounter.CanonicalEncounterKeys;
 import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.encounter.ProjectionPatientSummaryRepository;
+import open.dolphin.orca.service.OrcaAcceptanceCacheStore;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.rest.OrcaApiProxySupport;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
@@ -77,6 +78,8 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
     ProjectionPatientSummaryRepository projectionPatientSummaryRepository;
     @Inject
     KarteServiceBean karteServiceBean;
+    @Inject
+    OrcaAcceptanceCacheStore acceptanceCacheStore;
 
     public OrcaVisitResource() {
     }
@@ -264,12 +267,18 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         details.put("classCode", classCode);
         try {
             AcceptanceInventoryResponse response = wrapperService.getAcceptanceInventory(facilityId, body);
+            OrcaAcceptanceCacheStore.AcceptanceCacheResult cacheResult =
+                    saveAcceptanceCache(facilityId, body, response, details);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             details.put("targetReadyRowCount", response.getTargetReadyRowCount());
             details.put("targetReady", response.isTargetReady());
             details.put("rawSensitiveFieldsExcluded", response.isRawSensitiveFieldsExcluded());
             details.put("clientProvidedIdentifiersTrusted", response.isClientProvidedIdentifiersTrusted());
+            details.put("acceptanceCacheUpsertedCount", cacheResult.upsertedCount());
+            details.put("acceptanceCacheDiffDetectedCount", cacheResult.diffDetectedCount());
+            details.put("acceptanceCacheCancelledCount", cacheResult.cancelledCount());
+            details.put("acceptanceCacheNeedsReviewCount", cacheResult.needsReviewCount());
             markSuccessDetails(details);
             recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
@@ -432,6 +441,28 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
 
     void setConfigurationResolverForTest(ServerConfigurationResolver configurationResolver) {
         this.configurationResolver = configurationResolver;
+    }
+
+    void setAcceptanceCacheStoreForTest(OrcaAcceptanceCacheStore acceptanceCacheStore) {
+        this.acceptanceCacheStore = acceptanceCacheStore;
+    }
+
+    private OrcaAcceptanceCacheStore.AcceptanceCacheResult saveAcceptanceCache(String facilityId,
+            AcceptanceInventoryRequest body,
+            AcceptanceInventoryResponse response,
+            Map<String, Object> details) {
+        if (acceptanceCacheStore == null) {
+            return new OrcaAcceptanceCacheStore.AcceptanceCacheResult(0, 0, 0, 0);
+        }
+        Instant fetchedAt = Instant.now();
+        return acceptanceCacheStore.saveInventory(new OrcaAcceptanceCacheStore.AcceptanceInventoryCommand(
+                facilityId,
+                body.getAcceptanceDate().toString(),
+                stringDetail(details, "requestId"),
+                stringDetail(details, "traceId"),
+                fetchedAt,
+                fetchedAt.plusSeconds(300),
+                response));
     }
 
     private void publishReceptionRealtimeUpdateIfNeeded(HttpServletRequest request,
@@ -1544,6 +1575,14 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
     private boolean containsKey(HashSet<String> keys, String value) {
         String normalized = normalize(value);
         return normalized != null && keys.contains(normalized);
+    }
+
+    private String stringDetail(Map<String, Object> details, String key) {
+        if (details == null || key == null) {
+            return null;
+        }
+        Object value = details.get(key);
+        return value != null ? String.valueOf(value) : null;
     }
 
     private String normalize(String value) {

@@ -121,6 +121,14 @@
 - ORCA mutation が受け付けられた後も、`patientgetv2` canonical re-fetch が `ORCA_PATIENT_FOUND` / `CURRENT` を返し、`orca_patient_cache` 保存と local sync が終わるまで同期確認済み応答にしない。応答は `orcaMutationPrepared`、`orcaMutationSent`、`canonicalRefetched`、`localSynced`、`canonicalSourceApi=patientgetv2`、`canonicalCacheStatus`、`canonicalBusinessStatus` の allowlist field だけを返す。
 - 既存 local patient と同一内容で create が idempotent と判断される場合も、local row を ORCA 正本として扱わない。patientmodv2 は送らず、`patientgetv2` canonical re-fetch と local sync 確認を必須にする。
 
+## Official Acceptance Cache
+- 受付 inventory は `/api/orca/official/visits/acceptance-list` から ORCA `acceptlstv2` を呼び、取得ごとに `orca_acceptance_cache` を更新する。cache は表示・照合・警告用であり、OpenDolphinNext 側の受付正本ではない。
+- 施設は認証済み request context の facilityId で解決し、client 提供の facilityId、owner、role、任意 URL、storage key、digest は使わない。受付日と class code は server が検証済み request field だけを使い、ORCA 接続先は接続設定 allowlist / runtime contract に従う。
+- `orca_acceptance_cache` は `source_system=ORCA`, `source_api=acceptlstv2`, `source_request_id`, `source_trace_id`, `fetched_at`, `cache_expires_at`, `orca_patient_id`, `orca_acceptance_id` または受付複合 key、受付日/時刻、診療科、担当医、診療情報、保険組合せ、受付状態、取消日時、row hash、normalized payload、sanitized response summary を保存する。raw ORCA body、credential、接続先 URL、患者氏名・住所・電話、保険詳細、Cookie、Authorization、CSRF は保存しない。
+- 同一 facility/date の前回 cache に存在し、今回の ORCA inventory に存在しない受付は物理削除せず、`acceptance_status=CANCELLED`、`event_type=ORCA_ACCEPTANCE_CANCELLED`、`cancelled_at` を記録する。
+- 同じ受付 key の患者番号、受付時刻、診療科、担当医、診療情報、保険組合せが変化した場合は `DIFF_DETECTED` / `ORCA_ACCEPTANCE_DIFF_DETECTED` として保存し、変更 field 名だけを sanitized summary に入れる。必須 server-derived field が欠落した行は `NEEDS_REVIEW` とし、成功表示に潰さない。
+- cache 書き込みに失敗した場合は official wrapper 全体を成功扱いせず、古い受付 cache を current source として返さない。
+
 ## Charts Disease Mutation
 - Charts からの ORCA 病名登録・更新・削除は `/api/orca/official/chart-support/disease-mod-v3` だけを使う。
 - server は facility / patient access / department / insurance / target disease を server-side で再検証し、クライアント提供の facilityId、任意 URL、raw XML、`Request_Number` を信用しない。
