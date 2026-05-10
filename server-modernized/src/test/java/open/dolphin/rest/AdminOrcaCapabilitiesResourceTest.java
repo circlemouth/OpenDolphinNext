@@ -63,7 +63,7 @@ class AdminOrcaCapabilitiesResourceTest {
         assertEquals("api_only", connection.get("testedScope"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("internalWrappers");
-        assertEquals(5, items.size());
+        assertEquals(4, items.size());
         assertEquals("medical-sets", items.get(0).get("id"));
         assertEquals("stub_fixed", items.get(0).get("behavior"));
     }

@@ -102,6 +102,8 @@
 - Charts の病名正本は ORCA `diseasegetv2?class=01` の再取得結果です。`/api/local/diagnoses/{patientId}` の server-side projection から `diseasegetv2` を呼ぶ。呼び出し施設は認証済み request context の facilityId で解決し、クライアント提供の facilityId / owner / URL は使わない。
 - `diseasegetv2` は既存の ORCA transport / runtime config / allowlist に従い、任意 URL 入力から接続しない。失敗時は `orcaMirrorStatus=unavailable` の sanitized state だけを返し、base URL、host、credential、raw XML、stack trace は返さない。ORCA `Api_Result=21`（対象病名なし）は取得成功の 0 件として扱い、unavailable と混同しない。`includeEnded=true` は server が `Select_Mode=All` に変換し、client は raw XML / raw query を指定しない。
 - mirror response は ORCA projection を `diseases`、既存 local-only disease を `pendingLocalDiseases` として分離する。ORCA unavailable 時に local-only disease を `diseases` へ fallback しない。ORCA projection は表示名だけでなく `Disease_Single` component 列、`Disease_Supplement_Single`、転帰受信 code、server 計算 `orcaSnapshotHash` を保持する。
+- `POST /api/local/diagnoses` は公開しない。病名の作成・更新・削除は local table mutation ではなく ORCA `diseasev3` official bridge と送信後 `diseasegetv2` 再取得で扱う。
+- ORCA 病名の永続化境界は `orca_disease_cache`, `orca_disease_snapshot`, `orca_disease_operation`, `orca_disease_audit_event` に分離する。`orca_disease_cache` は `source_system=ORCA` と取得 source metadata、`orca_disease_snapshot` は診療録確定・送信前確認・照合などの固定時点、`orca_disease_operation` は冪等性付き diseasev3/fetch operation、`orca_disease_audit_event` は hash chain 用の要約監査情報だけを持つ。raw ORCA XML、資格情報、患者詳細、保険詳細はこれらのテーブルへ平文保存しない。
 - ORCA `masterlastupdatev3` は master update catalog の `disease_master` dataset として扱い、Charts disease mirror と病名候補検索は `masterVersion` を返す。master update の失敗詳細や ORCA 接続先情報は Charts response に出さない。
 
 ## Charts Disease Mutation

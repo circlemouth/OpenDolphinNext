@@ -53,7 +53,6 @@ import {
   postBirthDelivery,
   postMedicalRecords,
   postMedicalSets,
-  postPatientMutation,
   postSubjectiveEntry,
   type MedicalPatientSummary,
   type MedicalRecordEntry,
@@ -234,12 +233,8 @@ const formatRoleLabel = (value?: string) => {
 
 const getStringValue = (value: unknown) => (typeof value === 'string' ? value : undefined);
 
-const extractPatientIdFromPayload = (endpoint: OrcaInternalWrapperEndpoint, payload?: Record<string, unknown>) => {
+const extractPatientIdFromPayload = (payload?: Record<string, unknown>) => {
   if (!payload) return undefined;
-  if (endpoint === 'patient-mutation') {
-    const patient = (payload.patient ?? {}) as Record<string, unknown>;
-    return getStringValue(patient.patientId);
-  }
   return getStringValue(payload.patientId);
 };
 
@@ -327,27 +322,6 @@ const buildInternalWrapperCatalog = (today: string): OrcaInternalWrapperOption[]
       sequentialNumber: '',
       insuranceCombinationNumber: '0001',
       includeVisitStatus: false,
-    },
-  },
-  {
-    id: 'patient-mutation',
-    label: '/api/local/patients/mutation（院内患者作成/更新）',
-    hint: 'scope=local。official ORCA 互換ではなく院内ローカル患者テーブルの作成/更新 contract です。delete は未対応です',
-    routeNamespace: 'local',
-    behavior: 'local_write',
-    defaultPayload: {
-      operation: 'create',
-      patient: {
-        patientId: '00002',
-        wholeName: 'テスト 太郎',
-        wholeNameKana: 'テスト タロウ',
-        birthDate: '1980-01-01',
-        sex: '1',
-        telephone: '',
-        mobilePhone: '',
-        zipCode: '',
-        addressLine: '',
-      },
     },
   },
   {
@@ -786,8 +760,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
           return postBirthDelivery(params.payload);
         case 'medical-records':
           return postMedicalRecords(params.payload);
-        case 'patient-mutation':
-          return postPatientMutation(params.payload);
         case 'chart-subjectives':
           return postSubjectiveEntry(params.payload);
         default:
@@ -802,7 +774,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     },
     onSuccess: (result, variables) => {
       updateOrcaInternalWrapperState(variables.endpoint, { result, parseError: undefined });
-      const patientId = extractPatientIdFromPayload(variables.endpoint, variables.payload);
+      const patientId = extractPatientIdFromPayload(variables.payload);
       const operation = extractOperationFromPayload(variables.payload);
       logAuditEvent({
         runId: result.runId ?? resolvedRunId,

@@ -48,7 +48,6 @@ public final class OpenDolphinRestApplication extends Application {
                 // Local-only routes live under /api/local/*.
                 open.dolphin.rest.orca.LocalChartMedicalResource.class,
                 open.dolphin.rest.orca.LocalPatientSearchResource.class,
-                open.dolphin.rest.orca.LocalPatientMutationResource.class,
                 open.dolphin.rest.orca.LocalChartSubjectiveResource.class,
                 open.dolphin.rest.orca.LocalEncounterBillingWorkflowResource.class,
                 open.dolphin.rest.orca.LocalOrderBundleResource.class,

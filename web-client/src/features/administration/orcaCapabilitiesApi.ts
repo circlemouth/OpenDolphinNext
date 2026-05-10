@@ -1,7 +1,7 @@
 import { httpFetch } from '../../libs/http/httpClient';
 
 export type OrcaInternalWrapperCapability = {
-  id: 'medical-sets' | 'birth-delivery' | 'medical-records' | 'patient-mutation' | 'chart-subjectives';
+  id: 'medical-sets' | 'birth-delivery' | 'medical-records' | 'chart-subjectives';
   label?: string;
   routeNamespace?: 'official' | 'master' | 'local';
   behavior?: string;

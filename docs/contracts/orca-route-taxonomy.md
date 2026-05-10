@@ -46,7 +46,8 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - official 風の名称 (`patientmodv2`, `patientgetv2`, `medicalmodv2`, `subjectivesv2`) を local path / local metadata に残さない。
 - admin 向け internal wrapper の label は `/api/admin/internal/*` を表示し、official surface と誤認させない。
 - UI copy でも、`contraindicationcheckv2` の patient-aware official check と `/api/orca/master/order/interactions/check` の master-based static check を混同させない。
-- `/api/local/charts/subjectives`, `/api/local/encounters/{encounterKey}/medical-summary`, `/api/local/patients/mutation` は local-only surface として表示し、official ORCA write のような名称を付けない。
+- `/api/local/charts/subjectives`, `/api/local/encounters/{encounterKey}/medical-summary` は local-only surface として表示し、official ORCA write のような名称を付けない。
+- local patient create / update surface は公開しない。patient create / update は `/api/orca/official/patientmodv2/outpatient/*` の official bridge だけを使い、成功後 canonical re-fetch / local sync を行う。
 - 旧 public path の alias / shim は作らない。
 
 ## Current Route Map
@@ -99,19 +100,17 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 ### Local
 
 - `/api/local/patients/search`
-- `/api/local/patients/mutation`
 - `/api/local/charts/subjectives`
 - `/api/local/charts/medical-records`
 - `/api/local/encounters/{encounterKey}/medical-summary`
 - `/api/local/encounters/{encounterKey}/close-and-send-to-billing`
-- `/api/local/diagnoses`
 - `/api/local/diagnoses/{patientId}`
 - `/api/local/order/bundles`
 - `/api/local/order/recommendations`
 - `/api/local/prescription-orders`
 - `/api/local/prescription-orders/do-import`
 
-`/api/local/diagnoses/{patientId}` は Charts 向けの ORCA disease read model です。主 `diseases` は ORCA `diseasegetv2?class=01` 再取得結果だけを返し、既存 local-only disease は `pendingLocalDiseases` に隔離します。ORCA `Api_Result=21` は正常 0 件として扱います。`includeEnded=true` は server が `Select_Mode=All` に変換します。ORCA unavailable 時に local-only disease を主 `diseases` へ fallback してはいけません。ORCA 病名 mutation は local route ではなく official `/api/orca/official/chart-support/disease-mod-v3` を使用します。
+`/api/local/diagnoses/{patientId}` は Charts 向けの ORCA disease read model です。主 `diseases` は ORCA `diseasegetv2?class=01` 再取得結果だけを返し、既存 local-only disease は `pendingLocalDiseases` に隔離します。ORCA `Api_Result=21` は正常 0 件として扱います。`includeEnded=true` は server が `Select_Mode=All` に変換します。ORCA unavailable 時に local-only disease を主 `diseases` へ fallback してはいけません。`POST /api/local/diagnoses` は公開しません。ORCA 病名 mutation は local route ではなく official `/api/orca/official/chart-support/disease-mod-v3` を使用します。
 
 ### Admin-Internal
 
@@ -133,10 +132,10 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - appointment / visit / billing / report / chart-support / disease lookup は official bridge として `/api/orca/official/*` に固定する。
 - Charts の ORCA 病名 create / update / delete / 削除病名整理は official bridge として `/api/orca/official/chart-support/disease-mod-v3` に固定する。病名本体は `Disease_Single` component 列を正本にし、通常 CRUD は `Disease_Code` 単独や自由文字列だけで送らない。`Request_Number=01` は削除病名整理だけで server が生成し、通常 CRUD や client payload からは送らない。
 - order inputsets / interaction check は master-backed read として `/api/orca/master/order/*` に固定する。
-- order bundles / recommendations / prescription orders / chart medical summary / diagnoses は local-only として `/api/local/*` に固定する。
+- order bundles / recommendations / prescription orders / chart medical summary / diagnosis read model は local-only として `/api/local/*` に固定する。病名 mutation は local-only route に置かない。
 - 通常外来の初回会計送信は local workflow `/api/local/encounters/{encounterKey}/close-and-send-to-billing` に固定する。client が `patientId` / `facilityId` / voucher / sequential / insurance / `Medical_Uid` / `classCode` を送る direct official 初回送信は通常 UI に戻さない。`/api/orca/official/chart-support/medical-mod-v2` は low-level official bridge / QA focused test 用として残す。
 - sync status と admin wrapper label は `/api/admin/internal/*` に固定する。
-- `/api/local/patients/mutation` は `LocalPatientMutationRequest` / `LocalPatientMutationResponse` を使い、official patientmodv2 DTO と共有しない。
+- local patient mutation route は current public taxonomy から除外する。local patient CRUD 用の DTO、JAX-RS resource、admin wrapper は production route registration へ戻さない。
 
 ## Verification Contract
 

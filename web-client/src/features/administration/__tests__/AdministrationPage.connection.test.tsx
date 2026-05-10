@@ -99,7 +99,6 @@ vi.mock('../orcaInternalWrapperApi', () => ({
   postBirthDelivery: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '00' }),
   postMedicalRecords: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '00' }),
   postMedicalSets: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '00' }),
-  postPatientMutation: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '00' }),
   postSubjectiveEntry: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '00' }),
 }));
 

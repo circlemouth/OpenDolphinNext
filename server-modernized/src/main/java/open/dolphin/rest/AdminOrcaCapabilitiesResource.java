@@ -57,14 +57,6 @@ public class AdminOrcaCapabilitiesResource extends AbstractResource {
                         "official ORCA ではなく院内ローカル保存済みカルテ文書を返します"
                 ),
                 capability(
-                        "patient-mutation",
-                        "/api/local/patients/mutation（院内患者作成/更新）",
-                        "local",
-                        "local_write",
-                        true,
-                        "official ORCA 互換ではなく院内ローカル患者テーブルの作成/更新 contract です。delete は未対応です"
-                ),
-                capability(
                         "chart-subjectives",
                         "/api/local/charts/subjectives（院内主訴登録）",
                         "local",

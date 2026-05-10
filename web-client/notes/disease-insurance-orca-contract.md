@@ -44,9 +44,11 @@
 
 ## Charts ORCA Mirror API
 - Charts の病名欄は `GET /api/local/diagnoses/{patientId}` を使用する。クライアントは `facilityId` / owner / storage key / ORCA URL を送らず、サーバーは認証済みセッションの施設で患者とカルテを解決してから ORCA mirror を取得する。
+- `POST /api/local/diagnoses` は使用しません。Web クライアントからの病名 create / update / delete は、確認後に `/api/orca/official/chart-support/disease-mod-v3` へ送信し、成功後の再取得結果だけを主一覧へ反映します。
 - ORCA mirror の取得は server-side ORCA transport の allowlist / runtime config に従い、任意 URL は受け付けない。ORCA response は外部入力として XML secure parser で読み、allowlist 済みの病名名、`Disease_Single` component 列、補足コメント、開始日、転帰、診療科、保険組合せ番号だけを projection する。
 - `includeEnded=true` の取得では server が `Select_Mode=All` を生成し、転帰済み病名も含めて ORCA から再取得する。client は ORCA query XML や `Select_Mode` raw value を送らない。
 - response は `sourceOfTruth=orca`、`orcaMirrorStatus=connected|unavailable`、主一覧用 `diseases`、隔離表示用 `pendingLocalDiseases` を返す。`diseases` に local-only entry を混ぜません。
+- Server-side persistence は ORCA 病名の current cache、診療時点 snapshot、diseasev3 operation、監査 event を分離する。Web クライアントは cache/snapshot/operation/audit table の ID や保存先を authority として送らず、患者・診療日・診療科・医師・保険組合せは server-side context で検証される。
 - `diseases` の各行は `components[]`、`supplements[]`、`displayName`、`karteName`、`outcome`、`orcaOutcomeReceivedCode`、`syncStatus`、`orcaSnapshotHash` を持てる。`orcaSnapshotHash` は患者、診療科、入外、保険、開始日、転帰日、転帰、component 列、supplement 列から server が計算する。
 - `connected` で ORCA mirror が空の場合は「ORCAに登録済みの病名はありません。」、`unavailable` の場合は「ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。」を表示する。
 - 候補や local-only entry は明示操作なしに ORCA 登録 payload へ昇格しない。取得成功時に旧文言「ORCA病名の参照取得はこの画面ではまだ接続されていない」は表示しない。

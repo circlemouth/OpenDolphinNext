@@ -60,20 +60,6 @@ const buildDefaultPayloads = (today: string) => {
       insuranceCombinationNumber: '0001',
       includeVisitStatus: false,
     },
-    'patient-mutation': {
-      operation: 'create',
-      patient: {
-        patientId: '00099',
-        wholeName: 'テスト 太郎',
-        wholeNameKana: 'テスト タロウ',
-        birthDate: '1980-01-01',
-        sex: '1',
-        telephone: '',
-        mobilePhone: '',
-        zipCode: '',
-        addressLine: '',
-      },
-    },
     'chart-subjectives': {
       patientId: '00002',
       performDate: today,

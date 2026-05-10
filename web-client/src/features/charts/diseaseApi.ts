@@ -116,31 +116,6 @@ type FetchDiseasesParams = {
   includeEnded?: boolean;
 };
 
-export type DiseaseMutationOperation = {
-  operation: 'create' | 'update' | 'delete';
-  diagnosisId?: number;
-  diagnosisName?: string;
-  diagnosisCode?: string;
-  departmentCode?: string;
-  insuranceCombinationNumber?: string;
-  startDate?: string;
-  endDate?: string;
-  outcome?: string;
-  category?: string;
-  suspectedFlag?: string;
-  note?: string;
-};
-
-export type DiseaseMutationResult = {
-  ok: boolean;
-  runId?: string;
-  message?: string;
-  createdDiagnosisIds?: number[];
-  updatedDiagnosisIds?: number[];
-  removedDiagnosisIds?: number[];
-  raw?: unknown;
-};
-
 export type OrcaDiseaseMutationOperation = 'create' | 'update' | 'delete' | 'organizeDeletedDiseases';
 
 export type OrcaDiseaseMutationRequest = {
@@ -201,19 +176,6 @@ export type OrcaDiseaseMutationResult = {
   raw?: unknown;
 };
 
-const assignMutationScopedDiagnosisIds = (operations: DiseaseMutationOperation[]): DiseaseMutationOperation[] => {
-  let nextTemporaryId = -1;
-  return operations.map((operation) => {
-    if (typeof operation.diagnosisId === 'number' && Number.isFinite(operation.diagnosisId)) {
-      return operation;
-    }
-    return {
-      ...operation,
-      diagnosisId: nextTemporaryId--,
-    };
-  });
-};
-
 type DiseaseMasterEntry = {
   code?: string;
   name?: string;
@@ -242,40 +204,6 @@ const ORCA_MODIFIER_CODE_REGEX = /^ZZZ[0-9]{4}$/;
 
 const normalizeTerm = (value?: string | null) => (value ?? '').trim();
 const normalizeNameKey = (value?: string | null) => normalizeTerm(value).replaceAll(' ', '').replaceAll('　', '');
-
-const isValidDateOnly = (value: string) => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) {
-    return false;
-  }
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
-};
-
-const requireDateOnly = (value: string | undefined, fieldLabel: string) => {
-  const normalized = normalizeTerm(value);
-  if (!normalized || !isValidDateOnly(normalized)) {
-    throw new Error(`${fieldLabel}は西暦yyyy-MM-dd形式の実在する日付で入力してください。`);
-  }
-  return normalized;
-};
-
-const validateOutcome = (value?: string) => {
-  const normalized = normalizeTerm(value);
-  if (!normalized) {
-    return undefined;
-  }
-  if (normalized === '継続') {
-    return normalized;
-  }
-  if (!(DISEASE_OUTCOME_PRESETS as readonly string[]).includes(normalized)) {
-    throw new Error(`転帰は ${DISEASE_OUTCOME_PRESETS.join('、')} のいずれかを入力してください。`);
-  }
-  return normalized;
-};
 
 export const toOrcaOutcome = (value?: string): { outcome: string; sendCode?: string } => {
   const normalized = normalizeTerm(value);
@@ -307,36 +235,6 @@ export const toOrcaOutcome = (value?: string): { outcome: string; sendCode?: str
     default:
       throw new Error(`転帰は ${DISEASE_OUTCOME_PRESETS.join('、')} のいずれかを入力してください。`);
   }
-};
-
-const toMutationRequestOperation = (operation: DiseaseMutationOperation): DiseaseMutationOperation => {
-  const base = {
-    operation: operation.operation,
-    diagnosisId: operation.diagnosisId,
-  };
-  if (operation.operation === 'delete') {
-    return {
-      ...base,
-      diagnosisName: normalizeTerm(operation.diagnosisName) || undefined,
-    };
-  }
-  const startDate = requireDateOnly(operation.startDate, '開始日');
-  const endDate = operation.endDate ? requireDateOnly(operation.endDate, '転帰日') : undefined;
-  if (endDate && endDate < startDate) {
-    throw new Error('転帰日は開始日以降の日付を入力してください。');
-  }
-  return {
-    ...base,
-    diagnosisName: normalizeTerm(operation.diagnosisName) || undefined,
-    diagnosisCode: normalizeTerm(operation.diagnosisCode) || undefined,
-    departmentCode: normalizeTerm(operation.departmentCode) || undefined,
-    insuranceCombinationNumber: normalizeTerm(operation.insuranceCombinationNumber) || undefined,
-    startDate,
-    endDate,
-    outcome: validateOutcome(operation.outcome),
-    category: normalizeTerm(operation.category) || undefined,
-    suspectedFlag: normalizeTerm(operation.suspectedFlag) || undefined,
-  };
 };
 
 const normalizeDiseaseLayer = (value?: string | null): DiseaseLayer => {
@@ -743,37 +641,6 @@ export async function fetchDiseasesWithPatientImportRecovery(
     runId: retried.runId ?? importResult.runId ?? primary.runId,
     patientImportAttempted: true,
     patientImportStatus: importResult.status,
-  };
-}
-
-export async function mutateDiseases(params: {
-  patientId: string;
-  karteId: number;
-  operations: DiseaseMutationOperation[];
-}): Promise<DiseaseMutationResult> {
-  const runId = getObservabilityMeta().runId ?? generateRunId();
-  updateObservabilityMeta({ runId });
-  const normalizedOperations = assignMutationScopedDiagnosisIds(params.operations).map(toMutationRequestOperation);
-  const response = await httpFetch('/api/local/diagnoses', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ patientId: params.patientId, karteId: params.karteId, operations: normalizedOperations }),
-  });
-  const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  const message =
-    typeof json.message === 'string'
-      ? (json.message as string)
-      : typeof json.apiResultMessage === 'string'
-        ? (json.apiResultMessage as string)
-        : undefined;
-  return {
-    ok: response.ok,
-    runId: typeof json.runId === 'string' ? (json.runId as string) : runId,
-    message,
-    createdDiagnosisIds: Array.isArray(json.createdDiagnosisIds) ? (json.createdDiagnosisIds as number[]) : undefined,
-    updatedDiagnosisIds: Array.isArray(json.updatedDiagnosisIds) ? (json.updatedDiagnosisIds as number[]) : undefined,
-    removedDiagnosisIds: Array.isArray(json.removedDiagnosisIds) ? (json.removedDiagnosisIds as number[]) : undefined,
-    raw: json,
   };
 }
 

@@ -12,7 +12,6 @@ type OrcaInternalWrapperEndpoint =
   | 'medical-sets'
   | 'birth-delivery'
   | 'medical-records'
-  | 'patient-mutation'
   | 'chart-subjectives';
 
 type OrcaInternalWrapperOption = {

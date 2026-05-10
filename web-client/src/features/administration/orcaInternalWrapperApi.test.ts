@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   postMedicalRecords,
   postMedicalSets,
-  postPatientMutation,
   postBirthDelivery,
   postSubjectiveEntry,
 } from './orcaInternalWrapperApi';
@@ -139,35 +138,6 @@ describe('orcaInternalWrapperApi', () => {
     expect(result.apiResult).toBe('00');
     expect(result.records.length).toBe(1);
     expect(result.patient?.patientId).toBe('00002');
-  });
-
-  it('patient mutation の DB ID を読み取る', async () => {
-    mockHttpFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          apiResult: '00',
-          apiResultMessage: '登録完了',
-          runId: 'RUN-PATIENT-1',
-          patientDbId: 12,
-          patientId: '00003',
-        }),
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        },
-      ),
-    );
-
-    const result = await postPatientMutation({
-      operation: 'create',
-      patient: { patientId: '00003', wholeName: 'テスト 三郎' },
-    });
-
-    expect(result.ok).toBe(true);
-    expect(result.patientDbId).toBe(12);
-    expect(result.patientId).toBe('00003');
   });
 
   it('postSubjectiveEntry / postBirthDelivery の正規化が崩れない', async () => {
