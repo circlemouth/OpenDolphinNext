@@ -62,6 +62,13 @@ export type DiseaseWarning = {
 export type DiseaseUnmatchInformation = {
   code?: string;
   name?: string;
+  supplementName?: string;
+  inOut?: string;
+  category?: string;
+  suspectedFlag?: string;
+  startDate?: string;
+  endDate?: string;
+  outcome?: string;
   messageCategory?: string;
 };
 
@@ -171,6 +178,9 @@ export type OrcaDiseaseMutationResult = {
   responseClassification?: string;
   operationStatus?: string;
   needsUserReview?: boolean;
+  warnings?: DiseaseWarning[];
+  unmatchInformation?: DiseaseUnmatchInformation[];
+  unmatchInformationOverflow?: string;
   postMutationMirrorStatus?: 'connected' | 'unavailable';
   postMutationMirror?: DiseaseImportResponse;
   runId?: string;
@@ -411,6 +421,40 @@ const normalizeDiseaseEntry = (entry: DiseaseEntry): DiseaseEntry => {
     note: normalizeTerm(entry.note) || undefined,
   };
 };
+
+const normalizeDiseaseWarning = (value: unknown): DiseaseWarning | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const position = typeof record.position === 'number' && Number.isFinite(record.position) ? record.position : undefined;
+  return {
+    code: normalizeTerm(typeof record.code === 'string' ? record.code : undefined) || undefined,
+    messageCategory: normalizeTerm(typeof record.messageCategory === 'string' ? record.messageCategory : undefined) || undefined,
+    position,
+  };
+};
+
+const normalizeDiseaseWarnings = (value: unknown): DiseaseWarning[] =>
+  Array.isArray(value) ? value.map((item) => normalizeDiseaseWarning(item)).filter((item): item is DiseaseWarning => item !== null) : [];
+
+const normalizeDiseaseUnmatch = (value: unknown): DiseaseUnmatchInformation | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  return {
+    code: normalizeTerm(typeof record.code === 'string' ? record.code : undefined) || undefined,
+    name: normalizeTerm(typeof record.name === 'string' ? record.name : undefined) || undefined,
+    supplementName: normalizeTerm(typeof record.supplementName === 'string' ? record.supplementName : undefined) || undefined,
+    inOut: normalizeTerm(typeof record.inOut === 'string' ? record.inOut : undefined) || undefined,
+    category: normalizeTerm(typeof record.category === 'string' ? record.category : undefined) || undefined,
+    suspectedFlag: normalizeTerm(typeof record.suspectedFlag === 'string' ? record.suspectedFlag : undefined) || undefined,
+    startDate: normalizeTerm(typeof record.startDate === 'string' ? record.startDate : undefined) || undefined,
+    endDate: normalizeTerm(typeof record.endDate === 'string' ? record.endDate : undefined) || undefined,
+    outcome: normalizeTerm(typeof record.outcome === 'string' ? record.outcome : undefined) || undefined,
+    messageCategory: normalizeTerm(typeof record.messageCategory === 'string' ? record.messageCategory : undefined) || undefined,
+  };
+};
+
+const normalizeDiseaseUnmatches = (value: unknown): DiseaseUnmatchInformation[] =>
+  Array.isArray(value) ? value.map((item) => normalizeDiseaseUnmatch(item)).filter((item): item is DiseaseUnmatchInformation => item !== null) : [];
 
 const normalizeDiseaseSyncStatus = (value?: string | null): DiseaseSyncStatus => {
   switch (normalizeTerm(value)) {
@@ -822,6 +866,8 @@ export async function mutateOrcaDisease(params: OrcaDiseaseMutationRequest): Pro
       ? json.postMutationMirrorStatus
       : undefined;
   const postMutationMirror = toDiseaseImportResponse(json.postMutationMirror, typeof json.runId === 'string' ? json.runId : parsed.runId ?? runId);
+  const warnings = normalizeDiseaseWarnings(json.warnings);
+  const unmatchInformation = normalizeDiseaseUnmatches(json.unmatchInformation);
   return {
     ok: parsed.ok && json.businessAccepted === true && json.needsUserReview !== true && postMutationMirrorStatus !== 'unavailable',
     businessAccepted: json.businessAccepted === true,
@@ -830,6 +876,9 @@ export async function mutateOrcaDisease(params: OrcaDiseaseMutationRequest): Pro
     responseClassification: typeof json.responseClassification === 'string' ? json.responseClassification : undefined,
     operationStatus: typeof json.operationStatus === 'string' ? json.operationStatus : undefined,
     needsUserReview: json.needsUserReview === true,
+    warnings,
+    unmatchInformation,
+    unmatchInformationOverflow: typeof json.unmatchInformationOverflow === 'string' ? json.unmatchInformationOverflow : undefined,
     postMutationMirrorStatus,
     postMutationMirror,
     runId: typeof json.runId === 'string' ? json.runId : parsed.runId ?? runId,

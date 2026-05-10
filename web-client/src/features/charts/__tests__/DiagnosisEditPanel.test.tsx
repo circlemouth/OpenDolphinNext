@@ -415,4 +415,56 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     });
     expect(screen.getByText('target disease changed not found')).toBeInTheDocument();
   });
+
+  it('ORCA警告と不一致病名を折りたたまず初期表示する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(mutateOrcaDisease).mockResolvedValueOnce({
+      ok: false,
+      businessAccepted: true,
+      needsUserReview: true,
+      operationStatus: 'ORCA_UNMATCHED',
+      apiResult: '000',
+      responseClassification: 'accepted_with_unmatched',
+      warnings: [{ code: 'W001', messageCategory: 'warning_like', position: 1 }],
+      unmatchInformation: [
+        {
+          code: 'U001',
+          name: '要確認病名',
+          supplementName: '右片側',
+          inOut: 'O',
+          category: 'PD',
+          suspectedFlag: 'S',
+          startDate: '2026-04-01',
+          endDate: '2026-04-10',
+          outcome: '1',
+          messageCategory: 'unmatched_like',
+        },
+      ],
+    });
+
+    renderPanel();
+
+    await user.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
+    const authoring = screen.getByLabelText('ORCAへ病名登録');
+    fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: 'ReviewDisease' } });
+    vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('8839001');
+    await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
+    const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
+    await user.click(within(confirmDialog).getByRole('button', { name: '副病名として登録' }));
+
+    const reviewPanel = await screen.findByRole('region', { name: 'ORCA病名送信の要確認' });
+    expect(within(reviewPanel).getByText('ORCA病名送信の要確認')).toBeInTheDocument();
+    expect(within(reviewPanel).getByText('ORCAから警告または不一致が返りました。ORCA再取得結果と未照合病名を確認し、必要なら病名を修正して再送してください。')).toBeInTheDocument();
+    expect(within(reviewPanel).getByText('ORCA_UNMATCHED')).toBeInTheDocument();
+    expect(within(reviewPanel).getByText('000')).toBeInTheDocument();
+    expect(within(reviewPanel).getByText('accepted_with_unmatched')).toBeInTheDocument();
+    expect(within(reviewPanel).getByText('ORCA警告')).toBeInTheDocument();
+    expect(within(reviewPanel).getByText('code=W001 / 分類=warning_like / 位置=1')).toBeInTheDocument();
+    expect(within(reviewPanel).getByText('ORCA側のみ存在する未照合病名')).toBeInTheDocument();
+    expect(
+      within(reviewPanel).getByText(
+        'code=U001 / 病名=要確認病名 / 補足=右片側 / 入外=O / 区分=PD / 疑い=S / 開始=2026-04-01 / 転帰日=2026-04-10 / 転帰=1 / 分類=unmatched_like',
+      ),
+    ).toBeInTheDocument();
+  });
 });

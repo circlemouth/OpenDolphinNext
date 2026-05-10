@@ -23,6 +23,8 @@ import {
   type DiseaseEntry,
   type DiseaseLayer,
   type DiseaseMasterCandidate,
+  type DiseaseUnmatchInformation,
+  type DiseaseWarning,
   type OrcaDiseaseMutationOperation,
   type OrcaDiseaseMutationRequest,
   type OrcaDiseaseMutationResult,
@@ -96,6 +98,14 @@ type FormMutationInput = {
 
 type OrcaDiseaseInformation = NonNullable<OrcaDiseaseMutationRequest['diseaseInformation']>[number];
 type NoticeTone = 'info' | 'success' | 'warning' | 'error';
+type MutationReviewSummary = {
+  operationStatus?: string;
+  apiResult?: string;
+  responseClassification?: string;
+  warnings: DiseaseWarning[];
+  unmatchInformation: DiseaseUnmatchInformation[];
+  unmatchInformationOverflow?: string;
+};
 
 type PendingAction =
   | { operation: 'create'; title: string; confirmLabel: string; form: DiagnosisFormState; sourceEntry?: DiseaseEntry }
@@ -110,6 +120,8 @@ const POST_MUTATION_MIRROR_UNAVAILABLE_MESSAGE =
   'ORCA病名の送信は受け付けられましたが、ORCA病名の再取得が完了していません。ORCA正本を再取得して確認してください。';
 const CHART_TEXT_DISEASE_BOUNDARY_NOTE =
   '診療録本文中の病名記載はカルテ本文の正本です。ORCA登録病名へは明示確認後に登録してください。';
+const DISEASE_REVIEW_ACTION_NOTE =
+  'ORCA再取得結果と未照合病名を確認し、必要なら病名を修正して再送してください。';
 
 const buildEmptyForm = (today: string): DiagnosisFormState => ({
   prefix: '',
@@ -361,6 +373,49 @@ const formatSubDiseaseClassLabel = (value?: DiagnosisFormState['subDiseaseClass'
   }
 };
 
+const isReviewOperationStatus = (status?: string | null) => status === 'ORCA_WARNING' || status === 'ORCA_UNMATCHED' || status === 'NEEDS_REVIEW';
+
+const buildMutationReviewSummary = (result: OrcaDiseaseMutationResult): MutationReviewSummary | null => {
+  const warnings = result.warnings ?? [];
+  const unmatchInformation = result.unmatchInformation ?? [];
+  if (!result.needsUserReview && !isReviewOperationStatus(result.operationStatus) && warnings.length === 0 && unmatchInformation.length === 0) {
+    return null;
+  }
+  return {
+    operationStatus: result.operationStatus,
+    apiResult: result.apiResult,
+    responseClassification: result.responseClassification,
+    warnings,
+    unmatchInformation,
+    unmatchInformationOverflow: result.unmatchInformationOverflow,
+  };
+};
+
+const formatDiseaseWarning = (warning: DiseaseWarning, index: number) => {
+  const parts = [
+    warning.code ? `code=${warning.code}` : null,
+    warning.messageCategory ? `分類=${warning.messageCategory}` : null,
+    typeof warning.position === 'number' ? `位置=${warning.position}` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' / ') : `警告 ${index + 1}`;
+};
+
+const formatDiseaseUnmatch = (unmatch: DiseaseUnmatchInformation, index: number) => {
+  const parts = [
+    unmatch.code ? `code=${unmatch.code}` : null,
+    unmatch.name ? `病名=${unmatch.name}` : null,
+    unmatch.supplementName ? `補足=${unmatch.supplementName}` : null,
+    unmatch.inOut ? `入外=${unmatch.inOut}` : null,
+    unmatch.category ? `区分=${unmatch.category}` : null,
+    unmatch.suspectedFlag ? `疑い=${unmatch.suspectedFlag}` : null,
+    unmatch.startDate ? `開始=${unmatch.startDate}` : null,
+    unmatch.endDate ? `転帰日=${unmatch.endDate}` : null,
+    unmatch.outcome ? `転帰=${unmatch.outcome}` : null,
+    unmatch.messageCategory ? `分類=${unmatch.messageCategory}` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' / ') : `未照合病名 ${index + 1}`;
+};
+
 const toOrcaDiseaseInformation = (entry: DiseaseEntry): OrcaDiseaseInformation => {
   const outcome = toOrcaOutcome(entry.outcome);
   return {
@@ -487,6 +542,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
   const [quickCandidateKeyword, setQuickCandidateKeyword] = useState('');
   const [isQuickCandidateMenuOpen, setIsQuickCandidateMenuOpen] = useState(false);
   const [notice, setNotice] = useState<{ tone: NoticeTone; message: string } | null>(null);
+  const [mutationReview, setMutationReview] = useState<MutationReviewSummary | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const nameInputRef = useRef<HTMLInputElement | null>(null);
@@ -754,6 +810,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
         failureMessage,
       );
       setNotice(notice);
+      setMutationReview(buildMutationReviewSummary(result));
       setPendingAction(null);
       setIsEditorOpen(false);
       recordOutpatientFunnel('charts_action', {
@@ -798,6 +855,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
     onError: (error: unknown, input) => {
       const message = error instanceof Error ? error.message : String(error);
       setNotice({ tone: 'error', message: `ORCA病名の処理に失敗しました: ${message}` });
+      setMutationReview(null);
       setPendingAction(null);
       logAuditEvent({
         runId: meta.runId,
@@ -850,6 +908,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
           failureMessage,
         ),
       );
+      setMutationReview(buildMutationReviewSummary(result));
       setPendingAction(null);
       logAuditEvent({
         runId: result.runId ?? meta.runId,
@@ -875,6 +934,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       setNotice({ tone: 'error', message: `ORCA病名の削除に失敗しました: ${message}` });
+      setMutationReview(null);
       setPendingAction(null);
     },
   });
@@ -909,11 +969,13 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
           failureMessage,
         ),
       );
+      setMutationReview(buildMutationReviewSummary(result));
       setPendingAction(null);
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       setNotice({ tone: 'error', message: `削除病名の整理に失敗しました: ${message}` });
+      setMutationReview(null);
       setPendingAction(null);
     },
   });
@@ -952,6 +1014,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
     setEditingEntry(undefined);
     setForm(buildEmptyForm(today));
     setNotice(null);
+    setMutationReview(null);
     setIsEditorOpen(true);
   };
 
@@ -959,6 +1022,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
     setEditingEntry(entry);
     setForm(toFormState(entry, today));
     setNotice(null);
+    setMutationReview(null);
     setIsEditorOpen(true);
   };
 
@@ -1103,6 +1167,58 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
         </div>
       ) : null}
       {notice ? <div className={`charts-side-panel__notice charts-side-panel__notice--${notice.tone}`}>{notice.message}</div> : null}
+      {mutationReview ? (
+        <section className="charts-side-panel__notice charts-side-panel__notice--warning" aria-label="ORCA病名送信の要確認">
+          <div>
+            <strong>ORCA病名送信の要確認</strong>
+          </div>
+          <p>
+            ORCAから警告または不一致が返りました。{DISEASE_REVIEW_ACTION_NOTE}
+          </p>
+          <dl className="charts-diagnosis__confirm">
+            <div>
+              <dt>連携状態</dt>
+              <dd>{mutationReview.operationStatus ?? 'NEEDS_REVIEW'}</dd>
+            </div>
+            <div>
+              <dt>ORCA結果</dt>
+              <dd>{mutationReview.apiResult ?? '未通知'}</dd>
+            </div>
+            {mutationReview.responseClassification ? (
+              <div>
+                <dt>分類</dt>
+                <dd>{mutationReview.responseClassification}</dd>
+              </div>
+            ) : null}
+            {mutationReview.unmatchInformationOverflow ? (
+              <div>
+                <dt>不一致情報の超過</dt>
+                <dd>{mutationReview.unmatchInformationOverflow}</dd>
+              </div>
+            ) : null}
+          </dl>
+          {mutationReview.warnings.length > 0 ? (
+            <div>
+              <strong>ORCA警告</strong>
+              <ul className="charts-diagnosis__unblock">
+                {mutationReview.warnings.map((warning, index) => (
+                  <li key={`warning-${warning.code ?? index}`}>{formatDiseaseWarning(warning, index)}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {mutationReview.unmatchInformation.length > 0 ? (
+            <div>
+              <strong>ORCA側のみ存在する未照合病名</strong>
+              <ul className="charts-diagnosis__unblock">
+                {mutationReview.unmatchInformation.map((unmatch, index) => (
+                  <li key={`unmatch-${unmatch.code ?? index}`}>{formatDiseaseUnmatch(unmatch, index)}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {chartTextMentions.length > 0 ? (
         <section className="charts-diagnosis__quick-add" aria-label="診療録本文中の病名記載">

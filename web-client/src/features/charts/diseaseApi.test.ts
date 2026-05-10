@@ -599,6 +599,10 @@ describe('diseaseApi', () => {
     expect(result.businessAccepted).toBe(true);
     expect(result.needsUserReview).toBe(true);
     expect(result.operationStatus).toBe('ORCA_UNMATCHED');
+    expect(result.warnings).toEqual([{ code: 'W001', messageCategory: 'warning_like', position: undefined }]);
+    expect(result.unmatchInformation).toEqual([
+      expect.objectContaining({ code: 'U001', name: '要確認病名', messageCategory: 'unmatched_like' }),
+    ]);
     expect(result.message).toBe('ORCA病名の処理結果に確認が必要です。警告または不一致を確認してください。');
   });
 
