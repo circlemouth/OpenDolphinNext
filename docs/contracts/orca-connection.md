@@ -106,6 +106,13 @@
 - ORCA 病名の永続化境界は `orca_disease_cache`, `orca_disease_snapshot`, `orca_disease_operation`, `orca_disease_audit_event` に分離する。`orca_disease_cache` は `source_system=ORCA` と取得 source metadata、`fetched_at`、`cache_expires_at`、`raw_response_hash`、normalized payload を保存する。`/api/local/diagnoses/{patientId}` は `diseasegetv2` 成功 projection をこの cache に反映し、cache 書き込み失敗時は成功表示せず `orcaMirrorStatus=unavailable` に倒す。`orca_disease_snapshot` は診療録確定・送信前確認・照合などの固定時点、`orca_disease_operation` は冪等性付き diseasev3/fetch operation、`orca_disease_audit_event` は hash chain 用の要約監査情報だけを持つ。raw ORCA XML、資格情報、患者詳細、保険詳細はこれらのテーブルへ平文保存しない。
 - ORCA `masterlastupdatev3` は master update catalog の `disease_master` dataset として扱い、Charts disease mirror と病名候補検索は `masterVersion` を返す。master update の失敗詳細や ORCA 接続先情報は Charts response に出さない。
 
+## Official Patient Read Cache
+- 患者取得は `/api/orca/official/patientgetv2` から ORCA `patientgetv2` を呼び、取得ごとに `orca_patient_cache` を更新する。cache は display/read-through cache であり、OpenDolphinNext 側の患者正本ではない。
+- 施設は認証済み request context の facilityId で解決し、client 提供の facilityId、owner、role、任意 URL、storage key、digest は使わない。
+- API response body は既存 ORCA official 互換を維持し、source metadata は response header と監査 details に限定して返す。`X-Orca-Cache-Status` は `CURRENT`, `NOT_FOUND`, `NEEDS_REVIEW`, `UNAVAILABLE` 等の cache state、`X-Orca-Stale` は live ORCA 取得では `false` とし、cache-only fallback を current 表示に使わない。
+- `Api_Result=10` または患者不在 wording は `ORCA_PATIENT_NOT_FOUND` business status として扱い、単純な HTTP 404 や local fallback success に変換しない。
+- `orca_patient_cache` は `source_system=ORCA`, `source_api=patientgetv2`, `source_request_id`, `source_trace_id`, `fetched_at`, `cache_expires_at`, `cache_status`, `business_status`, `raw_response_hash`, normalized payload を保存する。raw ORCA body、credential、接続先 URL、Cookie、Authorization、CSRF は保存しない。
+
 ## Charts Disease Mutation
 - Charts からの ORCA 病名登録・更新・削除は `/api/orca/official/chart-support/disease-mod-v3` だけを使う。
 - server は facility / patient access / department / insurance / target disease を server-side で再検証し、クライアント提供の facilityId、任意 URL、raw XML、`Request_Number` を信用しない。
