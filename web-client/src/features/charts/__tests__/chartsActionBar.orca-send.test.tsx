@@ -261,7 +261,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
     expect(fetchPrescriptionOrder).toHaveBeenCalledWith({ patientId: '000001', from: '2026-01-20', encounterId: 'F001:E100' });
@@ -301,7 +301,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() =>
       expect(
@@ -383,7 +383,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(screen.getByText(/classCode が必須/)).toBeInTheDocument());
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
@@ -409,7 +409,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(screen.getByText(/classCode が必須/)).toBeInTheDocument());
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
@@ -435,7 +435,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(screen.getByText(/otherOrder.*explicit local-only 契約.*ORCA 送信しません/)).toBeInTheDocument());
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
@@ -475,7 +475,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
     const payload = vi.mocked(postOrcaMedicalModV2Xml).mock.calls[0]?.[0];
@@ -517,7 +517,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
     const payload = vi.mocked(postOrcaMedicalModV2Xml).mock.calls[0]?.[0];
@@ -548,7 +548,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() =>
       expect(
@@ -581,7 +581,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(screen.getByText(/本体となる注射薬剤\/手技コード行/)).toBeInTheDocument());
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
@@ -620,7 +620,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
     const payload = vi.mocked(postOrcaMedicalModV2Xml).mock.calls[0]?.[0];
@@ -660,7 +660,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
     const payload = vi.mocked(postOrcaMedicalModV2Xml).mock.calls[0]?.[0];
@@ -691,7 +691,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(screen.getByText(/本体行/)).toBeInTheDocument());
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
@@ -720,7 +720,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(screen.getByText(/本体行/)).toBeInTheDocument());
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
@@ -760,7 +760,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
     const payload = vi.mocked(postOrcaMedicalModV2Xml).mock.calls[0]?.[0];
@@ -804,7 +804,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
     expect(screen.queryByText(/送信を停止/)).not.toBeInTheDocument();
@@ -880,7 +880,7 @@ describe('ChartsActionBar ORCA send', () => {
     renderActionBar();
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText('ORCA送信に警告')).toBeInTheDocument());

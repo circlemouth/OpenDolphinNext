@@ -199,6 +199,103 @@ body {
   gap: 0.75rem;
 }
 
+.critical-operation-confirm {
+  display: grid;
+  gap: 1rem;
+}
+
+.critical-operation-confirm__operation {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(217, 119, 6, 0.34);
+  border-radius: 8px;
+  background: rgba(255, 251, 235, 0.96);
+  color: #78350f;
+  font-weight: 700;
+}
+
+.critical-operation-confirm[data-tone='danger'] .critical-operation-confirm__operation {
+  border-color: rgba(185, 28, 28, 0.34);
+  background: rgba(254, 242, 242, 0.96);
+  color: #7f1d1d;
+}
+
+.critical-operation-confirm__section {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.critical-operation-confirm__section h3,
+.critical-operation-confirm__identity {
+  margin: 0;
+}
+
+.critical-operation-confirm__identity {
+  font-size: 1.05rem;
+  color: var(--ui-text, #0f172a);
+}
+
+.critical-operation-confirm__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.critical-operation-confirm__list > div {
+  min-width: 0;
+  padding: 0.6rem;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.86);
+}
+
+.critical-operation-confirm__list dt {
+  color: var(--ui-text-muted, #64748b);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.critical-operation-confirm__list dd {
+  margin: 0.18rem 0 0;
+  color: var(--ui-text, #0f172a);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.critical-operation-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.critical-operation-confirm__actions button {
+  min-height: 44px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  padding: 0.6rem 0.9rem;
+  background: #fff;
+  color: var(--ui-text, #0f172a);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.critical-operation-confirm__actions button:hover {
+  background: rgba(248, 250, 252, 0.96);
+}
+
+.critical-operation-confirm__primary {
+  border-color: rgba(29, 78, 216, 0.55) !important;
+  background: #1d4ed8 !important;
+  color: #fff !important;
+}
+
+.critical-operation-confirm[data-tone='danger'] .critical-operation-confirm__primary {
+  border-color: rgba(185, 28, 28, 0.55) !important;
+  background: #b91c1c !important;
+}
+
 /* Full Screen Split Layout */
 .login-shell {
   min-height: 100vh;

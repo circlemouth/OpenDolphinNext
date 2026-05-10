@@ -121,7 +121,7 @@ describe('ChartsActionBar', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAへ送信する' }));
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
     expect(screen.getByText('ORCA送信を完了')).toBeInTheDocument();
@@ -191,6 +191,11 @@ describe('ChartsActionBar', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    expect(screen.getByRole('alertdialog', { name: '診療行為ORCA送信の確認' })).toBeInTheDocument();
+    expect(screen.getByText('実行操作:')).toBeInTheDocument();
+    expect(screen.getByText('診療行為ORCA送信')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ORCAへ送信する' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '送信する' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '患者確認' })).toBeInTheDocument();
     expect(screen.getByText('山田太郎')).toBeInTheDocument();
     expect(screen.getByText('P-777')).toBeInTheDocument();
