@@ -127,3 +127,9 @@
 - `POST /api/local/encounters/orca-transmissions/{transmissionId}/reconcile-temporary-medical` は `ORCA_UNKNOWN`、`ORCA_FAILED`、`CORRECTION_REQUIRED` の review transmission だけを対象に、認証 principal の facility と保存済み snapshot から ORCA `tmedicalgetv2` read-only 照合を行う。request body の patient / facility / insurance / voucher / sequential / `Medical_Uid` / URL / raw XML は受け取らない。照合 request は server 側の患者番号、診療日、診療科から作り、response には一致件数、`Medical_Uid` の存在有無、`Medical_Mode` / `Medical_Mode2`、固定 `needsUserReview=true`、必要時の `resendBlocked` / `resendBlockReason` だけを返す。`Medical_Uid` 値、保険組合せ、raw ORCA body、資格情報、患者氏名、住所、電話番号は response / audit / tracked evidence に残さない。照合成功は再送成功や会計反映済みを意味せず、state transition は別の明示操作で行う。`Medical_Mode` または `Medical_Mode2` が空でなく `0` 以外の場合は fail-closed に `resendBlocked=true`、`resendBlockReason=ORCA_TEMPORARY_MEDICAL_MODE_LOCKED` とし、原則再送を止めて管理者確認に回す。
 - `medicalmodv2 class=03` は ORCA 側で未展開・未変更と確認できた置換専用、`class=04` は明示的な追加送信専用とし、自動追加送信には使わない。
 - PushAPI / `pusheventgetv2` は補助情報に限る。Push が来ないことを失敗・成功の正本にせず、永続状態と `Medical_Uid` / `tmedicalgetv2` 確認を正とする。
+
+## ORCA Outage Operations
+- ORCA outage / degraded readiness の運用手順は [../runbooks/orca-outage-recovery.md](../runbooks/orca-outage-recovery.md) を正本とする。
+- ORCA outage 中も OpenDolphinNext 正本である診療録本文、SOAP、所見、説明内容、処方指示下書き、既存スナップショット、監査ログは閲覧・運用設定に応じた作成を許可できる。
+- ORCA outage 中は ORCA患者作成・更新、ORCA病名送信、ORCA診療行為送信、会計送信、再送、追加送信、置換送信を fail-closed にする。local-only 患者、病名、保険、会計情報を ORCA 正本へ fallback 表示しない。
+- 復旧後は `ORCA_UNKNOWN`、`ORCA_FAILED`、`CORRECTION_REQUIRED` を Reception の要確認一覧で再取得し、`tmedicalgetv2` read-only 再照合を行ってから再送可否を判断する。再送前の payload authority は server-side snapshot と server-derived encounter context だけとし、client-provided voucher、sequential、insurance combination、`Medical_Uid` は使わない。

@@ -253,6 +253,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] ORCA側で会計済みの場合は再送を原則禁止し、管理者確認フローにする。
   - [x] `tmedicalgetv2` 照合の `Medical_Mode` / `Medical_Mode2` が open (`0`) 以外の場合は server が `resendBlocked=true` / `ORCA_TEMPORARY_MEDICAL_MODE_LOCKED` を返し、Reception は再送停止と管理者確認を表示する。client は解除判定を作らず、`Medical_Uid` 値、保険組合せ、raw ORCA body は表示しない。
 - [ ] ORCA障害時の診療録/処方作成可否、会計送信不可表示、復旧後再照合、ネットワーク障害時の `UNKNOWN` 処理、DB障害時読み取り専用モード、復元後 ORCA再照合を文書化する。
+  - [x] `docs/runbooks/orca-outage-recovery.md` を追加し、ORCA outage 中の許可操作、禁止操作、`ORCA_UNKNOWN` 処理、復旧後 `tmedicalgetv2` 再照合、証跡ポリシーを sanitized contract として固定する。
 
 ## 17. 旧実装・危険経路の削除チェック
 

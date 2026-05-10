@@ -8,6 +8,7 @@
 - [architecture/](architecture/)
 - [architecture/repository-doc-taxonomy.md](architecture/repository-doc-taxonomy.md)
 - [runbooks/](runbooks/)
+- [runbooks/orca-outage-recovery.md](runbooks/orca-outage-recovery.md)
 - [operations/](operations/)
 - [releases/](releases/)
 - [web-client/architecture/](web-client/architecture/)

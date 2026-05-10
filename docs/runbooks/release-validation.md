@@ -7,6 +7,7 @@
 - `docs/contracts/` が今回の変更を反映している。
 - `docs/architecture/` の summary が current contract と矛盾していない。
 - `docs/managerdocs/` の release/readiness 説明が gate と矛盾していない。
+- ORCA outage / UNKNOWN recovery の運用手順は [orca-outage-recovery.md](./orca-outage-recovery.md) と `docs/contracts/orca-connection.md` が一致している。
 - `config/server-modernized.env.sample` が設定契約と一致している。
 - `target/` / `*.war` / `__MACOSX` / `.DS_Store` / `Thumbs.db` をレビュー対象に含めない。
 
