@@ -199,6 +199,7 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
                         }
                         """.formatted(CONTENT_HASH),
                 "[]",
+                201L,
                 CONTENT_HASH);
 
         OrcaMedicalCandidateResponse response = resource.latestFromChart(

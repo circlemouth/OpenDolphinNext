@@ -108,6 +108,7 @@ class OrcaMedicalCandidateRepository {
                                    sendable,
                                    cast(candidate_json as text),
                                    cast(issue_summary_json as text),
+                                   pr.prescription_order_revision_id,
                                    pr.content_hash
                               FROM opendolphin.orca_medical_candidate candidate
                               LEFT JOIN opendolphin.prescription_order po
@@ -136,7 +137,8 @@ class OrcaMedicalCandidateRepository {
                     Boolean.TRUE.equals(values[6]),
                     text(values[7]),
                     text(values[8]),
-                    text(values[9]));
+                    numberOrNull(values[9]),
+                    text(values[10]));
         } catch (NoResultException ex) {
             return null;
         }
@@ -146,7 +148,8 @@ class OrcaMedicalCandidateRepository {
         Map<String, Object> snapshot = readMap(record.candidateJson());
         String candidateContentHash = text(snapshot.get("prescriptionContentHash"));
         List<OrcaMedicalCandidateResponse.Issue> issues = new ArrayList<>(readIssues(record.issueSummaryJson()));
-        boolean sourceStale = !equalsTrimmed(candidateContentHash, record.currentPrescriptionContentHash());
+        boolean revisionStale = !Long.valueOf(record.prescriptionRevisionId()).equals(record.currentPrescriptionRevisionId());
+        boolean sourceStale = revisionStale || !equalsTrimmed(candidateContentHash, record.currentPrescriptionContentHash());
         OrcaMedicalCandidateResponse response = new OrcaMedicalCandidateResponse();
         response.setApiResult("00");
         response.setApiResultMessage("処理終了");
@@ -163,7 +166,7 @@ class OrcaMedicalCandidateRepository {
         response.setMedicalInformation(readMedicalInformation(snapshot.get("medicalInformation")));
         if (sourceStale) {
             issues.add(issue("prescription_candidate_source_stale",
-                    "candidate prescription content hash does not match current prescription revision"));
+                    "candidate source revision does not match current prescription revision"));
         }
         response.setIssues(issues);
         return response;
@@ -214,6 +217,10 @@ class OrcaMedicalCandidateRepository {
         return ((Number) value).longValue();
     }
 
+    private Long numberOrNull(Object value) {
+        return value instanceof Number number ? number.longValue() : null;
+    }
+
     private String text(Object value) {
         return value != null ? value.toString() : null;
     }
@@ -259,6 +266,7 @@ class OrcaMedicalCandidateRepository {
             boolean sendable,
             String candidateJson,
             String issueSummaryJson,
+            Long currentPrescriptionRevisionId,
             String currentPrescriptionContentHash) {
     }
 }
