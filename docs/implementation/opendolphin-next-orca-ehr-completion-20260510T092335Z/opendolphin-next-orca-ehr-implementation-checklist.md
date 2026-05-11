@@ -182,6 +182,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] reporting PDF payload は処方指示 event history と ORCA operation/transmission/reconciliation history を summary section に allowlist/redaction 付きで表示できる。raw ORCA body、credential、患者名、保険詳細、idempotency key、request/response body、任意 nested JSON は帳票へ出さない。
   - [x] `GET /api/charts/{chartId}/revisions/export.pdf` を追加し、server-derived JSON export projection と患者 master reference から reporting payload を組み立て、診療録 revision / 処方指示 / ORCA operation-transmission-reconciliation history、`exportHash`、件数を PDF summary に含める。client-provided reporting payload は採用せず、患者 master 欠落・施設不一致は 409 fail-closed とする。
   - [x] `GET /api/charts/revision-exports` / `.csv` を追加し、server-side facility、診療日範囲、任意 patient DB reference で患者単位・診療日単位・期間指定の export を返す。各 chart は既存 JSON/CSV export と同じ sanitized projection / `exportHash` を再利用し、期間は最大 366 日、raw patient detail / raw ORCA body / credential は返さない。
+  - [x] 2026-05-11T13:51Z: `GET /api/charts/revision-exports.pdf` を追加し、server-derived 期間 export cover と各 chart の PDF payload を結合する。期間 PDF も同じ 366 日上限、facility boundary、JSON/CSV と同じ sanitized projection / `exportHash` contract を再利用し、client-provided reporting payload は採用しない。
 
 ## 8. 処方指示正本実装
 
@@ -379,7 +380,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] ORCA送信に idempotency key がある。
 - [ ] ORCA警告・エラー・不一致が UI と監査ログに保存される。
 - [ ] 患者ヘッダーが主要画面に表示され、重大操作に確認フローがある。
-- [ ] 診療録 PDF 出力と期間エクスポートができる。
+- [x] 診療録 PDF 出力と期間エクスポートができる。
 - [x] 監査ログ hash chain 検証ができる。
 - [ ] 実ORCA接続試験、ORCAモック試験、DADS観点 UI テストが完了している。
 - [ ] 本番運用前に ORCA接続情報、証明書期限監視、DB/監査/添付バックアップ、復元試験、障害時/再送/照合手順、患者取り違え防止 UI、ロール権限、監査ログ閲覧権限を確認する。

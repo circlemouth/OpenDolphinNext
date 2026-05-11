@@ -3,6 +3,9 @@ package open.dolphin.session;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lowagie.text.Document;
+import com.lowagie.text.pdf.PdfCopy;
+import com.lowagie.text.pdf.PdfReader;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -10,6 +13,7 @@ import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -413,6 +417,69 @@ public class ChartRevisionExportService {
 
     public String exportChartPeriodCsv(String facilityId, String fromDateValue, String toDateValue, Long patientId) {
         return exportChartsCsv(exportChartPeriod(facilityId, fromDateValue, toDateValue, patientId).getCharts());
+    }
+
+    public ReportingResult exportChartPeriodPdf(String facilityId, String fromDateValue, String toDateValue,
+            Long patientId) {
+        ChartRevisionPeriodExportResponse period = exportChartPeriod(facilityId, fromDateValue, toDateValue,
+                patientId);
+        List<ReportingResult> reports = new ArrayList<>();
+        try {
+            reports.add(reportingEngine.render(periodCoverPayload(period)));
+            for (ChartRevisionExportResponse chart : period.getCharts()) {
+                reports.add(reportingEngine.render(exportChartReportingPayload(chart.getChartId(), facilityId)));
+            }
+            String fileName = "chart-revisions-" + period.getFromDate() + "-" + period.getToDate() + ".pdf";
+            return new ReportingResult(mergePdfReports(reports), fileName, "patient_summary", java.util.Locale.JAPAN);
+        } catch (IOException ex) {
+            throw restError(Response.Status.INTERNAL_SERVER_ERROR, "chart_revision_export_pdf_failed",
+                    "Chart period export PDF could not be rendered",
+                    Map.of("fromDate", period.getFromDate(), "toDate", period.getToDate()));
+        }
+    }
+
+    private ReportingPayload periodCoverPayload(ChartRevisionPeriodExportResponse period) {
+        ReportingPayload payload = new ReportingPayload();
+        ReportingPatientPayload patient = new ReportingPatientPayload();
+        patient.setFullName("Chart revision period export");
+        patient.setBirthDate("1900-01-01");
+        payload.setTemplate("patient_summary");
+        payload.setLocale("ja-JP");
+        payload.setDocumentTitle("Chart revision period export");
+        payload.setPatient(patient);
+        payload.setAttendingDoctor("server-derived");
+        payload.setEncounterDate(period.getFromDate());
+        payload.setGeneratedAt(ZonedDateTime.now().toString());
+        payload.setOutputFileName("chart-revisions-" + period.getFromDate() + "-" + period.getToDate() + ".pdf");
+        List<ReportingSummaryItemPayload> items = new ArrayList<>();
+        items.add(reportSummaryItem("Period from", "Period from", period.getFromDate()));
+        items.add(reportSummaryItem("Period to", "Period to", period.getToDate()));
+        items.add(reportSummaryItem("Chart count", "Chart count", String.valueOf(period.getChartCount())));
+        items.add(reportSummaryItem("Patient filter applied", "Patient filter applied",
+                String.valueOf(period.getPatientFilterApplied())));
+        items.add(reportSummaryItem("Export hash", "Export hash", period.getExportHash()));
+        items.add(reportSummaryItem("Export schema version", "Export schema version",
+                String.valueOf(period.getExportSchemaVersion())));
+        payload.setSummaryItems(items);
+        return payload;
+    }
+
+    private byte[] mergePdfReports(List<ReportingResult> reports) throws IOException {
+        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            Document document = new Document();
+            PdfCopy copy = new PdfCopy(document, output);
+            document.open();
+            for (ReportingResult report : reports) {
+                try (PdfReader reader = new PdfReader(report.getData())) {
+                    int pageCount = reader.getNumberOfPages();
+                    for (int page = 1; page <= pageCount; page++) {
+                        copy.addPage(copy.getImportedPage(reader, page));
+                    }
+                }
+            }
+            document.close();
+            return output.toByteArray();
+        }
     }
 
     private String exportChartsCsv(List<ChartRevisionExportResponse> exports) {

@@ -492,6 +492,19 @@ class ChartRevisionExportServiceTest {
     }
 
     @Test
+    void exportChartPeriodPdfRendersCoverAndServerDerivedChartPayloads() {
+        stubPeriodChartIds(List.of(10L));
+        stubExportQueries(List.of(finalRevision()), List.of(finalizedEvent()));
+        when(em.find(PatientModel.class, 501L)).thenReturn(patient("F001"));
+
+        ReportingResult pdf = service.exportChartPeriodPdf("F001", "2026-05-01", "2026-05-31", null);
+
+        assertThat(pdf.getFileName()).isEqualTo("chart-revisions-2026-05-01-2026-05-31.pdf");
+        assertThat(new String(pdf.getData(), 0, 4)).isEqualTo("%PDF");
+        assertThat(pdf.getData().length).isGreaterThan(1000);
+    }
+
+    @Test
     void exportChartPeriodRejectsInvalidDateRange() {
         Throwable thrown = catchThrowable(() -> service.exportChartPeriod("F001", "2026-06-01", "2026-05-01", null));
 

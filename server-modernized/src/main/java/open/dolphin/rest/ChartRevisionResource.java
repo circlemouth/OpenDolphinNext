@@ -66,6 +66,23 @@ public class ChartRevisionResource extends AbstractOrcaRestResource {
     }
 
     @GET
+    @Path("/revision-exports.pdf")
+    @Produces("application/pdf")
+    @Transactional
+    public Response exportChartPeriodPdf(
+            @Context HttpServletRequest request,
+            @QueryParam("fromDate") String fromDate,
+            @QueryParam("toDate") String toDate,
+            @QueryParam("patientId") Long patientId) {
+        requireRemoteUser(request);
+        String facilityId = requireFacilityId(request);
+        ReportingResult pdf = exportService.exportChartPeriodPdf(facilityId, fromDate, toDate, patientId);
+        return Response.ok(pdf.getData(), "application/pdf")
+                .header("Content-Disposition", "attachment; filename=\"" + pdf.getFileName() + "\"")
+                .build();
+    }
+
+    @GET
     @Path("/{chartId}/revisions/export")
     @Transactional
     public ChartRevisionExportResponse exportChart(
