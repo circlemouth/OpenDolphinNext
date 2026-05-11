@@ -1143,6 +1143,12 @@ export function PrescriptionOrderEditorPanel({
       started: startedDates.length > 0 ? Array.from(new Set(startedDates)).join(' / ') : '—',
     };
   }, [meta.encounterId, meta.visitDate, order.encounterDate, order.encounterId, order.performDate, order.rps, today]);
+  const finalizeBlockReason = useMemo(() => {
+    if (isPreviewMode) return 'プレビューモードでは処方確定できません。通常入力画面で確定してください。';
+    if (finalizeMutation.isPending) return '処方確定を実行中です。完了するまで再実行できません。';
+    if (mutation.isPending) return '保存処理中です。保存完了後に処方確定できます。';
+    return null;
+  }, [finalizeMutation.isPending, isPreviewMode, mutation.isPending]);
 
   const submit = (action: SaveAction) => {
     if (isPreviewMode) {
@@ -2160,6 +2166,7 @@ export function PrescriptionOrderEditorPanel({
             type="button"
             className="charts-side-panel__action charts-side-panel__action--finalize"
             onClick={beginFinalize}
+            aria-describedby={finalizeBlockReason ? domId('finalize-block-reason') : undefined}
             disabled={mutation.isPending || finalizeMutation.isPending || isPreviewMode}
           >
             処方確定
@@ -2170,6 +2177,11 @@ export function PrescriptionOrderEditorPanel({
             </button>
           ) : null}
         </div>
+        {finalizeBlockReason ? (
+          <p id={domId('finalize-block-reason')} className="charts-side-panel__block-reason" role="status">
+            {finalizeBlockReason}
+          </p>
+        ) : null}
       </footer>
     </section>
   );

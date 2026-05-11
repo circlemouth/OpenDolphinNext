@@ -31,7 +31,7 @@ Checklist count when parallel board was created:
 | B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C01 prescription authority, medical candidate send-prep, disease handoff gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D01 live ORCA Trial execution, adapter contract, retry/idempotency evidence | Active | 20260511T063714Z | `1218aa1ef` base | - |
-| E | `codex/orca-ehr-r2-worker-e-safety-ui` | R2-E01 medical safety UI, DADS/a11y, patient header/modal rollout | Active | 20260511T142143Z | this commit | - |
+| E | `codex/orca-ehr-r2-worker-e-safety-ui` | R2-E01 medical safety UI, DADS/a11y, patient header/modal rollout | Active | 20260511T144209Z | this commit | - |
 | F | `codex/orca-ehr-r2-worker-f-security-gates` | R2-F01 audit/security authorization matrix and release gate hardening | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | G | `master` | G-04 monitor round 2 heartbeat output and integrate merge-ready branches | Active | 20260511T063714Z | `1218aa1ef` | - |
 
@@ -160,6 +160,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T144209Z | E | E-04 follow-on | 11/20 Phase 4 prescription finalize disabled reason/a11y | this commit | targeted `prescriptionOrderEditorPanel.local-only.test.tsx`, explicit `verify:web-guard`, `typecheck`, and `git diff --check` passed | Done | Continue critical-operation confirmation coverage for prescription stop/cancel or remaining chart finalize flows |
 | 20260511T142143Z | E | E-03 follow-on | 11/20 Phase 4 prescription finalize critical confirmation modal | this commit | targeted `prescriptionOrderEditorPanel.local-only.test.tsx` / `prescriptionOrderApi.test.ts`, explicit `verify:web-guard`, `typecheck`, and `git diff --check` passed | Done | Continue critical-operation confirmation coverage for prescription stop/cancel or remaining chart finalize flows |
 | 20260511T135653Z | E | E-03 follow-on | 11/20 Phase 4 chart cancel critical confirmation modal | this commit | targeted `chartsActionBar.test.tsx`, explicit `verify:web-guard`, `typecheck`, and `git diff --check` passed | Done | Continue critical-operation confirmation coverage for prescription finalize/stop/cancel or remaining chart finalize flows |
 | 20260511T133244Z | E | E-03 follow-on | 11/20 Phase 4 chart revision critical confirmation modal | this commit | targeted `RevisionHistoryDrawer.test.tsx`, explicit `verify:web-guard`, `typecheck`, and `git diff --check` passed | Done | Continue critical-operation confirmation coverage for prescription finalize/stop/cancel or chart cancel flows |

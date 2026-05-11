@@ -4,6 +4,7 @@ import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ComponentProps } from 'react';
 
 import { PrescriptionOrderEditorPanel } from '../PrescriptionOrderEditorPanel';
 import { fetchOrcaGenericPrice } from '../orcaGenericPriceApi';
@@ -66,7 +67,10 @@ const createClient = () =>
     },
   });
 
-const renderPanel = (bundlesOverride: any[] = []) =>
+const renderPanel = (
+  bundlesOverride: any[] = [],
+  props: Partial<ComponentProps<typeof PrescriptionOrderEditorPanel>> = {},
+) =>
   render(
     <QueryClientProvider client={createClient()}>
       <PrescriptionOrderEditorPanel
@@ -75,6 +79,7 @@ const renderPanel = (bundlesOverride: any[] = []) =>
         active
         variant="utility"
         bundlesOverride={bundlesOverride}
+        {...props}
       />
     </QueryClientProvider>,
   );
@@ -85,6 +90,22 @@ afterEach(() => {
 });
 
 describe('PrescriptionOrderEditorPanel local-only usage contract', () => {
+  it('処方確定が native disabled の場合は近傍理由と aria-describedby を持つ', () => {
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+
+    renderPanel([], { readOnlyPreview: true });
+
+    const finalizeButton = screen.getByRole('button', { name: '処方確定' });
+    expect(finalizeButton).toBeDisabled();
+    expect(finalizeButton).toHaveAccessibleDescription(
+      'プレビューモードでは処方確定できません。通常入力画面で確定してください。',
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'プレビューモードでは処方確定できません。通常入力画面で確定してください。',
+    );
+    expect(finalizePrescriptionAuthority).not.toHaveBeenCalled();
+  });
+
   it('処方確定は共通重大操作確認で患者と処方サマリを再掲してから authority API を呼ぶ', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });

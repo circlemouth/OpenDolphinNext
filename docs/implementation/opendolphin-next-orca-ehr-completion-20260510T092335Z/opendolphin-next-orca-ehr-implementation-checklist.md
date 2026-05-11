@@ -272,6 +272,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T03:02Z: `PastHubPanel` の SOAP Do転記入口は転記可能 SOAP なし / セクション記載なしで native disabled を維持しつつ、近傍理由 `past-hub-do-copy-*` と `aria-describedby` で不足条件を表示することを focused test で固定した。
   - [x] 2026-05-11T03:22Z: `PatientSummaryPanel` の保存ボタンは read-only / 保存中 / 変更なしで native disabled を維持しつつ、近傍理由 `charts-patient-summary-save-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
   - [x] 2026-05-11T03:43Z: `SoapNotePanel` の保存ボタンは read-only / 履歴表示 / 保存中で native disabled を維持しつつ、近傍理由 `soap-note-save-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
+  - [x] 2026-05-11T14:42Z: `PrescriptionOrderEditorPanel` の `処方確定` は preview / 保存中 / 確定中で native disabled を維持しつつ、近傍理由 `finalize-block-reason` と `aria-describedby` で理由と有効化条件を表示することを focused test で固定した。
 - [ ] ボタン優先度、配置、44px以上の押下領域を DADS に沿って統一する。
   - [x] 2026-05-11T13:09Z: 共通 `CriticalOperationConfirmDialog` の cancel / confirm button を secondary / primary class contract に分け、DADS の 44px 以上の touch target を CSS と focused test で固定した。これは誤操作低減の UI 補助であり、操作権限・永続化・監査 enforcement は server-side / owning workflow に残す。
 

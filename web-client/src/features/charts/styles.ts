@@ -2375,6 +2375,13 @@ export const chartsStyles = css`
     color: #0f172a;
   }
 
+  .charts-side-panel__block-reason {
+    margin: var(--charts-space-xs) 0 0;
+    color: #475569;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
   .charts-side-panel__confirm-list {
     margin: var(--charts-space-xs) 0 0;
     padding-left: 1.25rem;
