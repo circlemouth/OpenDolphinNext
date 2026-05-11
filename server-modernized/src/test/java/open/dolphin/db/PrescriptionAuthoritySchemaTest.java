@@ -106,6 +106,35 @@ class PrescriptionAuthoritySchemaTest {
                          WHERE prescription_order_id = %d
                         """.formatted(orderId)));
                 assertTrue(eventRewrite.getMessage().contains("prescription_order_event_append_only"));
+
+                statement.execute("SELECT set_config('opendolphin.prescription_authority_mutation', 'event', false)");
+                long changedRevisionId = nextId(statement, """
+                        INSERT INTO opendolphin.prescription_order_revision
+                            (prescription_order_id, revision_number, status, reason_text, content_hash, finalized_by, finalized_at, created_by)
+                        VALUES
+                            (%d, 2, 'CHANGED', 'required clinical reason', repeat('b', 64), 'doctor-1', CURRENT_TIMESTAMP, 'doctor-1')
+                        RETURNING prescription_order_revision_id
+                        """.formatted(orderId));
+                statement.executeUpdate("""
+                        INSERT INTO opendolphin.prescription_order_item
+                            (prescription_order_revision_id, item_sequence, drug_code, drug_name, usage_code,
+                             usage_name, dose_value, dose_unit, days, prescription_location, medication_route,
+                             generic_name_prescription, doctor_comment)
+                        VALUES
+                            (%d, 1, '620000002', 'Changed Structured Drug', '002', 'Before sleep', '1', 'tablet', 7,
+                             'OUTSIDE', 'ORAL', false, 'server authority transition item')
+                        """.formatted(changedRevisionId));
+                statement.executeUpdate("""
+                        UPDATE opendolphin.prescription_order
+                           SET status = 'CHANGED', current_revision_id = %d
+                         WHERE prescription_order_id = %d
+                        """.formatted(changedRevisionId, orderId));
+                statement.executeUpdate("""
+                        INSERT INTO opendolphin.prescription_order_event
+                            (prescription_order_id, prescription_order_revision_id, event_type, reason_text, actor_user_id)
+                        VALUES
+                            (%d, %d, 'CHANGE', 'required clinical reason', 'doctor-1')
+                        """.formatted(orderId, changedRevisionId));
             }
         }
     }

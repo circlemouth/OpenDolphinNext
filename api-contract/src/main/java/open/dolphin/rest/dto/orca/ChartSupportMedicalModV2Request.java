@@ -139,6 +139,9 @@ public class ChartSupportMedicalModV2Request {
         private String medicalClass;
         private String medicalClassName;
         private String medicalClassNumber;
+        private Integer rpSequence;
+        private String usageCode;
+        private String usageName;
         private List<Medication> medications = new ArrayList<>();
 
         public String getEntity() {
@@ -173,6 +176,30 @@ public class ChartSupportMedicalModV2Request {
             this.medicalClassNumber = medicalClassNumber;
         }
 
+        public Integer getRpSequence() {
+            return rpSequence;
+        }
+
+        public void setRpSequence(Integer rpSequence) {
+            this.rpSequence = rpSequence;
+        }
+
+        public String getUsageCode() {
+            return usageCode;
+        }
+
+        public void setUsageCode(String usageCode) {
+            this.usageCode = usageCode;
+        }
+
+        public String getUsageName() {
+            return usageName;
+        }
+
+        public void setUsageName(String usageName) {
+            this.usageName = usageName;
+        }
+
         public List<Medication> getMedications() {
             return medications;
         }
@@ -181,16 +208,26 @@ public class ChartSupportMedicalModV2Request {
             this.medications = medications;
         }
 
+        @JsonIgnore
         public boolean isPhysiologyOrder() {
             return "physiologyOrder".equals(entity != null ? entity.trim() : null);
         }
     }
 
     public static class Medication {
+        private Integer itemSequence;
         private String code;
         private String name;
         private String number;
         private String genericFlg;
+
+        public Integer getItemSequence() {
+            return itemSequence;
+        }
+
+        public void setItemSequence(Integer itemSequence) {
+            this.itemSequence = itemSequence;
+        }
 
         public String getCode() {
             return code;

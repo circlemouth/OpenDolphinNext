@@ -51,6 +51,8 @@ export type PrescriptionDrug = PrescriptionLowerFields & PrescriptionNumberField
   name: string;
   quantity: string;
   unit: string;
+  standardName?: string;
+  dosageForm?: string;
   genericChangeAllowed: boolean;
   isGeneralNamePrescription: boolean;
   drugComment: string;
@@ -140,6 +142,8 @@ type StoredDrugMeta = {
   genericChangeAllowed?: boolean;
   isGeneralNamePrescription?: boolean;
   patientRequest?: boolean;
+  standardName?: string;
+  dosageForm?: string;
   numberFields?: PrescriptionNumberFields;
   lowerFields?: PrescriptionLowerFields;
 };
@@ -157,6 +161,8 @@ type ServerPrescriptionDrug = {
   name?: string;
   quantity?: string;
   unit?: string;
+  standardName?: string;
+  dosageForm?: string;
   memo?: string;
   genericChangeAllowed?: boolean;
   generalNamePrescription?: boolean;
@@ -177,6 +183,9 @@ type ServerPrescriptionRp = {
   bundleName?: string;
   medicalClass?: string;
   medicalClassNumber?: string;
+  days?: number;
+  prescriptionLocation?: 'IN_HOUSE' | 'OUTSIDE';
+  medicationRoute?: 'ORAL' | 'TOPICAL' | 'INJECTION' | 'AS_NEEDED' | 'OTHER';
   usageCode?: string;
   usageName?: string;
   memo?: string;
@@ -519,6 +528,8 @@ const toDrugFromItem = (item: OrderBundleItem): PrescriptionDrug => {
     name: item.name?.trim() || '',
     quantity: item.quantity?.trim() || '',
     unit: item.unit?.trim() || '',
+    standardName: drugMeta?.standardName?.trim() || undefined,
+    dosageForm: drugMeta?.dosageForm?.trim() || undefined,
     ...(drugMeta?.numberFields ?? {}),
     genericChangeAllowed: drugMeta?.genericChangeAllowed ?? true,
     isGeneralNamePrescription: drugMeta?.isGeneralNamePrescription ?? parsed.genericFlg === 'yes',
@@ -767,6 +778,8 @@ const normalizeDrugMeta = (drug: PrescriptionDrug): StoredDrugMeta => {
     genericChangeAllowed: drug.genericChangeAllowed,
     isGeneralNamePrescription: drug.isGeneralNamePrescription,
     patientRequest: drug.patientRequest,
+    standardName: drug.standardName?.trim() || undefined,
+    dosageForm: drug.dosageForm?.trim() || undefined,
     numberFields: normalizeNumberFields(drug),
     claimComments: normalizeClaimComments(drug.claimComments).map((comment) => ({
       code: comment.code,
@@ -807,6 +820,8 @@ const toServerDrug = (drug: PrescriptionDrug): ServerPrescriptionDrug => ({
   name: drug.name.trim() || undefined,
   quantity: drug.quantity.trim() || undefined,
   unit: drug.unit.trim() || undefined,
+  standardName: drug.standardName?.trim() || undefined,
+  dosageForm: drug.dosageForm?.trim() || undefined,
   memo: undefined,
   genericChangeAllowed: drug.genericChangeAllowed,
   generalNamePrescription: drug.isGeneralNamePrescription,
@@ -971,6 +986,9 @@ const toServerPrescriptionOrder = (order: PrescriptionOrder): ServerPrescription
     bundleName: rp.name.trim() || undefined,
     medicalClass: resolvePrescriptionClassCode(rp.category, rp.location),
     medicalClassNumber: rp.daysOrTimes.trim() || undefined,
+    days: /^\d{1,4}$/.test(rp.daysOrTimes.trim()) ? Number(rp.daysOrTimes.trim()) : undefined,
+    prescriptionLocation: rp.location === 'in' ? 'IN_HOUSE' : 'OUTSIDE',
+    medicationRoute: rp.category === 'tonyo' ? 'AS_NEEDED' : rp.category === 'gaiyo' ? 'TOPICAL' : 'ORAL',
     usageCode: rp.usageCode?.trim() || undefined,
     usageName: rp.usage.trim() || undefined,
     memo: undefined,
@@ -1015,6 +1033,8 @@ const fromServerDrug = (drug: ServerPrescriptionDrug): PrescriptionDrug => ({
   name: drug.name?.trim() || '',
   quantity: drug.quantity?.trim() || '',
   unit: drug.unit?.trim() || '',
+  standardName: drug.standardName?.trim() || undefined,
+  dosageForm: drug.dosageForm?.trim() || undefined,
   numberCode: drug.numberCode?.trim() || undefined,
   numberCodeSystem: drug.numberCodeSystem?.trim() || undefined,
   numberCodeName: drug.numberCodeName?.trim() || undefined,

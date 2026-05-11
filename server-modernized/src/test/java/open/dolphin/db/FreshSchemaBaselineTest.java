@@ -91,7 +91,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0327", appliedVersion(connection));
+                assertEquals("0329", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -143,6 +143,7 @@ class FreshSchemaBaselineTest {
                 assertTrue(tableExists(connection, "opendolphin", "orca_reconciliation_result"));
                 assertTrue(tableExists(connection, "opendolphin", "orca_billing_cache"));
                 assertTrue(tableExists(connection, "opendolphin", "orca_report_snapshot"));
+                assertTrue(tableExists(connection, "opendolphin", "orca_medical_candidate"));
                 assertFalse(tableExists(connection, "opendolphin", "d_module_payload"));
                 assertTrue(tableExists(connection, "opendolphin", "runtime_state_store"));
                 assertFalse(tableExists(connection, "opendolphin", "phr_async_job"));
@@ -203,6 +204,7 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "drug_code"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "usage_code"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "generic_name_prescription"));
+                assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "created_by"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_event", "event_type"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_orca_transmission", "operation_status"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_operation", "idempotency_key"));
@@ -226,6 +228,9 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "storage_upload_status"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "storage_uploaded_at"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "storage_retention_until"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_medical_candidate", "candidate_status"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_medical_candidate", "sendable"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_medical_candidate", "candidate_json"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_bucket"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_key"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_version_id"));
@@ -270,6 +275,7 @@ class FreshSchemaBaselineTest {
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_billing_cache_patient"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_report_snapshot_patient"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_report_snapshot_storage_upload"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_orca_medical_candidate_chart_revision"));
                 assertTrue(indexExists(connection, "opendolphin", "uq_d_orca_user_link_facility_orca_user"));
 
                 assertEquals(1L, countRows(connection, "select count(*) from opendolphin.audit_chain_head"));

@@ -12,6 +12,7 @@ export type OutpatientEncounterContext = {
   insuranceCombinationNumber?: string;
   voucherNumber?: string;
   sequentialNumber?: string;
+  chartRevisionId?: string;
 };
 
 export type ChartsNavigationMeta = {
@@ -48,6 +49,7 @@ const cloneContext = (context: OutpatientEncounterContext): OutpatientEncounterC
   insuranceCombinationNumber: context.insuranceCombinationNumber,
   voucherNumber: context.voucherNumber,
   sequentialNumber: context.sequentialNumber,
+  chartRevisionId: context.chartRevisionId,
 });
 
 const resolveScopeKey = (scope?: StorageScope) => toScopeSuffix(scope) ?? GLOBAL_SCOPE_KEY;
@@ -96,6 +98,7 @@ export const normalizeEncounterContext = (context?: OutpatientEncounterContext |
     insuranceCombinationNumber: normalizeEncounterId(context.insuranceCombinationNumber),
     voucherNumber: normalizeEncounterId(context.voucherNumber),
     sequentialNumber: normalizeEncounterId(context.sequentialNumber),
+    chartRevisionId: normalizeEncounterId(context.chartRevisionId),
   };
   const scheduleKey = normalizeEncounterId(context.scheduleKey);
   const encounterKey = normalizeEncounterId(context.encounterKey);

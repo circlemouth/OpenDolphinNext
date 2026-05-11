@@ -101,7 +101,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 確定済み文書の訂正・追記・取消は新 revision/event として扱い、原文を物理削除しない。
 - [x] `prescription_order`, `prescription_order_revision`, `prescription_order_event`, `prescription_order_item`, `prescription_orca_transmission` を作成または再設計する。
 - [x] 処方状態は `DRAFT`, `FINAL`, `CHANGED`, `STOPPED`, `CANCELLED`, `REISSUED` に限定する。
-- [ ] 確定済み処方を直接上書き不可にし、変更・中止・取消・再発行はイベントとして保存する。
+- [x] 確定済み処方を直接上書き不可にし、変更・中止・取消・再発行はイベントとして保存する。
 - [x] `orca_operation`, `orca_transmission`, `orca_response_summary`, `orca_reconciliation_result` を作成する。
   - [x] 2026-05-10T21:15Z: 共通 ORCA operation ledger migration を追加し、status / retry / idempotency / request-response hash / sanitized response summary / reconciliation result を raw body・credential なしで永続化する schema test を固定した。
 - [x] ORCA operation status は `PREPARED`, `READY_TO_SEND`, `SENDING`, `ORCA_ACCEPTED`, `ORCA_REJECTED`, `ORCA_WARNING`, `ORCA_UNMATCHED`, `ORCA_CONFLICT`, `NETWORK_FAILED`, `CERTIFICATE_FAILED`, `AUTH_FAILED`, `UNKNOWN`, `NEEDS_REVIEW`, `CANCELLED` に限定する。
@@ -178,13 +178,13 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 ## 8. 処方指示正本実装
 
-- [ ] `POST /api/prescriptions` を実装し、診療録リビジョンに紐付く `DRAFT` 処方指示を作成する。
-- [ ] 薬剤コード、薬剤名、規格、剤形、用法、用量、単位、日数、院内/院外、内服/外用/注射/頓用、一般名処方フラグ、医師コメント、入力者、作成日時を保存する。
-- [ ] `POST /api/prescriptions/{prescriptionId}/finalize` を実装し、確定者、確定日時、処方内容 hash を保存する。
-- [ ] 確定済み処方の直接更新を禁止し、処方確定は診療録確定とは別操作にする。
-- [ ] `change`, `stop`, `cancel`, `reissue` をイベントとして実装し、理由と変更前後内容を保存する。
-- [ ] `POST /api/local/orca/medical-candidates/from-chart/{chartRevisionId}` を local candidate route として実装し、診療録・処方指示から ORCA送信候補を作る。
-- [ ] 送信候補作成時に変換不能項目や ORCAコード未解決項目を `NEEDS_REVIEW` / 送信不可にする。
+- [x] `POST /api/prescriptions` を実装し、診療録リビジョンに紐付く `DRAFT` 処方指示を作成する。
+- [x] 薬剤コード、薬剤名、規格、剤形、用法、用量、単位、日数、院内/院外、内服/外用/注射/頓用、一般名処方フラグ、医師コメント、入力者、作成日時を保存する。
+- [x] `POST /api/prescriptions/{prescriptionId}/finalize` を実装し、確定者、確定日時、処方内容 hash を保存する。
+- [x] 確定済み処方の直接更新を禁止し、処方確定は診療録確定とは別操作にする。
+- [x] `change`, `stop`, `cancel`, `reissue` をイベントとして実装し、理由と変更前後内容を保存する。
+- [x] `POST /api/local/orca/medical-candidates/from-chart/{chartRevisionId}` を local candidate route として実装し、診療録・処方指示から ORCA送信候補を作る。
+- [x] 送信候補作成時に変換不能項目や ORCAコード未解決項目を `NEEDS_REVIEW` / 送信不可にする。
 - [ ] `POST /api/local/orca/medical-operations/prepare` と official `POST /api/orca/official/chart-support/medical-mod-v2` を組み合わせ、prepare/send の分離と `medicalmodv2` 相当の送信を実装する。
 - [ ] 送信前確認に患者、受付、診療科、医師、保険組合せ、候補を表示し、送信後に ORCA側結果を再取得・差分照合する。
 
@@ -204,7 +204,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 ## 10. 診療行為・会計・収納・レセプト
 
-- [ ] 診療録・処方指示から `orca_medical_candidate` を作成し、ORCA正本ではないことを明示する。
+- [x] 診療録・処方指示から `orca_medical_candidate` を作成し、ORCA正本ではないことを明示する。
 - [ ] `medicalmodv2` 相当の送信では患者番号、診療日、診療科、医師コード、保険組合せ、ORCA受付存在、患者/保険情報 freshness、会計済み衝突を検証する。
 - [ ] ORCAレスポンスを構造化保存し、送信後に ORCA側診療行為情報を再取得して差分表示する。
   - [x] 2026-05-10T21:59Z: `close-and-send-to-billing` は `medicalmodv2` response を sanitized `response_json` として保存し、送信直後に `tmedicalgetv2` で ORCA側中途終了データを再取得・照合する。UI 差分表示の完成は後続 D/E queue で継続。

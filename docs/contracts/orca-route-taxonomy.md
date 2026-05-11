@@ -111,6 +111,8 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/local/diagnoses/{patientId}?baseMonth=yyyyMM`
 - `/api/local/order/bundles`
 - `/api/local/order/recommendations`
+- `/api/local/orca/medical-candidates/from-chart/{chartRevisionId}`
+- `/api/local/orca/medical-candidates/from-chart/{chartRevisionId}/latest`
 - `/api/local/prescription-orders`
 - `/api/local/prescription-orders/do-import`
 
@@ -127,6 +129,10 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 `/api/local/encounters/{encounterKey}/close-and-send-to-billing` は通常外来の初回 ORCA 会計送信用 local workflow です。facility は認証済み request context と `encounter_projection` だけを authority とし、client 提供の patient / facility / acceptance / department / physician / insurance / voucher / sequential / `Medical_Uid` / classCode / URL / raw XML を受け取りません。`encounter_projection` に server-derived ORCA受付 ID と受付日時がない場合は `orca_acceptance_missing` で fail closed にし、患者・カルテ・ORCA transport lookup へ進みません。`worklist_flags_json.officialVisitIdentifiers.voucherNumber` が `encounter_projection.orca_acceptance_id` と不一致の場合も ORCA transport 前に fail closed にします。既存の同一 idempotency transmission は保存済み結果として返しますが、新規 idempotency の送信は会計送信済み/閉鎖相当の `business_state` では `encounter_billing_send_blocked` として止めます。
 
 `/api/local/encounters/orca-transmissions/review` と `/api/local/encounters/orca-transmissions/{transmissionId}/reconcile-temporary-medical` は close-and-send billing recovery 用の local workflow です。facility は認証済み request context だけを authority とし、client 提供の patient / facility / insurance / voucher / sequential / `Medical_Uid` / URL / raw XML を受け取りません。`reconcile-temporary-medical` は request body を受け付けず、未サニタイズまたは client-trusted snapshot を authority にしません。保存済み snapshot の診療日/診療科と保存済み record の患者番号から ORCA `tmedicalgetv2` を read-only で照合します。parse 不能または `Api_Result` 欠落 response は `apiResult=unknown` と sanitized message に正規化し、raw body や parser 詳細を返しません。ORCA `Api_Result` が `"00"` でない場合は response row を一致候補、`Medical_Uid` presence、resend block 判定に使いません。ORCA response row に診療日がある場合は snapshot 診療日と一致する row だけを候補にします。snapshot の診療日または診療科が欠落している場合は ORCA transport 前に fail closed とし、成功表示や自動再送ではなく `needsUserReview=true` の sanitized summary だけを返します。
+
+`/api/local/orca/medical-candidates/from-chart/{chartRevisionId}` は chart revision に紐付く処方正本から ORCA 診療行為送信候補を作る local prepare route です。candidate は `orca_medical_candidate` に `source_system=LOCAL_PRESCRIPTION` として保存され、ORCA 正本ではありません。facility は認証済み request context、patient / encounter / prescription revision は DB 上の処方正本から解決します。client 提供の patient / facility / insurance / voucher / sequential / URL / raw XML / digest は受け取りません。薬剤コード・用法コード・medical class が未解決の項目は `NEEDS_REVIEW` かつ `sendable=false` として返し、live `medicalmodv2` 送信は行いません。
+
+`/api/local/orca/medical-candidates/from-chart/{chartRevisionId}/latest` は同じ facility / chart revision の最新 local prescription candidate を再確認用に返します。新規 candidate 作成や live `medicalmodv2` 送信は行わず、保存済みの sanitized candidate snapshot と issue summary からレスポンスを再構成します。facility は認証済み request context だけを authority とし、client 提供の patient / facility / insurance / voucher / sequential / URL / raw XML / digest は受け取りません。保存済み candidate の処方 order id、revision id、content hash、または現在 status が現在の chart revision の送信候補化可能な処方 source と一致しない場合は `prescription_candidate_source_stale` として `NEEDS_REVIEW` / `sendable=false` を返します。
 
 `/api/local/prescription-orders` と `/api/local/prescription-orders/do-import` は local draft prescription payload の保存口ですが、encounter に紐づく mutation では `encounter_projection` を server-side authority として参照します。projection の facility/patient が request context と一致しない場合は `encounter_not_found`、会計待ち・取消・閉鎖相当の business state では `prescription_order_finalized_update_denied` として、payload 永続化前に fail closed します。client 提供の encounter/patient/facility は確定済み処方更新可否の権威にしません。
 

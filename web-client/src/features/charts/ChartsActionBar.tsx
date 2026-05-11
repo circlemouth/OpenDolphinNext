@@ -50,6 +50,7 @@ import {
 } from './orcaEncounterContext';
 import { retryOrcaQueue } from '../outpatient/orcaQueueApi';
 import { ClinicalIcon } from '../shared/ClinicalIcon';
+import { OrcaMedicalCandidatePanel } from './OrcaMedicalCandidatePanel';
 
 type ChartAction = 'start' | 'pause' | 'finish' | 'send' | 'draft' | 'cancel' | 'print';
 
@@ -253,6 +254,7 @@ export interface ChartsActionBarProps {
   onBeforeAction?: (action: ChartAction) => boolean | Promise<boolean>;
   sendConfirmSummary?: SendConfirmSummary;
   showLegacyOrcaSend?: boolean;
+  chartRevisionId?: string;
 }
 
 export type ChartsActionBarHandle = {
@@ -305,6 +307,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   onBeforeAction,
   sendConfirmSummary,
   showLegacyOrcaSend = false,
+  chartRevisionId,
 }: ChartsActionBarProps, ref) {
   const session = useOptionalSession();
   const canRetryOrcaQueue = isSystemAdminRole(session?.role);
@@ -2437,6 +2440,19 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             </ul>
           </div>
         ) : null}
+        <OrcaMedicalCandidatePanel
+          chartRevisionId={chartRevisionId}
+          patientName={selectedEntry?.name}
+          patientId={resolvedPatientId}
+          visitDate={resolvedVisitDate}
+          receptionId={resolvedReceptionId}
+          appointmentId={resolvedAppointmentId}
+          department={selectedEntry?.department ?? resolvedOrcaEncounterContext.departmentCode}
+          physician={selectedEntry?.physician ?? resolvedOrcaEncounterContext.physicianCode}
+          insuranceCombinationNumber={resolvedOrcaEncounterContext.insuranceCombinationNumber}
+          disabled={readOnly || uiLocked}
+          disabledReason={readOnly ? readOnlyReason : resolvedLockReason ?? undefined}
+        />
       </div>
 
       <FocusTrapDialog
