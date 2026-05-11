@@ -67,11 +67,13 @@
 - `snapshot_manifest_json` は chart finalize API が server-side に生成する。現時点では ORCA患者番号、encounter、受付IDまたは受付なし理由、診療科、担当医、保険組合せ、および Worker A/C/D の full snapshot 統合待ち status を保存する。患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token は manifest に保存しない。
 - `content_hash` は chart finalize API が確定時に server-side canonical content と確定 context から計算する。client 提供 digest は採用しない。
 - finalize event summary は hash、encounter、診療科、担当医、保険組合せ、入力者、確定者、代行入力 context、受付 context の有無だけを保存し、患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token を保存しない。
-- `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` は locked revision だけを対象にし、理由と actor を必須にする。訂正・追記は新 revision と event を作成し、元 revision は物理更新しない。取消は取消 event を追加し、元 revision 本文を物理削除しない。
-- chart PDF / CSV / JSON export は、current revision だけでなく `chart_revision_event` の `FINALIZED` / `AMENDED` / `ADDENDUM_ADDED` / `CANCELLED` / `VOIDED`、before/after summary、reason、actor、content hash、snapshot manifest summary を含める。export payload に raw ORCA body、credential、Cookie、Authorization、CSRF token、患者住所・電話などの不要 PHI を含めない。JSON export は sanitized payload から `exportHash` を server-side に計算し、保存後の revision/event 欠落や summary 差し替えを検出できるようにする。CSV export は spreadsheet formula injection を防ぐため、`=`, `+`, `-`, `@`, tab で始まるセル値を neutralize する。
+- `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` は locked revision だけを対象にし、理由と actor を必須にする。訂正・追記は新 revision と event を作成し、元 revision は物理更新しない。取消は取消 event を追加し、元 revision 本文を物理削除しない。event persistence 後は authoritative audit log に `CHART_REVISION_EVENT_RECORDED` を追記し、audit payload は chart/revision/event/hash/status metadata の allowlist に限定する。reason text、raw ORCA body、credential、Cookie、Authorization、患者名、住所、電話、保険詳細は audit payload に入れない。
+- chart PDF / CSV / JSON export は、current revision だけでなく `chart_revision_event` の `FINALIZED` / `AMENDED` / `ADDENDUM_ADDED` / `CANCELLED` / `VOIDED`、before/after summary、reason、actor、content hash、snapshot manifest summary、診療録 revision に紐づく処方指示 event history、ORCA operation/transmission/reconciliation history を含める。snapshot manifest summary は Worker A/C/D が server-side に生成した患者・受付・保険・病名・処方候補・ORCA operation/transmission/reconciliation の reference / hash / status metadata を allowlist で投影できる。export payload に raw ORCA body、credential、Cookie、Authorization、CSRF token、患者住所・電話などの不要 PHI を含めない。JSON export は sanitized payload から `exportHash` を server-side に計算し、保存後の revision/event/snapshot reference/prescription/ORCA history 欠落や summary 差し替えを検出できるようにする。CSV export は spreadsheet formula injection を防ぐため、`=`, `+`, `-`, `@`, tab で始まるセル値を neutralize する。
 - `GET /api/charts/{chartId}/revisions/export` は chart revision JSON export の最小 contract とする。施設 ID は server-side session から解決し、request body / query の owner/facility は採用しない。応答は `exportSchemaVersion`, `exportHashAlgorithm`, `exportHash`, `currentRevisionNumber`, `currentRevisionStatus`, `currentRevisionContentHash`, `revisionCount`, `eventCount`, revision list, event list を返す。summary JSON は allowlist された scalar key のみを投影する。reason/title/context 文字列に Authorization / Cookie / raw XML / SOAP body が混入している場合は redaction して返す。`exportHash` は redaction / allowlist 適用後の canonical export payload から計算し、allowlist 外 key や JSON key order では変化させない。`currentRevisionNumber` / `currentRevisionStatus` / `currentRevisionContentHash` / `revisionCount` / `eventCount` は canonical hash material に含め、current revision の状態誤認、本文 hash 誤認、履歴行欠落の検出を補強する。`chart_document.current_revision_id` がある場合、対応する revision が export revision list に含まれない不整合は fail-closed で拒否する。
-- `GET /api/charts/{chartId}/revisions/export.csv` は同じ施設境界と redaction / allowlist projection を使う CSV export とする。CSV には revision row と event row を含め、PDF/reporting integration が同じ provenance を表示できるよう `recordType`, revision identifiers, event identifiers, reason, actor, hash, summary を固定列で出力する。
-- reporting PDF payload は `chartRevisionEvents` を受け取り、既存 template の summary section に chart revision provenance を表示する。PDF 投影時も summary key allowlist と Authorization / Cookie / raw XML / SOAP body redaction を適用し、API caller が送った任意 nested JSON をそのまま帳票へ出さない。
+- `GET /api/charts/{chartId}/revisions/export.csv` は同じ施設境界と redaction / allowlist projection を使う CSV export とする。CSV には revision row、chart event row、prescription event row、ORCA operation/transmission event row を含め、PDF/reporting integration が同じ provenance を表示できるよう `recordType`, revision identifiers, event identifiers, reason/status, actor, hash, summary を固定列で出力する。
+- `GET /api/charts/{chartId}/revisions/export.pdf` は同じ server-side facility boundary と JSON/CSV export の sanitized projection から reporting payload を生成する直接 PDF export とする。患者名・生年月日・診療日・担当医は `chart_document` と `d_patient` の server-side reference から解決し、患者 master が存在しない、または施設が一致しない場合は fail-closed で拒否する。PDF には `chartRevisionEvents`、`prescriptionEvents`、`orcaEvents` と `exportHash` / record counts を含めるが、client-provided reporting payload、raw ORCA body、credential、Cookie、Authorization、idempotency key、request/response body、allowlist 外 summary key は採用しない。`GET /api/charts/{chartId}/revisions/print.pdf` は同じ PDF payload を inline disposition で返す印刷用 alias であり、別 sanitizer や client-provided reporting payload を持たない。
+- `GET /api/charts/revision-exports?fromDate=yyyy-MM-dd&toDate=yyyy-MM-dd[&patientId=<db-pk>]` と `.csv` / `.pdf` は、患者単位 / 診療日単位 / 期間指定の chart revision export surface とする。`fromDate` / `toDate` は必須、最大 366 日、`fromDate <= toDate` を満たさない場合は 400 で拒否する。検索対象は server-side session facility と `chart_revision.encounter_date` / `chart_document.patient_id` で絞り、各 chart の JSON/CSV/PDF projection は単一 chart export と同じ redaction / allowlist / `exportHash` contract を再利用する。period export hash は日付範囲、patient filter 有無、chart count、各 chart の `chartId` / `currentRevisionId` / `exportHash` から計算し、raw patient detail や client-provided owner/facility は含めない。period PDF は server-derived cover page と各 chart PDF payload を結合し、client-provided reporting payload は採用しない。`GET /api/charts/revision-exports.print.pdf` は同じ期間 PDF payload を inline disposition で返す印刷用 alias であり、同じ期間上限・施設境界・sanitized projection を再利用する。
+- reporting PDF payload は `chartRevisionEvents`、`prescriptionEvents`、`orcaEvents` を受け取り、既存 template の summary section に chart revision / prescription / ORCA provenance を表示する。PDF 投影時も summary key allowlist と Authorization / Cookie / raw XML / SOAP body redaction を適用し、API caller が送った任意 nested JSON をそのまま帳票へ出さない。
 
 ## reasonCode 一覧
 - `integrity_record_missing`
@@ -99,6 +101,7 @@
 - [x] locked chart revision、legacy document title、legacy SOAP / module payload、current revision pointer の直接更新拒否 trigger と regression test を追加する。
 - [x] finalize API skeleton、必須 context validation、server-side `content_hash` 生成、FINALIZED event 記録を追加する。
 - [x] amend/addendum/cancel API skeleton、理由必須 validation、before/after summary、event/new revision 記録を追加する。
+- [x] amend/addendum/cancel revision event を authoritative audit log へ接続し、audit payload を sanitized metadata allowlist に限定する。
 - [x] chart revision JSON export API を追加し、event 履歴、before/after summary、reason、actor、content hash を allowlist/redaction 付きで返す。
 - [x] chart revision CSV export API を追加し、JSON export と同じ event 履歴を spreadsheet formula injection 対策付きで返す。
 - [x] reporting PDF payload に chart revision event provenance を追加し、summary section へ allowlist/redaction 付きで表示する。
@@ -113,6 +116,10 @@
 - [x] chart revision JSON export に server-derived `currentRevisionStatus` を追加し、hash material に含める。
 - [x] chart revision JSON export に server-derived `currentRevisionNumber` を追加し、hash material に含める。
 - [x] chart revision JSON export に server-derived `currentRevisionContentHash` を追加し、hash material に含める。
+- [x] chart revision JSON/CSV export の snapshot manifest allowlist に患者・受付・保険・病名・処方候補・ORCA operation/transmission/reconciliation の sanitized reference / hash / status metadata を追加し、canonical `exportHash` material に含める。
+- [x] chart revision JSON/CSV export に診療録 revision に紐づく処方指示 event history を追加し、reason/summary を redaction / allowlist 投影して canonical `exportHash` material に含める。
+- [x] chart revision JSON/CSV export に診療録 revision に紐づく ORCA operation/transmission/reconciliation history を追加し、ledger の status/hash/attempt/review metadata と allowlist 済み response summary だけを canonical `exportHash` material に含める。
+- [x] reporting PDF payload に処方指示 event history と ORCA operation/transmission/reconciliation history の provenance slot を追加し、summary section へ allowlist/redaction 付きで表示する。
 
 ## 受け入れ条件
 - [x] active key を変更しても旧文書が verify できる。
@@ -124,6 +131,7 @@
 - [x] finalize API は client role claim を信用せず、保存済み `entered_by_user_id` と `finalized_by_user_id` が不一致の場合だけ `entry_mode=DELEGATED` を保存する。
 - [x] snapshot manifest は client body を採用せず、finalize API の server-side validated context から生成され、export では allowlist projection だけを返す。
 - [x] amend/addendum/cancel API は理由欠落、chart/revision 不一致、DRAFT 対象を拒否し、元 revision を物理更新せず event を記録する。
+- [x] amend/addendum/cancel API は event 記録後に authoritative audit event を追記し、reason text や raw ORCA / credential / PHI を audit payload に保存しない。
 - [x] `chart_revision_event` は UPDATE / DELETE が `chart_revision_event_append_only` で拒否される。
 - [x] JSON export は revision/event/snapshot summary の sanitized payload から SHA-256 `exportHash` を返し、payload 変更で hash が変わる。
 - [x] `exportHash` は redaction/allowlist 後の canonical projection を使い、raw secret 差分や excluded key 差分では変化しない。
@@ -133,3 +141,7 @@
 - [x] JSON export は `currentRevisionStatus` を返し、canonical hash material に含める。
 - [x] JSON export は `currentRevisionNumber` を返し、canonical hash material に含める。
 - [x] JSON export は `currentRevisionContentHash` を返し、canonical hash material に含める。
+- [x] JSON/CSV export は snapshot manifest 内の A/C/D 統合 reference / hash / status metadata を allowlist 投影し、raw ORCA body、credential、患者名、保険詳細などの allowlist 外 key を返さない。allowlist 済み reference や content hash が変われば `exportHash` も変わる。
+- [x] JSON/CSV export は処方指示 event history を施設境界と chart revision linkage で読み取り、raw ORCA body、credential、患者名、保険詳細などの allowlist 外 key を返さない。処方 event / content hash / allowlist 済み summary が変われば `exportHash` も変わる。
+- [x] JSON/CSV export は ORCA operation/transmission/reconciliation history を施設境界と chart revision linkage で読み取り、idempotency key、raw ORCA body、credential、患者詳細、request/response body などの allowlist 外 key を返さない。ORCA status / request-response hash / latest transmission / reconciliation status / allowlist 済み summary が変われば `exportHash` も変わる。
+- [x] reporting PDF payload は処方/ORCA history summary の allowlist key だけを表示し、raw ORCA body、credential、患者名、保険詳細、idempotency key、request/response body、任意 nested JSON を帳票へ出さない。

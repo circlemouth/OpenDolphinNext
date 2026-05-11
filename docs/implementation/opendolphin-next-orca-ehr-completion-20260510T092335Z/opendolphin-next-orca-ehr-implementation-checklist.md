@@ -169,9 +169,10 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] server-side canonical content/context から `content_hash` を生成し、FINALIZED event と `chart_revision` に記録する。患者・受付・保険・病名・処方候補・算定候補の full snapshot は B-04 / Worker C-D 連携後に継続する。
   - [x] `snapshot_manifest_json` skeleton を server-side validated context から生成し、ORCA患者番号、encounter、受付IDまたは受付なし理由、診療科、担当医、保険組合せ、後続 snapshot 統合待ち status を hash/export に含める。full snapshot entity 連携は Worker A/C/D 統合後に継続する。
 - [x] `entered_by` と `finalized_by` を分離し、代行入力時は `entry_mode=DELEGATED` を保存する。
-- [ ] `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` を実装し、理由必須、変更前後要約、監査ログを保存する。
-  - [x] amend/addendum/cancel API skeleton は locked revision のみを対象にし、理由・actor を必須化し、訂正/追記は新 revision と event、取消は event として元 revision を物理更新しない。authoritative audit log 連携は Worker F の audit chain と合わせて継続する。
-  - [x] `chart_revision_event` は DB trigger で UPDATE / DELETE を拒否し、理由・変更前後要約・event hash の後書き改ざんを防止する。authoritative audit log 連携は Worker F の audit chain と合わせて継続する。
+- [x] `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` を実装し、理由必須、変更前後要約、監査ログを保存する。
+  - [x] amend/addendum/cancel API skeleton は locked revision のみを対象にし、理由・actor を必須化し、訂正/追記は新 revision と event、取消は event として元 revision を物理更新しない。
+  - [x] `chart_revision_event` は DB trigger で UPDATE / DELETE を拒否し、理由・変更前後要約・event hash の後書き改ざんを防止する。
+  - [x] 2026-05-11T13:26Z: amend/addendum/cancel は event persistence 後に authoritative audit log へ `CHART_REVISION_EVENT_RECORDED` を追記し、監査 payload は chart/revision/event/hash/status metadata の allowlist に限定する。reason text、raw ORCA body、credential、Cookie、Authorization、患者名、住所、電話、保険詳細は保存しない。
 - [ ] PDF/CSV/JSON エクスポートは訂正・追記・取消履歴、処方指示履歴、ORCA連携履歴、診療時点スナップショットを含める。
   - [x] chart export contract に chart revision events、before/after summary、reason、actor、content hash を含めることを追加した。reporting 実装は B-04 継続。
   - [x] `GET /api/charts/{chartId}/revisions/export` を追加し、施設境界で chart revision JSON export に revision/event 履歴、reason、actor、content hash、allowlist 済み summary を含める。PDF/CSV、処方指示履歴、ORCA連携履歴の統合は Worker C-D / reporting 連携後に継続する。
@@ -186,6 +187,14 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] chart revision JSON export は server-derived `currentRevisionStatus` を返し、canonical `exportHash` material に含める。
   - [x] chart revision JSON export は server-derived `currentRevisionNumber` を返し、canonical `exportHash` material に含める。
   - [x] chart revision JSON export は server-derived `currentRevisionContentHash` を返し、canonical `exportHash` material に含める。
+  - [x] chart revision JSON/CSV export は snapshot manifest 内の A/C/D 統合 reference / hash / status metadata を allowlist 投影し、患者名・raw ORCA body・credential・保険詳細などの allowlist 外 key を返さず、canonical `exportHash` material に含める。
+  - [x] chart revision JSON/CSV export は診療録 revision に紐づく処方指示 event history を redaction / summary allowlist 付きで含め、処方 event / content hash / allowlist 済み summary を canonical `exportHash` material に含める。
+  - [x] chart revision JSON/CSV export は診療録 revision に紐づく ORCA operation/transmission/reconciliation history を施設境界で読み取り、status、request/response hash、latest transmission、attempt、review flag、allowlist 済み summary だけを canonical `exportHash` material に含める。idempotency key、raw ORCA body、credential、患者詳細、request/response body は返さない。
+  - [x] reporting PDF payload は処方指示 event history と ORCA operation/transmission/reconciliation history を summary section に allowlist/redaction 付きで表示できる。raw ORCA body、credential、患者名、保険詳細、idempotency key、request/response body、任意 nested JSON は帳票へ出さない。
+  - [x] `GET /api/charts/{chartId}/revisions/export.pdf` を追加し、server-derived JSON export projection と患者 master reference から reporting payload を組み立て、診療録 revision / 処方指示 / ORCA operation-transmission-reconciliation history、`exportHash`、件数を PDF summary に含める。client-provided reporting payload は採用せず、患者 master 欠落・施設不一致は 409 fail-closed とする。
+  - [x] `GET /api/charts/revision-exports` / `.csv` を追加し、server-side facility、診療日範囲、任意 patient DB reference で患者単位・診療日単位・期間指定の export を返す。各 chart は既存 JSON/CSV export と同じ sanitized projection / `exportHash` を再利用し、期間は最大 366 日、raw patient detail / raw ORCA body / credential は返さない。
+  - [x] 2026-05-11T13:51Z: `GET /api/charts/revision-exports.pdf` を追加し、server-derived 期間 export cover と各 chart の PDF payload を結合する。期間 PDF も同じ 366 日上限、facility boundary、JSON/CSV と同じ sanitized projection / `exportHash` contract を再利用し、client-provided reporting payload は採用しない。
+  - [x] 2026-05-11T14:13Z: `GET /api/charts/{chartId}/revisions/print.pdf` と `GET /api/charts/revision-exports.print.pdf` を追加し、単票/期間 PDF export と同じ server-derived sanitized payload を inline disposition で返す印刷 surface を固定した。印刷 alias は別 sanitizer、client-provided reporting payload、raw ORCA body、credential、PHI を受け付けない。
 
 ## 8. 処方指示正本実装
 
@@ -300,7 +309,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 診療録、訂正履歴、追記履歴、取消履歴、処方指示履歴、ORCA連携履歴、ORCA送信失敗履歴、ORCA警告・不一致履歴を Web画面で表示できる。
   - [x] 2026-05-11T10:11Z: `orca_medical_candidate` response に B export / reporting handoff 用の `prescriptionHistory` allowlist snapshot を追加した。snapshot は `prescription_order_event` / revision metadata / hash だけを返し、raw summary JSON、raw ORCA body、credential、患者・保険 detail、voucher / sequential を含めない。Web画面全体の履歴表示は引き続き後続 UI/export integration で継続する。
 - [ ] 診療録を印刷/PDF出力できる。
-- [ ] 患者単位、診療日単位、期間指定でエクスポートできる。
+- [x] 患者単位、診療日単位、期間指定でエクスポートできる。
+  - [x] 2026-05-11T12:55Z: `GET /api/charts/revision-exports?fromDate=yyyy-MM-dd&toDate=yyyy-MM-dd[&patientId=...]` と `.csv` を追加し、患者単位・診療日単位・期間指定の chart revision export を server-side facility 境界で実行する。期間は最大 366 日、各 chart export は既存 JSON/CSV と同じ provenance / redaction / hash contract を使う。
 - [ ] エクスポート対象に診療録本文、SOAP、処方指示、訂正・追記・取消履歴、ORCA連携履歴、ORCA由来スナップショットを含める。
 - [x] 診療録正本DB、監査ログDB、添付文書ストレージのバックアップ手順を実装する。
   - [x] 2026-05-10T21:13Z: `docs/runbooks/backup-restore-hash-verification.md` を追加し、診療録/処方正本DB、監査ログDB、添付/患者画像 object storage inventory、ORCA cache/snapshot の backup preflight と restore read-only 手順を固定した。tracked evidence は sanitized summary/hash/count だけに限定し、raw DB dump/object payload/raw ORCA body/HAR/trace/video/screenshot/PHI/credential を禁止する。
@@ -404,7 +414,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T11:57Z: release gate guard が `idempotency_key` / `request_hash` schema contract と focused idempotency test の存在を検証し、ORCA mutation の重複送信防止証跡が受入れ手順から欠落しないことを固定した。全 ORCA 送信 live evidence は未完了のため親項目は未完了。
 - [ ] ORCA警告・エラー・不一致が UI と監査ログに保存される。
 - [ ] 患者ヘッダーが主要画面に表示され、重大操作に確認フローがある。
-- [ ] 診療録 PDF 出力と期間エクスポートができる。
+- [x] 診療録 PDF 出力と期間エクスポートができる。
 - [x] 監査ログ hash chain 検証ができる。
 - [ ] 実ORCA接続試験、ORCAモック試験、DADS観点 UI テストが完了している。
   - [x] 2026-05-11T14:17Z: full release gate refresh として `web-client npm run ci`、Maven static-analysis verify は通過。実ORCA mutation / exact preflight / runtime-ready の残 blocker は `no_trial_native_mutation_ready_candidate` として維持する。

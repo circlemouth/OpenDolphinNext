@@ -70,6 +70,9 @@ Current implementation evidence and owning workstream status are tracked in [aud
 | `BACKUP_RESTORE_VERIFY` | Backup, restore, object inventory digest, chart/prescription content hash, and ORCA re-alignment gate result. |
 
 Each event must use sanitized details only: actor, role, target type, target hash or server identifier, facility, outcome, fixed reason/status code, request/trace ID, and hash/classification fields. Do not store raw ORCA bodies, credentials, cookies, session tokens, CSRF values, patient names, addresses, phone numbers, insurance details, raw invoice numbers, raw `Data_Id`, raw `Medical_Uid`, HAR, trace, video, screenshots, or raw network dumps.
+## Chart Revision Events
+
+`POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` appends `CHART_REVISION_EVENT_RECORDED` after the chart revision event row is persisted. The audit payload is limited to facility, chart/revision/event identifiers, revision numbers/statuses, event type, resulting status, content hash, reason-code presence, subject type/id, and outcome. It must not persist reason text, raw ORCA bodies, credentials, Cookies, Authorization headers, CSRF tokens, patient names, addresses, phone numbers, or insurance details. If the authoritative audit service cannot append, the chart revision operation fails closed instead of returning a successful mutation without audit evidence.
 
 ## Backup / Restore Verification
 
@@ -103,4 +106,5 @@ bash server-modernized/tools/ci/check-audit-append-only.sh --root "$(git rev-par
 bash server-modernized/tools/ci/check-backup-restore-runbook.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-sensitive-evidence-redaction.sh --root "$(git rev-parse --show-toplevel)"
 mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=AuditChainVerifierTest,AuthoritativeAuditRepositoryTest,RepoGuardScriptsTest test
+mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=ChartRevisionFinalizeServiceTest,AuditTrailServiceTest test
 ```
