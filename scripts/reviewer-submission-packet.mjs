@@ -126,6 +126,10 @@ const FORBIDDEN_CLOSEOUT_TEXT_PATTERNS = [
     label: 'raw_body_reference',
     pattern: /\braw-(?:request|response|body|network)\.(?:json|txt|xml)\b/i,
   },
+  {
+    label: 'protected_export_artifact_reference',
+    pattern: /\b(?:chart-export-raw|raw-chart-export|chart-revisions?-(?:raw|export)|period-export|printed-chart|report-body|report-binary|patient-image-download|attachment-download|storage-uri)\.(?:csv|json|pdf|png|jpe?g|txt|xml|zip)\b/i,
+  },
 ];
 
 const FORBIDDEN_BILLING_REPORT_KEY_NAMES = new Set([
