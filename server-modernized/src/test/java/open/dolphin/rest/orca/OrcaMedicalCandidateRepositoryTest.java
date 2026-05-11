@@ -31,6 +31,7 @@ class OrcaMedicalCandidateRepositoryTest {
         candidate.setPatientId("00001");
         candidate.setEncounterId("ENC-001");
         candidate.setPrescriptionContentHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        candidate.setPrescriptionHistory(List.of(historyEvent("FINALIZE", "Authorization: [redacted]")));
         candidate.setMedicalInformation(List.of(information));
 
         Map<String, Object> snapshot = new OrcaMedicalCandidateRepository().candidateSnapshot(candidate);
@@ -40,6 +41,7 @@ class OrcaMedicalCandidateRepositoryTest {
         assertEquals(Boolean.TRUE, snapshot.get("sendable"));
         assertEquals("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 snapshot.get("prescriptionContentHash"));
+        assertSame(candidate.getPrescriptionHistory(), snapshot.get("prescriptionHistory"));
         assertSame(candidate.getMedicalInformation(), snapshot.get("medicalInformation"));
         assertFalse(snapshot.containsKey("patientId"));
         assertFalse(snapshot.containsKey("encounterId"));
@@ -71,6 +73,7 @@ class OrcaMedicalCandidateRepositoryTest {
         candidate.setPatientId("CLIENT-PATIENT-IGNORED");
         candidate.setEncounterId("CLIENT-ENCOUNTER-IGNORED");
         candidate.setPrescriptionContentHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        candidate.setPrescriptionHistory(List.of(historyEvent("CHANGE", "clinical reason")));
         candidate.setMedicalInformation(List.of(information));
 
         OrcaMedicalCandidateResponse.Issue issue = new OrcaMedicalCandidateResponse.Issue();
@@ -110,7 +113,30 @@ class OrcaMedicalCandidateRepositoryTest {
         assertEquals(1, response.getMedicalInformation().size());
         assertEquals(1, response.getMedicalInformation().get(0).getRpSequence());
         assertEquals("620000001", response.getMedicalInformation().get(0).getMedications().get(0).getCode());
+        assertEquals(1, response.getPrescriptionHistory().size());
+        assertEquals("CHANGE", response.getPrescriptionHistory().get(0).getEventType());
+        assertEquals("clinical reason", response.getPrescriptionHistory().get(0).getReasonText());
         assertEquals("prescription_content_hash_missing", response.getIssues().get(0).getCode());
+    }
+
+    private static OrcaMedicalCandidateResponse.PrescriptionHistoryEvent historyEvent(
+            String eventType,
+            String reasonText) {
+        OrcaMedicalCandidateResponse.PrescriptionHistoryEvent event =
+                new OrcaMedicalCandidateResponse.PrescriptionHistoryEvent();
+        event.setPrescriptionEventId(401L);
+        event.setPrescriptionRevisionId(201L);
+        event.setRevisionNumber(1);
+        event.setRevisionStatus("FINAL");
+        event.setEventType(eventType);
+        event.setReasonCode("CLINICAL");
+        event.setReasonText(reasonText);
+        event.setActorUserId("doctor01");
+        event.setOccurredAt("2026-05-10 22:00:00+00");
+        event.setContentHash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        event.setEventHash("event-hash");
+        event.setPreviousEventHash("previous-hash");
+        return event;
     }
 
     @Test

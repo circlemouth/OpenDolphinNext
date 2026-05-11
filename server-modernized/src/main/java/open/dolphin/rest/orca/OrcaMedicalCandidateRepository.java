@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
 import open.dolphin.rest.dto.orca.OrcaMedicalCandidateResponse;
 
@@ -27,6 +28,17 @@ class OrcaMedicalCandidateRepository {
     private static final TypeReference<List<ChartSupportMedicalModV2Request.MedicalInformation>> MEDICAL_INFORMATION_LIST_TYPE =
             new TypeReference<>() {
             };
+    private static final TypeReference<List<OrcaMedicalCandidateResponse.PrescriptionHistoryEvent>> PRESCRIPTION_HISTORY_LIST_TYPE =
+            new TypeReference<>() {
+            };
+    private static final Pattern AUTHORIZATION_LINE =
+            Pattern.compile("(?i)Authorization\\s*:\\s*[^\\r\\n]+");
+    private static final Pattern COOKIE_LINE =
+            Pattern.compile("(?i)Cookie\\s*:\\s*[^\\r\\n]+");
+    private static final Pattern SOAP_BODY =
+            Pattern.compile("(?is)<\\s*(soapenv:)?Envelope\\b.*?</\\s*(soapenv:)?Envelope\\s*>");
+    private static final Pattern RAW_XML =
+            Pattern.compile("(?is)<\\?xml\\b.*");
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -94,6 +106,56 @@ class OrcaMedicalCandidateRepository {
                 .setParameter(12, actor)
                 .getSingleResult();
         return number(id);
+    }
+
+    List<OrcaMedicalCandidateResponse.PrescriptionHistoryEvent> findPrescriptionHistorySnapshot(
+            String facilityId,
+            long prescriptionOrderId) {
+        List<?> rows = entityManager.createNativeQuery("""
+                        SELECT event.prescription_order_event_id,
+                               event.prescription_order_revision_id,
+                               revision.revision_number,
+                               revision.status,
+                               event.event_type,
+                               event.reason_code,
+                               event.reason_text,
+                               event.actor_user_id,
+                               event.occurred_at,
+                               revision.content_hash,
+                               event.event_hash,
+                               event.previous_event_hash
+                          FROM opendolphin.prescription_order_event event
+                          JOIN opendolphin.prescription_order order_row
+                            ON order_row.prescription_order_id = event.prescription_order_id
+                          LEFT JOIN opendolphin.prescription_order_revision revision
+                            ON revision.prescription_order_revision_id = event.prescription_order_revision_id
+                         WHERE order_row.facility_id = ?
+                           AND event.prescription_order_id = ?
+                         ORDER BY event.occurred_at ASC, event.prescription_order_event_id ASC
+                        """)
+                .setParameter(1, facilityId)
+                .setParameter(2, prescriptionOrderId)
+                .getResultList();
+        List<OrcaMedicalCandidateResponse.PrescriptionHistoryEvent> snapshot = new ArrayList<>();
+        for (Object row : rows) {
+            Object[] values = (Object[]) row;
+            OrcaMedicalCandidateResponse.PrescriptionHistoryEvent event =
+                    new OrcaMedicalCandidateResponse.PrescriptionHistoryEvent();
+            event.setPrescriptionEventId(number(values[0]));
+            event.setPrescriptionRevisionId(numberOrZero(values[1]));
+            event.setRevisionNumber(integerOrNull(values[2]));
+            event.setRevisionStatus(redactUnsafeText(text(values[3])));
+            event.setEventType(redactUnsafeText(text(values[4])));
+            event.setReasonCode(redactUnsafeText(text(values[5])));
+            event.setReasonText(redactUnsafeText(text(values[6])));
+            event.setActorUserId(redactUnsafeText(text(values[7])));
+            event.setOccurredAt(text(values[8]));
+            event.setContentHash(redactUnsafeText(text(values[9])));
+            event.setEventHash(redactUnsafeText(text(values[10])));
+            event.setPreviousEventHash(redactUnsafeText(text(values[11])));
+            snapshot.add(event);
+        }
+        return snapshot;
     }
 
     LatestCandidateRecord findLatestCandidateByChartRevision(String facilityId, String chartRevisionId) {
@@ -179,6 +241,7 @@ class OrcaMedicalCandidateRepository {
         response.setPrescriptionRevisionId(record.prescriptionRevisionId());
         response.setPrescriptionContentHash(candidateContentHash);
         response.setMedicalInformation(readMedicalInformation(snapshot.get("medicalInformation")));
+        response.setPrescriptionHistory(readPrescriptionHistory(snapshot.get("prescriptionHistory")));
         if (sourceStale) {
             issues.add(issue("prescription_candidate_source_stale",
                     "candidate source revision does not match current prescription revision"));
@@ -193,6 +256,7 @@ class OrcaMedicalCandidateRepository {
         snapshot.put("candidateStatus", candidate.getCandidateStatus());
         snapshot.put("sendable", candidate.isSendable());
         snapshot.put("prescriptionContentHash", candidate.getPrescriptionContentHash());
+        snapshot.put("prescriptionHistory", candidate.getPrescriptionHistory());
         snapshot.put("medicalInformation", candidate.getMedicalInformation());
         return snapshot;
     }
@@ -228,12 +292,27 @@ class OrcaMedicalCandidateRepository {
         return OBJECT_MAPPER.convertValue(value, MEDICAL_INFORMATION_LIST_TYPE);
     }
 
+    private List<OrcaMedicalCandidateResponse.PrescriptionHistoryEvent> readPrescriptionHistory(Object value) {
+        if (value == null) {
+            return List.of();
+        }
+        return OBJECT_MAPPER.convertValue(value, PRESCRIPTION_HISTORY_LIST_TYPE);
+    }
+
     private long number(Object value) {
         return ((Number) value).longValue();
     }
 
     private Long numberOrNull(Object value) {
         return value instanceof Number number ? number.longValue() : null;
+    }
+
+    private long numberOrZero(Object value) {
+        return value instanceof Number number ? number.longValue() : 0L;
+    }
+
+    private Integer integerOrNull(Object value) {
+        return value instanceof Number number ? number.intValue() : null;
     }
 
     private String text(Object value) {
@@ -252,6 +331,17 @@ class OrcaMedicalCandidateRepository {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String redactUnsafeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String sanitized = AUTHORIZATION_LINE.matcher(value).replaceAll("Authorization: [redacted]");
+        sanitized = COOKIE_LINE.matcher(sanitized).replaceAll("Cookie: [redacted]");
+        sanitized = SOAP_BODY.matcher(sanitized).replaceAll("[redacted-soap-body]");
+        sanitized = RAW_XML.matcher(sanitized).replaceAll("[redacted-xml-body]");
+        return sanitized;
     }
 
     private OrcaMedicalCandidateResponse.Issue issue(String code, String message) {

@@ -49,6 +49,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - candidate 生成時は `prescription_order` row の patient / encounter と revision summary 内の patient / encounter が一致することを server-side で検証し、不一致または欠落時は `prescription_source_context_mismatch` で fail-closed にする。
 - candidate source にできる処方状態は `FINAL` / `CHANGED` / `REISSUED` のみとする。`DRAFT` / `STOPPED` / `CANCELLED` は ORCA 送信候補化を 409 で拒否し、payload を保存しない。
 - candidate response は `nonAuthoritative=true`、`candidateStatus=READY_TO_SEND|NEEDS_REVIEW`、`sendable`、server-generated `prescriptionContentHash` を返す。`prescriptionContentHash` が欠落する candidate は `NEEDS_REVIEW` / `sendable=false` とし、client 提供 digest で補完しない。
+- candidate response は Worker B の chart export / reporting integration へ渡す処方履歴として `prescriptionHistory` を返す。この snapshot は `prescription_order_event` / `prescription_order_revision` 由来の allowlist fields（event id、revision id/number/status、event type、reason code/text、actor、occurredAt、content/event hash）だけに限定し、before/after summary JSON、raw ORCA body、credential、患者詳細、保険詳細、voucher / sequential は含めない。reason text などの自由文字列は Authorization / Cookie / raw XML / SOAP body を redaction してから返す。
 - candidate `medicalInformation` は処方正本 revision から `rpSequence` / `medicalClass` / `medicalClassNumber` / `usageCode` / `usageName` / 薬剤行を再構成し、薬剤行には `itemSequence` を付ける。live `medicalmodv2` 送信側はこの candidate を送信前確認材料として扱い、patient / encounter / voucher / sequential / insurance combination は server-side encounter context から別途解決する。
 - 薬剤コード、用法コード、medical class、薬剤行が未解決の場合は `NEEDS_REVIEW` / `sendable=false` とし、live `medicalmodv2` 送信へ進めない。
 - candidate snapshot と audit details に raw ORCA body、credential、患者氏名・住所・電話番号、保険詳細、voucher / sequential の client 提供値を保存しない。`candidate_json` は non-authoritative flag、candidate status、sendable、server-generated prescription content hash、medical information rows に限定し、patient / encounter / insurance / voucher / sequential authority は DB row と server-side encounter context から別途解決する。
@@ -73,6 +74,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - candidate handoff から `usageCode` / `usageName` が欠落し、live send 側で client payload や display text から用法を再推測する。
 - client が DRAFT / STOPPED / CANCELLED の処方を chart revision 経由で candidate 化し、未確定または中止済み指示を送信前確認へ進める。
 - candidate handoff の行識別子が表示順だけになり、送信前確認・送信後差分照合で RP/薬剤行を取り違える。
+- chart export / reporting integration が処方履歴を再読込する時に raw summary JSON、患者詳細、保険詳細、ORCA raw body、client-provided voucher / sequential を持ち込み、診療録 export の allowlist 境界を破る。
 
 ## Verification
 

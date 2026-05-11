@@ -69,7 +69,7 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
 
         PrescriptionOrder order = decodeOrder(request, source.summaryJson());
         validateSummaryAuthority(request, source, order);
-        OrcaMedicalCandidateResponse response = buildCandidate(runId, normalizedChartRevisionId, source, order);
+        OrcaMedicalCandidateResponse response = buildCandidate(runId, facilityId, normalizedChartRevisionId, source, order);
         long candidateId = candidateRepository.saveCandidate(
                 facilityId,
                 normalizedChartRevisionId,
@@ -119,6 +119,7 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
     }
 
     private OrcaMedicalCandidateResponse buildCandidate(String runId,
+            String facilityId,
             String chartRevisionId,
             OrcaMedicalCandidateRepository.PrescriptionRevisionRecord source,
             PrescriptionOrder order) {
@@ -133,6 +134,9 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
         response.setPrescriptionId(source.prescriptionOrderId());
         response.setPrescriptionRevisionId(source.prescriptionRevisionId());
         response.setPrescriptionContentHash(trimToNull(source.contentHash()));
+        response.setPrescriptionHistory(candidateRepository.findPrescriptionHistorySnapshot(
+                facilityId,
+                source.prescriptionOrderId()));
 
         List<ChartSupportMedicalModV2Request.MedicalInformation> information = new ArrayList<>();
         List<OrcaMedicalCandidateResponse.Issue> issues = new ArrayList<>();

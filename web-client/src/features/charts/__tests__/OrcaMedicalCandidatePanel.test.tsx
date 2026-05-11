@@ -29,6 +29,7 @@ describe('OrcaMedicalCandidatePanel', () => {
       prescriptionId: 20,
       prescriptionRevisionId: 30,
       prescriptionContentHash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      prescriptionHistory: [],
       medicalInformation: [
         {
           entity: 'medOrder',

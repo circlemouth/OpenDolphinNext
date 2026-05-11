@@ -205,7 +205,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] 取得結果を `orca_disease_cache` に保存し、取得日時、基準月、診療科、保険組合せ、ORCA患者番号、stale を保持する。
 - [x] official `POST /api/orca/official/chart-support/disease-mod-v3` で ORCA `diseasev3` 相当の送信、server-derived context、冪等キー、operation 保存を行う。
 - [x] 旧 `diseasev2`、CLAIM病名送信、ORCA DB直接更新/参照を使わない。
-- [ ] `OrcaDiseaseMutationRequest` は operation、ORCA患者ID、基準月、診療日、診療科、医師、保険組合せ、病名コード、補足コード、疑い、開始/終了日、転帰、カルテ名、病名区分、レセプト表示、保険病名、主病名/副病名を持つ。
+- [x] `OrcaDiseaseMutationRequest` は operation、ORCA患者ID、基準月、診療日、診療科、医師、保険組合せ、病名コード、補足コード、疑い、開始/終了日、転帰、カルテ名、病名区分、レセプト表示、保険病名、主病名/副病名を持つ。
+  - [x] 2026-05-11T10:11Z: legacy DTO `DiseaseMutationRequest` に baseMonth / performDate / performTime / department / physician / insurance と mutation entry の karteName / diseaseClass / receipt / insuranceDisease / main/sub disease / component / supplement fields を追加し、current official `ChartSupportDiseaseModV3Request` と同じ completeness を contract test で固定した。
 - [x] `OrcaDiseaseMutationResponse` 相当の `ChartSupportDiseaseModV3Response` は result、warnings、unmatched、needsUserReview、operationStatus を持つ。
 - [x] `diseasev3` の警告・不一致を無視せず、`ORCA_WARNING` / `ORCA_UNMATCHED` と `needsUserReview=true` へ分類する。
 - [x] `diseasev3` の ORCAのみ病名、連番付け替え情報を無視せず、sanitized response / operation summary に保存する。
@@ -297,6 +298,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 ## 14. 保存性・見読性・バックアップ
 
 - [ ] 診療録、訂正履歴、追記履歴、取消履歴、処方指示履歴、ORCA連携履歴、ORCA送信失敗履歴、ORCA警告・不一致履歴を Web画面で表示できる。
+  - [x] 2026-05-11T10:11Z: `orca_medical_candidate` response に B export / reporting handoff 用の `prescriptionHistory` allowlist snapshot を追加した。snapshot は `prescription_order_event` / revision metadata / hash だけを返し、raw summary JSON、raw ORCA body、credential、患者・保険 detail、voucher / sequential を含めない。Web画面全体の履歴表示は引き続き後続 UI/export integration で継続する。
 - [ ] 診療録を印刷/PDF出力できる。
 - [ ] 患者単位、診療日単位、期間指定でエクスポートできる。
 - [ ] エクスポート対象に診療録本文、SOAP、処方指示、訂正・追記・取消履歴、ORCA連携履歴、ORCA由来スナップショットを含める。
