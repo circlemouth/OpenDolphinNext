@@ -44,6 +44,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - `POST /api/local/orca/medical-candidates/from-chart/{chartRevisionId}` は chart revision に紐付く current prescription revision から候補を作る。
 - candidate 生成時の facility は認証済み request context から解決し、patient / encounter / prescription revision は DB 上の処方正本から解決する。
 - candidate response は `nonAuthoritative=true`、`candidateStatus=READY_TO_SEND|NEEDS_REVIEW`、`sendable` を返す。
+- candidate `medicalInformation` は処方正本 revision から `medicalClass` / `medicalClassNumber` / `usageCode` / `usageName` / 薬剤行を再構成する。live `medicalmodv2` 送信側はこの candidate を送信前確認材料として扱い、patient / encounter / voucher / sequential / insurance combination は server-side encounter context から別途解決する。
 - 薬剤コード、用法コード、medical class、薬剤行が未解決の場合は `NEEDS_REVIEW` / `sendable=false` とし、live `medicalmodv2` 送信へ進めない。
 - candidate と audit details に raw ORCA body、credential、患者氏名・住所・電話番号、保険詳細、voucher / sequential の client 提供値を保存しない。
 - Web client の候補確認 surface は patient / acceptance / department / physician / insurance combination を確認表示にだけ使う。candidate prepare request は `chartRevisionId` だけを route path として送り、facility / patient / insurance / voucher / sequential / URL / digest を body や query として送らない。
@@ -58,6 +59,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - client が change/reissue payload の `patientId` / `encounterId` を別患者・別受付へ改ざんし、確定済み処方を横展開する。
 - client が finalize 時に偽 digest を送信し、保存済み処方内容とは異なる hash を正本化する。
 - client が candidate prepare に別患者・別施設・保険組合せ・voucher / sequential を混入させて ORCA 送信候補の authority を乗っ取る。
+- candidate handoff から `usageCode` / `usageName` が欠落し、live send 側で client payload や display text から用法を再推測する。
 
 ## Verification
 
@@ -66,6 +68,7 @@ Focused server verification:
 ```bash
 mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=PrescriptionAuthorityResourceTest,LocalOrcaMedicalCandidateResourceTest,PrescriptionAuthoritySchemaTest,FreshSchemaBaselineTest test
 mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=PrescriptionAuthorityStructuredItemTest,PrescriptionAuthorityResourceTest,PrescriptionAuthoritySchemaTest test
+mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=LocalOrcaMedicalCandidateResourceTest test
 ```
 
 Focused web verification:

@@ -21,6 +21,8 @@ export type OrcaMedicalCandidateMedicalInformation = {
   medicalClass?: string;
   medicalClassName?: string;
   medicalClassNumber?: string;
+  usageCode?: string;
+  usageName?: string;
   medications?: OrcaMedicalCandidateMedication[];
 };
 
@@ -75,6 +77,8 @@ const parseMedicalInformation = (value: unknown): OrcaMedicalCandidateMedicalInf
     medicalClass: asString(raw.medicalClass),
     medicalClassName: asString(raw.medicalClassName),
     medicalClassNumber: asString(raw.medicalClassNumber),
+    usageCode: asString(raw.usageCode),
+    usageName: asString(raw.usageName),
     medications: Array.isArray(raw.medications) ? raw.medications.map(parseMedication).filter((item): item is OrcaMedicalCandidateMedication => Boolean(item)) : [],
   };
 };

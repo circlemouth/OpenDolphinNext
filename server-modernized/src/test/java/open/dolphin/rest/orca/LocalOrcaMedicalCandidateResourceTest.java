@@ -64,6 +64,8 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("CHART-REV-001", repository.chartRevisionId);
         assertEquals("F001", repository.facilityId);
         assertEquals("211", response.getMedicalInformation().get(0).getMedicalClass());
+        assertEquals("001000", response.getMedicalInformation().get(0).getUsageCode());
+        assertEquals("after meal", response.getMedicalInformation().get(0).getUsageName());
         assertEquals("620000001", response.getMedicalInformation().get(0).getMedications().get(0).getCode());
     }
 

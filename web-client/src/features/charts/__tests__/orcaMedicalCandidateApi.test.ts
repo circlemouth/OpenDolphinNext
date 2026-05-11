@@ -36,6 +36,8 @@ describe('orcaMedicalCandidateApi', () => {
             {
               entity: 'medOrder',
               medicalClass: '211',
+              usageCode: '001000',
+              usageName: 'after meal',
               medications: [{ code: '620000001', name: '薬剤A', number: '1' }],
             },
           ],
@@ -51,6 +53,7 @@ describe('orcaMedicalCandidateApi', () => {
     expect(result.candidateId).toBe(10);
     expect(result.nonAuthoritative).toBe(true);
     expect(result.medicalInformation).toHaveLength(1);
+    expect(result.medicalInformation[0]).toEqual(expect.objectContaining({ usageCode: '001000', usageName: 'after meal' }));
     expect(httpFetch).toHaveBeenCalledWith('/api/local/orca/medical-candidates/from-chart/REV-1', {
       method: 'POST',
       headers: { Accept: 'application/json' },

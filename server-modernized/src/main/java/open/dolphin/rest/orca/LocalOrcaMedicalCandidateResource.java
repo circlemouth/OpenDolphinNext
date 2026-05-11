@@ -103,10 +103,12 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
             entry.setMedicalClass(trimToNull(rp.getMedicalClass()));
             entry.setMedicalClassName(trimToNull(rp.getBundleName()));
             entry.setMedicalClassNumber(firstNonBlank(rp.getMedicalClassNumber(), "1"));
+            entry.setUsageCode(trimToNull(rp.getUsageCode()));
+            entry.setUsageName(trimToNull(rp.getUsageName()));
             if (entry.getMedicalClass() == null) {
                 issues.add(issue("medical_class_unresolved", "medical class is required", rpIndex + 1, null));
             }
-            if (trimToNull(rp.getUsageCode()) == null) {
+            if (entry.getUsageCode() == null) {
                 issues.add(issue("usage_code_unresolved", "usage code is required", rpIndex + 1, null));
             }
 

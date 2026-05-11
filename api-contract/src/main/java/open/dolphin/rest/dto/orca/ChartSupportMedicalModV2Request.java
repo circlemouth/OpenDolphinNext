@@ -139,6 +139,8 @@ public class ChartSupportMedicalModV2Request {
         private String medicalClass;
         private String medicalClassName;
         private String medicalClassNumber;
+        private String usageCode;
+        private String usageName;
         private List<Medication> medications = new ArrayList<>();
 
         public String getEntity() {
@@ -171,6 +173,22 @@ public class ChartSupportMedicalModV2Request {
 
         public void setMedicalClassNumber(String medicalClassNumber) {
             this.medicalClassNumber = medicalClassNumber;
+        }
+
+        public String getUsageCode() {
+            return usageCode;
+        }
+
+        public void setUsageCode(String usageCode) {
+            this.usageCode = usageCode;
+        }
+
+        public String getUsageName() {
+            return usageName;
+        }
+
+        public void setUsageName(String usageName) {
+            this.usageName = usageName;
         }
 
         public List<Medication> getMedications() {

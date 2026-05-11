@@ -29,7 +29,7 @@ Checklist count when parallel board was created:
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
-| C | `codex/orca-ehr-worker-c-prescription` | C-06 prescription authority send/re-fetch handoff review | Done | 20260510T231719Z | this commit | - |
+| C | `codex/orca-ehr-worker-c-prescription` | C-07 prescription authority integration watch | Done | 20260511T000209Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-02 common patient header staged rollout | Done | 20260510T204142Z | this commit | - |
 | F | `codex/orca-ehr-worker-f-audit-security-gates` | F-02 credential/PHI leakage guards | Done | 20260510T201318Z | this commit | - |
@@ -65,6 +65,7 @@ Checklist count when parallel board was created:
 | C-04 | 8, 10.2 | Add candidate UI/API confirmation surface for medical send preparation. | Patient/acceptance/department/physician/insurance/candidate data is shown without overwriting orders. | Web focused tests + typecheck |
 | C-05 | 8 | Reconcile structured prescription item persistence checklist gap. | Drug code/name/spec/dosage/unit/days/location/category/general-name/doctor-comment are demonstrably persisted in structured columns or documented as blocked with tests. | Focused Maven + web API tests |
 | C-06 | 8, 10.2 | Review prescription authority handoff needs for send/re-fetch/diff workflow. | Worker C-owned prescription DTO/source-of-truth gaps are documented or closed before Worker D live send integration. | Focused contract/doc checks |
+| C-07 | 8, 10.2 | Integration watch for prescription authority after Worker D send/re-fetch lands. | Resolve only Worker C-owned conflicts or contract gaps without implementing live send. | Focused cross-worker tests |
 
 ### Worker D Queue
 
@@ -108,6 +109,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T000209Z | C | C-06 | 8/10.2 candidate handoff usage fields; no checklist item newly closed | this commit | `LocalOrcaMedicalCandidateResourceTest`, `orcaMedicalCandidateApi.test.ts`, web guard passed | Done | C-07 prescription authority integration watch |
 | 20260510T231719Z | C | C-05 | 8 structured prescription item persistence complete | this commit | `PrescriptionAuthorityStructuredItemTest`, `PrescriptionAuthorityResourceTest`, `PrescriptionAuthoritySchemaTest`, `prescriptionOrderApi.test.ts`, `typecheck`, web guard passed | Done | C-06 prescription authority send/re-fetch handoff review |
 | 20260510T224026Z | C | C-04 | 8/10.2 candidate confirmation surface partial; checklist item remains open until send/re-fetch/diff workflow lands | this commit | `orcaMedicalCandidateApi.test.ts`, `OrcaMedicalCandidatePanel.test.tsx`, `chartsActionBar.test.tsx`, `typecheck`, web guard passed | Done | C-05 prescription structured item persistence reconciliation |
 | 20260510T220959Z | C | C-03 | 8 local medical candidate prepare route; 10.1 `orca_medical_candidate` non-authoritative candidate | this commit | `LocalOrcaMedicalCandidateResourceTest`, `FreshSchemaBaselineTest`, route inventory/exposure tests, doc/config/runtime guards passed | Done | C-04 candidate UI/API confirmation surface |
