@@ -180,6 +180,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] chart revision JSON/CSV export は診療録 revision に紐づく ORCA operation/transmission/reconciliation history を施設境界で読み取り、status、request/response hash、latest transmission、attempt、review flag、allowlist 済み summary だけを canonical `exportHash` material に含める。idempotency key、raw ORCA body、credential、患者詳細、request/response body は返さない。
   - [x] reporting PDF payload は処方指示 event history と ORCA operation/transmission/reconciliation history を summary section に allowlist/redaction 付きで表示できる。raw ORCA body、credential、患者名、保険詳細、idempotency key、request/response body、任意 nested JSON は帳票へ出さない。
   - [x] `GET /api/charts/{chartId}/revisions/export.pdf` を追加し、server-derived JSON export projection と患者 master reference から reporting payload を組み立て、診療録 revision / 処方指示 / ORCA operation-transmission-reconciliation history、`exportHash`、件数を PDF summary に含める。client-provided reporting payload は採用せず、患者 master 欠落・施設不一致は 409 fail-closed とする。
+  - [x] `GET /api/charts/revision-exports` / `.csv` を追加し、server-side facility、診療日範囲、任意 patient DB reference で患者単位・診療日単位・期間指定の export を返す。各 chart は既存 JSON/CSV export と同じ sanitized projection / `exportHash` を再利用し、期間は最大 366 日、raw patient detail / raw ORCA body / credential は返さない。
 
 ## 8. 処方指示正本実装
 
@@ -289,7 +290,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [ ] 診療録、訂正履歴、追記履歴、取消履歴、処方指示履歴、ORCA連携履歴、ORCA送信失敗履歴、ORCA警告・不一致履歴を Web画面で表示できる。
 - [ ] 診療録を印刷/PDF出力できる。
-- [ ] 患者単位、診療日単位、期間指定でエクスポートできる。
+- [x] 患者単位、診療日単位、期間指定でエクスポートできる。
+  - [x] 2026-05-11T12:55Z: `GET /api/charts/revision-exports?fromDate=yyyy-MM-dd&toDate=yyyy-MM-dd[&patientId=...]` と `.csv` を追加し、患者単位・診療日単位・期間指定の chart revision export を server-side facility 境界で実行する。期間は最大 366 日、各 chart export は既存 JSON/CSV と同じ provenance / redaction / hash contract を使う。
 - [ ] エクスポート対象に診療録本文、SOAP、処方指示、訂正・追記・取消履歴、ORCA連携履歴、ORCA由来スナップショットを含める。
 - [x] 診療録正本DB、監査ログDB、添付文書ストレージのバックアップ手順を実装する。
   - [x] 2026-05-10T21:13Z: `docs/runbooks/backup-restore-hash-verification.md` を追加し、診療録/処方正本DB、監査ログDB、添付/患者画像 object storage inventory、ORCA cache/snapshot の backup preflight と restore read-only 手順を固定した。tracked evidence は sanitized summary/hash/count だけに限定し、raw DB dump/object payload/raw ORCA body/HAR/trace/video/screenshot/PHI/credential を禁止する。

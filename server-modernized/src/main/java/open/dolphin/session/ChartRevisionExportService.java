@@ -14,7 +14,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
@@ -40,6 +43,7 @@ import open.dolphin.rest.dto.chart.ChartRevisionExportOrcaEvent;
 import open.dolphin.rest.dto.chart.ChartRevisionExportPrescriptionEvent;
 import open.dolphin.rest.dto.chart.ChartRevisionExportResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionExportRevision;
+import open.dolphin.rest.dto.chart.ChartRevisionPeriodExportResponse;
 
 @ApplicationScoped
 @Transactional
@@ -49,6 +53,7 @@ public class ChartRevisionExportService {
     private static final String EXPORT_DENIED = "chart_revision_export_denied";
     private static final String EXPORT_INCONSISTENT = "chart_revision_export_inconsistent";
     private static final String NOT_FOUND = "chart_revision_export_not_found";
+    private static final int MAX_PERIOD_EXPORT_DAYS = 366;
     private static final int EXPORT_SCHEMA_VERSION = 1;
     private static final String EXPORT_HASH_ALGORITHM = "SHA-256";
     private static final List<String> SUMMARY_ALLOWLIST = List.of(
@@ -381,6 +386,36 @@ public class ChartRevisionExportService {
 
     public String exportChartCsv(long chartId, String facilityId) {
         ChartRevisionExportResponse export = exportChart(chartId, facilityId);
+        return exportChartsCsv(List.of(export));
+    }
+
+    public ChartRevisionPeriodExportResponse exportChartPeriod(String facilityId, String fromDateValue,
+            String toDateValue, Long patientId) {
+        LocalDate fromDate = parseRequiredDate(fromDateValue, "fromDate");
+        LocalDate toDate = parseRequiredDate(toDateValue, "toDate");
+        validateDateRange(fromDate, toDate);
+
+        List<ChartRevisionExportResponse> charts = findChartIdsForPeriod(facilityId, fromDate, toDate, patientId)
+                .stream()
+                .map(chartId -> exportChart(chartId, facilityId))
+                .toList();
+        ChartRevisionPeriodExportResponse response = new ChartRevisionPeriodExportResponse();
+        response.setFromDate(fromDate.toString());
+        response.setToDate(toDate.toString());
+        response.setPatientFilterApplied(patientId != null);
+        response.setExportSchemaVersion(EXPORT_SCHEMA_VERSION);
+        response.setExportHashAlgorithm(EXPORT_HASH_ALGORITHM);
+        response.setCharts(charts);
+        response.setChartCount(charts.size());
+        response.setExportHash(sha256(writeJson(periodExportHashMaterial(response))));
+        return response;
+    }
+
+    public String exportChartPeriodCsv(String facilityId, String fromDateValue, String toDateValue, Long patientId) {
+        return exportChartsCsv(exportChartPeriod(facilityId, fromDateValue, toDateValue, patientId).getCharts());
+    }
+
+    private String exportChartsCsv(List<ChartRevisionExportResponse> exports) {
         StringBuilder csv = new StringBuilder();
         appendCsvRow(csv,
                 "recordType",
@@ -399,83 +434,142 @@ public class ChartRevisionExportService {
                 "reasonText",
                 "contentHash",
                 "summary");
-        for (ChartRevisionExportRevision revision : export.getRevisions()) {
-            appendCsvRow(csv,
-                    "revision",
-                    export.getChartId(),
-                    export.getCurrentRevisionId(),
-                    revision.getRevisionId(),
-                    revision.getRevisionNumber(),
-                    revision.getStatus(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    revision.getFinalizedAt(),
-                    null,
-                    null,
-                    revision.getContentHash(),
-                    revisionSummary(revision));
-        }
-        for (ChartRevisionExportEvent event : export.getEvents()) {
-            appendCsvRow(csv,
-                    "event",
-                    export.getChartId(),
-                    export.getCurrentRevisionId(),
-                    event.getChartRevisionId(),
-                    null,
-                    null,
-                    event.getEventId(),
-                    event.getEventType(),
-                    event.getPreviousRevisionId(),
-                    event.getNewRevisionId(),
-                    event.getActorUserId(),
-                    event.getOccurredAt(),
-                    event.getReasonCode(),
-                    event.getReasonText(),
-                    event.getEventHash(),
-                    flattenSummary(event.getBeforeSummary(), event.getAfterSummary()));
-        }
-        for (ChartRevisionExportPrescriptionEvent event : export.getPrescriptionEvents()) {
-            appendCsvRow(csv,
-                    "prescriptionEvent",
-                    export.getChartId(),
-                    export.getCurrentRevisionId(),
-                    event.getChartRevisionId(),
-                    event.getRevisionNumber(),
-                    event.getStatus(),
-                    event.getEventId(),
-                    event.getEventType(),
-                    null,
-                    event.getPrescriptionRevisionId(),
-                    event.getActorUserId(),
-                    event.getOccurredAt(),
-                    event.getReasonCode(),
-                    event.getReasonText(),
-                    firstNonBlank(event.getEventHash(), event.getContentHash()),
-                    flattenSummary(event.getBeforeSummary(), event.getAfterSummary()));
-        }
-        for (ChartRevisionExportOrcaEvent event : export.getOrcaEvents()) {
-            appendCsvRow(csv,
-                    "orcaEvent",
-                    export.getChartId(),
-                    export.getCurrentRevisionId(),
-                    event.getChartRevisionId(),
-                    null,
-                    event.getOperationStatus(),
-                    event.getOrcaOperationId(),
-                    event.getOperationType(),
-                    null,
-                    event.getLatestTransmissionId(),
-                    event.getRequestedBy(),
-                    firstNonBlank(event.getTransmissionStartedAt(), event.getRequestedAt()),
-                    event.getReconciliationStatus(),
-                    event.getTransportStatus(),
-                    firstNonBlank(event.getTransmissionResponseHash(), event.getResponseHash()),
-                    orcaEventSummary(event));
+        for (ChartRevisionExportResponse export : exports) {
+            for (ChartRevisionExportRevision revision : export.getRevisions()) {
+                appendCsvRow(csv,
+                        "revision",
+                        export.getChartId(),
+                        export.getCurrentRevisionId(),
+                        revision.getRevisionId(),
+                        revision.getRevisionNumber(),
+                        revision.getStatus(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        revision.getFinalizedAt(),
+                        null,
+                        null,
+                        revision.getContentHash(),
+                        revisionSummary(revision));
+            }
+            for (ChartRevisionExportEvent event : export.getEvents()) {
+                appendCsvRow(csv,
+                        "event",
+                        export.getChartId(),
+                        export.getCurrentRevisionId(),
+                        event.getChartRevisionId(),
+                        null,
+                        null,
+                        event.getEventId(),
+                        event.getEventType(),
+                        event.getPreviousRevisionId(),
+                        event.getNewRevisionId(),
+                        event.getActorUserId(),
+                        event.getOccurredAt(),
+                        event.getReasonCode(),
+                        event.getReasonText(),
+                        event.getEventHash(),
+                        flattenSummary(event.getBeforeSummary(), event.getAfterSummary()));
+            }
+            for (ChartRevisionExportPrescriptionEvent event : export.getPrescriptionEvents()) {
+                appendCsvRow(csv,
+                        "prescriptionEvent",
+                        export.getChartId(),
+                        export.getCurrentRevisionId(),
+                        event.getChartRevisionId(),
+                        event.getRevisionNumber(),
+                        event.getStatus(),
+                        event.getEventId(),
+                        event.getEventType(),
+                        null,
+                        event.getPrescriptionRevisionId(),
+                        event.getActorUserId(),
+                        event.getOccurredAt(),
+                        event.getReasonCode(),
+                        event.getReasonText(),
+                        firstNonBlank(event.getEventHash(), event.getContentHash()),
+                        flattenSummary(event.getBeforeSummary(), event.getAfterSummary()));
+            }
+            for (ChartRevisionExportOrcaEvent event : export.getOrcaEvents()) {
+                appendCsvRow(csv,
+                        "orcaEvent",
+                        export.getChartId(),
+                        export.getCurrentRevisionId(),
+                        event.getChartRevisionId(),
+                        null,
+                        event.getOperationStatus(),
+                        event.getOrcaOperationId(),
+                        event.getOperationType(),
+                        null,
+                        event.getLatestTransmissionId(),
+                        event.getRequestedBy(),
+                        firstNonBlank(event.getTransmissionStartedAt(), event.getRequestedAt()),
+                        event.getReconciliationStatus(),
+                        event.getTransportStatus(),
+                        firstNonBlank(event.getTransmissionResponseHash(), event.getResponseHash()),
+                        orcaEventSummary(event));
+            }
         }
         return csv.toString();
+    }
+
+    private LocalDate parseRequiredDate(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw restError(Response.Status.BAD_REQUEST, "chart_revision_export_invalid_date",
+                    "Chart export date range is invalid", Map.of("field", field));
+        }
+        try {
+            return LocalDate.parse(value.trim());
+        } catch (DateTimeParseException ex) {
+            throw restError(Response.Status.BAD_REQUEST, "chart_revision_export_invalid_date",
+                    "Chart export date range is invalid", Map.of("field", field));
+        }
+    }
+
+    private void validateDateRange(LocalDate fromDate, LocalDate toDate) {
+        if (fromDate.isAfter(toDate)) {
+            throw restError(Response.Status.BAD_REQUEST, "chart_revision_export_invalid_date_range",
+                    "Chart export date range is invalid", Map.of("field", "fromDate"));
+        }
+        long days = ChronoUnit.DAYS.between(fromDate, toDate) + 1;
+        if (days > MAX_PERIOD_EXPORT_DAYS) {
+            throw restError(Response.Status.BAD_REQUEST, "chart_revision_export_date_range_too_large",
+                    "Chart export date range is too large", Map.of("maxDays", MAX_PERIOD_EXPORT_DAYS));
+        }
+    }
+
+    private List<Long> findChartIdsForPeriod(String facilityId, LocalDate fromDate, LocalDate toDate, Long patientId) {
+        if (facilityId == null || facilityId.isBlank()) {
+            return List.of();
+        }
+        String sql = """
+                SELECT DISTINCT cd.id
+                  FROM opendolphin.chart_document cd
+                  JOIN opendolphin.chart_revision cr
+                    ON cr.chart_document_id = cd.id
+                 WHERE cd.facility_id = :facilityId
+                   AND cr.encounter_date >= :fromDate
+                   AND cr.encounter_date <= :toDate
+                """;
+        if (patientId != null) {
+            sql += "   AND cd.patient_id = :patientId\n";
+        }
+        sql += " ORDER BY cd.id ASC";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("facilityId", facilityId);
+        query.setParameter("fromDate", fromDate);
+        query.setParameter("toDate", toDate);
+        if (patientId != null) {
+            query.setParameter("patientId", patientId);
+        }
+        @SuppressWarnings("unchecked")
+        List<Object> rows = query.getResultList();
+        return rows.stream()
+                .map(this::longValue)
+                .filter(id -> id != null)
+                .toList();
     }
 
     private ChartRevisionExportRevision resolveCurrentRevision(ChartDocumentModel document,
@@ -872,6 +966,24 @@ public class ChartRevisionExportService {
                 response.getPrescriptionEvents().stream().map(this::prescriptionEventHashMaterial).toList());
         material.put("orcaEvents",
                 response.getOrcaEvents().stream().map(this::orcaEventHashMaterial).toList());
+        return material;
+    }
+
+    private Map<String, Object> periodExportHashMaterial(ChartRevisionPeriodExportResponse response) {
+        Map<String, Object> material = new LinkedHashMap<>();
+        material.put("exportSchemaVersion", response.getExportSchemaVersion());
+        material.put("exportHashAlgorithm", response.getExportHashAlgorithm());
+        material.put("fromDate", response.getFromDate());
+        material.put("toDate", response.getToDate());
+        material.put("patientFilterApplied", response.getPatientFilterApplied());
+        material.put("chartCount", response.getChartCount());
+        material.put("charts", response.getCharts().stream().map(chart -> {
+            Map<String, Object> chartMaterial = new LinkedHashMap<>();
+            chartMaterial.put("chartId", chart.getChartId());
+            chartMaterial.put("currentRevisionId", chart.getCurrentRevisionId());
+            chartMaterial.put("exportHash", chart.getExportHash());
+            return chartMaterial;
+        }).toList());
         return material;
     }
 

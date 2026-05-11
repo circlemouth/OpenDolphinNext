@@ -2,6 +2,7 @@ package open.dolphin.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
@@ -28,6 +29,7 @@ import open.dolphin.infomodel.PatientModel;
 import open.dolphin.reporting.ReportingResult;
 import open.dolphin.reporting.api.ReportingPayload;
 import open.dolphin.rest.dto.chart.ChartRevisionExportResponse;
+import open.dolphin.rest.dto.chart.ChartRevisionPeriodExportResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -454,6 +456,50 @@ class ChartRevisionExportServiceTest {
     }
 
     @Test
+    void exportChartPeriodUsesServerDerivedChartExportsAndHash() {
+        stubPeriodChartIds(List.of(10L));
+        stubExportQueries(List.of(finalRevision()), List.of(finalizedEvent()));
+
+        ChartRevisionPeriodExportResponse response =
+                service.exportChartPeriod("F001", "2026-05-01", "2026-05-31", 501L);
+
+        assertThat(response.getFromDate()).isEqualTo("2026-05-01");
+        assertThat(response.getToDate()).isEqualTo("2026-05-31");
+        assertThat(response.getPatientFilterApplied()).isTrue();
+        assertThat(response.getExportSchemaVersion()).isEqualTo(1);
+        assertThat(response.getExportHashAlgorithm()).isEqualTo("SHA-256");
+        assertThat(response.getExportHash()).matches("[0-9a-f]{64}");
+        assertThat(response.getChartCount()).isEqualTo(1);
+        assertThat(response.getCharts()).hasSize(1);
+        assertThat(response.getCharts().get(0).getChartId()).isEqualTo(10L);
+        assertThat(response.getCharts().get(0).getExportHash()).matches("[0-9a-f]{64}");
+    }
+
+    @Test
+    void exportChartPeriodCsvAggregatesSanitizedRows() {
+        ChartRevisionEventModel event = amendedEvent();
+        event.setReasonText("=HYPERLINK(\"https://example.test\",\"Authorization: Basic secret\")");
+        stubPeriodChartIds(List.of(10L));
+        stubExportQueries(List.of(finalRevision()), List.of(event));
+
+        String csv = service.exportChartPeriodCsv("F001", "2026-05-01", "2026-05-31", null);
+
+        assertThat(csv).contains("\"recordType\",\"chartId\",\"currentRevisionId\"");
+        assertThat(csv).contains("\"revision\",\"10\",\"20\",\"20\",\"1\",\"FINAL\"");
+        assertThat(csv).contains("\"event\",\"10\",\"20\",\"20\",,,\"31\",\"AMENDED\"");
+        assertThat(csv).contains("\"'=HYPERLINK(\"\"https://example.test\"\",\"\"Authorization: [redacted]");
+        assertThat(csv).doesNotContain("Basic secret");
+    }
+
+    @Test
+    void exportChartPeriodRejectsInvalidDateRange() {
+        Throwable thrown = catchThrowable(() -> service.exportChartPeriod("F001", "2026-06-01", "2026-05-01", null));
+
+        assertThat(thrown).isInstanceOf(WebApplicationException.class);
+        assertThat(((WebApplicationException) thrown).getResponse().getStatus()).isEqualTo(400);
+    }
+
+    @Test
     void exportChartCsvIncludesHistoryAndNeutralizesSpreadsheetFormulaInjection() {
         ChartRevisionEventModel event = amendedEvent();
         event.setReasonText("=HYPERLINK(\"https://example.test\",\"Authorization: Basic secret\")");
@@ -657,6 +703,16 @@ class ChartRevisionExportServiceTest {
         when(eventQuery.getResultList()).thenReturn(events);
         when(prescriptionQuery.getResultList()).thenReturn(prescriptionEvents);
         when(orcaQuery.getResultList()).thenReturn(orcaEvents);
+    }
+
+    private void stubPeriodChartIds(List<Object> chartIds) {
+        Query periodQuery = mock(Query.class);
+        when(em.createNativeQuery(startsWith("SELECT DISTINCT cd.id"))).thenReturn(periodQuery);
+        when(periodQuery.setParameter(eq("facilityId"), eq("F001"))).thenReturn(periodQuery);
+        when(periodQuery.setParameter(eq("fromDate"), any(LocalDate.class))).thenReturn(periodQuery);
+        when(periodQuery.setParameter(eq("toDate"), any(LocalDate.class))).thenReturn(periodQuery);
+        when(periodQuery.setParameter(eq("patientId"), eq(501L))).thenReturn(periodQuery);
+        when(periodQuery.getResultList()).thenReturn(chartIds);
     }
 
     private Object[] prescriptionEventRow(Long prescriptionRevisionId, String eventType, String reasonText,

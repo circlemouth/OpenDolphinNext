@@ -9,6 +9,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -18,6 +19,7 @@ import open.dolphin.rest.dto.chart.ChartRevisionChangeResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionExportResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionFinalizeRequest;
 import open.dolphin.rest.dto.chart.ChartRevisionFinalizeResponse;
+import open.dolphin.rest.dto.chart.ChartRevisionPeriodExportResponse;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 import open.dolphin.session.ChartRevisionExportService;
 import open.dolphin.session.ChartRevisionFinalizeService;
@@ -31,6 +33,37 @@ public class ChartRevisionResource extends AbstractOrcaRestResource {
 
     @Inject
     private ChartRevisionExportService exportService;
+
+    @GET
+    @Path("/revision-exports")
+    @Transactional
+    public ChartRevisionPeriodExportResponse exportChartPeriod(
+            @Context HttpServletRequest request,
+            @QueryParam("fromDate") String fromDate,
+            @QueryParam("toDate") String toDate,
+            @QueryParam("patientId") Long patientId) {
+        requireRemoteUser(request);
+        String facilityId = requireFacilityId(request);
+        return exportService.exportChartPeriod(facilityId, fromDate, toDate, patientId);
+    }
+
+    @GET
+    @Path("/revision-exports.csv")
+    @Produces("text/csv")
+    @Transactional
+    public Response exportChartPeriodCsv(
+            @Context HttpServletRequest request,
+            @QueryParam("fromDate") String fromDate,
+            @QueryParam("toDate") String toDate,
+            @QueryParam("patientId") Long patientId) {
+        requireRemoteUser(request);
+        String facilityId = requireFacilityId(request);
+        String csv = exportService.exportChartPeriodCsv(facilityId, fromDate, toDate, patientId);
+        return Response.ok(csv, "text/csv")
+                .header("Content-Disposition",
+                        "attachment; filename=\"chart-revisions-" + fromDate + "-" + toDate + ".csv\"")
+                .build();
+    }
 
     @GET
     @Path("/{chartId}/revisions/export")
