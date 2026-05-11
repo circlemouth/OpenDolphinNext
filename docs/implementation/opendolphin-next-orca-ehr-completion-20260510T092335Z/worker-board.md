@@ -33,7 +33,7 @@ Checklist count when parallel board was created:
 | C | `codex/orca-ehr-worker-c-prescription` | C-13 prescription authority integration watch | Done | 20260511T020217Z | this commit | - |
 | F | `codex/orca-ehr-worker-f-audit-security-gates` | F-04 real ORCA connection trial checklist execution harness | Done | 20260510T215924Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-04 remaining disabled surface audit for SoapNotePanel save | Done | 20260511T034335Z | this commit | - |
-| G | `codex/orca-ehr-integrator-g` | G-02 merge first worker batch in prescribed order | Done | 20260510T195822Z | this docs commit | - |
+| G | `master` | G-03 post-merge verification / release-validation reconciliation | Done | 20260511T035538Z | pending docs commit | - |
 
 ## Worker Queues
 
@@ -245,6 +245,7 @@ Append newest rows at the top.
 
 | RUN_ID | Integrator action | Included workers | Verification | Result |
 | --- | --- | --- | --- | --- |
+| 20260511T035538Z | Merged first complete A-F batch into `master`; resolved ledger/doc conflicts; renumbered migration additions to `V0318`-`V0329` without deleting worker branches/worktrees. Merge commits: F `2de83ae16`, A `65ad06e49`, D `169cdf29d`, B `921fd7906`, C `835f5c787`, E `46762fad2`. | F, A, D, B, C, E | `git diff --check`, doc/config/runtime guards, audit guard, sensitive evidence guard, focused Maven, `verify:web-guard`, `typecheck`, targeted Vitest passed | Done |
 | 20260510T195822Z | Initialized parallel worker board and queues. | G | doc links/config/runtime lookup guards passed | Done |
 
 ## Blockers

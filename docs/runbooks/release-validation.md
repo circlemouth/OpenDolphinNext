@@ -241,6 +241,7 @@ mvn -f pom.server-modernized.xml -pl server-modernized -am -Dtest=PublicRouteInv
 cd web-client && node scripts/verify-no-blocked-orca-route-strings.mjs
 ```
 
+- Integrator G merge batch `20260511T035538Z` advanced the Flyway integration order through `V0329`; future branch integration must allocate migration numbers after `V0329` unless this batch is superseded.
 - `PublicRouteInventoryContractTest` で official / master / local / admin-internal inventory が current taxonomy と一致することを確認する。
 - `WebXmlEndpointExposureTest` で `/api/*` exposure と `/api/orca/*` taxonomy が崩れていないことを確認する。
 - `verify-no-blocked-orca-route-strings.mjs` で repo-wide scanned roots の taxonomy drift や blocked mock surface が残っていないことを確認する。
