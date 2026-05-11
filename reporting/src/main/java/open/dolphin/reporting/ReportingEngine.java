@@ -22,8 +22,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import open.dolphin.reporting.api.ReportingChartRevisionEventPayload;
+import open.dolphin.reporting.api.ReportingOrcaEventPayload;
 import open.dolphin.reporting.api.ReportingPayload;
 import open.dolphin.reporting.api.ReportingPatientPayload;
+import open.dolphin.reporting.api.ReportingPrescriptionEventPayload;
 import open.dolphin.reporting.api.ReportingSigningPayload;
 import open.dolphin.reporting.api.ReportingSummaryItemPayload;
 
@@ -56,6 +58,42 @@ public final class ReportingEngine {
                     "hasSnapshotManifest",
                     "hasOrcaAcceptanceId",
                     "hasNoAcceptanceReason")));
+    private static final Set<String> PRESCRIPTION_SUMMARY_ALLOWLIST = Collections.unmodifiableSet(new LinkedHashSet<>(
+            Arrays.asList(
+                    "status",
+                    "contentHash",
+                    "eventType",
+                    "revisionId",
+                    "revisionNumber",
+                    "prescriptionOrderId",
+                    "prescriptionRevisionId",
+                    "itemCount",
+                    "hasReasonCode",
+                    "newRevisionCreated",
+                    "sendable",
+                    "candidateStatus",
+                    "needsUserReview",
+                    "rawSensitiveFieldsExcluded")));
+    private static final Set<String> ORCA_SUMMARY_ALLOWLIST = Collections.unmodifiableSet(new LinkedHashSet<>(
+            Arrays.asList(
+                    "status",
+                    "operationStatus",
+                    "transmissionStatus",
+                    "transportStatus",
+                    "apiResult",
+                    "apiResultMessageCategory",
+                    "needsUserReview",
+                    "retryCount",
+                    "attemptNumber",
+                    "requestHash",
+                    "responseHash",
+                    "contentHash",
+                    "reconciliationStatus",
+                    "matchedCount",
+                    "totalCount",
+                    "resendBlocked",
+                    "resendBlockReason",
+                    "rawSensitiveFieldsExcluded")));
     private static final Pattern AUTHORIZATION_LINE = Pattern.compile("(?i)authorization\\s*:\\s*[^\\r\\n]+");
     private static final Pattern COOKIE_LINE = Pattern.compile("(?i)cookie\\s*:\\s*[^\\r\\n]+");
     private static final Pattern RAW_XML = Pattern.compile("(?is)<\\?xml.*");
@@ -123,6 +161,8 @@ public final class ReportingEngine {
             }
         }
         appendChartRevisionEvents(payload, builder);
+        appendPrescriptionEvents(payload, builder);
+        appendOrcaEvents(payload, builder);
         ReportContext context = builder.build();
         SigningConfig signingConfig = buildSigningConfig(payload.getSigning());
         String fileName = resolveFileName(payload.getOutputFileName(), templateName, locale, generatedAt);
@@ -156,17 +196,99 @@ public final class ReportingEngine {
         addValue(joiner, "reasonCode", safeText(event.getReasonCode()));
         addValue(joiner, "reasonText", safeText(event.getReasonText()));
         addValue(joiner, "contentHash", safeText(event.getContentHash()));
-        appendSummary(joiner, "before", event.getBeforeSummary());
-        appendSummary(joiner, "after", event.getAfterSummary());
+        appendSummary(joiner, "before", event.getBeforeSummary(), REVISION_SUMMARY_ALLOWLIST);
+        appendSummary(joiner, "after", event.getAfterSummary(), REVISION_SUMMARY_ALLOWLIST);
         return joiner.toString();
     }
 
-    private void appendSummary(StringJoiner joiner, String prefix, Map<String, Object> summary) {
+    void appendPrescriptionEvents(ReportingPayload payload, ReportContext.Builder builder) {
+        if (payload.getPrescriptionEvents() == null) {
+            return;
+        }
+        for (ReportingPrescriptionEventPayload event : payload.getPrescriptionEvents()) {
+            if (event == null) {
+                continue;
+            }
+            String eventType = safeText(event.getEventType());
+            String labelSuffix = isBlank(eventType) ? "event" : eventType;
+            builder.addSummaryItem("処方履歴: " + labelSuffix,
+                    "Prescription event: " + labelSuffix,
+                    prescriptionEventValue(event));
+        }
+    }
+
+    private String prescriptionEventValue(ReportingPrescriptionEventPayload event) {
+        StringJoiner joiner = new StringJoiner("; ");
+        addValue(joiner, "prescriptionOrderId", event.getPrescriptionOrderId());
+        addValue(joiner, "prescriptionRevisionId", event.getPrescriptionRevisionId());
+        addValue(joiner, "chartRevisionId", safeText(event.getChartRevisionId()));
+        addValue(joiner, "revisionNumber", event.getRevisionNumber());
+        addValue(joiner, "status", safeText(event.getStatus()));
+        addValue(joiner, "eventId", event.getEventId());
+        addValue(joiner, "eventType", safeText(event.getEventType()));
+        addValue(joiner, "actorUserId", safeText(event.getActorUserId()));
+        addValue(joiner, "occurredAt", safeText(event.getOccurredAt()));
+        addValue(joiner, "reasonCode", safeText(event.getReasonCode()));
+        addValue(joiner, "reasonText", safeText(event.getReasonText()));
+        addValue(joiner, "contentHash", safeText(event.getContentHash()));
+        addValue(joiner, "eventHash", safeText(event.getEventHash()));
+        appendSummary(joiner, "before", event.getBeforeSummary(), PRESCRIPTION_SUMMARY_ALLOWLIST);
+        appendSummary(joiner, "after", event.getAfterSummary(), PRESCRIPTION_SUMMARY_ALLOWLIST);
+        return joiner.toString();
+    }
+
+    void appendOrcaEvents(ReportingPayload payload, ReportContext.Builder builder) {
+        if (payload.getOrcaEvents() == null) {
+            return;
+        }
+        for (ReportingOrcaEventPayload event : payload.getOrcaEvents()) {
+            if (event == null) {
+                continue;
+            }
+            String operationStatus = safeText(event.getOperationStatus());
+            String labelSuffix = isBlank(operationStatus) ? "event" : operationStatus;
+            builder.addSummaryItem("ORCA連携履歴: " + labelSuffix,
+                    "ORCA event: " + labelSuffix,
+                    orcaEventValue(event));
+        }
+    }
+
+    private String orcaEventValue(ReportingOrcaEventPayload event) {
+        StringJoiner joiner = new StringJoiner("; ");
+        addValue(joiner, "orcaOperationId", event.getOrcaOperationId());
+        addValue(joiner, "chartRevisionId", safeText(event.getChartRevisionId()));
+        addValue(joiner, "operationScope", safeText(event.getOperationScope()));
+        addValue(joiner, "operationType", safeText(event.getOperationType()));
+        addValue(joiner, "sourceApi", safeText(event.getSourceApi()));
+        addValue(joiner, "operationStatus", safeText(event.getOperationStatus()));
+        addValue(joiner, "requestedBy", safeText(event.getRequestedBy()));
+        addValue(joiner, "requestedAt", safeText(event.getRequestedAt()));
+        addValue(joiner, "completedAt", safeText(event.getCompletedAt()));
+        addValue(joiner, "requestHash", safeText(event.getRequestHash()));
+        addValue(joiner, "responseHash", safeText(event.getResponseHash()));
+        addValue(joiner, "retryCount", event.getRetryCount());
+        addValue(joiner, "needsUserReview", event.getNeedsUserReview());
+        addValue(joiner, "latestTransmissionId", event.getLatestTransmissionId());
+        addValue(joiner, "transmissionStatus", safeText(event.getTransmissionStatus()));
+        addValue(joiner, "transportStatus", safeText(event.getTransportStatus()));
+        addValue(joiner, "attemptNumber", event.getAttemptNumber());
+        addValue(joiner, "transmissionStartedAt", safeText(event.getTransmissionStartedAt()));
+        addValue(joiner, "transmissionCompletedAt", safeText(event.getTransmissionCompletedAt()));
+        addValue(joiner, "transmissionRequestHash", safeText(event.getTransmissionRequestHash()));
+        addValue(joiner, "transmissionResponseHash", safeText(event.getTransmissionResponseHash()));
+        addValue(joiner, "reconciliationStatus", safeText(event.getReconciliationStatus()));
+        appendSummary(joiner, "operation", event.getOperationSummary(), ORCA_SUMMARY_ALLOWLIST);
+        appendSummary(joiner, "transmission", event.getTransmissionSummary(), ORCA_SUMMARY_ALLOWLIST);
+        return joiner.toString();
+    }
+
+    private void appendSummary(StringJoiner joiner, String prefix, Map<String, Object> summary,
+            Set<String> allowlist) {
         if (summary == null || summary.isEmpty()) {
             return;
         }
         for (Map.Entry<String, Object> entry : summary.entrySet()) {
-            if (REVISION_SUMMARY_ALLOWLIST.contains(entry.getKey())) {
+            if (allowlist.contains(entry.getKey())) {
                 Object value = safeScalar(entry.getValue());
                 if (value != null) {
                     addValue(joiner, prefix + "." + entry.getKey(), value);

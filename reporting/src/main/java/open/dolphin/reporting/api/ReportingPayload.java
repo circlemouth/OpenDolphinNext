@@ -17,6 +17,8 @@ public class ReportingPayload {
     private String generatedAt;
     private List<ReportingSummaryItemPayload> summaryItems = new ArrayList<>();
     private List<ReportingChartRevisionEventPayload> chartRevisionEvents = new ArrayList<>();
+    private List<ReportingPrescriptionEventPayload> prescriptionEvents = new ArrayList<>();
+    private List<ReportingOrcaEventPayload> orcaEvents = new ArrayList<>();
     private ReportingSigningPayload signing;
     private String outputFileName;
 
@@ -92,6 +94,24 @@ public class ReportingPayload {
         this.chartRevisionEvents = chartRevisionEvents == null
                 ? new ArrayList<>()
                 : new ArrayList<>(chartRevisionEvents);
+    }
+
+    public List<ReportingPrescriptionEventPayload> getPrescriptionEvents() {
+        return prescriptionEvents;
+    }
+
+    public void setPrescriptionEvents(List<ReportingPrescriptionEventPayload> prescriptionEvents) {
+        this.prescriptionEvents = prescriptionEvents == null
+                ? new ArrayList<>()
+                : new ArrayList<>(prescriptionEvents);
+    }
+
+    public List<ReportingOrcaEventPayload> getOrcaEvents() {
+        return orcaEvents;
+    }
+
+    public void setOrcaEvents(List<ReportingOrcaEventPayload> orcaEvents) {
+        this.orcaEvents = orcaEvents == null ? new ArrayList<>() : new ArrayList<>(orcaEvents);
     }
 
     public ReportingSigningPayload getSigning() {
