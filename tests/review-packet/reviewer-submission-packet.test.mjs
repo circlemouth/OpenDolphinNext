@@ -358,6 +358,53 @@ test('creates a clean review-checkout and validates the packet layout', () => {
   }
 });
 
+test('dry-run validates the closeout fixture and lists billing report result requirements', () => {
+  const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
+  try {
+    populateCloseout(repoDir, acceptedHead, mergeBase);
+    const outputDir = path.join(repoDir, 'out');
+    const stdout = run(
+      process.execPath,
+      [SCRIPT_PATH, '--run-id', RUN_ID, '--accepted-ref', ACCEPTED_REF, '--output', 'out', '--dry-run'],
+      repoDir,
+      { REVIEWER_PACKET_REPO_ROOT: repoDir },
+    );
+    const dryRun = JSON.parse(stdout);
+
+    assert.equal(dryRun.runId, RUN_ID);
+    assert.equal(dryRun.acceptedRef, ACCEPTED_REF);
+    assert.equal(dryRun.acceptedHead, acceptedHead);
+    assert.equal(dryRun.packetDir, path.join(outputDir, `submission-packet-${RUN_ID}`));
+    assert.equal(dryRun.zipPath, path.join(outputDir, `submission-packet-${RUN_ID}.zip`));
+    assert.equal(fs.existsSync(outputDir), false);
+    assert.ok(dryRun.requiredCloseoutFiles.includes('qa/billing-report-live-result/result.sanitized.json'));
+    assert.ok(dryRun.requiredPacketFiles.includes('closeout-packet/qa/billing-report-live-result/result.sanitized.json'));
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('dry-run fails when billing report live result evidence is missing', () => {
+  const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
+  try {
+    populateCloseout(repoDir, acceptedHead, mergeBase, {
+      omit: ['qa/billing-report-live-result/result.sanitized.json'],
+    });
+    assert.throws(
+      () =>
+        run(
+          process.execPath,
+          [SCRIPT_PATH, '--run-id', RUN_ID, '--accepted-ref', ACCEPTED_REF, '--dry-run'],
+          repoDir,
+          { REVIEWER_PACKET_REPO_ROOT: repoDir },
+        ),
+      /Missing required files:\nqa\/billing-report-live-result\/result\.sanitized\.json/,
+    );
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
 test('fails when billing report live result contains raw billing identifiers', () => {
   const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
   try {

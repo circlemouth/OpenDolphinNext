@@ -1045,6 +1045,8 @@ function main() {
           acceptedHead,
           packetDir: packetDirFor(outputDir, options.runId),
           zipPath: zipPathFor(outputDir, options.runId),
+          requiredCloseoutFiles: REQUIRED_CLOSEOUT_FILES,
+          requiredPacketFiles: REQUIRED_PACKET_FILES,
         },
         null,
         2,

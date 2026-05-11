@@ -31,6 +31,7 @@ reviewer 提出物を logs-only archive ではなく、同一 `RUN_ID` / 同一 
 - `--validate-only`: 既に生成済み packet を再検証する
 
 `--accepted-head` は通常不要だが、`git/accepted-branch.txt` の branch 名は固定しつつ、`git/git-head-current.txt` の accepted HEAD を明示したい場合に使う。
+`--dry-run` は `packetDir` / `zipPath` に加えて `requiredCloseoutFiles` / `requiredPacketFiles` を JSON で出力する。operator result flow を含む current closeout では `qa/billing-report-live-result/result.sanitized.json` が `requiredCloseoutFiles` に含まれていなければならない。dry-run は出力先へ書き込まず、欠落した required file、HEAD 不一致、sanitized evidence contract 違反を packet 生成前に fail させる。
 
 ## 入力契約
 

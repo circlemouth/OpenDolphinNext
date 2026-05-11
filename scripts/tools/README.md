@@ -115,6 +115,10 @@
   - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z`
   - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --output ./artifacts/reviewer-submission-packets`
   - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --dry-run`
+- Dry-run:
+  - 入力検証だけを行い、packet directory / zip は作成しない
+  - JSON の `requiredCloseoutFiles` / `requiredPacketFiles` で current allowlist を確認できる
+  - billing/report operator result flow では `qa/billing-report-live-result/result.sanitized.json` が required closeout file に含まれる
 - Evidence policy:
   - closeout evidence から reviewer 再読用の extracted subset だけを同梱する
   - raw XML、server stacktrace、HAR、request XML、raw network dump は reviewer submission packet 正本へ入れない
