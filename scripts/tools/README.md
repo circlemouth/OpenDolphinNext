@@ -115,6 +115,10 @@
   - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z`
   - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --output ./artifacts/reviewer-submission-packets`
   - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --dry-run`
+- Dry-run:
+  - 入力検証だけを行い、packet directory / zip は作成しない
+  - JSON の `requiredCloseoutFiles` / `requiredPacketFiles` で current allowlist を確認できる
+  - billing/report operator result flow では `qa/billing-report-live-result/result.sanitized.json` が required closeout file に含まれる
 - Evidence policy:
   - closeout evidence から reviewer 再読用の extracted subset だけを同梱する
   - raw XML、server stacktrace、HAR、request XML、raw network dump は reviewer submission packet 正本へ入れない
@@ -129,6 +133,13 @@
 - 使い方:
   - `./scripts/validate-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z`
   - `./scripts/validate-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --output ./artifacts/reviewer-submission-packets`
+
+## qa-orca-billing-report-live-result.mjs
+- 位置づけ: billing/report live Trial の operator result を sanitized record に正規化する QA helper。
+- Template:
+  - `cd web-client && node scripts/qa-orca-billing-report-live-result.mjs --print-operator-result-template`
+  - no-write の JSON sample だけを出力する
+  - dummy hash を server-derived hash へ置き換え、raw ORCA body / 帳票本文 / raw patient / invoice / `Data_Id` / `Medical_Uid` / storage key / storage digest / credential / HAR / trace / video / screenshot / raw network は追加しない
 
 ## orca-artifacts-namer.js
 - 目的: `artifacts/orca-connectivity/` 以下の Evidence ディレクトリ名が UTC タイムスタンプ (`YYYYMMDDThhmmssZ`) に統一されているかを自動検証し、命名揺れがある場合は推奨名を提案する。

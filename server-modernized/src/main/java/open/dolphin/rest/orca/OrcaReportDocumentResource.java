@@ -12,21 +12,34 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.orca.service.OrcaBillingCacheStore;
+import open.dolphin.orca.service.OrcaReportBinaryStorageService;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.OrcaReportRequest;
 import open.dolphin.rest.dto.orca.OrcaReportResponse;
+import open.dolphin.security.HashUtil;
 
 @Path("/orca/official/reports")
 public class OrcaReportDocumentResource extends AbstractOrcaRestResource {
+    private static final Duration REPORT_BINARY_RETENTION = Duration.ofDays(30);
 
     @Inject
     private OrcaTransport orcaTransport;
+
+    @Inject
+    private OrcaBillingCacheStore billingCacheStore;
+
+    @Inject
+    private OrcaReportBinaryStorageService reportBinaryStorageService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -59,14 +72,19 @@ public class OrcaReportDocumentResource extends AbstractOrcaRestResource {
                 OrcaTransportRequest.post(requestXml).withAccept(MediaType.APPLICATION_JSON));
 
         OrcaReportResponse response = parseResponse(transportResult, runId, traceId);
+        OrcaBillingCacheStore.ReportSnapshotReceipt snapshot = persistReportSnapshotOrThrow(
+                request, facilityId, type, payload, requestXml, transportResult, response);
+        stageReportBinaryIfAvailable(request, facilityId, type, transportResult, response, snapshot);
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("runId", runId);
         details.put("traceId", traceId);
         details.put("reportType", type);
         details.put("patientId", payload.getPatientId());
-        details.put("invoiceNumber", payload.getInvoiceNumber());
-        details.put("dataId", response.getDataId());
+        details.put("invoiceNumberPresent", !isBlank(payload.getInvoiceNumber()));
+        details.put("invoiceNumberHash", hashNullable(payload.getInvoiceNumber()));
+        details.put("dataIdPresent", !isBlank(response.getDataId()));
+        details.put("dataIdHash", hashNullable(response.getDataId()));
         details.put("apiResult", response.getApiResult());
         details.put("httpStatus", response.getStatus());
         recordAudit(
@@ -75,6 +93,97 @@ public class OrcaReportDocumentResource extends AbstractOrcaRestResource {
                 details,
                 response.isOk() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
+    }
+
+    private OrcaBillingCacheStore.ReportSnapshotReceipt persistReportSnapshotOrThrow(
+            HttpServletRequest request,
+            String facilityId,
+            String type,
+            OrcaReportRequest payload,
+            String requestXml,
+            OrcaTransportResult transportResult,
+            OrcaReportResponse response) {
+        if (billingCacheStore == null) {
+            response.setStorageUploadStatus("NOT_UPLOADED");
+            response.setReportBinaryAvailable(false);
+            return null;
+        }
+        try {
+            OrcaBillingCacheStore.ReportSnapshotReceipt snapshot = billingCacheStore.saveReportSnapshot(
+                    new OrcaBillingCacheStore.ReportSnapshotCommand(
+                    facilityId,
+                    payload.getPatientId(),
+                    type,
+                    payload.getInvoiceNumber(),
+                    requestXml,
+                    transportResult != null ? transportResult.getBody() : null,
+                    response,
+                    null));
+            response.setStorageUploadStatus(snapshot != null ? snapshot.storageUploadStatus() : "NOT_UPLOADED");
+            response.setReportBinaryAvailable(false);
+            return snapshot;
+        } catch (RuntimeException ex) {
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("runId", resolveRunId(request));
+            details.put("traceId", resolveTraceId(request));
+            details.put("reportType", type);
+            details.put("snapshotStatus", "UNAVAILABLE");
+            details.put("reason", "report_snapshot_persist_failed");
+            recordAudit(request, "ORCA_REPORT_CREATE", details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, jakarta.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE,
+                    "orca_report_snapshot_unavailable", "ORCA report snapshot is unavailable");
+        }
+    }
+
+    private void stageReportBinaryIfAvailable(
+            HttpServletRequest request,
+            String facilityId,
+            String type,
+            OrcaTransportResult transportResult,
+            OrcaReportResponse response,
+            OrcaBillingCacheStore.ReportSnapshotReceipt snapshot) {
+        if (snapshot == null
+                || !snapshot.uploadEligible()
+                || transportResult == null
+                || isBlank(transportResult.getBody())
+                || reportBinaryStorageService == null
+                || !reportBinaryStorageService.isUploadEnabled()) {
+            return;
+        }
+        Instant uploadedAt = Instant.now();
+        try {
+            OrcaReportBinaryStorageService.UploadResult upload = reportBinaryStorageService.uploadReportBinary(
+                    new OrcaReportBinaryStorageService.UploadCommand(
+                            snapshot.snapshotId(),
+                            facilityId,
+                            snapshot.serverStorageObjectKey(),
+                            snapshot.serverStorageDigest(),
+                            transportResult.getBody().getBytes(StandardCharsets.UTF_8),
+                            firstNonBlank(transportResult.getContentType(), MediaType.APPLICATION_JSON),
+                            uploadedAt,
+                            uploadedAt.plus(REPORT_BINARY_RETENTION)));
+            response.setStorageUploadStatus("UPLOADED");
+            response.setReportBinaryAvailable(true);
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("runId", resolveRunId(request));
+            details.put("traceId", resolveTraceId(request));
+            details.put("reportType", type);
+            details.put("snapshotId", upload.snapshotId());
+            details.put("storageUploadStatus", "UPLOADED");
+            details.put("retentionUntil", upload.retentionUntil().toString());
+            recordAudit(request, "ORCA_REPORT_BINARY_UPLOAD", details, AuditEventEnvelope.Outcome.SUCCESS);
+        } catch (RuntimeException ex) {
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("runId", resolveRunId(request));
+            details.put("traceId", resolveTraceId(request));
+            details.put("reportType", type);
+            details.put("snapshotId", snapshot.snapshotId());
+            details.put("storageUploadStatus", "UPLOAD_FAILED");
+            details.put("reason", "report_binary_upload_failed");
+            recordAudit(request, "ORCA_REPORT_BINARY_UPLOAD", details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, jakarta.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE,
+                    "orca_report_binary_unavailable", "ORCA report binary storage is unavailable");
+        }
     }
 
     private OrcaEndpoint resolveEndpoint(String type) {
@@ -217,6 +326,10 @@ public class OrcaReportDocumentResource extends AbstractOrcaRestResource {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private String hashNullable(String value) {
+        return !isBlank(value) ? HashUtil.sha256(value.trim()) : null;
     }
 
     private void appendTag(StringBuilder builder, String tag, String value) {

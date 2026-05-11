@@ -8,8 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +23,7 @@ import java.util.Map;
 import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.orca.service.DiseaseProjectionService;
+import open.dolphin.orca.service.OrcaBillingCacheStore;
 import open.dolphin.orca.service.OrcaDiseaseOperationStore;
 import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.OrcaEndpoint;
@@ -260,7 +262,9 @@ class OrcaChartSupportResourceTest {
                 </data>
                 """);
         OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        OrcaBillingCacheStore billingCacheStore = mock(OrcaBillingCacheStore.class);
         injectField(resource, "orcaTransport", transport);
+        injectField(resource, "billingCacheStore", billingCacheStore);
 
         ChartSupportIncomeInfoRequest payload = new ChartSupportIncomeInfoRequest();
         payload.setPatientId("12345");
@@ -280,6 +284,46 @@ class OrcaChartSupportResourceTest {
         assertEquals("内科", response.getEntries().get(0).getDepartmentName());
         assertEquals(1200.0, response.getEntries().get(0).getAcMoney(), 0.0001);
         assertNull(response.getEntries().get(0).getIcMoney());
+
+        ArgumentCaptor<OrcaBillingCacheStore.IncomeInfoCommand> cacheCommand =
+                ArgumentCaptor.forClass(OrcaBillingCacheStore.IncomeInfoCommand.class);
+        verify(billingCacheStore).saveIncomeInfo(cacheCommand.capture());
+        OrcaBillingCacheStore.IncomeInfoCommand command = cacheCommand.getValue();
+        assertEquals("F001", command.facilityId());
+        assertEquals("12345", command.orcaPatientId());
+        assertEquals("2026-03-22", command.baseDate());
+        assertTrue(command.requestBody().contains("<incomeinfv2req type=\"record\">"));
+        assertTrue(command.responseBody().contains("<Api_Result type=\"string\">0000</Api_Result>"));
+        assertEquals(response, command.response());
+    }
+
+    @Test
+    void incomeInfoFailsClosedWhenBillingCachePersistenceFails() {
+        CapturingTransport transport = new CapturingTransport("""
+                <data>
+                  <incomeinfores type="record">
+                    <Api_Result type="string">0000</Api_Result>
+                    <Api_Result_Message type="string">OK</Api_Result_Message>
+                  </incomeinfores>
+                </data>
+                """);
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        OrcaBillingCacheStore billingCacheStore = mock(OrcaBillingCacheStore.class);
+        injectField(resource, "orcaTransport", transport);
+        injectField(resource, "billingCacheStore", billingCacheStore);
+        doThrow(new IllegalStateException("store unavailable"))
+                .when(billingCacheStore)
+                .saveIncomeInfo(any(OrcaBillingCacheStore.IncomeInfoCommand.class));
+
+        ChartSupportIncomeInfoRequest payload = new ChartSupportIncomeInfoRequest();
+        payload.setPatientId("12345");
+        payload.setBaseDate("2026-03-22");
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> resource.incomeInfo(buildRequest(), payload));
+
+        assertEquals(503, exception.getResponse().getStatus());
     }
 
     @Test

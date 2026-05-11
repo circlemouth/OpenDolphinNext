@@ -55,11 +55,13 @@ UI は DB degraded / read-only と ORCA outage を混同しない。DB write pat
 ## UNKNOWN Handling
 
 1. `medicalmodv2` の通信断、`Medical_Uid` 欠落、parse ambiguity は `ORCA_UNKNOWN` とし、成功扱いにしない。
-2. 同じ snapshot を即時再送しない。
-3. Reception の ORCA送信要確認一覧から `ORCA状態を再照合` を実行する。
-4. 再照合 request は server-side transmission ID だけを使う。patient、facility、insurance、voucher、sequential、`Medical_Uid`、URL、raw XML は client から受け取らない。
-5. `tmedicalgetv2` の一致候補がある場合も、再送成功や会計反映済みとは扱わず、内容確認後の明示操作まで `needsUserReview=true` を維持する。
-6. `Medical_Mode` または `Medical_Mode2` が空でなく `0` 以外の場合は `resendBlocked=true` とし、管理者確認なしに再送しない。
+2. `medicalmodv2` が zero-like result と `Medical_Uid` を返した場合でも、server は `tmedicalgetv2` read-only 再取得・照合が成功するまで `ORCA_MEDICAL_REGISTERED` に昇格しない。
+3. 同じ snapshot を即時再送しない。
+4. Reception の ORCA送信要確認一覧から `ORCA状態を再照合` を実行する。
+5. 再照合 request は server-side transmission ID だけを使う。patient、facility、insurance、voucher、sequential、`Medical_Uid`、URL、raw XML は client から受け取らない。
+6. `tmedicalgetv2` の一致候補がある場合も、再送成功や会計反映済みとは扱わず、内容確認後の明示操作まで `needsUserReview=true` を維持する。
+7. `Medical_Mode` または `Medical_Mode2` が空でなく `0` 以外の場合は `resendBlocked=true` とし、管理者確認なしに再送しない。
+8. 共通 ORCA 台帳では、元操作を `orca_operation`、各 transport attempt を `orca_transmission`、sanitized ORCA response を `orca_response_summary`、復旧照合を `orca_reconciliation_result` に記録する。記録は request/response hash、固定 status/reason code、件数、`Medical_Uid` の存在有無、`Medical_Mode` / `Medical_Mode2` の分類値に限定し、raw body や raw identifier を保存しない。
 
 ## Recovery After ORCA Restores
 
@@ -70,6 +72,11 @@ UI は DB degraded / read-only と ORCA outage を混同しない。DB write pat
 5. 差分や `resendBlocked` がある場合は管理者確認フローに回す。
 6. 再送または追加送信が必要な場合も、server-side snapshot と server-derived encounter context から payload を再構成する。client-provided voucher、sequential、insurance combination、`Medical_Uid` は使わない。
 7. すべての再照合、再送、停止判断を監査ログに残す。監査ログは sanitized summary と固定 status/reason code に限定する。
+8. 会計・収納・帳票は復旧後に ORCA adapter から再取得し、`orca_billing_cache` または `orca_report_snapshot` を更新する。local DB 上の金額、収納済み状態、帳票 snapshot、レセプト関連 summary を ORCA 正本へ昇格しない。
+9. `orca_billing_cache` / `orca_report_snapshot` の evidence は request/response hash、件数、invoice/data id hash、sanitized summary、監査 action だけに限定する。raw ORCA body、raw invoice number、raw Data_Id、帳票本文、credential、患者詳細、HAR/trace/video/screenshot は incident evidence に含めない。
+10. 帳票 object storage の key/digest は server-generated `server_storage_object_key` / `server_storage_digest` だけを使う。手元メモ、client payload、復旧作業者入力、raw Data_Id から object key を組み立てない。
+11. `storage_upload_status` が `UPLOADED` / `RETENTION_BLOCKED` 以外、または `storage_retention_until` が欠落・期限切れの帳票 binary は復旧 evidence として再利用しない。必要なら ORCA から再取得し、新しい snapshot として保存する。
+12. 帳票 binary を再保存する場合は `OrcaReportBinaryStorageService` の server-side digest verification を通す。手元に残った帳票本文や client から渡された digest/key を根拠に直接 object storage へ put しない。
 
 ## Recovery After DB Restore
 
@@ -80,12 +87,17 @@ UI は DB degraded / read-only と ORCA outage を混同しない。DB write pat
 5. 送信系 transmission は自動再送しない。まず Reception の ORCA送信要確認一覧に出し、`tmedicalgetv2` read-only 再照合で ORCA 側状態を確認する。
 6. restore 前後の local snapshot と ORCA 再取得結果に差分がある場合は `NEEDS_REVIEW` とし、管理者確認まで再送・追加送信・置換送信を止める。
 7. `Medical_Mode` または `Medical_Mode2` が空でなく `0` 以外の場合は、restore 前の local 状態に関係なく `resendBlocked=true` とする。
-8. 復旧判断、hash chain 検証、content hash 検証、ORCA再取得、差分照合、再送可否判断を監査ログに保存する。監査ログには raw ORCA body、患者詳細、保険詳細、接続先情報を残さない。
+8. 会計 cache と帳票 snapshot は `source_system=ORCA` の取得証跡として扱い、restore 後の請求・収納・レセプト正本にはしない。復旧確認では ORCA 再取得結果と hash/sanitized summary を比較し、local-only 金額更新や帳票本文の再利用で済ませない。
+9. `server_storage_object_key` / `server_storage_digest` が欠落または再取得結果と一致しない帳票 snapshot は `NEEDS_REVIEW` とし、restore 後の帳票再利用には使わない。
+10. `storage_upload_status` が `UPLOADED` / `RETENTION_BLOCKED` でない、または `storage_uploaded_at` / `storage_retention_until` が揃わない帳票 snapshot は binary object 未利用として扱い、restore 後の帳票再利用には使わない。
+11. restore 後に帳票 binary を再 upload する場合も、DB snapshot と再取得 content の SHA-256 が一致する場合だけ `UPLOADED` へ戻す。digest 不一致は `NEEDS_REVIEW` とし、帳票 binary は使わない。
+12. 復旧判断、hash chain 検証、content hash 検証、ORCA再取得、差分照合、再送可否判断を監査ログに保存する。監査ログには raw ORCA body、患者詳細、保険詳細、接続先情報を残さない。
 
 ## Evidence Policy
 
 - 記録してよいもの: RUN_ID、traceId、operationStatus、reconciliationStatus、transmissionId、snapshotId、row count、`Medical_Uid` の存在有無、`Medical_Mode` / `Medical_Mode2`、`resendBlocked`、固定 reason code。
 - 記録してはいけないもの: ORCA URL、host、port、Basic 認証、証明書、raw ORCA body、raw XML、患者氏名、住所、電話番号、保険詳細、`Medical_Uid` 値、voucher、sequential、insurance combination。
+- DB 台帳に保存してよいものも同じ allowlist に従う。`orca_operation` / `orca_transmission` / `orca_response_summary` / `orca_reconciliation_result` / `orca_billing_cache` / `orca_report_snapshot` は raw request/response body や credential を持つ列を作らず、hash と sanitized JSON summary だけを保存する。
 
 ## Verification
 

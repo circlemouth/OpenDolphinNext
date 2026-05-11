@@ -102,12 +102,15 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] `prescription_order`, `prescription_order_revision`, `prescription_order_event`, `prescription_order_item`, `prescription_orca_transmission` を作成または再設計する。
 - [x] 処方状態は `DRAFT`, `FINAL`, `CHANGED`, `STOPPED`, `CANCELLED`, `REISSUED` に限定する。
 - [ ] 確定済み処方を直接上書き不可にし、変更・中止・取消・再発行はイベントとして保存する。
-- [ ] `orca_operation`, `orca_transmission`, `orca_response_summary`, `orca_reconciliation_result` を作成する。
-- [ ] ORCA operation status は `PREPARED`, `READY_TO_SEND`, `SENDING`, `ORCA_ACCEPTED`, `ORCA_REJECTED`, `ORCA_WARNING`, `ORCA_UNMATCHED`, `ORCA_CONFLICT`, `NETWORK_FAILED`, `CERTIFICATE_FAILED`, `AUTH_FAILED`, `UNKNOWN`, `NEEDS_REVIEW`, `CANCELLED` に限定する。
+- [x] `orca_operation`, `orca_transmission`, `orca_response_summary`, `orca_reconciliation_result` を作成する。
+  - [x] 2026-05-10T21:15Z: 共通 ORCA operation ledger migration を追加し、status / retry / idempotency / request-response hash / sanitized response summary / reconciliation result を raw body・credential なしで永続化する schema test を固定した。
+- [x] ORCA operation status は `PREPARED`, `READY_TO_SEND`, `SENDING`, `ORCA_ACCEPTED`, `ORCA_REJECTED`, `ORCA_WARNING`, `ORCA_UNMATCHED`, `ORCA_CONFLICT`, `NETWORK_FAILED`, `CERTIFICATE_FAILED`, `AUTH_FAILED`, `UNKNOWN`, `NEEDS_REVIEW`, `CANCELLED` に限定する。
+  - [x] 2026-05-10T21:15Z: `orca_operation` の check constraint と `OrcaOperationLedgerSchemaTest` で不正 status を拒否することを固定した。
 - [x] `diseasev3` は server-generated `idempotency_key` の二重送信をサーバー側で拒否する。
 - [x] `diseasev3` の transport 例外は `NETWORK_FAILED` / `needsUserReview=true` として operation に保存し、成功扱いにしない。
-- [ ] `UNKNOWN` は成功扱いせず、ORCA再照合完了まで UI に要確認として表示する。
+- [x] `UNKNOWN` は成功扱いせず、ORCA再照合完了まで UI に要確認として表示する。
   - [x] `close-and-send-to-billing` の `ORCA_UNKNOWN` / `operationStatus=UNKNOWN` / `needsUserReview=true` は Charts の診察終了成功に潰さず、会計待ち遷移と患者タブ終了を停止して要確認を初期表示する。
+  - [x] 2026-05-10T21:59Z: `medicalmodv2` zero-like response も completion evidence 欠落時は `UNKNOWN` とし、`Medical_Uid` が返った場合も `tmedicalgetv2` read-only 再取得・照合を通過するまで `ORCA_MEDICAL_REGISTERED` に昇格しない server-side fail-closed path を固定した。
 - [x] `authoritative_audit_event` を append-only / hash chain 付きに再設計または拡張する。
 - [ ] 監査ログに ORCA認証情報、証明書パスワード、Basic認証文字列を保存しない。
 - [ ] ORCA raw XML を保存する場合は暗号化し、アクセス権限を限定する。
@@ -184,10 +187,30 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 診療録・処方指示から `orca_medical_candidate` を作成し、ORCA正本ではないことを明示する。
 - [ ] `medicalmodv2` 相当の送信では患者番号、診療日、診療科、医師コード、保険組合せ、ORCA受付存在、患者/保険情報 freshness、会計済み衝突を検証する。
 - [ ] ORCAレスポンスを構造化保存し、送信後に ORCA側診療行為情報を再取得して差分表示する。
-- [ ] ORCA会計情報取得 API をサーバーアダプタ経由で呼び、`orca_billing_cache` に保存する。
-- [ ] OpenDolphinNext 側で会計金額や収納済み状態を独立更新できる API を作らない。
-- [ ] 領収書・請求書は ORCA帳票取得結果として扱い、帳票取得履歴を監査ログに保存する。
-- [ ] レセプト情報を OpenDolphinNext 正本として持たず、ORCA由来キャッシュまたは帳票スナップショットとして扱う。
+  - [x] 2026-05-10T21:59Z: `close-and-send-to-billing` は `medicalmodv2` response を sanitized `response_json` として保存し、送信直後に `tmedicalgetv2` で ORCA側中途終了データを再取得・照合する。UI 差分表示の完成は後続 D/E queue で継続。
+- [x] ORCA会計情報取得 API をサーバーアダプタ経由で呼び、`orca_billing_cache` に保存する。
+  - [x] 2026-05-10T22:30Z: `/api/orca/official/chart-support/income-info` は `incomeinfv2` transport response を `orca_billing_cache` へ hash と sanitized summary として保存し、保存失敗時は成功応答にしない。
+  - [x] 2026-05-11T00:22Z: `OrcaChartSupportResourceTest` は public `income-info` resource が `facilityId` / ORCA patient / base date / request-response body を server-side cache command へ渡し、`orca_billing_cache` 保存失敗時に HTTP 503 で fail closed することを固定した。
+- [x] OpenDolphinNext 側で会計金額や収納済み状態を独立更新できる API を作らない。
+  - [x] 2026-05-10T22:30Z: `orca_billing_cache` は `source_system=ORCA` の cache 境界とし、schema/test/docs で raw invoice/insurance や local source を拒否する。会計金額・収納済み状態を local authority として更新する resource は追加していない。
+- [x] 領収書・請求書は ORCA帳票取得結果として扱い、帳票取得履歴を監査ログに保存する。
+  - [x] 2026-05-10T22:30Z: `/api/orca/official/reports/{type}` は ORCA report response を `orca_report_snapshot` へ hash/sanitized summary として保存し、audit detail は invoice/Data_Id raw ではなく hash と存在有無に限定する。
+  - [x] 2026-05-10T23:18Z: `orca_report_snapshot.server_storage_object_key` / `server_storage_digest` は server が request/response hash と report type から生成し、raw patient / invoice / Data_Id / client-provided key を保存しない。
+  - [x] 2026-05-10T23:22Z: `orca_report_snapshot.storage_upload_status` / upload time / retention until を追加し、binary object を `UPLOADED` 扱いにするには server-generated key/digest と retention metadata が必須になる DB gate を追加した。
+  - [x] 2026-05-11T00:02Z: `OrcaReportBinaryStorageService` は DB snapshot の server-generated key/digest と content SHA-256 が一致する場合だけ object storage へ put し、digest mismatch / snapshot mismatch / disabled storage は upload 前に fail closed する。
+  - [x] 2026-05-11T00:22Z: `OrcaReportDocumentResourceTest` は public report resource が `orca_report_snapshot` command を作成し、snapshot 保存失敗時に帳票取得成功へ進めず HTTP 503 で fail closed することを固定した。
+  - [x] 2026-05-11T00:42Z: `/api/orca/official/reports/{type}` は snapshot receipt から server-internal binary upload command を作り、storage 有効時だけ object storage へ staging する。client 由来の storage key/digest/retention は受け取らず、response は `storageUploadStatus` / `reportBinaryAvailable` のみを返し、upload 失敗時は HTTP 503 で fail closed する。
+  - [x] 2026-05-11T01:02Z: release-validation の server contract gate は `OrcaReportDocumentResourceTest` / `OrcaBillingCacheStoreTest` / `OperationsHealthResourceTest` を含み、billing/report/readiness coverage を `ReleaseValidationRunbookContractTest` で固定した。
+  - [x] 2026-05-11T01:22Z: ORCA billing/report live profile は同一 RUN_ID の exact selected-candidate preflight 後続に限定し、`income-info` / `/api/orca/official/reports/{type}` の evidence を `orca_billing_cache` / `orca_report_snapshot` の sanitized hash・server-generated storage key/digest・`storageUploadStatus` / `reportBinaryAvailable` だけに限定する contract を固定した。
+  - [x] 2026-05-11T01:42Z: `qa-orca-billing-report-live-profile.mjs` dry-run harness を追加し、candidate discovery と exact selected-candidate preflight の sanitized summary が揃う場合だけ billing/report live profile に進めること、summary に raw patient / insurance / credential / ORCA body / browser artifact 情報を含めないことを固定した。
+  - [x] 2026-05-11T02:02Z: reviewer submission packet は `qa/billing-report-live-profile/summary.sanitized.json` のみを allowlist copy / validate し、dry-run が live ORCA 実行済み・会計済み・収納済み・レセプト正本化として扱われる誤読と raw artifact / raw patient key 参照を拒否する。
+  - [x] 2026-05-11T02:22Z: `qa-orca-billing-report-live-handoff.mjs` を追加し、ready dry-run summary と manual approval reference hash が揃う場合だけ人手 live validation へ進める handoff evidence を作る。handoff 自体は live ORCA traffic を実行せず、raw artifact / raw patient / raw invoice / raw `Data_Id` / storage key/digest flag と capture env を拒否する。
+  - [x] 2026-05-11T02:42Z: `qa-orca-billing-report-live-result.mjs` を追加し、operator live result を sanitized record として正規化する。accepted evidence は ORCA由来 cache/snapshot の hash・件数・invoice/data id hash・server-generated storage key/digest presence・`storageUploadStatus` / `reportBinaryAvailable` に限定し、raw identifier / raw artifact / storage key/digest / upload failure を拒否する。
+  - [x] 2026-05-11T03:03Z: reviewer submission packet は `qa/billing-report-live-result/result.sanitized.json` を allowlist copy / validate し、ready handoff hash、ORCA由来 hash-only cache/snapshot evidence、server-generated storage boundary、upload failure / blocker なしを要求する。raw identifier / raw artifact / storage key/digest が result evidence に混入した場合は packet 作成を拒否する。
+  - [x] 2026-05-11T03:22Z: reviewer submission packet dry-run は `requiredCloseoutFiles` / `requiredPacketFiles` を JSON 出力し、`qa/billing-report-live-result/result.sanitized.json` の欠落を packet 生成前に fail する。dry-run は出力先へ書き込まず、closeout fixture が operator result evidence まで揃っていることを focused test で固定した。
+  - [x] 2026-05-11T03:42Z: `qa-orca-billing-report-live-result.mjs --print-operator-result-template` を追加し、operator が raw ORCA body / 帳票本文 / raw patient / invoice / `Data_Id` / `Medical_Uid` / storage key/digest / browser artifact を追記せず、server-derived hash/status だけで sanitized result input を作る contract を固定した。
+- [x] レセプト情報を OpenDolphinNext 正本として持たず、ORCA由来キャッシュまたは帳票スナップショットとして扱う。
+  - [x] 2026-05-10T22:30Z: `orca_report_snapshot` は `source_system=ORCA` と固定 report type/status を持つ snapshot 境界であり、restore/recovery docs でも local snapshot を正本昇格しないことを明記した。
 
 ## 11. Webクライアント医療安全UI
 
@@ -250,6 +273,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 開発環境でもブラウザに ORCA認証情報を渡さない。
 - [ ] ORCA接続、証明書期限、DB、監査ログ書き込みの health check を実装する。
   - [x] `/api/health/readiness` に sanitized `auditLog` check を追加し、authoritative audit chain head の write path lock が取れない場合は `audit_log_write_unavailable` で全体 readiness を fail-closed にする。会計送信と `tmedicalgetv2` 再照合は audit write path が利用できない場合、ORCA transport 前に 503 を返す。
+  - [x] 2026-05-10T23:06Z: `/api/health/readiness` に sanitized `orcaBillingCache` check を追加し、`orca_billing_cache` / `orca_report_snapshot` schema が利用できない場合は `orca_billing_cache_unavailable` で全体 readiness を fail-closed にする。SQL、内部例外、raw table detail は返さない。
 - [ ] ORCA障害時は UI に「ORCA連携停止中」を表示しつつ、診療録正本閲覧を可能にする。
   - [x] App shell は `/api/health/readiness` の sanitized ORCA check が `DOWN` または取得失敗の場合、全ロールに `ORCA連携停止中` の compact status だけを表示する。正常時は非表示とし、URL、host、credential、raw error は表示しない。
 - [ ] ORCA送信失敗、`UNKNOWN`, `NEEDS_REVIEW` の一覧画面を作る。

@@ -91,7 +91,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0319", appliedVersion(connection));
+                assertEquals("0322", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -137,6 +137,12 @@ class FreshSchemaBaselineTest {
                 assertTrue(tableExists(connection, "opendolphin", "prescription_order_item"));
                 assertTrue(tableExists(connection, "opendolphin", "prescription_order_event"));
                 assertTrue(tableExists(connection, "opendolphin", "prescription_orca_transmission"));
+                assertTrue(tableExists(connection, "opendolphin", "orca_operation"));
+                assertTrue(tableExists(connection, "opendolphin", "orca_transmission"));
+                assertTrue(tableExists(connection, "opendolphin", "orca_response_summary"));
+                assertTrue(tableExists(connection, "opendolphin", "orca_reconciliation_result"));
+                assertTrue(tableExists(connection, "opendolphin", "orca_billing_cache"));
+                assertTrue(tableExists(connection, "opendolphin", "orca_report_snapshot"));
                 assertFalse(tableExists(connection, "opendolphin", "d_module_payload"));
                 assertTrue(tableExists(connection, "opendolphin", "runtime_state_store"));
                 assertFalse(tableExists(connection, "opendolphin", "phr_async_job"));
@@ -191,6 +197,27 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "generic_name_prescription"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_event", "event_type"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_orca_transmission", "operation_status"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_operation", "idempotency_key"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_operation", "request_hash"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_operation", "response_hash"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_operation", "request_summary_json"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_operation", "response_summary_json"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_transmission", "request_hash"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_transmission", "response_hash"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_transmission", "transport_status"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_response_summary", "warnings_json"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_response_summary", "unmatched_json"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_reconciliation_result", "reconciliation_status"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_reconciliation_result", "resend_blocked"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_billing_cache", "source_system"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_billing_cache", "normalized_summary_json"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_billing_cache", "invoice_hashes_json"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "source_system"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "summary_json"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "server_storage_object_key"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "storage_upload_status"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "storage_uploaded_at"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_report_snapshot", "storage_retention_until"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_bucket"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_key"));
                 assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_version_id"));
@@ -228,6 +255,13 @@ class FreshSchemaBaselineTest {
                 assertTrue(indexExists(connection, "opendolphin", "idx_prescription_order_item_revision"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_prescription_order_event_order"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_prescription_orca_transmission_order"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_orca_operation_status"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_orca_transmission_operation"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_orca_response_summary_review"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_orca_reconciliation_status"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_orca_billing_cache_patient"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_orca_report_snapshot_patient"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_orca_report_snapshot_storage_upload"));
                 assertTrue(indexExists(connection, "opendolphin", "uq_d_orca_user_link_facility_orca_user"));
 
                 assertEquals(1L, countRows(connection, "select count(*) from opendolphin.audit_chain_head"));
