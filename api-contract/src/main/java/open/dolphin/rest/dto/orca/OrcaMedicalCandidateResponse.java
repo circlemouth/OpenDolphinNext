@@ -18,6 +18,7 @@ public class OrcaMedicalCandidateResponse {
     private long prescriptionId;
     private long prescriptionRevisionId;
     private String prescriptionContentHash;
+    private List<PrescriptionHistoryEvent> prescriptionHistory = new ArrayList<>();
     private List<ChartSupportMedicalModV2Request.MedicalInformation> medicalInformation = new ArrayList<>();
     private List<Issue> issues = new ArrayList<>();
 
@@ -125,6 +126,14 @@ public class OrcaMedicalCandidateResponse {
         this.prescriptionContentHash = prescriptionContentHash;
     }
 
+    public List<PrescriptionHistoryEvent> getPrescriptionHistory() {
+        return prescriptionHistory;
+    }
+
+    public void setPrescriptionHistory(List<PrescriptionHistoryEvent> prescriptionHistory) {
+        this.prescriptionHistory = prescriptionHistory;
+    }
+
     public List<ChartSupportMedicalModV2Request.MedicalInformation> getMedicalInformation() {
         return medicalInformation;
     }
@@ -177,6 +186,117 @@ public class OrcaMedicalCandidateResponse {
 
         public void setItemSequence(Integer itemSequence) {
             this.itemSequence = itemSequence;
+        }
+    }
+
+    public static class PrescriptionHistoryEvent {
+        private long prescriptionEventId;
+        private long prescriptionRevisionId;
+        private Integer revisionNumber;
+        private String revisionStatus;
+        private String eventType;
+        private String reasonCode;
+        private String reasonText;
+        private String actorUserId;
+        private String occurredAt;
+        private String contentHash;
+        private String eventHash;
+        private String previousEventHash;
+
+        public long getPrescriptionEventId() {
+            return prescriptionEventId;
+        }
+
+        public void setPrescriptionEventId(long prescriptionEventId) {
+            this.prescriptionEventId = prescriptionEventId;
+        }
+
+        public long getPrescriptionRevisionId() {
+            return prescriptionRevisionId;
+        }
+
+        public void setPrescriptionRevisionId(long prescriptionRevisionId) {
+            this.prescriptionRevisionId = prescriptionRevisionId;
+        }
+
+        public Integer getRevisionNumber() {
+            return revisionNumber;
+        }
+
+        public void setRevisionNumber(Integer revisionNumber) {
+            this.revisionNumber = revisionNumber;
+        }
+
+        public String getRevisionStatus() {
+            return revisionStatus;
+        }
+
+        public void setRevisionStatus(String revisionStatus) {
+            this.revisionStatus = revisionStatus;
+        }
+
+        public String getEventType() {
+            return eventType;
+        }
+
+        public void setEventType(String eventType) {
+            this.eventType = eventType;
+        }
+
+        public String getReasonCode() {
+            return reasonCode;
+        }
+
+        public void setReasonCode(String reasonCode) {
+            this.reasonCode = reasonCode;
+        }
+
+        public String getReasonText() {
+            return reasonText;
+        }
+
+        public void setReasonText(String reasonText) {
+            this.reasonText = reasonText;
+        }
+
+        public String getActorUserId() {
+            return actorUserId;
+        }
+
+        public void setActorUserId(String actorUserId) {
+            this.actorUserId = actorUserId;
+        }
+
+        public String getOccurredAt() {
+            return occurredAt;
+        }
+
+        public void setOccurredAt(String occurredAt) {
+            this.occurredAt = occurredAt;
+        }
+
+        public String getContentHash() {
+            return contentHash;
+        }
+
+        public void setContentHash(String contentHash) {
+            this.contentHash = contentHash;
+        }
+
+        public String getEventHash() {
+            return eventHash;
+        }
+
+        public void setEventHash(String eventHash) {
+            this.eventHash = eventHash;
+        }
+
+        public String getPreviousEventHash() {
+            return previousEventHash;
+        }
+
+        public void setPreviousEventHash(String previousEventHash) {
+            this.previousEventHash = previousEventHash;
         }
     }
 }

@@ -33,6 +33,22 @@ describe('orcaMedicalCandidateApi', () => {
           prescriptionId: 20,
           prescriptionRevisionId: 30,
           prescriptionContentHash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          prescriptionHistory: [
+            {
+              prescriptionEventId: 40,
+              prescriptionRevisionId: 30,
+              revisionNumber: 1,
+              revisionStatus: 'FINAL',
+              eventType: 'FINALIZE',
+              reasonCode: 'CLINICAL',
+              reasonText: '用法確認',
+              actorUserId: 'doctor01',
+              occurredAt: '2026-05-10T22:00:00Z',
+              contentHash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              eventHash: 'event-hash',
+              previousEventHash: 'previous-hash',
+            },
+          ],
           medicalInformation: [
             {
               entity: 'medOrder',
@@ -54,6 +70,7 @@ describe('orcaMedicalCandidateApi', () => {
     expect(result.ok).toBe(true);
     expect(result.candidateId).toBe(10);
     expect(result.prescriptionContentHash).toBe('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    expect(result.prescriptionHistory[0]).toEqual(expect.objectContaining({ eventType: 'FINALIZE', revisionStatus: 'FINAL' }));
     expect(result.nonAuthoritative).toBe(true);
     expect(result.medicalInformation).toHaveLength(1);
     expect(result.medicalInformation[0]).toEqual(expect.objectContaining({ rpSequence: 1, usageCode: '001000', usageName: 'after meal' }));

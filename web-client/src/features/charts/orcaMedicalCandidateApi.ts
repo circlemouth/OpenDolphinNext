@@ -28,6 +28,21 @@ export type OrcaMedicalCandidateMedicalInformation = {
   medications?: OrcaMedicalCandidateMedication[];
 };
 
+export type OrcaMedicalCandidatePrescriptionHistoryEvent = {
+  prescriptionEventId?: number;
+  prescriptionRevisionId?: number;
+  revisionNumber?: number;
+  revisionStatus?: string;
+  eventType?: string;
+  reasonCode?: string;
+  reasonText?: string;
+  actorUserId?: string;
+  occurredAt?: string;
+  contentHash?: string;
+  eventHash?: string;
+  previousEventHash?: string;
+};
+
 export type OrcaMedicalCandidateResponse = {
   ok: boolean;
   status?: number;
@@ -43,6 +58,7 @@ export type OrcaMedicalCandidateResponse = {
   prescriptionId?: number;
   prescriptionRevisionId?: number;
   prescriptionContentHash?: string;
+  prescriptionHistory: OrcaMedicalCandidatePrescriptionHistoryEvent[];
   medicalInformation: OrcaMedicalCandidateMedicalInformation[];
   issues: OrcaMedicalCandidateIssue[];
 };
@@ -88,6 +104,25 @@ const parseMedicalInformation = (value: unknown): OrcaMedicalCandidateMedicalInf
   };
 };
 
+const parsePrescriptionHistoryEvent = (value: unknown): OrcaMedicalCandidatePrescriptionHistoryEvent | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  return {
+    prescriptionEventId: asNumber(raw.prescriptionEventId),
+    prescriptionRevisionId: asNumber(raw.prescriptionRevisionId),
+    revisionNumber: asNumber(raw.revisionNumber),
+    revisionStatus: asString(raw.revisionStatus),
+    eventType: asString(raw.eventType),
+    reasonCode: asString(raw.reasonCode),
+    reasonText: asString(raw.reasonText),
+    actorUserId: asString(raw.actorUserId),
+    occurredAt: asString(raw.occurredAt),
+    contentHash: asString(raw.contentHash),
+    eventHash: asString(raw.eventHash),
+    previousEventHash: asString(raw.previousEventHash),
+  };
+};
+
 const emptyFailure = (params: {
   runId: string;
   status?: number;
@@ -100,6 +135,7 @@ const emptyFailure = (params: {
   message: params.message,
   sendable: false,
   nonAuthoritative: true,
+  prescriptionHistory: [],
   medicalInformation: [],
   issues: params.errorCode ? [{ code: params.errorCode, message: params.message }] : [],
 });
@@ -123,6 +159,9 @@ const parseCandidateJson = (
   prescriptionId: asNumber(json.prescriptionId),
   prescriptionRevisionId: asNumber(json.prescriptionRevisionId),
   prescriptionContentHash: asString(json.prescriptionContentHash),
+  prescriptionHistory: Array.isArray(json.prescriptionHistory)
+    ? json.prescriptionHistory.map(parsePrescriptionHistoryEvent).filter((item): item is OrcaMedicalCandidatePrescriptionHistoryEvent => Boolean(item))
+    : [],
   medicalInformation: Array.isArray(json.medicalInformation)
     ? json.medicalInformation.map(parseMedicalInformation).filter((item): item is OrcaMedicalCandidateMedicalInformation => Boolean(item))
     : [],
@@ -143,6 +182,7 @@ export async function prepareOrcaMedicalCandidateFromChart(params: {
       message: '診療録リビジョンが未確定のため候補を作成できません。',
       sendable: false,
       nonAuthoritative: true,
+      prescriptionHistory: [],
       medicalInformation: [],
       issues: [{ code: 'chart_revision_missing', message: 'chartRevisionId is required' }],
     };
@@ -180,6 +220,7 @@ export async function getLatestOrcaMedicalCandidateFromChart(params: {
       message: '診療録リビジョンが未確定のため候補を確認できません。',
       sendable: false,
       nonAuthoritative: true,
+      prescriptionHistory: [],
       medicalInformation: [],
       issues: [{ code: 'chart_revision_missing', message: 'chartRevisionId is required' }],
     };

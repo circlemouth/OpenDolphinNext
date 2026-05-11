@@ -47,6 +47,7 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void prepareFromChartPersistsNonAuthoritativeReadyCandidate() throws Exception {
+        repository.history = List.of(historyEvent("FINALIZE", 201L, CONTENT_HASH));
         repository.source = new OrcaMedicalCandidateRepository.PrescriptionRevisionRecord(
                 101L,
                 201L,
@@ -72,6 +73,11 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("after meal", response.getMedicalInformation().get(0).getUsageName());
         assertEquals(1, response.getMedicalInformation().get(0).getMedications().get(0).getItemSequence());
         assertEquals("620000001", response.getMedicalInformation().get(0).getMedications().get(0).getCode());
+        assertEquals(1, response.getPrescriptionHistory().size());
+        assertEquals("FINALIZE", response.getPrescriptionHistory().get(0).getEventType());
+        assertEquals(CONTENT_HASH, response.getPrescriptionHistory().get(0).getContentHash());
+        assertEquals("F001", repository.historyFacilityId);
+        assertEquals(101L, repository.historyPrescriptionOrderId);
     }
 
     @Test
@@ -252,6 +258,27 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
         return order;
     }
 
+    private static OrcaMedicalCandidateResponse.PrescriptionHistoryEvent historyEvent(
+            String eventType,
+            long revisionId,
+            String contentHash) {
+        OrcaMedicalCandidateResponse.PrescriptionHistoryEvent event =
+                new OrcaMedicalCandidateResponse.PrescriptionHistoryEvent();
+        event.setPrescriptionEventId(401L);
+        event.setPrescriptionRevisionId(revisionId);
+        event.setRevisionNumber(1);
+        event.setRevisionStatus("FINAL");
+        event.setEventType(eventType);
+        event.setReasonCode("CLINICAL");
+        event.setReasonText("用法変更");
+        event.setActorUserId("doctor01");
+        event.setOccurredAt("2026-05-10 22:00:00+00");
+        event.setContentHash(contentHash);
+        event.setEventHash("event-hash");
+        event.setPreviousEventHash("previous-hash");
+        return event;
+    }
+
     private HttpServletRequest request(String uri) {
         Map<String, Object> attributes = new HashMap<>();
         return (HttpServletRequest) Proxy.newProxyInstance(
@@ -311,6 +338,9 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
         private LatestCandidateRecord latest;
         private String latestFacilityId;
         private String latestChartRevisionId;
+        private List<OrcaMedicalCandidateResponse.PrescriptionHistoryEvent> history = List.of();
+        private String historyFacilityId;
+        private long historyPrescriptionOrderId;
 
         @Override
         PrescriptionRevisionRecord findPrescriptionByChartRevision(String facilityId, String chartRevisionId) {
@@ -333,6 +363,15 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
             this.latestFacilityId = facilityId;
             this.latestChartRevisionId = chartRevisionId;
             return latest;
+        }
+
+        @Override
+        List<OrcaMedicalCandidateResponse.PrescriptionHistoryEvent> findPrescriptionHistorySnapshot(
+                String facilityId,
+                long prescriptionOrderId) {
+            this.historyFacilityId = facilityId;
+            this.historyPrescriptionOrderId = prescriptionOrderId;
+            return history;
         }
     }
 
