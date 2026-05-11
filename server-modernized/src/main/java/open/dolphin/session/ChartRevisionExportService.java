@@ -34,6 +34,8 @@ public class ChartRevisionExportService {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
     private static final String EXPORT_DENIED = "chart_revision_export_denied";
     private static final String NOT_FOUND = "chart_revision_export_not_found";
+    private static final int EXPORT_SCHEMA_VERSION = 1;
+    private static final String EXPORT_HASH_ALGORITHM = "SHA-256";
     private static final List<String> SUMMARY_ALLOWLIST = List.of(
             "status",
             "contentHash",
@@ -107,6 +109,8 @@ public class ChartRevisionExportService {
         ChartRevisionExportResponse response = new ChartRevisionExportResponse();
         response.setChartId(chartId);
         response.setCurrentRevisionId(document.getCurrentRevisionId());
+        response.setExportSchemaVersion(EXPORT_SCHEMA_VERSION);
+        response.setExportHashAlgorithm(EXPORT_HASH_ALGORITHM);
         response.setRevisions(revisions.stream().map(this::toRevision).toList());
         response.setEvents(events.stream().map(this::toEvent).toList());
         response.setExportHash(sha256(writeJson(exportHashMaterial(response))));
@@ -353,6 +357,8 @@ public class ChartRevisionExportService {
 
     private Map<String, Object> exportHashMaterial(ChartRevisionExportResponse response) {
         Map<String, Object> material = new LinkedHashMap<>();
+        material.put("exportSchemaVersion", response.getExportSchemaVersion());
+        material.put("exportHashAlgorithm", response.getExportHashAlgorithm());
         material.put("chartId", response.getChartId());
         material.put("currentRevisionId", response.getCurrentRevisionId());
         material.put("revisions", response.getRevisions().stream().map(this::revisionHashMaterial).toList());

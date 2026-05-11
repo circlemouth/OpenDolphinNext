@@ -43,6 +43,8 @@ class ChartRevisionExportServiceTest {
 
         assertThat(response.getChartId()).isEqualTo(10L);
         assertThat(response.getCurrentRevisionId()).isEqualTo(21L);
+        assertThat(response.getExportSchemaVersion()).isEqualTo(1);
+        assertThat(response.getExportHashAlgorithm()).isEqualTo("SHA-256");
         assertThat(response.getExportHash()).matches("[0-9a-f]{64}");
         assertThat(response.getRevisions()).hasSize(2);
         assertThat(response.getRevisions().get(1).getStatus()).isEqualTo("AMENDED");
