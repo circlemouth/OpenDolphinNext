@@ -29,6 +29,7 @@ rg -n "medicalmodv23" web-client server-modernized docs
 bash server-modernized/tools/ci/check-no-legacy-disease-authority.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-finalized-write-guards.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-orca-transport-boundary.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-orca-retry-recovery-contract.sh --root "$(git rev-parse --show-toplevel)"
 ```
 期待結果:
 - taxonomy grep は current route と docs 正本だけを返し、legacy alias や blocked route を返さない。
@@ -39,11 +40,15 @@ bash server-modernized/tools/ci/check-orca-transport-boundary.sh --root "$(git r
 - legacy disease authority guard が通り、active modernized roots に `diseasev2`、旧 CLAIM 病名送信、ORCA 患者病名 DB 直接参照が残っていない。
 - finalized write guard が通り、確定済み診療録タイトル直接更新は 409 `karte.document.finalized_update_denied` で拒否され、処方保存/DO import は server-side `encounter_projection` の会計待ち・取消・閉鎖相当状態を payload 永続化前に 409 `prescription_order_finalized_update_denied` で拒否する。
 - ORCA transport boundary guard が通り、production server source の JDK HTTP usage は `OrcaTransport` / `OrcaHttpClient` と明示許可された push/master-update 補助面に限定され、ORCA API traffic が resource/service から直接送信されない。
+- ORCA retry/recovery contract guard が通り、retry、idempotency、timeout 後の `UNKNOWN`、二重クリック時の二重送信防止、サーバー再起動後の送信状態復元、`tmedicalgetv2` 再照合、`resendBlocked` の受入れ証跡が runbook / contract / focused tests から欠落していない。
 
 2. server contract / inventory / exposure tests を current taxonomy で実行する。
 ```bash
 mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=PublicRouteInventoryContractTest,WebXmlEndpointExposureTest,AdminOrcaUserResourceTest,AdminOrcaUserLinkResourceTest,OrcaAppointmentResourceTest,OrcaChartSupportResourceTest,OrcaChartSupportSupportTest,OrcaLiveGatewaySupportTest,OrcaReportDocumentResourceTest,OrcaBillingCacheStoreTest,OperationsHealthResourceTest \
+  test
+mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=OrcaHttpClientResilienceTest,PatientModV2OutpatientResourceIdempotencyTest,OrcaBillingCorrectionScenarioSupportTest,OrcaOperationLedgerSchemaTest \
   test
 ```
 期待結果:
@@ -51,6 +56,7 @@ mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSp
 - `WebXmlEndpointExposureTest` が `/api/*` 以外の public exposure を拒否し、`/api/orca/*` 直下を official/master のみに制限できる。
 - `patientlst3v2` / `visitptlstv2` / `manageusersv2` / `contraindicationcheckv2` / `medicationgetv2` / `incomeinfv2` の XML 契約が current shape に一致する。
 - `OrcaReportDocumentResourceTest` と `OrcaBillingCacheStoreTest` が ORCA帳票 snapshot / binary staging / server-generated storage key/digest / fail-closed persistence を固定し、`OperationsHealthResourceTest` が `orcaBillingCache` readiness を sanitized schema availability として固定できる。
+- `OrcaHttpClientResilienceTest` が timeout/retry 上限と transport failure 分類を固定し、`PatientModV2OutpatientResourceIdempotencyTest` が二重クリック相当の重複 patientmodv2 mutation を server idempotency で吸収する。`OrcaBillingCorrectionScenarioSupportTest` と `OrcaOperationLedgerSchemaTest` は `medicalmodv2` の `ORCA_UNKNOWN`、`tmedicalgetv2` 再照合、server restart / backup restore 後に台帳状態を再取得して自動再送しない復旧境界を固定する。
 
 3. patients official/local 境界の focused regression を実行する。
 ```bash

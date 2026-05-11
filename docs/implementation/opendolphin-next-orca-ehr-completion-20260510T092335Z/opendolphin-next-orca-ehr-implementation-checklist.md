@@ -364,6 +364,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] ORCA病名取得/追加/変更/削除/転帰更新/警告/不一致/ORCA側のみ病名を確認する。
 - [ ] ORCA診療行為送信成功/警告/失敗、他端末使用中、会計情報、収納情報、帳票取得を確認する。
 - [ ] 通信断後の再送、timeout 後の `UNKNOWN`、二重クリックで二重送信されないこと、サーバー再起動後の送信状態復元を確認する。
+  - [x] 2026-05-11T11:57Z: `check-orca-retry-recovery-contract.sh` を追加し、release-validation が `OrcaHttpClientResilienceTest` / `PatientModV2OutpatientResourceIdempotencyTest` / `OrcaBillingCorrectionScenarioSupportTest` / `OrcaOperationLedgerSchemaTest` を実行対象に含み、retry、idempotency、`ORCA_UNKNOWN`、`tmedicalgetv2`、`resendBlocked`、server restart / restore 後の自動再送禁止を contract/runbook から落とさないことを固定した。actual live Trial の通信断・timeout・二重クリック・再起動証跡ではないため親項目は未完了のまま維持する。
 
 ## 19. リリース判定チェック
 
@@ -371,6 +372,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 診療録確定済み直接更新経路、確定済み処方直接更新経路が残っていない。
 - [ ] ORCA認証情報がブラウザへ露出しない。
 - [ ] ORCA送信に idempotency key がある。
+  - [x] 2026-05-11T11:57Z: release gate guard が `idempotency_key` / `request_hash` schema contract と focused idempotency test の存在を検証し、ORCA mutation の重複送信防止証跡が受入れ手順から欠落しないことを固定した。全 ORCA 送信 live evidence は未完了のため親項目は未完了。
 - [ ] ORCA警告・エラー・不一致が UI と監査ログに保存される。
 - [ ] 患者ヘッダーが主要画面に表示され、重大操作に確認フローがある。
 - [ ] 診療録 PDF 出力と期間エクスポートができる。

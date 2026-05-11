@@ -22,8 +22,26 @@ class ReleaseValidationRunbookContractTest {
                 .contains("OperationsHealthResourceTest")
                 .contains("orcaBillingCache")
                 .contains("check-orca-transport-boundary.sh")
+                .contains("check-orca-retry-recovery-contract.sh")
                 .contains("server-generated storage key/digest")
                 .doesNotContain("OrcaReportResource");
+    }
+
+    @Test
+    void releaseValidationIncludesOrcaRetryRecoveryAndIdempotencyGates() throws IOException {
+        String runbook = Files.readString(Path.of("../docs/runbooks/release-validation.md"));
+
+        assertThat(runbook)
+                .contains("OrcaHttpClientResilienceTest")
+                .contains("PatientModV2OutpatientResourceIdempotencyTest")
+                .contains("OrcaBillingCorrectionScenarioSupportTest")
+                .contains("OrcaOperationLedgerSchemaTest")
+                .contains("timeout 後の `UNKNOWN`")
+                .contains("二重クリック")
+                .contains("サーバー再起動後")
+                .contains("tmedicalgetv2")
+                .contains("resendBlocked")
+                .contains("自動再送しない");
     }
 
     @Test
