@@ -629,6 +629,15 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
     }
     return hints;
   }, [diagnosisQuery.isError, isDiseaseMirrorUnavailable, meta.departmentCode, meta.fallbackUsed, meta.missingMaster, meta.readOnly, meta.visitDate]);
+  const mutationBlockReasonText = mutationBlockReasons.join(' / ');
+  const showMutationBlockedNotice = () => {
+    if (mutationBlockReasons.length === 0) return false;
+    setNotice({
+      tone: 'warning',
+      message: `ORCA病名操作を停止: ${mutationBlockReasonText}`,
+    });
+    return true;
+  };
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -1027,6 +1036,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
   };
 
   const requestFormMutation = (operation: Extract<OrcaDiseaseMutationOperation, 'create' | 'update'>, nextForm: DiagnosisFormState, sourceEntry?: DiseaseEntry) => {
+    if (showMutationBlockedNotice()) return;
     const validationMessage = validateDiagnosisForm(nextForm);
     if (validationMessage) {
       setNotice({ tone: 'error', message: validationMessage });
@@ -1065,6 +1075,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
   };
 
   const requestQuickCreate = (mode: QuickCreateMode) => {
+    if (showMutationBlockedNotice()) return;
     const title =
       mode === 'main'
         ? '主病名として登録'
@@ -1097,7 +1108,8 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
   };
 
   const confirmPendingAction = () => {
-    if (!pendingAction || isOrcaMutationBlocked) return;
+    if (!pendingAction) return;
+    if (showMutationBlockedNotice()) return;
     if (pendingAction.operation === 'delete') {
       deleteMutation.mutate(pendingAction.entry);
       return;
@@ -1142,7 +1154,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
       </header>
 
       {isDiseaseMirrorPending ? (
-        <div className="charts-side-panel__notice charts-side-panel__notice--info">
+        <div id="diagnosis-mutation-block-reason" className="charts-side-panel__notice charts-side-panel__notice--info">
           ORCA登録病名を確認中です。確認完了まで病名操作は待機します。
         </div>
       ) : mutationBlockReasons.length > 0 ? (
@@ -1312,21 +1324,30 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
           <div className="charts-diagnosis__quick-actions" aria-label="病名登録種別">
             <button
               type="button"
-              disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              disabled={isDiseaseMirrorPending || isAnyMutationPending}
+              aria-disabled={isOrcaMutationBlocked}
+              aria-describedby={mutationBlockReasons.length > 0 ? 'diagnosis-mutation-block-reason' : undefined}
+              data-disabled-reason={mutationBlockReasons.length > 0 ? 'orca_disease_mutation_blocked' : undefined}
               onClick={() => requestQuickCreate('main')}
             >
               主病名として登録
             </button>
             <button
               type="button"
-              disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              disabled={isDiseaseMirrorPending || isAnyMutationPending}
+              aria-disabled={isOrcaMutationBlocked}
+              aria-describedby={mutationBlockReasons.length > 0 ? 'diagnosis-mutation-block-reason' : undefined}
+              data-disabled-reason={mutationBlockReasons.length > 0 ? 'orca_disease_mutation_blocked' : undefined}
               onClick={() => requestQuickCreate('sub')}
             >
               副病名として登録
             </button>
             <button
               type="button"
-              disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              disabled={isDiseaseMirrorPending || isAnyMutationPending}
+              aria-disabled={isOrcaMutationBlocked}
+              aria-describedby={mutationBlockReasons.length > 0 ? 'diagnosis-mutation-block-reason' : undefined}
+              data-disabled-reason={mutationBlockReasons.length > 0 ? 'orca_disease_mutation_blocked' : undefined}
               onClick={() => requestQuickCreate('suspected')}
             >
               疑い病名として登録

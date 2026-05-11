@@ -217,6 +217,7 @@
 - SOAP / カルテ本文中の病名らしい記載は `診療録本文中の病名記載` 枠に表示し、`ORCA登録病名` と混ぜません。この枠はカルテ本文正本の参照であり、ORCA送信ボタンを置かず、明示 confirm なしに `diseasev3` payload へ昇格しません。
 - 病名マスター候補は補助入力です。`/api/orca/official/disease-master/name/{param}/` は server-side ORCA master datasource を参照し、日付を `yyyyMMdd` に正規化します。ローカル開発DBで `tbl_byomei` が無い、または ORCA master datasource が未起動の場合だけ最小 bootstrap 候補を返せますが、明示 confirm なしに ORCA 登録 payload や主一覧へ昇格しません。
 - ORCA unavailable 時は local-only disease を fallback 表示せず、「ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。」を表示し、ORCA 病名操作を disabled にします。
+- `DiagnosisEditPanel` の quick ORCA病名登録ボタンは、read-only / ORCA mirror unavailable などの理由だけでは native disabled にせず、`aria-disabled=true` と `diagnosis-mutation-block-reason` で近傍理由を関連付け、押下時に `ORCA病名操作を停止: ...` を表示して confirm / mutation へ進みません。ORCA mirror 取得中や mutation pending など二重操作防止が必要な状態は native disabled を維持します。
 - ORCA 病名操作は `ORCAへ病名登録` / `ORCA病名を更新` / `ORCA病名を削除` / `削除病名を整理` に分け、いずれも明示 confirm 後に `/api/orca/official/chart-support/disease-mod-v3` へ送ります。成功後は楽観更新せず、再取得した ORCA `diseasegetv2` 結果だけを表示します。
 - `diseasev3` operation は `create|update|delete|organizeDeletedDiseases` に限定します。`Request_Number=01` は `削除病名を整理` だけで使い、通常 create/update/delete には混ぜません。client は `Request_Number` を送らず、server-owned value として扱います。
 
@@ -225,6 +226,7 @@
 - code-confirm: `PatientsPage` の local search 明示、official create/update/import の分岐、成功後 canonical re-fetch/local sync
 - code-confirm: `PatientInfoEditDialog` の official update route 呼び出しと、成功後 callback による canonical/local sync refresh
 - code-confirm: `DiagnosisEditPanel` の `保険病名` / `ORCA mirror` / `候補` 分離、candidate-not-truth、manual-resolution は対象病名がある時だけ visible
+- code-confirm: `DiagnosisEditPanel` quick disease create は ORCA mirror unavailable / read-only 時に押下時理由を表示し、confirm / mutation へ進まない
 - manual: reception / charts 由来の再入場と patient 未選択開始
 
 ## Mobile Images Surface
