@@ -6,12 +6,23 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.Instant;
 import javax.sql.DataSource;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoResponse;
 import open.dolphin.rest.dto.orca.OrcaReportResponse;
+import open.dolphin.storage.attachment.AttachmentStorageMode;
+import open.dolphin.storage.attachment.AttachmentStorageSettings;
+import open.dolphin.storage.objectstore.ObjectStorageClient;
+import open.dolphin.storage.objectstore.ObjectStorageDeleteRequest;
+import open.dolphin.storage.objectstore.ObjectStorageGetRequest;
+import open.dolphin.storage.objectstore.ObjectStorageLocation;
+import open.dolphin.storage.objectstore.ObjectStoragePutRequest;
+import open.dolphin.storage.objectstore.ObjectStoragePutResult;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 
@@ -142,6 +153,123 @@ class OrcaBillingCacheStoreTest {
         }
     }
 
+    @Test
+    void uploadsReportBinaryOnlyWhenDigestAndSnapshotMetadataMatch() throws Exception {
+        try (EmbeddedPostgres postgres = EmbeddedPostgres.builder().start()) {
+            DataSource dataSource = postgres.getPostgresDatabase();
+            migrate(dataSource);
+            OrcaBillingCacheStore store = new OrcaBillingCacheStore();
+            store.dataSource = dataSource;
+
+            OrcaReportResponse response = new OrcaReportResponse();
+            response.setOk(true);
+            response.setStatus(200);
+            response.setApiResult("0000");
+            response.setDataId("DATA-SECRET-003");
+            response.setFormId("FORM-2");
+
+            store.saveReportSnapshot(new OrcaBillingCacheStore.ReportSnapshotCommand(
+                    "F001", "00001", "statement", "INV-SECRET-003",
+                    REQUEST_XML, RESPONSE_BODY, response, null));
+
+            long snapshotId;
+            String storageKey;
+            String storageDigest;
+            try (Connection connection = dataSource.getConnection()) {
+                snapshotId = singleLong(connection,
+                        "select orca_report_snapshot_id from opendolphin.orca_report_snapshot");
+                storageKey = singleText(connection,
+                        "select server_storage_object_key from opendolphin.orca_report_snapshot");
+                storageDigest = singleText(connection,
+                        "select server_storage_digest from opendolphin.orca_report_snapshot");
+            }
+
+            FakeObjectStorageClient objectStorageClient = new FakeObjectStorageClient();
+            OrcaReportBinaryStorageService service = new OrcaReportBinaryStorageService(
+                    dataSource, s3Settings(), objectStorageClient);
+            Instant uploadedAt = Instant.parse("2026-05-10T00:02:09Z");
+            Instant retentionUntil = uploadedAt.plusSeconds(86400);
+
+            OrcaReportBinaryStorageService.UploadResult result = service.uploadReportBinary(
+                    new OrcaReportBinaryStorageService.UploadCommand(
+                            snapshotId,
+                            "F001",
+                            storageKey,
+                            storageDigest,
+                            RESPONSE_BODY.getBytes(StandardCharsets.UTF_8),
+                            "application/json",
+                            uploadedAt,
+                            retentionUntil));
+
+            assertEquals(snapshotId, result.snapshotId());
+            assertEquals(storageDigest, result.digest());
+            assertEquals("s3://orca-report-test/" + storageKey, result.storageUri());
+            assertEquals(storageKey, objectStorageClient.lastRequest.location().key());
+            assertFalse(objectStorageClient.lastPayload.contains("DATA-SECRET-003"));
+
+            try (Connection connection = dataSource.getConnection()) {
+                assertEquals("UPLOADED", singleText(connection,
+                        "select storage_upload_status from opendolphin.orca_report_snapshot"));
+                assertEquals("true", singleText(connection,
+                        "select (storage_uploaded_at is not null)::text from opendolphin.orca_report_snapshot"));
+                assertEquals("true", singleText(connection,
+                        "select (storage_retention_until >= storage_uploaded_at)::text from opendolphin.orca_report_snapshot"));
+            }
+        }
+    }
+
+    @Test
+    void rejectsReportBinaryUploadBeforeObjectStorageWhenDigestDoesNotMatch() throws Exception {
+        try (EmbeddedPostgres postgres = EmbeddedPostgres.builder().start()) {
+            DataSource dataSource = postgres.getPostgresDatabase();
+            migrate(dataSource);
+            OrcaBillingCacheStore store = new OrcaBillingCacheStore();
+            store.dataSource = dataSource;
+
+            OrcaReportResponse response = new OrcaReportResponse();
+            response.setOk(true);
+            response.setStatus(200);
+            response.setApiResult("0000");
+
+            store.saveReportSnapshot(new OrcaBillingCacheStore.ReportSnapshotCommand(
+                    "F001", "00001", "statement", "INV-SECRET-004",
+                    REQUEST_XML, RESPONSE_BODY, response, null));
+
+            long snapshotId;
+            String storageKey;
+            String storageDigest;
+            try (Connection connection = dataSource.getConnection()) {
+                snapshotId = singleLong(connection,
+                        "select orca_report_snapshot_id from opendolphin.orca_report_snapshot");
+                storageKey = singleText(connection,
+                        "select server_storage_object_key from opendolphin.orca_report_snapshot");
+                storageDigest = singleText(connection,
+                        "select server_storage_digest from opendolphin.orca_report_snapshot");
+            }
+
+            FakeObjectStorageClient objectStorageClient = new FakeObjectStorageClient();
+            OrcaReportBinaryStorageService service = new OrcaReportBinaryStorageService(
+                    dataSource, s3Settings(), objectStorageClient);
+            Instant uploadedAt = Instant.parse("2026-05-10T00:02:09Z");
+
+            assertThrows(IllegalArgumentException.class, () -> service.uploadReportBinary(
+                    new OrcaReportBinaryStorageService.UploadCommand(
+                            snapshotId,
+                            "F001",
+                            storageKey,
+                            storageDigest,
+                            "tampered".getBytes(StandardCharsets.UTF_8),
+                            "application/json",
+                            uploadedAt,
+                            uploadedAt.plusSeconds(86400))));
+            assertEquals(0, objectStorageClient.putCount);
+            try (Connection connection = dataSource.getConnection()) {
+                assertEquals("NOT_UPLOADED", singleText(connection,
+                        "select storage_upload_status from opendolphin.orca_report_snapshot"));
+            }
+        }
+    }
+
     private static void migrate(DataSource dataSource) {
         Flyway.configure()
                 .dataSource(dataSource)
@@ -160,9 +288,71 @@ class OrcaBillingCacheStoreTest {
         }
     }
 
+    private static long singleLong(Connection connection, String sql) throws Exception {
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet rs = statement.executeQuery()) {
+            rs.next();
+            return rs.getLong(1);
+        }
+    }
+
     private static void execute(Connection connection, String sql) throws Exception {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.executeUpdate();
+        }
+    }
+
+    private static AttachmentStorageSettings s3Settings() {
+        return new AttachmentStorageSettings(
+                AttachmentStorageMode.S3,
+                null,
+                new AttachmentStorageSettings.S3Settings(
+                        "orca-report-test",
+                        "ap-northeast-1",
+                        null,
+                        "attachments",
+                        true,
+                        null,
+                        null,
+                        64,
+                        "access-key",
+                        "secret-key"),
+                null);
+    }
+
+    private static final class FakeObjectStorageClient implements ObjectStorageClient {
+        private ObjectStoragePutRequest lastRequest;
+        private String lastPayload;
+        private int putCount;
+
+        @Override
+        public ObjectStoragePutResult putObject(ObjectStoragePutRequest request) {
+            putCount++;
+            lastRequest = request;
+            try {
+                lastPayload = new String(request.contentStream().readAllBytes(), StandardCharsets.UTF_8);
+            } catch (Exception ex) {
+                throw new IllegalStateException(ex);
+            }
+            return new ObjectStoragePutResult(request.location());
+        }
+
+        @Override
+        public InputStream getObject(ObjectStorageGetRequest request) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void deleteObject(ObjectStorageDeleteRequest request) {
+        }
+
+        @Override
+        public boolean isBucketReachable(String bucket) {
+            return true;
+        }
+
+        @Override
+        public void close() {
         }
     }
 }
