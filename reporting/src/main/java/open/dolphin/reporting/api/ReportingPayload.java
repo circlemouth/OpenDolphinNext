@@ -16,6 +16,7 @@ public class ReportingPayload {
     private String encounterDate;
     private String generatedAt;
     private List<ReportingSummaryItemPayload> summaryItems = new ArrayList<>();
+    private List<ReportingChartRevisionEventPayload> chartRevisionEvents = new ArrayList<>();
     private ReportingSigningPayload signing;
     private String outputFileName;
 
@@ -81,6 +82,16 @@ public class ReportingPayload {
 
     public void setSummaryItems(List<ReportingSummaryItemPayload> summaryItems) {
         this.summaryItems = summaryItems == null ? new ArrayList<>() : new ArrayList<>(summaryItems);
+    }
+
+    public List<ReportingChartRevisionEventPayload> getChartRevisionEvents() {
+        return chartRevisionEvents;
+    }
+
+    public void setChartRevisionEvents(List<ReportingChartRevisionEventPayload> chartRevisionEvents) {
+        this.chartRevisionEvents = chartRevisionEvents == null
+                ? new ArrayList<>()
+                : new ArrayList<>(chartRevisionEvents);
     }
 
     public ReportingSigningPayload getSigning() {

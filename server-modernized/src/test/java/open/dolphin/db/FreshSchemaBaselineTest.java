@@ -91,7 +91,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0322", appliedVersion(connection));
+                assertEquals("0327", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -188,6 +188,14 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "chart_document", "current_revision_id"));
                 assertTrue(columnExists(connection, "opendolphin", "chart_revision", "status"));
                 assertTrue(columnExists(connection, "opendolphin", "chart_revision", "content_hash"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_revision", "encounter_id"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_revision", "department_code"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_revision", "physician_code"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_revision", "insurance_combination_number"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_revision", "finalize_context_json"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_revision", "snapshot_manifest_json"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_revision", "entry_mode"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_revision", "delegated_by_user_id"));
                 assertTrue(columnExists(connection, "opendolphin", "chart_revision_event", "event_type"));
                 assertTrue(columnExists(connection, "opendolphin", "chart_revision_event", "before_summary_json"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order", "status"));

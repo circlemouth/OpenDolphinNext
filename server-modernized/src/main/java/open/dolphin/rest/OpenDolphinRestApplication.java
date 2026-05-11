@@ -25,6 +25,7 @@ public final class OpenDolphinRestApplication extends Application {
                 open.dolphin.rest.KarteResource.class,
                 open.dolphin.rest.KarteDocumentWriteResource.class,
                 open.dolphin.rest.KarteRevisionResource.class,
+                open.dolphin.rest.ChartRevisionResource.class,
                 open.dolphin.rest.LetterResource.class,
                 open.dolphin.rest.OrcaPatientApiResource.class,
                 open.dolphin.rest.PatientModV2OutpatientResource.class,

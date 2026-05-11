@@ -97,7 +97,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] `chart_document`, `chart_revision`, `chart_revision_event`, `chart_module`, `chart_attachment` を作成または再設計する。
   - [x] `chart_document`, `chart_revision`, `chart_revision_event` の最小 schema と JPA entity を追加した。`chart_module` / `chart_attachment` の詳細再設計は後続 revision/export 実装で継続確認する。
 - [x] `chart_revision.status` は `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` に限定する。
-- [ ] `FINAL` 以降の本文、SOAP、モジュール、タイトルを直接更新不可にする。
+- [x] `FINAL` 以降の本文、SOAP、モジュール、タイトルを直接更新不可にする。
 - [ ] 確定済み文書の訂正・追記・取消は新 revision/event として扱い、原文を物理削除しない。
 - [x] `prescription_order`, `prescription_order_revision`, `prescription_order_event`, `prescription_order_item`, `prescription_orca_transmission` を作成または再設計する。
 - [x] 処方状態は `DRAFT`, `FINAL`, `CHANGED`, `STOPPED`, `CANCELLED`, `REISSUED` に限定する。
@@ -149,12 +149,32 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [ ] 診療録状態 `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` を実装する。
 - [ ] `FINAL` は本文、SOAP、所見、説明内容、添付文書、タイトルを直接編集不可にする。
-- [ ] `POST /api/charts/{chartId}/revisions/{revisionId}/finalize` を実装する。
-- [ ] 確定時に患者番号、氏名、生年月日、性別、診療日、ORCA受付IDまたは受付なし理由、診療科、担当医、保険組合せ、確定者、代行入力者、本体内容を必須検証する。
+  - [x] 本文 / SOAP / module payload / title / current revision pointer の直接 UPDATE / DELETE は service guard と DB trigger で拒否する。添付文書の詳細 revision/export 連携は B-04 で継続する。
+- [x] `POST /api/charts/{chartId}/revisions/{revisionId}/finalize` を実装する。
+- [x] 確定時に患者番号、氏名、生年月日、性別、診療日、ORCA受付IDまたは受付なし理由、診療科、担当医、保険組合せ、確定者、代行入力者、本体内容を必須検証する。
+  - [x] finalize API skeleton は ORCA患者番号、氏名、生年月日、性別、encounter、診療日、受付IDまたは受付なし理由、診療科、担当医、保険組合せ、確定者、canonical content JSON を必須検証する。代行入力者の永続項目は後続 revision context 拡張で継続する。
+  - [x] 保存済み `entered_by_user_id` を代行入力者の authority とし、`entry_mode` / `delegated_by_user_id` は `entered_by_user_id` と `finalized_by_user_id` から server-side に導出・検証する。
 - [ ] 確定時に患者・受付・保険・病名・処方候補・算定候補のスナップショットと `content_hash` を作る。
-- [ ] `entered_by` と `finalized_by` を分離し、代行入力時は `entry_mode=DELEGATED` を保存する。
+  - [x] server-side canonical content/context から `content_hash` を生成し、FINALIZED event と `chart_revision` に記録する。患者・受付・保険・病名・処方候補・算定候補の full snapshot は B-04 / Worker C-D 連携後に継続する。
+  - [x] `snapshot_manifest_json` skeleton を server-side validated context から生成し、ORCA患者番号、encounter、受付IDまたは受付なし理由、診療科、担当医、保険組合せ、後続 snapshot 統合待ち status を hash/export に含める。full snapshot entity 連携は Worker A/C/D 統合後に継続する。
+- [x] `entered_by` と `finalized_by` を分離し、代行入力時は `entry_mode=DELEGATED` を保存する。
 - [ ] `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` を実装し、理由必須、変更前後要約、監査ログを保存する。
+  - [x] amend/addendum/cancel API skeleton は locked revision のみを対象にし、理由・actor を必須化し、訂正/追記は新 revision と event、取消は event として元 revision を物理更新しない。authoritative audit log 連携は Worker F の audit chain と合わせて継続する。
+  - [x] `chart_revision_event` は DB trigger で UPDATE / DELETE を拒否し、理由・変更前後要約・event hash の後書き改ざんを防止する。authoritative audit log 連携は Worker F の audit chain と合わせて継続する。
 - [ ] PDF/CSV/JSON エクスポートは訂正・追記・取消履歴、処方指示履歴、ORCA連携履歴、診療時点スナップショットを含める。
+  - [x] chart export contract に chart revision events、before/after summary、reason、actor、content hash を含めることを追加した。reporting 実装は B-04 継続。
+  - [x] `GET /api/charts/{chartId}/revisions/export` を追加し、施設境界で chart revision JSON export に revision/event 履歴、reason、actor、content hash、allowlist 済み summary を含める。PDF/CSV、処方指示履歴、ORCA連携履歴の統合は Worker C-D / reporting 連携後に継続する。
+  - [x] `GET /api/charts/{chartId}/revisions/export.csv` を追加し、JSON export と同じ revision/event 履歴を固定列 CSV として出力する。raw ORCA / credential redaction と spreadsheet formula injection neutralization を通す。PDF と処方/ORCA履歴の統合は B-05 継続。
+  - [x] reporting PDF payload の `chartRevisionEvents` を summary section に投影し、訂正・追記・取消履歴の reason、actor、hash、before/after summary を allowlist/redaction 付きで表示できるようにした。処方指示履歴、ORCA連携履歴、診療時点 full snapshot は Worker C-D 統合後に継続する。
+  - [x] chart revision JSON/CSV export は server-generated snapshot manifest summary を allowlist/redaction 付きで含める。処方指示履歴、ORCA連携履歴、full snapshot entity は Worker A/C/D 統合後に継続する。
+  - [x] chart revision JSON export は allowlist/redaction 済み payload から `exportHash` を計算し、revision/event/snapshot summary の欠落・差し替え検出に使えるようにする。
+  - [x] chart revision JSON export の `exportHash` は allowlist 順の canonical projection を使い、allowlist 外 key、raw secret 差分、JSON key order で揺れないことを focused test で固定する。
+  - [x] chart revision JSON export は `exportSchemaVersion=1` / `exportHashAlgorithm=SHA-256` を返し、hash material に含める。
+  - [x] chart revision JSON export は `revisionCount` / `eventCount` を返し、canonical `exportHash` material に含める。
+  - [x] chart revision JSON export は `currentRevisionId` が revision list から欠落した不整合を 409 で拒否する。
+  - [x] chart revision JSON export は server-derived `currentRevisionStatus` を返し、canonical `exportHash` material に含める。
+  - [x] chart revision JSON export は server-derived `currentRevisionNumber` を返し、canonical `exportHash` material に含める。
+  - [x] chart revision JSON export は server-derived `currentRevisionContentHash` を返し、canonical `exportHash` material に含める。
 
 ## 8. 処方指示正本実装
 
@@ -363,7 +383,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [ ] 診療録リビジョンモデルを完成させる。
 - [ ] 訂正・追記・取消イベントを実装する。
-- [ ] 代行入力者と医師確定者を分離する。
+- [x] 代行入力者と医師確定者を分離する。
 - [ ] 処方変更・中止・取消・再発行履歴を実装する。
 - [ ] 診療録確定時スナップショットを実装する。
 
