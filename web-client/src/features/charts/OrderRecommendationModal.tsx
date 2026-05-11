@@ -130,6 +130,8 @@ export function OrderRecommendationModal(props: {
   }, [candidates, scope]);
 
   const canApply = Boolean(patientId);
+  const categoryScopeReasonId = 'order-recommend-category-scope-reason';
+  const categoryScopeBlocked = !resolvedEntity;
 
   return (
     <FocusTrapDialog
@@ -147,8 +149,9 @@ export function OrderRecommendationModal(props: {
               className="order-recommend-modal__scope-button"
               data-active={scope === 'category' ? '1' : '0'}
               onClick={() => setScope('category')}
-              disabled={!resolvedEntity}
-              title={!resolvedEntity ? 'カテゴリ未選択のため横断のみ利用できます。' : undefined}
+              disabled={categoryScopeBlocked}
+              aria-describedby={categoryScopeBlocked ? categoryScopeReasonId : undefined}
+              title={categoryScopeBlocked ? 'カテゴリ未選択のため横断のみ利用できます。' : undefined}
             >
               このカテゴリ
             </button>
@@ -161,6 +164,11 @@ export function OrderRecommendationModal(props: {
               横断
             </button>
           </div>
+          {categoryScopeBlocked ? (
+            <p id={categoryScopeReasonId} className="order-recommend-modal__empty">
+              このカテゴリはカテゴリ未選択のため利用できません。横断を使用してください。
+            </p>
+          ) : null}
           <div className="order-recommend-modal__search">
             <label htmlFor="order-recommend-keyword">検索</label>
             <input

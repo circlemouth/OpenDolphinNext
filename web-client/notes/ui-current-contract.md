@@ -86,6 +86,7 @@
 - 共通 `CriticalOperationConfirmDialog` は重大操作の確認 surface として、実行操作名、患者名、患者ID、診療日などの患者識別情報、対象サマリ、cancel/confirm CTA を同一 modal 内に再掲します。Charts の低レベル ORCA 送信確認では title / operation を `診療行為ORCA送信`、confirm CTA を `ORCAへ送信する` とし、診療録確定、診察終了、会計済み確認の label と混同させません。
 - Charts の低レベル `ORCA 送信` と通常導線の `診察終了して会計へ送信` は送信前 precheck 理由だけでは native disabled にせず、`aria-disabled=true` と近傍 guard note で理由を示したうえで、押下時に同じ fail-closed precheck を実行して warning banner / audit に不足条件を出します。実行中など二重実行防止が必要な場合だけ native disabled を使います。
 - `OrderDockPanel` の quick-add / group-add / bundle edit / bundle copy / bundle delete / prescription-history import / recommendation apply は patient context 不足、read-only、missing master、fallback data だけでは native disabled にせず、`aria-disabled=true` と近傍 `order-dock-edit-block-reason` で理由を示したうえで、押下時に `オーダー追加を停止: ...`、`オーダー編集を停止: ...`、`オーダーコピーを停止: ...`、`オーダー削除を停止: ...`、`処方履歴取り込みを停止: ...`、`直近処方コピーを停止: ...`、`頻用オーダー反映を停止: ...` notice を出して editor / delete confirm を開きません。検索入力 / category select、pending/loading、二重実行防止、直近処方なしなど操作自体を受けられない状態は native disabled を維持し、検索入力 / category select には近傍 `order-dock-search-block-reason` と `aria-describedby` で理由を示します。
+- `OrderRecommendationModal` のカテゴリ scope は default entity がない場合 native disabled を維持し、近傍 `order-recommend-category-scope-reason` と `aria-describedby` で理由と横断 scope の代替を示します。
 - `OrderBundleEditPanel` embedded footer の `保存して閉じる` / `保存して続ける` / `保存して追加・更新` は read-only、missing master、fallback data だけでは native disabled にせず、`aria-disabled=true`、`data-disabled-reason=order_detail_submit_blocked`、近傍 edit block reason で理由を示し、押下時に `保存操作を停止: ...` notice と blocked audit を出して mutation へ進みません。保存中・禁忌チェック中など二重実行防止は native disabled を維持します。
 - `SoapNotePanel` の利用者向け見出しは `カルテ本文` とし、内部向けの `Primary Workspace` や折りたたみの記載メタ情報は通常表示に置きません。
 - page CTA の owner は `ChartsActionBar` です。通常 UI の primary は `診察終了して会計へ送信` で、`ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。低レベル `ORCA送信` direct bridge は debug / QA / focused test 用に限定し、通常画面の初回会計送信導線には出しません。
@@ -123,6 +124,7 @@
   - `CriticalOperationConfirmDialog` は backdrop click で閉じず、患者識別情報と実行操作名を alertdialog 内に再掲し、操作ごとに distinct な confirm label を使う
   - Charts `ORCA 送信` と `診察終了して会計へ送信` は missing master / encounter context 不足などの precheck failure でも押下可能に見せ、押下時に理由を表示して確認 modal / finish hook / transport へ進まないこと
   - `OrderDockPanel` quick-add / group-add / bundle edit / bundle copy / bundle delete / prescription-history import / recommendation apply は patient context 不足、read-only、missing master、fallback data で押下時理由を表示し、editor / delete confirm を開かないこと。検索入力 / category select は native disabled 維持時に `order-dock-search-block-reason` で近傍理由を表示すること
+  - `OrderRecommendationModal` category scope はカテゴリ未選択時に `order-recommend-category-scope-reason` で近傍理由と横断代替を表示すること
   - `OrderBundleEditPanel` embedded footer submit は read-only、missing master、fallback data で押下時理由を表示し、mutation へ進まないこと
   - right rail は chooser-only を維持し、`document` / `ORCA` tool や embedded editor を再混入させない
   - canonical encounter context 不足時は `診察終了して会計へ送信` を fail-close

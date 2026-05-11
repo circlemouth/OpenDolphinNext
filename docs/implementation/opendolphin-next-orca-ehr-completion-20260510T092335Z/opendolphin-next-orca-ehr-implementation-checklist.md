@@ -212,6 +212,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T01:22Z: `OrderDockPanel` の頻用オーダー apply は patient context 不足、read-only、missing master、fallback data で候補反映時に `頻用オーダー反映を停止` notice で不足条件を表示し、editor を開かず modal を維持することを focused test で固定した。
   - [x] 2026-05-11T01:43Z: `OrderDockPanel` の検索入力 / category select は操作自体を受けられない入力欄として native disabled を維持しつつ、近傍理由 `order-dock-search-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
   - [x] 2026-05-11T02:02Z: `OrderBundleEditPanel` embedded footer submit は read-only / missing master / fallback data だけでは native disabled にせず、近傍 edit block reason と押下時 `保存操作を停止` notice で不足条件を表示し、mutation へ進まないことを focused test で固定した。
+  - [x] 2026-05-11T02:22Z: `OrderRecommendationModal` のカテゴリ scope はカテゴリ未選択時に native disabled を維持しつつ、近傍理由 `order-recommend-category-scope-reason` と `aria-describedby` で横断 scope の代替を表示することを focused test で固定した。
 - [ ] ボタン優先度、配置、44px以上の押下領域を DADS に沿って統一する。
 
 ## 12. 監査ログ・真正性
