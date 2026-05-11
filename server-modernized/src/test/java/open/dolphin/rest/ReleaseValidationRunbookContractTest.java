@@ -31,6 +31,8 @@ class ReleaseValidationRunbookContractTest {
 
         assertThat(runbook)
                 .contains("ORCA billing/report live profile")
+                .contains("qa-orca-billing-report-live-profile.mjs")
+                .contains("--dry-run --sanitized-evidence-only --disable-browser-artifacts")
                 .contains("candidate discovery")
                 .contains("exact selected-candidate preflight")
                 .contains("income-info")

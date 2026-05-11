@@ -30,7 +30,7 @@ Checklist count when parallel board was created:
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
-| D | `codex/orca-ehr-worker-d-orca-operation` | D-04 follow-up billing/report live dry-run harness | Done | 20260511T012208Z | this commit | - |
+| D | `codex/orca-ehr-worker-d-orca-operation` | D-04 follow-up billing/report sanitized evidence integration | Done | 20260511T014209Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-02 common patient header staged rollout | Done | 20260510T204142Z | this commit | - |
 | F | `codex/orca-ehr-worker-f-audit-security-gates` | F-02 credential/PHI leakage guards | Done | 20260510T201318Z | this commit | - |
 | G | `codex/orca-ehr-integrator-g` | G-02 merge first worker batch in prescribed order | Done | 20260510T195822Z | this docs commit | - |
@@ -106,6 +106,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T014209Z | D | D-04 follow-up | 10.3/10.4 billing/report live dry-run harness validates candidate discovery + exact preflight and emits sanitized evidence only | this commit | direct Node assertions, dry-run CLI leak scan, web guard, `ReleaseValidationRunbookContractTest` passed | Done | D-04 follow-up billing/report sanitized evidence integration |
 | 20260511T012208Z | D | D-04 follow-up | 10.3/10.4 ORCA billing/report live profile evidence boundary fixed to sanitized cache/snapshot hash and server-generated storage metadata only | this commit | `ReleaseValidationRunbookContractTest` passed | Done | D-04 follow-up billing/report live dry-run harness |
 | 20260511T010209Z | D | D-04 follow-up | 10.3/10.4 release-validation now gates report resource, billing cache, and `orcaBillingCache` readiness coverage with runbook contract test | this commit | `ReleaseValidationRunbookContractTest`, `PublicRouteInventoryContractTest`, `WebXmlEndpointExposureTest`, `OrcaReportDocumentResourceTest`, `OrcaBillingCacheStoreTest`, `OperationsHealthResourceTest` passed | Done | D-04 follow-up ORCA billing/report live profile validation |
 | 20260511T004209Z | D | D-04 follow-up | 10.3/10.4 report fetch pipeline stages binary object only from server-side snapshot receipt and fails closed on enabled upload failure | this commit | `OrcaReportDocumentResourceTest`, `OrcaBillingCacheStoreTest`, doc/config/runtime lookup guards passed | Done | D-04 follow-up release-gate billing/report coverage |

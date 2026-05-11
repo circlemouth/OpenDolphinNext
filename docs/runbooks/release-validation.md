@@ -178,6 +178,14 @@ cd web-client && QA_PATIENT_ID=<summary.phase3AttemptPatientId> node scripts/qa-
 ### ORCA billing/report live profile
 会計・帳票の live Trial 検証は、同一 RUN_ID の runtime-ready smoke、candidate discovery、exact selected-candidate preflight、accept/fullflow の後続 profile として実行する。患者 ID 単独、UI 表示値、client-provided voucher / sequential / insurance combination / invoice number / `Data_Id` / storage key / digest は受入れ根拠にしない。
 
+事前 dry-run:
+```bash
+cd web-client && RUN_ID=<RUN_ID> node scripts/qa-orca-billing-report-live-profile.mjs \
+  --dry-run --sanitized-evidence-only --disable-browser-artifacts \
+  --candidate-discovery-summary ../artifacts/orca-remediation/closeout/<RUN_ID>/qa/weborca-candidate-discovery/summary.json \
+  --exact-preflight-summary ../artifacts/orca-remediation/closeout/<RUN_ID>/qa/weborca-readonly-preflight/summary.json
+```
+
 受入れ条件:
 - `income-info` は server-side facility と exact selected-candidate preflight で確認済みの患者・診療日だけを対象にし、結果は `orca_billing_cache` の `source_system=ORCA`、request/response hash、件数、sanitized summary で確認する。
 - `/api/orca/official/reports/{type}` は `orca_report_snapshot` の request/response hash、invoice/data id hash、server-generated storage key/digest、`storageUploadStatus`、`reportBinaryAvailable` だけを evidence にする。
