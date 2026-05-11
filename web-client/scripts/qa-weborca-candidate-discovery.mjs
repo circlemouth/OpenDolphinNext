@@ -13,6 +13,8 @@ import {
 import {
   buildCandidateReadinessDecision,
   buildCandidateDiscoveryGate,
+  buildReadonlyMutationPolicy,
+  isReadonlyBlockedMutationUrl,
   normalizeCandidateExclusionSet,
   summarizeLocalSelectableDiagnostic,
   summarizeMedicalInformationReadiness,
@@ -73,8 +75,6 @@ const DEFAULT_CANDIDATES = Array.from({ length: 11 }, (_, index) => String(index
 const REJECTED_LEGACY_SEED = '0000001';
 const CANDIDATE_DISCOVERY_SOURCE = 'qa-weborca-candidate-discovery';
 const CANDIDATE_DISCOVERY_FLOW_MODE = 'candidate-discovery-proposal';
-const MUTATION_ROUTE_PATTERN =
-  /\/api\/orca\/official\/(?:visits\/mutation|appointments\/mutation|patientmodv2\/outpatient\/(?:create|update)|patients\/(?:import|sync\/run))/;
 const PATIENT_NOT_FOUND_PATTERN =
   /(patient[-_\s]*not[-_\s]*found|no\s+patient|患者番号に該当する患者が存在しません|該当する患者が存在しません|患者.*存在しません)/i;
 const MEDICAL_INFORMATION_PROBE_PATH = '/api/orca/official/appointments/medical-information';
@@ -89,6 +89,8 @@ const networkRecords = [];
 const requestRecords = [];
 const blockedMutationRequests = [];
 let unsafeRequestHeaders = { 'Content-Type': 'application/json' };
+
+const currentReadonlyMutationPolicy = () => buildReadonlyMutationPolicy(blockedMutationRequests);
 
 const logStep = (label) => {
   fs.appendFileSync(stepLogPath, `[${new Date().toISOString()}] ${label}\n`, 'utf8');
@@ -534,15 +536,15 @@ const evaluateLocalUiReadiness = async (context, patientId) => {
   const localRequests = [];
   const localResponses = [];
   try {
-    await page.route(MUTATION_ROUTE_PATTERN, async (route) => {
+    await page.route('**/*', async (route) => {
       const request = route.request();
-      const row = {
-        url: redactUrl(request.url()),
-        method: request.method(),
-        reason: 'mutation route blocked during read-only candidate discovery',
-      };
+      if (!isReadonlyBlockedMutationUrl(request.url())) {
+        await route.continue();
+        return;
+      }
+      const row = { url: request.url(), method: request.method() };
       blockedMutationRequests.push(row);
-      localRequests.push(row);
+      localRequests.push(buildReadonlyMutationPolicy([row]).blockedRequests[0]);
       await route.abort('blockedbyclient');
     });
     page.on('console', (msg) => {
@@ -553,7 +555,13 @@ const evaluateLocalUiReadiness = async (context, patientId) => {
     });
     page.on('pageerror', (error) => pageErrors.push({ category: errorCategory(error), patientId }));
     page.on('request', (request) => {
-      if (request.url().includes(LOCAL_PATIENT_SEARCH_PATH) || MUTATION_ROUTE_PATTERN.test(request.url())) {
+      if (isReadonlyBlockedMutationUrl(request.url())) {
+        const record = buildReadonlyMutationPolicy([{ url: request.url(), method: request.method() }]).blockedRequests[0];
+        requestRecords.push(record);
+        localRequests.push(record);
+        return;
+      }
+      if (request.url().includes(LOCAL_PATIENT_SEARCH_PATH)) {
         const record = {
           url: redactUrl(request.url()),
           method: request.method(),
@@ -870,9 +878,10 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId, so
     verdict: verdict(!patientNotFoundDetected),
     accepted: !patientNotFoundDetected,
   };
+  const mutationPolicy = currentReadonlyMutationPolicy();
   const mutationProhibited = {
-    verdict: verdict(blockedMutationRequests.length === 0),
-    blockedRequestCount: blockedMutationRequests.length,
+    verdict: verdict(mutationPolicy.blockedRequestCount === 0),
+    blockedRequestCount: mutationPolicy.blockedRequestCount,
   };
   const medicalInformationReadiness = summarizeMedicalInformationReadiness({
     patientId,
@@ -1215,6 +1224,7 @@ try {
 
   const acceptedRow = selectPreferredExactPreflightCandidate(rows, undefined, { excludedPatientIds });
   const acceptedCandidateCount = rows.filter((row) => row.acceptedForExactPreflightProposal === true).length;
+  const mutationPolicy = currentReadonlyMutationPolicy();
   const selectedCandidate = acceptedRow
     ? {
         kind: 'proposal',
@@ -1229,7 +1239,7 @@ try {
   const discoveryGate = buildCandidateDiscoveryGate({
     candidateCount: rows.length,
     acceptedCandidateCount,
-    blockedRequestCount: blockedMutationRequests.length,
+    blockedRequestCount: mutationPolicy.blockedRequestCount,
     selectedCandidate,
   });
   const summary = {
@@ -1257,10 +1267,7 @@ try {
     acceptedCandidateCount,
     selectedCandidate,
     ...discoveryGate,
-    mutationPolicy: {
-      ...discoveryGate.mutationPolicy,
-      blockedRequests: blockedMutationRequests,
-    },
+    mutationPolicy,
     preflightSummaryPath: path.relative(artifactRoot, preflightSummaryJsonPath),
     consoleMessages,
     pageErrors,
@@ -1304,11 +1311,7 @@ try {
     verdict: 'rejected',
     blockerClassification: 'environment-blocker',
     fatalErrorCategory: errorCategory(error),
-    mutationPolicy: {
-      prohibited: true,
-      blockedRequestCount: blockedMutationRequests.length,
-      blockedRequests: blockedMutationRequests,
-    },
+    mutationPolicy: currentReadonlyMutationPolicy(),
   };
   const preflightSummary = {
     runId,

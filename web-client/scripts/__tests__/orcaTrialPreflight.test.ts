@@ -14,6 +14,7 @@ import {
   classifyAcceptmodReadOnlyDiagnostic,
   evaluatePreflightSummary,
   officialPatientEvidenceAccepted,
+  isReadonlyBlockedMutationUrl,
   isRejectedTrialCandidate,
   normalizeCandidateExclusionSet,
   sanitizeOfficialPatientExistenceEvidence,
@@ -1646,6 +1647,31 @@ describe('orca trial-native preflight gates', () => {
     });
   });
 
+  it('candidate discovery rejects read-only evidence when a shared blocked mutation route is seen', () => {
+    const policy = buildReadonlyMutationPolicy([
+      { url: '/api/orca/official/visits/acceptance-operation?patientId=00001', method: 'POST' },
+    ]);
+    const gate = buildCandidateDiscoveryGate({
+      candidateCount: 11,
+      acceptedCandidateCount: 1,
+      blockedRequestCount: policy.blockedRequestCount,
+      selectedCandidate: { kind: 'proposal', patientId: '00001' },
+    });
+
+    expect(gate).toMatchObject({
+      candidateDiscoveryAloneAuthorizesPhase3: false,
+      acceptedForPhase3Attempt: false,
+      releaseVerdict: 'PARTIAL / READONLY MUTATION BLOCKER',
+      blockerClassification: 'readonly-mutation-blocker',
+      blockerReason: 'readonly_mutation_attempt_blocked',
+      mutationPolicy: {
+        prohibited: true,
+        blockedRequestCount: 1,
+      },
+    });
+    expect(JSON.stringify(policy)).not.toMatch(/00001|patientId/);
+  });
+
   it('keeps acceptedCandidateCount at 0 when request contract rejection prevents readiness', () => {
     const insuranceReadiness = summarizeInsuranceReadiness({
       httpStatus: 200,
@@ -1762,6 +1788,20 @@ describe('orca trial-native preflight gates', () => {
       },
     ]);
     expect(JSON.stringify(policy)).not.toMatch(/00001|SHOULD_NOT_LEAK|Patient_Name|Insurance_Symbol|token/);
+  });
+
+  it('matches candidate discovery mutation routes with the shared read-only blocker list', () => {
+    expect(isReadonlyBlockedMutationUrl('/api/orca/official/visits/acceptance-operation?patientId=00001')).toBe(true);
+    expect(isReadonlyBlockedMutationUrl('/api/orca/official/chart-support/medical-mod-v2')).toBe(true);
+    expect(isReadonlyBlockedMutationUrl('/api/orca/official/chart-support/disease-mod-v3')).toBe(true);
+    expect(isReadonlyBlockedMutationUrl('/api/local/encounters/enc-1/close-and-send-to-billing')).toBe(true);
+    expect(
+      isReadonlyBlockedMutationUrl(
+        '/api/local/encounters/orca-transmissions/transmission-1/reconcile-temporary-medical?token=SHOULD_NOT_LEAK',
+      ),
+    ).toBe(true);
+    expect(isReadonlyBlockedMutationUrl('/api/orca/official/patientgetv2?id=00001')).toBe(false);
+    expect(isReadonlyBlockedMutationUrl('/api/local/encounters/enc-1/medical-summary?patientId=00001')).toBe(false);
   });
 
   it('preflight summary is rejected when read-only evidence includes a mutation attempt', () => {

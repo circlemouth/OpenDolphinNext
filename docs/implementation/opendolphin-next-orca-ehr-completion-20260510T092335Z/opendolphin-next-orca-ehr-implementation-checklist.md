@@ -366,6 +366,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [x] 2026-05-10T21:59Z: `ops/tests/orca/live-trial-checklist.sh --dry-run --run-id <RUN_ID>` と `check-live-orca-trial-harness.sh` を追加し、runtime-ready、medical-information probe、candidate discovery、exact read-only preflight、approved acceptmodv2、fullflow、Phase 4 medicalmodv2、sensitive evidence guard の順序を sanitized dry-run で固定した。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
 - [x] 2026-05-11T12:44Z: exact read-only preflight に `mutationPolicy` guard を追加し、patientmodv2 / appointments・visits mutation / acceptance operation / medicalmodv2 / diseasev3 / local billing send / temporary medical reconcile が記録された場合は `readonly_mutation_attempt_blocked` で Phase 3 handoff を拒否する。blocked request evidence は route template、method、固定 reason のみに sanitize し、患者 ID、保険 detail、credential、Cookie、Authorization、CSRF、raw body は残さない。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
+- [x] 2026-05-11T13:08Z: candidate discovery も exact read-only preflight と同じ `mutationPolicy` guard を使うようにし、acceptance operation / medicalmodv2 / diseasev3 / local billing send / temporary medical reconcile を含む mutation request を browser route で abort する。blocked request evidence は route template、method、固定 reason だけに正規化し、患者 ID、query、保険 detail、credential、Cookie、Authorization、CSRF、raw body を summary / request evidence に残さない。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
 - [ ] ORCA患者取得正常系/不在/更新成功/更新失敗を確認する。
 - [ ] ORCA受付一覧取得/受付取消/保険組合せ取得を確認する。
 - [ ] ORCA病名取得/追加/変更/削除/転帰更新/警告/不一致/ORCA側のみ病名を確認する。

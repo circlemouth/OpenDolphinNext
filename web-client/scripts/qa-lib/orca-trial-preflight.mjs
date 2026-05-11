@@ -94,14 +94,19 @@ const pathFromRecordedUrl = (value) => {
   }
 };
 
+export const readonlyBlockedMutationRouteForPath = (pathName) =>
+  READONLY_PREFLIGHT_BLOCKED_MUTATION_ROUTES.find((route) =>
+    typeof route.matches === 'function' ? route.matches(pathName) : pathName.startsWith(route.path),
+  );
+
+export const isReadonlyBlockedMutationUrl = (value) => Boolean(readonlyBlockedMutationRouteForPath(pathFromRecordedUrl(value)));
+
 export const buildReadonlyMutationPolicy = (records = []) => {
   const blockedRequests = asArray(records)
     .map((record) => {
       const pathName = pathFromRecordedUrl(record?.url);
       const method = normalizeText(record?.method).toUpperCase() || 'UNKNOWN';
-      const match = READONLY_PREFLIGHT_BLOCKED_MUTATION_ROUTES.find((route) =>
-        typeof route.matches === 'function' ? route.matches(pathName) : pathName.startsWith(route.path),
-      );
+      const match = readonlyBlockedMutationRouteForPath(pathName);
       if (!match) return null;
       return {
         path: match.path,
