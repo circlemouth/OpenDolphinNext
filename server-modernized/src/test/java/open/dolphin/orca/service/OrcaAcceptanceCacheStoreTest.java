@@ -40,10 +40,13 @@ class OrcaAcceptanceCacheStoreTest {
             assertTrue(summary(dataSource, "A-001").contains("departmentCode"));
             assertFalse(summary(dataSource, "A-001").contains("Patient_Information"));
 
+            insertEncounterAcceptanceLink(dataSource, "F001:E001", "A-001");
             OrcaAcceptanceCacheStore.AcceptanceCacheResult cancelled = store.saveInventory(command(inventory()));
             assertEquals(0, cancelled.upsertedCount());
             assertEquals(1, cancelled.cancelledCount());
             assertEquals("CANCELLED", status(dataSource, "A-001"));
+            assertEquals("ORCA_ACCEPTANCE_CANCELLED", linkWarningStatus(dataSource, "F001:E001"));
+            assertEquals("checked_in", encounterBusinessState(dataSource, "F001:E001"));
             assertEquals(1, rowCount(dataSource));
         }
     }
@@ -153,6 +156,66 @@ class OrcaAcceptanceCacheStoreTest {
              ResultSet resultSet = statement.executeQuery()) {
             resultSet.next();
             return resultSet.getInt(1);
+        }
+    }
+
+    private static void insertEncounterAcceptanceLink(DataSource dataSource, String encounterKey, String acceptanceId)
+            throws Exception {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement encounter = connection.prepareStatement("""
+                     INSERT INTO opendolphin.encounter_projection (
+                         encounter_key, facility_id, patient_id, orca_acceptance_id, acceptance_datetime,
+                         business_state, worklist_flags, projected_at
+                     ) VALUES (?, 'F001', '00001', ?, '2026-05-10T09:00:00Z', 'checked_in', '{}'::jsonb,
+                               '2026-05-10T09:01:00Z')
+                     """);
+             PreparedStatement link = connection.prepareStatement("""
+                     INSERT INTO opendolphin.encounter_orca_acceptance_link (
+                         encounter_key, facility_id, patient_id, orca_acceptance_key, orca_acceptance_id,
+                         acceptance_date, link_status, warning_status
+                     ) VALUES (?, 'F001', '00001', ?, ?, '2026-05-10', 'CURRENT', 'CLEAR')
+                     """)) {
+            encounter.setString(1, encounterKey);
+            encounter.setString(2, acceptanceId);
+            encounter.executeUpdate();
+            link.setString(1, encounterKey);
+            link.setString(2, acceptanceId);
+            link.setString(3, acceptanceId);
+            link.executeUpdate();
+        }
+    }
+
+    private static String linkWarningStatus(DataSource dataSource, String encounterKey) throws Exception {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT warning_status
+                       FROM opendolphin.encounter_orca_acceptance_link
+                      WHERE encounter_key = ?
+                     """)) {
+            statement.setString(1, encounterKey);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    return null;
+                }
+                return resultSet.getString(1);
+            }
+        }
+    }
+
+    private static String encounterBusinessState(DataSource dataSource, String encounterKey) throws Exception {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT business_state
+                       FROM opendolphin.encounter_projection
+                      WHERE encounter_key = ?
+                     """)) {
+            statement.setString(1, encounterKey);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    return null;
+                }
+                return resultSet.getString(1);
+            }
         }
     }
 

@@ -74,6 +74,77 @@ public class EncounterProjectionRepository {
              ORDER BY acceptance_datetime ASC, encounter_key ASC
             """;
 
+    private static final String SQL_SYNC_ACCEPTANCE_LINK = """
+            INSERT INTO opendolphin.encounter_orca_acceptance_link (
+                encounter_key, facility_id, patient_id, orca_acceptance_key, orca_acceptance_id,
+                orca_patient_id, acceptance_date, acceptance_time, department_code, physician_code,
+                medical_information, insurance_combination_number, source_system, source_api,
+                link_status, warning_status, changed_fields_json, cache_fetched_at, cache_expires_at,
+                raw_sensitive_fields_excluded, client_provided_identifiers_trusted, server_derived_authority_required,
+                linked_at, updated_at
+            )
+            SELECT ep.encounter_key,
+                   ep.facility_id,
+                   ep.patient_id,
+                   ep.orca_acceptance_id,
+                   COALESCE(cache.orca_acceptance_id, ep.orca_acceptance_id),
+                   cache.orca_patient_id,
+                   to_char(ep.acceptance_datetime AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD'),
+                   COALESCE(cache.acceptance_time, to_char(ep.acceptance_datetime AT TIME ZONE 'Asia/Tokyo', 'HH24MI')),
+                   COALESCE(cache.department_code, ep.worklist_flags #>> '{officialVisitIdentifiers,departmentCode}'),
+                   COALESCE(cache.physician_code, ep.worklist_flags #>> '{officialVisitIdentifiers,physicianCode}'),
+                   cache.medical_information,
+                   COALESCE(cache.insurance_combination_number,
+                            ep.worklist_flags #>> '{officialVisitIdentifiers,insuranceCombinationNumber}'),
+                   'ORCA',
+                   COALESCE(cache.source_api, 'acceptlstv2'),
+                   COALESCE(cache.acceptance_status, 'UNKNOWN'),
+                   CASE cache.acceptance_status
+                       WHEN 'CANCELLED' THEN 'ORCA_ACCEPTANCE_CANCELLED'
+                       WHEN 'DIFF_DETECTED' THEN 'ORCA_ACCEPTANCE_DIFF_DETECTED'
+                       WHEN 'NEEDS_REVIEW' THEN 'ORCA_ACCEPTANCE_NEEDS_REVIEW'
+                       WHEN 'CURRENT' THEN 'CLEAR'
+                       ELSE 'ORCA_ACCEPTANCE_STALE_OR_UNRESOLVED'
+                   END,
+                   COALESCE(cache.response_summary_json -> 'changedFields', '[]'::jsonb),
+                   cache.fetched_at,
+                   cache.cache_expires_at,
+                   TRUE,
+                   FALSE,
+                   TRUE,
+                   ep.projected_at,
+                   ep.projected_at
+              FROM opendolphin.encounter_projection ep
+              LEFT JOIN opendolphin.orca_acceptance_cache cache
+                ON cache.facility_id = ep.facility_id
+               AND cache.acceptance_date = to_char(ep.acceptance_datetime AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD')
+               AND (cache.orca_acceptance_id = ep.orca_acceptance_id
+                    OR cache.orca_acceptance_key = ep.orca_acceptance_id)
+             WHERE ep.encounter_key = ?
+            ON CONFLICT (encounter_key) DO UPDATE SET
+                facility_id = EXCLUDED.facility_id,
+                patient_id = EXCLUDED.patient_id,
+                orca_acceptance_key = EXCLUDED.orca_acceptance_key,
+                orca_acceptance_id = EXCLUDED.orca_acceptance_id,
+                orca_patient_id = EXCLUDED.orca_patient_id,
+                acceptance_date = EXCLUDED.acceptance_date,
+                acceptance_time = EXCLUDED.acceptance_time,
+                department_code = EXCLUDED.department_code,
+                physician_code = EXCLUDED.physician_code,
+                medical_information = EXCLUDED.medical_information,
+                insurance_combination_number = EXCLUDED.insurance_combination_number,
+                source_api = EXCLUDED.source_api,
+                link_status = EXCLUDED.link_status,
+                warning_status = EXCLUDED.warning_status,
+                changed_fields_json = EXCLUDED.changed_fields_json,
+                cache_fetched_at = EXCLUDED.cache_fetched_at,
+                cache_expires_at = EXCLUDED.cache_expires_at,
+                raw_sensitive_fields_excluded = TRUE,
+                client_provided_identifiers_trusted = FALSE,
+                server_derived_authority_required = TRUE,
+                updated_at = EXCLUDED.updated_at
+            """;
+
     @Resource(lookup = "java:jboss/datasources/PostgresDS")
     DataSource dataSource;
 
@@ -110,6 +181,7 @@ public class EncounterProjectionRepository {
             statement.setLong(16, command.stateVersion());
             statement.setTimestamp(17, Timestamp.from(command.projectedAt()));
             statement.executeUpdate();
+            syncAcceptanceLink(connection, command.encounterKey().trim());
         } catch (SQLException ex) {
             throw new IllegalStateException("Failed to upsert encounter projection", ex);
         }
@@ -209,6 +281,13 @@ public class EncounterProjectionRepository {
             throw new IllegalStateException("PostgresDS is not available for encounter projection repository");
         }
         return dataSource;
+    }
+
+    private void syncAcceptanceLink(Connection connection, String encounterKey) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(SQL_SYNC_ACCEPTANCE_LINK)) {
+            statement.setString(1, encounterKey);
+            statement.executeUpdate();
+        }
     }
 
     private static Timestamp toTimestamp(Instant value) {

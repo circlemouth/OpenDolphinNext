@@ -86,6 +86,41 @@ public class OrcaAcceptanceCacheStore {
                AND NOT (orca_acceptance_key = ANY (?))
             """;
 
+    private static final String SQL_REFRESH_LINKS = """
+            UPDATE opendolphin.encounter_orca_acceptance_link link
+               SET orca_acceptance_id = COALESCE(cache.orca_acceptance_id, link.orca_acceptance_id),
+                   orca_patient_id = cache.orca_patient_id,
+                   acceptance_time = COALESCE(cache.acceptance_time, link.acceptance_time),
+                   department_code = COALESCE(cache.department_code, link.department_code),
+                   physician_code = COALESCE(cache.physician_code, link.physician_code),
+                   medical_information = cache.medical_information,
+                   insurance_combination_number = COALESCE(cache.insurance_combination_number,
+                                                            link.insurance_combination_number),
+                   source_api = cache.source_api,
+                   link_status = cache.acceptance_status,
+                   warning_status = CASE cache.acceptance_status
+                       WHEN 'CANCELLED' THEN 'ORCA_ACCEPTANCE_CANCELLED'
+                       WHEN 'DIFF_DETECTED' THEN 'ORCA_ACCEPTANCE_DIFF_DETECTED'
+                       WHEN 'NEEDS_REVIEW' THEN 'ORCA_ACCEPTANCE_NEEDS_REVIEW'
+                       WHEN 'CURRENT' THEN 'CLEAR'
+                       ELSE 'ORCA_ACCEPTANCE_STALE_OR_UNRESOLVED'
+                   END,
+                   changed_fields_json = COALESCE(cache.response_summary_json -> 'changedFields', '[]'::jsonb),
+                   cache_fetched_at = cache.fetched_at,
+                   cache_expires_at = cache.cache_expires_at,
+                   raw_sensitive_fields_excluded = TRUE,
+                   client_provided_identifiers_trusted = FALSE,
+                   server_derived_authority_required = TRUE,
+                   updated_at = ?
+              FROM opendolphin.orca_acceptance_cache cache
+             WHERE link.facility_id = cache.facility_id
+               AND link.acceptance_date = cache.acceptance_date
+               AND (link.orca_acceptance_key = cache.orca_acceptance_key
+                    OR link.orca_acceptance_id = cache.orca_acceptance_id)
+               AND link.facility_id = ?
+               AND link.acceptance_date = ?
+            """;
+
     @Resource(lookup = "java:jboss/datasources/PostgresDS")
     DataSource dataSource;
 
@@ -124,6 +159,7 @@ public class OrcaAcceptanceCacheStore {
                 upserted++;
             }
             int cancelled = markCancelled(connection, command, fetchedAt, activeKeys);
+            refreshEncounterLinks(connection, command, fetchedAt);
             return new AcceptanceCacheResult(upserted, diffDetected, cancelled, needsReview);
         } catch (SQLException ex) {
             throw new IllegalStateException("Failed to save ORCA acceptance cache", ex);
@@ -213,6 +249,17 @@ public class OrcaAcceptanceCacheStore {
             statement.setString(7, command.acceptanceDate().trim());
             statement.setArray(8, connection.createArrayOf("varchar", keys));
             return statement.executeUpdate();
+        }
+    }
+
+    private void refreshEncounterLinks(Connection connection,
+            AcceptanceInventoryCommand command,
+            Instant fetchedAt) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(SQL_REFRESH_LINKS)) {
+            statement.setTimestamp(1, Timestamp.from(fetchedAt));
+            statement.setString(2, command.facilityId().trim());
+            statement.setString(3, command.acceptanceDate().trim());
+            statement.executeUpdate();
         }
     }
 

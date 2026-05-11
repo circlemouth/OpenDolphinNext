@@ -27,7 +27,7 @@ Checklist count when parallel board was created:
 
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
-| A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A02 encounter/acceptance link and stale patient/insurance/acceptance warning gaps | Active | 20260511T101041Z | this commit | - |
+| A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A03 patient/insurance freshness and UI warning handoff gaps | Active | 20260511T101821Z | this commit | - |
 | B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C01 prescription authority, medical candidate send-prep, disease handoff gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D01 live ORCA Trial execution, adapter contract, retry/idempotency evidence | Active | 20260511T063714Z | `1218aa1ef` base | - |
@@ -160,6 +160,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T101821Z | A | R2-A02 encounter/acceptance link warning projection | 3.3/6/13 `encounter_orca_acceptance_link`; acceptance cancel/diff/needs-review warning sync without workflow mutation | this commit | `EncounterProjectionRepositoryTest`, `OrcaAcceptanceCacheStoreTest`, `FreshSchemaBaselineTest`, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | R2-A03 patient/insurance freshness and UI warning handoff gaps |
 | 20260511T101041Z | A | R2-A01 official appointments GET routes | 3.3/6/13 official appointment list/patient read wrapper query route; route taxonomy/checklist contract update | this commit | `OrcaAppointmentResourceTest`, `PublicRouteInventoryContractTest`, `WebXmlEndpointExposureTest`, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | R2-A02 encounter/acceptance link and stale patient/insurance/acceptance warning gaps |
 | 20260510T215924Z | F | F-04 | 18/19 live ORCA Trial execution harness and sanitized evidence policy | this commit | live trial dry-run harness, live ORCA harness guard, doc/config/runtime/audit/backup/sensitive guards passed; `RepoGuardScriptsTest` passed | Done | Worker F queue exhausted; support Integrator G release gates or new audit/security blocker |
 | 20260510T211308Z | F | F-03 | 14.3 backup/restore/hash verification workflow; 16 backup restore ORCA re-alignment boundary | this commit | backup/restore, doc/config/runtime/audit/sensitive guards passed; `RepoGuardScriptsTest` passed | Done | F-04 real ORCA connection trial checklist execution harness |

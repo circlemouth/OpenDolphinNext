@@ -141,7 +141,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] `GET /api/orca/official/appointments/list?date=...` と `GET /api/orca/official/appointments/patient?...` を受付取得 route として実装する。
   - [x] 2026-05-11T10:10Z: 既存 POST wrapper と同じ server-side official transport / audit path に正規化する GET query route を追加し、日付 query は `yyyy-MM-dd` 固定で ORCA transport 前に fail closed する。
 - [x] 受付取得結果を `orca_acceptance_cache` に保存し、ORCA患者番号、受付日、診療科、担当医、保険組合せを保持する。
-- [ ] `encounter_id` と ORCA受付情報の紐付けテーブルを作る。
+- [x] `encounter_id` と ORCA受付情報の紐付けテーブルを作る。
+  - [x] 2026-05-11T10:18Z: `encounter_orca_acceptance_link` を追加し、`encounter_projection` の server-derived 受付 ID / 診療科 / 担当医 / 保険組合せと `orca_acceptance_cache` の取消・差分・要確認 status を警告 read model として同期する。link 更新は `encounter_projection.business_state` を直接変更せず、client-provided identifier を authority にしない DB constraint を固定した。
 - [ ] ORCA受付取消、診療科・担当医・保険組合せ変更を検知して診療録画面に警告/差分を表示する。
 - [ ] 保険情報取得結果を `orca_insurance_cache` に保存し、診療録確定時に `encounter_insurance_snapshot` を作る。
 - [ ] 保険組合せ未選択や保険変更後の再送では、押下時に具体理由と差分を表示する。

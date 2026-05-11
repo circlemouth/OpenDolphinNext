@@ -58,7 +58,9 @@ class EncounterProjectionRepositoryTest {
                     null,
                     "doctor-1",
                     "first visit",
-                    "{\"waiting\":true}",
+                    """
+                            {"waiting":true,"officialVisitIdentifiers":{"departmentCode":"01","physicianCode":"DR01","insuranceCombinationNumber":"0001","voucherNumber":"E100","sequentialNumber":"1"}}
+                            """,
                     Instant.parse("2026-03-25T09:06:00Z"),
                     0L,
                     Instant.parse("2026-03-25T09:06:00Z")));
@@ -126,6 +128,12 @@ class EncounterProjectionRepositoryTest {
                 assertThat(queryString(connection,
                         "select subject_key from opendolphin.reconciliation_task where facility_id = ? and subject_type = ?",
                         "F001", "encounter")).isEqualTo("F001:E100");
+                assertThat(queryString(connection,
+                        "select warning_status from opendolphin.encounter_orca_acceptance_link where encounter_key = ?",
+                        "F001:E100")).isEqualTo("ORCA_ACCEPTANCE_STALE_OR_UNRESOLVED");
+                assertThat(queryString(connection,
+                        "select department_code from opendolphin.encounter_orca_acceptance_link where encounter_key = ?",
+                        "F001:E100")).isEqualTo("01");
             }
         }
     }
