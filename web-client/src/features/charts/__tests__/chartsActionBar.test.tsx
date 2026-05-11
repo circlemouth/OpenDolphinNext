@@ -289,6 +289,13 @@ describe('ChartsActionBar', () => {
     );
 
     await user.click(screen.getByRole('button', { name: '診察終了して会計へ送信' }));
+    const confirmDialog = await screen.findByRole('alertdialog', { name: '診察終了して会計へ送信の確認' });
+    expect(within(confirmDialog).getByText('実行操作:')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('P-200')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('2026-01-04')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('会計済み確定ではありません')).toBeInTheDocument();
+    expect(onAfterFinish).not.toHaveBeenCalled();
+    await user.click(within(confirmDialog).getByRole('button', { name: '診察終了して会計へ送信' }));
 
     await waitFor(() => expect(onAfterFinish).toHaveBeenCalledTimes(1));
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
@@ -579,6 +586,8 @@ describe('ChartsActionBar', () => {
     );
 
     await user.click(screen.getByRole('button', { name: '診察終了して会計へ送信' }));
+    const confirmDialog = await screen.findByRole('alertdialog', { name: '診察終了して会計へ送信の確認' });
+    await user.click(within(confirmDialog).getByRole('button', { name: '診察終了して会計へ送信' }));
 
     await waitFor(() => expect(onAfterFinish).toHaveBeenCalledTimes(1));
     expect(onAfterStart).not.toHaveBeenCalled();

@@ -324,6 +324,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const [isRunning, setIsRunning] = useState(false);
   const [runningAction, setRunningAction] = useState<ChartAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<ChartAction | null>(null);
+  const confirmedCriticalActionRef = useRef<Set<ChartAction>>(new Set());
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [approvalUnlockDialogStep, setApprovalUnlockDialogStep] = useState<'confirm' | 'final' | null>(null);
@@ -1023,7 +1024,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const logApproval = (action: ChartAction, state: 'open' | 'confirmed' | 'cancelled') => {
     const blockedReasons = state === 'cancelled' ? ['confirm_cancelled'] : undefined;
     logUiState({
-      action: action === 'print' ? 'print' : 'send',
+      action: action === 'print' ? 'print' : action === 'finish' ? 'finish' : 'send',
       screen: 'charts/action-bar',
       controlId: `action-${action}-approval`,
       runId,
@@ -1063,6 +1064,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
 
   const handleAction = async (action: ChartAction) => {
     if (isRunning) return;
+    const criticalActionConfirmed = action === 'finish' ? confirmedCriticalActionRef.current.delete(action) : false;
 
     if (readOnly) {
       const blockedReason = readOnlyReason;
@@ -1228,6 +1230,13 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         setRetryAction(null);
         return;
       }
+    }
+
+    if (action === 'finish' && !criticalActionConfirmed) {
+      setConfirmAction('finish');
+      approvalSessionRef.current = { action: 'finish', closed: false };
+      logApproval('finish', 'open');
+      return;
     }
 
     if (action === 'send' && (fallbackUsed || missingMaster)) {
@@ -2492,6 +2501,44 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         testId="charts-send-dialog"
       />
 
+      <CriticalOperationConfirmDialog
+        open={confirmAction === 'finish'}
+        title="診察終了して会計へ送信の確認"
+        description="現在の診察を閉じ、会計送信フローを開始します。会計済み確定とは別の操作です。"
+        operationLabel="診察終了して会計へ送信"
+        patientName={sendDialogSummary.patientName}
+        patientFields={[
+          { label: '患者ID', value: sendDialogSummary.patientIdLabel },
+          {
+            label: '生年月日 / 年齢',
+            value: `${sendDialogSummary.birthDate}${sendDialogSummary.ageLabel ? ` / ${sendDialogSummary.ageLabel}` : ''}`,
+          },
+          { label: '診療日', value: sendDialogSummary.visitLabel },
+          { label: '受付ID', value: sendDialogSummary.receptionLabel },
+          { label: '予約ID', value: sendDialogSummary.appointmentLabel },
+        ]}
+        summaryTitle="終了対象サマリ"
+        summaryFields={[
+          { label: '病名', value: sendDialogSummary.diagnosisCount },
+          { label: 'オーダー', value: sendDialogSummary.orderCount },
+          { label: 'SOAP', value: sendDialogSummary.soapState },
+          { label: '画像添付', value: sendDialogSummary.imageCount },
+          { label: '会計状態', value: '会計済み確定ではありません' },
+        ]}
+        confirmLabel="診察終了して会計へ送信"
+        onCancel={() => {
+          finalizeApproval('finish', 'cancelled');
+          setConfirmAction(null);
+        }}
+        onConfirm={() => {
+          finalizeApproval('finish', 'confirmed');
+          setConfirmAction(null);
+          confirmedCriticalActionRef.current.add('finish');
+          void handleAction('finish');
+        }}
+        testId="charts-finish-dialog"
+      />
+
       <FocusTrapDialog
         open={approvalUnlockDialogStep !== null}
         role="alertdialog"
@@ -2785,7 +2832,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                 aria-disabled={finishPrecheckReasons.length > 0}
                 aria-describedby={!isRunning && finishPrecheckReasons.length > 0 ? 'charts-actions-finish-guard' : undefined}
                 title={finishPrecheckReasons.length > 0 ? `会計送信不可: ${finishPrecheckReasons.map((reason) => reason.summary).join(' / ')}` : otherBlocked ? statusLine : undefined}
-                onClick={() => handleAction('finish')}
+                onClick={() => void handleAction('finish')}
                 aria-keyshortcuts="Alt+E"
               >
                 診察終了して会計へ送信
