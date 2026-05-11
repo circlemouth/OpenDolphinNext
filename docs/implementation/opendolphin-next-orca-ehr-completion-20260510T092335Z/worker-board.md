@@ -16,12 +16,10 @@
 
 ## Current Snapshot
 
-Checklist count when parallel board was created:
+Checklist count after round 2 integration reconciliation:
 
 | Metric | Count |
 | --- | ---: |
-| Open checklist items | 177 |
-| Done checklist items | 35 |
 | Open checklist items | 175 |
 | Done checklist items | 37 |
 
@@ -29,19 +27,13 @@ Checklist count when parallel board was created:
 
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
-| A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A05 live Trial exact selected-candidate selector readiness rerun | Active | 20260511T145115Z | this commit | reception selector readiness still requires actual Trial rerun after local selectable cache fallback |
-| B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T063714Z | `1218aa1ef` base | - |
-| A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A01 patient/acceptance/insurance boundary plus live readiness gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
-| B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T141345Z | this commit | - |
-| C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C01 prescription authority, medical candidate send-prep, disease handoff gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
-| D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D01 live ORCA Trial execution, adapter contract, retry/idempotency evidence | Blocked | 20260511T145138Z | this commit | Fullflow sanitized/no-artifact failure path is hardened; fullflow rerun and billing/report closeout still blocked until live runtime is rerun with same prerequisites |
-| C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C19 prescription history allowlist snapshot and disease request completeness handoff | Active | 20260511T101116Z | this commit | - |
-| D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D01 live ORCA Trial execution, adapter contract, retry/idempotency evidence | Active | 20260511T063714Z | `1218aa1ef` base | - |
-| E | `codex/orca-ehr-r2-worker-e-safety-ui` | R2-E01 medical safety UI, DADS/a11y, patient header/modal rollout | Active | 20260511T063714Z | `1218aa1ef` base | - |
-| F | `codex/orca-ehr-r2-worker-f-security-gates` | R2-F09 audit event coverage inventory / live Trial precondition blocker | Active | 20260511T150603Z | this commit | `no_trial_native_mutation_ready_candidate`: Trial read connectivity OK; local selectable / selector / runtime-ready preconditions block mutation |
-| E | `codex/orca-ehr-r2-worker-e-safety-ui` | R2-E01 medical safety UI, DADS/a11y, patient header/modal rollout | Active | 20260511T150214Z | this commit | - |
-| F | `codex/orca-ehr-r2-worker-f-security-gates` | R2-F01 audit/security authorization matrix and release gate hardening | Active | 20260511T063714Z | `1218aa1ef` base | - |
-| G | `master` | G-04 monitor round 2 heartbeat output and integrate merge-ready branches | Active | 20260511T063714Z | `1218aa1ef` | - |
+| A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A05 live Trial exact selected-candidate selector readiness rerun | Merged to `master` | 20260511T145115Z | `339dd1dc6` merge | Actual Trial candidate discovery/exact preflight rerun still required after local selectable cache fallback. |
+| B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration | Merged to `master` | 20260511T141345Z | `ea8a343c2` merge | None for merged slice; future work waits for additional A/C/D stable snapshot contracts. |
+| C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C19 prescription history allowlist snapshot and disease request completeness handoff | Merged to `master` | 20260511T101116Z | `bc5b69e1a` merge plus `40ff5b554` marker fix | None for merged slice; coordinate with B export and D live send/re-fetch. |
+| D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D11 fullflow sanitized artifact hardening | Merged to `master` | 20260511T145138Z | `3e589b764` merge | Fullflow rerun and billing/report closeout remain blocked until live runtime is rerun with the same prerequisites. |
+| E | `codex/orca-ehr-r2-worker-e-safety-ui` | R2-E03/E04 medical safety UI confirmations and disabled reasons | Merged to `master` | 20260511T150214Z | `ed279bc2d` merge | None for merged slice; remaining UI coverage can continue for prescription stop/cancel and residual flows. |
+| F | `codex/orca-ehr-r2-worker-f-security-gates` | R2-F09 audit event coverage inventory / release gate hardening | Merged to `master` | 20260511T150603Z | `faae9e89f` merge | Audit inventory still has owner-verification rows for owning workers; live Trial mutation/fullflow remains outside F. |
+| G | `master` | G-05 post-merge validation, cleanup, and next-worker handoff | Active | 20260511T151412Z | pending G docs commit | Post-merge validation and safe branch/worktree cleanup in progress. |
 
 ## Round 2 Assignment Snapshot
 
@@ -168,6 +160,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T151412Z | G | G-05 round 2 staged integration | A/B/C/D/E/F round 2 merge-ready branches integrated into `master` | pending G docs commit | merge inventory, conflict resolution, post-merge guards/focused checks, safe cleanup | In progress | Complete validation and delete only clean fully merged worktrees/branches |
 | 20260511T150603Z | F | R2-F09 audit event coverage inventory | 12/15/18/19 audit coverage implementation evidence inventory | this commit | `check-audit-append-only.sh`, `RepoGuardScriptsTest`, doc links passed | Done | Owner workers must move `Owner verification required` rows to implemented evidence or named blockers |
 | 20260511T145148Z | F | R2-F08 audit event coverage matrix guard | 12/15/18/19 audit event coverage and release-gate drift prevention | this commit | `check-audit-append-only.sh`, `RepoGuardScriptsTest`, sensitive evidence guard passed | Done | Hand off live Trial local selectable / selector / runtime-ready preconditions; rerun runtime-ready/exact preflight before mutation |
 | 20260511T141708Z | F | R2-F07 full release gate refresh | 15/18/19 release gate, browser secret exposure, server static-analysis | this commit | `web-client npm run ci` passed after ignored `.env.local` cleanup; `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` passed with SpotBugs `BugInstance size is 0` | Done | Hand off live Trial local selectable / selector / runtime-ready preconditions; rerun runtime-ready/exact preflight before mutation |
