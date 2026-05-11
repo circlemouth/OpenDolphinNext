@@ -143,6 +143,10 @@ public class OrcaReportBinaryStorageService {
         return new UploadResult(snapshotId, stored.toUri(), expectedDigest, uploadedAt, retentionUntil);
     }
 
+    public boolean isUploadEnabled() {
+        return settings != null && settings.getMode().isS3() && objectStorageClient != null;
+    }
+
     private void deleteUploadedObject(ObjectStorageLocation stored) {
         try {
             objectStorageClient.deleteObject(new ObjectStorageDeleteRequest(stored));

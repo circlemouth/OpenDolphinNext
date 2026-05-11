@@ -17,6 +17,8 @@ public class OrcaReportResponse {
     private String runId;
     private String traceId;
     private String error;
+    private String storageUploadStatus;
+    private Boolean reportBinaryAvailable;
 
     public boolean isOk() {
         return ok;
@@ -112,5 +114,21 @@ public class OrcaReportResponse {
 
     public void setError(String error) {
         this.error = error;
+    }
+
+    public String getStorageUploadStatus() {
+        return storageUploadStatus;
+    }
+
+    public void setStorageUploadStatus(String storageUploadStatus) {
+        this.storageUploadStatus = storageUploadStatus;
+    }
+
+    public Boolean getReportBinaryAvailable() {
+        return reportBinaryAvailable;
+    }
+
+    public void setReportBinaryAvailable(Boolean reportBinaryAvailable) {
+        this.reportBinaryAvailable = reportBinaryAvailable;
     }
 }

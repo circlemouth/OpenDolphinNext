@@ -13,7 +13,10 @@ import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import open.dolphin.orca.service.OrcaBillingCacheStore;
+import open.dolphin.orca.service.OrcaReportBinaryStorageService;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
@@ -29,6 +32,7 @@ class OrcaReportDocumentResourceTest {
     private OrcaReportDocumentResource resource;
     private OrcaTransport orcaTransport;
     private OrcaBillingCacheStore billingCacheStore;
+    private OrcaReportBinaryStorageService reportBinaryStorageService;
     private HttpServletRequest request;
 
     @BeforeEach
@@ -36,10 +40,12 @@ class OrcaReportDocumentResourceTest {
         resource = new OrcaReportDocumentResource();
         orcaTransport = mock(OrcaTransport.class);
         billingCacheStore = mock(OrcaBillingCacheStore.class);
+        reportBinaryStorageService = mock(OrcaReportBinaryStorageService.class);
         request = mock(HttpServletRequest.class);
 
         setField(resource, "orcaTransport", orcaTransport);
         setField(resource, "billingCacheStore", billingCacheStore);
+        setField(resource, "reportBinaryStorageService", reportBinaryStorageService);
         setField(resource, "sessionAuditDispatcher", null);
 
         when(request.getRemoteUser()).thenReturn("FACILITY:user");
@@ -86,6 +92,8 @@ class OrcaReportDocumentResourceTest {
         assertTrue(command.requestBody().contains("<prescriptionv2req type=\"record\">"));
         assertTrue(command.responseBody().contains("\"Api_Result\": \"0000\""));
         assertEquals(response, command.response());
+        assertEquals("NOT_UPLOADED", response.getStorageUploadStatus());
+        assertFalse(Boolean.TRUE.equals(response.getReportBinaryAvailable()));
     }
 
     @Test
@@ -138,6 +146,96 @@ class OrcaReportDocumentResourceTest {
         OrcaReportRequest payload = new OrcaReportRequest();
         payload.setPatientId("P001");
         payload.setInvoiceNumber("INV-01");
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> resource.createReport(request, "prescription", payload));
+
+        assertEquals(503, exception.getResponse().getStatus());
+    }
+
+    @Test
+    void createReportStagesReportBinaryWhenStorageIsEnabledAndSnapshotIsEligible() {
+        String responseBody = """
+                {
+                  "prescriptionv2res": {
+                    "Api_Result": "0000",
+                    "Api_Result_Message": "正常終了",
+                    "Data_Id": "DATA-01"
+                  }
+                }
+                """;
+        when(orcaTransport.invoke(anyString(), any(), any(OrcaTransportRequest.class)))
+                .thenReturn(OrcaTransportResult.fallback(responseBody, "application/json"));
+        when(billingCacheStore.saveReportSnapshot(any(OrcaBillingCacheStore.ReportSnapshotCommand.class)))
+                .thenReturn(new OrcaBillingCacheStore.ReportSnapshotReceipt(
+                        11L,
+                        "FACILITY",
+                        "CURRENT",
+                        "orca-reports/facility/prescription/request-response.json",
+                        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                        "NOT_UPLOADED",
+                        true));
+        when(reportBinaryStorageService.isUploadEnabled()).thenReturn(true);
+        when(reportBinaryStorageService.uploadReportBinary(any(OrcaReportBinaryStorageService.UploadCommand.class)))
+                .thenReturn(new OrcaReportBinaryStorageService.UploadResult(
+                        11L,
+                        "s3://bucket/orca-reports/facility/prescription/request-response.json",
+                        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                        Instant.parse("2026-05-11T00:42:09Z"),
+                        Instant.parse("2026-06-10T00:42:09Z")));
+
+        OrcaReportRequest payload = new OrcaReportRequest();
+        payload.setPatientId("P001");
+        payload.setInvoiceNumber("INV-01");
+
+        OrcaReportResponse response = resource.createReport(request, "prescription", payload);
+
+        ArgumentCaptor<OrcaReportBinaryStorageService.UploadCommand> upload =
+                ArgumentCaptor.forClass(OrcaReportBinaryStorageService.UploadCommand.class);
+        verify(reportBinaryStorageService).uploadReportBinary(upload.capture());
+        OrcaReportBinaryStorageService.UploadCommand command = upload.getValue();
+        assertEquals(11L, command.snapshotId());
+        assertEquals("FACILITY", command.facilityId());
+        assertEquals("orca-reports/facility/prescription/request-response.json", command.serverStorageObjectKey());
+        assertEquals("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                command.serverStorageDigest());
+        assertTrue(new String(command.contentBytes(), StandardCharsets.UTF_8).contains("\"Api_Result\": \"0000\""));
+        assertEquals("application/json", command.contentType());
+        assertEquals("UPLOADED", response.getStorageUploadStatus());
+        assertTrue(Boolean.TRUE.equals(response.getReportBinaryAvailable()));
+    }
+
+    @Test
+    void createReportFailsClosedWhenEnabledBinaryUploadFails() {
+        when(orcaTransport.invoke(anyString(), any(), any(OrcaTransportRequest.class)))
+                .thenReturn(OrcaTransportResult.fallback(
+                        """
+                        {
+                          "prescriptionv2res": {
+                            "Api_Result": "0000",
+                            "Api_Result_Message": "正常終了",
+                            "Data_Id": "DATA-01"
+                          }
+                        }
+                        """,
+                        "application/json"));
+        when(billingCacheStore.saveReportSnapshot(any(OrcaBillingCacheStore.ReportSnapshotCommand.class)))
+                .thenReturn(new OrcaBillingCacheStore.ReportSnapshotReceipt(
+                        12L,
+                        "FACILITY",
+                        "CURRENT",
+                        "orca-reports/facility/prescription/request-response.json",
+                        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                        "NOT_UPLOADED",
+                        true));
+        when(reportBinaryStorageService.isUploadEnabled()).thenReturn(true);
+        doThrow(new IllegalStateException("object storage unavailable"))
+                .when(reportBinaryStorageService)
+                .uploadReportBinary(any(OrcaReportBinaryStorageService.UploadCommand.class));
+
+        OrcaReportRequest payload = new OrcaReportRequest();
+        payload.setPatientId("P001");
 
         WebApplicationException exception = assertThrows(
                 WebApplicationException.class,

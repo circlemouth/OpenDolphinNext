@@ -7,6 +7,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -71,6 +72,7 @@ public class OrcaBillingCacheStore {
                 fetched_at,
                 snapshot_reason
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'NOT_UPLOADED', ?, ?, ?, cast(? as jsonb), ?, 'ORCA_REPORT_FETCH')
+            RETURNING orca_report_snapshot_id
             """;
 
     @Resource(lookup = "java:jboss/datasources/PostgresDS")
@@ -119,7 +121,7 @@ public class OrcaBillingCacheStore {
         }
     }
 
-    public void saveReportSnapshot(ReportSnapshotCommand command) {
+    public ReportSnapshotReceipt saveReportSnapshot(ReportSnapshotCommand command) {
         Objects.requireNonNull(command, "command");
         requireText(command.facilityId(), "facilityId");
         requireText(command.orcaPatientId(), "orcaPatientId");
@@ -162,7 +164,19 @@ public class OrcaBillingCacheStore {
             statement.setString(16, response != null ? normalize(response.getApiResultMessage()) : null);
             statement.setString(17, summaryJson);
             statement.setTimestamp(18, Timestamp.from(fetchedAt));
-            statement.executeUpdate();
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) {
+                    throw new IllegalStateException("ORCA report snapshot insert did not return an id");
+                }
+                return new ReportSnapshotReceipt(
+                        rs.getLong(1),
+                        command.facilityId().trim(),
+                        snapshotStatus,
+                        serverStorageObjectKey,
+                        serverStorageDigest,
+                        "NOT_UPLOADED",
+                        response != null && response.isOk() && serverStorageObjectKey != null && serverStorageDigest != null);
+            }
         } catch (SQLException ex) {
             throw new IllegalStateException("Failed to persist sanitized ORCA report snapshot", ex);
         }
@@ -344,5 +358,15 @@ public class OrcaBillingCacheStore {
             String responseBody,
             OrcaReportResponse response,
             Instant fetchedAt) {
+    }
+
+    public record ReportSnapshotReceipt(
+            long snapshotId,
+            String facilityId,
+            String snapshotStatus,
+            String serverStorageObjectKey,
+            String serverStorageDigest,
+            String storageUploadStatus,
+            boolean uploadEligible) {
     }
 }
