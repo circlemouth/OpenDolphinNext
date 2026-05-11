@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { formatSoapAuthoredAt, type SoapEntry } from '../soapNote';
-import { FocusTrapDialog } from '../../../components/modals/FocusTrapDialog';
+import { CriticalOperationConfirmDialog } from '../../../components/modals/CriticalOperationConfirmDialog';
 
 import { fetchRevisionHistory } from './revisionHistoryApi';
 import { createKarteRevision } from './revisionWriteApi';
@@ -34,6 +34,12 @@ const formatDelta = (entry: RevisionHistoryEntry) => {
     .slice(0, 6);
   return parts.length > 0 ? parts.join(' / ') : '';
 };
+
+const resolveCriticalOperationLabel = (operation?: 'revise' | 'restore') =>
+  operation === 'restore' ? '診療録復元' : '診療録訂正';
+
+const resolveCriticalConfirmLabel = (operation?: 'revise' | 'restore') =>
+  operation === 'restore' ? '現在版として採用する' : '改訂版を追加する';
 
 export function RevisionHistoryDrawer({ open, onClose, meta, soapHistory }: RevisionHistoryDrawerProps) {
   const isRevisionEditEnabled = import.meta.env.VITE_CHARTS_REVISION_EDIT !== '0';
@@ -192,52 +198,36 @@ export function RevisionHistoryDrawer({ open, onClose, meta, soapHistory }: Revi
         {remoteHint ? <span>{remoteHint}</span> : null}
       </div>
 
-      <FocusTrapDialog
+      <CriticalOperationConfirmDialog
         open={Boolean(confirmAction)}
-        role="alertdialog"
-        title={`${confirmAction?.label ?? '操作'}を実行しますか？`}
-        description="版履歴操作を実行します。対象と影響範囲を確認してください。"
-        onClose={() => setConfirmAction(null)}
+        title={`${resolveCriticalOperationLabel(confirmAction?.operation)}の確認`}
+        description="診療録の版履歴操作を実行します。対象患者と対象revisionを確認してください。"
+        operationLabel={resolveCriticalOperationLabel(confirmAction?.operation)}
+        patientName={undefined}
+        patientFields={[
+          { label: '患者ID', value: meta.patientId ?? '—' },
+          { label: '診療日', value: meta.visitDate ?? '—' },
+          { label: '受付ID', value: meta.receptionId ?? '—' },
+          { label: '予約ID', value: meta.appointmentId ?? '—' },
+        ]}
+        summaryTitle="版履歴操作サマリ"
+        summaryFields={[
+          { label: '操作種別', value: confirmAction?.label ?? '—' },
+          { label: '対象revision', value: confirmAction?.entry.revisionId ?? '—' },
+          { label: '親revision', value: confirmAction?.entry.parentRevisionId ?? '—' },
+          { label: '版作成時刻', value: confirmAction ? formatSoapAuthoredAt(confirmAction.entry.authoredAt) : '—' },
+          { label: '影響範囲', value: '選択版を基準に新規改訂または復元を実行します。' },
+        ]}
+        confirmLabel={resolveCriticalConfirmLabel(confirmAction?.operation)}
         testId="revision-action-confirm-dialog"
-      >
-        <section className="charts-tab-guard" aria-label="版履歴操作確認">
-          <dl className="charts-actions__send-confirm-list">
-            <div>
-              <dt>対象患者ID</dt>
-              <dd>{meta.patientId ?? '—'}</dd>
-            </div>
-            <div>
-              <dt>診療日</dt>
-              <dd>{meta.visitDate ?? '—'}</dd>
-            </div>
-            <div>
-              <dt>対象revision</dt>
-              <dd>{confirmAction?.entry.revisionId ?? '—'}</dd>
-            </div>
-            <div>
-              <dt>影響範囲</dt>
-              <dd>選択版を基準に新規改訂または復元を実行します。</dd>
-            </div>
-          </dl>
-          <div className="charts-tab-guard__actions" role="group" aria-label="版履歴操作選択">
-            <button type="button" onClick={() => setConfirmAction(null)}>
-              キャンセル
-            </button>
-            <button
-              type="button"
-              className="charts-tab-guard__danger"
-              onClick={() => {
-                if (!confirmAction) return;
-                const payload = confirmAction;
-                setConfirmAction(null);
-                void executeAction(payload.operation, payload.entry, payload.options);
-              }}
-            >
-              実行する
-            </button>
-          </div>
-        </section>
-      </FocusTrapDialog>
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (!confirmAction) return;
+          const payload = confirmAction;
+          setConfirmAction(null);
+          void executeAction(payload.operation, payload.entry, payload.options);
+        }}
+      />
 
       {actionFeedback ? (
         <p className={`revision-drawer__status revision-drawer__status--${actionFeedback.tone}`} role="status">

@@ -247,6 +247,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-10T21:59Z: 診療行為 ORCA 送信の確認フローを共通重大操作 modal へ移行した。診療録確定/処方確定/取消/診察終了など全操作の完全統一は後続で継続する。
   - [x] 2026-05-11T12:23Z: 病名 ORCA 送信（登録/更新/削除/削除病名整理）の確認フローを共通重大操作 modal へ移行した。UI confirm は患者取り違え防止と誤操作低減の補助であり、認可・永続化・監査 enforcement は server-side の責務として残す。
   - [x] 2026-05-11T12:44Z: 診察終了/会計送信の確認フローを共通重大操作 modal へ移行した。未保存 guard と不足条件 guard を通過後に confirm を出し、会計済み確定ではないことを明示する。会計送信可否・ORCA transmission・監査 enforcement は server-side / owning workflow の責務として残す。
+  - [x] 2026-05-11T13:32Z: `RevisionHistoryDrawer` の診療録訂正（改訂版追加）/ 診療録復元の確認を共通重大操作 modal へ移行した。患者ID、診療日、受付/予約ID、対象 revision、親 revision、影響範囲を再掲し、revision write API は confirm 後だけ呼ぶ。訂正/復元権限・append-only event・監査 enforcement は server-side chart revision workflow の責務として残す。
 - [ ] 「診療録確定」「会計へ送信」「診察終了」「ORCA送信成功」を別概念として表示する。
 - [ ] 成功、失敗、警告、情報、要確認をセマンティックに分け、原因と次に取るべき行動を示す。
 - [ ] ORCA警告、不一致、ORCA側のみ存在する情報を隠さない。
