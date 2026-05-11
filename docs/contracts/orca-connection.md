@@ -152,6 +152,13 @@
 - `orca_report_snapshot` と audit details に raw ORCA body、帳票本文、Basic 認証、Cookie、Authorization、CSRF、ORCA URL/host、患者氏名・住所・電話番号、保険番号詳細、invoice number raw、Data_Id raw、client-provided storage key/digest は保存しない。帳票ファイルを object storage へ保存する場合も storage key/digest は server-side authority で生成・検証する。
 - `ORCA_OFFICIAL_INCOME_INFO` と `ORCA_REPORT_CREATE` は取得履歴として監査ログへ残す。監査 detail は runId/traceId、route/report type、Api_Result、HTTP status、invoice/data id の存在有無と hash などの要約に限定し、raw invoice number / raw Data_Id / raw ORCA body を出さない。
 
+## Billing / Report Live Validation Profile
+- Live Trial の会計・帳票検証は `docs/runbooks/release-validation.md` の ORCA billing/report live profile に従い、同一 RUN_ID の runtime-ready smoke、candidate discovery、exact selected-candidate preflight、accept/fullflow の後続として扱う。
+- `income-info` は exact selected-candidate preflight で確認済みの患者・診療日だけを対象にし、`orca_billing_cache` の `source_system=ORCA`、request/response hash、件数、sanitized summary を accepted evidence とする。患者 ID 単独、UI 表示、client-provided voucher / sequential / insurance combination / invoice number は authority にしない。
+- `/api/orca/official/reports/{type}` は `orca_report_snapshot` の request/response hash、invoice/data id hash、server-generated storage key/digest、`storageUploadStatus`、`reportBinaryAvailable` だけを evidence にする。raw invoice number、raw `Data_Id`、帳票本文、storage URI/object key/digest の raw 値を reviewer evidence に出さない。
+- object storage 有効時は `OrcaReportBinaryStorageService` の digest verification と snapshot metadata 照合を通過した binary staging だけを accepted とし、upload 失敗・digest mismatch・retention 欠落は fail-closed blocker とする。
+- Live billing/report evidence は会計済み、収納済み、レセプト正本化、帳票正本化の証明ではない。ORCA由来 cache/snapshot の取得・保存・監査可能性だけを示す。
+
 ## Close And Send Billing Workflow
 - 通常外来の初回 ORCA 会計送信は `POST /api/local/encounters/{encounterKey}/close-and-send-to-billing` から行う。client payload は `idempotencyKey` と任意 precheck flag に限定し、`patientId` / `facilityId` / voucher / sequential / insurance / `Medical_Uid` / `classCode` / raw XML / URL は受け付けない。
 - server は認証 principal の facility、`encounter_projection`、保存済み order/disease から snapshot を作り、`d_billing_orca_snapshot` と `d_billing_orca_transmission` に状態を記録する。状態 enum は `DRAFT`, `READY_TO_SEND`, `ORCA_SENDING`, `ORCA_DISEASE_SYNCED`, `ORCA_MEDICAL_REGISTERED`, `ORCA_CONFIRMED`, `ORCA_FAILED`, `ORCA_UNKNOWN`, `DIRTY_AFTER_SENT`, `ORCA_LOCKED_OR_OPENED`, `CORRECTION_REQUIRED` に固定する。
