@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
+    private static final String CONTENT_HASH = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
     private LocalOrcaMedicalCandidateResource resource;
     private FakeCandidateRepository repository;
@@ -52,6 +53,7 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
                 "00001",
                 "ENC-001",
                 "FINAL",
+                CONTENT_HASH,
                 OBJECT_MAPPER.writeValueAsString(order("211", "001000", "620000001")));
 
         OrcaMedicalCandidateResponse response = resource.prepareFromChart(request, "CHART-REV-001");
@@ -61,6 +63,7 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
         assertTrue(response.isNonAuthoritative());
         assertEquals(301L, response.getCandidateId());
         assertEquals("00001", response.getPatientId());
+        assertEquals(CONTENT_HASH, response.getPrescriptionContentHash());
         assertEquals("CHART-REV-001", repository.chartRevisionId);
         assertEquals("F001", repository.facilityId);
         assertEquals(1, response.getMedicalInformation().get(0).getRpSequence());
@@ -79,6 +82,7 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
                 "00001",
                 "ENC-001",
                 "FINAL",
+                CONTENT_HASH,
                 OBJECT_MAPPER.writeValueAsString(order("211", null, null)));
 
         OrcaMedicalCandidateResponse response = resource.prepareFromChart(request, "CHART-REV-001");
@@ -87,6 +91,24 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
         assertFalse(response.isSendable());
         assertTrue(response.getIssues().stream().anyMatch(issue -> "usage_code_unresolved".equals(issue.getCode())));
         assertTrue(response.getIssues().stream().anyMatch(issue -> "drug_code_unresolved".equals(issue.getCode())));
+    }
+
+    @Test
+    void prepareFromChartRequiresServerGeneratedPrescriptionContentHash() throws Exception {
+        repository.source = new OrcaMedicalCandidateRepository.PrescriptionRevisionRecord(
+                101L,
+                201L,
+                "00001",
+                "ENC-001",
+                "FINAL",
+                null,
+                OBJECT_MAPPER.writeValueAsString(order("211", "001000", "620000001")));
+
+        OrcaMedicalCandidateResponse response = resource.prepareFromChart(request, "CHART-REV-001");
+
+        assertEquals("NEEDS_REVIEW", response.getCandidateStatus());
+        assertFalse(response.isSendable());
+        assertTrue(response.getIssues().stream().anyMatch(issue -> "prescription_content_hash_missing".equals(issue.getCode())));
     }
 
     @Test
@@ -99,6 +121,7 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
                 "00001",
                 "ENC-001",
                 "FINAL",
+                CONTENT_HASH,
                 OBJECT_MAPPER.writeValueAsString(mismatched));
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
@@ -117,6 +140,7 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
                     "00001",
                     "ENC-001",
                     status,
+                    CONTENT_HASH,
                     OBJECT_MAPPER.writeValueAsString(order("211", "001000", "620000001")));
 
             WebApplicationException ex = assertThrows(WebApplicationException.class,

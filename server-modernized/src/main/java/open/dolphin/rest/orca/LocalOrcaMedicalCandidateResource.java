@@ -108,9 +108,14 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
         response.setChartRevisionId(chartRevisionId);
         response.setPrescriptionId(source.prescriptionOrderId());
         response.setPrescriptionRevisionId(source.prescriptionRevisionId());
+        response.setPrescriptionContentHash(trimToNull(source.contentHash()));
 
         List<ChartSupportMedicalModV2Request.MedicalInformation> information = new ArrayList<>();
         List<OrcaMedicalCandidateResponse.Issue> issues = new ArrayList<>();
+        if (response.getPrescriptionContentHash() == null) {
+            issues.add(issue("prescription_content_hash_missing",
+                    "prescription content hash is required", null, null));
+        }
         List<PrescriptionRp> rps = order != null && order.getRps() != null ? order.getRps() : List.of();
         for (int rpIndex = 0; rpIndex < rps.size(); rpIndex++) {
             PrescriptionRp rp = rps.get(rpIndex);

@@ -17,6 +17,7 @@ public class OrcaMedicalCandidateResponse {
     private String chartRevisionId;
     private long prescriptionId;
     private long prescriptionRevisionId;
+    private String prescriptionContentHash;
     private List<ChartSupportMedicalModV2Request.MedicalInformation> medicalInformation = new ArrayList<>();
     private List<Issue> issues = new ArrayList<>();
 
@@ -114,6 +115,14 @@ public class OrcaMedicalCandidateResponse {
 
     public void setPrescriptionRevisionId(long prescriptionRevisionId) {
         this.prescriptionRevisionId = prescriptionRevisionId;
+    }
+
+    public String getPrescriptionContentHash() {
+        return prescriptionContentHash;
+    }
+
+    public void setPrescriptionContentHash(String prescriptionContentHash) {
+        this.prescriptionContentHash = prescriptionContentHash;
     }
 
     public List<ChartSupportMedicalModV2Request.MedicalInformation> getMedicalInformation() {

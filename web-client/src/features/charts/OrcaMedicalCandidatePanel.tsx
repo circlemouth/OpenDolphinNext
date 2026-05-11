@@ -27,6 +27,11 @@ const display = (value?: string | number | null) => {
   return text || '—';
 };
 
+const shortHash = (value?: string | null) => {
+  const text = value?.trim();
+  return text ? text.slice(0, 12) : '—';
+};
+
 export function OrcaMedicalCandidatePanel({
   chartRevisionId,
   patientName,
@@ -146,6 +151,10 @@ export function OrcaMedicalCandidatePanel({
             <div>
               <dt>処方版</dt>
               <dd>{display(candidate.prescriptionRevisionId)}</dd>
+            </div>
+            <div>
+              <dt>処方hash</dt>
+              <dd>{shortHash(candidate.prescriptionContentHash)}</dd>
             </div>
             <div>
               <dt>診療行為行</dt>

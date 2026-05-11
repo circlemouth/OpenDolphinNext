@@ -26,6 +26,7 @@ class OrcaMedicalCandidateRepository {
                                    po.patient_id,
                                    po.encounter_id,
                                    po.status,
+                                   pr.content_hash,
                                    cast(pr.after_summary_json as text)
                               FROM opendolphin.prescription_order po
                               JOIN opendolphin.prescription_order_revision pr
@@ -45,7 +46,8 @@ class OrcaMedicalCandidateRepository {
                     text(values[2]),
                     text(values[3]),
                     text(values[4]),
-                    text(values[5]));
+                    text(values[5]),
+                    text(values[6]));
         } catch (NoResultException ex) {
             return null;
         }
@@ -103,6 +105,7 @@ class OrcaMedicalCandidateRepository {
             String patientId,
             String encounterId,
             String status,
+            String contentHash,
             String summaryJson) {
     }
 }

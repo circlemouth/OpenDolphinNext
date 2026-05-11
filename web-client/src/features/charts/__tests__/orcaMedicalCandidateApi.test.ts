@@ -32,6 +32,7 @@ describe('orcaMedicalCandidateApi', () => {
           chartRevisionId: 'REV-1',
           prescriptionId: 20,
           prescriptionRevisionId: 30,
+          prescriptionContentHash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           medicalInformation: [
             {
               entity: 'medOrder',
@@ -52,6 +53,7 @@ describe('orcaMedicalCandidateApi', () => {
 
     expect(result.ok).toBe(true);
     expect(result.candidateId).toBe(10);
+    expect(result.prescriptionContentHash).toBe('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
     expect(result.nonAuthoritative).toBe(true);
     expect(result.medicalInformation).toHaveLength(1);
     expect(result.medicalInformation[0]).toEqual(expect.objectContaining({ rpSequence: 1, usageCode: '001000', usageName: 'after meal' }));

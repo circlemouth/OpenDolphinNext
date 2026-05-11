@@ -42,6 +42,7 @@ export type OrcaMedicalCandidateResponse = {
   chartRevisionId?: string;
   prescriptionId?: number;
   prescriptionRevisionId?: number;
+  prescriptionContentHash?: string;
   medicalInformation: OrcaMedicalCandidateMedicalInformation[];
   issues: OrcaMedicalCandidateIssue[];
 };
@@ -140,6 +141,7 @@ export async function prepareOrcaMedicalCandidateFromChart(params: {
     chartRevisionId: asString(json.chartRevisionId),
     prescriptionId: asNumber(json.prescriptionId),
     prescriptionRevisionId: asNumber(json.prescriptionRevisionId),
+    prescriptionContentHash: asString(json.prescriptionContentHash),
     medicalInformation: Array.isArray(json.medicalInformation)
       ? json.medicalInformation.map(parseMedicalInformation).filter((item): item is OrcaMedicalCandidateMedicalInformation => Boolean(item))
       : [],

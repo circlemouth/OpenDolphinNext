@@ -28,6 +28,7 @@ describe('OrcaMedicalCandidatePanel', () => {
       chartRevisionId: 'REV-1',
       prescriptionId: 20,
       prescriptionRevisionId: 30,
+      prescriptionContentHash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       medicalInformation: [
         {
           entity: 'medOrder',
@@ -70,6 +71,7 @@ describe('OrcaMedicalCandidatePanel', () => {
     }));
     expect(screen.getByText('NEEDS_REVIEW / 要確認')).toBeInTheDocument();
     expect(screen.getByText('10')).toBeInTheDocument();
+    expect(screen.getByText('aaaaaaaaaaaa')).toBeInTheDocument();
     expect(screen.getAllByText('1件')).toHaveLength(2);
     expect(screen.getByRole('list', { name: '診療行為候補行' })).toHaveTextContent('RP1');
     expect(screen.getByText('診療区分: 211 / 内服')).toBeInTheDocument();
