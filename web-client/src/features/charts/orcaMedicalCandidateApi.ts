@@ -10,6 +10,7 @@ export type OrcaMedicalCandidateIssue = {
 };
 
 export type OrcaMedicalCandidateMedication = {
+  itemSequence?: number;
   code?: string;
   name?: string;
   number?: string;
@@ -21,6 +22,7 @@ export type OrcaMedicalCandidateMedicalInformation = {
   medicalClass?: string;
   medicalClassName?: string;
   medicalClassNumber?: string;
+  rpSequence?: number;
   usageCode?: string;
   usageName?: string;
   medications?: OrcaMedicalCandidateMedication[];
@@ -62,6 +64,7 @@ const parseMedication = (value: unknown): OrcaMedicalCandidateMedication | null 
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
   return {
+    itemSequence: asNumber(raw.itemSequence),
     code: asString(raw.code),
     name: asString(raw.name),
     number: asString(raw.number),
@@ -77,6 +80,7 @@ const parseMedicalInformation = (value: unknown): OrcaMedicalCandidateMedicalInf
     medicalClass: asString(raw.medicalClass),
     medicalClassName: asString(raw.medicalClassName),
     medicalClassNumber: asString(raw.medicalClassNumber),
+    rpSequence: asNumber(raw.rpSequence),
     usageCode: asString(raw.usageCode),
     usageName: asString(raw.usageName),
     medications: Array.isArray(raw.medications) ? raw.medications.map(parseMedication).filter((item): item is OrcaMedicalCandidateMedication => Boolean(item)) : [],

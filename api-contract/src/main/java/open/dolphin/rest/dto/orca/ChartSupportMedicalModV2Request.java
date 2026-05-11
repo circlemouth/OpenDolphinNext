@@ -139,6 +139,7 @@ public class ChartSupportMedicalModV2Request {
         private String medicalClass;
         private String medicalClassName;
         private String medicalClassNumber;
+        private Integer rpSequence;
         private String usageCode;
         private String usageName;
         private List<Medication> medications = new ArrayList<>();
@@ -175,6 +176,14 @@ public class ChartSupportMedicalModV2Request {
             this.medicalClassNumber = medicalClassNumber;
         }
 
+        public Integer getRpSequence() {
+            return rpSequence;
+        }
+
+        public void setRpSequence(Integer rpSequence) {
+            this.rpSequence = rpSequence;
+        }
+
         public String getUsageCode() {
             return usageCode;
         }
@@ -205,10 +214,19 @@ public class ChartSupportMedicalModV2Request {
     }
 
     public static class Medication {
+        private Integer itemSequence;
         private String code;
         private String name;
         private String number;
         private String genericFlg;
+
+        public Integer getItemSequence() {
+            return itemSequence;
+        }
+
+        public void setItemSequence(Integer itemSequence) {
+            this.itemSequence = itemSequence;
+        }
 
         public String getCode() {
             return code;

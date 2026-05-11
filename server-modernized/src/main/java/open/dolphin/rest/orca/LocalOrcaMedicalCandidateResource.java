@@ -105,6 +105,7 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
             }
             ChartSupportMedicalModV2Request.MedicalInformation entry = new ChartSupportMedicalModV2Request.MedicalInformation();
             entry.setEntity("medOrder");
+            entry.setRpSequence(rpIndex + 1);
             entry.setMedicalClass(trimToNull(rp.getMedicalClass()));
             entry.setMedicalClassName(trimToNull(rp.getBundleName()));
             entry.setMedicalClassNumber(firstNonBlank(rp.getMedicalClassNumber(), "1"));
@@ -125,6 +126,7 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
                     continue;
                 }
                 ChartSupportMedicalModV2Request.Medication medication = new ChartSupportMedicalModV2Request.Medication();
+                medication.setItemSequence(drugIndex + 1);
                 medication.setCode(trimToNull(drug.getCode()));
                 medication.setName(trimToNull(drug.getName()));
                 medication.setNumber(trimToNull(drug.getQuantity()));

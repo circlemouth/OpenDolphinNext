@@ -45,7 +45,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - candidate 生成時の facility は認証済み request context から解決し、patient / encounter / prescription revision は DB 上の処方正本から解決する。
 - candidate source にできる処方状態は `FINAL` / `CHANGED` / `REISSUED` のみとする。`DRAFT` / `STOPPED` / `CANCELLED` は ORCA 送信候補化を 409 で拒否し、payload を保存しない。
 - candidate response は `nonAuthoritative=true`、`candidateStatus=READY_TO_SEND|NEEDS_REVIEW`、`sendable` を返す。
-- candidate `medicalInformation` は処方正本 revision から `medicalClass` / `medicalClassNumber` / `usageCode` / `usageName` / 薬剤行を再構成する。live `medicalmodv2` 送信側はこの candidate を送信前確認材料として扱い、patient / encounter / voucher / sequential / insurance combination は server-side encounter context から別途解決する。
+- candidate `medicalInformation` は処方正本 revision から `rpSequence` / `medicalClass` / `medicalClassNumber` / `usageCode` / `usageName` / 薬剤行を再構成し、薬剤行には `itemSequence` を付ける。live `medicalmodv2` 送信側はこの candidate を送信前確認材料として扱い、patient / encounter / voucher / sequential / insurance combination は server-side encounter context から別途解決する。
 - 薬剤コード、用法コード、medical class、薬剤行が未解決の場合は `NEEDS_REVIEW` / `sendable=false` とし、live `medicalmodv2` 送信へ進めない。
 - candidate と audit details に raw ORCA body、credential、患者氏名・住所・電話番号、保険詳細、voucher / sequential の client 提供値を保存しない。
 - Web client の候補確認 surface は patient / acceptance / department / physician / insurance combination を確認表示にだけ使う。candidate prepare request は `chartRevisionId` だけを route path として送り、facility / patient / insurance / voucher / sequential / URL / digest を body や query として送らない。
@@ -62,6 +62,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - client が candidate prepare に別患者・別施設・保険組合せ・voucher / sequential を混入させて ORCA 送信候補の authority を乗っ取る。
 - candidate handoff から `usageCode` / `usageName` が欠落し、live send 側で client payload や display text から用法を再推測する。
 - client が DRAFT / STOPPED / CANCELLED の処方を chart revision 経由で candidate 化し、未確定または中止済み指示を送信前確認へ進める。
+- candidate handoff の行識別子が表示順だけになり、送信前確認・送信後差分照合で RP/薬剤行を取り違える。
 
 ## Verification
 
