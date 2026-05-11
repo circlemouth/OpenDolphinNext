@@ -28,7 +28,7 @@ Checklist count when parallel board was created:
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A01 patient/acceptance/insurance boundary plus live readiness gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
-| B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T135141Z | this commit | - |
+| B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T141345Z | this commit | - |
 | C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C01 prescription authority, medical candidate send-prep, disease handoff gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D01 live ORCA Trial execution, adapter contract, retry/idempotency evidence | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | E | `codex/orca-ehr-r2-worker-e-safety-ui` | R2-E01 medical safety UI, DADS/a11y, patient header/modal rollout | Active | 20260511T063714Z | `1218aa1ef` base | - |
@@ -160,6 +160,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T141345Z | B | B-05 final surface | 14/19 single-chart and period PDF print aliases | this commit | `ChartRevisionResourceTest`, `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest`, reporting/PDF focused tests, doc/config/runtime/audit/sensitive guards passed | Done | Hold B until new A/C/D snapshot contracts land or Integrator G requests conflict resolution |
 | 20260511T135141Z | B | B-05 final surface | 14/19 period PDF export surface | this commit | `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest`, reporting/PDF focused tests, doc/config/runtime/audit/sensitive guards passed | Done | Hold B until new A/C/D snapshot contracts land or Integrator G requests conflict resolution |
 | 20260511T132606Z | B | B-04 audit follow-up | 7 amend/addendum/cancel authoritative audit linkage | this commit | `ChartRevisionFinalizeServiceTest`, `AuditTrailServiceTest`, `PublicRouteInventoryContractTest`, reporting/PDF focused tests, doc/config/runtime/audit/sensitive guards passed | Done | Continue B-owned export/snapshot follow-up only after new A/C/D stable snapshot contracts land; leave authorization matrix/guard to Worker F |
 | 20260511T125522Z | B | B-05 follow-up | 14/19 patient/date/period chart revision export surface | this commit | `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest`, reporting/PDF focused tests, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | Coordinate next with Worker F for audit-log integration gaps; avoid implementing F-owned authorization matrix/guards |

@@ -77,9 +77,22 @@ public class ChartRevisionResource extends AbstractOrcaRestResource {
         requireRemoteUser(request);
         String facilityId = requireFacilityId(request);
         ReportingResult pdf = exportService.exportChartPeriodPdf(facilityId, fromDate, toDate, patientId);
-        return Response.ok(pdf.getData(), "application/pdf")
-                .header("Content-Disposition", "attachment; filename=\"" + pdf.getFileName() + "\"")
-                .build();
+        return pdfResponse(pdf, "attachment");
+    }
+
+    @GET
+    @Path("/revision-exports.print.pdf")
+    @Produces("application/pdf")
+    @Transactional
+    public Response printChartPeriodPdf(
+            @Context HttpServletRequest request,
+            @QueryParam("fromDate") String fromDate,
+            @QueryParam("toDate") String toDate,
+            @QueryParam("patientId") Long patientId) {
+        requireRemoteUser(request);
+        String facilityId = requireFacilityId(request);
+        ReportingResult pdf = exportService.exportChartPeriodPdf(facilityId, fromDate, toDate, patientId);
+        return pdfResponse(pdf, "inline");
     }
 
     @GET
@@ -118,9 +131,20 @@ public class ChartRevisionResource extends AbstractOrcaRestResource {
         requireRemoteUser(request);
         String facilityId = requireFacilityId(request);
         ReportingResult pdf = exportService.exportChartPdf(chartId, facilityId);
-        return Response.ok(pdf.getData(), "application/pdf")
-                .header("Content-Disposition", "attachment; filename=\"" + pdf.getFileName() + "\"")
-                .build();
+        return pdfResponse(pdf, "attachment");
+    }
+
+    @GET
+    @Path("/{chartId}/revisions/print.pdf")
+    @Produces("application/pdf")
+    @Transactional
+    public Response printChartPdf(
+            @Context HttpServletRequest request,
+            @PathParam("chartId") long chartId) {
+        requireRemoteUser(request);
+        String facilityId = requireFacilityId(request);
+        ReportingResult pdf = exportService.exportChartPdf(chartId, facilityId);
+        return pdfResponse(pdf, "inline");
     }
 
     @POST
@@ -177,5 +201,11 @@ public class ChartRevisionResource extends AbstractOrcaRestResource {
         requireRemoteUser(request);
         String facilityId = requireFacilityId(request);
         return finalizeService.cancelRevision(chartId, revisionId, facilityId, payload);
+    }
+
+    private static Response pdfResponse(ReportingResult pdf, String disposition) {
+        return Response.ok(pdf.getData(), "application/pdf")
+                .header("Content-Disposition", disposition + "; filename=\"" + pdf.getFileName() + "\"")
+                .build();
     }
 }

@@ -183,6 +183,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] `GET /api/charts/{chartId}/revisions/export.pdf` を追加し、server-derived JSON export projection と患者 master reference から reporting payload を組み立て、診療録 revision / 処方指示 / ORCA operation-transmission-reconciliation history、`exportHash`、件数を PDF summary に含める。client-provided reporting payload は採用せず、患者 master 欠落・施設不一致は 409 fail-closed とする。
   - [x] `GET /api/charts/revision-exports` / `.csv` を追加し、server-side facility、診療日範囲、任意 patient DB reference で患者単位・診療日単位・期間指定の export を返す。各 chart は既存 JSON/CSV export と同じ sanitized projection / `exportHash` を再利用し、期間は最大 366 日、raw patient detail / raw ORCA body / credential は返さない。
   - [x] 2026-05-11T13:51Z: `GET /api/charts/revision-exports.pdf` を追加し、server-derived 期間 export cover と各 chart の PDF payload を結合する。期間 PDF も同じ 366 日上限、facility boundary、JSON/CSV と同じ sanitized projection / `exportHash` contract を再利用し、client-provided reporting payload は採用しない。
+  - [x] 2026-05-11T14:13Z: `GET /api/charts/{chartId}/revisions/print.pdf` と `GET /api/charts/revision-exports.print.pdf` を追加し、単票/期間 PDF export と同じ server-derived sanitized payload を inline disposition で返す印刷 surface を固定した。印刷 alias は別 sanitizer、client-provided reporting payload、raw ORCA body、credential、PHI を受け付けない。
 
 ## 8. 処方指示正本実装
 
