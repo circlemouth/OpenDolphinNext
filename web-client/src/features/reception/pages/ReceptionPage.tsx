@@ -49,6 +49,7 @@ import { AdminBroadcastBanner } from '../../shared/AdminBroadcastBanner';
 import { ApiFailureBanner } from '../../shared/ApiFailureBanner';
 import { AuditSummaryInline } from '../../shared/AuditSummaryInline';
 import { ClinicalIcon } from '../../shared/ClinicalIcon';
+import { PatientIdentityBar } from '../../shared/PatientIdentityBar';
 import { RunIdBadge } from '../../shared/RunIdBadge';
 import { StatusPill } from '../../shared/StatusPill';
 import { resolveCacheHitTone, resolveMetaFlagTone, resolveTransitionTone } from '../../shared/metaPillRules';
@@ -4596,12 +4597,59 @@ export function ReceptionPage({
       patientSearchSelected?.kana?.trim() ||
       (selectedEntry?.patientId?.trim() === acceptTarget.patientId ? selectedEntry.kana?.trim() : '') ||
       '';
+    const selectedEntryMatchesTarget = selectedEntry?.patientId?.trim() === acceptTarget.patientId;
+    const acceptDepartmentLabel =
+      resolvedDepartmentCode
+        ? departmentOptions.find(([code]) => code === resolvedDepartmentCode)?.[1] ?? `診療科コード ${resolvedDepartmentCode}`
+        : undefined;
+    const acceptPhysicianLabel =
+      resolvedPhysicianCode
+        ? physicianOptions.find((physician) => physician.code === resolvedPhysicianCode)?.label ?? `担当医コード ${resolvedPhysicianCode}`
+        : undefined;
+    const acceptInsuranceContext =
+      selectedEntryMatchesTarget && selectedEntry?.insuranceCombinationNumber
+        ? selectedEntry.insuranceCombinationNumber
+        : acceptPaymentMode === 'insurance'
+          ? '保険（組合せ未確定）'
+          : acceptPaymentMode === 'self'
+            ? '自費'
+            : undefined;
+    const acceptInternalReference =
+      selectedEntryMatchesTarget
+        ? selectedEntry?.encounterKey ?? selectedEntry?.scheduleKey ?? selectedEntry?.receptionId ?? selectedEntry?.appointmentId
+        : undefined;
+    const acceptOrcaStatus =
+      acceptTarget.officialReadiness === 'ready'
+        ? 'verified'
+        : acceptTarget.officialReadiness === 'checking'
+          ? 'checking'
+          : 'unverified';
 
     return (
       <div
         className={`reception-accept__detail-panel${placement === 'modal' ? ' reception-accept__detail-panel--modal' : ''}`}
         data-test-id={placement === 'modal' ? 'reception-accept-detail-modal' : 'reception-accept-detail-sidepane'}
       >
+        <PatientIdentityBar
+          className="reception-accept__patient-identity"
+          eyebrow="受付登録 / 患者確認"
+          patientId={acceptTarget.patientId}
+          internalPatientId={acceptInternalReference}
+          patientName={acceptPatientName}
+          patientKana={acceptPatientKana}
+          sex={acceptTarget.sex}
+          age={formatAgeJa(acceptPatientAge)}
+          acceptanceDate={selectedDate}
+          department={acceptDepartmentLabel}
+          physician={acceptPhysicianLabel}
+          insuranceCombination={acceptInsuranceContext}
+          orcaSourceLabel="ORCA受付対象確認"
+          orcaCacheStatus={acceptOrcaStatus}
+          photo={<PatientProfileIcon sexTone={acceptPatientSexTone} ageGroup={acceptPatientAgeGroup} />}
+          selected={Boolean(selectedPatientId)}
+          showMeta={false}
+          showVisitSupport={false}
+        />
         <section
           className="reception-accept__identity-card"
           role="group"

@@ -167,6 +167,7 @@
 - patient search 結果から charts を開く導線は置きません。Charts 再開は受付一覧の row/card action など、既に受付行の canonical handoff が成立している導線に限定します。
 - 既存患者受付/患者検索モーダルの患者ID/氏名/カナ検索は、送信時の form value を正とし、受付行 auto-fill や未反映 state でユーザーが入力した患者IDを上書きしません。検索結果未選択時の右ペインは、既存の受付行選択を「選択患者」として表示しません。
 - 既存患者受付/患者検索モーダルの受付登録ペインは、右側のスクロール可能なフォーム区画を境界・scrollbar・陰影で明示します。患者サマリは性別/小児区分アイコン、ふりがな、氏名、年齢だけを表示し、上部で示す患者IDや内部名 `受付登録モーダル`、`Medical_Information` などの実装説明は visible copy に出しません。右ペイン下部に「受付内容を確認して...」「必須項目を入力すると...」のような補助文は置きません。
+- 既存患者受付/患者検索モーダルの受付登録ペインは、共通 `PatientIdentityBar` の医療安全患者ヘッダーをフォームより先に表示し、患者ID、氏名/カナ、性別/年齢、受付日、診療科、担当医、保険/保険組合せ context、ORCA受付対象確認 status を同じ visible region に再掲します。保険が初期選択されていて ORCA 保険組合せ番号が未確定の場合は `保険（組合せ未確定）` と表示し、client 側で ORCA 組合せ番号や受付成立を捏造しません。このヘッダーは患者取り違え防止の UI 補助であり、受付登録・権限・永続化の server-side enforcement を代替しません。
 - 受付取消確認モーダルは、取消対象の同定に必要な氏名・年齢・性別/小児区分アイコン・現在状態だけを表示します。RUN_ID、患者ID/受付ID/予約ID、性別コード、ふりがな、重複した氏名/状態文、取消理由入力、内部説明文は visible copy に出しません。取消実行は破壊的操作として赤系の danger CTA で表示します。
 - 過去カルテモーダルは利用者向けの履歴情報だけを表示し、RUN_ID copy CTA や ORCA 内部の連番/状態コードを visible copy に出しません。
 - Reception surface は常時表示の戻り導線を持たず、Charts 再開は受付行または受付/患者検索の canonical handoff が成立した場合の操作として出します。
@@ -203,6 +204,7 @@
 - test: visit list request が `Department_Code` を送ること
 - test: `Medical_Information` 未選択時に送信しないこと
 - test: master search 導線では `WholeName` 未入力で official patient search を送らず、`InOut` 未選択時は official payload から省くこと
+- test: accept workflow の受付登録ペインは共通 `PatientIdentityBar` で患者ID、氏名、受付日、診療科、担当医、保険 context、ORCA受付対象確認 status を visible 表示し、未確定の保険組合せを確定番号として見せないこと
 - test: claim-send / visit context で patientId first-match / display string reparsing / `today` fallback を使わないこと
 - test: accept 成功後の charts handoff は `scheduleKey` / `encounterKey` を持つ canonical context だけで成立し、mutation response または refreshed entry のどちらでも同じ contract を使うこと
 - test: Reception は標準の初回 `会計送信` direct button を出さず、医師画面から送信する案内と recovery-only surface に寄せること
