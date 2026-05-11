@@ -1787,6 +1787,8 @@ export function OrderBundleEditPanel({
     return reasons;
   }, [isPreviewMode, meta.fallbackUsed, meta.missingMaster, meta.readOnly]);
   const isBlocked = blockReasons.length > 0;
+  const editBlockedReasonId = `${entityId}-edit-block-reason`;
+  const saveBlockedReason = blockReasons.join(' / ');
   const session = useOptionalSession();
   const storageScope = useMemo(
     () => ({ facilityId: session?.facilityId, userId: session?.userId }),
@@ -3577,7 +3579,7 @@ export function OrderBundleEditPanel({
       return;
     }
     if (isBlocked) {
-      setNotice({ tone: 'error', message: '編集ガード中のため保存できません。' });
+      setNotice({ tone: 'error', message: `保存操作を停止: ${saveBlockedReason}` });
       logAuditEvent({
         runId: meta.runId,
         cacheHit: meta.cacheHit,
@@ -3961,7 +3963,7 @@ export function OrderBundleEditPanel({
 
       <div className="charts-side-panel__dock-body" ref={editorScrollRef}>
       {isBlocked && (
-        <div className="charts-side-panel__notice charts-side-panel__notice--info">
+        <div id={editBlockedReasonId} className="charts-side-panel__notice charts-side-panel__notice--info">
           編集はブロックされています: {blockReasons.join(' / ')}
         </div>
       )}
@@ -5538,7 +5540,11 @@ export function OrderBundleEditPanel({
             type="button"
             className="charts-side-panel__action charts-side-panel__action--expand"
             onClick={() => submitAction('expand')}
-            disabled={isSaving || isBlocked}
+            disabled={isSaving}
+            aria-disabled={isBlocked}
+            aria-describedby={isBlocked ? editBlockedReasonId : undefined}
+            data-disabled-reason={isBlocked ? 'order_detail_submit_blocked' : undefined}
+            title={isBlocked ? saveBlockedReason : undefined}
           >
             保存して閉じる
           </button>
@@ -5546,7 +5552,11 @@ export function OrderBundleEditPanel({
             type="button"
             className="charts-side-panel__action charts-side-panel__action--expand-continue"
             onClick={() => submitAction('expand_continue')}
-            disabled={isSaving || isBlocked}
+            disabled={isSaving}
+            aria-disabled={isBlocked}
+            aria-describedby={isBlocked ? editBlockedReasonId : undefined}
+            data-disabled-reason={isBlocked ? 'order_detail_submit_blocked' : undefined}
+            title={isBlocked ? saveBlockedReason : undefined}
           >
             保存して続ける
           </button>
@@ -5554,7 +5564,11 @@ export function OrderBundleEditPanel({
             type="button"
             className="charts-side-panel__action charts-side-panel__action--save"
             onClick={() => submitAction('save')}
-            disabled={isSaving || isBlocked}
+            disabled={isSaving}
+            aria-disabled={isBlocked}
+            aria-describedby={isBlocked ? editBlockedReasonId : undefined}
+            data-disabled-reason={isBlocked ? 'order_detail_submit_blocked' : undefined}
+            title={isBlocked ? saveBlockedReason : undefined}
             aria-keyshortcuts="Control+Enter"
             aria-label={form.documentId ? '保存して更新する' : '保存して追加する'}
           >
