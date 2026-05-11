@@ -126,7 +126,7 @@
 - 受付 inventory は `/api/orca/official/visits/acceptance-list` から ORCA `acceptlstv2` を呼び、取得ごとに `orca_acceptance_cache` を更新する。cache は表示・照合・警告用であり、OpenDolphinNext 側の受付正本ではない。
 - 施設は認証済み request context の facilityId で解決し、client 提供の facilityId、owner、role、任意 URL、storage key、digest は使わない。受付日と class code は server が検証済み request field だけを使い、ORCA 接続先は接続設定 allowlist / runtime contract に従う。
 - `orca_acceptance_cache` は `source_system=ORCA`, `source_api=acceptlstv2`, `source_request_id`, `source_trace_id`, `fetched_at`, `cache_expires_at`, `orca_patient_id`, `orca_acceptance_id` または受付複合 key、受付日/時刻、診療科、担当医、診療情報、保険組合せ、受付状態、取消日時、row hash、normalized payload、sanitized response summary を保存する。raw ORCA body、credential、接続先 URL、患者氏名・住所・電話、保険詳細、Cookie、Authorization、CSRF は保存しない。
-- 同一 facility/date の前回 cache に存在し、今回の ORCA inventory に存在しない受付は物理削除せず、`acceptance_status=CANCELLED`、`event_type=ORCA_ACCEPTANCE_CANCELLED`、`cancelled_at` を記録する。
+- 同一 facility/date の前回 cache に存在し、今回の ORCA inventory に存在しない受付は物理削除せず、`acceptance_status=CANCELLED`、`event_type=ORCA_ACCEPTANCE_CANCELLED`、`cancelled_at` を記録する。この cache event は院内 `encounter_projection` / `encounter_workflow_state` を自動削除・自動取消しない。診療録側 warning / workflow state 変更は別の server-side encounter workflow で明示処理する。
 - 同じ受付 key の患者番号、受付時刻、診療科、担当医、診療情報、保険組合せが変化した場合は `DIFF_DETECTED` / `ORCA_ACCEPTANCE_DIFF_DETECTED` として保存し、変更 field 名だけを sanitized summary に入れる。必須 server-derived field が欠落した行は `NEEDS_REVIEW` とし、成功表示に潰さない。
 - cache 書き込みに失敗した場合は official wrapper 全体を成功扱いせず、古い受付 cache を current source として返さない。failure audit は固定 error code と sanitized error message に限定し、cache upsert / diff / cancel count などの成功系 metadata を付けない。
 

@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -73,6 +74,16 @@ class OrcaVisitResourceTest {
         public AcceptanceCacheResult saveInventory(AcceptanceInventoryCommand command) {
             this.command = command;
             throw new IllegalStateException("cache unavailable internal-marker");
+        }
+    }
+
+    private static final class CancelledAcceptanceCacheStore extends OrcaAcceptanceCacheStore {
+        private AcceptanceInventoryCommand command;
+
+        @Override
+        public AcceptanceCacheResult saveInventory(AcceptanceInventoryCommand command) {
+            this.command = command;
+            return new AcceptanceCacheResult(0, 0, 1, 0);
         }
     }
 
@@ -465,6 +476,33 @@ class OrcaVisitResourceTest {
         assertNull(auditDispatcher.payload.getDetails().get("acceptanceCacheUpsertedCount"));
         assertNull(auditDispatcher.payload.getDetails().get("acceptanceCacheCancelledCount"));
         assertTrue(!auditDispatcher.payload.getDetails().toString().contains("internal-marker"));
+    }
+
+    @Test
+    void acceptanceInventoryCancellationDoesNotMutateEncounterWorkflowState() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        AcceptanceInventoryResponse stub = new AcceptanceInventoryResponse();
+        stub.setApiResult("00");
+        stub.setApiResultMessage("OK");
+        when(wrapperService.getAcceptanceInventory(anyString(), any(AcceptanceInventoryRequest.class))).thenReturn(stub);
+
+        EncounterProjectionRepository encounterProjectionRepository = mock(EncounterProjectionRepository.class);
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        CancelledAcceptanceCacheStore cacheStore = new CancelledAcceptanceCacheStore();
+        resource.setAcceptanceCacheStoreForTest(cacheStore);
+        resource.encounterProjectionRepository = encounterProjectionRepository;
+
+        AcceptanceInventoryRequest request = new AcceptanceInventoryRequest();
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 27));
+        request.setClassCode("01");
+
+        AcceptanceInventoryResponse response =
+                resource.acceptanceInventory(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals("00", response.getApiResult());
+        assertEquals(0, cacheStore.command.response().getRows().size());
+        verifyNoInteractions(encounterProjectionRepository);
     }
 
     @Test
