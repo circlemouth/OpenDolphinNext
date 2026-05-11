@@ -267,6 +267,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [ ] ログイン、ログアウト、患者閲覧、診療録作成/保存/確定/訂正/追記/取消、文書添付/削除、処方作成/確定/変更/中止/取消/再発行、ORCA患者/受付/保険/病名取得、ORCA病名/診療行為送信、ORCA会計/帳票取得、ORCA送信失敗/再送/取消、エラー、権限拒否を記録する。
   - [x] 2026-05-11T14:51Z: `docs/contracts/audit-log.md` に Required Event Coverage matrix を追加し、auth / authz / admin / patient read / chart / prescription / attachment / protected export / ORCA read-mutation-send-billing-report / failure / hash-chain / restore gate の最低 event label を固定した。`check-audit-append-only.sh` と `RepoGuardScriptsTest` が matrix 欠落を release blocker にする。
+  - [x] 2026-05-11T15:06Z: `docs/contracts/audit-event-coverage-inventory.md` を追加し、各 required label の owner / coverage status / next proof を棚卸しした。`check-audit-append-only.sh` は inventory 欠落や label 欠落も release blocker にする。
 - [ ] 監査ログは操作者、ロール、対象患者、ORCA患者番号、診療録、処方、ORCA操作、時刻、操作種別、変更前後要約、端末情報、IP/user-agent hash、request/trace ID、ORCA連携結果、警告/エラー/不一致要約、event hash、previous hash を保存する。
 - [x] 監査ログは append-only とし、削除/更新 API を作らない。
 - [ ] 一般ユーザーと管理者のいずれも監査ログ改ざんができない設計にする。

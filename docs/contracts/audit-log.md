@@ -39,6 +39,8 @@ Each event stores:
 
 The following labels are the minimum audit event coverage matrix for release gates. Implementations may use more specific event names, but they must map back to these labels in tests, contracts, or release evidence. Missing coverage is a release blocker; UI hiding, local-only logs, or reviewer notes are not substitutes for authoritative audit events.
 
+Current implementation evidence and owning workstream status are tracked in [audit-event-coverage-inventory.md](./audit-event-coverage-inventory.md). The inventory is part of the release gate: a label may remain blocked, but it must not disappear or become ownerless.
+
 | Label | Minimum coverage |
 | --- | --- |
 | `AUTH_LOGIN` | Successful login and session establishment. |
@@ -82,6 +84,7 @@ Backup restore and migration recovery must follow [backup-restore-hash-verificat
 - `AuditChainVerifier.verifyAll()` exists.
 - production source roots do not mutate `opendolphin.audit_event` with `UPDATE`, `DELETE FROM`, or `TRUNCATE TABLE`.
 - the required audit event coverage matrix remains present in this contract.
+- the audit event coverage inventory remains present and lists every required label with a coverage status.
 
 The guard intentionally scans production source only. Tests may deliberately tamper with `audit_event` to prove verifier failure detection.
 

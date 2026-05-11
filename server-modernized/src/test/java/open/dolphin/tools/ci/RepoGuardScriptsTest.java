@@ -117,6 +117,20 @@ class RepoGuardScriptsTest {
     }
 
     @Test
+    void checkAuditAppendOnlyFailsWhenCoverageInventoryIsMissingLabel() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-audit-inventory-ng");
+        createAuditAppendOnlyFixture(repoRoot, false);
+        Files.writeString(
+                repoRoot.resolve("docs/contracts/audit-event-coverage-inventory.md"),
+                "# Audit Event Coverage Inventory\n\nCoverage status\nAUTH_LOGIN\n");
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-audit-append-only.sh", repoRoot);
+
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.output()).contains("audit event coverage inventory missing required label");
+    }
+
+    @Test
     void checkBackupRestoreRunbookPassesForCompleteFixture() throws Exception {
         Path repoRoot = Files.createTempDirectory("repo-guard-backup-restore-ok");
         createBackupRestoreFixture(repoRoot, true);
@@ -315,6 +329,38 @@ class RepoGuardScriptsTest {
 
                 ## Required Event Coverage
 
+                AUTH_LOGIN
+                AUTH_LOGOUT
+                AUTH_FAILURE
+                AUTHZ_DENIED
+                ADMIN_ROLE_CHANGE
+                ADMIN_ACCOUNT_STATE_CHANGE
+                PATIENT_READ
+                CHART_SAVE
+                CHART_FINALIZE
+                CHART_REVISION
+                PRESCRIPTION_FINALIZE
+                PRESCRIPTION_CHANGE
+                DOCUMENT_ATTACHMENT
+                PROTECTED_EXPORT
+                ORCA_PATIENT_READ
+                ORCA_PATIENT_MUTATION
+                ORCA_ACCEPTANCE_READ
+                ORCA_INSURANCE_READ
+                ORCA_DISEASE_MUTATION
+                ORCA_MEDICAL_SEND
+                ORCA_BILLING_READ
+                ORCA_REPORT_CREATE
+                ORCA_SEND_FAILURE
+                AUDIT_CHAIN_VERIFY
+                BACKUP_RESTORE_VERIFY
+                """);
+        Files.writeString(
+                repoRoot.resolve("docs/contracts/audit-event-coverage-inventory.md"),
+                """
+                # Audit Event Coverage Inventory
+
+                Coverage status
                 AUTH_LOGIN
                 AUTH_LOGOUT
                 AUTH_FAILURE

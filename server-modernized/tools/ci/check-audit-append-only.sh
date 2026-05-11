@@ -12,6 +12,7 @@ fi
 AUDIT_REPOSITORY="$ROOT/server-modernized/src/main/java/open/dolphin/security/audit/AuthoritativeAuditRepository.java"
 AUDIT_VERIFIER="$ROOT/server-modernized/src/main/java/open/dolphin/security/audit/AuditChainVerifier.java"
 AUDIT_CONTRACT="$ROOT/docs/contracts/audit-log.md"
+AUDIT_INVENTORY="$ROOT/docs/contracts/audit-event-coverage-inventory.md"
 
 if [[ ! -f "$AUDIT_REPOSITORY" ]]; then
   echo "authoritative audit repository missing: $AUDIT_REPOSITORY" >&2
@@ -25,6 +26,11 @@ fi
 
 if [[ ! -f "$AUDIT_CONTRACT" ]]; then
   echo "audit contract missing: $AUDIT_CONTRACT" >&2
+  exit 1
+fi
+
+if [[ ! -f "$AUDIT_INVENTORY" ]]; then
+  echo "audit event coverage inventory missing: $AUDIT_INVENTORY" >&2
   exit 1
 fi
 
@@ -107,6 +113,15 @@ for label in "${required_event_labels[@]}"; do
     echo "audit contract missing required event coverage label: $label" >&2
     exit 1
   fi
+  if ! rg -q "\\b${label}\\b" "$AUDIT_INVENTORY"; then
+    echo "audit event coverage inventory missing required label: $label" >&2
+    exit 1
+  fi
 done
+
+if ! rg -q "Coverage status" "$AUDIT_INVENTORY"; then
+  echo "audit event coverage inventory must include Coverage status" >&2
+  exit 1
+fi
 
 echo "audit append-only guard passed"
