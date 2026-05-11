@@ -1254,40 +1254,23 @@ const buildReadinessAxes = (rows) => ({
 let browser;
 let context;
 let timeoutHandle;
+let discoveryTimedOut = false;
 
 try {
   if (Number.isFinite(discoveryTimeoutMs) && discoveryTimeoutMs > 0) {
     timeoutHandle = setTimeout(() => {
+      discoveryTimedOut = true;
       logStep(`candidate discovery timeout after ${discoveryTimeoutMs}ms`);
-      (async () => {
-        try {
-          await context?.close();
-        } catch {
-          // best-effort cleanup before the fail-closed timeout exit
-        }
-        try {
-          await browser?.close();
-        } catch {
-          // best-effort cleanup before the fail-closed timeout exit
-        }
-        try {
-          writeDiscoveryTimeoutSummary(discoveryTimeoutMs);
-        } catch (error) {
-          fs.appendFileSync(
-            stepLogPath,
-            `[${new Date().toISOString()}] timeout summary write failed: ${error?.message ?? String(error)}\n`,
-            'utf8',
-          );
-        }
-        process.exit(124);
-      })().catch((error) => {
+      try {
+        writeDiscoveryTimeoutSummary(discoveryTimeoutMs);
+      } catch (error) {
         fs.appendFileSync(
           stepLogPath,
-          `[${new Date().toISOString()}] timeout cleanup failed: ${error?.message ?? String(error)}\n`,
+          `[${new Date().toISOString()}] timeout summary write failed: ${error?.message ?? String(error)}\n`,
           'utf8',
         );
-        process.exit(124);
-      });
+      }
+      process.exit(124);
     }, discoveryTimeoutMs);
   }
   const { source: candidateSource, candidates } = parseCandidateEnv();
@@ -1386,6 +1369,12 @@ try {
   }
 } catch (error) {
   if (timeoutHandle) clearTimeout(timeoutHandle);
+  if (discoveryTimedOut) {
+    writeDiscoveryTimeoutSummary(discoveryTimeoutMs);
+    await context?.close().catch(() => {});
+    await browser?.close().catch(() => {});
+    process.exit(124);
+  }
   logStep(`fatal errorCategory=${errorCategory(error)}`);
   fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
   fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');

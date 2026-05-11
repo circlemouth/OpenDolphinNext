@@ -121,7 +121,7 @@ const summarizeAppointmentEvidence = (evidence) => ({
   patientMatchedEntryCount: evidence.patientMatchedEntryCount,
   chartReadyEntryCount: evidence.chartReadyEntryCount,
   entryCount: evidence.entryCount,
-  smokeEntry: summarizeSmokeEntry(evidence.smokeEntry),
+  smokeEntry: evidence.smokeEntry ? summarizeSmokeEntry(evidence.smokeEntry) : null,
   rawSmoke: {
     slotsCount: evidence.rawSmoke?.slots?.length ?? 0,
     reservationsCount: evidence.rawSmoke?.reservations?.length ?? 0,
