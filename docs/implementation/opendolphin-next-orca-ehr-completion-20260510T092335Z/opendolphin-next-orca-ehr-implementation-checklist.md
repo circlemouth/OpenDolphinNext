@@ -30,6 +30,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] ORCA送信成功、失敗、警告、不一致、他端末使用中、患者不在、通信失敗、証明書異常が区別され、UIと監査ログに残る。
 - [ ] 患者取り違え防止、重大操作確認、警告表示、エラー表示が DADSルールに基づいて実装される。
 - [ ] 実ORCA接続試験、ORCAモック試験、ユニット試験、統合試験、E2E試験、監査ログ試験、UI安全試験がCIで確認できる。
+  - [x] 2026-05-11T14:17Z: Worker F branch で `web-client npm run ci` と `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` を再実行し、web guard/typecheck/unit/build と Maven unit/integration/static-analysis が通過した。live Trial mutation / DADS 全観点 / runtime-ready は親項目の未完了範囲として維持する。
 
 ## 2. 正本境界の再定義
 
@@ -376,6 +377,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 診療録 PDF 出力と期間エクスポートができる。
 - [x] 監査ログ hash chain 検証ができる。
 - [ ] 実ORCA接続試験、ORCAモック試験、DADS観点 UI テストが完了している。
+  - [x] 2026-05-11T14:17Z: full release gate refresh として `web-client npm run ci`、Maven static-analysis verify は通過。実ORCA mutation / exact preflight / runtime-ready の残 blocker は `no_trial_native_mutation_ready_candidate` として維持する。
 - [ ] 本番運用前に ORCA接続情報、証明書期限監視、DB/監査/添付バックアップ、復元試験、障害時/再送/照合手順、患者取り違え防止 UI、ロール権限、監査ログ閲覧権限を確認する。
   - [x] 2026-05-11T13:58Z: `docs/runbooks/production-operations-readiness.md` と `check-production-operations-runbook.sh` を追加し、pair release、deployment secret store、sanitized readiness、監査書込経路、object storage profile、backup/restore/hash verification、rollback、sanitized evidence policy を本番運用前 stop condition として固定した。actual live mutation と operator sign-off は未完了のため親項目は未完了のまま維持する。
 
