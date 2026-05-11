@@ -107,6 +107,22 @@ describe('PatientSummaryPanel', () => {
     expect(await screen.findByText('患者サマリを保存しました。')).toBeInTheDocument();
   });
 
+  it('read-only 時の保存は native disabled を維持し近傍理由を示す', async () => {
+    renderWithQueryClient(
+      <PatientSummaryPanel
+        patientId="P-001"
+        readOnly
+        readOnlyReason="別端末で編集中のため保存できません。"
+      />,
+    );
+
+    expect(await screen.findByText('保存はブロックされています: 別端末で編集中のため保存できません。')).toBeInTheDocument();
+    const saveButton = screen.getByRole('button', { name: '保存' });
+    expect(saveButton).toBeDisabled();
+    expect(saveButton).toHaveAttribute('aria-describedby', 'charts-patient-summary-save-block-reason');
+    expect(mockedSavePatientFreeDocument).not.toHaveBeenCalled();
+  });
+
   it('患者切替時は前患者の未保存 free document draft を次患者へ持ち越さない', async () => {
     const user = userEvent.setup();
     mockedFetchPatientFreeDocument.mockImplementation(async ({ patientId }) => ({

@@ -177,9 +177,13 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/orca\.internal\.example/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));
-    expect(screen.getByRole('button', { name: '主病名として登録' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '副病名として登録' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '疑い病名として登録' })).toBeDisabled();
+    const mainButton = screen.getByRole('button', { name: '主病名として登録' });
+    expect(mainButton).not.toBeDisabled();
+    expect(mainButton).toHaveAttribute('aria-disabled', 'true');
+    expect(mainButton).toHaveAttribute('aria-describedby', 'diagnosis-mutation-block-reason');
+    await userEvent.click(mainButton);
+    expect(screen.getByText(/ORCA病名操作を停止: ORCA病名を取得できません。/)).toBeInTheDocument();
+    expect(mutateOrcaDisease).not.toHaveBeenCalled();
   });
 
   it('sends ORCA disease create only after explicit confirmation and does not call local diagnosis mutation', async () => {

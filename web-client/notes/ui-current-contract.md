@@ -82,6 +82,16 @@
 ### Current Fact
 - normal runtime の中心 surface は `SoapNotePanel` です。
 - `ChartsPatientSummaryBar` は患者文脈を常時見せる encounter context band として扱います。画面種別の装飾ラベル（例: `CHARTS`）は表示しません。
+- 共通 `PatientIdentityBar` の医療安全患者ヘッダーは、患者識別情報に加えて、内部参照ID、受付日、診療科、担当医、保険組合せ、ORCA取得 source/fetched/cache status を同じ visible band に表示できる共通 component です。Charts の患者ヘッダーはこの共通 contract を使い、ORCA取得が未確認・暫定参照の場合は `stale` として見せ、警告を details 内へ隠しません。
+- 共通 `CriticalOperationConfirmDialog` は重大操作の確認 surface として、実行操作名、患者名、患者ID、診療日などの患者識別情報、対象サマリ、cancel/confirm CTA を同一 modal 内に再掲します。Charts の低レベル ORCA 送信確認では title / operation を `診療行為ORCA送信`、confirm CTA を `ORCAへ送信する` とし、診療録確定、診察終了、会計済み確認の label と混同させません。
+- Charts の低レベル `ORCA 送信` と通常導線の `診察終了して会計へ送信` は送信前 precheck 理由だけでは native disabled にせず、`aria-disabled=true` と近傍 guard note で理由を示したうえで、押下時に同じ fail-closed precheck を実行して warning banner / audit に不足条件を出します。実行中など二重実行防止が必要な場合だけ native disabled を使います。
+- `OrderDockPanel` の quick-add / group-add / bundle edit / bundle copy / bundle delete / prescription-history import / recommendation apply は patient context 不足、read-only、missing master、fallback data だけでは native disabled にせず、`aria-disabled=true` と近傍 `order-dock-edit-block-reason` で理由を示したうえで、押下時に `オーダー追加を停止: ...`、`オーダー編集を停止: ...`、`オーダーコピーを停止: ...`、`オーダー削除を停止: ...`、`処方履歴取り込みを停止: ...`、`直近処方コピーを停止: ...`、`頻用オーダー反映を停止: ...` notice を出して editor / delete confirm を開きません。検索入力 / category select、pending/loading、二重実行防止、直近処方なしなど操作自体を受けられない状態は native disabled を維持し、検索入力 / category select には近傍 `order-dock-search-block-reason` と `aria-describedby` で理由を示します。
+- `OrderRecommendationModal` のカテゴリ scope は default entity がない場合 native disabled を維持し、近傍 `order-recommend-category-scope-reason` と `aria-describedby` で理由と横断 scope の代替を示します。
+- `OrderBundleEditPanel` embedded footer の `保存して閉じる` / `保存して続ける` / `保存して追加・更新` は read-only、missing master、fallback data だけでは native disabled にせず、`aria-disabled=true`、`data-disabled-reason=order_detail_submit_blocked`、近傍 edit block reason で理由を示し、押下時に `保存操作を停止: ...` notice と blocked audit を出して mutation へ進みません。保存中・禁忌チェック中など二重実行防止は native disabled を維持します。
+- `DoCopyDialog` の `適用` は転記元なし / Do対象未選択では native disabled を維持し、近傍 `charts-do-copy-apply-block-reason` と `aria-describedby` で理由を示します。
+- `PastHubPanel` の SOAP Do転記入口は転記可能 SOAP なし / セクション記載なしでは native disabled を維持し、近傍 `past-hub-do-copy-*` reason と `aria-describedby` で理由を示します。
+- `PatientSummaryPanel` の `保存` は read-only / 保存中 / 変更なしでは native disabled を維持し、近傍 `charts-patient-summary-save-block-reason` と `aria-describedby` で理由を示します。
+- `SoapNotePanel` の `保存` は read-only / 履歴表示 / 保存中では native disabled を維持し、近傍 `soap-note-save-block-reason` と `aria-describedby` で理由を示します。
 - `SoapNotePanel` の利用者向け見出しは `カルテ本文` とし、内部向けの `Primary Workspace` や折りたたみの記載メタ情報は通常表示に置きません。
 - page CTA の owner は `ChartsActionBar` です。通常 UI の primary は `診察終了して会計へ送信` で、`ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。低レベル `ORCA送信` direct bridge は debug / QA / focused test 用に限定し、通常画面の初回会計送信導線には出しません。
 - `PastHubPanel` は左列の historical reference / Do 補助 surface であり、comparison 専用主面ではありません。
@@ -115,6 +125,16 @@
 - runtime smoke は主要 route / guard の確認根拠であり、debug-only surface の常時表示までは断定しません。
 - manual: SoapNotePanel 中心の通常導線、Patients / Mobile Images / 管理画面 への遷移確認
 - guard minimum:
+  - `PatientIdentityBar` の医療安全患者ヘッダーは患者ID、受付/診療日、診療科、担当医、保険組合せ、ORCA取得状態を同じ visible region に表示し、重大操作前の患者取り違え防止に使える状態を維持する
+  - `CriticalOperationConfirmDialog` は backdrop click で閉じず、患者識別情報と実行操作名を alertdialog 内に再掲し、操作ごとに distinct な confirm label を使う
+  - Charts `ORCA 送信` と `診察終了して会計へ送信` は missing master / encounter context 不足などの precheck failure でも押下可能に見せ、押下時に理由を表示して確認 modal / finish hook / transport へ進まないこと
+  - `OrderDockPanel` quick-add / group-add / bundle edit / bundle copy / bundle delete / prescription-history import / recommendation apply は patient context 不足、read-only、missing master、fallback data で押下時理由を表示し、editor / delete confirm を開かないこと。検索入力 / category select は native disabled 維持時に `order-dock-search-block-reason` で近傍理由を表示すること
+  - `OrderRecommendationModal` category scope はカテゴリ未選択時に `order-recommend-category-scope-reason` で近傍理由と横断代替を表示すること
+  - `OrderBundleEditPanel` embedded footer submit は read-only、missing master、fallback data で押下時理由を表示し、mutation へ進まないこと
+  - `DoCopyDialog` apply は転記元なし / Do対象未選択で `charts-do-copy-apply-block-reason` による近傍理由を表示すること
+  - `PastHubPanel` SOAP Do転記入口は転記可能SOAPなし / セクション記載なしで近傍理由を表示すること
+  - `PatientSummaryPanel` save は read-only / 保存中 / 変更なしで `charts-patient-summary-save-block-reason` による近傍理由を表示すること
+  - `SoapNotePanel` save は read-only / 履歴表示 / 保存中で `soap-note-save-block-reason` による近傍理由を表示すること
   - right rail は chooser-only を維持し、`document` / `ORCA` tool や embedded editor を再混入させない
   - canonical encounter context 不足時は `診察終了して会計へ送信` を fail-close
   - canonical encounter context 不足時は report print / incomeinfv2 取得も fail-close
@@ -213,6 +233,7 @@
 - SOAP / カルテ本文中の病名らしい記載は `診療録本文中の病名記載` 枠に表示し、`ORCA登録病名` と混ぜません。この枠はカルテ本文正本の参照であり、ORCA送信ボタンを置かず、明示 confirm なしに `diseasev3` payload へ昇格しません。
 - 病名マスター候補は補助入力です。`/api/orca/official/disease-master/name/{param}/` は server-side ORCA master datasource を参照し、日付を `yyyyMMdd` に正規化します。ローカル開発DBで `tbl_byomei` が無い、または ORCA master datasource が未起動の場合だけ最小 bootstrap 候補を返せますが、明示 confirm なしに ORCA 登録 payload や主一覧へ昇格しません。
 - ORCA unavailable 時は local-only disease を fallback 表示せず、「ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。」を表示し、ORCA 病名操作を disabled にします。
+- `DiagnosisEditPanel` の quick ORCA病名登録ボタンは、read-only / ORCA mirror unavailable などの理由だけでは native disabled にせず、`aria-disabled=true` と `diagnosis-mutation-block-reason` で近傍理由を関連付け、押下時に `ORCA病名操作を停止: ...` を表示して confirm / mutation へ進みません。ORCA mirror 取得中や mutation pending など二重操作防止が必要な状態は native disabled を維持します。
 - ORCA 病名操作は `ORCAへ病名登録` / `ORCA病名を更新` / `ORCA病名を削除` / `削除病名を整理` に分け、いずれも明示 confirm 後に `/api/orca/official/chart-support/disease-mod-v3` へ送ります。成功後は楽観更新せず、再取得した ORCA `diseasegetv2` 結果だけを表示します。
 - `diseasev3` operation は `create|update|delete|organizeDeletedDiseases` に限定します。`Request_Number=01` は `削除病名を整理` だけで使い、通常 create/update/delete には混ぜません。client は `Request_Number` を送らず、server-owned value として扱います。
 
@@ -221,6 +242,7 @@
 - code-confirm: `PatientsPage` の local search 明示、official create/update/import の分岐、成功後 canonical re-fetch/local sync
 - code-confirm: `PatientInfoEditDialog` の official update route 呼び出しと、成功後 callback による canonical/local sync refresh
 - code-confirm: `DiagnosisEditPanel` の `保険病名` / `ORCA mirror` / `候補` 分離、candidate-not-truth、manual-resolution は対象病名がある時だけ visible
+- code-confirm: `DiagnosisEditPanel` quick disease create は ORCA mirror unavailable / read-only 時に押下時理由を表示し、confirm / mutation へ進まない
 - manual: reception / charts 由来の再入場と patient 未選択開始
 
 ## Mobile Images Surface

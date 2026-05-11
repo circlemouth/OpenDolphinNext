@@ -235,14 +235,31 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 ## 11. Webクライアント医療安全UI
 
 - [ ] 主要画面に患者ヘッダーを常時表示し、ORCA患者番号、内部参照ID、氏名、カナ、生年月日、年齢、性別、受付日、診療科、担当医、保険組合せ、ORCA取得日時、キャッシュ状態を表示する。
+  - [x] 2026-05-10T21:16Z: 共通 `PatientIdentityBar` に医療安全患者ヘッダー行を追加し、Charts の患者ヘッダーで受付日、診療科、担当医、保険組合せ、ORCA source/cache status を visible 表示する段階適用を実施した。Patients / Mobile Images は同じ共通 component を継続利用し、全主要画面の完全統一は後続 heartbeat で Reception などへ拡張する。
 - [ ] モーダル内の重大操作確認にも患者識別情報を再掲する。
+  - [x] 2026-05-10T21:59Z: 共通 `CriticalOperationConfirmDialog` を追加し、患者識別情報、実行操作名、対象サマリ、distinct confirm label を alertdialog 内に再掲する契約を固定した。Charts の ORCA 送信確認へ適用し、confirm CTA を `ORCAへ送信する` に分離した。
 - [ ] 診療録確定/訂正/取消、処方確定/中止/取消、病名ORCA送信、診療行為ORCA送信、会計送信、診察終了に確認フローを実装する。
+  - [x] 2026-05-10T21:59Z: 診療行為 ORCA 送信の確認フローを共通重大操作 modal へ移行した。診療録確定/処方確定/取消/診察終了など全操作の完全統一は後続で継続する。
 - [ ] 「診療録確定」「会計へ送信」「診察終了」「ORCA送信成功」を別概念として表示する。
 - [ ] 成功、失敗、警告、情報、要確認をセマンティックに分け、原因と次に取るべき行動を示す。
 - [ ] ORCA警告、不一致、ORCA側のみ存在する情報を隠さない。
 - [ ] 全フォームにラベル、必須/任意、サポートテキスト、具体的エラーを持たせる。
 - [ ] 入力値変更だけで ORCA送信、突然のダイアログ、画面遷移をしない。
 - [ ] `disabled` に頼らず、押下後に不足条件を表示する。やむを得ず `disabled` を使う場合は理由と有効化条件を近くに表示する。
+  - [x] 2026-05-10T22:30Z: Charts の低レベル `ORCA 送信` は precheck 不足だけでは native disabled にせず、近傍 guard note / `aria-disabled=true` / 押下時 warning banner で不足条件を表示し、確認 modal と transport へ進まないことを focused test で固定した。
+  - [x] 2026-05-10T23:13Z: Charts の通常導線 `診察終了して会計へ送信` も precheck 不足だけでは native disabled にせず、近傍 guard note / `aria-disabled=true` / 押下時 warning banner で不足条件を表示し、finish hook と transport へ進まないことを focused test で固定した。
+  - [x] 2026-05-11T00:02Z: `DiagnosisEditPanel` の quick ORCA病名登録ボタンは ORCA mirror unavailable / read-only だけでは native disabled にせず、近傍理由 `diagnosis-mutation-block-reason` と押下時 `ORCA病名操作を停止` notice で不足条件を表示し、confirm / mutation へ進まないことを focused test で固定した。
+  - [x] 2026-05-11T00:22Z: `OrderDockPanel` の quick-add / group-add は patient context 不足、read-only、missing master、fallback data だけでは native disabled にせず、近傍理由 `order-dock-edit-block-reason` と押下時 `オーダー追加を停止` notice で不足条件を表示し、editor を開かないことを focused test で固定した。
+  - [x] 2026-05-11T00:42Z: `OrderDockPanel` の bundle edit / copy / delete は patient context 不足、read-only、missing master、fallback data だけでは native disabled にせず、近傍理由 `order-dock-edit-block-reason` と押下時 `オーダー編集/コピー/削除を停止` notice で不足条件を表示し、editor / delete confirm を開かないことを focused test で固定した。
+  - [x] 2026-05-11T01:02Z: `OrderDockPanel` の処方履歴 `新規（空）` / `直近処方をコピーして開始` は patient context 不足、read-only、missing master、fallback data だけでは native disabled にせず、近傍理由 `order-dock-edit-block-reason` と押下時 `処方履歴取り込み/直近処方コピーを停止` notice で不足条件を表示し、editor を開かないことを focused test で固定した。
+  - [x] 2026-05-11T01:22Z: `OrderDockPanel` の頻用オーダー apply は patient context 不足、read-only、missing master、fallback data で候補反映時に `頻用オーダー反映を停止` notice で不足条件を表示し、editor を開かず modal を維持することを focused test で固定した。
+  - [x] 2026-05-11T01:43Z: `OrderDockPanel` の検索入力 / category select は操作自体を受けられない入力欄として native disabled を維持しつつ、近傍理由 `order-dock-search-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
+  - [x] 2026-05-11T02:02Z: `OrderBundleEditPanel` embedded footer submit は read-only / missing master / fallback data だけでは native disabled にせず、近傍 edit block reason と押下時 `保存操作を停止` notice で不足条件を表示し、mutation へ進まないことを focused test で固定した。
+  - [x] 2026-05-11T02:22Z: `OrderRecommendationModal` のカテゴリ scope はカテゴリ未選択時に native disabled を維持しつつ、近傍理由 `order-recommend-category-scope-reason` と `aria-describedby` で横断 scope の代替を表示することを focused test で固定した。
+  - [x] 2026-05-11T02:42Z: `DoCopyDialog` の適用ボタンは転記元なし / Do対象未選択で native disabled を維持しつつ、近傍理由 `charts-do-copy-apply-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
+  - [x] 2026-05-11T03:02Z: `PastHubPanel` の SOAP Do転記入口は転記可能 SOAP なし / セクション記載なしで native disabled を維持しつつ、近傍理由 `past-hub-do-copy-*` と `aria-describedby` で不足条件を表示することを focused test で固定した。
+  - [x] 2026-05-11T03:22Z: `PatientSummaryPanel` の保存ボタンは read-only / 保存中 / 変更なしで native disabled を維持しつつ、近傍理由 `charts-patient-summary-save-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
+  - [x] 2026-05-11T03:43Z: `SoapNotePanel` の保存ボタンは read-only / 履歴表示 / 保存中で native disabled を維持しつつ、近傍理由 `soap-note-save-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
 - [ ] ボタン優先度、配置、44px以上の押下領域を DADS に沿って統一する。
 
 ## 12. 監査ログ・真正性

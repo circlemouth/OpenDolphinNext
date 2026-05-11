@@ -267,6 +267,9 @@ export function PastHubPanel({
               const dept = head?.department ?? '';
               const phys = head?.physician ?? '';
               const meta = [dept, phys].filter(Boolean).join(' / ');
+              const safeDateKey = group.date.replace(/[^A-Za-z0-9_-]/g, '-');
+              const doCopyBatchReasonId = `past-hub-do-copy-batch-reason-${safeDateKey}`;
+              const doCopyBatchBlockedReason = !canDoCopyBatch ? '転記可能なSOAPがありません。' : '';
 
               const bundlesByEntity = new Map<PastHubOrderEntity, OrderBundle[]>();
               bundlesForDay.forEach((bundle) => {
@@ -353,20 +356,28 @@ export function PastHubPanel({
                               <strong>記載（表示中）</strong>
                               <span className="charts-past-hub__col-meta">SOAP 最新</span>
                               {onRequestDoCopyBatch ? (
-                                <button
-                                  type="button"
-                                  className="charts-past-hub__do charts-past-hub__do--batch"
-                                  disabled={!canDoCopyBatch}
-                                  title={!canDoCopyBatch ? '転記可能なSOAPがありません。' : undefined}
-                                  onClick={() => {
-                                    onRequestDoCopyBatch({
-                                      sections: doCopySections,
-                                      sourceDate: group.date,
-                                    });
-                                  }}
-                                >
-                                  この日のSOAPをまとめてDo
-                                </button>
+                                <>
+                                  {doCopyBatchBlockedReason ? (
+                                    <span id={doCopyBatchReasonId} className="charts-past-hub__hint">
+                                      まとめDoはブロックされています: {doCopyBatchBlockedReason}
+                                    </span>
+                                  ) : null}
+                                  <button
+                                    type="button"
+                                    className="charts-past-hub__do charts-past-hub__do--batch"
+                                    disabled={Boolean(doCopyBatchBlockedReason)}
+                                    aria-describedby={doCopyBatchBlockedReason ? doCopyBatchReasonId : undefined}
+                                    title={doCopyBatchBlockedReason || undefined}
+                                    onClick={() => {
+                                      onRequestDoCopyBatch({
+                                        sections: doCopySections,
+                                        sourceDate: group.date,
+                                      });
+                                    }}
+                                  >
+                                    この日のSOAPをまとめてDo
+                                  </button>
+                                </>
                               ) : null}
                             </div>
                             <div className="charts-past-hub__notes-grid" role="list">
@@ -374,6 +385,8 @@ export function PastHubPanel({
                                 const entry = soapLatestBySection.get(section);
                                 const body = entry?.body?.trim() ?? '';
                                 const metaLine = entry ? `${formatSoapAuthoredAt(entry.authoredAt)} / ${entry.authorName ?? entry.authorRole ?? '—'}` : '—';
+                                const doCopyReasonId = `past-hub-do-copy-reason-${section}`;
+                                const doCopyBlockedReason = !canDoCopy ? 'Do転記は無効です。' : !entry ? '記載がありません。' : '';
                                 return (
                                   <div key={section} className="charts-past-hub__note" role="listitem">
                                     <div className="charts-past-hub__note-head">
@@ -382,11 +395,17 @@ export function PastHubPanel({
                                     </div>
                                     <p className="charts-past-hub__note-body">{body ? body.slice(0, 140) : '記載なし'}</p>
                                     <div className="charts-past-hub__actions">
+                                      {doCopyBlockedReason ? (
+                                        <span id={doCopyReasonId} className="charts-past-hub__hint">
+                                          Do転記はブロックされています: {doCopyBlockedReason}
+                                        </span>
+                                      ) : null}
                                       <button
                                         type="button"
                                         className="charts-past-hub__do"
-                                        disabled={!canDoCopy || !entry}
-                                        title={!canDoCopy ? 'Do転記は無効です。' : !entry ? '記載がありません。' : undefined}
+                                        disabled={Boolean(doCopyBlockedReason)}
+                                        aria-describedby={doCopyBlockedReason ? doCopyReasonId : undefined}
+                                        title={doCopyBlockedReason || undefined}
                                         onClick={() => {
                                           if (!entry) return;
                                           onRequestDoCopy?.({ section, entry });

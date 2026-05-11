@@ -4919,6 +4919,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                       appointmentId={appointmentId}
                       department={patientDisplay.department}
                       physician={patientDisplay.physician}
+                      insuranceCombinationNumber={encounterContext.insuranceCombinationNumber ?? selectedEntry?.insuranceCombinationNumber}
                       runId={resolvedRunId ?? flags.runId}
                       missingMaster={resolvedMissingMaster}
                       fallbackUsed={resolvedFallbackUsed}

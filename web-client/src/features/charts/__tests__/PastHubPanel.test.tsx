@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { PastHubPanel } from '../PastHubPanel';
@@ -125,5 +126,52 @@ describe('PastHubPanel', () => {
     expect(await screen.findByText('オーダー情報の取得に失敗しました。時間をおいて再試行してください。')).toBeInTheDocument();
     expect(screen.queryByText(/backend order route missing/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/stacktrace/i)).not.toBeInTheDocument();
+  });
+
+  it('Do転記入口は転記可能SOAPなしの native disabled に近傍理由を示す', async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <PastHubPanel
+        patientId="P-001"
+        entries={[
+          {
+            id: 'row-001',
+            patientId: 'P-001',
+            appointmentId: 'A-001',
+            receptionId: 'R-001',
+            visitDate: '2026-03-04',
+            department: '内科',
+            physician: '田中医師',
+            status: '診療中',
+            source: 'visits',
+          },
+        ]}
+        soapHistory={[]}
+        doCopyEnabled
+        onRequestDoCopy={vi.fn()}
+        onRequestDoCopyBatch={vi.fn()}
+        selectedContext={{
+          patientId: 'P-001',
+          appointmentId: 'A-001',
+          receptionId: 'R-001',
+          visitDate: '2026-03-04',
+        }}
+        switchLocked={false}
+        todayIso="2026-03-05"
+        onSelectEncounter={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('2026-03-04'));
+
+    expect(screen.getByText('まとめDoはブロックされています: 転記可能なSOAPがありません。')).toBeInTheDocument();
+    const batchButton = screen.getByRole('button', { name: 'この日のSOAPをまとめてDo' });
+    expect(batchButton).toBeDisabled();
+    expect(batchButton).toHaveAttribute('aria-describedby', 'past-hub-do-copy-batch-reason-2026-03-04');
+
+    expect(screen.getAllByText('Do転記はブロックされています: 記載がありません。').length).toBeGreaterThan(0);
+    const sectionButtons = screen.getAllByRole('button', { name: 'Do転記' });
+    expect(sectionButtons[0]).toBeDisabled();
+    expect(sectionButtons[0]).toHaveAttribute('aria-describedby', 'past-hub-do-copy-reason-subjective');
   });
 });

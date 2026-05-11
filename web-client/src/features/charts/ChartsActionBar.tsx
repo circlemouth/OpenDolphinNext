@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
+import { CriticalOperationConfirmDialog } from '../../components/modals/CriticalOperationConfirmDialog';
 import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
 import { isSystemAdminRole } from '../../libs/auth/roles';
@@ -2455,93 +2456,41 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         />
       </div>
 
-      <FocusTrapDialog
+      <CriticalOperationConfirmDialog
         open={confirmAction === 'send'}
-        role="alertdialog"
-        title="ORCA送信の確認"
+        title="診療行為ORCA送信の確認"
         description="現在の患者/受付を ORCA へ送信します。実行後に取り消せない場合があります。"
-        onClose={() => {
+        operationLabel="診療行為ORCA送信"
+        patientName={sendDialogSummary.patientName}
+        patientFields={[
+          { label: '患者ID', value: sendDialogSummary.patientIdLabel },
+          {
+            label: '生年月日 / 年齢',
+            value: `${sendDialogSummary.birthDate}${sendDialogSummary.ageLabel ? ` / ${sendDialogSummary.ageLabel}` : ''}`,
+          },
+          { label: '診療日', value: sendDialogSummary.visitLabel },
+          { label: '受付ID', value: sendDialogSummary.receptionLabel },
+          { label: '予約ID', value: sendDialogSummary.appointmentLabel },
+        ]}
+        summaryTitle="送信対象サマリ"
+        summaryFields={[
+          { label: '病名', value: sendDialogSummary.diagnosisCount },
+          { label: 'オーダー', value: sendDialogSummary.orderCount },
+          { label: 'SOAP', value: sendDialogSummary.soapState },
+          { label: '画像添付', value: sendDialogSummary.imageCount },
+        ]}
+        confirmLabel="ORCAへ送信する"
+        onCancel={() => {
           finalizeApproval('send', 'cancelled');
           setConfirmAction(null);
         }}
+        onConfirm={() => {
+          finalizeApproval('send', 'confirmed');
+          setConfirmAction(null);
+          void handleAction('send');
+        }}
         testId="charts-send-dialog"
-      >
-        <div className="charts-actions__send-confirm" role="group" aria-label="ORCA送信の確認">
-          <section className="charts-actions__send-confirm-section" aria-label="患者確認">
-            <h3>患者確認</h3>
-            <p className="charts-actions__send-confirm-identity">
-              <strong>
-                {sendDialogSummary.patientName}
-              </strong>
-            </p>
-            <dl className="charts-actions__send-confirm-list">
-              <div>
-                <dt>患者ID</dt>
-                <dd>{sendDialogSummary.patientIdLabel}</dd>
-              </div>
-              <div>
-                <dt>生年月日 / 年齢</dt>
-                <dd>
-                  {sendDialogSummary.birthDate}
-                  {sendDialogSummary.ageLabel ? ` / ${sendDialogSummary.ageLabel}` : ''}
-                </dd>
-              </div>
-              <div>
-                <dt>診療日</dt>
-                <dd>{sendDialogSummary.visitLabel}</dd>
-              </div>
-              <div>
-                <dt>受付ID</dt>
-                <dd>{sendDialogSummary.receptionLabel}</dd>
-              </div>
-              <div>
-                <dt>予約ID</dt>
-                <dd>{sendDialogSummary.appointmentLabel}</dd>
-              </div>
-            </dl>
-          </section>
-          <section className="charts-actions__send-confirm-section" aria-label="送信対象サマリ">
-            <h3>送信対象サマリ</h3>
-            <dl className="charts-actions__send-confirm-list">
-              <div>
-                <dt>病名</dt>
-                <dd>{sendDialogSummary.diagnosisCount}</dd>
-              </div>
-              <div>
-                <dt>オーダー</dt>
-                <dd>{sendDialogSummary.orderCount}</dd>
-              </div>
-              <div>
-                <dt>SOAP</dt>
-                <dd>{sendDialogSummary.soapState}</dd>
-              </div>
-              <div>
-                <dt>画像添付</dt>
-                <dd>{sendDialogSummary.imageCount}</dd>
-              </div>
-            </dl>
-          </section>
-          <button
-            type="button"
-            onClick={() => {
-              finalizeApproval('send', 'cancelled');
-              setConfirmAction(null);
-            }}
-          >
-            キャンセル
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              finalizeApproval('send', 'confirmed');
-              setConfirmAction(null);
-              void handleAction('send');
-            }}
-          >
-            送信する
-          </button>
-        </div>
-      </FocusTrapDialog>
+      />
 
       <FocusTrapDialog
         open={approvalUnlockDialogStep !== null}
@@ -2825,15 +2774,17 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                 type="button"
                 id="charts-action-finish"
                 className={`charts-actions__button charts-actions__button--encounter-finish${primaryAction === 'finish' ? ' charts-actions__button--primary-route' : ''}`}
-                disabled={otherBlocked || !resolvedPatientId}
+                disabled={otherBlocked}
                 data-disabled-reason={
                   otherBlocked
                     ? (isLocked ? 'locked' : undefined)
-                    : !resolvedPatientId
-                      ? 'patient_not_selected'
+                    : finishPrecheckReasons.length > 0
+                      ? finishPrecheckReasons.map((reason) => reason.key).join(',')
                       : undefined
                 }
-                title={!resolvedPatientId ? '患者未選択のため会計送信できません。' : otherBlocked ? statusLine : undefined}
+                aria-disabled={finishPrecheckReasons.length > 0}
+                aria-describedby={!isRunning && finishPrecheckReasons.length > 0 ? 'charts-actions-finish-guard' : undefined}
+                title={finishPrecheckReasons.length > 0 ? `会計送信不可: ${finishPrecheckReasons.map((reason) => reason.summary).join(' / ')}` : otherBlocked ? statusLine : undefined}
                 onClick={() => handleAction('finish')}
                 aria-keyshortcuts="Alt+E"
               >
@@ -2850,8 +2801,12 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               className={`charts-actions__button charts-actions__button--send${
                 primaryAction === 'send' || primaryAction === 'sending' ? ' charts-actions__button--primary-route' : ''
               }`}
-              disabled={sendDisabled}
+              disabled={isRunning}
               onClick={() => {
+                if (sendPrecheckReasons.length > 0) {
+                  void handleAction('send');
+                  return;
+                }
                 setConfirmAction('send');
                 approvalSessionRef.current = { action: 'send', closed: false };
                 logApproval('send', 'open');

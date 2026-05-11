@@ -7,13 +7,21 @@ import './patientIdentityBar.css';
 export interface PatientIdentityBarProps {
   title?: string;
   patientId?: string;
+  internalPatientId?: string;
   patientName?: string;
   patientKana?: string;
   sex?: string;
   age?: string;
   visitDate?: string;
+  acceptanceDate?: string;
   receptionId?: string;
   appointmentId?: string;
+  department?: string;
+  physician?: string;
+  insuranceCombination?: string;
+  orcaSourceLabel?: string;
+  orcaFetchedAt?: string;
+  orcaCacheStatus?: 'fresh' | 'stale' | 'unverified' | 'missing' | string;
   eyebrow?: string;
   note?: string;
   chips?: ReactNode;
@@ -37,13 +45,21 @@ const normalizeValue = (value?: string | null) => {
 export function PatientIdentityBar({
   title,
   patientId,
+  internalPatientId,
   patientName,
   patientKana,
   sex,
   age,
   visitDate,
+  acceptanceDate,
   receptionId,
   appointmentId,
+  department,
+  physician,
+  insuranceCombination,
+  orcaSourceLabel,
+  orcaFetchedAt,
+  orcaCacheStatus,
   eyebrow,
   note,
   chips,
@@ -63,7 +79,28 @@ export function PatientIdentityBar({
   const resolvedName = normalizeValue(patientName);
   const resolvedKana = normalizeValue(patientKana);
   const resolvedVisitDate = normalizeValue(visitDate);
+  const resolvedInternalPatientId = normalizeValue(internalPatientId);
+  const resolvedAcceptanceDate = normalizeValue(acceptanceDate);
+  const resolvedDepartment = normalizeValue(department);
+  const resolvedPhysician = normalizeValue(physician);
+  const resolvedInsuranceCombination = normalizeValue(insuranceCombination);
+  const resolvedOrcaSourceLabel = normalizeValue(orcaSourceLabel);
+  const resolvedOrcaFetchedAt = normalizeValue(orcaFetchedAt);
+  const resolvedOrcaCacheStatus = normalizeValue(orcaCacheStatus);
   const resolvedNote = normalizeValue(note);
+  const medicalSafetyItems = [
+    resolvedInternalPatientId ? { label: '内部参照ID', value: resolvedInternalPatientId } : undefined,
+    resolvedAcceptanceDate ?? resolvedVisitDate ? { label: '受付日', value: resolvedAcceptanceDate ?? resolvedVisitDate ?? '—' } : undefined,
+    resolvedDepartment ? { label: '診療科', value: resolvedDepartment } : undefined,
+    resolvedPhysician ? { label: '担当医', value: resolvedPhysician } : undefined,
+    resolvedInsuranceCombination ? { label: '保険組合せ', value: resolvedInsuranceCombination } : undefined,
+    resolvedOrcaSourceLabel || resolvedOrcaFetchedAt || resolvedOrcaCacheStatus
+      ? {
+          label: 'ORCA取得',
+          value: [resolvedOrcaSourceLabel, resolvedOrcaFetchedAt, resolvedOrcaCacheStatus].filter(Boolean).join(' / ') || '—',
+        }
+      : undefined,
+  ].filter((item): item is { label: string; value: string } => Boolean(item));
 
   return (
     <section
@@ -110,6 +147,17 @@ export function PatientIdentityBar({
               {resolvedVisitDate ? <span className="patient-identity-bar__supporting-item">診療日 {resolvedVisitDate}</span> : null}
               {resolvedNote ? <span className="patient-identity-bar__supporting-item">{resolvedNote}</span> : null}
             </div>
+          ) : null}
+
+          {medicalSafetyItems.length > 0 ? (
+            <dl className="patient-identity-bar__medical-safety" aria-label="医療安全患者ヘッダー">
+              {medicalSafetyItems.map((item) => (
+                <div className="patient-identity-bar__medical-safety-item" key={item.label}>
+                  <dt>{item.label}</dt>
+                  <dd>{item.value}</dd>
+                </div>
+              ))}
+            </dl>
           ) : null}
 
           {chips ? <div className="patient-identity-bar__chips">{chips}</div> : null}

@@ -107,4 +107,31 @@ describe('SoapNotePanel UI regression', () => {
     expect(screen.getByText(/病名・オーダー・文書など他領域の保存状態とは別です/)).toBeInTheDocument();
     expect(screen.queryByText(/java\.lang|jdbc:\/\/internal-host/)).not.toBeInTheDocument();
   });
+
+  it('read-only時の保存ボタンはnative disabledを維持し近傍理由を関連付ける', () => {
+    renderWithQueryClient(
+      <SoapNotePanel
+        history={[]}
+        meta={{
+          runId: 'RUN-SOAP-SAVE-BLOCKED',
+          patientId: 'P-001',
+          appointmentId: 'APT-001',
+          receptionId: 'RCP-001',
+          visitDate: '2026-03-01',
+        }}
+        author={{ role: 'doctor', displayName: 'Dr. Test', userId: 'doctor01' }}
+        orderBundles={[]}
+        readOnly
+        readOnlyReason="確定済み診療録のため保存できません。"
+      />,
+    );
+
+    const saveButton = screen.getByRole('button', { name: '保存' });
+    const reason = screen.getByText('保存はブロックされています: 確定済み診療録のため保存できません。');
+
+    expect(saveButton).toBeDisabled();
+    expect(reason).toHaveAttribute('id', 'soap-note-save-block-reason');
+    expect(saveButton).toHaveAttribute('aria-describedby', 'soap-note-save-block-reason');
+    expect(saveButton).toHaveAttribute('title', '確定済み診療録のため保存できません。');
+  });
 });

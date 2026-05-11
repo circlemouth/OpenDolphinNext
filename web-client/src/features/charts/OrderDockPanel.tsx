@@ -527,6 +527,11 @@ export function OrderDockPanel(props: {
         : meta.fallbackUsed
           ? 'フォールバックデータのため操作できません。'
           : undefined;
+  const showEditBlockedNotice = useCallback((operationLabel = 'オーダー追加') => {
+    if (canEdit) return false;
+    setNotice({ tone: 'error', message: `${operationLabel}を停止: ${editDisabledReason ?? '編集不可のため操作できません。'}` });
+    return true;
+  }, [canEdit, editDisabledReason]);
 
   const quickSearchCandidates = useMemo<SearchCandidate[]>(() => {
     const keyword = quickSearch.trim().toLowerCase();
@@ -928,6 +933,7 @@ export function OrderDockPanel(props: {
 
   const handleQuickAdd = useCallback(
     (groupKey: OrderGroupKey, triggerEl?: HTMLElement | null) => {
+      if (showEditBlockedNotice()) return;
       setQuickAddGroupKey(groupKey);
       openEditor(
         quickAddEntityByGroup[groupKey],
@@ -935,7 +941,7 @@ export function OrderDockPanel(props: {
         { source: primaryOperationSource, reason: 'quick_add', triggerEl },
       );
     },
-    [openEditor, primaryOperationSource, quickAddEntityByGroup],
+    [openEditor, primaryOperationSource, quickAddEntityByGroup, showEditBlockedNotice],
   );
 
   const handleQuickAddExit = useCallback(() => {
@@ -952,7 +958,7 @@ export function OrderDockPanel(props: {
   const handleQuickSearchApply = useCallback(
     (candidate: SearchCandidate) => {
       if (!canEdit) {
-        setNotice({ tone: 'error', message: editDisabledReason ?? '編集不可のため追加できません。' });
+        showEditBlockedNotice();
         return;
       }
       setQuickAddGroupKey(null);
@@ -966,18 +972,19 @@ export function OrderDockPanel(props: {
       }
       setQuickSearch('');
     },
-    [canEdit, editDisabledReason, openEditor, primaryOperationSource],
+    [canEdit, openEditor, primaryOperationSource, showEditBlockedNotice],
   );
 
   const handleApplyRecommendation = useCallback(
     (candidate: OrderRecommendationCandidate, entity: string) => {
+      if (showEditBlockedNotice('頻用オーダー反映')) return;
       const resolved = resolveCanonicalOrderEntity(entity.trim()) ?? entity.trim();
       if (!isOrderEntity(resolved)) return;
       setQuickAddGroupKey(null);
       openEditor(resolved, { requestId: buildRequestId(), kind: 'recommendation', candidate }, { source: primaryOperationSource, reason: 'recommendation' });
       setRecommendModalOpen(false);
     },
-    [openEditor, primaryOperationSource],
+    [openEditor, primaryOperationSource, showEditBlockedNotice],
   );
 
   const latestPrescription = useMemo(() => {
@@ -1049,7 +1056,9 @@ export function OrderDockPanel(props: {
             className="order-dock__mini-add"
             data-test-id={`order-dock-quick-add-${quickAddModeSpec.key}`}
             onClick={(event) => handleQuickAdd(quickAddModeSpec.key, event.currentTarget)}
-            disabled={!canEdit}
+            aria-disabled={!canEdit}
+            aria-describedby={!canEdit ? 'order-dock-edit-block-reason' : undefined}
+            data-disabled-reason={!canEdit ? 'order_edit_blocked' : undefined}
             title={!canEdit ? editDisabledReason : undefined}
             aria-label={`${quickAddModeSpec.label.replace('+', '')}を追加`}
           >
@@ -1076,7 +1085,9 @@ export function OrderDockPanel(props: {
             className="order-dock__mini-add"
             data-test-id={`order-dock-quick-add-${item.key}`}
             onClick={(event) => handleQuickAdd(item.key, event.currentTarget)}
-            disabled={!canEdit}
+            aria-disabled={!canEdit}
+            aria-describedby={!canEdit ? 'order-dock-edit-block-reason' : undefined}
+            data-disabled-reason={!canEdit ? 'order_edit_blocked' : undefined}
             title={!canEdit ? editDisabledReason : undefined}
             aria-label={`${item.label.replace('+', '')}を追加`}
           >
@@ -1208,9 +1219,10 @@ export function OrderDockPanel(props: {
             className="order-dock__group-action order-dock__group-action--add"
             data-test-id={`order-dock-group-add-${group.key}`}
             aria-label={`${groupLabel}を追加して編集開始`}
-            aria-describedby="order-dock-edit-context-status"
             onClick={(event) => handleQuickAdd(group.key, event.currentTarget)}
-            disabled={!canEdit}
+            aria-disabled={!canEdit}
+            aria-describedby={!canEdit ? 'order-dock-edit-block-reason order-dock-edit-context-status' : 'order-dock-edit-context-status'}
+            data-disabled-reason={!canEdit ? 'order_edit_blocked' : undefined}
             title={!canEdit ? editDisabledReason : undefined}
           >
             ＋
@@ -1481,14 +1493,17 @@ export function OrderDockPanel(props: {
                           type="button"
                           className="order-dock__bundle-action"
                           aria-label={`${bundleLabel}を編集`}
-                          onClick={(event) =>
+                          onClick={(event) => {
+                            if (showEditBlockedNotice('オーダー編集')) return;
                             openEditor(bundleEntity, { requestId: buildRequestId(), kind: 'edit', bundle }, {
                               source: primaryOperationSource,
                               reason: 'bundle_edit',
                               triggerEl: event.currentTarget,
-                            })
-                          }
-                          disabled={!canMutate}
+                            });
+                          }}
+                          aria-disabled={!canMutate}
+                          aria-describedby={!canMutate ? 'order-dock-edit-block-reason' : undefined}
+                          data-disabled-reason={!canMutate ? 'order_edit_blocked' : undefined}
                           title={!canMutate ? editDisabledReason : undefined}
                         >
                           編集
@@ -1497,14 +1512,17 @@ export function OrderDockPanel(props: {
                           type="button"
                           className="order-dock__bundle-action"
                           aria-label={`${bundleLabel}をコピーして編集`}
-                          onClick={(event) =>
+                          onClick={(event) => {
+                            if (showEditBlockedNotice('オーダーコピー')) return;
                             openEditor(bundleEntity, { requestId: buildRequestId(), kind: 'copy', bundle }, {
                               source: primaryOperationSource,
                               reason: 'bundle_copy',
                               triggerEl: event.currentTarget,
-                            })
-                          }
-                          disabled={!canMutate}
+                            });
+                          }}
+                          aria-disabled={!canMutate}
+                          aria-describedby={!canMutate ? 'order-dock-edit-block-reason' : undefined}
+                          data-disabled-reason={!canMutate ? 'order_edit_blocked' : undefined}
                           title={!canMutate ? editDisabledReason : undefined}
                         >
                           コピー
@@ -1514,7 +1532,7 @@ export function OrderDockPanel(props: {
                           className="order-dock__bundle-action order-dock__bundle-action--danger"
                           aria-label={`${bundleLabel}を削除`}
                           onClick={() => {
-                            if (!canMutate) return;
+                            if (showEditBlockedNotice('オーダー削除')) return;
                             const eventId = buildOrderHubEventId();
                             emitOrderHubKpi({
                               category: 'OUI-01',
@@ -1526,7 +1544,10 @@ export function OrderDockPanel(props: {
                             });
                             setDeleteTarget({ bundle, label: bundleLabel, groupLabel, eventId });
                           }}
-                          disabled={!canMutate || deleteMutation.isPending}
+                          aria-disabled={!canMutate}
+                          aria-describedby={!canMutate ? 'order-dock-edit-block-reason' : undefined}
+                          data-disabled-reason={!canMutate ? 'order_edit_blocked' : undefined}
+                          disabled={deleteMutation.isPending}
                           title={!canMutate ? editDisabledReason : undefined}
                         >
                           削除
@@ -1697,12 +1718,14 @@ export function OrderDockPanel(props: {
               placeholder="オーダー名・薬剤名・コード"
               disabled={!patientId || !canEdit}
               aria-label="オーダー検索"
+              aria-describedby={!canEdit && editDisabledReason ? 'order-dock-search-block-reason' : undefined}
             />
             <select
               value={quickSearchGroup}
               onChange={(event) => setQuickSearchGroup(event.target.value as OrderGroupKey | 'all')}
               disabled={!patientId || !canEdit}
               aria-label="カテゴリ選択"
+              aria-describedby={!canEdit && editDisabledReason ? 'order-dock-search-block-reason' : undefined}
             >
               <option value="all">全カテゴリ</option>
               <option value="prescription">処方</option>
@@ -1712,6 +1735,11 @@ export function OrderDockPanel(props: {
               <option value="charge">算定</option>
             </select>
           </div>
+          {!canEdit && editDisabledReason ? (
+            <p id="order-dock-search-block-reason" className="order-dock__search-empty">
+              検索して追加はブロックされています: {editDisabledReason}
+            </p>
+          ) : null}
           {quickSearchCandidates.length > 0 ? (
             <ul className="order-dock__search-results" role="listbox" aria-label="検索候補">
               {quickSearchCandidates.map((candidate) => (
@@ -1735,6 +1763,11 @@ export function OrderDockPanel(props: {
         </div>
       ) : null}
 
+      {!canEdit && editDisabledReason ? (
+        <div id="order-dock-edit-block-reason" className="order-dock__notice order-dock__notice--info">
+          オーダー追加はブロックされています: {editDisabledReason}
+        </div>
+      ) : null}
       {notice ? <div className={`order-dock__notice order-dock__notice--${notice.tone}`}>{notice.message}</div> : null}
       {orderBundlesLoading ? <p className="order-dock__empty">オーダー情報を取得しています...</p> : null}
       {orderBundlesError ? <p className="order-dock__empty">{resolveUserSafeFetchFailure('オーダー情報', orderBundlesError)}</p> : null}
@@ -1777,14 +1810,17 @@ export function OrderDockPanel(props: {
                 <button
                   type="button"
                   className="order-dock__rx-action"
-                  onClick={(event) =>
+                  onClick={(event) => {
+                    if (showEditBlockedNotice('処方履歴取り込み')) return;
                     openEditor('medOrder', { requestId: buildRequestId(), kind: 'new' }, {
                       source: 'bottom-floating',
                       reason: 'rx_new',
                       triggerEl: event.currentTarget,
-                    })
-                  }
-                  disabled={!canEdit}
+                    });
+                  }}
+                  aria-disabled={!canEdit}
+                  aria-describedby={!canEdit ? 'order-dock-edit-block-reason' : undefined}
+                  data-disabled-reason={!canEdit ? 'order_edit_blocked' : undefined}
                   title={!canEdit ? editDisabledReason : undefined}
                 >
                   新規（空）
@@ -1793,6 +1829,7 @@ export function OrderDockPanel(props: {
                   type="button"
                   className="order-dock__rx-action"
                   onClick={(event) => {
+                    if (showEditBlockedNotice('直近処方コピー')) return;
                     if (!latestPrescriptionBundle) return;
                     openEditor('medOrder', { requestId: buildRequestId(), kind: 'copy', bundle: latestPrescriptionBundle }, {
                       source: 'bottom-floating',
@@ -1800,7 +1837,10 @@ export function OrderDockPanel(props: {
                       triggerEl: event.currentTarget,
                     });
                   }}
-                  disabled={!canEdit || !latestPrescriptionBundle}
+                  aria-disabled={!canEdit}
+                  aria-describedby={!canEdit ? 'order-dock-edit-block-reason' : undefined}
+                  data-disabled-reason={!canEdit ? 'order_edit_blocked' : undefined}
+                  disabled={!latestPrescriptionBundle}
                   title={
                     !latestPrescriptionBundle
                       ? '直近処方がないためコピーできません。'

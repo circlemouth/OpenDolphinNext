@@ -44,6 +44,12 @@ export function DoCopyDialog({ state, onApply, onUndo, onClose }: DoCopyDialogPr
   const selectedSet = useMemo(() => new Set(selectedSections), [selectedSections]);
   const hasAnySource = sections.some((item) => item.source.body.trim().length > 0);
   const sourceLabel = state?.sourceLabel?.trim();
+  const applyBlockedReasonId = 'charts-do-copy-apply-block-reason';
+  const applyBlockedReason = !hasAnySource
+    ? '転記できる記載がありません。'
+    : selectedSections.length === 0
+      ? 'Do対象セクションを1つ以上選択してください。'
+      : '';
 
   return (
     <FocusTrapDialog
@@ -115,11 +121,17 @@ export function DoCopyDialog({ state, onApply, onUndo, onClose }: DoCopyDialogPr
         <div className="charts-do-copy__actions" role="group" aria-label="Do転記操作">
           {!applied ? (
             <>
+              {applyBlockedReason ? (
+                <p id={applyBlockedReasonId} className="charts-do-copy__empty">
+                  適用はブロックされています: {applyBlockedReason}
+                </p>
+              ) : null}
               <button
                 type="button"
                 className="charts-do-copy__primary"
                 onClick={() => onApply(selectedSections)}
-                disabled={selectedSections.length === 0 || !hasAnySource}
+                disabled={Boolean(applyBlockedReason)}
+                aria-describedby={applyBlockedReason ? applyBlockedReasonId : undefined}
               >
                 適用
               </button>
