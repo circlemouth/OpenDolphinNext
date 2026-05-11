@@ -108,15 +108,21 @@ class OrcaMedicalCandidateRepository {
                                    sendable,
                                    cast(candidate_json as text),
                                    cast(issue_summary_json as text),
-                                   pr.prescription_order_revision_id,
-                                   pr.content_hash
+                                   current_po.prescription_order_id,
+                                   current_pr.prescription_order_revision_id,
+                                   current_pr.content_hash
                               FROM opendolphin.orca_medical_candidate candidate
-                              LEFT JOIN opendolphin.prescription_order po
-                                ON po.prescription_order_id = candidate.prescription_order_id
-                               AND po.facility_id = candidate.facility_id
-                               AND po.chart_revision_id = candidate.chart_revision_id
-                              LEFT JOIN opendolphin.prescription_order_revision pr
-                                ON pr.prescription_order_revision_id = po.current_revision_id
+                              LEFT JOIN LATERAL (
+                                  SELECT po.prescription_order_id,
+                                         po.current_revision_id
+                                    FROM opendolphin.prescription_order po
+                                   WHERE po.facility_id = candidate.facility_id
+                                     AND po.chart_revision_id = candidate.chart_revision_id
+                                   ORDER BY po.updated_at DESC, po.prescription_order_id DESC
+                                   LIMIT 1
+                              ) current_po ON true
+                              LEFT JOIN opendolphin.prescription_order_revision current_pr
+                                ON current_pr.prescription_order_revision_id = current_po.current_revision_id
                              WHERE candidate.facility_id = ?
                                AND candidate.chart_revision_id = ?
                                AND candidate.source_system = 'LOCAL_PRESCRIPTION'
@@ -138,7 +144,8 @@ class OrcaMedicalCandidateRepository {
                     text(values[7]),
                     text(values[8]),
                     numberOrNull(values[9]),
-                    text(values[10]));
+                    numberOrNull(values[10]),
+                    text(values[11]));
         } catch (NoResultException ex) {
             return null;
         }
@@ -148,8 +155,9 @@ class OrcaMedicalCandidateRepository {
         Map<String, Object> snapshot = readMap(record.candidateJson());
         String candidateContentHash = text(snapshot.get("prescriptionContentHash"));
         List<OrcaMedicalCandidateResponse.Issue> issues = new ArrayList<>(readIssues(record.issueSummaryJson()));
+        boolean orderStale = !Long.valueOf(record.prescriptionOrderId()).equals(record.currentPrescriptionOrderId());
         boolean revisionStale = !Long.valueOf(record.prescriptionRevisionId()).equals(record.currentPrescriptionRevisionId());
-        boolean sourceStale = revisionStale || !equalsTrimmed(candidateContentHash, record.currentPrescriptionContentHash());
+        boolean sourceStale = orderStale || revisionStale || !equalsTrimmed(candidateContentHash, record.currentPrescriptionContentHash());
         OrcaMedicalCandidateResponse response = new OrcaMedicalCandidateResponse();
         response.setApiResult("00");
         response.setApiResultMessage("処理終了");
@@ -266,6 +274,7 @@ class OrcaMedicalCandidateRepository {
             boolean sendable,
             String candidateJson,
             String issueSummaryJson,
+            Long currentPrescriptionOrderId,
             Long currentPrescriptionRevisionId,
             String currentPrescriptionContentHash) {
     }

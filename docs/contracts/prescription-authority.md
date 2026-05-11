@@ -45,7 +45,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - `GET /api/local/orca/medical-candidates/from-chart/{chartRevisionId}/latest` は同じ facility / chart revision に保存済みの最新 local prescription candidate を再確認用に返す。新規 candidate は作らず、live `medicalmodv2` 送信もしない。
 - candidate 生成時の facility は認証済み request context から解決し、patient / encounter / prescription revision は DB 上の処方正本から解決する。
 - latest candidate 取得時の facility は認証済み request context から解決し、patient / encounter / prescription revision は `orca_medical_candidate` DB row から再構成する。client は patient / facility / insurance / voucher / sequential / URL / digest を body や query として送らない。
-- latest candidate 取得時は保存済み candidate の `prescription_order_revision_id` / `prescriptionContentHash` と現在の処方 revision id / `content_hash` を server-side で照合する。不一致または現在 revision/hash 欠落時は `prescription_candidate_source_stale` を付け、`NEEDS_REVIEW` / `sendable=false` として返す。
+- latest candidate 取得時は保存済み candidate の `prescription_order_id` / `prescription_order_revision_id` / `prescriptionContentHash` と、同じ facility / chart revision の現在処方 order id / revision id / `content_hash` を server-side で照合する。不一致または現在 order/revision/hash 欠落時は `prescription_candidate_source_stale` を付け、`NEEDS_REVIEW` / `sendable=false` として返す。
 - candidate 生成時は `prescription_order` row の patient / encounter と revision summary 内の patient / encounter が一致することを server-side で検証し、不一致または欠落時は `prescription_source_context_mismatch` で fail-closed にする。
 - candidate source にできる処方状態は `FINAL` / `CHANGED` / `REISSUED` のみとする。`DRAFT` / `STOPPED` / `CANCELLED` は ORCA 送信候補化を 409 で拒否し、payload を保存しない。
 - candidate response は `nonAuthoritative=true`、`candidateStatus=READY_TO_SEND|NEEDS_REVIEW`、`sendable`、server-generated `prescriptionContentHash` を返す。`prescriptionContentHash` が欠落する candidate は `NEEDS_REVIEW` / `sendable=false` とし、client 提供 digest で補完しない。
@@ -68,7 +68,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - client が偽 digest を送って候補と異なる処方 revision を後続 workflow へ結び付ける。
 - candidate snapshot に client 由来の patient / encounter / insurance / voucher / sequential を混入させ、後続 send workflow が snapshot を authority と誤解する。
 - client が latest candidate 取得時に別施設・別患者・別保険・偽 digest を query/body へ混入させ、候補の authority を乗っ取る。
-- 処方変更後または同一 hash の再発行後に古い latest candidate を取得し、現在処方 revision と一致している候補として送信前確認へ進める。
+- 処方変更後、同一 hash の再発行後、または同じ chart revision に新しい処方 order が作られた後に古い latest candidate を取得し、現在処方 source と一致している候補として送信前確認へ進める。
 - revision summary に別患者または別 encounter の context が混入し、chart revision 経由で横展開 candidate が保存される。
 - candidate handoff から `usageCode` / `usageName` が欠落し、live send 側で client payload や display text から用法を再推測する。
 - client が DRAFT / STOPPED / CANCELLED の処方を chart revision 経由で candidate 化し、未確定または中止済み指示を送信前確認へ進める。
