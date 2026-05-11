@@ -22,6 +22,7 @@ import {
 import {
   buildOfficialPatientReadinessAxes,
   buildReadonlyMutationPolicy,
+  isReadonlyBlockedMutationUrl,
   normalizeCandidateExclusionSet,
   officialPatientEvidenceAccepted,
   sanitizeOfficialPatientExistenceEvidence,
@@ -110,6 +111,7 @@ const consoleMessages = [];
 const pageErrors = [];
 const networkRecords = [];
 const requestRecords = [];
+const blockedMutationRequestKeys = new Set();
 let unsafeRequestHeaders = { 'Content-Type': 'application/json' };
 
 const logStep = (label) => {
@@ -162,6 +164,15 @@ const verdict = (accepted, verified = true) => {
   return accepted ? 'accepted' : 'rejected';
 };
 const isTarget = (url) => TARGET_PATHS.some((pathName) => url.includes(pathName));
+const sanitizedReadonlyMutationRequest = (url, method) => buildReadonlyMutationPolicy([{ url, method }]).blockedRequests[0];
+const recordReadonlyMutationRequest = (url, method) => {
+  const record = sanitizedReadonlyMutationRequest(url, method);
+  if (!record) return;
+  const key = `${record.method}:${record.path}:${record.reason}`;
+  if (blockedMutationRequestKeys.has(key)) return;
+  blockedMutationRequestKeys.add(key);
+  requestRecords.push(record);
+};
 const urlFor = (pathName, query) => {
   const url = new URL(pathName, baseURL);
   for (const [key, value] of Object.entries(query ?? {})) {
@@ -195,6 +206,10 @@ const summarizeBody = (body) => {
 
 const recordRequest = (request) => {
   const url = request.url();
+  if (isReadonlyBlockedMutationUrl(url)) {
+    recordReadonlyMutationRequest(url, request.method());
+    return;
+  }
   if (!isTarget(url)) return;
   requestRecords.push({
     url: redactUrl(url),
@@ -854,6 +869,16 @@ try {
   unsafeRequestHeaders = buildQaUnsafeRequestHeaders({ baseURL, csrfToken: auth.csrfToken });
   const page = auth.page;
   const sessionMe = auth.sessionMe;
+
+  await page.route('**/*', async (route) => {
+    const request = route.request();
+    if (!isReadonlyBlockedMutationUrl(request.url())) {
+      await route.continue();
+      return;
+    }
+    recordReadonlyMutationRequest(request.url(), request.method());
+    await route.abort('blockedbyclient');
+  });
 
   page.on('console', (msg) => {
     const type = msg.type();

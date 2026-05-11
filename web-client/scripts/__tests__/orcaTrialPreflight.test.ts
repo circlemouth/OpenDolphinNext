@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import {
   READINESS_FAILURE_CATEGORIES,
@@ -37,6 +39,15 @@ const acceptedSelectors = {
 };
 
 describe('orca trial-native preflight gates', () => {
+  it('exact read-only preflight installs the shared browser mutation blocker before Phase 3 handoff', () => {
+    const script = fs.readFileSync(path.resolve(process.cwd(), 'scripts/qa-weborca-readonly-preflight.mjs'), 'utf8');
+
+    expect(script).toContain('isReadonlyBlockedMutationUrl');
+    expect(script).toContain("await page.route('**/*'");
+    expect(script).toContain('recordReadonlyMutationRequest(request.url(), request.method())');
+    expect(script).toContain("await route.abort('blockedbyclient')");
+  });
+
   it('builds same-origin CSRF headers for QA direct read-only POST probes without cookie or authorization', () => {
     const headers = buildQaUnsafeRequestHeaders({
       baseURL: 'https://localhost:5173/f/1.2.3/reception',
