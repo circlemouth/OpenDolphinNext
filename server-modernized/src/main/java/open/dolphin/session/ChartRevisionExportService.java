@@ -73,7 +73,27 @@ public class ChartRevisionExportService {
             "insuranceSnapshotStatus",
             "diseaseSnapshotStatus",
             "prescriptionCandidateSnapshotStatus",
-            "orcaTransmissionSnapshotStatus");
+            "orcaTransmissionSnapshotStatus",
+            "patientSnapshotReference",
+            "patientSnapshotHash",
+            "acceptanceSnapshotReference",
+            "acceptanceSnapshotHash",
+            "insuranceSnapshotReference",
+            "insuranceSnapshotHash",
+            "diseaseSnapshotReference",
+            "diseaseSnapshotHash",
+            "prescriptionCandidateSnapshotReference",
+            "prescriptionCandidateSnapshotHash",
+            "prescriptionOrderId",
+            "prescriptionOrderRevisionId",
+            "prescriptionContentHash",
+            "orcaOperationReference",
+            "orcaOperationStatus",
+            "orcaTransmissionReference",
+            "orcaTransmissionHash",
+            "orcaReconciliationStatus",
+            "snapshotCapturedAt",
+            "rawSensitiveFieldsExcluded");
     private static final Pattern AUTHORIZATION_LINE = Pattern.compile("(?i)authorization\\s*:\\s*[^\\r\\n]+");
     private static final Pattern COOKIE_LINE = Pattern.compile("(?i)cookie\\s*:\\s*[^\\r\\n]+");
     private static final Pattern RAW_XML = Pattern.compile("(?is)<\\?xml.*");

@@ -154,6 +154,88 @@ class ChartRevisionExportServiceTest {
     }
 
     @Test
+    void exportChartIncludesSanitizedWorkerSnapshotReferencesInHashMaterial() {
+        ChartRevisionModel firstRevision = finalRevision();
+        firstRevision.setSnapshotManifestJson("{\"snapshotVersion\":1,\"source\":\"CHART_FINALIZE\","
+                + "\"patientSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"patientSnapshotReference\":\"orca_patient_cache:101\","
+                + "\"patientSnapshotHash\":\"" + "1".repeat(64) + "\","
+                + "\"acceptanceSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"acceptanceSnapshotReference\":\"orca_acceptance_cache:202\","
+                + "\"acceptanceSnapshotHash\":\"" + "2".repeat(64) + "\","
+                + "\"insuranceSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"insuranceSnapshotReference\":\"encounter_insurance_snapshot:303\","
+                + "\"insuranceSnapshotHash\":\"" + "3".repeat(64) + "\","
+                + "\"diseaseSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"diseaseSnapshotReference\":\"orca_disease_snapshot:404\","
+                + "\"diseaseSnapshotHash\":\"" + "4".repeat(64) + "\","
+                + "\"prescriptionCandidateSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"prescriptionCandidateSnapshotReference\":\"orca_medical_candidate:505\","
+                + "\"prescriptionCandidateSnapshotHash\":\"" + "5".repeat(64) + "\","
+                + "\"prescriptionOrderId\":606,"
+                + "\"prescriptionOrderRevisionId\":707,"
+                + "\"prescriptionContentHash\":\"" + "6".repeat(64) + "\","
+                + "\"orcaTransmissionSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"orcaOperationReference\":\"orca_operation:808\","
+                + "\"orcaOperationStatus\":\"ORCA_ACCEPTED\","
+                + "\"orcaTransmissionReference\":\"orca_transmission:909\","
+                + "\"orcaTransmissionHash\":\"" + "7".repeat(64) + "\","
+                + "\"orcaReconciliationStatus\":\"MATCHED\","
+                + "\"snapshotCapturedAt\":\"2026-05-11T10:00:00Z\","
+                + "\"rawSensitiveFieldsExcluded\":true,"
+                + "\"patientName\":\"Do Not Export\","
+                + "\"rawOrcaBody\":\"<xml>raw</xml>\","
+                + "\"Authorization\":\"Basic secret\"}");
+        stubExportQueries(List.of(firstRevision), List.of(finalizedEvent()));
+
+        ChartRevisionExportResponse first = service.exportChart(10L, "F001");
+
+        assertThat(first.getRevisions().get(0).getSnapshotManifest())
+                .containsEntry("patientSnapshotReference", "orca_patient_cache:101")
+                .containsEntry("acceptanceSnapshotReference", "orca_acceptance_cache:202")
+                .containsEntry("insuranceSnapshotReference", "encounter_insurance_snapshot:303")
+                .containsEntry("diseaseSnapshotReference", "orca_disease_snapshot:404")
+                .containsEntry("prescriptionCandidateSnapshotReference", "orca_medical_candidate:505")
+                .containsEntry("prescriptionOrderId", 606L)
+                .containsEntry("prescriptionOrderRevisionId", 707L)
+                .containsEntry("prescriptionContentHash", "6".repeat(64))
+                .containsEntry("orcaOperationReference", "orca_operation:808")
+                .containsEntry("orcaOperationStatus", "ORCA_ACCEPTED")
+                .containsEntry("orcaTransmissionReference", "orca_transmission:909")
+                .containsEntry("orcaTransmissionHash", "7".repeat(64))
+                .containsEntry("orcaReconciliationStatus", "MATCHED")
+                .containsEntry("rawSensitiveFieldsExcluded", true)
+                .doesNotContainKey("patientName")
+                .doesNotContainKey("rawOrcaBody")
+                .doesNotContainKey("Authorization");
+
+        ChartRevisionModel secondRevision = finalRevision();
+        secondRevision.setSnapshotManifestJson("{\"snapshotVersion\":1,\"source\":\"CHART_FINALIZE\","
+                + "\"patientSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"patientSnapshotReference\":\"orca_patient_cache:101\","
+                + "\"patientSnapshotHash\":\"" + "1".repeat(64) + "\","
+                + "\"prescriptionCandidateSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"prescriptionCandidateSnapshotReference\":\"orca_medical_candidate:999\","
+                + "\"prescriptionCandidateSnapshotHash\":\"" + "9".repeat(64) + "\","
+                + "\"prescriptionOrderId\":606,"
+                + "\"prescriptionOrderRevisionId\":707,"
+                + "\"prescriptionContentHash\":\"" + "8".repeat(64) + "\","
+                + "\"orcaTransmissionSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"orcaOperationReference\":\"orca_operation:808\","
+                + "\"orcaOperationStatus\":\"ORCA_ACCEPTED\","
+                + "\"orcaTransmissionReference\":\"orca_transmission:909\","
+                + "\"orcaTransmissionHash\":\"" + "7".repeat(64) + "\","
+                + "\"orcaReconciliationStatus\":\"MATCHED\","
+                + "\"rawSensitiveFieldsExcluded\":true}");
+        stubExportQueries(List.of(secondRevision), List.of(finalizedEvent()));
+
+        ChartRevisionExportResponse second = service.exportChart(10L, "F001");
+
+        assertThat(second.getExportHash()).matches("[0-9a-f]{64}");
+        assertThat(second.getExportHash()).isNotEqualTo(first.getExportHash());
+    }
+
+    @Test
     void exportChartCsvIncludesHistoryAndNeutralizesSpreadsheetFormulaInjection() {
         ChartRevisionEventModel event = amendedEvent();
         event.setReasonText("=HYPERLINK(\"https://example.test\",\"Authorization: Basic secret\")");
