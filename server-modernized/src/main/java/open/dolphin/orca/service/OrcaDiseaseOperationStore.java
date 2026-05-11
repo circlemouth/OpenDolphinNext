@@ -245,6 +245,14 @@ public class OrcaDiseaseOperationStore {
             String requestXml,
             String responseBody,
             ChartSupportDiseaseModV3Response response) {
+        public OperationCommand {
+            response = copyResponse(response, ChartSupportDiseaseModV3Response.class);
+        }
+
+        @Override
+        public ChartSupportDiseaseModV3Response response() {
+            return copyResponse(response, ChartSupportDiseaseModV3Response.class);
+        }
     }
 
     public record OperationRow(
@@ -255,5 +263,9 @@ public class OrcaDiseaseOperationStore {
             String requestHash,
             String responseHash,
             boolean needsUserReview) {
+    }
+
+    private static <T> T copyResponse(T response, Class<T> type) {
+        return response == null ? null : JSON.convertValue(response, type);
     }
 }

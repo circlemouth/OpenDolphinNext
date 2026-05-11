@@ -2,6 +2,7 @@ package open.dolphin.rest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -91,7 +92,9 @@ class OrcaReportDocumentResourceTest {
         assertEquals("INV-01", command.invoiceNumber());
         assertTrue(command.requestBody().contains("<prescriptionv2req type=\"record\">"));
         assertTrue(command.responseBody().contains("\"Api_Result\": \"0000\""));
-        assertEquals(response, command.response());
+        assertNotSame(response, command.response());
+        assertEquals(response.getDataId(), command.response().getDataId());
+        assertEquals(response.getFormId(), command.response().getFormId());
         assertEquals("NOT_UPLOADED", response.getStorageUploadStatus());
         assertFalse(Boolean.TRUE.equals(response.getReportBinaryAvailable()));
     }

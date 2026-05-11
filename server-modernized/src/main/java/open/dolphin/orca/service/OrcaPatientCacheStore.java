@@ -333,7 +333,7 @@ public class OrcaPatientCacheStore {
                         firstText(patient, "WholeAddress1", "address", "addressSummary"),
                         firstText(patient, "PhoneNumber1", "telephone", "phoneSummary"),
                         classifyBusinessStatus(apiResult, apiResultMessage, patientId != null));
-            } catch (Exception ex) {
+            } catch (JsonProcessingException | IllegalArgumentException ex) {
                 return new PatientResponseSummary(null, null, requestedPatientId, null, null, null, null, null, null,
                         "ORCA_PATIENT_NEEDS_REVIEW");
             }

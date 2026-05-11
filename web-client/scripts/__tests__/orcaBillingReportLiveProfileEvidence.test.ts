@@ -53,6 +53,16 @@ const exactPreflight = (overrides = {}) => ({
   ...overrides,
 });
 
+const expectNoRawEvidenceLeak = (value: unknown) => {
+  const serialized = JSON.stringify(value);
+
+  expect(serialized).not.toMatch(
+    /00002|WholeName|Insurance_Combination_Number|must-not-leak|Authorization|Cookie|JSESSIONID|CSRF|Medical_Uid/,
+  );
+  expect(serialized).not.toMatch(/(?:^|[/"'\s])trace[^/"'\s]*\.zip\b/i);
+  expect(serialized).not.toMatch(/\b(?:har\/|[^/"'\s]+\.har\b|[^/"'\s]+\.(?:webm|mp4|png|jpe?g)\b)/i);
+};
+
 describe('ORCA billing/report live profile dry-run evidence', () => {
   it('requires dry-run sanitized mode and no browser artifacts', () => {
     const parsed = parseBillingReportLiveProfileArgs([
@@ -123,9 +133,7 @@ describe('ORCA billing/report live profile dry-run evidence', () => {
     expect(summary.acceptedEvidenceFields).toContain('serverGeneratedStorageKeyDigest');
     expect(summary.forbiddenEvidenceFields).toContain('rawOrcaBody');
     expect(summary.claimBoundary).toContain('not paid status');
-    expect(JSON.stringify(summary)).not.toMatch(
-      /00002|WholeName|Insurance_Combination_Number|must-not-leak|Authorization|Cookie|JSESSIONID|CSRF|HAR|trace|video|screenshot|Medical_Uid/,
-    );
+    expectNoRawEvidenceLeak(summary);
   });
 
   it('blocks when discovery is only a proposal or preflight is not exact accepted evidence', () => {
@@ -180,7 +188,8 @@ describe('ORCA billing/report live profile dry-run evidence', () => {
     expect(handoff.manualApproval.referenceCapturedRaw).toBe(false);
     expect(handoff.reportTypes).toEqual(['invoicereceipt', 'statement']);
     expect(handoff.acceptedEvidenceFields).toContain('approvalReferenceHash');
-    expect(JSON.stringify(handoff)).not.toMatch(/owner-approved-ticket-123|00002|WholeName|Insurance_Combination_Number|must-not-leak/);
+    expect(JSON.stringify(handoff)).not.toMatch(/owner-approved-ticket-123/);
+    expectNoRawEvidenceLeak(handoff);
   });
 
   it('blocks manual live handoff when the dry-run summary is not ready or raw artifact capture is requested', () => {
@@ -282,7 +291,8 @@ describe('ORCA billing/report live profile dry-run evidence', () => {
     expect(result.liveTrialOrca.executed).toBe(true);
     expect(result.liveTrialOrca.acceptedAsBillingReportEvidence).toBe(true);
     expect(result.claimBoundary).toContain('does not make billing');
-    expect(JSON.stringify(result)).not.toMatch(/owner-approved-ticket-123|00002|WholeName|Insurance_Combination_Number|must-not-leak/);
+    expect(JSON.stringify(result)).not.toMatch(/owner-approved-ticket-123/);
+    expectNoRawEvidenceLeak(result);
   });
 
   it('blocks operator result evidence with raw identifiers or storage upload failure', () => {

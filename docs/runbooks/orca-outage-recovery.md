@@ -6,6 +6,8 @@ ORCA / WebORCA が利用できない、または ORCA 送信結果が不明な�
 
 この runbook は `docs/contracts/orca-connection.md` と `docs/contracts/health-endpoints.md` の current contract に従う。接続先 URL、host、credential、raw ORCA body、患者氏名、住所、電話番号、保険詳細は証跡に残さない。
 
+Production cutover / rollback の最低 stop condition は [production-operations-readiness.md](./production-operations-readiness.md) も併用する。ORCA outage、DB write path degraded、restore 中 read-only、audit write path unavailable のいずれかがある場合は、同 runbook の stop condition に従い release を開始しない。
+
 ## Detection
 
 - App shell に `ORCA連携停止中` が表示された場合、ORCA 停止または readiness 取得失敗として扱う。

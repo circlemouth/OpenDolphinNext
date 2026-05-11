@@ -347,6 +347,14 @@ public class OrcaBillingCacheStore {
             String responseBody,
             ChartSupportIncomeInfoResponse response,
             Instant fetchedAt) {
+        public IncomeInfoCommand {
+            response = copyResponse(response, ChartSupportIncomeInfoResponse.class);
+        }
+
+        @Override
+        public ChartSupportIncomeInfoResponse response() {
+            return copyResponse(response, ChartSupportIncomeInfoResponse.class);
+        }
     }
 
     public record ReportSnapshotCommand(
@@ -358,6 +366,14 @@ public class OrcaBillingCacheStore {
             String responseBody,
             OrcaReportResponse response,
             Instant fetchedAt) {
+        public ReportSnapshotCommand {
+            response = copyResponse(response, OrcaReportResponse.class);
+        }
+
+        @Override
+        public OrcaReportResponse response() {
+            return copyResponse(response, OrcaReportResponse.class);
+        }
     }
 
     public record ReportSnapshotReceipt(
@@ -368,5 +384,9 @@ public class OrcaBillingCacheStore {
             String serverStorageDigest,
             String storageUploadStatus,
             boolean uploadEligible) {
+    }
+
+    private static <T> T copyResponse(T response, Class<T> type) {
+        return response == null ? null : JSON.convertValue(response, type);
     }
 }

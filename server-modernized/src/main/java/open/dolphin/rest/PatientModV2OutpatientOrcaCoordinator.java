@@ -206,9 +206,7 @@ record PatientModV2OutpatientOrcaCoordinator(
         if (model == null) {
             throw new IllegalStateException("Local patient record not found after import. patientId=" + patientId);
         }
-        if (details != null) {
-            details.put("localSynced", Boolean.TRUE);
-        }
+        details.put("localSynced", Boolean.TRUE);
         return model;
     }
 

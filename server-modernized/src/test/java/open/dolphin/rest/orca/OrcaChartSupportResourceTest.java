@@ -1,6 +1,7 @@
 package open.dolphin.rest.orca;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -294,7 +295,9 @@ class OrcaChartSupportResourceTest {
         assertEquals("2026-03-22", command.baseDate());
         assertTrue(command.requestBody().contains("<incomeinfv2req type=\"record\">"));
         assertTrue(command.responseBody().contains("<Api_Result type=\"string\">0000</Api_Result>"));
-        assertEquals(response, command.response());
+        assertNotSame(response, command.response());
+        assertEquals(response.getApiResult(), command.response().getApiResult());
+        assertEquals(response.getEntries().size(), command.response().getEntries().size());
     }
 
     @Test

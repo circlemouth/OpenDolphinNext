@@ -79,23 +79,23 @@ public final class OrcaApiResult {
     }
 
     public List<String> warnings() {
-        return warnings;
+        return List.copyOf(warnings);
     }
 
     public List<String> errors() {
-        return errors;
+        return List.copyOf(errors);
     }
 
     public List<String> unmatched() {
-        return unmatched;
+        return List.copyOf(unmatched);
     }
 
     public List<String> orcaOnly() {
-        return orcaOnly;
+        return List.copyOf(orcaOnly);
     }
 
     public List<String> renumberedIdentifiers() {
-        return renumberedIdentifiers;
+        return List.copyOf(renumberedIdentifiers);
     }
 
     public OperationStatus operationStatus() {
@@ -252,27 +252,27 @@ public final class OrcaApiResult {
         }
 
         public Builder warnings(List<String> warnings) {
-            this.warnings = warnings;
+            this.warnings = copy(warnings);
             return this;
         }
 
         public Builder errors(List<String> errors) {
-            this.errors = errors;
+            this.errors = copy(errors);
             return this;
         }
 
         public Builder unmatched(List<String> unmatched) {
-            this.unmatched = unmatched;
+            this.unmatched = copy(unmatched);
             return this;
         }
 
         public Builder orcaOnly(List<String> orcaOnly) {
-            this.orcaOnly = orcaOnly;
+            this.orcaOnly = copy(orcaOnly);
             return this;
         }
 
         public Builder renumberedIdentifiers(List<String> renumberedIdentifiers) {
-            this.renumberedIdentifiers = renumberedIdentifiers;
+            this.renumberedIdentifiers = copy(renumberedIdentifiers);
             return this;
         }
 

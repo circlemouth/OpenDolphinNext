@@ -30,6 +30,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] ORCA送信成功、失敗、警告、不一致、他端末使用中、患者不在、通信失敗、証明書異常が区別され、UIと監査ログに残る。
 - [ ] 患者取り違え防止、重大操作確認、警告表示、エラー表示が DADSルールに基づいて実装される。
 - [ ] 実ORCA接続試験、ORCAモック試験、ユニット試験、統合試験、E2E試験、監査ログ試験、UI安全試験がCIで確認できる。
+  - [x] 2026-05-11T14:17Z: Worker F branch で `web-client npm run ci` と `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` を再実行し、web guard/typecheck/unit/build と Maven unit/integration/static-analysis が通過した。live Trial mutation / DADS 全観点 / runtime-ready は親項目の未完了範囲として維持する。
 
 ## 2. 正本境界の再定義
 
@@ -265,6 +266,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 ## 12. 監査ログ・真正性
 
 - [ ] ログイン、ログアウト、患者閲覧、診療録作成/保存/確定/訂正/追記/取消、文書添付/削除、処方作成/確定/変更/中止/取消/再発行、ORCA患者/受付/保険/病名取得、ORCA病名/診療行為送信、ORCA会計/帳票取得、ORCA送信失敗/再送/取消、エラー、権限拒否を記録する。
+  - [x] 2026-05-11T14:51Z: `docs/contracts/audit-log.md` に Required Event Coverage matrix を追加し、auth / authz / admin / patient read / chart / prescription / attachment / protected export / ORCA read-mutation-send-billing-report / failure / hash-chain / restore gate の最低 event label を固定した。`check-audit-append-only.sh` と `RepoGuardScriptsTest` が matrix 欠落を release blocker にする。
+  - [x] 2026-05-11T15:06Z: `docs/contracts/audit-event-coverage-inventory.md` を追加し、各 required label の owner / coverage status / next proof を棚卸しした。`check-audit-append-only.sh` は inventory 欠落や label 欠落も release blocker にする。
 - [ ] 監査ログは操作者、ロール、対象患者、ORCA患者番号、診療録、処方、ORCA操作、時刻、操作種別、変更前後要約、端末情報、IP/user-agent hash、request/trace ID、ORCA連携結果、警告/エラー/不一致要約、event hash、previous hash を保存する。
 - [x] 監査ログは append-only とし、削除/更新 API を作らない。
 - [ ] 一般ユーザーと管理者のいずれも監査ログ改ざんができない設計にする。
@@ -303,6 +306,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] UI/a11y でラベル、プレースホルダー説明代用禁止、重大操作確認、重要警告初期表示、disabled 理由、キーボード操作、フォーカス、コントラスト、ボタン配置、患者ヘッダー視認性をテストする。
 - [ ] セキュリティテストで bundle への ORCA URL/Basic/証明書情報混入、生ORCAパス到達、ログ/監査ログ credential 混入、患者情報過剰エラー、権限なし操作を拒否できることを確認する。
   - [x] 2026-05-10T20:42Z: `verify:no-public-secrets`、`verify:no-direct-orca-proxy-config`、`verify:no-blocked-orca-route-strings`、`check-audit-append-only.sh`、`check-sensitive-evidence-redaction.sh`、`RepoGuardScriptsTest` で bundle/test output/snapshot/audit guard の credential/PHI leakage regression を固定した。権限なし操作の full authorization matrix は各 owning worker の server resource tests と release gate で継続確認する。
+  - [x] 2026-05-11T10:12Z: reviewer submission packet validator が copied report / QA / evidence 内の `error-context.md`、trace zip、video、screenshot、raw body / raw JSON / raw text 参照を拒否するよう強化し、sanitized evidence から raw browser diagnostic artifact へ誘導できないことを focused test で固定した。
+  - [x] 2026-05-11T11:45Z: billing/report live profile の sanitized evidence test を、safe correlation `traceId` は許容しつつ trace zip / HAR / video / screenshot / raw `Medical_Uid` / raw patient-insurance field を拒否する形へ修正し、`npm run ci` が security/web gate を通過することを確認した。
 
 ## 16. 運用・設定
 
@@ -374,7 +379,9 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 診療録 PDF 出力と期間エクスポートができる。
 - [x] 監査ログ hash chain 検証ができる。
 - [ ] 実ORCA接続試験、ORCAモック試験、DADS観点 UI テストが完了している。
+  - [x] 2026-05-11T14:17Z: full release gate refresh として `web-client npm run ci`、Maven static-analysis verify は通過。実ORCA mutation / exact preflight / runtime-ready の残 blocker は `no_trial_native_mutation_ready_candidate` として維持する。
 - [ ] 本番運用前に ORCA接続情報、証明書期限監視、DB/監査/添付バックアップ、復元試験、障害時/再送/照合手順、患者取り違え防止 UI、ロール権限、監査ログ閲覧権限を確認する。
+  - [x] 2026-05-11T13:58Z: `docs/runbooks/production-operations-readiness.md` と `check-production-operations-runbook.sh` を追加し、pair release、deployment secret store、sanitized readiness、監査書込経路、object storage profile、backup/restore/hash verification、rollback、sanitized evidence policy を本番運用前 stop condition として固定した。actual live mutation と operator sign-off は未完了のため親項目は未完了のまま維持する。
 
 ## 20. 実装優先順位
 
@@ -419,4 +426,5 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] PDF・印刷・期間エクスポートを完成させる。
 - [ ] バックアップ・復元手順を整備する。
 - [ ] 実ORCA接続試験を完了する。
-- [ ] 本番運用手順書を整備する。
+- [x] 本番運用手順書を整備する。
+  - [x] 2026-05-11T13:58Z: `production-operations-readiness.md` を release validation / cutover / outage recovery / backup-restore / reviewer packet と相互参照し、`check-production-operations-runbook.sh` と `RepoGuardScriptsTest` で runbook drift を検出する。

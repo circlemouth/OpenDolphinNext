@@ -99,7 +99,7 @@ public class ChartRevisionExportResponse {
     }
 
     public List<ChartRevisionExportRevision> getRevisions() {
-        return revisions;
+        return new ArrayList<>(revisions);
     }
 
     public void setRevisions(List<ChartRevisionExportRevision> revisions) {
@@ -107,7 +107,7 @@ public class ChartRevisionExportResponse {
     }
 
     public List<ChartRevisionExportEvent> getEvents() {
-        return events;
+        return new ArrayList<>(events);
     }
 
     public void setEvents(List<ChartRevisionExportEvent> events) {

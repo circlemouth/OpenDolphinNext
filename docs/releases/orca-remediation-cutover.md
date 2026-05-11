@@ -3,6 +3,8 @@
 最終更新: 2026-04-24
 用途: Worker G の post-merge verification 後に、ORCA remediation 一式を本番相当へ切り替えるための cutover / rollback 正本
 
+Production operations の最低 stop condition は [production-operations-readiness.md](../runbooks/production-operations-readiness.md) を併用する。cutover は release validation と production operations readiness の両方が current RUN_ID で説明できる場合だけ開始する。
+
 ## 1. 前提
 - `master` に Worker G の最終修正が入っていること。
 - `docs/runbooks/release-validation.md` の必須コマンドが成功していること。

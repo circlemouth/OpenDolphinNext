@@ -23,6 +23,7 @@ class RepoGuardScriptsIT {
         assertScriptSucceeds(repoRoot, "server-modernized/tools/ci/check-persistence-entities.sh");
         assertScriptSucceeds(repoRoot, "server-modernized/tools/ci/check-no-generated-artifacts.sh");
         assertScriptSucceeds(repoRoot, "server-modernized/tools/ci/check-backup-restore-runbook.sh");
+        assertScriptSucceeds(repoRoot, "server-modernized/tools/ci/check-production-operations-runbook.sh");
         assertScriptSucceeds(repoRoot, "server-modernized/tools/ci/check-live-orca-trial-harness.sh");
         assertScriptSucceeds(repoRoot, "server-modernized/tools/ci/check-sensitive-evidence-redaction.sh");
     }

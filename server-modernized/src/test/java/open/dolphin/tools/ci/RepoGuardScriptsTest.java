@@ -105,6 +105,32 @@ class RepoGuardScriptsTest {
     }
 
     @Test
+    void checkAuditAppendOnlyFailsWhenRequiredCoverageMatrixIsMissing() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-audit-coverage-ng");
+        createAuditAppendOnlyFixture(repoRoot, false);
+        Files.writeString(repoRoot.resolve("docs/contracts/audit-log.md"), "# Audit Log Contract\n");
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-audit-append-only.sh", repoRoot);
+
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.output()).contains("Required Event Coverage");
+    }
+
+    @Test
+    void checkAuditAppendOnlyFailsWhenCoverageInventoryIsMissingLabel() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-audit-inventory-ng");
+        createAuditAppendOnlyFixture(repoRoot, false);
+        Files.writeString(
+                repoRoot.resolve("docs/contracts/audit-event-coverage-inventory.md"),
+                "# Audit Event Coverage Inventory\n\nCoverage status\nAUTH_LOGIN\n");
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-audit-append-only.sh", repoRoot);
+
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.output()).contains("audit event coverage inventory missing required label");
+    }
+
+    @Test
     void checkBackupRestoreRunbookPassesForCompleteFixture() throws Exception {
         Path repoRoot = Files.createTempDirectory("repo-guard-backup-restore-ok");
         createBackupRestoreFixture(repoRoot, true);
@@ -123,6 +149,27 @@ class RepoGuardScriptsTest {
 
         assertThat(result.exitCode()).isNotZero();
         assertThat(result.output()).contains("chart/prescription content hash verification gate");
+    }
+
+    @Test
+    void checkProductionOperationsRunbookPassesForCompleteFixture() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-production-ops-ok");
+        createProductionOperationsFixture(repoRoot, true);
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-production-operations-runbook.sh", repoRoot);
+
+        assertThat(result.exitCode()).isZero();
+    }
+
+    @Test
+    void checkProductionOperationsRunbookFailsWhenSecretStoreBoundaryIsMissing() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-production-ops-ng");
+        createProductionOperationsFixture(repoRoot, false);
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-production-operations-runbook.sh", repoRoot);
+
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.output()).contains("secret-store-only credential boundary");
     }
 
     @Test
@@ -240,6 +287,7 @@ class RepoGuardScriptsTest {
         Path auditDir = repoRoot.resolve("server-modernized/src/main/java/open/dolphin/security/audit");
         Files.createDirectories(auditDir);
         Files.createDirectories(repoRoot.resolve("domain/src/main/java"));
+        Files.createDirectories(repoRoot.resolve("docs/contracts"));
         Files.writeString(
                 auditDir.resolve("AuthoritativeAuditRepository.java"),
                 """
@@ -273,6 +321,71 @@ class RepoGuardScriptsTest {
                     public record VerificationResult() {
                     }
                 }
+                """);
+        Files.writeString(
+                repoRoot.resolve("docs/contracts/audit-log.md"),
+                """
+                # Audit Log Contract
+
+                ## Required Event Coverage
+
+                AUTH_LOGIN
+                AUTH_LOGOUT
+                AUTH_FAILURE
+                AUTHZ_DENIED
+                ADMIN_ROLE_CHANGE
+                ADMIN_ACCOUNT_STATE_CHANGE
+                PATIENT_READ
+                CHART_SAVE
+                CHART_FINALIZE
+                CHART_REVISION
+                PRESCRIPTION_FINALIZE
+                PRESCRIPTION_CHANGE
+                DOCUMENT_ATTACHMENT
+                PROTECTED_EXPORT
+                ORCA_PATIENT_READ
+                ORCA_PATIENT_MUTATION
+                ORCA_ACCEPTANCE_READ
+                ORCA_INSURANCE_READ
+                ORCA_DISEASE_MUTATION
+                ORCA_MEDICAL_SEND
+                ORCA_BILLING_READ
+                ORCA_REPORT_CREATE
+                ORCA_SEND_FAILURE
+                AUDIT_CHAIN_VERIFY
+                BACKUP_RESTORE_VERIFY
+                """);
+        Files.writeString(
+                repoRoot.resolve("docs/contracts/audit-event-coverage-inventory.md"),
+                """
+                # Audit Event Coverage Inventory
+
+                Coverage status
+                AUTH_LOGIN
+                AUTH_LOGOUT
+                AUTH_FAILURE
+                AUTHZ_DENIED
+                ADMIN_ROLE_CHANGE
+                ADMIN_ACCOUNT_STATE_CHANGE
+                PATIENT_READ
+                CHART_SAVE
+                CHART_FINALIZE
+                CHART_REVISION
+                PRESCRIPTION_FINALIZE
+                PRESCRIPTION_CHANGE
+                DOCUMENT_ATTACHMENT
+                PROTECTED_EXPORT
+                ORCA_PATIENT_READ
+                ORCA_PATIENT_MUTATION
+                ORCA_ACCEPTANCE_READ
+                ORCA_INSURANCE_READ
+                ORCA_DISEASE_MUTATION
+                ORCA_MEDICAL_SEND
+                ORCA_BILLING_READ
+                ORCA_REPORT_CREATE
+                ORCA_SEND_FAILURE
+                AUDIT_CHAIN_VERIFY
+                BACKUP_RESTORE_VERIFY
                 """);
         if (includeForbiddenMutation) {
             Files.writeString(
@@ -316,6 +429,52 @@ class RepoGuardScriptsTest {
         Files.writeString(
                 repoRoot.resolve("docs/contracts/audit-log.md"),
                 "[backup](../runbooks/backup-restore-hash-verification.md)\n");
+    }
+
+    private static void createProductionOperationsFixture(Path repoRoot, boolean includeSecretStoreBoundary)
+            throws IOException {
+        Files.createDirectories(repoRoot.resolve("docs/runbooks"));
+        Files.createDirectories(repoRoot.resolve("docs/releases"));
+        String secretStoreLine = includeSecretStoreBoundary
+                ? "deployment secret store supplies production credentials.\n"
+                : "";
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/production-operations-readiness.md"),
+                """
+                # Production Operations Readiness Runbook
+
+                web-client and server-modernized pair release
+                deployed as a pair
+                %s
+                /api/health/readiness
+                auditLog.status=UP
+                audit logging is unavailable
+                object-storage-free Trial profile
+                AuditChainVerifier.verifyAll()
+                content hashes
+                ORCA_SENT ORCA_CONFIRMED ORCA_UNKNOWN ORCA_FAILED CORRECTION_REQUIRED
+                raw ORCA body and raw XML
+                Basic/Authorization/Cookie/JSESSIONID/CSRF
+                patient name, address, phone number
+                HAR, trace, video, screenshot
+                check-production-operations-runbook.sh
+                """
+                        .formatted(secretStoreLine));
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/release-validation.md"),
+                "[production](./production-operations-readiness.md)\ncheck-production-operations-runbook.sh\n");
+        Files.writeString(
+                repoRoot.resolve("docs/releases/orca-remediation-cutover.md"),
+                "[Production Operations Readiness](../runbooks/production-operations-readiness.md)\n");
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/orca-outage-recovery.md"),
+                "[Production Operations Readiness](./production-operations-readiness.md)\n");
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/backup-restore-hash-verification.md"),
+                "[Production Operations Readiness](./production-operations-readiness.md)\n");
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/reviewer-submission-packet.md"),
+                "[Production Operations Readiness](./production-operations-readiness.md)\n");
     }
 
     private static void createLiveOrcaTrialHarnessFixture(Path repoRoot, boolean includeSanitizedFlag) throws IOException {
