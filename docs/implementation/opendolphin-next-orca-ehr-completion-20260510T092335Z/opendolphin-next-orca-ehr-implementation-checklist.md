@@ -179,6 +179,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] chart revision JSON/CSV export は診療録 revision に紐づく処方指示 event history を redaction / summary allowlist 付きで含め、処方 event / content hash / allowlist 済み summary を canonical `exportHash` material に含める。
   - [x] chart revision JSON/CSV export は診療録 revision に紐づく ORCA operation/transmission/reconciliation history を施設境界で読み取り、status、request/response hash、latest transmission、attempt、review flag、allowlist 済み summary だけを canonical `exportHash` material に含める。idempotency key、raw ORCA body、credential、患者詳細、request/response body は返さない。
   - [x] reporting PDF payload は処方指示 event history と ORCA operation/transmission/reconciliation history を summary section に allowlist/redaction 付きで表示できる。raw ORCA body、credential、患者名、保険詳細、idempotency key、request/response body、任意 nested JSON は帳票へ出さない。
+  - [x] `GET /api/charts/{chartId}/revisions/export.pdf` を追加し、server-derived JSON export projection と患者 master reference から reporting payload を組み立て、診療録 revision / 処方指示 / ORCA operation-transmission-reconciliation history、`exportHash`、件数を PDF summary に含める。client-provided reporting payload は採用せず、患者 master 欠落・施設不一致は 409 fail-closed とする。
 
 ## 8. 処方指示正本実装
 

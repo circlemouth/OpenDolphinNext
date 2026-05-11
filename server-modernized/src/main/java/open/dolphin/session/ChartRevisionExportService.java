@@ -10,9 +10,11 @@ import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
@@ -23,6 +25,15 @@ import java.util.regex.Pattern;
 import open.dolphin.infomodel.ChartDocumentModel;
 import open.dolphin.infomodel.ChartRevisionEventModel;
 import open.dolphin.infomodel.ChartRevisionModel;
+import open.dolphin.infomodel.PatientModel;
+import open.dolphin.reporting.ReportingEngine;
+import open.dolphin.reporting.ReportingResult;
+import open.dolphin.reporting.api.ReportingChartRevisionEventPayload;
+import open.dolphin.reporting.api.ReportingOrcaEventPayload;
+import open.dolphin.reporting.api.ReportingPatientPayload;
+import open.dolphin.reporting.api.ReportingPayload;
+import open.dolphin.reporting.api.ReportingPrescriptionEventPayload;
+import open.dolphin.reporting.api.ReportingSummaryItemPayload;
 import open.dolphin.rest.AbstractResource;
 import open.dolphin.rest.dto.chart.ChartRevisionExportEvent;
 import open.dolphin.rest.dto.chart.ChartRevisionExportOrcaEvent;
@@ -135,11 +146,52 @@ public class ChartRevisionExportService {
     private static final Pattern COOKIE_LINE = Pattern.compile("(?i)cookie\\s*:\\s*[^\\r\\n]+");
     private static final Pattern RAW_XML = Pattern.compile("(?is)<\\?xml.*");
     private static final Pattern SOAP_BODY = Pattern.compile("(?is)<soap[^>]*>.*?</soap[^>]*>");
+    private final ReportingEngine reportingEngine = new ReportingEngine();
 
     @PersistenceContext(unitName = "opendolphinPU")
     private EntityManager em;
 
     public ChartRevisionExportResponse exportChart(long chartId, String facilityId) {
+        ChartDocumentModel document = loadChartDocument(chartId, facilityId);
+        return exportChart(document);
+    }
+
+    public ReportingResult exportChartPdf(long chartId, String facilityId) {
+        try {
+            return reportingEngine.render(exportChartReportingPayload(chartId, facilityId));
+        } catch (IOException ex) {
+            throw restError(Response.Status.INTERNAL_SERVER_ERROR, "chart_revision_export_pdf_failed",
+                    "Chart export PDF could not be rendered", Map.of("chartId", chartId));
+        }
+    }
+
+    ReportingPayload exportChartReportingPayload(long chartId, String facilityId) {
+        ChartDocumentModel document = loadChartDocument(chartId, facilityId);
+        ChartRevisionExportResponse export = exportChart(document);
+        ChartRevisionExportRevision currentRevision = currentRevision(export);
+        PatientModel patient = loadPatient(document);
+
+        ReportingPayload payload = new ReportingPayload();
+        payload.setTemplate("patient_summary");
+        payload.setLocale("ja-JP");
+        payload.setDocumentTitle(firstNonBlank(currentRevision.getTitle(), "Chart revision export"));
+        payload.setPatient(reportingPatient(patient, document));
+        payload.setAttendingDoctor(requiredText(currentRevision.getPhysicianCode(), "currentRevision.physicianCode",
+                document.getId()));
+        payload.setEncounterDate(requiredText(currentRevision.getEncounterDate(), "currentRevision.encounterDate",
+                document.getId()));
+        payload.setGeneratedAt(ZonedDateTime.now().toString());
+        payload.setOutputFileName("chart-revisions-" + chartId + ".pdf");
+        payload.setSummaryItems(reportSummaryItems(export));
+        payload.setChartRevisionEvents(export.getEvents().stream().map(this::toReportingEvent).toList());
+        payload.setPrescriptionEvents(export.getPrescriptionEvents().stream()
+                .map(this::toReportingPrescriptionEvent)
+                .toList());
+        payload.setOrcaEvents(export.getOrcaEvents().stream().map(this::toReportingOrcaEvent).toList());
+        return payload;
+    }
+
+    private ChartDocumentModel loadChartDocument(long chartId, String facilityId) {
         ChartDocumentModel document = em.find(ChartDocumentModel.class, chartId);
         if (document == null) {
             throw restError(Response.Status.NOT_FOUND, NOT_FOUND, "Chart document was not found",
@@ -150,7 +202,11 @@ public class ChartRevisionExportService {
                     "Chart export is not available for this facility",
                     Map.of("chartId", chartId));
         }
+        return document;
+    }
 
+    private ChartRevisionExportResponse exportChart(ChartDocumentModel document) {
+        Long chartId = document.getId();
         List<ChartRevisionModel> revisions = em.createQuery(
                         "select r from ChartRevisionModel r where r.chartDocumentId = :chartId "
                                 + "order by r.revisionNumber asc, r.id asc",
@@ -183,6 +239,144 @@ public class ChartRevisionExportService {
         response.setEventCount(response.getEvents().size());
         response.setExportHash(sha256(writeJson(exportHashMaterial(response))));
         return response;
+    }
+
+    private PatientModel loadPatient(ChartDocumentModel document) {
+        if (document.getPatientId() == null) {
+            throw restError(Response.Status.CONFLICT, EXPORT_INCONSISTENT,
+                    "Chart export patient reference is inconsistent", Map.of("chartId", document.getId()));
+        }
+        PatientModel patient = em.find(PatientModel.class, document.getPatientId());
+        if (patient == null || patient.getFacilityId() == null
+                || !patient.getFacilityId().equals(document.getFacilityId())) {
+            throw restError(Response.Status.CONFLICT, EXPORT_INCONSISTENT,
+                    "Chart export patient reference is inconsistent", Map.of("chartId", document.getId()));
+        }
+        return patient;
+    }
+
+    private ChartRevisionExportRevision currentRevision(ChartRevisionExportResponse export) {
+        Long currentRevisionId = export.getCurrentRevisionId();
+        if (currentRevisionId == null) {
+            throw restError(Response.Status.CONFLICT, EXPORT_INCONSISTENT,
+                    "Chart revision export is inconsistent", Map.of("chartId", export.getChartId()));
+        }
+        return export.getRevisions().stream()
+                .filter(revision -> currentRevisionId.equals(revision.getRevisionId()))
+                .findFirst()
+                .orElseThrow(() -> restError(Response.Status.CONFLICT, EXPORT_INCONSISTENT,
+                        "Chart revision export is inconsistent",
+                        Map.of("chartId", export.getChartId(), "currentRevisionId", currentRevisionId)));
+    }
+
+    private ReportingPatientPayload reportingPatient(PatientModel patient, ChartDocumentModel document) {
+        ReportingPatientPayload payload = new ReportingPatientPayload();
+        payload.setFullName(requiredText(patient.getFullName(), "patient.fullName", document.getId()));
+        if (patient.getBirthday() == null) {
+            throw restError(Response.Status.CONFLICT, EXPORT_INCONSISTENT,
+                    "Chart export patient reference is inconsistent", Map.of("chartId", document.getId()));
+        }
+        payload.setBirthDate(patient.getBirthday().toString());
+        return payload;
+    }
+
+    private List<ReportingSummaryItemPayload> reportSummaryItems(ChartRevisionExportResponse export) {
+        List<ReportingSummaryItemPayload> items = new ArrayList<>();
+        items.add(reportSummaryItem("Export hash", "Export hash", export.getExportHash()));
+        items.add(reportSummaryItem("Export schema version", "Export schema version",
+                String.valueOf(export.getExportSchemaVersion())));
+        items.add(reportSummaryItem("Current revision", "Current revision",
+                String.valueOf(export.getCurrentRevisionNumber())));
+        items.add(reportSummaryItem("Current status", "Current status", export.getCurrentRevisionStatus()));
+        items.add(reportSummaryItem("Revision count", "Revision count", String.valueOf(export.getRevisionCount())));
+        items.add(reportSummaryItem("Chart event count", "Chart event count", String.valueOf(export.getEventCount())));
+        items.add(reportSummaryItem("Prescription event count", "Prescription event count",
+                String.valueOf(export.getPrescriptionEvents().size())));
+        items.add(reportSummaryItem("ORCA event count", "ORCA event count",
+                String.valueOf(export.getOrcaEvents().size())));
+        return items;
+    }
+
+    private ReportingSummaryItemPayload reportSummaryItem(String label, String labelEn, String value) {
+        ReportingSummaryItemPayload item = new ReportingSummaryItemPayload();
+        item.setLabel(label);
+        item.setLabelEn(labelEn);
+        item.setValue(value != null && !value.isBlank() ? value : "unavailable");
+        return item;
+    }
+
+    private ReportingChartRevisionEventPayload toReportingEvent(ChartRevisionExportEvent event) {
+        ReportingChartRevisionEventPayload payload = new ReportingChartRevisionEventPayload();
+        payload.setEventId(event.getEventId());
+        payload.setChartRevisionId(event.getChartRevisionId());
+        payload.setPreviousRevisionId(event.getPreviousRevisionId());
+        payload.setNewRevisionId(event.getNewRevisionId());
+        payload.setEventType(event.getEventType());
+        payload.setActorUserId(event.getActorUserId());
+        payload.setOccurredAt(event.getOccurredAt());
+        payload.setReasonCode(event.getReasonCode());
+        payload.setReasonText(event.getReasonText());
+        payload.setContentHash(event.getEventHash());
+        payload.setBeforeSummary(event.getBeforeSummary());
+        payload.setAfterSummary(event.getAfterSummary());
+        return payload;
+    }
+
+    private ReportingPrescriptionEventPayload toReportingPrescriptionEvent(ChartRevisionExportPrescriptionEvent event) {
+        ReportingPrescriptionEventPayload payload = new ReportingPrescriptionEventPayload();
+        payload.setPrescriptionOrderId(event.getPrescriptionOrderId());
+        payload.setPrescriptionRevisionId(event.getPrescriptionRevisionId());
+        payload.setChartRevisionId(event.getChartRevisionId());
+        payload.setRevisionNumber(event.getRevisionNumber());
+        payload.setStatus(event.getStatus());
+        payload.setContentHash(event.getContentHash());
+        payload.setEventId(event.getEventId());
+        payload.setEventType(event.getEventType());
+        payload.setActorUserId(event.getActorUserId());
+        payload.setOccurredAt(event.getOccurredAt());
+        payload.setReasonCode(event.getReasonCode());
+        payload.setReasonText(event.getReasonText());
+        payload.setBeforeSummary(event.getBeforeSummary());
+        payload.setAfterSummary(event.getAfterSummary());
+        payload.setEventHash(event.getEventHash());
+        return payload;
+    }
+
+    private ReportingOrcaEventPayload toReportingOrcaEvent(ChartRevisionExportOrcaEvent event) {
+        ReportingOrcaEventPayload payload = new ReportingOrcaEventPayload();
+        payload.setOrcaOperationId(event.getOrcaOperationId());
+        payload.setChartRevisionId(event.getChartRevisionId());
+        payload.setOperationScope(event.getOperationScope());
+        payload.setOperationType(event.getOperationType());
+        payload.setSourceApi(event.getSourceApi());
+        payload.setOperationStatus(event.getOperationStatus());
+        payload.setRequestedBy(event.getRequestedBy());
+        payload.setRequestedAt(event.getRequestedAt());
+        payload.setCompletedAt(event.getCompletedAt());
+        payload.setRequestHash(event.getRequestHash());
+        payload.setResponseHash(event.getResponseHash());
+        payload.setRetryCount(event.getRetryCount());
+        payload.setNeedsUserReview(event.getNeedsUserReview());
+        payload.setLatestTransmissionId(event.getLatestTransmissionId());
+        payload.setTransmissionStatus(event.getTransmissionStatus());
+        payload.setTransportStatus(event.getTransportStatus());
+        payload.setAttemptNumber(event.getAttemptNumber());
+        payload.setTransmissionStartedAt(event.getTransmissionStartedAt());
+        payload.setTransmissionCompletedAt(event.getTransmissionCompletedAt());
+        payload.setTransmissionRequestHash(event.getTransmissionRequestHash());
+        payload.setTransmissionResponseHash(event.getTransmissionResponseHash());
+        payload.setReconciliationStatus(event.getReconciliationStatus());
+        payload.setOperationSummary(event.getOperationSummary());
+        payload.setTransmissionSummary(event.getTransmissionSummary());
+        return payload;
+    }
+
+    private String requiredText(String value, String field, long chartId) {
+        if (value == null || value.isBlank()) {
+            throw restError(Response.Status.CONFLICT, EXPORT_INCONSISTENT,
+                    "Chart revision export is inconsistent", Map.of("chartId", chartId, "field", field));
+        }
+        return value;
     }
 
     public String exportChartCsv(long chartId, String facilityId) {

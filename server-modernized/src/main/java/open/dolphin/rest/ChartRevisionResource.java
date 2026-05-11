@@ -12,6 +12,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import open.dolphin.reporting.ReportingResult;
 import open.dolphin.rest.dto.chart.ChartRevisionChangeRequest;
 import open.dolphin.rest.dto.chart.ChartRevisionChangeResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionExportResponse;
@@ -54,6 +55,21 @@ public class ChartRevisionResource extends AbstractOrcaRestResource {
         String csv = exportService.exportChartCsv(chartId, facilityId);
         return Response.ok(csv, "text/csv")
                 .header("Content-Disposition", "attachment; filename=\"chart-revisions-" + chartId + ".csv\"")
+                .build();
+    }
+
+    @GET
+    @Path("/{chartId}/revisions/export.pdf")
+    @Produces("application/pdf")
+    @Transactional
+    public Response exportChartPdf(
+            @Context HttpServletRequest request,
+            @PathParam("chartId") long chartId) {
+        requireRemoteUser(request);
+        String facilityId = requireFacilityId(request);
+        ReportingResult pdf = exportService.exportChartPdf(chartId, facilityId);
+        return Response.ok(pdf.getData(), "application/pdf")
+                .header("Content-Disposition", "attachment; filename=\"" + pdf.getFileName() + "\"")
                 .build();
     }
 

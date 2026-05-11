@@ -28,7 +28,7 @@ Checklist count when parallel board was created:
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A01 patient/acceptance/insurance boundary plus live readiness gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
-| B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T120549Z | this commit | - |
+| B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T123645Z | this commit | - |
 | C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C01 prescription authority, medical candidate send-prep, disease handoff gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D01 live ORCA Trial execution, adapter contract, retry/idempotency evidence | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | E | `codex/orca-ehr-r2-worker-e-safety-ui` | R2-E01 medical safety UI, DADS/a11y, patient header/modal rollout | Active | 20260511T063714Z | `1218aa1ef` base | - |
@@ -160,6 +160,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T123645Z | B | B-05 follow-up | 7/14 direct chart export PDF endpoint and reporting payload mapper | this commit | `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest`, reporting/PDF focused tests, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | Continue B-05 with period/print export parity if a separate export surface remains after integration |
 | 20260511T120549Z | B | B-05 follow-up | 7/14 reporting PDF payload parity for prescription and ORCA history | this commit | `ReportingChartRevisionEventTest`, `PdfSigningServiceTest`, `ChartRevisionExportServiceTest`, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | Continue B-05 by wiring an explicit chart export to reporting payload mapper if/when server resource exposes a direct PDF export endpoint |
 | 20260511T114527Z | B | B-05/B-08 follow-up | 7/14 chart revision export ORCA operation/transmission/reconciliation history integration | this commit | `ChartRevisionExportServiceTest`, reporting/PDF focused tests, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | Continue B-05 with PDF/reporting surface parity for prescription/ORCA history if reporting contract exposes payload slots |
 | 20260511T111120Z | B | B-05/B-08 follow-up | 7/14 chart revision export prescription event history integration | this commit | `ChartRevisionExportServiceTest`, `ReportingChartRevisionEventTest`, `PdfSigningServiceTest`, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | Continue B-05/B-08 with ORCA operation/transmission history export projection after D-owned stable read contract is available |

@@ -12,6 +12,9 @@ import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import jakarta.ws.rs.WebApplicationException;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -21,6 +24,9 @@ import open.dolphin.infomodel.ChartRevisionEventModel;
 import open.dolphin.infomodel.ChartRevisionEventType;
 import open.dolphin.infomodel.ChartRevisionModel;
 import open.dolphin.infomodel.ChartRevisionStatus;
+import open.dolphin.infomodel.PatientModel;
+import open.dolphin.reporting.ReportingResult;
+import open.dolphin.reporting.api.ReportingPayload;
 import open.dolphin.rest.dto.chart.ChartRevisionExportResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +38,7 @@ class ChartRevisionExportServiceTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        System.setProperty("open.dolphin.templates.dir", reportingTemplateRoot().toString());
         service = new ChartRevisionExportService();
         em = mock(EntityManager.class);
         setField(service, "em", em);
@@ -382,6 +389,71 @@ class ChartRevisionExportServiceTest {
     }
 
     @Test
+    void exportChartReportingPayloadUsesServerDerivedPatientAndHistoryProjection() {
+        stubExportQueries(
+                List.of(finalRevision()),
+                List.of(amendedEvent()),
+                List.<Object[]>of(prescriptionEventRow(
+                        401L,
+                        "CHANGE",
+                        "Authorization: Basic secret\n<?xml version=\"1.0\"?><xml>raw</xml>",
+                        "{\"status\":\"FINAL\",\"patientName\":\"Do Not Export\"}",
+                        "{\"eventType\":\"CHANGE\",\"contentHash\":\"" + "8".repeat(64)
+                                + "\",\"rawSensitiveFieldsExcluded\":true}",
+                        "9".repeat(64))),
+                List.<Object[]>of(orcaEventRow(
+                        "ORCA_ACCEPTED",
+                        "HTTP_OK",
+                        "{\"operationStatus\":\"ORCA_ACCEPTED\",\"rawOrcaBody\":\"<xml>raw</xml>\"}",
+                        "{\"apiResult\":\"00\",\"rawSensitiveFieldsExcluded\":true}",
+                        "8".repeat(64))));
+        when(em.find(PatientModel.class, 501L)).thenReturn(patient("F001"));
+
+        ReportingPayload payload = service.exportChartReportingPayload(10L, "F001");
+
+        assertThat(payload.getOutputFileName()).isEqualTo("chart-revisions-10.pdf");
+        assertThat(payload.getPatient().getFullName()).isEqualTo("Test Patient");
+        assertThat(payload.getPatient().getBirthDate()).isEqualTo("1980-04-12");
+        assertThat(payload.getDocumentTitle()).isEqualTo("Progress note");
+        assertThat(payload.getEncounterDate()).isEqualTo("2026-05-10");
+        assertThat(payload.getAttendingDoctor()).isEqualTo("10001");
+        assertThat(payload.getChartRevisionEvents()).hasSize(1);
+        assertThat(payload.getPrescriptionEvents()).hasSize(1);
+        assertThat(payload.getOrcaEvents()).hasSize(1);
+        assertThat(payload.getPrescriptionEvents().get(0).getReasonText())
+                .contains("Authorization: [redacted]")
+                .contains("[redacted-xml-body]")
+                .doesNotContain("Basic secret")
+                .doesNotContain("<xml>");
+        assertThat(payload.getPrescriptionEvents().get(0).getBeforeSummary()).doesNotContainKey("patientName");
+        assertThat(payload.getOrcaEvents().get(0).getOperationSummary()).doesNotContainKey("rawOrcaBody");
+        assertThat(payload.getSummaryItems())
+                .anySatisfy(item -> {
+                    assertThat(item.getLabel()).isEqualTo("Export hash");
+                    assertThat(item.getValue()).matches("[0-9a-f]{64}");
+                })
+                .anySatisfy(item -> {
+                    assertThat(item.getLabel()).isEqualTo("Prescription event count");
+                    assertThat(item.getValue()).isEqualTo("1");
+                })
+                .anySatisfy(item -> {
+                    assertThat(item.getLabel()).isEqualTo("ORCA event count");
+                    assertThat(item.getValue()).isEqualTo("1");
+                });
+    }
+
+    @Test
+    void exportChartPdfRendersServerDerivedPayload() {
+        stubExportQueries(List.of(finalRevision()), List.of(finalizedEvent()));
+        when(em.find(PatientModel.class, 501L)).thenReturn(patient("F001"));
+
+        ReportingResult pdf = service.exportChartPdf(10L, "F001");
+
+        assertThat(pdf.getFileName()).isEqualTo("chart-revisions-10.pdf");
+        assertThat(new String(pdf.getData(), 0, 4)).isEqualTo("%PDF");
+    }
+
+    @Test
     void exportChartCsvIncludesHistoryAndNeutralizesSpreadsheetFormulaInjection() {
         ChartRevisionEventModel event = amendedEvent();
         event.setReasonText("=HYPERLINK(\"https://example.test\",\"Authorization: Basic secret\")");
@@ -429,6 +501,17 @@ class ChartRevisionExportServiceTest {
         assertThat(((WebApplicationException) thrown).getResponse().getStatus()).isEqualTo(409);
     }
 
+    @Test
+    void exportChartReportingPayloadRejectsCrossFacilityPatientReference() {
+        stubExportQueries(List.of(finalRevision()), List.of(finalizedEvent()));
+        when(em.find(PatientModel.class, 501L)).thenReturn(patient("F999"));
+
+        Throwable thrown = catchThrowable(() -> service.exportChartReportingPayload(10L, "F001"));
+
+        assertThat(thrown).isInstanceOf(WebApplicationException.class);
+        assertThat(((WebApplicationException) thrown).getResponse().getStatus()).isEqualTo(409);
+    }
+
     private ChartDocumentModel chartDocument() {
         return chartDocument(21L);
     }
@@ -437,8 +520,20 @@ class ChartRevisionExportServiceTest {
         ChartDocumentModel document = new ChartDocumentModel();
         document.setId(10L);
         document.setFacilityId("F001");
+        document.setKarteId(601L);
+        document.setPatientId(501L);
         document.setCurrentRevisionId(currentRevisionId);
         return document;
+    }
+
+    private PatientModel patient(String facilityId) {
+        PatientModel patient = new PatientModel();
+        patient.setId(501L);
+        patient.setFacilityId(facilityId);
+        patient.setPatientId("P-501");
+        patient.setFullName("Test Patient");
+        patient.setBirthday(LocalDate.parse("1980-04-12"));
+        return patient;
     }
 
     private ChartRevisionModel finalRevision() {
@@ -619,5 +714,13 @@ class ChartRevisionExportServiceTest {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private Path reportingTemplateRoot() {
+        Path rootRelative = Paths.get("server-modernized", "reporting", "templates").toAbsolutePath();
+        if (Files.isDirectory(rootRelative)) {
+            return rootRelative;
+        }
+        return Paths.get("reporting", "templates").toAbsolutePath();
     }
 }
