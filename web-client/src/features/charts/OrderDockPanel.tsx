@@ -527,9 +527,9 @@ export function OrderDockPanel(props: {
         : meta.fallbackUsed
           ? 'フォールバックデータのため操作できません。'
           : undefined;
-  const showEditBlockedNotice = useCallback(() => {
+  const showEditBlockedNotice = useCallback((operationLabel = 'オーダー追加') => {
     if (canEdit) return false;
-    setNotice({ tone: 'error', message: `オーダー追加を停止: ${editDisabledReason ?? '編集不可のため追加できません。'}` });
+    setNotice({ tone: 'error', message: `${operationLabel}を停止: ${editDisabledReason ?? '編集不可のため操作できません。'}` });
     return true;
   }, [canEdit, editDisabledReason]);
 
@@ -1492,14 +1492,17 @@ export function OrderDockPanel(props: {
                           type="button"
                           className="order-dock__bundle-action"
                           aria-label={`${bundleLabel}を編集`}
-                          onClick={(event) =>
+                          onClick={(event) => {
+                            if (showEditBlockedNotice('オーダー編集')) return;
                             openEditor(bundleEntity, { requestId: buildRequestId(), kind: 'edit', bundle }, {
                               source: primaryOperationSource,
                               reason: 'bundle_edit',
                               triggerEl: event.currentTarget,
-                            })
-                          }
-                          disabled={!canMutate}
+                            });
+                          }}
+                          aria-disabled={!canMutate}
+                          aria-describedby={!canMutate ? 'order-dock-edit-block-reason' : undefined}
+                          data-disabled-reason={!canMutate ? 'order_edit_blocked' : undefined}
                           title={!canMutate ? editDisabledReason : undefined}
                         >
                           編集
@@ -1508,14 +1511,17 @@ export function OrderDockPanel(props: {
                           type="button"
                           className="order-dock__bundle-action"
                           aria-label={`${bundleLabel}をコピーして編集`}
-                          onClick={(event) =>
+                          onClick={(event) => {
+                            if (showEditBlockedNotice('オーダーコピー')) return;
                             openEditor(bundleEntity, { requestId: buildRequestId(), kind: 'copy', bundle }, {
                               source: primaryOperationSource,
                               reason: 'bundle_copy',
                               triggerEl: event.currentTarget,
-                            })
-                          }
-                          disabled={!canMutate}
+                            });
+                          }}
+                          aria-disabled={!canMutate}
+                          aria-describedby={!canMutate ? 'order-dock-edit-block-reason' : undefined}
+                          data-disabled-reason={!canMutate ? 'order_edit_blocked' : undefined}
                           title={!canMutate ? editDisabledReason : undefined}
                         >
                           コピー
@@ -1525,7 +1531,7 @@ export function OrderDockPanel(props: {
                           className="order-dock__bundle-action order-dock__bundle-action--danger"
                           aria-label={`${bundleLabel}を削除`}
                           onClick={() => {
-                            if (!canMutate) return;
+                            if (showEditBlockedNotice('オーダー削除')) return;
                             const eventId = buildOrderHubEventId();
                             emitOrderHubKpi({
                               category: 'OUI-01',
@@ -1537,7 +1543,10 @@ export function OrderDockPanel(props: {
                             });
                             setDeleteTarget({ bundle, label: bundleLabel, groupLabel, eventId });
                           }}
-                          disabled={!canMutate || deleteMutation.isPending}
+                          aria-disabled={!canMutate}
+                          aria-describedby={!canMutate ? 'order-dock-edit-block-reason' : undefined}
+                          data-disabled-reason={!canMutate ? 'order_edit_blocked' : undefined}
+                          disabled={deleteMutation.isPending}
                           title={!canMutate ? editDisabledReason : undefined}
                         >
                           削除

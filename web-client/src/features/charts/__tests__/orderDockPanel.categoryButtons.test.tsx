@@ -211,6 +211,47 @@ describe('OrderDockPanel category quick-add', () => {
     expect(screen.queryByLabelText('処方入力')).not.toBeInTheDocument();
   });
 
+  it('編集不可時の束操作は disabled だけにせず押下時に理由を表示する', async () => {
+    const user = userEvent.setup();
+    renderWithClient(
+      <OrderDockPanel
+        patientId="P-100"
+        meta={{ ...baseMeta, missingMaster: true }}
+        visitDate="2026-02-17"
+        orderBundles={[
+          {
+            entity: 'medOrder',
+            bundleName: '既存処方',
+            started: '2026-02-17',
+            items: [{ name: 'A100 アムロジピン', quantity: '1', unit: '錠', memo: '' }],
+          } as any,
+        ]}
+      />,
+    );
+
+    const editButton = screen.getByRole('button', { name: '既存処方を編集' });
+    expect(editButton).not.toBeDisabled();
+    expect(editButton).toHaveAttribute('aria-disabled', 'true');
+    expect(editButton).toHaveAttribute('aria-describedby', 'order-dock-edit-block-reason');
+    await user.click(editButton);
+    expect(screen.getByText('オーダー編集を停止: マスター未同期のため操作できません。')).toBeInTheDocument();
+    expect(screen.queryByLabelText('処方入力')).not.toBeInTheDocument();
+
+    const copyButton = screen.getByRole('button', { name: '既存処方をコピーして編集' });
+    expect(copyButton).not.toBeDisabled();
+    expect(copyButton).toHaveAttribute('aria-disabled', 'true');
+    await user.click(copyButton);
+    expect(screen.getByText('オーダーコピーを停止: マスター未同期のため操作できません。')).toBeInTheDocument();
+    expect(screen.queryByLabelText('処方入力')).not.toBeInTheDocument();
+
+    const deleteButton = screen.getByRole('button', { name: '既存処方を削除' });
+    expect(deleteButton).not.toBeDisabled();
+    expect(deleteButton).toHaveAttribute('aria-disabled', 'true');
+    await user.click(deleteButton);
+    expect(screen.getByText('オーダー削除を停止: マスター未同期のため操作できません。')).toBeInTheDocument();
+    expect(screen.queryByTestId('order-dock-delete-dialog')).not.toBeInTheDocument();
+  });
+
   it('quick-add は主要カテゴリの新規入力を開く', async () => {
     const user = userEvent.setup();
     renderWithClient(
