@@ -3,11 +3,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+  buildBillingReportLiveOperatorResultTemplate,
   buildBillingReportLiveResultSummary,
   validateBillingReportLiveResultCommand,
 } from './qa-lib/orca-billing-report-live-profile-evidence.mjs';
 
 const runId = process.env.RUN_ID || new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
+
+if (process.argv.slice(2).includes('--print-operator-result-template')) {
+  console.log(`${JSON.stringify(buildBillingReportLiveOperatorResultTemplate(), null, 2)}\n`);
+  process.exit(0);
+}
+
 const commandGate = validateBillingReportLiveResultCommand({ argv: process.argv.slice(2), env: process.env });
 const artifactDir =
   commandGate.options.artifactDir ||

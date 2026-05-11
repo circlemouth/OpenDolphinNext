@@ -714,3 +714,31 @@ export const buildBillingReportLiveResultSummary = ({
     rawSensitiveFieldsExcluded: true,
   };
 };
+
+export const buildBillingReportLiveOperatorResultTemplate = ({ reportType = 'invoicereceipt' } = {}) => ({
+  source: 'orca-billing-report-live-operator-result',
+  operatorOutcome: 'live_success_sanitized',
+  rawSensitiveFieldsExcluded: true,
+  liveTrialOrca: {
+    executed: true,
+  },
+  incomeInfo: {
+    sourceSystem: 'ORCA',
+    requestHash: '0'.repeat(64),
+    responseHash: '1'.repeat(64),
+    rowCount: 0,
+  },
+  reportSnapshots: [
+    {
+      reportType: normalize(reportType) || 'invoicereceipt',
+      requestHash: '2'.repeat(64),
+      responseHash: '3'.repeat(64),
+      invoiceDataIdHash: '4'.repeat(64),
+      storageUploadStatus: 'NOT_UPLOADED',
+      reportBinaryAvailable: false,
+      serverGeneratedStorageKeyDigestPresent: true,
+    },
+  ],
+  claimBoundary:
+    'operator input template records only sanitized ORCA-derived cache/snapshot hashes and status fields; do not add raw patient, invoice, Data_Id, Medical_Uid, ORCA body, report body, storage key, storage digest, credential, HAR, trace, video, screenshot, or raw network data',
+});

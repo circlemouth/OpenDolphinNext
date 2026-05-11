@@ -197,6 +197,9 @@ cd web-client && RUN_ID=<RUN_ID> node scripts/qa-orca-billing-report-live-handof
 
 operator result record:
 ```bash
+cd web-client && node scripts/qa-orca-billing-report-live-result.mjs --print-operator-result-template \
+  > ../artifacts/orca-remediation/closeout/<RUN_ID>/qa/billing-report-live-result/operator-result.template.json
+
 cd web-client && RUN_ID=<RUN_ID> node scripts/qa-orca-billing-report-live-result.mjs \
   --sanitized-evidence-only --disable-browser-artifacts \
   --handoff-summary ../artifacts/orca-remediation/closeout/<RUN_ID>/qa/billing-report-live-handoff/handoff.sanitized.json \
@@ -209,6 +212,7 @@ cd web-client && RUN_ID=<RUN_ID> node scripts/qa-orca-billing-report-live-result
 - object storage 有効時の帳票 binary は `OrcaReportBinaryStorageService` の digest verification を通過した場合だけ accepted とし、upload 失敗は fail-closed blocker とする。
 - live handoff は ready な dry-run summary と manual approval reference の hash だけを evidence にし、handoff command 自体は live ORCA traffic を実行しない。`--live`、HAR、trace、video、screenshot、raw network、raw patient / invoice / `Data_Id` / `Medical_Uid` / storage key / digest を渡す flag または環境変数が有効な場合は実行前に fail する。
 - operator result record は handoff summary と operator の sanitized result JSON だけを入力にする。`operatorOutcome=live_success_sanitized` を accepted evidence にするには `source_system=ORCA`、request/response hash、row count、invoice/data id hash、server-generated storage key/digest presence、`storageUploadStatus`、`reportBinaryAvailable` が揃い、raw patient / raw invoice / raw `Data_Id` / raw `Medical_Uid` / storage key/digest / HAR / trace / video / screenshot / raw network を含まないことを wrapper が確認する。
+- operator result JSON は `--print-operator-result-template` の出力を元に作る。template は dummy sha256 と allowlist field だけを含む no-write sample であり、operator は raw ORCA body、帳票本文、raw patient / invoice / `Data_Id` / `Medical_Uid`、storage key/digest、credential、HAR、trace、video、screenshot、raw network を追記してはならない。
 - reviewer submission packet に含める billing/report profile evidence は `qa/billing-report-live-profile/summary.sanitized.json` の dry-run sanitized summary だけとし、`liveTrialOrca.executed=false` を保持する。これは live Trial 実行成功、会計済み、収納済み、レセプト正本化の証跡ではなく、次の live 実行可否を判定する gate evidence に限定する。
 - reviewer submission packet に含める billing/report result evidence は `qa/billing-report-live-result/result.sanitized.json` の operator sanitized result record だけとする。packet validation は ready handoff hash、`rawSensitiveFieldsExcluded=true`、ORCA由来 income cache / report snapshot の hash-only evidence、server-generated storage key/digest presence、upload failure / expired / blocker なしを要求し、raw ORCA body、raw patient / invoice / `Data_Id` / `Medical_Uid`、帳票本文、storage key/digest、HAR、trace、video、screenshot、raw network を拒否する。
 - 証跡に raw ORCA body、帳票本文、raw invoice number、raw `Data_Id`、raw `Medical_Uid`、患者氏名・住所・電話番号、保険詳細、credential、Cookie、Authorization、HAR、trace、video、screenshot、raw network JSON を残さない。

@@ -134,6 +134,13 @@
   - `./scripts/validate-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z`
   - `./scripts/validate-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --output ./artifacts/reviewer-submission-packets`
 
+## qa-orca-billing-report-live-result.mjs
+- 位置づけ: billing/report live Trial の operator result を sanitized record に正規化する QA helper。
+- Template:
+  - `cd web-client && node scripts/qa-orca-billing-report-live-result.mjs --print-operator-result-template`
+  - no-write の JSON sample だけを出力する
+  - dummy hash を server-derived hash へ置き換え、raw ORCA body / 帳票本文 / raw patient / invoice / `Data_Id` / `Medical_Uid` / storage key / storage digest / credential / HAR / trace / video / screenshot / raw network は追加しない
+
 ## orca-artifacts-namer.js
 - 目的: `artifacts/orca-connectivity/` 以下の Evidence ディレクトリ名が UTC タイムスタンプ (`YYYYMMDDThhmmssZ`) に統一されているかを自動検証し、命名揺れがある場合は推奨名を提案する。
 - 事前条件: Node.js が利用可能であること。Python 実行は禁止されているため、必ず `node` コマンドで実行する。
