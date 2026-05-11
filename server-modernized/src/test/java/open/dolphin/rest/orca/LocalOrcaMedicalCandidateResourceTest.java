@@ -171,6 +171,63 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
         assertEquals(0, repository.saveCalls);
     }
 
+    @Test
+    void latestFromChartUsesFacilityContextAndReturnsSavedCandidatePreview() {
+        repository.latest = new OrcaMedicalCandidateRepository.LatestCandidateRecord(
+                301L,
+                101L,
+                201L,
+                "00001",
+                "ENC-001",
+                "READY_TO_SEND",
+                true,
+                """
+                        {
+                          "nonAuthoritative": true,
+                          "candidateStatus": "READY_TO_SEND",
+                          "sendable": true,
+                          "prescriptionContentHash": "%s",
+                          "medicalInformation": [
+                            {
+                              "entity": "medOrder",
+                              "rpSequence": 1,
+                              "medicalClass": "211",
+                              "usageCode": "001000",
+                              "medications": [{"itemSequence": 1, "code": "620000001", "number": "1"}]
+                            }
+                          ]
+                        }
+                        """.formatted(CONTENT_HASH),
+                "[]");
+
+        OrcaMedicalCandidateResponse response = resource.latestFromChart(
+                request("/api/local/orca/medical-candidates/from-chart/CHART-REV-001/latest"),
+                "CHART-REV-001");
+
+        assertEquals(301L, response.getCandidateId());
+        assertTrue(response.isSendable());
+        assertTrue(response.isNonAuthoritative());
+        assertEquals("00001", response.getPatientId());
+        assertEquals("ENC-001", response.getEncounterId());
+        assertEquals(CONTENT_HASH, response.getPrescriptionContentHash());
+        assertEquals("F001", repository.latestFacilityId);
+        assertEquals("CHART-REV-001", repository.latestChartRevisionId);
+        assertEquals(1, response.getMedicalInformation().get(0).getRpSequence());
+        assertEquals("620000001", response.getMedicalInformation().get(0).getMedications().get(0).getCode());
+    }
+
+    @Test
+    void latestFromChartReturns404WhenCandidateMissing() {
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.latestFromChart(
+                        request("/api/local/orca/medical-candidates/from-chart/CHART-REV-404/latest"),
+                        "CHART-REV-404"));
+
+        assertEquals(404, ex.getResponse().getStatus());
+        assertEquals("F001", repository.latestFacilityId);
+        assertEquals("CHART-REV-404", repository.latestChartRevisionId);
+    }
+
     private static PrescriptionOrder order(String medicalClass, String usageCode, String drugCode) {
         PrescriptionDrug drug = new PrescriptionDrug();
         drug.setCode(drugCode);
@@ -247,6 +304,9 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
         private int saveCalls;
         private String facilityId;
         private String chartRevisionId;
+        private LatestCandidateRecord latest;
+        private String latestFacilityId;
+        private String latestChartRevisionId;
 
         @Override
         PrescriptionRevisionRecord findPrescriptionByChartRevision(String facilityId, String chartRevisionId) {
@@ -262,6 +322,13 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
             this.facilityId = facilityId;
             this.chartRevisionId = chartRevisionId;
             return 301L;
+        }
+
+        @Override
+        LatestCandidateRecord findLatestCandidateByChartRevision(String facilityId, String chartRevisionId) {
+            this.latestFacilityId = facilityId;
+            this.latestChartRevisionId = chartRevisionId;
+            return latest;
         }
     }
 

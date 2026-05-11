@@ -68,6 +68,7 @@ class PublicRouteInventoryContractTest {
             "GET /api/local/encounters/orca-transmissions/review",
             "GET /api/local/order/bundles",
             "GET /api/local/order/recommendations",
+            "GET /api/local/orca/medical-candidates/from-chart/{*}/latest",
             "GET /api/local/prescription-orders",
             "POST /api/local/charts/medical-records",
             "POST /api/local/charts/subjectives",

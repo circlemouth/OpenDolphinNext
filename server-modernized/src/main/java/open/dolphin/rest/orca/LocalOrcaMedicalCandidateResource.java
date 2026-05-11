@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -78,6 +79,29 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
                 Instant.now());
         response.setCandidateId(candidateId);
         recordSuccess(request, facilityId, normalizedChartRevisionId, response, runId);
+        return response;
+    }
+
+    @GET
+    @Path("/from-chart/{chartRevisionId}/latest")
+    public OrcaMedicalCandidateResponse latestFromChart(
+            @Context HttpServletRequest request,
+            @PathParam("chartRevisionId") String chartRevisionId) {
+        String runId = resolveRunId(request);
+        String facilityId = requireFacilityId(request);
+        String normalizedChartRevisionId = trimToNull(chartRevisionId);
+        if (normalizedChartRevisionId == null) {
+            throw validationError(request, "chartRevisionId", "chartRevisionId is required");
+        }
+        OrcaMedicalCandidateRepository.LatestCandidateRecord record =
+                candidateRepository.findLatestCandidateByChartRevision(facilityId, normalizedChartRevisionId);
+        if (record == null) {
+            throw restError(request, Response.Status.NOT_FOUND,
+                    "medical_candidate_not_found",
+                    "ORCA medical candidate for chart revision was not found");
+        }
+        OrcaMedicalCandidateResponse response = candidateRepository.toResponse(normalizedChartRevisionId, record);
+        response.setRunId(runId);
         return response;
     }
 

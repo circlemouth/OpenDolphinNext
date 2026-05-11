@@ -208,6 +208,7 @@ public class ChartSupportMedicalModV2Request {
             this.medications = medications;
         }
 
+        @JsonIgnore
         public boolean isPhysiologyOrder() {
             return "physiologyOrder".equals(entity != null ? entity.trim() : null);
         }

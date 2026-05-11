@@ -88,6 +88,47 @@ const parseMedicalInformation = (value: unknown): OrcaMedicalCandidateMedicalInf
   };
 };
 
+const emptyFailure = (params: {
+  runId: string;
+  status?: number;
+  message?: string;
+  errorCode?: string;
+}): OrcaMedicalCandidateResponse => ({
+  ok: false,
+  status: params.status,
+  runId: params.runId,
+  message: params.message,
+  sendable: false,
+  nonAuthoritative: true,
+  medicalInformation: [],
+  issues: params.errorCode ? [{ code: params.errorCode, message: params.message }] : [],
+});
+
+const parseCandidateJson = (
+  json: Record<string, unknown>,
+  parsed: { status?: number; runId?: string; message?: string },
+  fallbackRunId: string,
+): OrcaMedicalCandidateResponse => ({
+  ok: true,
+  status: parsed.status,
+  runId: asString(json.runId) ?? parsed.runId ?? fallbackRunId,
+  message: parsed.message,
+  candidateId: asNumber(json.candidateId),
+  candidateStatus: asString(json.candidateStatus),
+  sendable: json.sendable === true,
+  nonAuthoritative: json.nonAuthoritative !== false,
+  patientId: asString(json.patientId),
+  encounterId: asString(json.encounterId),
+  chartRevisionId: asString(json.chartRevisionId),
+  prescriptionId: asNumber(json.prescriptionId),
+  prescriptionRevisionId: asNumber(json.prescriptionRevisionId),
+  prescriptionContentHash: asString(json.prescriptionContentHash),
+  medicalInformation: Array.isArray(json.medicalInformation)
+    ? json.medicalInformation.map(parseMedicalInformation).filter((item): item is OrcaMedicalCandidateMedicalInformation => Boolean(item))
+    : [],
+  issues: Array.isArray(json.issues) ? json.issues.map(parseIssue).filter((item): item is OrcaMedicalCandidateIssue => Boolean(item)) : [],
+});
+
 export async function prepareOrcaMedicalCandidateFromChart(params: {
   chartRevisionId: string;
   signal?: AbortSignal;
@@ -115,36 +156,49 @@ export async function prepareOrcaMedicalCandidateFromChart(params: {
     fallbackMessage: '診療行為送信候補の作成に失敗しました。',
   });
   if (!parsed.ok || !parsed.json) {
-    return {
-      ok: false,
+    return emptyFailure({
       status: parsed.status,
       runId: parsed.runId ?? runId,
       message: parsed.message,
+      errorCode: parsed.errorCode,
+    });
+  }
+  return parseCandidateJson(parsed.json, parsed, runId);
+}
+
+export async function getLatestOrcaMedicalCandidateFromChart(params: {
+  chartRevisionId: string;
+  signal?: AbortSignal;
+}): Promise<OrcaMedicalCandidateResponse> {
+  const runId = getObservabilityMeta().runId ?? generateRunId();
+  updateObservabilityMeta({ runId });
+  const chartRevisionId = params.chartRevisionId.trim();
+  if (!chartRevisionId) {
+    return {
+      ok: false,
+      runId,
+      message: '診療録リビジョンが未確定のため候補を確認できません。',
       sendable: false,
       nonAuthoritative: true,
       medicalInformation: [],
-      issues: parsed.errorCode ? [{ code: parsed.errorCode, message: parsed.message }] : [],
+      issues: [{ code: 'chart_revision_missing', message: 'chartRevisionId is required' }],
     };
   }
-  const json = parsed.json;
-  return {
-    ok: true,
-    status: parsed.status,
-    runId: asString(json.runId) ?? parsed.runId ?? runId,
-    message: parsed.message,
-    candidateId: asNumber(json.candidateId),
-    candidateStatus: asString(json.candidateStatus),
-    sendable: json.sendable === true,
-    nonAuthoritative: json.nonAuthoritative !== false,
-    patientId: asString(json.patientId),
-    encounterId: asString(json.encounterId),
-    chartRevisionId: asString(json.chartRevisionId),
-    prescriptionId: asNumber(json.prescriptionId),
-    prescriptionRevisionId: asNumber(json.prescriptionRevisionId),
-    prescriptionContentHash: asString(json.prescriptionContentHash),
-    medicalInformation: Array.isArray(json.medicalInformation)
-      ? json.medicalInformation.map(parseMedicalInformation).filter((item): item is OrcaMedicalCandidateMedicalInformation => Boolean(item))
-      : [],
-    issues: Array.isArray(json.issues) ? json.issues.map(parseIssue).filter((item): item is OrcaMedicalCandidateIssue => Boolean(item)) : [],
-  };
+  const response = await httpFetch(`/api/local/orca/medical-candidates/from-chart/${encodeURIComponent(chartRevisionId)}/latest`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal: params.signal,
+  });
+  const parsed = await parseOrcaApiResponse(response, {
+    fallbackMessage: '診療行為送信候補の取得に失敗しました。',
+  });
+  if (!parsed.ok || !parsed.json) {
+    return emptyFailure({
+      status: parsed.status,
+      runId: parsed.runId ?? runId,
+      message: parsed.message,
+      errorCode: parsed.errorCode,
+    });
+  }
+  return parseCandidateJson(parsed.json, parsed, runId);
 }
