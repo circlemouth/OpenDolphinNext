@@ -27,7 +27,7 @@ Checklist count when parallel board was created:
 
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
-| A | `codex/orca-ehr-worker-a-patient-boundary` | Worker A queue complete; temporary reconcile body rejection guard | Done | 20260511T020908Z | this commit | - |
+| A | `codex/orca-ehr-worker-a-patient-boundary` | Worker A queue complete; temporary reconcile snapshot context guard | Done | 20260511T023009Z | this commit | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
@@ -54,6 +54,7 @@ Checklist count when parallel board was created:
 | A-11 | 3.3, 6, 13 | Reject mismatched server-derived billing voucher on normal billing send. | `officialVisitIdentifiers.voucherNumber` must match `encounter_projection.orca_acceptance_id` before patient/karte/transport lookup. | Billing workflow focused tests |
 | A-12 | 3.3, 6, 13 | Block new normal billing sends from closed or accounting-wait encounter states. | Existing idempotency results can be returned, but new idempotency sends fail closed before patient/karte/transport lookup when `business_state` is billing-closed. | Billing workflow focused tests |
 | A-13 | 3.3, 6, 13 | Reject request bodies on temporary medical reconcile. | `reconcile-temporary-medical` uses only authenticated facility plus saved transmission/snapshot; body-bearing requests fail before audit/repository/ORCA lookup. | Billing workflow focused tests |
+| A-14 | 3.3, 6, 13 | Require saved snapshot visit date and department for temporary medical reconcile. | `tmedicalgetv2` reconcile payload is not generated from fallback timestamps or empty department; incomplete snapshot fails before ORCA transport. | Billing correction focused tests |
 
 ### Worker B Queue
 
@@ -115,6 +116,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T023009Z | A | A-14 | 3.3/6/13 temporary reconcile snapshot context fail-closed | this commit | focused billing correction test and doc/config/runtime guards passed | Done | Await next Worker A queue item |
 | 20260511T020908Z | A | A-13 | 3.3/6/13 temporary reconcile request-body rejection | this commit | focused billing workflow test and doc/config/runtime guards passed | Done | Await next Worker A queue item |
 | 20260511T014810Z | A | A-12 | 3.3/6/13 billing-send closed-state fail-closed | this commit | focused billing workflow test and doc/config/runtime guards passed | Done | Await next Worker A queue item |
 | 20260511T012916Z | A | A-11 | 3.3/6/13 billing-send projection voucher mismatch fail-closed | this commit | focused billing workflow test and doc/config/runtime guards passed | Done | Await next Worker A queue item |

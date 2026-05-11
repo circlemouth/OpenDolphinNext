@@ -671,8 +671,11 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         JsonNode snapshot = readProjectionFlags(record != null ? record.snapshotJson() : null);
         String performDate = textNode(snapshot, "visitDate");
         String departmentCode = textNode(snapshot, "departmentCode");
-        if (performDate == null && record != null && record.startedAt() != null) {
-            performDate = record.startedAt().atZone(TOKYO_ZONE).toLocalDate().toString();
+        if (performDate == null) {
+            throw new IllegalArgumentException("snapshot visitDate is required");
+        }
+        if (departmentCode == null) {
+            throw new IllegalArgumentException("snapshot departmentCode is required");
         }
         String patientId = normalize(record != null ? record.patientId() : null);
         StringBuilder builder = new StringBuilder();
@@ -681,7 +684,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         builder.append("<Perform_Date type=\"string\">").append(xmlToken(performDate, "performDate")).append("</Perform_Date>");
         builder.append("<InOut type=\"string\">2</InOut>");
         builder.append("<Department_Code type=\"string\">")
-                .append(departmentCode != null ? xmlToken(departmentCode, "departmentCode") : "")
+                .append(xmlToken(departmentCode, "departmentCode"))
                 .append("</Department_Code>");
         builder.append("<Patient_ID type=\"string\">").append(xmlToken(patientId, "patientId")).append("</Patient_ID>");
         builder.append("</tmedicalgetreq>");

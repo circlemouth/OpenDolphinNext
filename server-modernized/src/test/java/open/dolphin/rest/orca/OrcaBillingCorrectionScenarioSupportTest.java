@@ -187,6 +187,61 @@ class OrcaBillingCorrectionScenarioSupportTest {
     }
 
     @Test
+    void temporaryMedicalReconcileRequiresSnapshotVisitDateAndDepartment() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord missingVisitDate =
+                new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                        43L,
+                        101L,
+                        "FAC-1",
+                        "encounter-missing-visit-date",
+                        "idem-missing-visit-date",
+                        "ORCA_UNKNOWN",
+                        null,
+                        "unknown",
+                        "result_unknown",
+                        200,
+                        "REQ-2",
+                        "TRACE-2",
+                        "00012",
+                        "schedule-2",
+                        Instant.parse("2026-05-10T15:00:00Z"),
+                        null,
+                        """
+                        {"departmentCode":"01","rawSensitiveFieldsExcluded":true}
+                        """);
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord missingDepartment =
+                new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                        44L,
+                        102L,
+                        "FAC-1",
+                        "encounter-missing-department",
+                        "idem-missing-department",
+                        "ORCA_UNKNOWN",
+                        null,
+                        "unknown",
+                        "result_unknown",
+                        200,
+                        "REQ-3",
+                        "TRACE-3",
+                        "00012",
+                        "schedule-3",
+                        Instant.parse("2026-05-10T15:00:00Z"),
+                        null,
+                        """
+                        {"visitDate":"2026-05-10","rawSensitiveFieldsExcluded":true}
+                        """);
+
+        IllegalArgumentException visitDateError = assertThrows(IllegalArgumentException.class,
+                () -> resource.buildTemporaryMedicalGetPayload(missingVisitDate));
+        IllegalArgumentException departmentError = assertThrows(IllegalArgumentException.class,
+                () -> resource.buildTemporaryMedicalGetPayload(missingDepartment));
+
+        assertTrue(visitDateError.getMessage().contains("visitDate"));
+        assertTrue(departmentError.getMessage().contains("departmentCode"));
+    }
+
+    @Test
     void temporaryMedicalReconcileBlocksResendWhenOrcaModeIsLocked() {
         LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
         BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
