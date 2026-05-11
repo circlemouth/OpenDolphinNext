@@ -33,6 +33,7 @@ public class ChartRevisionExportService {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
     private static final String EXPORT_DENIED = "chart_revision_export_denied";
+    private static final String EXPORT_INCONSISTENT = "chart_revision_export_inconsistent";
     private static final String NOT_FOUND = "chart_revision_export_not_found";
     private static final int EXPORT_SCHEMA_VERSION = 1;
     private static final String EXPORT_HASH_ALGORITHM = "SHA-256";
@@ -113,6 +114,7 @@ public class ChartRevisionExportService {
         response.setExportHashAlgorithm(EXPORT_HASH_ALGORITHM);
         response.setRevisions(revisions.stream().map(this::toRevision).toList());
         response.setEvents(events.stream().map(this::toEvent).toList());
+        requireCurrentRevisionInExport(document, response);
         response.setRevisionCount(response.getRevisions().size());
         response.setEventCount(response.getEvents().size());
         response.setExportHash(sha256(writeJson(exportHashMaterial(response))));
@@ -178,6 +180,20 @@ public class ChartRevisionExportService {
                     flattenSummary(event.getBeforeSummary(), event.getAfterSummary()));
         }
         return csv.toString();
+    }
+
+    private void requireCurrentRevisionInExport(ChartDocumentModel document, ChartRevisionExportResponse response) {
+        Long currentRevisionId = document.getCurrentRevisionId();
+        if (currentRevisionId == null) {
+            return;
+        }
+        boolean found = response.getRevisions().stream()
+                .anyMatch(revision -> currentRevisionId.equals(revision.getRevisionId()));
+        if (!found) {
+            throw restError(Response.Status.CONFLICT, EXPORT_INCONSISTENT,
+                    "Chart revision export is inconsistent",
+                    Map.of("chartId", document.getId(), "currentRevisionId", currentRevisionId));
+        }
     }
 
     private ChartRevisionExportRevision toRevision(ChartRevisionModel revision) {

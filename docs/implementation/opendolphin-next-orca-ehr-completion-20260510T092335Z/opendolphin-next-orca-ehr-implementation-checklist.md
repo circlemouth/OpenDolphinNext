@@ -168,6 +168,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] chart revision JSON export の `exportHash` は allowlist 順の canonical projection を使い、allowlist 外 key、raw secret 差分、JSON key order で揺れないことを focused test で固定する。
   - [x] chart revision JSON export は `exportSchemaVersion=1` / `exportHashAlgorithm=SHA-256` を返し、hash material に含める。
   - [x] chart revision JSON export は `revisionCount` / `eventCount` を返し、canonical `exportHash` material に含める。
+  - [x] chart revision JSON export は `currentRevisionId` が revision list から欠落した不整合を 409 で拒否する。
 
 ## 8. 処方指示正本実装
 

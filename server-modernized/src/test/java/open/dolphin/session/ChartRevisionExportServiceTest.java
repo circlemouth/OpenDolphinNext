@@ -138,9 +138,9 @@ class ChartRevisionExportServiceTest {
         String csv = service.exportChartCsv(10L, "F001");
 
         assertThat(csv).contains("\"recordType\",\"chartId\",\"currentRevisionId\"");
-        assertThat(csv).contains("\"revision\",\"10\",\"21\",\"20\",\"1\",\"FINAL\"");
+        assertThat(csv).contains("\"revision\",\"10\",\"20\",\"20\",\"1\",\"FINAL\"");
         assertThat(csv).contains("snapshot.patientSnapshotStatus=IDENTIFIER_ONLY");
-        assertThat(csv).contains("\"event\",\"10\",\"21\",\"20\",,,\"31\",\"AMENDED\"");
+        assertThat(csv).contains("\"event\",\"10\",\"20\",\"20\",,,\"31\",\"AMENDED\"");
         assertThat(csv).contains("\"'=HYPERLINK(\"\"https://example.test\"\",\"\"Authorization: [redacted]");
         assertThat(csv).contains("after.eventType=AMENDED");
         assertThat(csv).doesNotContain("Basic secret");
@@ -167,11 +167,25 @@ class ChartRevisionExportServiceTest {
         assertThat(((WebApplicationException) thrown).getResponse().getStatus()).isEqualTo(404);
     }
 
+    @Test
+    void exportChartRejectsMissingCurrentRevisionInExportList() {
+        stubExportQueries(chartDocument(99L), List.of(finalRevision()), List.of(finalizedEvent()));
+
+        Throwable thrown = catchThrowable(() -> service.exportChart(10L, "F001"));
+
+        assertThat(thrown).isInstanceOf(WebApplicationException.class);
+        assertThat(((WebApplicationException) thrown).getResponse().getStatus()).isEqualTo(409);
+    }
+
     private ChartDocumentModel chartDocument() {
+        return chartDocument(21L);
+    }
+
+    private ChartDocumentModel chartDocument(Long currentRevisionId) {
         ChartDocumentModel document = new ChartDocumentModel();
         document.setId(10L);
         document.setFacilityId("F001");
-        document.setCurrentRevisionId(21L);
+        document.setCurrentRevisionId(currentRevisionId);
         return document;
     }
 
@@ -246,7 +260,13 @@ class ChartRevisionExportServiceTest {
     }
 
     private void stubExportQueries(List<ChartRevisionModel> revisions, List<ChartRevisionEventModel> events) {
-        when(em.find(ChartDocumentModel.class, 10L)).thenReturn(chartDocument());
+        Long currentRevisionId = revisions.isEmpty() ? null : revisions.get(revisions.size() - 1).getId();
+        stubExportQueries(chartDocument(currentRevisionId), revisions, events);
+    }
+
+    private void stubExportQueries(ChartDocumentModel document, List<ChartRevisionModel> revisions,
+            List<ChartRevisionEventModel> events) {
+        when(em.find(ChartDocumentModel.class, 10L)).thenReturn(document);
         TypedQuery<ChartRevisionModel> revisionQuery = mock(TypedQuery.class);
         TypedQuery<ChartRevisionEventModel> eventQuery = mock(TypedQuery.class);
         when(em.createQuery(startsWith("select r from ChartRevisionModel"), eq(ChartRevisionModel.class)))
