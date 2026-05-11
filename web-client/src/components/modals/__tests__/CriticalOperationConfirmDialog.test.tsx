@@ -60,6 +60,8 @@ describe('CriticalOperationConfirmDialog', () => {
         summaryTitle="取消対象"
         summaryFields={[{ label: '状態', value: '受付中' }]}
         confirmLabel="受付を取消する"
+        cancelDisabled
+        confirmDisabled
         tone="danger"
         testId="critical-backdrop"
         onCancel={onCancel}
@@ -69,6 +71,9 @@ describe('CriticalOperationConfirmDialog', () => {
 
     const backdrop = document.querySelector('[data-test-id="critical-backdrop"]');
     expect(backdrop).not.toBeNull();
+    const dialog = screen.getByRole('alertdialog', { name: '受付取消の確認' });
+    expect(within(dialog).getByRole('button', { name: 'キャンセル' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: '受付を取消する' })).toBeDisabled();
     fireEvent.mouseDown(backdrop as Element);
     expect(onCancel).not.toHaveBeenCalled();
   });

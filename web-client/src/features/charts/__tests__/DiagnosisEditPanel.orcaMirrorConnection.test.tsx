@@ -203,7 +203,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: 'HTN' } });
     vi.mocked(resolveDiseaseCodeFromOrcaMaster).mockResolvedValueOnce('8839001');
     await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
-    const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
+    const confirmDialog = await screen.findByRole('alertdialog', { name: '副病名として登録の確認' });
     await user.click(within(confirmDialog).getByRole('button', { name: '副病名として登録' }));
 
     await waitFor(() => {
@@ -274,7 +274,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     const authoring = screen.getByLabelText('ORCAへ病名登録');
     fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: '入力病名' } });
     await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
-    const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
+    const confirmDialog = await screen.findByRole('alertdialog', { name: '副病名として登録の確認' });
     await user.click(within(confirmDialog).getByRole('button', { name: '副病名として登録' }));
 
     const mirrorList = await screen.findByRole('table', { name: 'ORCA登録病名（活動中）' });
@@ -310,7 +310,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     const authoring = screen.getByLabelText('ORCAへ病名登録');
     fireEvent.change(within(authoring).getByLabelText('病名 *'), { target: { value: '再取得未確認病名' } });
     await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
-    const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
+    const confirmDialog = await screen.findByRole('alertdialog', { name: '副病名として登録の確認' });
     await user.click(within(confirmDialog).getByRole('button', { name: '副病名として登録' }));
 
     expect(

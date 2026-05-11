@@ -20,6 +20,8 @@ export interface CriticalOperationConfirmDialogProps {
   summaryFields: CriticalOperationField[];
   cancelLabel?: string;
   confirmLabel: string;
+  cancelDisabled?: boolean;
+  confirmDisabled?: boolean;
   tone?: CriticalOperationTone;
   testId?: string;
   onCancel: () => void;
@@ -43,6 +45,8 @@ export function CriticalOperationConfirmDialog({
   summaryFields,
   cancelLabel = 'キャンセル',
   confirmLabel,
+  cancelDisabled = false,
+  confirmDisabled = false,
   tone = 'warning',
   testId,
   onCancel,
@@ -88,10 +92,10 @@ export function CriticalOperationConfirmDialog({
           </dl>
         </section>
         <div className="critical-operation-confirm__actions" role="group" aria-label={`${operationLabel}操作`}>
-          <button type="button" onClick={onCancel}>
+          <button type="button" onClick={onCancel} disabled={cancelDisabled}>
             {cancelLabel}
           </button>
-          <button type="button" className="critical-operation-confirm__primary" onClick={onConfirm}>
+          <button type="button" className="critical-operation-confirm__primary" onClick={onConfirm} disabled={confirmDisabled}>
             {confirmLabel}
           </button>
         </div>
