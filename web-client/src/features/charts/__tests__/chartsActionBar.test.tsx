@@ -289,6 +289,13 @@ describe('ChartsActionBar', () => {
     );
 
     await user.click(screen.getByRole('button', { name: '診察終了して会計へ送信' }));
+    const confirmDialog = await screen.findByRole('alertdialog', { name: '診察終了して会計へ送信の確認' });
+    expect(within(confirmDialog).getByText('実行操作:')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('P-200')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('2026-01-04')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('会計済み確定ではありません')).toBeInTheDocument();
+    expect(onAfterFinish).not.toHaveBeenCalled();
+    await user.click(within(confirmDialog).getByRole('button', { name: '診察終了して会計へ送信' }));
 
     await waitFor(() => expect(onAfterFinish).toHaveBeenCalledTimes(1));
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
@@ -300,6 +307,65 @@ describe('ChartsActionBar', () => {
         details: expect.objectContaining({
           completionMode: 'close_and_send_to_billing',
         }),
+      }),
+    );
+  });
+
+  it('診療録取消は共通重大操作確認で患者識別情報を再掲してから実行する', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-240"
+          visitDate="2026-01-06"
+          selectedEntry={{ patientId: 'P-240', appointmentId: 'APT-240', receptionId: 'REC-240', visitDate: '2026-01-06' } as any}
+          sendConfirmSummary={{
+            patientName: '確認 花子',
+            patientId: 'P-240',
+            birthDate: '1975-02-10',
+            age: '50歳',
+            visitDate: '2026-01-06',
+            receptionId: 'REC-240',
+            appointmentId: 'APT-240',
+            diagnosisCount: 1,
+            orderCount: 2,
+            soap: {
+              subjective: true,
+              objective: false,
+              assessment: true,
+              plan: false,
+            },
+            imageAttachmentCount: 0,
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByText('その他'));
+    await user.click(screen.getByRole('button', { name: 'キャンセル' }));
+
+    const confirmDialog = await screen.findByRole('alertdialog', { name: '診療録取消の確認' });
+    expect(within(confirmDialog).getByText('実行操作:')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('診療録取消')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('確認 花子')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('P-240')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('1975-02-10 / 50歳')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('REC-240')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('APT-240')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('診療録取消の確定ではありません')).toBeInTheDocument();
+    expect(screen.queryByText('キャンセルを完了')).not.toBeInTheDocument();
+
+    await user.click(within(confirmDialog).getByRole('button', { name: '診療録取消を実行する' }));
+
+    expect(await screen.findByText('キャンセルを完了')).toBeInTheDocument();
+    expect(recordChartsAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'DRAFT_CANCEL',
+        outcome: 'success',
+        patientId: 'P-240',
+        appointmentId: 'APT-240',
       }),
     );
   });
@@ -579,6 +645,8 @@ describe('ChartsActionBar', () => {
     );
 
     await user.click(screen.getByRole('button', { name: '診察終了して会計へ送信' }));
+    const confirmDialog = await screen.findByRole('alertdialog', { name: '診察終了して会計へ送信の確認' });
+    await user.click(within(confirmDialog).getByRole('button', { name: '診察終了して会計へ送信' }));
 
     await waitFor(() => expect(onAfterFinish).toHaveBeenCalledTimes(1));
     expect(onAfterStart).not.toHaveBeenCalled();
@@ -619,6 +687,63 @@ describe('ChartsActionBar', () => {
     expect(printButton).not.toBeDisabled();
     expect(screen.getAllByText(/承認済み（署名確定）/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/編集内容は履歴として追記/).length).toBeGreaterThan(0);
+  });
+
+  it('署名確定解除は共通重大操作確認で患者と影響範囲を再掲してから実行する', async () => {
+    const user = userEvent.setup();
+    const onApprovalUnlock = vi.fn();
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-310"
+          visitDate="2026-01-05"
+          orcaEncounterContext={{
+            patientId: 'P-310',
+            visitDate: '2026-01-05',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          }}
+          selectedEntry={{
+            patientId: 'P-310',
+            name: '署名患者',
+            appointmentId: 'APT-310',
+            receptionId: 'REC-310',
+            visitDate: '2026-01-05',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          } as any}
+          approvalLock={{ locked: true, runId: 'RUN-LOCK', action: 'send' }}
+          onApprovalUnlock={onApprovalUnlock}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: '署名確定解除' }));
+
+    const firstDialog = await screen.findByRole('alertdialog', { name: '署名確定解除' });
+    expect(within(firstDialog).getByText('実行操作:')).toBeInTheDocument();
+    expect(within(firstDialog).getByText('署名患者')).toBeInTheDocument();
+    expect(within(firstDialog).getByText('P-310')).toBeInTheDocument();
+    expect(within(firstDialog).getByText('REC-310')).toBeInTheDocument();
+    expect(within(firstDialog).getByText('APT-310')).toBeInTheDocument();
+    expect(within(firstDialog).getByText('診療録確定や会計済み確定ではありません')).toBeInTheDocument();
+    expect(onApprovalUnlock).not.toHaveBeenCalled();
+
+    await user.click(within(firstDialog).getByRole('button', { name: '最終確認へ' }));
+    const finalDialog = await screen.findByRole('alertdialog', { name: '署名確定解除: 最終確認' });
+    expect(within(finalDialog).getByText('最終確認')).toBeInTheDocument();
+
+    await user.click(within(finalDialog).getByRole('button', { name: '解除を実行' }));
+
+    expect(onApprovalUnlock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText(/署名確定を解除しました。/)).toBeInTheDocument();
   });
 
   it('閲覧専用時は印刷がガードされる', () => {

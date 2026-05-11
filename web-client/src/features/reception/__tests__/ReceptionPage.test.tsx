@@ -691,6 +691,7 @@ describe('ReceptionPage accept UX', () => {
   });
 
   it('enables 受付する when required fields are auto-filled', async () => {
+    mockSearchParams = new URLSearchParams('date=2026-01-29');
     mockAppointmentData.entries = [
       {
         id: 'row-1',
@@ -742,6 +743,18 @@ describe('ReceptionPage accept UX', () => {
 
     const paymentSelect = within(acceptPanel).getByLabelText(/保険\/自費/);
     expect(paymentSelect).toHaveValue('insurance');
+    const medicalSafetyHeader = within(acceptPanel).getByLabelText('医療安全患者ヘッダー');
+    expect(within(acceptPanel).getByRole('heading', { name: '田中一郎' })).toBeInTheDocument();
+    expect(medicalSafetyHeader).toHaveTextContent('受付日');
+    expect(medicalSafetyHeader).toHaveTextContent('2026-01-29');
+    expect(medicalSafetyHeader).toHaveTextContent('診療科');
+    expect(medicalSafetyHeader).toHaveTextContent('内科');
+    expect(medicalSafetyHeader).toHaveTextContent('担当医');
+    expect(medicalSafetyHeader).toHaveTextContent('担当医A');
+    expect(medicalSafetyHeader).toHaveTextContent('保険組合せ');
+    expect(medicalSafetyHeader).toHaveTextContent('保険（組合せ未確定）');
+    expect(medicalSafetyHeader).toHaveTextContent('ORCA取得');
+    expect(medicalSafetyHeader).toHaveTextContent('ORCA受付対象確認 / verified');
     await user.selectOptions(departmentSelect, departmentSelect.options[0]?.value ?? '01');
     await user.selectOptions(physicianSelect, physicianSelect.options[1]?.value ?? '10001');
     await waitFor(() => expect(registerButton).toBeEnabled());

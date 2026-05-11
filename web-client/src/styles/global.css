@@ -270,8 +270,9 @@ body {
   flex-wrap: wrap;
 }
 
-.critical-operation-confirm__actions button {
+.critical-operation-confirm__button {
   min-height: 44px;
+  min-width: 44px;
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.34);
   padding: 0.6rem 0.9rem;
@@ -281,17 +282,22 @@ body {
   cursor: pointer;
 }
 
-.critical-operation-confirm__actions button:hover {
+.critical-operation-confirm__button:hover {
   background: rgba(248, 250, 252, 0.96);
 }
 
-.critical-operation-confirm__primary {
+.critical-operation-confirm__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.critical-operation-confirm__button--primary {
   border-color: rgba(29, 78, 216, 0.55) !important;
   background: #1d4ed8 !important;
   color: #fff !important;
 }
 
-.critical-operation-confirm[data-tone='danger'] .critical-operation-confirm__primary {
+.critical-operation-confirm[data-tone='danger'] .critical-operation-confirm__button--primary {
   border-color: rgba(185, 28, 28, 0.55) !important;
   background: #b91c1c !important;
 }

@@ -83,8 +83,12 @@
 - normal runtime の中心 surface は `SoapNotePanel` です。
 - `ChartsPatientSummaryBar` は患者文脈を常時見せる encounter context band として扱います。画面種別の装飾ラベル（例: `CHARTS`）は表示しません。
 - 共通 `PatientIdentityBar` の医療安全患者ヘッダーは、患者識別情報に加えて、内部参照ID、受付日、診療科、担当医、保険組合せ、ORCA取得 source/fetched/cache status を同じ visible band に表示できる共通 component です。Charts の患者ヘッダーはこの共通 contract を使い、ORCA取得が未確認・暫定参照の場合は `stale` として見せ、警告を details 内へ隠しません。
-- 共通 `CriticalOperationConfirmDialog` は重大操作の確認 surface として、実行操作名、患者名、患者ID、診療日などの患者識別情報、対象サマリ、cancel/confirm CTA を同一 modal 内に再掲します。Charts の低レベル ORCA 送信確認では title / operation を `診療行為ORCA送信`、confirm CTA を `ORCAへ送信する` とし、診療録確定、診察終了、会計済み確認の label と混同させません。
+- 共通 `CriticalOperationConfirmDialog` は重大操作の確認 surface として、実行操作名、患者名、患者ID、診療日などの患者識別情報、対象サマリ、cancel/confirm CTA を同一 modal 内に再掲します。Charts の低レベル ORCA 送信確認では title / operation を `診療行為ORCA送信`、confirm CTA を `ORCAへ送信する` とし、`DiagnosisEditPanel` の病名 ORCA 送信確認では operation を `病名ORCA送信`、title を各操作の確認、confirm CTA を `ORCAへ病名登録` / `ORCA病名を更新` / `ORCA病名を削除` / `削除病名を整理` とします。Charts の通常導線 `診察終了して会計へ送信` は未保存 guard と不足条件 guard を通過した後、共通 alertdialog で患者識別情報、終了対象サマリ、`会計済み確定ではありません` を再掲してから after-finish flow へ進みます。Charts の `その他 > キャンセル` は `診療録取消` として共通 alertdialog を通過し、患者識別情報、取消対象サマリ、`診療録取消の確定ではありません` を再掲してから UI の取消 intent を処理します。診療録確定、診療行為ORCA送信、会計済み確認、診療録取消確定の label と混同させません。共通 modal の action buttons は cancel を secondary、confirm を primary/danger として class contract を分け、DADS の 44px 以上の touch target を CSS と focused test で固定します。
+- Charts の `署名確定解除` は共通 `CriticalOperationConfirmDialog` を使い、患者ID、診療日、受付ID、予約ID、署名状態、解除段階、影響範囲、`診療録確定や会計済み確定ではありません` を alertdialog 内に再掲します。既存の二段階確認は維持し、解除 callback は最終確認後だけ呼びます。署名確定解除の権限、履歴、再署名要否、監査 enforcement は server-side chart workflow の責務として残します。
+- `PrescriptionOrderEditorPanel` の `処方確定` は保存操作と分離した common critical-operation alertdialog を通過してから `/api/prescriptions` draft 作成と `/api/prescriptions/{prescriptionId}/finalize` へ進みます。確認 modal には患者ID、診療日、来院参照、RP数、薬剤数、コード付き薬剤数、開始日、`ORCA送信や会計済み確定ではありません` を再掲します。client は server が返した `prescriptionId` だけで finalize route を呼び、client 側 hidden 値や local object key/digest を authority にしません。
+- `RevisionHistoryDrawer` の診療録訂正（改訂版追加）/ 診療録復元は共通 `CriticalOperationConfirmDialog` を使い、患者ID、診療日、受付ID、予約ID、対象 revision、親 revision、版作成時刻、影響範囲を alertdialog 内に再掲してから revision write API へ進みます。この UI は対象確認の補助であり、確定済み診療録の訂正/復元権限、append-only event、content hash、監査 enforcement は server-side の chart revision workflow に残します。
 - Charts の低レベル `ORCA 送信` と通常導線の `診察終了して会計へ送信` は送信前 precheck 理由だけでは native disabled にせず、`aria-disabled=true` と近傍 guard note で理由を示したうえで、押下時に同じ fail-closed precheck を実行して warning banner / audit に不足条件を出します。実行中など二重実行防止が必要な場合だけ native disabled を使います。
+- `PrescriptionOrderEditorPanel` の `処方確定` が preview / 保存中 / 確定中で native disabled になる場合は、近傍 `charts-side-panel__block-reason` と `aria-describedby` で理由と有効化条件を表示します。この理由表示は二重実行防止と操作理解の UI 補助であり、処方確定の権限・状態遷移 enforcement ではありません。
 - `OrderDockPanel` の quick-add / group-add / bundle edit / bundle copy / bundle delete / prescription-history import / recommendation apply は patient context 不足、read-only、missing master、fallback data だけでは native disabled にせず、`aria-disabled=true` と近傍 `order-dock-edit-block-reason` で理由を示したうえで、押下時に `オーダー追加を停止: ...`、`オーダー編集を停止: ...`、`オーダーコピーを停止: ...`、`オーダー削除を停止: ...`、`処方履歴取り込みを停止: ...`、`直近処方コピーを停止: ...`、`頻用オーダー反映を停止: ...` notice を出して editor / delete confirm を開きません。検索入力 / category select、pending/loading、二重実行防止、直近処方なしなど操作自体を受けられない状態は native disabled を維持し、検索入力 / category select には近傍 `order-dock-search-block-reason` と `aria-describedby` で理由を示します。
 - `OrderRecommendationModal` のカテゴリ scope は default entity がない場合 native disabled を維持し、近傍 `order-recommend-category-scope-reason` と `aria-describedby` で理由と横断 scope の代替を示します。
 - `OrderBundleEditPanel` embedded footer の `保存して閉じる` / `保存して続ける` / `保存して追加・更新` は read-only、missing master、fallback data だけでは native disabled にせず、`aria-disabled=true`、`data-disabled-reason=order_detail_submit_blocked`、近傍 edit block reason で理由を示し、押下時に `保存操作を停止: ...` notice と blocked audit を出して mutation へ進みません。保存中・禁忌チェック中など二重実行防止は native disabled を維持します。
@@ -114,6 +118,7 @@
 - `visitDate` の `today` fallback や display string parsing は ORCA 送信文脈に使いません。
 - chart flow 後続の旧 follow-up route は current contract に含めません。通常の初回会計送信は `/api/local/encounters/{encounterKey}/close-and-send-to-billing` を使い、server が encounter projection と保存済み order/disease から ORCA payload を導出します。低レベル official outbound は `medicalmodv2` / `diseasev3` / `incomeinfv2` の bridge として残します。
 - `close-and-send-to-billing` が `ORCA_UNKNOWN`、`operationStatus=UNKNOWN`、`needsUserReview=true`、または `confirmationRequired=true` を返した場合、Charts は診察終了成功や会計待ち遷移に潰さず、患者タブを閉じずに要確認 banner を初期表示します。再送や状態確定は Reception 側 recovery / ORCA 連携一覧で `tmedicalgetv2` 再照合後に扱います。
+- `診察終了して会計へ送信`、Charts `その他 > キャンセル`、`署名確定解除`、`処方確定`、共通重大操作 confirm の action priority / 44px touch target は患者取り違え防止と誤操作低減の UI 補助です。会計送信可否、encounter close、ORCA transmission、署名確定解除、処方確定の状態遷移、診療録取消の永続化、append-only event、監査、会計済み確定、操作権限の判断は server-side / owning workflow の enforcement に残し、UI confirm だけで安全性を満たした扱いにしません。
 - Charts の処方由来 `orca_medical_candidate` 確認 surface は、患者、受付/予約、診療日、診療科、医師、保険組合せ、候補 status、処方 content hash 要約、候補行数、未解決 issue、RPごとの診療区分・用法・薬剤行を表示します。candidate API の `medicalInformation` は処方正本由来の `rpSequence` / `medicalClass` / `medicalClassNumber` / `usageCode` / `usageName` / 薬剤行（`itemSequence` 付き）を first-class に返します。この surface は candidate prepare と保存済み latest candidate の再確認だけを行い、ORCA 正本や請求 workflow の確定状態とは表示上も操作上も分離します。latest candidate が現在の処方 order id / revision id / hash と一致しない、または現在 status が候補化不能な場合は server が `prescription_candidate_source_stale` を返し、Charts は未解決 issue として扱います。client は candidate prepare / latest lookup に `chartRevisionId` 以外の patient / facility / insurance / voucher / sequential / URL / digest を送らず、表示中の受付・保険情報は確認用であって authority ではありません。
 
 ### Terminology
@@ -127,6 +132,8 @@
 - guard minimum:
   - `PatientIdentityBar` の医療安全患者ヘッダーは患者ID、受付/診療日、診療科、担当医、保険組合せ、ORCA取得状態を同じ visible region に表示し、重大操作前の患者取り違え防止に使える状態を維持する
   - `CriticalOperationConfirmDialog` は backdrop click で閉じず、患者識別情報と実行操作名を alertdialog 内に再掲し、操作ごとに distinct な confirm label を使う
+  - `RevisionHistoryDrawer` の診療録訂正/復元は共通重大操作 confirm を通過するまで revision write API を呼ばず、patientId/visitDate/revision を確認画面に再掲する
+  - Charts `その他 > キャンセル` は共通重大操作 confirm を通過するまで取消 intent を実行せず、patientId/visitDate/reception/appointment と `診療録取消の確定ではありません` を確認画面に再掲する
   - Charts `ORCA 送信` と `診察終了して会計へ送信` は missing master / encounter context 不足などの precheck failure でも押下可能に見せ、押下時に理由を表示して確認 modal / finish hook / transport へ進まないこと
   - `OrderDockPanel` quick-add / group-add / bundle edit / bundle copy / bundle delete / prescription-history import / recommendation apply は patient context 不足、read-only、missing master、fallback data で押下時理由を表示し、editor / delete confirm を開かないこと。検索入力 / category select は native disabled 維持時に `order-dock-search-block-reason` で近傍理由を表示すること
   - `OrderRecommendationModal` category scope はカテゴリ未選択時に `order-recommend-category-scope-reason` で近傍理由と横断代替を表示すること
@@ -167,6 +174,7 @@
 - patient search 結果から charts を開く導線は置きません。Charts 再開は受付一覧の row/card action など、既に受付行の canonical handoff が成立している導線に限定します。
 - 既存患者受付/患者検索モーダルの患者ID/氏名/カナ検索は、送信時の form value を正とし、受付行 auto-fill や未反映 state でユーザーが入力した患者IDを上書きしません。検索結果未選択時の右ペインは、既存の受付行選択を「選択患者」として表示しません。
 - 既存患者受付/患者検索モーダルの受付登録ペインは、右側のスクロール可能なフォーム区画を境界・scrollbar・陰影で明示します。患者サマリは性別/小児区分アイコン、ふりがな、氏名、年齢だけを表示し、上部で示す患者IDや内部名 `受付登録モーダル`、`Medical_Information` などの実装説明は visible copy に出しません。右ペイン下部に「受付内容を確認して...」「必須項目を入力すると...」のような補助文は置きません。
+- 既存患者受付/患者検索モーダルの受付登録ペインは、共通 `PatientIdentityBar` の医療安全患者ヘッダーをフォームより先に表示し、患者ID、氏名/カナ、性別/年齢、受付日、診療科、担当医、保険/保険組合せ context、ORCA受付対象確認 status を同じ visible region に再掲します。保険が初期選択されていて ORCA 保険組合せ番号が未確定の場合は `保険（組合せ未確定）` と表示し、client 側で ORCA 組合せ番号や受付成立を捏造しません。このヘッダーは患者取り違え防止の UI 補助であり、受付登録・権限・永続化の server-side enforcement を代替しません。
 - 受付取消確認モーダルは、取消対象の同定に必要な氏名・年齢・性別/小児区分アイコン・現在状態だけを表示します。RUN_ID、患者ID/受付ID/予約ID、性別コード、ふりがな、重複した氏名/状態文、取消理由入力、内部説明文は visible copy に出しません。取消実行は破壊的操作として赤系の danger CTA で表示します。
 - 過去カルテモーダルは利用者向けの履歴情報だけを表示し、RUN_ID copy CTA や ORCA 内部の連番/状態コードを visible copy に出しません。
 - Reception surface は常時表示の戻り導線を持たず、Charts 再開は受付行または受付/患者検索の canonical handoff が成立した場合の操作として出します。
@@ -203,6 +211,7 @@
 - test: visit list request が `Department_Code` を送ること
 - test: `Medical_Information` 未選択時に送信しないこと
 - test: master search 導線では `WholeName` 未入力で official patient search を送らず、`InOut` 未選択時は official payload から省くこと
+- test: accept workflow の受付登録ペインは共通 `PatientIdentityBar` で患者ID、氏名、受付日、診療科、担当医、保険 context、ORCA受付対象確認 status を visible 表示し、未確定の保険組合せを確定番号として見せないこと
 - test: claim-send / visit context で patientId first-match / display string reparsing / `today` fallback を使わないこと
 - test: accept 成功後の charts handoff は `scheduleKey` / `encounterKey` を持つ canonical context だけで成立し、mutation response または refreshed entry のどちらでも同じ contract を使うこと
 - test: Reception は標準の初回 `会計送信` direct button を出さず、医師画面から送信する案内と recovery-only surface に寄せること
@@ -226,6 +235,7 @@
 - 患者基本情報の official create/update/import は単一路線に混ぜず、`create` / `update` / `import` を別導線として扱います。
 - official create/update/import 成功後は canonical source を再取得し、その canonical record で local sync を確定します。
 - chart の患者基本情報編集 dialog も Patients と同じ official update route を使います。
+- Patients 詳細ペインの共通 `PatientIdentityBar` は、選択患者と `location.state.encounter` / volatile encounter context の patientId が一致する場合だけ、内部参照ID、受付/診療日、診療科、担当医、保険組合せ、`患者管理同期状態` を医療安全患者ヘッダーへ表示します。patientId が一致しない encounter context は表示文脈へ混ぜず、Patients 側の表示は患者基本情報と同期状態の UI 補助に限定し、ORCA受付・保険・権限・永続化の server-side authority を代替しません。
 - chart support では、patient-aware な official `contraindicationcheckv2` と、ORCA master を使う static interaction check を UI copy で明確に分離します。
 - SOAP 補助入力、chart summary、Patients の diff/review は local-only surface として表示し、official ORCA write と誤認させる copy を残しません。
 - local-only wording は `症状詳記（院内ローカル）`、`院内ローカル診療サマリ`、`院内メモはローカル編集のみ` に寄せ、official write surface と見分けられる状態を current contract とします。
@@ -234,11 +244,12 @@
 - 病名マスター候補は補助入力です。`/api/orca/official/disease-master/name/{param}/` は server-side ORCA master datasource を参照し、日付を `yyyyMMdd` に正規化します。ローカル開発DBで `tbl_byomei` が無い、または ORCA master datasource が未起動の場合だけ最小 bootstrap 候補を返せますが、明示 confirm なしに ORCA 登録 payload や主一覧へ昇格しません。
 - ORCA unavailable 時は local-only disease を fallback 表示せず、「ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。」を表示し、ORCA 病名操作を disabled にします。
 - `DiagnosisEditPanel` の quick ORCA病名登録ボタンは、read-only / ORCA mirror unavailable などの理由だけでは native disabled にせず、`aria-disabled=true` と `diagnosis-mutation-block-reason` で近傍理由を関連付け、押下時に `ORCA病名操作を停止: ...` を表示して confirm / mutation へ進みません。ORCA mirror 取得中や mutation pending など二重操作防止が必要な状態は native disabled を維持します。
-- ORCA 病名操作は `ORCAへ病名登録` / `ORCA病名を更新` / `ORCA病名を削除` / `削除病名を整理` に分け、いずれも明示 confirm 後に `/api/orca/official/chart-support/disease-mod-v3` へ送ります。成功後は楽観更新せず、再取得した ORCA `diseasegetv2` 結果だけを表示します。
+- ORCA 病名操作は `ORCAへ病名登録` / `ORCA病名を更新` / `ORCA病名を削除` / `削除病名を整理` に分け、いずれも共通 `CriticalOperationConfirmDialog` の alertdialog で ORCA患者番号、診療日、診療科、保険組合せ、操作、病名、属性、ORCA送信コード、再取得待ちを再掲してから `/api/orca/official/chart-support/disease-mod-v3` へ送ります。成功後は楽観更新せず、再取得した ORCA `diseasegetv2` 結果だけを表示します。この確認 modal は患者取り違え防止の UI 補助であり、病名送信の認可、ORCA request number、永続化、監査の server-side enforcement を代替しません。
 - `diseasev3` operation は `create|update|delete|organizeDeletedDiseases` に限定します。`Request_Number=01` は `削除病名を整理` だけで使い、通常 create/update/delete には混ぜません。client は `Request_Number` を送らず、server-owned value として扱います。
 
 ### Verification
 - code-confirm: `PatientsPage` の初期選択、warning copy、fallback CTA
+- code-confirm: `PatientsPage` の詳細患者ヘッダーは一致する encounter context だけを医療安全メタへ表示し、不一致 patientId の encounter / schedule / 診療科 / 担当医 / 保険組合せを表示しないこと
 - code-confirm: `PatientsPage` の local search 明示、official create/update/import の分岐、成功後 canonical re-fetch/local sync
 - code-confirm: `PatientInfoEditDialog` の official update route 呼び出しと、成功後 callback による canonical/local sync refresh
 - code-confirm: `DiagnosisEditPanel` の `保険病名` / `ORCA mirror` / `候補` 分離、candidate-not-truth、manual-resolution は対象病名がある時だけ visible
@@ -249,12 +260,14 @@
 ### Current Fact
 - `patientId` は query `patientId` -> `location.state.patientId` -> deep link volatile context の順で解決します。
 - current screen は `ReturnToBar`、患者特定、アップロード、完了/参照の単一カラム構成です。
+- `MobileImagesUploadPage` は共通 `PatientIdentityBar` を使い、router state の `encounter` に診療日、診療科コード、担当医コード、保険組合せ、encounter/schedule key がある場合は同じ visible 医療安全患者ヘッダーへ表示します。Mobile Images 側では ORCA 正本再取得を行わないため、ORCA取得状態は `遷移文脈 / unverified` として表示し、アップロード完了や画像参照を ORCA 同期済みとは表示しません。
 - fallback は `from=reception` なら reception、`from=patients` なら patients、既定は charts です。
 - retry 後は送信ボタンへ、送信成功後は最初の参照リンクへ focus を戻します。
 - document/image lifecycle は `web-client/notes/document-image-lifecycle.md` を正本とし、print preview restore と attachment-linked saved document の再編集は fail-close します。
 
 ### Verification
 - code-confirm: deep link scrub 後の patient 復元、missing-patient error、feature-disabled message
+- code-confirm: router state encounter がある場合、Mobile Images の共通患者ヘッダーに診療日、診療科、担当医、保険組合せ、内部参照ID、ORCA取得状態が visible に出ること
 - manual: file picker、upload、retry、return CTA
 
 ## Admin Surface

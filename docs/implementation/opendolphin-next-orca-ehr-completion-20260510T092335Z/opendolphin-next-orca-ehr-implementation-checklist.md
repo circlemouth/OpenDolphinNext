@@ -258,10 +258,24 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [ ] 主要画面に患者ヘッダーを常時表示し、ORCA患者番号、内部参照ID、氏名、カナ、生年月日、年齢、性別、受付日、診療科、担当医、保険組合せ、ORCA取得日時、キャッシュ状態を表示する。
   - [x] 2026-05-10T21:16Z: 共通 `PatientIdentityBar` に医療安全患者ヘッダー行を追加し、Charts の患者ヘッダーで受付日、診療科、担当医、保険組合せ、ORCA source/cache status を visible 表示する段階適用を実施した。Patients / Mobile Images は同じ共通 component を継続利用し、全主要画面の完全統一は後続 heartbeat で Reception などへ拡張する。
+  - [x] 2026-05-11T10:11Z: Mobile Images の共通 `PatientIdentityBar` に router state `encounter` 由来の受付日、診療科、担当医、保険組合せ、内部参照ID、`遷移文脈 / unverified` の ORCA取得状態を visible 表示する段階適用を実施した。Mobile Images 側では ORCA正本再取得や同期済み表示は行わず、患者画像アップロード完了を ORCA同期済みと混同しない。
+  - [x] 2026-05-11T11:17Z: Reception の既存患者受付/患者検索モーダル内受付登録ペインへ共通 `PatientIdentityBar` を追加し、患者ID、氏名/カナ、受付日、診療科、担当医、保険 context、`ORCA受付対象確認 / verified|checking|unverified` を visible 表示する段階適用を実施した。未確定の保険組合せは `保険（組合せ未確定）` と表示し、client 側で ORCA 組合せ番号や受付成立を捏造しない。
+  - [x] 2026-05-11T11:55Z: Patients 詳細ペインの共通 `PatientIdentityBar` に、選択患者と一致する encounter context 由来の内部参照ID、受付/診療日、診療科、担当医、保険組合せ、`患者管理同期状態 / fresh|stale|missing|unverified` を visible 表示する段階適用を実施した。不一致 patientId の encounter context はヘッダーへ混ぜず、Patients UI を server-side authority の代替にしない。
 - [ ] モーダル内の重大操作確認にも患者識別情報を再掲する。
   - [x] 2026-05-10T21:59Z: 共通 `CriticalOperationConfirmDialog` を追加し、患者識別情報、実行操作名、対象サマリ、distinct confirm label を alertdialog 内に再掲する契約を固定した。Charts の ORCA 送信確認へ適用し、confirm CTA を `ORCAへ送信する` に分離した。
+  - [x] 2026-05-11T12:23Z: `DiagnosisEditPanel` の病名 ORCA 送信確認を共通 `CriticalOperationConfirmDialog` へ移行し、ORCA患者番号、診療日、診療科、保険組合せ、操作、病名属性、ORCA送信コード、再取得待ちを alertdialog 内に再掲した。
+  - [x] 2026-05-11T12:44Z: Charts の通常導線 `診察終了して会計へ送信` を共通 `CriticalOperationConfirmDialog` へ接続し、患者ID、診療日、受付/予約ID、終了対象サマリ、会計済み確定ではない旨を alertdialog 内に再掲した。
+  - [x] 2026-05-11T13:56Z: Charts の `その他 > キャンセル` を `診療録取消` の共通 `CriticalOperationConfirmDialog` へ接続し、患者ID、診療日、受付/予約ID、取消対象サマリ、診療録取消の確定ではない旨を alertdialog 内に再掲した。
+  - [x] 2026-05-11T14:21Z: `PrescriptionOrderEditorPanel` の `処方確定` を共通 `CriticalOperationConfirmDialog` へ接続し、患者ID、診療日、来院参照、RP/薬剤/コード付き薬剤数、開始日、ORCA送信や会計済み確定ではない旨を alertdialog 内に再掲した。
+  - [x] 2026-05-11T15:02Z: Charts の `署名確定解除` を共通 `CriticalOperationConfirmDialog` へ接続し、患者ID、診療日、受付/予約ID、署名状態、解除段階、影響範囲、診療録確定や会計済み確定ではない旨を alertdialog 内に再掲した。
 - [ ] 診療録確定/訂正/取消、処方確定/中止/取消、病名ORCA送信、診療行為ORCA送信、会計送信、診察終了に確認フローを実装する。
   - [x] 2026-05-10T21:59Z: 診療行為 ORCA 送信の確認フローを共通重大操作 modal へ移行した。診療録確定/処方確定/取消/診察終了など全操作の完全統一は後続で継続する。
+  - [x] 2026-05-11T12:23Z: 病名 ORCA 送信（登録/更新/削除/削除病名整理）の確認フローを共通重大操作 modal へ移行した。UI confirm は患者取り違え防止と誤操作低減の補助であり、認可・永続化・監査 enforcement は server-side の責務として残す。
+  - [x] 2026-05-11T12:44Z: 診察終了/会計送信の確認フローを共通重大操作 modal へ移行した。未保存 guard と不足条件 guard を通過後に confirm を出し、会計済み確定ではないことを明示する。会計送信可否・ORCA transmission・監査 enforcement は server-side / owning workflow の責務として残す。
+  - [x] 2026-05-11T13:32Z: `RevisionHistoryDrawer` の診療録訂正（改訂版追加）/ 診療録復元の確認を共通重大操作 modal へ移行した。患者ID、診療日、受付/予約ID、対象 revision、親 revision、影響範囲を再掲し、revision write API は confirm 後だけ呼ぶ。訂正/復元権限・append-only event・監査 enforcement は server-side chart revision workflow の責務として残す。
+  - [x] 2026-05-11T13:56Z: Charts `その他 > キャンセル` の診療録取消導線を共通重大操作 modal へ移行した。未保存 guard を通過後に confirm を出し、診療録取消の確定ではないことを明示する。取消権限・永続化・append-only event・監査 enforcement は server-side chart revision workflow の責務として残す。
+  - [x] 2026-05-11T14:21Z: 処方確定導線を共通重大操作 modal へ移行した。保存/入力 validation を通過後に confirm を出し、draft 作成後に server-returned `prescriptionId` で finalize route を呼ぶ。処方確定権限・状態遷移・content hash・監査 enforcement は server-side prescription workflow の責務として残す。
+  - [x] 2026-05-11T15:02Z: 署名確定解除導線を共通重大操作 modal へ移行した。既存二段階確認を維持し、解除 callback は最終確認後だけ呼ぶ。署名確定解除権限・履歴・再署名要否・監査 enforcement は server-side chart workflow の責務として残す。
 - [ ] 「診療録確定」「会計へ送信」「診察終了」「ORCA送信成功」を別概念として表示する。
 - [ ] 成功、失敗、警告、情報、要確認をセマンティックに分け、原因と次に取るべき行動を示す。
 - [ ] ORCA警告、不一致、ORCA側のみ存在する情報を隠さない。
@@ -282,7 +296,9 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T03:02Z: `PastHubPanel` の SOAP Do転記入口は転記可能 SOAP なし / セクション記載なしで native disabled を維持しつつ、近傍理由 `past-hub-do-copy-*` と `aria-describedby` で不足条件を表示することを focused test で固定した。
   - [x] 2026-05-11T03:22Z: `PatientSummaryPanel` の保存ボタンは read-only / 保存中 / 変更なしで native disabled を維持しつつ、近傍理由 `charts-patient-summary-save-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
   - [x] 2026-05-11T03:43Z: `SoapNotePanel` の保存ボタンは read-only / 履歴表示 / 保存中で native disabled を維持しつつ、近傍理由 `soap-note-save-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
+  - [x] 2026-05-11T14:42Z: `PrescriptionOrderEditorPanel` の `処方確定` は preview / 保存中 / 確定中で native disabled を維持しつつ、近傍理由 `finalize-block-reason` と `aria-describedby` で理由と有効化条件を表示することを focused test で固定した。
 - [ ] ボタン優先度、配置、44px以上の押下領域を DADS に沿って統一する。
+  - [x] 2026-05-11T13:09Z: 共通 `CriticalOperationConfirmDialog` の cancel / confirm button を secondary / primary class contract に分け、DADS の 44px 以上の touch target を CSS と focused test で固定した。これは誤操作低減の UI 補助であり、操作権限・永続化・監査 enforcement は server-side / owning workflow に残す。
 
 ## 12. 監査ログ・真正性
 

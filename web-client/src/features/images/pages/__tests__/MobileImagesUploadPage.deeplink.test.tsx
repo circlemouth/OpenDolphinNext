@@ -78,6 +78,45 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
     expect(document.querySelector('[data-test-id="mobile-image-file-input"]')).toBeEnabled();
   });
 
+  it('遷移文脈の診療日・診療科・担当医・保険組合せを医療安全患者ヘッダーへ表示する', async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/f/0001/m/images',
+            state: {
+              patientId: '123',
+              encounter: {
+                patientId: '123',
+                encounterKey: 'enc-20260511-1',
+                visitDate: '2026-05-11',
+                departmentCode: '01',
+                physicianCode: '10001',
+                insuranceCombinationNumber: '0001',
+              },
+            },
+          },
+        ]}
+      >
+        <MobileImagesUploadPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(vi.mocked(fetchPatientImageList)).toHaveBeenCalledWith('123');
+    });
+    const medicalSafetyHeader = screen.getByLabelText('医療安全患者ヘッダー');
+    expect(medicalSafetyHeader).toHaveTextContent('内部参照ID');
+    expect(medicalSafetyHeader).toHaveTextContent('enc-20260511-1');
+    expect(medicalSafetyHeader).toHaveTextContent('受付日');
+    expect(medicalSafetyHeader).toHaveTextContent('2026-05-11');
+    expect(medicalSafetyHeader).toHaveTextContent('診療科コード 01');
+    expect(medicalSafetyHeader).toHaveTextContent('担当医コード 10001');
+    expect(medicalSafetyHeader).toHaveTextContent('保険組合せ 0001');
+    expect(medicalSafetyHeader).toHaveTextContent('ORCA取得');
+    expect(medicalSafetyHeader).toHaveTextContent('遷移文脈 / unverified');
+  });
+
   it('URL/退避どちらにも patientId が無い場合は明確エラーを表示し送信不可', async () => {
     render(
       <MemoryRouter initialEntries={['/f/0001/m/images']}>

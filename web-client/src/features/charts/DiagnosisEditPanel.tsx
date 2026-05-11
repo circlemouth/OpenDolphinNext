@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { CriticalOperationConfirmDialog } from '../../components/modals/CriticalOperationConfirmDialog';
 import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
 import { resolveAriaLive } from '../../libs/observability/observability';
@@ -1704,116 +1705,61 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
         </form>
       </FocusTrapDialog>
 
-      <FocusTrapDialog
+      <CriticalOperationConfirmDialog
         open={Boolean(pendingAction)}
-        title={pendingAction?.title ?? 'ORCA病名操作'}
+        title={pendingAction ? `${pendingAction.title}の確認` : '病名ORCA送信の確認'}
         description="この操作は ORCA へ送信し、成功後に再取得した結果だけを ORCA登録病名として表示します。"
-        onClose={() => setPendingAction(null)}
-        initialFocus="none"
+        operationLabel="病名ORCA送信"
+        patientFields={[
+          { label: 'ORCA患者番号', value: patientId },
+          { label: '診療日', value: meta.visitDate ?? '-' },
+          { label: '診療科', value: meta.departmentCode ?? '-' },
+          { label: '保険組合せ', value: formatInsuranceCombination(meta.insuranceCombinationNumber ?? pendingEntry?.insuranceCombinationNumber) },
+        ]}
+        summaryTitle="病名ORCA送信対象"
+        summaryFields={[
+          { label: '操作', value: pendingAction?.title ?? '-' },
+          { label: '病名', value: pendingForm?.name || formatEntryName(pendingEntry) },
+          { label: '病名属性', value: pendingForm ? formatDiseaseAttributeLabel(pendingForm) : pendingEntry ? (isMainDisease(pendingEntry) ? '主病名' : '副病名') : '-' },
+          { label: 'レセプト表示', value: pendingForm ? (pendingForm.receiptPrint ? '表示する' : '表示しない') : '表示する' },
+          { label: '保険病名', value: pendingForm ? (pendingForm.insuranceDisease ? '指定する' : '指定しない') : '指定しない' },
+          { label: '副病名区分', value: pendingForm ? formatSubDiseaseClassLabel(pendingForm.subDiseaseClass) : '指定なし' },
+          { label: '病名保険区分', value: pendingForm ? formatDiseaseInsuranceClassLabel(pendingForm.diseaseInsuranceClass) : '指定なし' },
+          { label: '病名カテゴリ', value: pendingForm ? formatDiseaseCategoryLabel(pendingForm.diseaseCategory) : '指定なし' },
+          { label: '病名区分', value: pendingForm ? formatDiseaseClassLabel(pendingForm.diseaseClass) : '指定なし' },
+          { label: 'レセプト表示期間', value: pendingForm ? formatOrcaCode(resolveDiseaseReceiptPrintPeriodCode(pendingForm)) : '送信しない' },
+          { label: '退院証明', value: pendingForm ? formatDischargeCertificateLabel(pendingForm.dischargeCertificate) : '指定なし' },
+          { label: '開始日', value: pendingForm?.startDate || pendingEntry?.startDate || '-' },
+          { label: '転帰', value: pendingForm?.outcome || pendingEntry?.outcome || '-' },
+          {
+            label: '構成コード',
+            value: pendingForm
+              ? normalizeFormComponents(pendingForm).map((component) => component.code).join(' + ') || (pendingForm.uncodedAccepted ? '未コード化' : '-')
+              : pendingEntry
+                ? formatComponentCodeList(pendingEntry)
+                : '-',
+          },
+          {
+            label: 'ORCA送信コード',
+            value: pendingForm
+              ? `Disease_Insurance_Class=${formatOrcaCode(resolveDiseaseInsuranceClassCode(pendingForm))} / Disease_Category=${formatOrcaCode(resolveDiseaseCategoryCode(pendingForm))} / Disease_Class=${formatOrcaCode(resolveDiseaseClassCode(pendingForm))} / Main_Disease_Class=${formatOrcaCode(resolveMainDiseaseClassCode(pendingForm))} / Disease_SuspectedFlag=${formatOrcaCode(resolveSuspectedFlagCode(pendingForm))} / Disease_Receipt_Print=${formatOrcaCode(resolveDiseaseReceiptPrintCode(pendingForm))} / Disease_Receipt_Print_Period=${formatOrcaCode(resolveDiseaseReceiptPrintPeriodCode(pendingForm))} / Insurance_Disease=${formatOrcaCode(resolveInsuranceDiseaseCode(pendingForm))} / Discharge_Certificate=${formatOrcaCode(resolveDischargeCertificateCode(pendingForm))} / Sub_Disease_Class=${formatOrcaCode(resolveSubDiseaseClassCode(pendingForm))}`
+              : pendingEntry
+                ? `Disease_Insurance_Class=送信しない / Disease_Category=送信しない / Disease_Class=送信しない / Main_Disease_Class=${formatOrcaCode(isMainDisease(pendingEntry) ? '01' : undefined)} / Disease_SuspectedFlag=${formatOrcaCode(isSuspectedDisease(pendingEntry) ? 'S' : undefined)} / Disease_Receipt_Print=1 / Disease_Receipt_Print_Period=送信しない / Insurance_Disease=送信しない / Discharge_Certificate=送信しない / Sub_Disease_Class=送信しない`
+                : '-',
+          },
+          { label: '再取得', value: 'ORCA再取得が完了するまで一覧は更新しません。' },
+        ]}
+        confirmLabel={pendingAction?.confirmLabel ?? '実行'}
+        cancelDisabled={isAnyMutationPending}
+        confirmDisabled={isAnyMutationPending || isOrcaMutationBlocked}
+        tone={pendingAction?.operation === 'delete' || pendingAction?.operation === 'organizeDeletedDiseases' ? 'danger' : 'warning'}
+        onCancel={() => {
+          if (isAnyMutationPending) return;
+          setPendingAction(null);
+        }}
+        onConfirm={confirmPendingAction}
         testId="charts-diagnosis-confirm-dialog"
-      >
-        <div className="charts-side-panel__form charts-diagnosis__editor">
-          <dl className="charts-diagnosis__confirm">
-            <div>
-              <dt>操作</dt>
-              <dd>{pendingAction?.title ?? '-'}</dd>
-            </div>
-            <div>
-              <dt>ORCA患者番号</dt>
-              <dd>{patientId}</dd>
-            </div>
-            <div>
-              <dt>診療日</dt>
-              <dd>{meta.visitDate ?? '-'}</dd>
-            </div>
-            <div>
-              <dt>診療科</dt>
-              <dd>{meta.departmentCode ?? '-'}</dd>
-            </div>
-            <div>
-              <dt>保険組合せ</dt>
-              <dd>{formatInsuranceCombination(meta.insuranceCombinationNumber ?? pendingEntry?.insuranceCombinationNumber)}</dd>
-            </div>
-            <div>
-              <dt>病名</dt>
-              <dd>{pendingForm?.name || formatEntryName(pendingEntry)}</dd>
-            </div>
-            <div>
-              <dt>病名属性</dt>
-              <dd>{pendingForm ? formatDiseaseAttributeLabel(pendingForm) : pendingEntry ? (isMainDisease(pendingEntry) ? '主病名' : '副病名') : '-'}</dd>
-            </div>
-            <div>
-              <dt>レセプト表示</dt>
-              <dd>{pendingForm ? (pendingForm.receiptPrint ? '表示する' : '表示しない') : '表示する'}</dd>
-            </div>
-            <div>
-              <dt>保険病名</dt>
-              <dd>{pendingForm ? (pendingForm.insuranceDisease ? '指定する' : '指定しない') : '指定しない'}</dd>
-            </div>
-            <div>
-              <dt>副病名区分</dt>
-              <dd>{pendingForm ? formatSubDiseaseClassLabel(pendingForm.subDiseaseClass) : '指定なし'}</dd>
-            </div>
-            <div>
-              <dt>病名保険区分</dt>
-              <dd>{pendingForm ? formatDiseaseInsuranceClassLabel(pendingForm.diseaseInsuranceClass) : '指定なし'}</dd>
-            </div>
-            <div>
-              <dt>病名カテゴリ</dt>
-              <dd>{pendingForm ? formatDiseaseCategoryLabel(pendingForm.diseaseCategory) : '指定なし'}</dd>
-            </div>
-            <div>
-              <dt>病名区分</dt>
-              <dd>{pendingForm ? formatDiseaseClassLabel(pendingForm.diseaseClass) : '指定なし'}</dd>
-            </div>
-            <div>
-              <dt>レセプト表示期間</dt>
-              <dd>{pendingForm ? formatOrcaCode(resolveDiseaseReceiptPrintPeriodCode(pendingForm)) : '送信しない'}</dd>
-            </div>
-            <div>
-              <dt>退院証明</dt>
-              <dd>{pendingForm ? formatDischargeCertificateLabel(pendingForm.dischargeCertificate) : '指定なし'}</dd>
-            </div>
-            <div>
-              <dt>開始日</dt>
-              <dd>{pendingForm?.startDate || pendingEntry?.startDate || '-'}</dd>
-            </div>
-            <div>
-              <dt>転帰</dt>
-              <dd>{pendingForm?.outcome || pendingEntry?.outcome || '-'}</dd>
-            </div>
-            <div>
-              <dt>構成コード</dt>
-              <dd>
-                {pendingForm
-                  ? normalizeFormComponents(pendingForm).map((component) => component.code).join(' + ') || (pendingForm.uncodedAccepted ? '未コード化' : '-')
-                  : pendingEntry
-                    ? formatComponentCodeList(pendingEntry)
-                    : '-'}
-              </dd>
-            </div>
-            <div>
-              <dt>ORCA送信コード</dt>
-              <dd>
-                {pendingForm
-                  ? `Disease_Insurance_Class=${formatOrcaCode(resolveDiseaseInsuranceClassCode(pendingForm))} / Disease_Category=${formatOrcaCode(resolveDiseaseCategoryCode(pendingForm))} / Disease_Class=${formatOrcaCode(resolveDiseaseClassCode(pendingForm))} / Main_Disease_Class=${formatOrcaCode(resolveMainDiseaseClassCode(pendingForm))} / Disease_SuspectedFlag=${formatOrcaCode(resolveSuspectedFlagCode(pendingForm))} / Disease_Receipt_Print=${formatOrcaCode(resolveDiseaseReceiptPrintCode(pendingForm))} / Disease_Receipt_Print_Period=${formatOrcaCode(resolveDiseaseReceiptPrintPeriodCode(pendingForm))} / Insurance_Disease=${formatOrcaCode(resolveInsuranceDiseaseCode(pendingForm))} / Discharge_Certificate=${formatOrcaCode(resolveDischargeCertificateCode(pendingForm))} / Sub_Disease_Class=${formatOrcaCode(resolveSubDiseaseClassCode(pendingForm))}`
-                  : pendingEntry
-                    ? `Disease_Insurance_Class=送信しない / Disease_Category=送信しない / Disease_Class=送信しない / Main_Disease_Class=${formatOrcaCode(isMainDisease(pendingEntry) ? '01' : undefined)} / Disease_SuspectedFlag=${formatOrcaCode(isSuspectedDisease(pendingEntry) ? 'S' : undefined)} / Disease_Receipt_Print=1 / Disease_Receipt_Print_Period=送信しない / Insurance_Disease=送信しない / Discharge_Certificate=送信しない / Sub_Disease_Class=送信しない`
-                    : '-'}
-              </dd>
-            </div>
-          </dl>
-          <div className="charts-side-panel__notice charts-side-panel__notice--info">ORCA再取得が完了するまで一覧は更新しません。</div>
-          <div className="charts-diagnosis__editor-actions" role="group" aria-label="ORCA病名操作の確認">
-            <button type="button" onClick={confirmPendingAction} disabled={isAnyMutationPending || isOrcaMutationBlocked}>
-              {pendingAction?.confirmLabel ?? '実行'}
-            </button>
-            <button type="button" className="charts-side-panel__ghost" onClick={() => setPendingAction(null)} disabled={isAnyMutationPending}>
-              キャンセル
-            </button>
-          </div>
-        </div>
-      </FocusTrapDialog>
+      />
     </section>
   );
 }

@@ -31,7 +31,7 @@ import {
 import { MISSING_MASTER_RECOVERY_NEXT_ACTION } from '../shared/missingMasterRecovery';
 import { ToneBanner } from '../reception/components/ToneBanner';
 import { applyAuthServicePatch, useAuthService, type AuthServiceFlags, type DataSourceTransition } from '../charts/authService';
-import { loadChartsEncounterContext, normalizeVisitDate } from '../charts/encounterContext';
+import { loadChartsEncounterContext, normalizeEncounterContext, normalizeVisitDate } from '../charts/encounterContext';
 import { useSession } from '../../AppRouter';
 import { applyExternalParams, isSafeReturnTo, pickExternalParams } from '../../routes/appNavigation';
 import { useNavigationGuard } from '../../routes/NavigationGuardProvider';
@@ -460,7 +460,12 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           patientId?: string;
           appointmentId?: string;
           receptionId?: string;
+          scheduleKey?: string;
+          encounterKey?: string;
           visitDate?: string;
+          departmentCode?: string;
+          physicianCode?: string;
+          insuranceCombinationNumber?: string;
         };
         carryover?: {
           kw?: string;
@@ -492,6 +497,18 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     normalizeVisitDate(locationState?.visitDate) ??
     normalizeVisitDate(stateEncounter?.visitDate) ??
     normalizeVisitDate(storedEncounter?.visitDate);
+  const patientHeaderEncounterContext = useMemo(
+    () =>
+      normalizeEncounterContext({
+        ...storedEncounter,
+        ...stateEncounter,
+        patientId: patientIdParam,
+        appointmentId: appointmentIdParam,
+        receptionId: receptionIdParam,
+        visitDate: visitDateParam,
+      }),
+    [appointmentIdParam, patientIdParam, receptionIdParam, stateEncounter, storedEncounter, visitDateParam],
+  );
   const fromCandidate = appNav.fromCandidate ?? undefined;
   const fromCharts = fromCandidate === 'charts';
   const initialFilters = useMemo(
@@ -1480,6 +1497,31 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       lastErrorCategory: lastSaveResult.errorCategory,
     });
   }, [lastOfficialAction, lastSaveResult]);
+  const patientHeaderContextMatchesSelection =
+    Boolean(form.patientId) && patientHeaderEncounterContext.patientId === form.patientId;
+  const patientHeaderInternalReference = patientHeaderContextMatchesSelection
+    ? patientHeaderEncounterContext.encounterKey ??
+      patientHeaderEncounterContext.scheduleKey ??
+      patientHeaderEncounterContext.receptionId ??
+      patientHeaderEncounterContext.appointmentId
+    : undefined;
+  const patientHeaderVisitDate = patientHeaderContextMatchesSelection ? patientHeaderEncounterContext.visitDate : undefined;
+  const patientHeaderDepartment = patientHeaderContextMatchesSelection
+    ? patientHeaderEncounterContext.departmentCode
+    : undefined;
+  const patientHeaderPhysician = patientHeaderContextMatchesSelection ? patientHeaderEncounterContext.physicianCode : undefined;
+  const patientHeaderInsurance = patientHeaderContextMatchesSelection
+    ? patientHeaderEncounterContext.insuranceCombinationNumber ?? form.insurance
+    : form.insurance;
+  const patientHeaderOrcaCacheStatus = missingMasterFlag
+    ? 'missing'
+    : fallbackUsedFlag
+      ? 'stale'
+      : currentOrcaStatus.state === '同期確認済'
+        ? 'fresh'
+        : currentOrcaStatus.state === '同期可能'
+          ? 'unverified'
+          : currentOrcaStatus.state;
 
   const resolveAuditPatientId = (record: AuditEventRecord) => {
     const payload = record.payload as Record<string, unknown> | undefined;
@@ -2413,10 +2455,17 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               className="patients-detail__identity-bar"
               eyebrow="患者マスタ / 監査"
               patientId={form.patientId}
+              internalPatientId={patientHeaderInternalReference}
               patientName={form.name}
               patientKana={form.kana}
               sex={resolveSexLabel(form.sex)}
               age={resolveAgeLabel(form.birthDate)}
+              visitDate={patientHeaderVisitDate}
+              department={patientHeaderDepartment}
+              physician={patientHeaderPhysician}
+              insuranceCombination={patientHeaderInsurance}
+              orcaSourceLabel={form.patientId ? '患者管理同期状態' : undefined}
+              orcaCacheStatus={form.patientId ? patientHeaderOrcaCacheStatus : undefined}
               note={form.lastVisit ? `最終受診 ${form.lastVisit}` : '受診履歴なし'}
               selected={Boolean(form.patientId)}
               chips={

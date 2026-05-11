@@ -19,6 +19,7 @@ import {
   buildPrescriptionOrderSendBundles,
   buildPrescriptionMutationOperations,
   fetchPrescriptionOrder,
+  finalizePrescriptionAuthority,
   savePrescriptionOrder,
   toPrescriptionOrder,
   type PrescriptionOrder,
@@ -26,7 +27,7 @@ import {
 
 describe('prescriptionOrderApi first-class contract', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.mocked(httpFetch).mockReset();
   });
 
   it('save と send は 211/212/221/222/231/232 の class semantics を揃える', async () => {
@@ -1069,5 +1070,98 @@ describe('prescriptionOrderApi first-class contract', () => {
       'RP1 RPコメント: 850000001 系コメント family は未対応のため保存できません。',
     );
     expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
+  });
+
+  it('finalizePrescriptionAuthority は draft 作成後に server-side prescriptionId で finalize route を呼ぶ', async () => {
+    vi.mocked(httpFetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            runId: 'RUN-RX-AUTH',
+            prescriptionId: 55,
+            revisionId: 56,
+            status: 'DRAFT',
+            patientId: '000001',
+            encounterId: 'F001:E100',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            runId: 'RUN-RX-AUTH',
+            prescriptionId: 55,
+            revisionId: 57,
+            status: 'FINAL',
+            contentHash: 'a'.repeat(64),
+            patientId: '000001',
+            encounterId: 'F001:E100',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+
+    const order: PrescriptionOrder = {
+      patientId: '000001',
+      encounterId: 'F001:E100',
+      encounterDate: '2026-03-09',
+      performDate: '2026-03-09',
+      doctorComment: '',
+      deletedDocumentIds: [],
+      rps: [
+        {
+          rpId: 'rp-1',
+          name: '処方RP',
+          location: 'out',
+          category: 'regular',
+          usage: '1日1回',
+          daysOrTimes: '7',
+          remark: '',
+          refillPattern: 'none',
+          doctorComment: '',
+          started: '2026-03-09',
+          drugs: [
+            {
+              rowId: 'drug-1',
+              code: '620000001',
+              name: 'アムロジピン',
+              quantity: '1',
+              unit: '錠',
+              genericChangeAllowed: true,
+              isGeneralNamePrescription: false,
+              drugComment: '',
+              claimComments: [],
+              patientRequest: true,
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = await finalizePrescriptionAuthority({ patientId: '000001', encounterId: 'F001:E100', order });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        ok: true,
+        prescriptionId: 55,
+        revisionId: 57,
+        status: 'FINAL',
+      }),
+    );
+    expect(vi.mocked(httpFetch)).toHaveBeenNthCalledWith(
+      1,
+      '/api/prescriptions',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    );
+    expect(vi.mocked(httpFetch)).toHaveBeenNthCalledWith(
+      2,
+      '/api/prescriptions/55/finalize',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    );
   });
 });

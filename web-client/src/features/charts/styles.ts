@@ -2363,10 +2363,23 @@ export const chartsStyles = css`
     color: #14532d;
   }
 
+  .charts-side-panel__action--finalize {
+    border-color: rgba(185, 28, 28, 0.45);
+    background: #fef2f2;
+    color: #991b1b;
+  }
+
   .charts-side-panel__action--close {
     border-color: var(--ui-border-strong);
     background: #ffffff;
     color: #0f172a;
+  }
+
+  .charts-side-panel__block-reason {
+    margin: var(--charts-space-xs) 0 0;
+    color: #475569;
+    font-size: 0.82rem;
+    line-height: 1.5;
   }
 
   .charts-side-panel__confirm-list {

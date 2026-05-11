@@ -8,6 +8,7 @@ import { useOptionalSession } from '../../../AppRouter';
 import { loadDeepLinkContext } from '../../../routes/deepLinkContextStorage';
 import { buildFacilityPath } from '../../../routes/facilityRoutes';
 import { useAuthService } from '../../charts/authService';
+import type { OutpatientEncounterContext } from '../../charts/encounterContext';
 import { useAppNavigation } from '../../../routes/useAppNavigation';
 import { MobilePatientPicker } from '../components/MobilePatientPicker';
 import { fetchPatientImageList, uploadPatientImageViaXhr, type PatientImageListItem, type UploadProgressEvent } from '../mobileApi';
@@ -19,6 +20,7 @@ import type { FeedbackTone } from '../../shared/feedbackTone';
 type UploadStage = 'idle' | 'ready' | 'uploading' | 'success' | 'error';
 type MobileImagesLocationState = {
   patientId?: string;
+  encounter?: OutpatientEncounterContext;
 };
 const FEATURE_DISABLED_MESSAGE = '患者画像機能はサーバーで無効化されています。';
 
@@ -45,6 +47,12 @@ const buildErrorMessage = (status: number, error?: string, errorCode?: string) =
 };
 
 const normalizePatientId = (value?: string | null) => {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const normalizeContextValue = (value?: string | null) => {
   if (!value) return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
@@ -226,10 +234,32 @@ export function MobileImagesUploadPage() {
   );
   const patientIdParam = useMemo(() => normalizePatientId(queryParams.get('patientId')), [queryParams]);
   const statePatientId = useMemo(() => normalizePatientId(locationState?.patientId), [locationState?.patientId]);
+  const stateEncounter = locationState?.encounter;
   const deepLinkPatientId = useMemo(
     () => normalizePatientId(loadDeepLinkContext()?.values.patientId),
     [location.search],
   );
+  const encounterSafetyContext = useMemo(() => {
+    const visitDate = normalizeContextValue(stateEncounter?.visitDate);
+    const departmentCode = normalizeContextValue(stateEncounter?.departmentCode);
+    const physicianCode = normalizeContextValue(stateEncounter?.physicianCode);
+    const insuranceCombinationNumber = normalizeContextValue(stateEncounter?.insuranceCombinationNumber);
+    const encounterKey = normalizeContextValue(stateEncounter?.encounterKey);
+    const scheduleKey = normalizeContextValue(stateEncounter?.scheduleKey);
+    const hasContext = Boolean(
+      visitDate || departmentCode || physicianCode || insuranceCombinationNumber || encounterKey || scheduleKey,
+    );
+    if (!hasContext) return undefined;
+    return {
+      acceptanceDate: visitDate,
+      department: departmentCode ? `診療科コード ${departmentCode}` : undefined,
+      physician: physicianCode ? `担当医コード ${physicianCode}` : undefined,
+      insuranceCombination: insuranceCombinationNumber ? `保険組合せ ${insuranceCombinationNumber}` : undefined,
+      internalPatientId: encounterKey ?? scheduleKey,
+      orcaSourceLabel: '遷移文脈',
+      orcaCacheStatus: 'unverified',
+    };
+  }, [stateEncounter]);
   const resolvedPatientId = patientIdParam ?? statePatientId ?? deepLinkPatientId;
   const resolvedPatientSourceLabel = patientIdParam
     ? '入口 query patientId'
@@ -482,7 +512,14 @@ export function MobileImagesUploadPage() {
           <PatientIdentityBar
             eyebrow="患者画像アップロード / 参照"
             patientId={patientId}
+            internalPatientId={encounterSafetyContext?.internalPatientId}
             patientName={patientId ? undefined : '患者未確定'}
+            acceptanceDate={encounterSafetyContext?.acceptanceDate}
+            department={encounterSafetyContext?.department}
+            physician={encounterSafetyContext?.physician}
+            insuranceCombination={encounterSafetyContext?.insuranceCombination}
+            orcaSourceLabel={encounterSafetyContext?.orcaSourceLabel}
+            orcaCacheStatus={encounterSafetyContext?.orcaCacheStatus}
             note="画面内で患者を選び直せます。URL 由来の patientId は画面遷移後に保持しません。"
             chips={
               <>

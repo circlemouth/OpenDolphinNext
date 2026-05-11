@@ -138,7 +138,7 @@ describe('DiagnosisEditPanel readback contract', () => {
     await user.clear(within(dialog).getByLabelText(/転帰 ※任意/));
     await user.type(within(dialog).getByLabelText(/転帰 ※任意/), '継続中');
     await user.click(within(dialog).getByRole('button', { name: 'ORCA病名を更新' }));
-    const confirmDialog = await screen.findByRole('dialog', { name: 'ORCA病名を更新' });
+    const confirmDialog = await screen.findByRole('alertdialog', { name: 'ORCA病名を更新の確認' });
     await user.click(within(confirmDialog).getByRole('button', { name: 'ORCA病名を更新' }));
 
     await waitFor(() => {
@@ -203,7 +203,7 @@ describe('DiagnosisEditPanel readback contract', () => {
 
     const authoring = screen.getByLabelText('ORCAへ病名登録');
     await user.click(within(authoring).getByRole('button', { name: '副病名として登録' }));
-    const confirmDialog = await screen.findByRole('dialog', { name: '副病名として登録' });
+    const confirmDialog = await screen.findByRole('alertdialog', { name: '副病名として登録の確認' });
     await user.click(within(confirmDialog).getByRole('button', { name: '副病名として登録' }));
 
     await waitFor(() => {
