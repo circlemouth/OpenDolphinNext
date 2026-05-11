@@ -18,6 +18,7 @@ public class ChartRevisionExportResponse {
     private List<ChartRevisionExportRevision> revisions = new ArrayList<>();
     private List<ChartRevisionExportEvent> events = new ArrayList<>();
     private List<ChartRevisionExportPrescriptionEvent> prescriptionEvents = new ArrayList<>();
+    private List<ChartRevisionExportOrcaEvent> orcaEvents = new ArrayList<>();
 
     public Long getChartId() {
         return chartId;
@@ -123,5 +124,13 @@ public class ChartRevisionExportResponse {
         this.prescriptionEvents = prescriptionEvents == null
                 ? new ArrayList<>()
                 : new ArrayList<>(prescriptionEvents);
+    }
+
+    public List<ChartRevisionExportOrcaEvent> getOrcaEvents() {
+        return orcaEvents;
+    }
+
+    public void setOrcaEvents(List<ChartRevisionExportOrcaEvent> orcaEvents) {
+        this.orcaEvents = orcaEvents == null ? new ArrayList<>() : new ArrayList<>(orcaEvents);
     }
 }

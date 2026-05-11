@@ -55,6 +55,7 @@ class ChartRevisionExportServiceTest {
         assertThat(response.getEventCount()).isEqualTo(2);
         assertThat(response.getRevisions()).hasSize(2);
         assertThat(response.getPrescriptionEvents()).isEmpty();
+        assertThat(response.getOrcaEvents()).isEmpty();
         assertThat(response.getRevisions().get(1).getStatus()).isEqualTo("AMENDED");
         assertThat(response.getRevisions().get(0).getSnapshotManifest())
                 .containsEntry("snapshotVersion", 1L)
@@ -303,6 +304,84 @@ class ChartRevisionExportServiceTest {
     }
 
     @Test
+    void exportChartIncludesOrcaHistoryAndSanitizesUnsafePayloads() {
+        stubExportQueries(
+                List.of(finalRevision()),
+                List.of(finalizedEvent()),
+                List.of(),
+                List.<Object[]>of(orcaEventRow(
+                        "ORCA_ACCEPTED",
+                        "HTTP_OK",
+                        "{\"operationStatus\":\"ORCA_ACCEPTED\",\"rawOrcaBody\":\"<xml>raw</xml>\","
+                                + "\"Authorization\":\"Basic secret\",\"needsUserReview\":false}",
+                        "{\"apiResult\":\"00\",\"apiResultMessageCategory\":\"INFO\","
+                                + "\"rawResponse\":\"<?xml version=\\\"1.0\\\"?><xml>raw</xml>\","
+                                + "\"rawSensitiveFieldsExcluded\":true}",
+                        "8".repeat(64))));
+
+        ChartRevisionExportResponse response = service.exportChart(10L, "F001");
+
+        assertThat(response.getOrcaEvents()).hasSize(1);
+        assertThat(response.getOrcaEvents().get(0).getOrcaOperationId()).isEqualTo(801L);
+        assertThat(response.getOrcaEvents().get(0).getChartRevisionId()).isEqualTo("20");
+        assertThat(response.getOrcaEvents().get(0).getOperationScope()).isEqualTo("MEDICAL");
+        assertThat(response.getOrcaEvents().get(0).getOperationType()).isEqualTo("TEMPORARY_MEDICAL_CREATE");
+        assertThat(response.getOrcaEvents().get(0).getRequestHash()).isEqualTo("7".repeat(64));
+        assertThat(response.getOrcaEvents().get(0).getResponseHash()).isEqualTo("8".repeat(64));
+        assertThat(response.getOrcaEvents().get(0).getLatestTransmissionId()).isEqualTo(901L);
+        assertThat(response.getOrcaEvents().get(0).getTransportStatus()).isEqualTo("HTTP_OK");
+        assertThat(response.getOrcaEvents().get(0).getReconciliationStatus()).isEqualTo("MATCHED");
+        assertThat(response.getOrcaEvents().get(0).getOperationSummary())
+                .containsEntry("operationStatus", "ORCA_ACCEPTED")
+                .containsEntry("needsUserReview", false)
+                .doesNotContainKey("rawOrcaBody")
+                .doesNotContainKey("Authorization");
+        assertThat(response.getOrcaEvents().get(0).getTransmissionSummary())
+                .containsEntry("apiResult", "00")
+                .containsEntry("rawSensitiveFieldsExcluded", true)
+                .doesNotContainKey("rawResponse");
+
+        stubExportQueries(
+                List.of(finalRevision()),
+                List.of(finalizedEvent()),
+                List.of(),
+                List.<Object[]>of(orcaEventRow(
+                        "ORCA_WARNING",
+                        "HTTP_OK",
+                        "{\"operationStatus\":\"ORCA_WARNING\",\"needsUserReview\":true}",
+                        "{\"apiResult\":\"K1\",\"apiResultMessageCategory\":\"WARN\"}",
+                        "9".repeat(64))));
+
+        ChartRevisionExportResponse changed = service.exportChart(10L, "F001");
+
+        assertThat(changed.getExportHash()).matches("[0-9a-f]{64}");
+        assertThat(changed.getExportHash()).isNotEqualTo(response.getExportHash());
+    }
+
+    @Test
+    void exportChartCsvIncludesOrcaHistoryRowsAndNeutralizesSpreadsheetFormulaInjection() {
+        stubExportQueries(
+                List.of(finalRevision()),
+                List.of(finalizedEvent()),
+                List.of(),
+                List.<Object[]>of(orcaEventRow(
+                        "=ORCA_ACCEPTED",
+                        "+HTTP_OK",
+                        "{\"operationStatus\":\"=ORCA_ACCEPTED\",\"rawOrcaBody\":\"<xml>raw</xml>\"}",
+                        "{\"apiResult\":\"00\",\"rawSensitiveFieldsExcluded\":true}",
+                        "8".repeat(64))));
+
+        String csv = service.exportChartCsv(10L, "F001");
+
+        assertThat(csv).contains("\"orcaEvent\",\"10\",\"20\",\"20\",,\"'=ORCA_ACCEPTED\",\"801\"");
+        assertThat(csv).contains("\"TEMPORARY_MEDICAL_CREATE\",,\"901\",\"doctor01\"");
+        assertThat(csv).contains("\"MATCHED\",\"'+HTTP_OK\"");
+        assertThat(csv).contains("transmission.rawSensitiveFieldsExcluded=true");
+        assertThat(csv).doesNotContain("rawOrcaBody");
+        assertThat(csv).doesNotContain("<xml>");
+    }
+
+    @Test
     void exportChartCsvIncludesHistoryAndNeutralizesSpreadsheetFormulaInjection() {
         ChartRevisionEventModel event = amendedEvent();
         event.setReasonText("=HYPERLINK(\"https://example.test\",\"Authorization: Basic secret\")");
@@ -450,23 +529,39 @@ class ChartRevisionExportServiceTest {
 
     private void stubExportQueries(ChartDocumentModel document, List<ChartRevisionModel> revisions,
             List<ChartRevisionEventModel> events, List<Object[]> prescriptionEvents) {
+        stubExportQueries(document, revisions, events, prescriptionEvents, List.of());
+    }
+
+    private void stubExportQueries(List<ChartRevisionModel> revisions, List<ChartRevisionEventModel> events,
+            List<Object[]> prescriptionEvents, List<Object[]> orcaEvents) {
+        Long currentRevisionId = revisions.isEmpty() ? null : revisions.get(revisions.size() - 1).getId();
+        stubExportQueries(chartDocument(currentRevisionId), revisions, events, prescriptionEvents, orcaEvents);
+    }
+
+    private void stubExportQueries(ChartDocumentModel document, List<ChartRevisionModel> revisions,
+            List<ChartRevisionEventModel> events, List<Object[]> prescriptionEvents, List<Object[]> orcaEvents) {
         when(em.find(ChartDocumentModel.class, 10L)).thenReturn(document);
         TypedQuery<ChartRevisionModel> revisionQuery = mock(TypedQuery.class);
         TypedQuery<ChartRevisionEventModel> eventQuery = mock(TypedQuery.class);
         Query prescriptionQuery = mock(Query.class);
+        Query orcaQuery = mock(Query.class);
         when(em.createQuery(startsWith("select r from ChartRevisionModel"), eq(ChartRevisionModel.class)))
                 .thenReturn(revisionQuery);
         when(em.createQuery(startsWith("select e from ChartRevisionEventModel"), eq(ChartRevisionEventModel.class)))
                 .thenReturn(eventQuery);
         when(em.createNativeQuery(startsWith("SELECT po.prescription_order_id"))).thenReturn(prescriptionQuery);
+        when(em.createNativeQuery(startsWith("SELECT oo.orca_operation_id"))).thenReturn(orcaQuery);
         when(revisionQuery.setParameter("chartId", 10L)).thenReturn(revisionQuery);
         when(eventQuery.setParameter("chartId", 10L)).thenReturn(eventQuery);
         when(prescriptionQuery.setParameter(eq("facilityId"), eq("F001"))).thenReturn(prescriptionQuery);
         when(prescriptionQuery.setParameter(eq("chartRevisionIds"), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(prescriptionQuery);
+        when(orcaQuery.setParameter(eq("facilityId"), eq("F001"))).thenReturn(orcaQuery);
+        when(orcaQuery.setParameter(eq("chartRevisionIds"), org.mockito.ArgumentMatchers.any())).thenReturn(orcaQuery);
         when(revisionQuery.getResultList()).thenReturn(revisions);
         when(eventQuery.getResultList()).thenReturn(events);
         when(prescriptionQuery.getResultList()).thenReturn(prescriptionEvents);
+        when(orcaQuery.getResultList()).thenReturn(orcaEvents);
     }
 
     private Object[] prescriptionEventRow(Long prescriptionRevisionId, String eventType, String reasonText,
@@ -487,6 +582,36 @@ class ChartRevisionExportServiceTest {
                 beforeSummaryJson,
                 afterSummaryJson,
                 eventHash
+        };
+    }
+
+    private Object[] orcaEventRow(String operationStatus, String transportStatus, String operationSummaryJson,
+            String transmissionSummaryJson, String responseHash) {
+        return new Object[]{
+                801L,
+                "20",
+                "MEDICAL",
+                "TEMPORARY_MEDICAL_CREATE",
+                "api21/medicalmod",
+                operationStatus,
+                "doctor01",
+                Timestamp.from(Instant.parse("2026-05-11T11:10:00Z")),
+                Timestamp.from(Instant.parse("2026-05-11T11:12:00Z")),
+                "7".repeat(64),
+                responseHash,
+                1,
+                false,
+                901L,
+                operationStatus,
+                transportStatus,
+                2,
+                Timestamp.from(Instant.parse("2026-05-11T11:11:00Z")),
+                Timestamp.from(Instant.parse("2026-05-11T11:12:00Z")),
+                "7".repeat(64),
+                responseHash,
+                "MATCHED",
+                operationSummaryJson,
+                transmissionSummaryJson
         };
     }
 

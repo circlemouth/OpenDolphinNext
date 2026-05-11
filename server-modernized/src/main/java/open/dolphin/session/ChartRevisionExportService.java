@@ -25,6 +25,7 @@ import open.dolphin.infomodel.ChartRevisionEventModel;
 import open.dolphin.infomodel.ChartRevisionModel;
 import open.dolphin.rest.AbstractResource;
 import open.dolphin.rest.dto.chart.ChartRevisionExportEvent;
+import open.dolphin.rest.dto.chart.ChartRevisionExportOrcaEvent;
 import open.dolphin.rest.dto.chart.ChartRevisionExportPrescriptionEvent;
 import open.dolphin.rest.dto.chart.ChartRevisionExportResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionExportRevision;
@@ -73,6 +74,25 @@ public class ChartRevisionExportService {
             "sendable",
             "candidateStatus",
             "needsUserReview",
+            "rawSensitiveFieldsExcluded");
+    private static final List<String> ORCA_SUMMARY_ALLOWLIST = List.of(
+            "status",
+            "operationStatus",
+            "transmissionStatus",
+            "transportStatus",
+            "apiResult",
+            "apiResultMessageCategory",
+            "needsUserReview",
+            "retryCount",
+            "attemptNumber",
+            "requestHash",
+            "responseHash",
+            "contentHash",
+            "reconciliationStatus",
+            "matchedCount",
+            "totalCount",
+            "resendBlocked",
+            "resendBlockReason",
             "rawSensitiveFieldsExcluded");
     private static final List<String> SNAPSHOT_MANIFEST_ALLOWLIST = List.of(
             "snapshotVersion",
@@ -152,6 +172,7 @@ public class ChartRevisionExportService {
         response.setRevisions(revisions.stream().map(this::toRevision).toList());
         response.setEvents(events.stream().map(this::toEvent).toList());
         response.setPrescriptionEvents(loadPrescriptionEvents(document.getFacilityId(), response.getRevisions()));
+        response.setOrcaEvents(loadOrcaEvents(document.getFacilityId(), response.getRevisions()));
         ChartRevisionExportRevision currentRevision = resolveCurrentRevision(document, response);
         if (currentRevision != null) {
             response.setCurrentRevisionNumber(currentRevision.getRevisionNumber());
@@ -240,6 +261,25 @@ public class ChartRevisionExportService {
                     event.getReasonText(),
                     firstNonBlank(event.getEventHash(), event.getContentHash()),
                     flattenSummary(event.getBeforeSummary(), event.getAfterSummary()));
+        }
+        for (ChartRevisionExportOrcaEvent event : export.getOrcaEvents()) {
+            appendCsvRow(csv,
+                    "orcaEvent",
+                    export.getChartId(),
+                    export.getCurrentRevisionId(),
+                    event.getChartRevisionId(),
+                    null,
+                    event.getOperationStatus(),
+                    event.getOrcaOperationId(),
+                    event.getOperationType(),
+                    null,
+                    event.getLatestTransmissionId(),
+                    event.getRequestedBy(),
+                    firstNonBlank(event.getTransmissionStartedAt(), event.getRequestedAt()),
+                    event.getReconciliationStatus(),
+                    event.getTransportStatus(),
+                    firstNonBlank(event.getTransmissionResponseHash(), event.getResponseHash()),
+                    orcaEventSummary(event));
         }
         return csv.toString();
     }
@@ -362,6 +402,109 @@ public class ChartRevisionExportService {
         return dto;
     }
 
+    private List<ChartRevisionExportOrcaEvent> loadOrcaEvents(String facilityId,
+            List<ChartRevisionExportRevision> revisions) {
+        if (facilityId == null || facilityId.isBlank() || revisions == null || revisions.isEmpty()) {
+            return List.of();
+        }
+        List<String> chartRevisionIds = revisions.stream()
+                .map(ChartRevisionExportRevision::getRevisionId)
+                .filter(id -> id != null)
+                .map(String::valueOf)
+                .toList();
+        if (chartRevisionIds.isEmpty()) {
+            return List.of();
+        }
+        Query query = em.createNativeQuery("""
+                SELECT oo.orca_operation_id,
+                       oo.chart_revision_id,
+                       oo.operation_scope,
+                       oo.operation_type,
+                       oo.source_api,
+                       oo.operation_status,
+                       oo.requested_by,
+                       oo.requested_at,
+                       oo.completed_at,
+                       oo.request_hash,
+                       oo.response_hash,
+                       oo.retry_count,
+                       oo.needs_user_review,
+                       ot.orca_transmission_id,
+                       ot.transmission_status,
+                       ot.transport_status,
+                       ot.attempt_number,
+                       ot.started_at,
+                       ot.completed_at,
+                       ot.request_hash,
+                       ot.response_hash,
+                       rr.reconciliation_status,
+                       CAST(oo.response_summary_json AS text),
+                       CAST(ot.response_summary_json AS text)
+                  FROM opendolphin.orca_operation oo
+                  LEFT JOIN LATERAL (
+                      SELECT tx.orca_transmission_id,
+                             tx.transmission_status,
+                             tx.transport_status,
+                             tx.attempt_number,
+                             tx.started_at,
+                             tx.completed_at,
+                             tx.request_hash,
+                             tx.response_hash,
+                             tx.response_summary_json
+                        FROM opendolphin.orca_transmission tx
+                       WHERE tx.orca_operation_id = oo.orca_operation_id
+                         AND tx.facility_id = oo.facility_id
+                       ORDER BY tx.attempt_number DESC, tx.started_at DESC, tx.orca_transmission_id DESC
+                       LIMIT 1
+                  ) ot ON TRUE
+                  LEFT JOIN LATERAL (
+                      SELECT rc.reconciliation_status
+                        FROM opendolphin.orca_reconciliation_result rc
+                       WHERE rc.orca_operation_id = oo.orca_operation_id
+                         AND rc.facility_id = oo.facility_id
+                       ORDER BY rc.reconciled_at DESC, rc.orca_reconciliation_result_id DESC
+                       LIMIT 1
+                  ) rr ON TRUE
+                 WHERE oo.facility_id = :facilityId
+                   AND oo.chart_revision_id IN (:chartRevisionIds)
+                 ORDER BY oo.chart_revision_id ASC, oo.requested_at ASC, oo.orca_operation_id ASC
+                """);
+        query.setParameter("facilityId", facilityId);
+        query.setParameter("chartRevisionIds", chartRevisionIds);
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = query.getResultList();
+        return rows.stream().map(this::toOrcaEvent).toList();
+    }
+
+    private ChartRevisionExportOrcaEvent toOrcaEvent(Object[] row) {
+        ChartRevisionExportOrcaEvent dto = new ChartRevisionExportOrcaEvent();
+        dto.setOrcaOperationId(longValue(row[0]));
+        dto.setChartRevisionId(redactUnsafeText(textValue(row[1])));
+        dto.setOperationScope(redactUnsafeText(textValue(row[2])));
+        dto.setOperationType(redactUnsafeText(textValue(row[3])));
+        dto.setSourceApi(redactUnsafeText(textValue(row[4])));
+        dto.setOperationStatus(redactUnsafeText(textValue(row[5])));
+        dto.setRequestedBy(redactUnsafeText(textValue(row[6])));
+        dto.setRequestedAt(row[7] != null ? row[7].toString() : null);
+        dto.setCompletedAt(row[8] != null ? row[8].toString() : null);
+        dto.setRequestHash(redactUnsafeText(textValue(row[9])));
+        dto.setResponseHash(redactUnsafeText(textValue(row[10])));
+        dto.setRetryCount(integerValue(row[11]));
+        dto.setNeedsUserReview(booleanValue(row[12]));
+        dto.setLatestTransmissionId(longValue(row[13]));
+        dto.setTransmissionStatus(redactUnsafeText(textValue(row[14])));
+        dto.setTransportStatus(redactUnsafeText(textValue(row[15])));
+        dto.setAttemptNumber(integerValue(row[16]));
+        dto.setTransmissionStartedAt(row[17] != null ? row[17].toString() : null);
+        dto.setTransmissionCompletedAt(row[18] != null ? row[18].toString() : null);
+        dto.setTransmissionRequestHash(redactUnsafeText(textValue(row[19])));
+        dto.setTransmissionResponseHash(redactUnsafeText(textValue(row[20])));
+        dto.setReconciliationStatus(redactUnsafeText(textValue(row[21])));
+        dto.setOperationSummary(sanitizeObject(textValue(row[22]), ORCA_SUMMARY_ALLOWLIST));
+        dto.setTransmissionSummary(sanitizeObject(textValue(row[23]), ORCA_SUMMARY_ALLOWLIST));
+        return dto;
+    }
+
     private Map<String, Object> sanitizeSummary(String summaryJson) {
         return sanitizeObject(summaryJson, SUMMARY_ALLOWLIST);
     }
@@ -458,6 +601,24 @@ public class ChartRevisionExportService {
         return joiner.toString();
     }
 
+    private String orcaEventSummary(ChartRevisionExportOrcaEvent event) {
+        StringJoiner joiner = new StringJoiner("; ");
+        addSummary(joiner, "operationScope", event.getOperationScope());
+        addSummary(joiner, "sourceApi", event.getSourceApi());
+        addSummary(joiner, "requestHash", event.getRequestHash());
+        addSummary(joiner, "responseHash", event.getResponseHash());
+        addSummary(joiner, "retryCount", event.getRetryCount());
+        addSummary(joiner, "needsUserReview", event.getNeedsUserReview());
+        addSummary(joiner, "attemptNumber", event.getAttemptNumber());
+        addSummary(joiner, "transmissionStatus", event.getTransmissionStatus());
+        addSummary(joiner, "transportStatus", event.getTransportStatus());
+        addSummary(joiner, "transmissionRequestHash", event.getTransmissionRequestHash());
+        addSummary(joiner, "transmissionResponseHash", event.getTransmissionResponseHash());
+        flattenSummaryMap(joiner, "operation", event.getOperationSummary());
+        flattenSummaryMap(joiner, "transmission", event.getTransmissionSummary());
+        return joiner.toString();
+    }
+
     private void flattenSummaryMap(StringJoiner joiner, String prefix, Map<String, Object> summary) {
         if (summary == null || summary.isEmpty()) {
             return;
@@ -515,6 +676,8 @@ public class ChartRevisionExportService {
         material.put("events", response.getEvents().stream().map(this::eventHashMaterial).toList());
         material.put("prescriptionEvents",
                 response.getPrescriptionEvents().stream().map(this::prescriptionEventHashMaterial).toList());
+        material.put("orcaEvents",
+                response.getOrcaEvents().stream().map(this::orcaEventHashMaterial).toList());
         return material;
     }
 
@@ -577,6 +740,35 @@ public class ChartRevisionExportService {
         return material;
     }
 
+    private Map<String, Object> orcaEventHashMaterial(ChartRevisionExportOrcaEvent event) {
+        Map<String, Object> material = new LinkedHashMap<>();
+        material.put("orcaOperationId", event.getOrcaOperationId());
+        material.put("chartRevisionId", event.getChartRevisionId());
+        material.put("operationScope", event.getOperationScope());
+        material.put("operationType", event.getOperationType());
+        material.put("sourceApi", event.getSourceApi());
+        material.put("operationStatus", event.getOperationStatus());
+        material.put("requestedBy", event.getRequestedBy());
+        material.put("requestedAt", event.getRequestedAt());
+        material.put("completedAt", event.getCompletedAt());
+        material.put("requestHash", event.getRequestHash());
+        material.put("responseHash", event.getResponseHash());
+        material.put("retryCount", event.getRetryCount());
+        material.put("needsUserReview", event.getNeedsUserReview());
+        material.put("latestTransmissionId", event.getLatestTransmissionId());
+        material.put("transmissionStatus", event.getTransmissionStatus());
+        material.put("transportStatus", event.getTransportStatus());
+        material.put("attemptNumber", event.getAttemptNumber());
+        material.put("transmissionStartedAt", event.getTransmissionStartedAt());
+        material.put("transmissionCompletedAt", event.getTransmissionCompletedAt());
+        material.put("transmissionRequestHash", event.getTransmissionRequestHash());
+        material.put("transmissionResponseHash", event.getTransmissionResponseHash());
+        material.put("reconciliationStatus", event.getReconciliationStatus());
+        material.put("operationSummary", event.getOperationSummary());
+        material.put("transmissionSummary", event.getTransmissionSummary());
+        return material;
+    }
+
     private Long longValue(Object value) {
         if (value instanceof Number number) {
             return number.longValue();
@@ -607,6 +799,16 @@ public class ChartRevisionExportService {
 
     private String textValue(Object value) {
         return value != null ? String.valueOf(value) : null;
+    }
+
+    private Boolean booleanValue(Object value) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        if (value == null) {
+            return null;
+        }
+        return Boolean.valueOf(String.valueOf(value));
     }
 
     private String firstNonBlank(String first, String second) {
