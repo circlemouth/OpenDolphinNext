@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBillingReportLiveProfileSummary,
   buildBillingReportLiveHandoffSummary,
+  buildBillingReportLiveResultSummary,
   parseBillingReportLiveProfileArgs,
   validateBillingReportLiveHandoffCommand,
   validateBillingReportLiveProfileCommand,
+  validateBillingReportLiveResultCommand,
 } from '../qa-lib/orca-billing-report-live-profile-evidence.mjs';
 
 const commandGate = validateBillingReportLiveProfileCommand({
@@ -210,5 +212,126 @@ describe('ORCA billing/report live profile dry-run evidence', () => {
     expect(handoff.blockers).toContain('forbidden flag: --trace');
     expect(handoff.blockers).toContain('forbidden env enabled: QA_TRACE');
     expect(handoff.blockers).toContain('dryRunSummaryReady');
+  });
+
+  it('records a sanitized operator live result without making billing authority claims', () => {
+    const dryRunSummary = buildBillingReportLiveProfileSummary({
+      runId: '20260511T014209Z',
+      commandGate,
+      candidateDiscoverySummary: candidateDiscovery(),
+      exactPreflightSummary: exactPreflight(),
+    });
+    const handoffGate = validateBillingReportLiveHandoffCommand({
+      argv: [
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--require-manual-approval',
+        '--dry-run-summary',
+        'summary.sanitized.json',
+        '--approval-reference',
+        'owner-approved-ticket-123',
+      ],
+      env: {},
+    });
+    const handoff = buildBillingReportLiveHandoffSummary({
+      runId: '20260511T022207Z',
+      commandGate: handoffGate,
+      dryRunSummary,
+    });
+    const resultGate = validateBillingReportLiveResultCommand({
+      argv: [
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--handoff-summary',
+        'handoff.sanitized.json',
+        '--operator-result-summary',
+        'operator-result.sanitized.json',
+      ],
+      env: {},
+    });
+    const result = buildBillingReportLiveResultSummary({
+      runId: '20260511T024210Z',
+      commandGate: resultGate,
+      handoffSummary: handoff,
+      operatorResultSummary: {
+        source: 'orca-billing-report-live-operator-result',
+        operatorOutcome: 'live_success_sanitized',
+        rawSensitiveFieldsExcluded: true,
+        liveTrialOrca: { executed: true },
+        incomeInfo: {
+          sourceSystem: 'ORCA',
+          requestHash: 'a'.repeat(64),
+          responseHash: 'b'.repeat(64),
+          rowCount: 1,
+        },
+        reportSnapshots: [
+          {
+            reportType: 'invoicereceipt',
+            requestHash: 'c'.repeat(64),
+            responseHash: 'd'.repeat(64),
+            invoiceDataIdHash: 'e'.repeat(64),
+            storageUploadStatus: 'NOT_UPLOADED',
+            reportBinaryAvailable: false,
+            serverGeneratedStorageKeyDigestPresent: true,
+          },
+        ],
+      },
+    });
+
+    expect(result.blockers).toEqual([]);
+    expect(result.liveTrialOrca.executed).toBe(true);
+    expect(result.liveTrialOrca.acceptedAsBillingReportEvidence).toBe(true);
+    expect(result.claimBoundary).toContain('does not make billing');
+    expect(JSON.stringify(result)).not.toMatch(/owner-approved-ticket-123|00002|WholeName|Insurance_Combination_Number|must-not-leak/);
+  });
+
+  it('blocks operator result evidence with raw identifiers or storage upload failure', () => {
+    const resultGate = validateBillingReportLiveResultCommand({
+      argv: [
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--handoff-summary',
+        'handoff.sanitized.json',
+        '--operator-result-summary',
+        'operator-result.sanitized.json',
+        '--raw-network',
+      ],
+      env: { QA_RAW_NETWORK: '1' },
+    });
+    const result = buildBillingReportLiveResultSummary({
+      runId: '20260511T024210Z',
+      commandGate: resultGate,
+      handoffSummary: {
+        commandContract: 'orca-billing-report-live-handoff-sanitized-manual-approval',
+        readyForManualLiveExecution: true,
+      },
+      operatorResultSummary: {
+        source: 'orca-billing-report-live-operator-result',
+        operatorOutcome: 'live_success_sanitized',
+        rawSensitiveFieldsExcluded: true,
+        liveTrialOrca: { executed: true },
+        rawDataId: 'must-not-leak',
+        incomeInfo: {
+          sourceSystem: 'ORCA',
+          requestHash: 'a'.repeat(64),
+          rowCount: 1,
+        },
+        reportSnapshots: [
+          {
+            reportType: 'invoicereceipt',
+            requestHash: 'c'.repeat(64),
+            storageUploadStatus: 'UPLOAD_FAILED',
+            reportBinaryAvailable: false,
+            serverGeneratedStorageKeyDigestPresent: true,
+          },
+        ],
+      },
+    });
+
+    expect(result.liveTrialOrca.acceptedAsBillingReportEvidence).toBe(false);
+    expect(result.blockers).toContain('forbidden flag: --raw-network');
+    expect(result.blockers).toContain('forbidden env enabled: QA_RAW_NETWORK');
+    expect(result.blockers).toContain('forbidden_result_key:rawDataId');
+    expect(result.blockers).toContain('invoicereceipt:report_storage_upload_failed');
   });
 });
