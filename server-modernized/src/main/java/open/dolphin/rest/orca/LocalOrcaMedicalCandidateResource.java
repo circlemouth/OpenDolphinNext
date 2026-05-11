@@ -67,6 +67,7 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
         }
 
         PrescriptionOrder order = decodeOrder(request, source.summaryJson());
+        validateSummaryAuthority(request, source, order);
         OrcaMedicalCandidateResponse response = buildCandidate(runId, normalizedChartRevisionId, source, order);
         long candidateId = candidateRepository.saveCandidate(
                 facilityId,
@@ -78,6 +79,19 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
         response.setCandidateId(candidateId);
         recordSuccess(request, facilityId, normalizedChartRevisionId, response, runId);
         return response;
+    }
+
+    private void validateSummaryAuthority(HttpServletRequest request,
+            OrcaMedicalCandidateRepository.PrescriptionRevisionRecord source,
+            PrescriptionOrder order) {
+        String summaryPatientId = order != null ? trimToNull(order.getPatientId()) : null;
+        String summaryEncounterId = order != null ? trimToNull(order.getEncounterId()) : null;
+        if (!equalsTrimmed(source.patientId(), summaryPatientId)
+                || !equalsTrimmed(source.encounterId(), summaryEncounterId)) {
+            throw restError(request, Response.Status.CONFLICT,
+                    "prescription_source_context_mismatch",
+                    "Prescription source context does not match the authoritative order row");
+        }
     }
 
     private OrcaMedicalCandidateResponse buildCandidate(String runId,
@@ -213,5 +227,11 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
     private String firstNonBlank(String first, String fallback) {
         String normalized = trimToNull(first);
         return normalized != null ? normalized : fallback;
+    }
+
+    private boolean equalsTrimmed(String expected, String actual) {
+        String normalizedExpected = trimToNull(expected);
+        String normalizedActual = trimToNull(actual);
+        return normalizedExpected != null && normalizedExpected.equals(normalizedActual);
     }
 }
