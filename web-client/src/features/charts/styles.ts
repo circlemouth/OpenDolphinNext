@@ -2363,6 +2363,12 @@ export const chartsStyles = css`
     color: #14532d;
   }
 
+  .charts-side-panel__action--finalize {
+    border-color: rgba(185, 28, 28, 0.45);
+    background: #fef2f2;
+    color: #991b1b;
+  }
+
   .charts-side-panel__action--close {
     border-color: var(--ui-border-strong);
     background: #ffffff;

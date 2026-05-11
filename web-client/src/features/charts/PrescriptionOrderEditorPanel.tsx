@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { CriticalOperationConfirmDialog } from '../../components/modals/CriticalOperationConfirmDialog';
 import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import { resolveAriaLive } from '../../libs/observability/observability';
 import type { OrderBundleEditPanelMeta, OrderBundleEditPanelRequest, OrderBundleEditingContext } from './OrderBundleEditPanel';
@@ -25,6 +26,7 @@ import {
   buildEmptyPrescriptionOrder,
   buildEmptyPrescriptionRp,
   fetchPrescriptionOrder,
+  finalizePrescriptionAuthority,
   importPrescriptionDoInput,
   savePrescriptionOrder,
   toPrescriptionOrder,
@@ -372,6 +374,7 @@ export function PrescriptionOrderEditorPanel({
   const [inputSetLoading, setInputSetLoading] = useState(false);
   const [inputSetItems, setInputSetItems] = useState<OrcaOrderInputSetSummary[]>([]);
   const [interactionConfirmOpen, setInteractionConfirmOpen] = useState(false);
+  const [finalizeConfirmOpen, setFinalizeConfirmOpen] = useState(false);
   const [interactionPairs, setInteractionPairs] = useState<Array<{
     code1: string;
     code2: string;
@@ -1092,6 +1095,55 @@ export function PrescriptionOrderEditorPanel({
     },
   });
 
+  const finalizeMutation = useMutation({
+    mutationFn: async (payload: { order: PrescriptionOrder }) => {
+      if (isPreviewMode) throw new Error('preview mode');
+      if (!patientId) throw new Error('patientId is required');
+      return finalizePrescriptionAuthority({
+        patientId,
+        encounterId: payload.order.encounterId ?? meta.encounterId,
+        order: {
+          ...payload.order,
+          encounterId: payload.order.encounterId ?? meta.encounterId,
+        },
+      });
+    },
+    onSuccess: (result) => {
+      if (!result.ok) {
+        setNotice({ tone: 'error', message: result.message ?? '処方確定に失敗しました。' });
+        return;
+      }
+      setNotice({
+        tone: 'success',
+        message: `処方を確定しました。status=${result.status ?? 'FINAL'}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['charts-prescription-bundles'] });
+      queryClient.invalidateQueries({ queryKey: ['charts-order-bundles'] });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : '処方確定に失敗しました。';
+      setNotice({ tone: 'error', message });
+    },
+  });
+
+  const finalizeSummary = useMemo(() => {
+    const rpCount = order.rps.length;
+    const drugCount = order.rps.reduce((sum, rp) => sum + rp.drugs.filter((drug) => drug.name.trim()).length, 0);
+    const codedDrugCount = order.rps.reduce(
+      (sum, rp) => sum + rp.drugs.filter((drug) => drug.name.trim() && drug.code?.trim()).length,
+      0,
+    );
+    const startedDates = order.rps.map((rp) => rp.started?.trim()).filter((value): value is string => Boolean(value));
+    return {
+      visitDate: order.performDate ?? order.encounterDate ?? meta.visitDate ?? today,
+      encounterId: order.encounterId ?? meta.encounterId ?? '—',
+      rpCount: `${rpCount}件`,
+      drugCount: `${drugCount}件`,
+      codedDrugCount: `${codedDrugCount}件`,
+      started: startedDates.length > 0 ? Array.from(new Set(startedDates)).join(' / ') : '—',
+    };
+  }, [meta.encounterId, meta.visitDate, order.encounterDate, order.encounterId, order.performDate, order.rps, today]);
+
   const submit = (action: SaveAction) => {
     if (isPreviewMode) {
       setNotice({ tone: 'info', message: 'プレビューモードでは保存できません。' });
@@ -1143,6 +1195,27 @@ export function PrescriptionOrderEditorPanel({
       }
       mutation.mutate({ action, order });
     })();
+  };
+
+  const beginFinalize = () => {
+    if (isPreviewMode) {
+      setNotice({ tone: 'info', message: 'プレビューモードでは処方確定できません。' });
+      return;
+    }
+    if (interactionConfirmOpen || finalizeConfirmOpen || finalizeMutation.isPending) return;
+    const issues = validate();
+    setValidationIssues(issues);
+    if (issues.length > 0) {
+      setNotice({ tone: 'error', message: issues[0].message });
+      if (typeof issues[0].rpIndex === 'number') {
+        setSelectedRpIndex(issues[0].rpIndex);
+      }
+      if (typeof issues[0].drugIndex === 'number') {
+        setSelectedDrugIndex(issues[0].drugIndex);
+      }
+      return;
+    }
+    setFinalizeConfirmOpen(true);
   };
 
   const applyBulkDays = () => {
@@ -1224,6 +1297,35 @@ export function PrescriptionOrderEditorPanel({
           </div>
         </div>
       </FocusTrapDialog>
+      <CriticalOperationConfirmDialog
+        open={finalizeConfirmOpen}
+        title="処方確定の確認"
+        description="現在の処方内容を確定します。確定後の変更、中止、取消は履歴として扱われます。"
+        operationLabel="処方確定"
+        patientName={patientId}
+        patientFields={[
+          { label: '患者ID', value: patientId },
+          { label: '診療日', value: finalizeSummary.visitDate },
+          { label: '来院参照', value: finalizeSummary.encounterId },
+        ]}
+        summaryTitle="確定対象サマリ"
+        summaryFields={[
+          { label: 'RP', value: finalizeSummary.rpCount },
+          { label: '薬剤', value: finalizeSummary.drugCount },
+          { label: 'コード付き薬剤', value: finalizeSummary.codedDrugCount },
+          { label: '開始日', value: finalizeSummary.started },
+          { label: 'ORCA状態', value: 'ORCA送信や会計済み確定ではありません' },
+        ]}
+        confirmLabel="処方を確定する"
+        tone="danger"
+        confirmDisabled={finalizeMutation.isPending}
+        onCancel={() => setFinalizeConfirmOpen(false)}
+        onConfirm={() => {
+          setFinalizeConfirmOpen(false);
+          finalizeMutation.mutate({ order });
+        }}
+        testId="prescription-finalize-dialog"
+      />
       <header className="charts-side-panel__section-header">
         <div className="charts-side-panel__section-header-main">
           <strong>処方（RP集合）</strong>
@@ -2053,6 +2155,14 @@ export function PrescriptionOrderEditorPanel({
             disabled={mutation.isPending || isPreviewMode}
           >
             保存
+          </button>
+          <button
+            type="button"
+            className="charts-side-panel__action charts-side-panel__action--finalize"
+            onClick={beginFinalize}
+            disabled={mutation.isPending || finalizeMutation.isPending || isPreviewMode}
+          >
+            処方確定
           </button>
           {onClose ? (
             <button type="button" className="charts-side-panel__action charts-side-panel__action--close" onClick={onClose}>

@@ -109,6 +109,19 @@ export type PrescriptionOrderFetchResult = Omit<OrderBundleFetchResult, 'bundles
 
 export type PrescriptionOrderSaveResult = OrderBundleMutationResult;
 
+export type PrescriptionAuthorityMutationResult = {
+  ok: boolean;
+  runId?: string;
+  prescriptionId?: number;
+  revisionId?: number;
+  status?: string;
+  contentHash?: string;
+  patientId?: string;
+  encounterId?: string;
+  message?: string;
+  raw?: unknown;
+};
+
 export type PrescriptionClaimCommentCodeIssue = {
   rpIndex: number;
   drugIndex: number;
@@ -1380,6 +1393,85 @@ export async function savePrescriptionOrder(params: {
     message: parsed.message,
     raw: parsed.json ?? parsed.text,
   };
+}
+
+const parsePrescriptionAuthorityMutationResult = (
+  parsed: Awaited<ReturnType<typeof parseOrcaApiResponse>>,
+  runId: string,
+): PrescriptionAuthorityMutationResult => {
+  const json = parsed.json && typeof parsed.json === 'object' && !Array.isArray(parsed.json)
+    ? (parsed.json as Record<string, unknown>)
+    : {};
+  const prescriptionId = typeof json.prescriptionId === 'number' ? json.prescriptionId : undefined;
+  const revisionId = typeof json.revisionId === 'number' ? json.revisionId : undefined;
+  const status = typeof json.status === 'string' ? json.status : undefined;
+  const contentHash = typeof json.contentHash === 'string' ? json.contentHash : undefined;
+  const patientId = typeof json.patientId === 'string' ? json.patientId : undefined;
+  const encounterId = typeof json.encounterId === 'string' ? json.encounterId : undefined;
+  return {
+    ok: parsed.ok,
+    runId: parsed.runId ?? runId,
+    prescriptionId,
+    revisionId,
+    status,
+    contentHash,
+    patientId,
+    encounterId,
+    message: parsed.message,
+    raw: parsed.json ?? parsed.text,
+  };
+};
+
+export async function finalizePrescriptionAuthority(params: {
+  patientId: string;
+  encounterId?: string;
+  chartRevisionId?: string;
+  order: PrescriptionOrder;
+}): Promise<PrescriptionAuthorityMutationResult> {
+  const runId = getObservabilityMeta().runId ?? generateRunId();
+  updateObservabilityMeta({ runId });
+  const encounterId = params.order.encounterId ?? params.encounterId;
+  const normalizedOrder = normalizePrescriptionOrder({
+    ...params.order,
+    patientId: params.patientId,
+    encounterId,
+  });
+  const createResponse = await httpFetch('/api/prescriptions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      patientId: params.patientId,
+      encounterId,
+      chartRevisionId: params.chartRevisionId,
+      order: toServerPrescriptionOrder(normalizedOrder),
+    }),
+  });
+  const createParsed = await parseOrcaApiResponse(createResponse, {
+    fallbackMessage: '処方確定の準備に失敗しました。',
+  });
+  const created = parsePrescriptionAuthorityMutationResult(createParsed, runId);
+  if (!created.ok || typeof created.prescriptionId !== 'number') {
+    return created.ok
+      ? {
+          ...created,
+          ok: false,
+          message: '処方確定の準備結果に prescriptionId が含まれていません。',
+        }
+      : created;
+  }
+
+  const finalizeResponse = await httpFetch(`/api/prescriptions/${encodeURIComponent(String(created.prescriptionId))}/finalize`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      patientId: params.patientId,
+      encounterId,
+    }),
+  });
+  const finalizeParsed = await parseOrcaApiResponse(finalizeResponse, {
+    fallbackMessage: '処方確定に失敗しました。',
+  });
+  return parsePrescriptionAuthorityMutationResult(finalizeParsed, created.runId ?? runId);
 }
 
 export const fetchPrescriptionOrderBundlesWithPatientImportRecovery = async (params: {

@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { PrescriptionOrderEditorPanel } from '../PrescriptionOrderEditorPanel';
@@ -10,7 +10,7 @@ import { fetchOrcaGenericPrice } from '../orcaGenericPriceApi';
 import { fetchOrcaOrderInputSetDetail, fetchOrcaOrderInputSets } from '../orcaOrderInputSetApi';
 import { checkOrcaMasterStaticOrderInteractions } from '../orcaOrderInteractionApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
-import { savePrescriptionOrder } from '../prescriptionOrderApi';
+import { finalizePrescriptionAuthority, savePrescriptionOrder } from '../prescriptionOrderApi';
 
 vi.mock('../orderMasterSearchApi', async () => {
   const actual = await vi.importActual<typeof import('../orderMasterSearchApi')>('../orderMasterSearchApi');
@@ -37,6 +37,13 @@ vi.mock('../prescriptionOrderApi', async () => {
   const actual = await vi.importActual<typeof import('../prescriptionOrderApi')>('../prescriptionOrderApi');
   return {
     ...actual,
+    finalizePrescriptionAuthority: vi.fn().mockResolvedValue({
+      ok: true,
+      prescriptionId: 901,
+      revisionId: 902,
+      status: 'FINAL',
+      contentHash: 'a'.repeat(64),
+    }),
     savePrescriptionOrder: vi.fn().mockResolvedValue({ ok: true }),
   };
 });
@@ -78,6 +85,47 @@ afterEach(() => {
 });
 
 describe('PrescriptionOrderEditorPanel local-only usage contract', () => {
+  it('処方確定は共通重大操作確認で患者と処方サマリを再掲してから authority API を呼ぶ', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+    vi.mocked(fetchOrcaGenericPrice).mockResolvedValue({ ok: false, status: 404 });
+    vi.mocked(checkOrcaMasterStaticOrderInteractions).mockResolvedValue({ ok: true, status: 200, totalCount: 0, pairs: [] });
+
+    renderPanel([
+      {
+        entity: 'medOrder',
+        bundleName: '確定対象RP',
+        bundleNumber: '1',
+        admin: '毎食後',
+        adminCode: '001000',
+        classCode: '212',
+        started: '2026-03-09',
+        items: [{ code: '620000001', name: 'アムロジピン', quantity: '1', unit: '錠', memo: '' }],
+      },
+    ]);
+
+    await user.click(screen.getByRole('button', { name: '処方確定' }));
+
+    const dialog = await screen.findByRole('alertdialog', { name: '処方確定の確認' });
+    expect(within(dialog).getByText('実行操作:')).toBeInTheDocument();
+    expect(within(dialog).getByText('処方確定')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('P-RX-LOCAL').length).toBeGreaterThan(0);
+    expect(within(dialog).getByText('F001:E777')).toBeInTheDocument();
+    expect(within(dialog).getByText('ORCA送信や会計済み確定ではありません')).toBeInTheDocument();
+    expect(finalizePrescriptionAuthority).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole('button', { name: '処方を確定する' }));
+
+    await waitFor(() => expect(finalizePrescriptionAuthority).toHaveBeenCalledTimes(1));
+    expect(finalizePrescriptionAuthority).toHaveBeenCalledWith(
+      expect.objectContaining({
+        patientId: 'P-RX-LOCAL',
+        encounterId: 'F001:E777',
+      }),
+    );
+    expect(await screen.findByText('処方を確定しました。status=FINAL')).toBeInTheDocument();
+  });
+
   it('ORCA入力セット取込は用法コードを投与コードから復元し、注記テキストへは依存しない', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
