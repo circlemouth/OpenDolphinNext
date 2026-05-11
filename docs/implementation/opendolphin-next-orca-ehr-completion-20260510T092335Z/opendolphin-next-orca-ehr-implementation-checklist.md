@@ -158,9 +158,10 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] server-side canonical content/context から `content_hash` を生成し、FINALIZED event と `chart_revision` に記録する。患者・受付・保険・病名・処方候補・算定候補の full snapshot は B-04 / Worker C-D 連携後に継続する。
   - [x] `snapshot_manifest_json` skeleton を server-side validated context から生成し、ORCA患者番号、encounter、受付IDまたは受付なし理由、診療科、担当医、保険組合せ、後続 snapshot 統合待ち status を hash/export に含める。full snapshot entity 連携は Worker A/C/D 統合後に継続する。
 - [x] `entered_by` と `finalized_by` を分離し、代行入力時は `entry_mode=DELEGATED` を保存する。
-- [ ] `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` を実装し、理由必須、変更前後要約、監査ログを保存する。
-  - [x] amend/addendum/cancel API skeleton は locked revision のみを対象にし、理由・actor を必須化し、訂正/追記は新 revision と event、取消は event として元 revision を物理更新しない。authoritative audit log 連携は Worker F の audit chain と合わせて継続する。
-  - [x] `chart_revision_event` は DB trigger で UPDATE / DELETE を拒否し、理由・変更前後要約・event hash の後書き改ざんを防止する。authoritative audit log 連携は Worker F の audit chain と合わせて継続する。
+- [x] `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` を実装し、理由必須、変更前後要約、監査ログを保存する。
+  - [x] amend/addendum/cancel API skeleton は locked revision のみを対象にし、理由・actor を必須化し、訂正/追記は新 revision と event、取消は event として元 revision を物理更新しない。
+  - [x] `chart_revision_event` は DB trigger で UPDATE / DELETE を拒否し、理由・変更前後要約・event hash の後書き改ざんを防止する。
+  - [x] 2026-05-11T13:26Z: amend/addendum/cancel は event persistence 後に authoritative audit log へ `CHART_REVISION_EVENT_RECORDED` を追記し、監査 payload は chart/revision/event/hash/status metadata の allowlist に限定する。reason text、raw ORCA body、credential、Cookie、Authorization、患者名、住所、電話、保険詳細は保存しない。
 - [ ] PDF/CSV/JSON エクスポートは訂正・追記・取消履歴、処方指示履歴、ORCA連携履歴、診療時点スナップショットを含める。
   - [x] chart export contract に chart revision events、before/after summary、reason、actor、content hash を含めることを追加した。reporting 実装は B-04 継続。
   - [x] `GET /api/charts/{chartId}/revisions/export` を追加し、施設境界で chart revision JSON export に revision/event 履歴、reason、actor、content hash、allowlist 済み summary を含める。PDF/CSV、処方指示履歴、ORCA連携履歴の統合は Worker C-D / reporting 連携後に継続する。

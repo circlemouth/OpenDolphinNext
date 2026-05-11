@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
@@ -29,6 +30,8 @@ import open.dolphin.rest.dto.chart.ChartRevisionChangeRequest;
 import open.dolphin.rest.dto.chart.ChartRevisionChangeResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionFinalizeRequest;
 import open.dolphin.rest.dto.chart.ChartRevisionFinalizeResponse;
+import open.dolphin.security.audit.AuditEventPayload;
+import open.dolphin.security.audit.AuditTrailService;
 
 @ApplicationScoped
 @Transactional
@@ -41,6 +44,9 @@ public class ChartRevisionFinalizeService {
 
     @PersistenceContext(unitName = "opendolphinPU")
     private EntityManager em;
+
+    @Inject
+    private AuditTrailService auditTrailService;
 
     public ChartRevisionFinalizeResponse finalizeRevision(long chartId, long revisionId,
             String facilityId, ChartRevisionFinalizeRequest request) {
@@ -237,6 +243,9 @@ public class ChartRevisionFinalizeService {
         event.setEventHash(sha256(event.getAfterSummaryJson()));
         em.persist(event);
         em.flush();
+
+        recordRevisionChangeAudit(facilityId, document, source, newRevision, event, eventType, newStatus,
+                contentHash, reasonCode != null);
 
         ChartRevisionChangeResponse response = new ChartRevisionChangeResponse();
         response.setChartId(chartId);
@@ -452,6 +461,48 @@ public class ChartRevisionFinalizeService {
         summary.put("newRevisionCreated", newRevisionCreated);
         summary.put("hasReasonCode", hasReasonCode);
         return writeJson(summary);
+    }
+
+    private void recordRevisionChangeAudit(String facilityId, ChartDocumentModel document, ChartRevisionModel source,
+            ChartRevisionModel newRevision, ChartRevisionEventModel event, ChartRevisionEventType eventType,
+            ChartRevisionStatus newStatus, String contentHash, boolean hasReasonCode) {
+        if (auditTrailService == null) {
+            throw restError(Response.Status.SERVICE_UNAVAILABLE, "audit_log_write_unavailable",
+                    "Audit log write path is unavailable", Map.of("reasonCode", "audit_log_write_unavailable"));
+        }
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("facilityId", facilityId != null && !facilityId.isBlank() ? facilityId : document.getFacilityId());
+        details.put("subjectType", "chart_revision");
+        details.put("subjectId", document.getId() + ":" + source.getId());
+        details.put("chartId", document.getId());
+        details.put("sourceRevisionId", source.getId());
+        details.put("sourceRevisionNumber", source.getRevisionNumber());
+        details.put("sourceRevisionStatus", source.getStatus().name());
+        details.put("newRevisionId", newRevision != null ? newRevision.getId() : null);
+        details.put("newRevisionNumber", newRevision != null ? newRevision.getRevisionNumber() : null);
+        details.put("eventId", event.getId());
+        details.put("eventType", eventType.name());
+        details.put("status", newStatus.name());
+        details.put("contentHash", contentHash);
+        details.put("hasReasonCode", hasReasonCode);
+        details.put("outcome", "SUCCESS");
+
+        AuditEventPayload payload = new AuditEventPayload();
+        payload.setAction("CHART_REVISION_EVENT_RECORDED");
+        payload.setResource("/api/charts/{chartId}/revisions/{revisionId}/" + revisionEventPath(eventType));
+        payload.setActorId(String.valueOf(event.getActorUserId()));
+        payload.setOutcome("SUCCESS");
+        payload.setDetails(details);
+        auditTrailService.record(payload);
+    }
+
+    private String revisionEventPath(ChartRevisionEventType eventType) {
+        return switch (eventType) {
+            case AMENDED -> "amend";
+            case ADDENDUM_ADDED -> "addendum";
+            case CANCELLED -> "cancel";
+            default -> "event";
+        };
     }
 
     private String writeHashMaterial(long chartId, long revisionId, String title, String contextJson,

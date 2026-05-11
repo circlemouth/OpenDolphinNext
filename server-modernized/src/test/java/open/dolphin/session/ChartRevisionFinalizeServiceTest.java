@@ -20,6 +20,8 @@ import open.dolphin.rest.dto.chart.ChartRevisionFinalizeRequest;
 import open.dolphin.rest.dto.chart.ChartRevisionFinalizeResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionChangeRequest;
 import open.dolphin.rest.dto.chart.ChartRevisionChangeResponse;
+import open.dolphin.security.audit.AuditEventPayload;
+import open.dolphin.security.audit.AuditTrailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -28,12 +30,15 @@ class ChartRevisionFinalizeServiceTest {
 
     private ChartRevisionFinalizeService service;
     private EntityManager em;
+    private AuditTrailService auditTrailService;
 
     @BeforeEach
     void setUp() throws Exception {
         service = new ChartRevisionFinalizeService();
         em = mock(EntityManager.class);
+        auditTrailService = mock(AuditTrailService.class);
         setField(service, "em", em);
+        setField(service, "auditTrailService", auditTrailService);
     }
 
     @Test
@@ -228,6 +233,25 @@ class ChartRevisionFinalizeServiceTest {
         assertThat(event.getReasonText()).isEqualTo("Clinically necessary correction");
         assertThat(event.getBeforeSummaryJson()).contains("\"status\":\"FINAL\"");
         assertThat(event.getAfterSummaryJson()).doesNotContain("Sanitized Patient");
+
+        ArgumentCaptor<AuditEventPayload> auditCaptor = ArgumentCaptor.forClass(AuditEventPayload.class);
+        verify(auditTrailService).record(auditCaptor.capture());
+        AuditEventPayload audit = auditCaptor.getValue();
+        assertThat(audit.getAction()).isEqualTo("CHART_REVISION_EVENT_RECORDED");
+        assertThat(audit.getResource()).isEqualTo("/api/charts/{chartId}/revisions/{revisionId}/amend");
+        assertThat(audit.getActorId()).isEqualTo("202");
+        assertThat(audit.getDetails())
+                .containsEntry("facilityId", "F001")
+                .containsEntry("subjectType", "chart_revision")
+                .containsEntry("subjectId", "10:20")
+                .containsEntry("chartId", 10L)
+                .containsEntry("sourceRevisionId", 20L)
+                .containsEntry("newRevisionId", 21L)
+                .containsEntry("eventId", 31L)
+                .containsEntry("eventType", "AMENDED")
+                .containsEntry("hasReasonCode", true)
+                .containsEntry("outcome", "SUCCESS");
+        assertThat(audit.getDetails()).doesNotContainKey("reasonText");
     }
 
     @Test
@@ -255,6 +279,15 @@ class ChartRevisionFinalizeServiceTest {
         verify(em).persist(eventCaptor.capture());
         assertThat(eventCaptor.getValue().getEventType()).isEqualTo(ChartRevisionEventType.CANCELLED);
         assertThat(eventCaptor.getValue().getReasonText()).isEqualTo("Wrong encounter selected");
+
+        ArgumentCaptor<AuditEventPayload> auditCaptor = ArgumentCaptor.forClass(AuditEventPayload.class);
+        verify(auditTrailService).record(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getResource())
+                .isEqualTo("/api/charts/{chartId}/revisions/{revisionId}/cancel");
+        assertThat(auditCaptor.getValue().getDetails())
+                .containsEntry("eventType", "CANCELLED")
+                .containsEntry("newRevisionId", null)
+                .containsEntry("hasReasonCode", true);
     }
 
     @Test

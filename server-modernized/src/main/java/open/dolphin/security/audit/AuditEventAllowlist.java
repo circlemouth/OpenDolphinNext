@@ -177,6 +177,19 @@ final class AuditEventAllowlist {
         keys.put("ORCA_MASTER_FETCH", merge(DEFAULT_KEYS, normalizedSet(
                 "keywordPresent",
                 "keywordLength")));
+        keys.put("CHART_REVISION_EVENT_RECORDED", merge(DEFAULT_KEYS, normalizedSet(
+                "subjectType",
+                "subjectId",
+                "chartId",
+                "sourceRevisionId",
+                "sourceRevisionNumber",
+                "sourceRevisionStatus",
+                "newRevisionId",
+                "newRevisionNumber",
+                "eventId",
+                "eventType",
+                "contentHash",
+                "hasReasonCode")));
         return Map.copyOf(keys);
     }
 
