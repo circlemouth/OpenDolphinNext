@@ -64,10 +64,11 @@
 - `chart_revision_event` は revision chain の状態遷移、理由、変更前後 summary を保存する。summary には raw 患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token を保存しない。
 - `POST /api/charts/{chartId}/revisions/{revisionId}/finalize` は `DRAFT` revision だけを対象にする。確定時は ORCA患者番号、患者氏名、生年月日、性別、encounter、診療日、ORCA受付IDまたは受付なし理由、診療科、担当医、保険組合せ、確定者、保存済み入力者、canonical content JSON を必須検証する。
 - `entered_by_user_id` は draft revision の保存済み入力者を authority とし、finalize request の role / owner claim で上書きしない。`entered_by_user_id` と `finalized_by_user_id` が一致する場合は `entry_mode=DIRECT`、異なる場合は `entry_mode=DELEGATED` として保存する。client が `entryMode` / `delegatedByUserId` を送る場合も、保存済み入力者と確定者から導出される値に一致しないものは拒否する。
+- `snapshot_manifest_json` は chart finalize API が server-side に生成する。現時点では ORCA患者番号、encounter、受付IDまたは受付なし理由、診療科、担当医、保険組合せ、および Worker A/C/D の full snapshot 統合待ち status を保存する。患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token は manifest に保存しない。
 - `content_hash` は chart finalize API が確定時に server-side canonical content と確定 context から計算する。client 提供 digest は採用しない。
 - finalize event summary は hash、encounter、診療科、担当医、保険組合せ、入力者、確定者、代行入力 context、受付 context の有無だけを保存し、患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token を保存しない。
 - `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` は locked revision だけを対象にし、理由と actor を必須にする。訂正・追記は新 revision と event を作成し、元 revision は物理更新しない。取消は取消 event を追加し、元 revision 本文を物理削除しない。
-- chart PDF / CSV / JSON export は、current revision だけでなく `chart_revision_event` の `FINALIZED` / `AMENDED` / `ADDENDUM_ADDED` / `CANCELLED` / `VOIDED`、before/after summary、reason、actor、content hash を含める。export payload に raw ORCA body、credential、Cookie、Authorization、CSRF token、患者住所・電話などの不要 PHI を含めない。CSV export は spreadsheet formula injection を防ぐため、`=`, `+`, `-`, `@`, tab で始まるセル値を neutralize する。
+- chart PDF / CSV / JSON export は、current revision だけでなく `chart_revision_event` の `FINALIZED` / `AMENDED` / `ADDENDUM_ADDED` / `CANCELLED` / `VOIDED`、before/after summary、reason、actor、content hash、snapshot manifest summary を含める。export payload に raw ORCA body、credential、Cookie、Authorization、CSRF token、患者住所・電話などの不要 PHI を含めない。CSV export は spreadsheet formula injection を防ぐため、`=`, `+`, `-`, `@`, tab で始まるセル値を neutralize する。
 - `GET /api/charts/{chartId}/revisions/export` は chart revision JSON export の最小 contract とする。施設 ID は server-side session から解決し、request body / query の owner/facility は採用しない。応答は revision list と event list を時系列で返し、summary JSON は allowlist された scalar key のみを投影する。reason/title/context 文字列に Authorization / Cookie / raw XML / SOAP body が混入している場合は redaction して返す。
 - `GET /api/charts/{chartId}/revisions/export.csv` は同じ施設境界と redaction / allowlist projection を使う CSV export とする。CSV には revision row と event row を含め、PDF/reporting integration が同じ provenance を表示できるよう `recordType`, revision identifiers, event identifiers, reason, actor, hash, summary を固定列で出力する。
 - reporting PDF payload は `chartRevisionEvents` を受け取り、既存 template の summary section に chart revision provenance を表示する。PDF 投影時も summary key allowlist と Authorization / Cookie / raw XML / SOAP body redaction を適用し、API caller が送った任意 nested JSON をそのまま帳票へ出さない。
@@ -102,6 +103,7 @@
 - [x] chart revision CSV export API を追加し、JSON export と同じ event 履歴を spreadsheet formula injection 対策付きで返す。
 - [x] reporting PDF payload に chart revision event provenance を追加し、summary section へ allowlist/redaction 付きで表示する。
 - [x] chart revision finalize context に `entry_mode` / `delegated_by_user_id` を追加し、保存済み入力者と確定者から代行入力 context を server-side 検証する。
+- [x] chart revision finalize 時に server-generated `snapshot_manifest_json` skeleton を保存し、content hash と export summary に含める。
 
 ## 受け入れ条件
 - [x] active key を変更しても旧文書が verify できる。
@@ -111,4 +113,5 @@
 - [x] locked revision の本文・SOAP / module payload・title・current revision pointer 直接更新は DB guard と service guard の両方で拒否される。
 - [x] finalize API は必須 context 欠落、chart/revision 不一致、非 DRAFT 再確定を拒否し、server-side canonical hash を記録する。
 - [x] finalize API は client role claim を信用せず、保存済み `entered_by_user_id` と `finalized_by_user_id` が不一致の場合だけ `entry_mode=DELEGATED` を保存する。
+- [x] snapshot manifest は client body を採用せず、finalize API の server-side validated context から生成され、export では allowlist projection だけを返す。
 - [x] amend/addendum/cancel API は理由欠落、chart/revision 不一致、DRAFT 対象を拒否し、元 revision を物理更新せず event を記録する。

@@ -45,6 +45,11 @@ class ChartRevisionExportServiceTest {
         assertThat(response.getCurrentRevisionId()).isEqualTo(21L);
         assertThat(response.getRevisions()).hasSize(2);
         assertThat(response.getRevisions().get(1).getStatus()).isEqualTo("AMENDED");
+        assertThat(response.getRevisions().get(0).getSnapshotManifest())
+                .containsEntry("snapshotVersion", 1L)
+                .containsEntry("patientSnapshotStatus", "IDENTIFIER_ONLY")
+                .doesNotContainKey("patientName")
+                .doesNotContainKey("rawOrcaBody");
         assertThat(response.getEvents()).hasSize(2);
         assertThat(response.getEvents().get(0).getEventType()).isEqualTo("FINALIZED");
         assertThat(response.getEvents().get(0).getAfterSummary())
@@ -69,6 +74,7 @@ class ChartRevisionExportServiceTest {
 
         assertThat(csv).contains("\"recordType\",\"chartId\",\"currentRevisionId\"");
         assertThat(csv).contains("\"revision\",\"10\",\"21\",\"20\",\"1\",\"FINAL\"");
+        assertThat(csv).contains("snapshot.patientSnapshotStatus=IDENTIFIER_ONLY");
         assertThat(csv).contains("\"event\",\"10\",\"21\",\"20\",,,\"31\",\"AMENDED\"");
         assertThat(csv).contains("\"'=HYPERLINK(\"\"https://example.test\"\",\"\"Authorization: [redacted]");
         assertThat(csv).contains("after.eventType=AMENDED");
@@ -129,6 +135,10 @@ class ChartRevisionExportServiceTest {
         revision.setDepartmentCode("01");
         revision.setPhysicianCode("10001");
         revision.setInsuranceCombinationNumber("0001");
+        revision.setSnapshotManifestJson("{\"snapshotVersion\":1,\"source\":\"CHART_FINALIZE\","
+                + "\"patientSnapshotStatus\":\"IDENTIFIER_ONLY\","
+                + "\"patientName\":\"Do Not Export\","
+                + "\"rawOrcaBody\":\"<xml>raw</xml>\"}");
         revision.setEnteredByUserId(101L);
         revision.setFinalizedByUserId(202L);
         return revision;

@@ -75,6 +75,10 @@ public class ChartRevisionModel implements Serializable {
     @JdbcTypeCode(SqlTypes.JSON)
     private String finalizeContextJson;
 
+    @Column(name = "snapshot_manifest_json", nullable = false, columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String snapshotManifestJson;
+
     @Column(name = "entered_by_user_id", nullable = false)
     private Long enteredByUserId;
 
@@ -109,6 +113,9 @@ public class ChartRevisionModel implements Serializable {
         if (finalizeContextJson == null || finalizeContextJson.isBlank()) {
             finalizeContextJson = "{}";
         }
+        if (snapshotManifestJson == null || snapshotManifestJson.isBlank()) {
+            snapshotManifestJson = "{}";
+        }
         if (entryMode == null) {
             entryMode = ChartRevisionEntryMode.DIRECT;
         }
@@ -119,6 +126,9 @@ public class ChartRevisionModel implements Serializable {
         updatedAt = Instant.now();
         if (finalizeContextJson == null || finalizeContextJson.isBlank()) {
             finalizeContextJson = "{}";
+        }
+        if (snapshotManifestJson == null || snapshotManifestJson.isBlank()) {
+            snapshotManifestJson = "{}";
         }
         if (entryMode == null) {
             entryMode = ChartRevisionEntryMode.DIRECT;
@@ -255,6 +265,14 @@ public class ChartRevisionModel implements Serializable {
 
     public void setFinalizeContextJson(String finalizeContextJson) {
         this.finalizeContextJson = finalizeContextJson;
+    }
+
+    public String getSnapshotManifestJson() {
+        return snapshotManifestJson;
+    }
+
+    public void setSnapshotManifestJson(String snapshotManifestJson) {
+        this.snapshotManifestJson = snapshotManifestJson;
     }
 
     public Long getEnteredByUserId() {

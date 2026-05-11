@@ -53,6 +53,7 @@ public final class ReportingEngine {
                     "entryMode",
                     "delegatedByUserId",
                     "finalizedByUserId",
+                    "hasSnapshotManifest",
                     "hasOrcaAcceptanceId",
                     "hasNoAcceptanceReason")));
     private static final Pattern AUTHORIZATION_LINE = Pattern.compile("(?i)authorization\\s*:\\s*[^\\r\\n]+");

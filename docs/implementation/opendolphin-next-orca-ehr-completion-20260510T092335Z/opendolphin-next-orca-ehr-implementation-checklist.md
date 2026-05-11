@@ -153,6 +153,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 保存済み `entered_by_user_id` を代行入力者の authority とし、`entry_mode` / `delegated_by_user_id` は `entered_by_user_id` と `finalized_by_user_id` から server-side に導出・検証する。
 - [ ] 確定時に患者・受付・保険・病名・処方候補・算定候補のスナップショットと `content_hash` を作る。
   - [x] server-side canonical content/context から `content_hash` を生成し、FINALIZED event と `chart_revision` に記録する。患者・受付・保険・病名・処方候補・算定候補の full snapshot は B-04 / Worker C-D 連携後に継続する。
+  - [x] `snapshot_manifest_json` skeleton を server-side validated context から生成し、ORCA患者番号、encounter、受付IDまたは受付なし理由、診療科、担当医、保険組合せ、後続 snapshot 統合待ち status を hash/export に含める。full snapshot entity 連携は Worker A/C/D 統合後に継続する。
 - [x] `entered_by` と `finalized_by` を分離し、代行入力時は `entry_mode=DELEGATED` を保存する。
 - [ ] `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` を実装し、理由必須、変更前後要約、監査ログを保存する。
   - [x] amend/addendum/cancel API skeleton は locked revision のみを対象にし、理由・actor を必須化し、訂正/追記は新 revision と event、取消は event として元 revision を物理更新しない。authoritative audit log 連携は Worker F の audit chain と合わせて継続する。
@@ -161,6 +162,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] `GET /api/charts/{chartId}/revisions/export` を追加し、施設境界で chart revision JSON export に revision/event 履歴、reason、actor、content hash、allowlist 済み summary を含める。PDF/CSV、処方指示履歴、ORCA連携履歴の統合は Worker C-D / reporting 連携後に継続する。
   - [x] `GET /api/charts/{chartId}/revisions/export.csv` を追加し、JSON export と同じ revision/event 履歴を固定列 CSV として出力する。raw ORCA / credential redaction と spreadsheet formula injection neutralization を通す。PDF と処方/ORCA履歴の統合は B-05 継続。
   - [x] reporting PDF payload の `chartRevisionEvents` を summary section に投影し、訂正・追記・取消履歴の reason、actor、hash、before/after summary を allowlist/redaction 付きで表示できるようにした。処方指示履歴、ORCA連携履歴、診療時点 full snapshot は Worker C-D 統合後に継続する。
+  - [x] chart revision JSON/CSV export は server-generated snapshot manifest summary を allowlist/redaction 付きで含める。処方指示履歴、ORCA連携履歴、full snapshot entity は Worker A/C/D 統合後に継続する。
 
 ## 8. 処方指示正本実装
 

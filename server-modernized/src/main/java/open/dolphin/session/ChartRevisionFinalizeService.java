@@ -100,8 +100,10 @@ public class ChartRevisionFinalizeService {
         String finalizeContextJson = writeContextJson(orcaPatientId, patientBirthDate, patientGender, encounterId,
                 encounterDate, orcaAcceptanceId, noAcceptanceReason, departmentCode, physicianCode,
                 insuranceCombinationNumber, enteredByUserId, entryMode, delegatedByUserId, finalizedByUserId);
+        String snapshotManifestJson = writeSnapshotManifestJson(orcaPatientId, encounterId, encounterDate,
+                orcaAcceptanceId, noAcceptanceReason, departmentCode, physicianCode, insuranceCombinationNumber);
         String contentHash = sha256(writeHashMaterial(chartId, revisionId, revision.getTitle(), finalizeContextJson,
-                canonicalContent));
+                snapshotManifestJson, canonicalContent));
         Instant finalizedAt = Instant.now();
 
         revision.setStatus(ChartRevisionStatus.FINAL);
@@ -114,6 +116,7 @@ public class ChartRevisionFinalizeService {
         revision.setPhysicianCode(physicianCode);
         revision.setInsuranceCombinationNumber(insuranceCombinationNumber);
         revision.setFinalizeContextJson(finalizeContextJson);
+        revision.setSnapshotManifestJson(snapshotManifestJson);
         revision.setContentHash(contentHash);
         revision.setEntryMode(entryMode);
         revision.setDelegatedByUserId(delegatedByUserId);
@@ -131,7 +134,7 @@ public class ChartRevisionFinalizeService {
         event.setBeforeSummaryJson("{\"status\":\"DRAFT\"}");
         event.setAfterSummaryJson(writeEventSummary(contentHash, encounterId, encounterDate, departmentCode,
                 physicianCode, insuranceCombinationNumber, enteredByUserId, entryMode, delegatedByUserId,
-                finalizedByUserId, orcaAcceptanceId != null, noAcceptanceReason != null));
+                finalizedByUserId, true, orcaAcceptanceId != null, noAcceptanceReason != null));
         event.setEventHash(sha256(event.getAfterSummaryJson()));
         em.persist(event);
         em.flush();
@@ -186,6 +189,7 @@ public class ChartRevisionFinalizeService {
             int nextRevisionNumber = nextRevisionNumber(chartId);
             String title = firstNonBlank(request.getTitle(), source.getTitle());
             contentHash = sha256(writeHashMaterial(chartId, 0L, title, source.getFinalizeContextJson(),
+                    source.getSnapshotManifestJson(),
                     canonicalContent));
             Instant now = Instant.now();
 
@@ -210,10 +214,11 @@ public class ChartRevisionFinalizeService {
             newRevision.setPhysicianCode(source.getPhysicianCode());
             newRevision.setInsuranceCombinationNumber(source.getInsuranceCombinationNumber());
             newRevision.setFinalizeContextJson(source.getFinalizeContextJson());
+            newRevision.setSnapshotManifestJson(source.getSnapshotManifestJson());
             em.persist(newRevision);
             em.flush();
             contentHash = sha256(writeHashMaterial(chartId, newRevision.getId(), title, source.getFinalizeContextJson(),
-                    canonicalContent));
+                    source.getSnapshotManifestJson(), canonicalContent));
             newRevision.setContentHash(contentHash);
         }
 
@@ -382,10 +387,35 @@ public class ChartRevisionFinalizeService {
         return writeJson(context);
     }
 
+    private String writeSnapshotManifestJson(String orcaPatientId, String encounterId, LocalDate encounterDate,
+            String orcaAcceptanceId, String noAcceptanceReason, String departmentCode, String physicianCode,
+            String insuranceCombinationNumber) {
+        Map<String, Object> manifest = new LinkedHashMap<>();
+        manifest.put("snapshotVersion", 1);
+        manifest.put("source", "CHART_FINALIZE");
+        manifest.put("orcaPatientId", orcaPatientId);
+        manifest.put("encounterId", encounterId);
+        manifest.put("encounterDate", encounterDate.toString());
+        manifest.put("orcaAcceptanceId", orcaAcceptanceId);
+        manifest.put("hasNoAcceptanceReason", noAcceptanceReason != null);
+        manifest.put("departmentCode", departmentCode);
+        manifest.put("physicianCode", physicianCode);
+        manifest.put("insuranceCombinationNumber", insuranceCombinationNumber);
+        manifest.put("patientSnapshotStatus", "IDENTIFIER_ONLY");
+        manifest.put("acceptanceSnapshotStatus", orcaAcceptanceId != null
+                ? "REFERENCED_BY_ORCA_ACCEPTANCE_ID"
+                : "NO_ACCEPTANCE_REASON_RECORDED");
+        manifest.put("insuranceSnapshotStatus", "COMBINATION_REFERENCED");
+        manifest.put("diseaseSnapshotStatus", "PENDING_WORKER_INTEGRATION");
+        manifest.put("prescriptionCandidateSnapshotStatus", "PENDING_WORKER_INTEGRATION");
+        manifest.put("orcaTransmissionSnapshotStatus", "PENDING_WORKER_INTEGRATION");
+        return writeJson(manifest);
+    }
+
     private String writeEventSummary(String contentHash, String encounterId, LocalDate encounterDate,
             String departmentCode, String physicianCode, String insuranceCombinationNumber,
             Long enteredByUserId, ChartRevisionEntryMode entryMode, Long delegatedByUserId, Long finalizedByUserId,
-            boolean hasOrcaAcceptanceId, boolean hasNoAcceptanceReason) {
+            boolean hasSnapshotManifest, boolean hasOrcaAcceptanceId, boolean hasNoAcceptanceReason) {
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("status", ChartRevisionStatus.FINAL.name());
         summary.put("contentHash", contentHash);
@@ -398,6 +428,7 @@ public class ChartRevisionFinalizeService {
         summary.put("entryMode", entryMode.name());
         summary.put("delegatedByUserId", delegatedByUserId);
         summary.put("finalizedByUserId", finalizedByUserId);
+        summary.put("hasSnapshotManifest", hasSnapshotManifest);
         summary.put("hasOrcaAcceptanceId", hasOrcaAcceptanceId);
         summary.put("hasNoAcceptanceReason", hasNoAcceptanceReason);
         return writeJson(summary);
@@ -424,14 +455,19 @@ public class ChartRevisionFinalizeService {
     }
 
     private String writeHashMaterial(long chartId, long revisionId, String title, String contextJson,
-            String canonicalContent) {
+            String snapshotManifestJson, String canonicalContent) {
         Map<String, Object> material = new LinkedHashMap<>();
         material.put("chartId", chartId);
         material.put("revisionId", revisionId);
         material.put("title", title);
-        material.put("finalizeContext", readJson(contextJson));
+        material.put("finalizeContext", readJson(jsonOrEmpty(contextJson)));
+        material.put("snapshotManifest", readJson(jsonOrEmpty(snapshotManifestJson)));
         material.put("content", readJson(canonicalContent));
         return writeJson(material);
+    }
+
+    private String jsonOrEmpty(String json) {
+        return trimToNull(json) != null ? json : "{}";
     }
 
     private JsonNode readJson(String json) {

@@ -48,8 +48,26 @@ public class ChartRevisionExportService {
             "entryMode",
             "delegatedByUserId",
             "finalizedByUserId",
+            "hasSnapshotManifest",
             "hasOrcaAcceptanceId",
             "hasNoAcceptanceReason");
+    private static final Set<String> SNAPSHOT_MANIFEST_ALLOWLIST = Set.of(
+            "snapshotVersion",
+            "source",
+            "orcaPatientId",
+            "encounterId",
+            "encounterDate",
+            "orcaAcceptanceId",
+            "hasNoAcceptanceReason",
+            "departmentCode",
+            "physicianCode",
+            "insuranceCombinationNumber",
+            "patientSnapshotStatus",
+            "acceptanceSnapshotStatus",
+            "insuranceSnapshotStatus",
+            "diseaseSnapshotStatus",
+            "prescriptionCandidateSnapshotStatus",
+            "orcaTransmissionSnapshotStatus");
     private static final Pattern AUTHORIZATION_LINE = Pattern.compile("(?i)authorization\\s*:\\s*[^\\r\\n]+");
     private static final Pattern COOKIE_LINE = Pattern.compile("(?i)cookie\\s*:\\s*[^\\r\\n]+");
     private static final Pattern RAW_XML = Pattern.compile("(?is)<\\?xml.*");
@@ -165,6 +183,7 @@ public class ChartRevisionExportService {
         dto.setDepartmentCode(redactUnsafeText(revision.getDepartmentCode()));
         dto.setPhysicianCode(redactUnsafeText(revision.getPhysicianCode()));
         dto.setInsuranceCombinationNumber(redactUnsafeText(revision.getInsuranceCombinationNumber()));
+        dto.setSnapshotManifest(sanitizeSnapshotManifest(revision.getSnapshotManifestJson()));
         dto.setEnteredByUserId(revision.getEnteredByUserId());
         dto.setEntryMode(revision.getEntryMode() != null ? revision.getEntryMode().name() : null);
         dto.setDelegatedByUserId(revision.getDelegatedByUserId());
@@ -191,17 +210,25 @@ public class ChartRevisionExportService {
     }
 
     private Map<String, Object> sanitizeSummary(String summaryJson) {
-        if (summaryJson == null || summaryJson.isBlank()) {
+        return sanitizeObject(summaryJson, SUMMARY_ALLOWLIST);
+    }
+
+    private Map<String, Object> sanitizeSnapshotManifest(String snapshotManifestJson) {
+        return sanitizeObject(snapshotManifestJson, SNAPSHOT_MANIFEST_ALLOWLIST);
+    }
+
+    private Map<String, Object> sanitizeObject(String json, Set<String> allowlist) {
+        if (json == null || json.isBlank()) {
             return Map.of();
         }
         try {
-            JsonNode root = OBJECT_MAPPER.readTree(summaryJson);
+            JsonNode root = OBJECT_MAPPER.readTree(json);
             if (!root.isObject()) {
                 return Map.of();
             }
             Map<String, Object> sanitized = new LinkedHashMap<>();
             root.fields().forEachRemaining(entry -> {
-                if (SUMMARY_ALLOWLIST.contains(entry.getKey())) {
+                if (allowlist.contains(entry.getKey())) {
                     Object value = scalarValue(entry.getValue());
                     if (value != null) {
                         sanitized.put(entry.getKey(), value);
@@ -262,6 +289,7 @@ public class ChartRevisionExportService {
         addSummary(joiner, "departmentCode", revision.getDepartmentCode());
         addSummary(joiner, "physicianCode", revision.getPhysicianCode());
         addSummary(joiner, "insuranceCombinationNumber", revision.getInsuranceCombinationNumber());
+        flattenSummaryMap(joiner, "snapshot", revision.getSnapshotManifest());
         addSummary(joiner, "enteredByUserId", revision.getEnteredByUserId());
         addSummary(joiner, "entryMode", revision.getEntryMode());
         addSummary(joiner, "delegatedByUserId", revision.getDelegatedByUserId());

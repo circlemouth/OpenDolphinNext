@@ -28,7 +28,7 @@ Checklist count when parallel board was created:
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
-| B | `codex/orca-ehr-worker-b-chart-revision` | B-07 chart snapshot/export integration follow-up | Done | 20260511T002815Z | this commit | - |
+| B | `codex/orca-ehr-worker-b-chart-revision` | B-08 full snapshot integration after A/C/D contracts | Done | 20260511T004810Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-02 common patient header staged rollout | Done | 20260510T204142Z | this commit | - |
@@ -57,6 +57,7 @@ Checklist count when parallel board was created:
 | B-05 | 14 | Integrate chart revision export payload into PDF/CSV reporting output after Worker C-D prescription/ORCA histories land. | CSV/PDF reporting surfaces carry the same chart revision provenance as JSON without raw ORCA bodies or credentials. Prescription/ORCA histories remain after Worker C-D integration. | Reporting/PDF focused tests |
 | B-06 | 7 | Extend finalize context for delegated entry metadata. | `entered_by` and `finalized_by` stay separate and delegated entry mode is preserved without trusting client role claims. | Focused Maven tests |
 | B-07 | 7, 14 | Integrate chart finalization snapshot/export follow-up after Worker A/C/D data contracts land. | Remaining patient/acceptance/insurance/disease/prescription/candidate snapshot references are included without raw ORCA bodies or credentials. | Focused Maven/reporting tests |
+| B-08 | 7, 14 | Replace snapshot manifest pending statuses with full A/C/D snapshot references when contracts are integrated. | Finalized chart export links patient/acceptance/insurance/disease/prescription/ORCA operation snapshots without raw ORCA bodies or credentials. | Cross-worker focused Maven/reporting tests |
 
 ### Worker C Queue
 
@@ -109,6 +110,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T004810Z | B | B-07a | 7/14 chart finalize snapshot manifest skeleton; export allowlist | this commit | `ChartRevisionFinalizeServiceTest`, `ChartRevisionExportServiceTest`, `FreshSchemaBaselineTest` passed | Done | B-08 full snapshot integration after A/C/D contracts |
 | 20260511T002815Z | B | B-06 | 7 delegated chart entry/finalizer context; `entry_mode=DELEGATED` persistence | this commit | `ChartRevisionFinalizeServiceTest` passed | Done | B-07 chart snapshot/export integration follow-up after Worker C-D |
 | 20260511T000804Z | B | B-05b | 14 chart revision PDF/reporting payload; event provenance summary; redaction/allowlist | this commit | `ReportingChartRevisionEventTest`, `PdfSigningServiceTest`, `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest` passed | Done | B-06 delegated entry/finalizer context |
 | 20260510T233305Z | B | B-05a | 14 chart revision CSV export; reporting provenance fixed columns; CSV injection mitigation | this commit | `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest` passed | Done | B-05b PDF/reporting template integration |

@@ -61,6 +61,10 @@ class ChartRevisionFinalizeServiceTest {
         assertThat(revision.getFinalizeContextJson()).contains("\"enteredByUserId\":101");
         assertThat(revision.getFinalizeContextJson()).contains("\"entryMode\":\"DIRECT\"");
         assertThat(revision.getFinalizeContextJson()).doesNotContain("Sanitized Patient");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"snapshotVersion\":1");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"patientSnapshotStatus\":\"IDENTIFIER_ONLY\"");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"prescriptionCandidateSnapshotStatus\":\"PENDING_WORKER_INTEGRATION\"");
+        assertThat(revision.getSnapshotManifestJson()).doesNotContain("Sanitized Patient");
         assertThat(document.getCurrentRevisionId()).isEqualTo(20L);
 
         ArgumentCaptor<ChartRevisionEventModel> eventCaptor = ArgumentCaptor.forClass(ChartRevisionEventModel.class);
@@ -69,6 +73,7 @@ class ChartRevisionFinalizeServiceTest {
         assertThat(event.getEventType()).isEqualTo(ChartRevisionEventType.FINALIZED);
         assertThat(event.getAfterSummaryJson()).contains(response.getContentHash());
         assertThat(event.getAfterSummaryJson()).contains("\"entryMode\":\"DIRECT\"");
+        assertThat(event.getAfterSummaryJson()).contains("\"hasSnapshotManifest\":true");
         assertThat(event.getAfterSummaryJson()).doesNotContain("Sanitized Patient");
         verify(em).flush();
     }
@@ -211,6 +216,7 @@ class ChartRevisionFinalizeServiceTest {
         assertThat(newRevision.getEnteredByUserId()).isEqualTo(source.getEnteredByUserId());
         assertThat(newRevision.getEntryMode()).isEqualTo(source.getEntryMode());
         assertThat(newRevision.getDelegatedByUserId()).isEqualTo(source.getDelegatedByUserId());
+        assertThat(newRevision.getSnapshotManifestJson()).isEqualTo(source.getSnapshotManifestJson());
         assertThat(newRevision.getFinalizedByUserId()).isEqualTo(202L);
 
         ChartRevisionEventModel event = persistCaptor.getAllValues().stream()
@@ -307,6 +313,7 @@ class ChartRevisionFinalizeServiceTest {
         revision.setPhysicianCode("10001");
         revision.setInsuranceCombinationNumber("0001");
         revision.setFinalizeContextJson("{\"orcaPatientId\":\"00001\"}");
+        revision.setSnapshotManifestJson("{\"snapshotVersion\":1,\"source\":\"CHART_FINALIZE\"}");
         return revision;
     }
 
