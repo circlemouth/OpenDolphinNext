@@ -27,7 +27,7 @@ Checklist count when parallel board was created:
 
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
-| A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A05 live Trial patient/acceptance/insurance evidence watch | Active | 20260511T122348Z | this commit | - |
+| A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A05 live Trial patient/acceptance/insurance evidence watch | Active | 20260511T124449Z | this commit | - |
 | B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C01 prescription authority, medical candidate send-prep, disease handoff gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D01 live ORCA Trial execution, adapter contract, retry/idempotency evidence | Active | 20260511T063714Z | `1218aa1ef` base | - |
@@ -160,6 +160,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T124449Z | A | R2-A05 live Trial read-only preflight mutation guard | 18 live Trial patient/acceptance/insurance read-only evidence readiness; Phase 3 approved mutation handoff guard | this commit | `orcaTrialPreflight.test.ts`, web guard, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | R2-A05 continue live Trial patient/acceptance/insurance evidence watch |
 | 20260511T122348Z | A | R2-A04 local summary ORCA warning context handoff | 3.1/3.2/3.3/6/13 patient cache stale, acceptance diff/cancel, insurance freshness/diff exposed via sanitized `orcaContext` | this commit | `LocalMedicalSummaryResourceTest`, `EncounterProjectionRepositoryTest`, `api.medicalSummary.test.ts`, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | R2-A05 live Trial patient/acceptance/insurance evidence watch |
 | 20260511T115550Z | A | R2-A03 patient/insurance freshness warning handoff | 3.1/3.2/3.3/6/13 patient cache stale, insurance freshness/diff, encounter link handoff | this commit | `OrcaPatientCacheStoreTest`, `OrcaInsuranceCacheStoreTest`, `FreshSchemaBaselineTest`, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | R2-A04 remaining patient/insurance/acceptance UI integration watch |
 | 20260511T101821Z | A | R2-A02 encounter/acceptance link warning projection | 3.3/6/13 `encounter_orca_acceptance_link`; acceptance cancel/diff/needs-review warning sync without workflow mutation | this commit | `EncounterProjectionRepositoryTest`, `OrcaAcceptanceCacheStoreTest`, `FreshSchemaBaselineTest`, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | R2-A03 patient/insurance freshness and UI warning handoff gaps |

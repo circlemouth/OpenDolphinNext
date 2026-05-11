@@ -51,6 +51,26 @@ export const READINESS_FAILURE_CATEGORIES = {
   none: 'none',
 };
 const SELECTOR_FIELDS = ['department', 'physician', 'paymentMode', 'visitKind', 'medicalInformation'];
+const READONLY_PREFLIGHT_BLOCKED_MUTATION_ROUTES = [
+  { path: '/api/orca/official/patientmodv2/outpatient/create', reason: 'patientmodv2_create_mutation' },
+  { path: '/api/orca/official/patientmodv2/outpatient/update', reason: 'patientmodv2_update_mutation' },
+  { path: '/api/orca/official/appointments/mutation', reason: 'appointment_mutation' },
+  { path: '/api/orca/official/visits/mutation', reason: 'visit_mutation' },
+  { path: '/api/orca/official/visits/acceptance-operation', reason: 'acceptance_operation_mutation' },
+  { path: '/api/orca/official/chart-support/medical-mod-v2', reason: 'medicalmodv2_mutation' },
+  { path: '/api/orca/official/chart-support/disease-mod-v3', reason: 'diseasev3_mutation' },
+  {
+    path: '/api/local/encounters/{encounterKey}/close-and-send-to-billing',
+    reason: 'local_encounter_billing_mutation',
+    matches: (pathName) => pathName.startsWith('/api/local/encounters/') && pathName.endsWith('/close-and-send-to-billing'),
+  },
+  {
+    path: '/api/local/encounters/orca-transmissions/{transmissionId}/reconcile-temporary-medical',
+    reason: 'local_tmedical_reconcile_mutation',
+    matches: (pathName) =>
+      pathName.startsWith('/api/local/encounters/orca-transmissions/') && pathName.endsWith('/reconcile-temporary-medical'),
+  },
+];
 
 const asArray = (value) => (Array.isArray(value) ? value : value == null ? [] : [value]);
 const isRecord = (value) => value && typeof value === 'object' && !Array.isArray(value);
@@ -62,6 +82,42 @@ const is2xx = (httpStatus) => Number(httpStatus) >= 200 && Number(httpStatus) < 
 const optionalStatus = (value) => {
   const numeric = Number(value);
   return Number.isInteger(numeric) && numeric > 0 ? numeric : undefined;
+};
+
+const pathFromRecordedUrl = (value) => {
+  const raw = normalizeText(value);
+  if (!raw) return '';
+  try {
+    return new URL(raw, 'https://qa.local').pathname;
+  } catch {
+    return raw.split('?')[0] ?? raw;
+  }
+};
+
+export const buildReadonlyMutationPolicy = (records = []) => {
+  const blockedRequests = asArray(records)
+    .map((record) => {
+      const pathName = pathFromRecordedUrl(record?.url);
+      const method = normalizeText(record?.method).toUpperCase() || 'UNKNOWN';
+      const match = READONLY_PREFLIGHT_BLOCKED_MUTATION_ROUTES.find((route) =>
+        typeof route.matches === 'function' ? route.matches(pathName) : pathName.startsWith(route.path),
+      );
+      if (!match) return null;
+      return {
+        path: match.path,
+        method,
+        reason: match.reason,
+      };
+    })
+    .filter(Boolean);
+  return {
+    prohibited: true,
+    verdict: blockedRequests.length === 0 ? 'accepted' : 'rejected',
+    blockedRequestCount: blockedRequests.length,
+    blockedRequests,
+    targetMutationRequestCount: blockedRequests.length,
+    rawSensitiveFieldsExcluded: true,
+  };
 };
 
 const findFirstDeep = (value, names) => {
@@ -1728,6 +1784,7 @@ export const evaluatePreflightSummary = (summary) => {
     return summary?.appointmentDependency?.classification ?? 'appointment_dependency_not_ready';
   }
   if (summary?.acceptmodv2ReadOnlyDiagnostic?.classification === 'patient_not_found') return 'diagnostic_patient_not_found';
+  if (Number(summary?.mutationPolicy?.blockedRequestCount ?? 0) > 0) return 'readonly_mutation_attempt_blocked';
   if (summary?.secretScanClean === false) return 'secret_scan_failed';
   return 'none';
 };

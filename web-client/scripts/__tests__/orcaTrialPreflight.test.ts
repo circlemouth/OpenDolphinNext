@@ -7,6 +7,7 @@ import {
   buildCandidateDiscoveryGate,
   buildOfficialPatientReadinessAxes,
   buildReadinessRejectionReasons,
+  buildReadonlyMutationPolicy,
   collectCandidateRejectionReasons,
   classifyLocalExactMatchTaxonomy,
   classifyReadinessFailureDiagnostic,
@@ -1724,5 +1725,55 @@ describe('orca trial-native preflight gates', () => {
       'medical_information_not_ready',
     ]);
     expect(JSON.stringify(reasons)).not.toMatch(/WholeName|Address|Phone|Insurance_Symbol|Authorization|Cookie/);
+  });
+
+  it('summarizes read-only preflight mutation route attempts without preserving query or body details', () => {
+    const policy = buildReadonlyMutationPolicy([
+      { url: '/api/orca/official/patientgetv2?id=00001', method: 'GET' },
+      {
+        url: '/api/orca/official/patientmodv2/outpatient/update?patientId=00001&token=SHOULD_NOT_LEAK',
+        method: 'POST',
+        postData: { keys: ['Patient_Name', 'Insurance_Symbol'] },
+      },
+      {
+        url: 'https://localhost:5173/api/local/encounters/enc-1/close-and-send-to-billing?patientId=00001',
+        method: 'POST',
+      },
+      { url: '/api/local/encounters/enc-1/medical-summary', method: 'GET' },
+    ]);
+
+    expect(policy).toMatchObject({
+      prohibited: true,
+      verdict: 'rejected',
+      blockedRequestCount: 2,
+      targetMutationRequestCount: 2,
+      rawSensitiveFieldsExcluded: true,
+    });
+    expect(policy.blockedRequests).toEqual([
+      {
+        path: '/api/orca/official/patientmodv2/outpatient/update',
+        method: 'POST',
+        reason: 'patientmodv2_update_mutation',
+      },
+      {
+        path: '/api/local/encounters/{encounterKey}/close-and-send-to-billing',
+        method: 'POST',
+        reason: 'local_encounter_billing_mutation',
+      },
+    ]);
+    expect(JSON.stringify(policy)).not.toMatch(/00001|SHOULD_NOT_LEAK|Patient_Name|Insurance_Symbol|token/);
+  });
+
+  it('preflight summary is rejected when read-only evidence includes a mutation attempt', () => {
+    expect(evaluatePreflightSummary({
+      candidateId: '00001',
+      officialPatientExistence: { accepted: true },
+      insuranceReadiness: { accepted: true },
+      selectorReadiness: { accepted: true },
+      localSelectableReadiness: { accepted: true },
+      appointmentDependency: { flowMode: 'direct_acceptance', required: false, accepted: true },
+      mutationPolicy: buildReadonlyMutationPolicy([{ url: '/api/orca/official/appointments/mutation', method: 'POST' }]),
+      secretScanClean: true,
+    })).toBe('readonly_mutation_attempt_blocked');
   });
 });

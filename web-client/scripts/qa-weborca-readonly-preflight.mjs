@@ -21,6 +21,7 @@ import {
 } from './qa-lib/acceptmodv2-identity-gate.mjs';
 import {
   buildOfficialPatientReadinessAxes,
+  buildReadonlyMutationPolicy,
   normalizeCandidateExclusionSet,
   officialPatientEvidenceAccepted,
   sanitizeOfficialPatientExistenceEvidence,
@@ -746,7 +747,11 @@ const classify = ({
   medicalInformationReadiness,
   acceptmodv2ReadOnlyDiagnostic,
   appointmentDependency,
+  mutationPolicy,
 }) => {
+  if (Number(mutationPolicy?.blockedRequestCount ?? 0) > 0) {
+    return { blockerClassification: 'readonly-mutation-blocker', blockerReason: 'readonly_mutation_attempt_blocked' };
+  }
   if (sessionMe.status === 401 || sessionMe.status === 403 || medicalInformationProbe.status === 401 || medicalInformationProbe.status === 403) {
     return { blockerClassification: 'auth-blocker', blockerReason: 'authentication_or_authorization_failed' };
   }
@@ -1001,6 +1006,7 @@ try {
     selectorDiagnostic: selectorReadiness,
     localSelectableDiagnostic,
   });
+  const mutationPolicy = buildReadonlyMutationPolicy(requestRecords);
   const classification = classify({
     sessionMe,
     medicalInformationProbe,
@@ -1012,6 +1018,7 @@ try {
     medicalInformationReadiness,
     appointmentDependency,
     acceptmodv2ReadOnlyDiagnostic,
+    mutationPolicy,
   });
   const acceptedForPhase3Attempt =
     classification.blockerClassification === 'none' &&
@@ -1025,6 +1032,7 @@ try {
     selectorReadiness.verdict === 'accepted' &&
     appointmentDependency.verdict === 'accepted' &&
     acceptmodv2ReadOnlyDiagnostic.acceptedForPhase3Attempt === true &&
+    mutationPolicy.blockedRequestCount === 0 &&
     rawSensitiveFieldsExcluded === true;
   const inputIdentity = buildInputIdentity({
     runId,
@@ -1121,12 +1129,7 @@ try {
     appointmentDependency,
     acceptmodv2ReadOnlyDiagnostic,
     acceptedForPhase3Attempt,
-    mutationPolicy: {
-      prohibited: true,
-      blockedRequestCount: 0,
-      blockedRequests: [],
-      targetMutationRequestCount: 0,
-    },
+    mutationPolicy,
     verdict: acceptedForPhase3Attempt ? 'accepted' : 'rejected',
     blockerClassification: classification.blockerClassification,
     blockerReason: classification.blockerReason,
@@ -1261,12 +1264,7 @@ try {
       mutationSuccess: false,
       acceptedForPhase3Attempt: false,
     },
-    mutationPolicy: {
-      prohibited: true,
-      blockedRequestCount: 0,
-      blockedRequests: [],
-      targetMutationRequestCount: 0,
-    },
+    mutationPolicy: buildReadonlyMutationPolicy(requestRecords),
     acceptedForPhase3Attempt: false,
     verdict: 'rejected',
     blockerClassification: 'environment-blocker',
