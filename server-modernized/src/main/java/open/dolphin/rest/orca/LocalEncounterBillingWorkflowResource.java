@@ -519,6 +519,8 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         snapshot.put("medicalInformationCount", medicalInformationCount);
         snapshot.put("diseaseSyncCount", 0);
         snapshot.put("rawSensitiveFieldsExcluded", Boolean.TRUE);
+        snapshot.put("clientProvidedIdentifiersTrusted", Boolean.FALSE);
+        snapshot.put("serverDerivedAuthorityRequired", Boolean.TRUE);
         try {
             return JSON_MAPPER.writeValueAsString(snapshot);
         } catch (JsonProcessingException ex) {
@@ -669,6 +671,9 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
 
     String buildTemporaryMedicalGetPayload(BillingOrcaWorkflowRepository.TransmissionReviewRecord record) {
         JsonNode snapshot = readProjectionFlags(record != null ? record.snapshotJson() : null);
+        if (!isServerDerivedProjection(snapshot)) {
+            throw new IllegalArgumentException("server-derived sanitized snapshot is required");
+        }
         String performDate = textNode(snapshot, "visitDate");
         String departmentCode = textNode(snapshot, "departmentCode");
         if (performDate == null) {

@@ -131,7 +131,7 @@ class OrcaBillingCorrectionScenarioSupportTest {
                         java.time.Instant.parse("2026-05-10T15:00:00Z"),
                         null,
                         """
-                        {"visitDate":"2026-05-10","departmentCode":"01","rawSensitiveFieldsExcluded":true}
+                        {"visitDate":"2026-05-10","departmentCode":"01","rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true}
                         """);
 
         String payload = resource.buildTemporaryMedicalGetPayload(record);
@@ -208,7 +208,7 @@ class OrcaBillingCorrectionScenarioSupportTest {
                         Instant.parse("2026-05-10T15:00:00Z"),
                         null,
                         """
-                        {"departmentCode":"01","rawSensitiveFieldsExcluded":true}
+                        {"departmentCode":"01","rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true}
                         """);
         BillingOrcaWorkflowRepository.TransmissionReviewRecord missingDepartment =
                 new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
@@ -229,7 +229,7 @@ class OrcaBillingCorrectionScenarioSupportTest {
                         Instant.parse("2026-05-10T15:00:00Z"),
                         null,
                         """
-                        {"visitDate":"2026-05-10","rawSensitiveFieldsExcluded":true}
+                        {"visitDate":"2026-05-10","rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true}
                         """);
 
         IllegalArgumentException visitDateError = assertThrows(IllegalArgumentException.class,
@@ -239,6 +239,37 @@ class OrcaBillingCorrectionScenarioSupportTest {
 
         assertTrue(visitDateError.getMessage().contains("visitDate"));
         assertTrue(departmentError.getMessage().contains("departmentCode"));
+    }
+
+    @Test
+    void temporaryMedicalReconcileRequiresSanitizedServerDerivedSnapshot() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord clientTrustedSnapshot =
+                new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                        45L,
+                        103L,
+                        "FAC-1",
+                        "encounter-client-trusted",
+                        "idem-client-trusted",
+                        "ORCA_UNKNOWN",
+                        null,
+                        "unknown",
+                        "result_unknown",
+                        200,
+                        "REQ-4",
+                        "TRACE-4",
+                        "00012",
+                        "schedule-4",
+                        Instant.parse("2026-05-10T15:00:00Z"),
+                        null,
+                        """
+                        {"visitDate":"2026-05-10","departmentCode":"01","rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":true,"serverDerivedAuthorityRequired":true}
+                        """);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> resource.buildTemporaryMedicalGetPayload(clientTrustedSnapshot));
+
+        assertTrue(ex.getMessage().contains("server-derived"));
     }
 
     @Test
@@ -265,7 +296,10 @@ class OrcaBillingCorrectionScenarioSupportTest {
                         """
                                 {
                                   "visitDate":"2026-05-10",
-                                  "departmentCode":"01"
+                                  "departmentCode":"01",
+                                  "rawSensitiveFieldsExcluded":true,
+                                  "clientProvidedIdentifiersTrusted":false,
+                                  "serverDerivedAuthorityRequired":true
                                 }
                                 """);
 
