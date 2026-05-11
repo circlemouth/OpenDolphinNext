@@ -852,7 +852,9 @@ const run = async () => {
   logStep(`outpatient scenario server-handoff=${String(scenarioApplied)}`);
   await page.locator('.reception-page').waitFor({ timeout: 20000 });
   logStep('reception page ready');
-  const openWorkflowButton = page.getByRole('button', { name: '既存患者受付/患者検索' });
+  const openWorkflowButton = page.getByRole('button', {
+    name: /(?:患者を受付する|既存患者受付(?:\/患者検索|へ)?)/,
+  });
   await openWorkflowButton.waitFor({ timeout: 20000 });
   await openWorkflowButton.click();
   logStep('opened reception workflow modal');

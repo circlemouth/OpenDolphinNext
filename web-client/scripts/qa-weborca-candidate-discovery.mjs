@@ -693,7 +693,7 @@ const evaluateLocalUiReadiness = async (context, patientId) => {
 
     await page.goto(`/f/${encodeURIComponent(facilityId)}/reception`, { waitUntil: 'domcontentloaded' });
     await page.locator('.reception-page').waitFor({ timeout: 20_000 });
-    await page.getByRole('button', { name: /既存患者受付(?:\/患者検索|へ)?/ }).click();
+    await page.getByRole('button', { name: /(?:患者を受付する|既存患者受付(?:\/患者検索|へ)?)/ }).click();
     const workflowModal = page.locator('[data-test-id="reception-accept-workflow-modal"]');
     await workflowModal.waitFor({ timeout: 20_000 });
     const patientSearchForm = workflowModal.locator('[data-test-id="reception-patient-search-form"]');
