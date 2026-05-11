@@ -119,6 +119,14 @@ export function PatientSummaryPanel({ patientId, readOnly = false, readOnlyReaso
 
   const isSaving = saveMutation.isPending;
   const canSave = !readOnly && !isSaving && dirty;
+  const saveBlockedReasonId = 'charts-patient-summary-save-block-reason';
+  const saveBlockedReason = readOnly
+    ? readOnlyReason ?? '読み取り専用のため保存できません。'
+    : isSaving
+      ? '保存中です。'
+      : !dirty
+        ? '変更がありません。'
+        : '';
   const ariaLive = resolveAriaLive('info');
   const saveError =
     saveMutation.data && !saveMutation.data.ok
@@ -170,11 +178,17 @@ export function PatientSummaryPanel({ patientId, readOnly = false, readOnlyReaso
           aria-readonly={readOnly}
         />
         <div className="charts-free-doc__actions" role="group" aria-label="患者サマリ操作">
+          {saveBlockedReason ? (
+            <p id={saveBlockedReasonId} className="charts-free-doc__status">
+              保存はブロックされています: {saveBlockedReason}
+            </p>
+          ) : null}
           <button
             type="button"
             className="charts-free-doc__save"
             disabled={!canSave}
-            title={readOnly ? readOnlyReason ?? '読み取り専用のため保存できません。' : dirty ? undefined : '変更がありません'}
+            aria-describedby={saveBlockedReason ? saveBlockedReasonId : undefined}
+            title={saveBlockedReason || undefined}
             onClick={() => {
               setStatusNotice({ tone: 'info', message: '患者サマリを保存中です。' });
               void saveMutation.mutate();

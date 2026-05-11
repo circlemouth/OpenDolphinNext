@@ -215,6 +215,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T02:22Z: `OrderRecommendationModal` のカテゴリ scope はカテゴリ未選択時に native disabled を維持しつつ、近傍理由 `order-recommend-category-scope-reason` と `aria-describedby` で横断 scope の代替を表示することを focused test で固定した。
   - [x] 2026-05-11T02:42Z: `DoCopyDialog` の適用ボタンは転記元なし / Do対象未選択で native disabled を維持しつつ、近傍理由 `charts-do-copy-apply-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
   - [x] 2026-05-11T03:02Z: `PastHubPanel` の SOAP Do転記入口は転記可能 SOAP なし / セクション記載なしで native disabled を維持しつつ、近傍理由 `past-hub-do-copy-*` と `aria-describedby` で不足条件を表示することを focused test で固定した。
+  - [x] 2026-05-11T03:22Z: `PatientSummaryPanel` の保存ボタンは read-only / 保存中 / 変更なしで native disabled を維持しつつ、近傍理由 `charts-patient-summary-save-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
 - [ ] ボタン優先度、配置、44px以上の押下領域を DADS に沿って統一する。
 
 ## 12. 監査ログ・真正性
