@@ -156,6 +156,11 @@
 - `Api_Result` が zero-like でも completion evidence が欠ける場合は `UNKNOWN` とし、ORCA 再照合または post-mutation re-fetch が完了するまで成功扱いにしない。HTTP 401/403 は `AUTH_FAILED`、TLS/certificate 系 failure は `CERTIFICATE_FAILED`、その他 transport failure は `NETWORK_FAILED` として区別する。
 - diseasev3 と medicalmodv2 の response parser はこの分類を使い、病名の ORCA only / unmatch / warning、診療行為の warning / completion evidence 欠落を共通 status に正規化する。
 
+## ORCA Transport Boundary
+- Production server source の ORCA API HTTP traffic は `open.dolphin.orca.transport.OrcaTransport` / `OrcaHttpClient` を唯一の送信口にする。resource / service 層は `OrcaEndpoint` と sanitized request envelope を渡し、JDK `HttpClient` / `HttpRequest` / `HttpResponse` を直接作らない。
+- `server-modernized/tools/ci/check-orca-transport-boundary.sh` は `server-modernized/src/main/java` を検査し、JDK HTTP usage を `open/dolphin/orca/transport`、ORCA push socket、master-update artifact download の明示許可面に限定する。許可面以外で直接 HTTP を追加した場合は release gate で fail する。
+- push socket は ORCA Push WebSocket lifecycle の補助面であり、通常 ORCA API success evidence の正本にしない。master-update artifact download は local artifact 取得用であり、ORCA official mutation/read wrapper の transport ではない。
+
 ## ORCA Operation Ledger
 - ORCA 送信・取得・照合の共通台帳は `orca_operation`, `orca_transmission`, `orca_response_summary`, `orca_reconciliation_result` に分離する。既存の disease / billing / prescription 個別テーブルは domain-specific state を保持し、共通台帳は API 横断の idempotency、status、retry、request/response hash、sanitized summary、post-send reconciliation を保持する。
 - `orca_operation.operation_status` と `orca_transmission.transmission_status` は `PREPARED`, `READY_TO_SEND`, `SENDING`, `ORCA_ACCEPTED`, `ORCA_REJECTED`, `ORCA_WARNING`, `ORCA_UNMATCHED`, `ORCA_CONFLICT`, `NETWORK_FAILED`, `CERTIFICATE_FAILED`, `AUTH_FAILED`, `UNKNOWN`, `NEEDS_REVIEW`, `CANCELLED` の固定分類に従う。`UNKNOWN` は成功扱いにせず、`orca_reconciliation_result` による再取得・照合が完了するまで `needs_user_review=true` を維持する。

@@ -28,6 +28,7 @@ rg -n "medicalInformation \\?\\? '01'|medicalInformation \\|\\| '01'" web-client
 rg -n "medicalmodv23" web-client server-modernized docs
 bash server-modernized/tools/ci/check-no-legacy-disease-authority.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-finalized-write-guards.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-orca-transport-boundary.sh --root "$(git rev-parse --show-toplevel)"
 ```
 期待結果:
 - taxonomy grep は current route と docs 正本だけを返し、legacy alias や blocked route を返さない。
@@ -37,6 +38,7 @@ bash server-modernized/tools/ci/check-finalized-write-guards.sh --root "$(git re
 - `medicalmodv23` は 0 hit。
 - legacy disease authority guard が通り、active modernized roots に `diseasev2`、旧 CLAIM 病名送信、ORCA 患者病名 DB 直接参照が残っていない。
 - finalized write guard が通り、確定済み診療録タイトル直接更新は 409 `karte.document.finalized_update_denied` で拒否され、処方保存/DO import は server-side `encounter_projection` の会計待ち・取消・閉鎖相当状態を payload 永続化前に 409 `prescription_order_finalized_update_denied` で拒否する。
+- ORCA transport boundary guard が通り、production server source の JDK HTTP usage は `OrcaTransport` / `OrcaHttpClient` と明示許可された push/master-update 補助面に限定され、ORCA API traffic が resource/service から直接送信されない。
 
 2. server contract / inventory / exposure tests を current taxonomy で実行する。
 ```bash
@@ -334,5 +336,6 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - `check-backup-restore-runbook.sh` は backup / restore / hash verification runbook、release gate、outage recovery、audit contract が同じ restore fail-closed 境界を参照していることを検査する。
 - `check-live-orca-trial-harness.sh` は live ORCA Trial checklist harness と release validation が sanitized evidence / browser artifact disable / exact preflight before mutation の境界を維持していることを検査する。
 - `check-no-direct-runtime-lookup.sh` は `ServerConfigurationResolver.java` 以外の direct runtime lookup を許可しない。
+- `check-orca-transport-boundary.sh` は production server source の ORCA API 通信口を `OrcaTransport` / `OrcaHttpClient` に寄せ、resource/service 層の直接 JDK HTTP 送信を拒否する。
 - どれか 1 つでも失敗したら release は見送る。
 - cutover / rollback の実施順序と停止条件は [../releases/orca-remediation-cutover.md](../releases/orca-remediation-cutover.md) を正本とする。

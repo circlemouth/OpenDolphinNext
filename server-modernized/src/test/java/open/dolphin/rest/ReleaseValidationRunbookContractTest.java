@@ -21,6 +21,7 @@ class ReleaseValidationRunbookContractTest {
                 .contains("OrcaBillingCacheStoreTest")
                 .contains("OperationsHealthResourceTest")
                 .contains("orcaBillingCache")
+                .contains("check-orca-transport-boundary.sh")
                 .contains("server-generated storage key/digest")
                 .doesNotContain("OrcaReportResource");
     }

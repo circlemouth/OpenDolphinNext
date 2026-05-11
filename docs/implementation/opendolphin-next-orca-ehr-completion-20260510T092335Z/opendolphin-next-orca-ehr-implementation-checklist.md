@@ -117,7 +117,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 ## 5. ORCA連携アダプタ
 
-- [ ] `OrcaClient` を唯一の ORCA通信口にする。
+- [x] `OrcaClient` を唯一の ORCA通信口にする。
+  - [x] 2026-05-11T11:17Z: `check-orca-transport-boundary.sh` を追加し、production server source の JDK HTTP usage を `OrcaTransport` / `OrcaHttpClient` と明示許可された push/master-update 補助面に限定する release guard を固定した。通常 ORCA API traffic を resource/service から直接送信する再混入は CI で fail する。
 - [ ] Webクライアントから ORCA URL へ直接到達できないようにする。
 - [ ] Vite開発プロキシから `/orca22`, `/api01rv2`, `/api21` 等の生ORCAプロキシを削除する。
 - [ ] ORCA接続URL、Basic認証、クライアント証明書、証明書パスワードはサーバー側設定だけに置く。
