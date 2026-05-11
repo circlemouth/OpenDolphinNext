@@ -1549,6 +1549,14 @@ export function SoapNotePanel({
         return '両方';
     }
   }, [viewMode]);
+  const saveBlockedReasonId = 'soap-note-save-block-reason';
+  const saveBlockedReason = readOnly
+    ? readOnlyReason ?? '読み取り専用のため保存できません。'
+    : historyView
+      ? '履歴表示中は保存できません。'
+      : syncState.isSaving
+        ? '保存中です。'
+        : '';
   const handleTemplateDialogOpen = useCallback(() => {
     setTemplateSelection('');
     if (!SOAP_SECTIONS.includes(templateTargetSection)) {
@@ -1828,16 +1836,16 @@ export function SoapNotePanel({
             onClick={handleSave}
             disabled={readOnly || historyView || syncState.isSaving}
             className="soap-note__primary"
-            title={
-              readOnly
-                ? readOnlyReason ?? '読み取り専用のため保存できません。'
-                : historyView
-                  ? '履歴表示中は保存できません。'
-                  : undefined
-            }
+            aria-describedby={saveBlockedReason ? saveBlockedReasonId : undefined}
+            title={saveBlockedReason || undefined}
           >
             {syncState.isSaving ? '保存中...' : history.length === 0 ? '保存' : '更新'}
           </button>
+          {saveBlockedReason ? (
+            <p id={saveBlockedReasonId} className="soap-note__guard">
+              保存はブロックされています: {saveBlockedReason}
+            </p>
+          ) : null}
           <details className="soap-note__menu">
             <summary className="soap-note__ghost">その他</summary>
             <div className="soap-note__menu-items" role="menu" aria-label="SOAP追加操作">

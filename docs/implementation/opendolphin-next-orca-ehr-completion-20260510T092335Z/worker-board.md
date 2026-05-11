@@ -31,7 +31,7 @@ Checklist count when parallel board was created:
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
-| E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-04 remaining disabled surface audit for PatientSummaryPanel save | Done | 20260511T032216Z | this commit | - |
+| E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-04 remaining disabled surface audit for SoapNotePanel save | Done | 20260511T034335Z | this commit | - |
 | F | `codex/orca-ehr-worker-f-audit-security-gates` | F-02 credential/PHI leakage guards | Done | 20260510T201318Z | this commit | - |
 | G | `codex/orca-ehr-integrator-g` | G-02 merge first worker batch in prescribed order | Done | 20260510T195822Z | this docs commit | - |
 
@@ -106,6 +106,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T034335Z | E | E-04 follow-on | 11 disabled dependency reason for SoapNotePanel save; 20 Phase 4 disabled reason audit | this commit | targeted `SoapNotePanel.test.tsx`, explicit `verify:web-guard`, and `typecheck` passed | Done | E-04 follow-on: continue remaining Medical Safety UI disabled surface audit or move to checklist 17 remaining |
 | 20260511T032216Z | E | E-04 follow-on | 11 disabled dependency reason for PatientSummaryPanel save; 20 Phase 4 disabled reason audit | this commit | targeted `PatientSummaryPanel.test.tsx`, explicit `verify:web-guard`, and `typecheck` passed | Done | E-04 follow-on: continue remaining Medical Safety UI disabled surface audit or move to checklist 17 remaining |
 | 20260511T030213Z | E | E-04 follow-on | 11 disabled dependency reason for PastHubPanel SOAP Do copy; 20 Phase 4 disabled reason audit | this commit | targeted `PastHubPanel.test.tsx`, explicit `verify:web-guard`, and `typecheck` passed | Done | E-04 follow-on: continue remaining Medical Safety UI disabled surface audit or move to checklist 17 remaining |
 | 20260511T024216Z | E | E-04 follow-on | 11 disabled dependency reason for DoCopyDialog apply; 20 Phase 4 disabled reason audit | this commit | targeted `DoCopyDialog.test.tsx`, explicit `verify:web-guard`, and `typecheck` passed | Done | E-04 follow-on: continue remaining Medical Safety UI disabled surface audit or move to checklist 17 remaining |

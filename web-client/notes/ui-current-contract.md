@@ -91,6 +91,7 @@
 - `DoCopyDialog` の `適用` は転記元なし / Do対象未選択では native disabled を維持し、近傍 `charts-do-copy-apply-block-reason` と `aria-describedby` で理由を示します。
 - `PastHubPanel` の SOAP Do転記入口は転記可能 SOAP なし / セクション記載なしでは native disabled を維持し、近傍 `past-hub-do-copy-*` reason と `aria-describedby` で理由を示します。
 - `PatientSummaryPanel` の `保存` は read-only / 保存中 / 変更なしでは native disabled を維持し、近傍 `charts-patient-summary-save-block-reason` と `aria-describedby` で理由を示します。
+- `SoapNotePanel` の `保存` は read-only / 履歴表示 / 保存中では native disabled を維持し、近傍 `soap-note-save-block-reason` と `aria-describedby` で理由を示します。
 - `SoapNotePanel` の利用者向け見出しは `カルテ本文` とし、内部向けの `Primary Workspace` や折りたたみの記載メタ情報は通常表示に置きません。
 - page CTA の owner は `ChartsActionBar` です。通常 UI の primary は `診察終了して会計へ送信` で、`ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。低レベル `ORCA送信` direct bridge は debug / QA / focused test 用に限定し、通常画面の初回会計送信導線には出しません。
 - `PastHubPanel` は左列の historical reference / Do 補助 surface であり、comparison 専用主面ではありません。
@@ -132,6 +133,7 @@
   - `DoCopyDialog` apply は転記元なし / Do対象未選択で `charts-do-copy-apply-block-reason` による近傍理由を表示すること
   - `PastHubPanel` SOAP Do転記入口は転記可能SOAPなし / セクション記載なしで近傍理由を表示すること
   - `PatientSummaryPanel` save は read-only / 保存中 / 変更なしで `charts-patient-summary-save-block-reason` による近傍理由を表示すること
+  - `SoapNotePanel` save は read-only / 履歴表示 / 保存中で `soap-note-save-block-reason` による近傍理由を表示すること
   - right rail は chooser-only を維持し、`document` / `ORCA` tool や embedded editor を再混入させない
   - canonical encounter context 不足時は `診察終了して会計へ送信` を fail-close
   - canonical encounter context 不足時は report print / incomeinfv2 取得も fail-close
