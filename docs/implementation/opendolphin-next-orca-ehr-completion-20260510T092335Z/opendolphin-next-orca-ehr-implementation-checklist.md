@@ -190,6 +190,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-10T21:59Z: `close-and-send-to-billing` は `medicalmodv2` response を sanitized `response_json` として保存し、送信直後に `tmedicalgetv2` で ORCA側中途終了データを再取得・照合する。UI 差分表示の完成は後続 D/E queue で継続。
 - [x] ORCA会計情報取得 API をサーバーアダプタ経由で呼び、`orca_billing_cache` に保存する。
   - [x] 2026-05-10T22:30Z: `/api/orca/official/chart-support/income-info` は `incomeinfv2` transport response を `orca_billing_cache` へ hash と sanitized summary として保存し、保存失敗時は成功応答にしない。
+  - [x] 2026-05-11T00:22Z: `OrcaChartSupportResourceTest` は public `income-info` resource が `facilityId` / ORCA patient / base date / request-response body を server-side cache command へ渡し、`orca_billing_cache` 保存失敗時に HTTP 503 で fail closed することを固定した。
 - [x] OpenDolphinNext 側で会計金額や収納済み状態を独立更新できる API を作らない。
   - [x] 2026-05-10T22:30Z: `orca_billing_cache` は `source_system=ORCA` の cache 境界とし、schema/test/docs で raw invoice/insurance や local source を拒否する。会計金額・収納済み状態を local authority として更新する resource は追加していない。
 - [x] 領収書・請求書は ORCA帳票取得結果として扱い、帳票取得履歴を監査ログに保存する。
@@ -197,6 +198,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-10T23:18Z: `orca_report_snapshot.server_storage_object_key` / `server_storage_digest` は server が request/response hash と report type から生成し、raw patient / invoice / Data_Id / client-provided key を保存しない。
   - [x] 2026-05-10T23:22Z: `orca_report_snapshot.storage_upload_status` / upload time / retention until を追加し、binary object を `UPLOADED` 扱いにするには server-generated key/digest と retention metadata が必須になる DB gate を追加した。
   - [x] 2026-05-11T00:02Z: `OrcaReportBinaryStorageService` は DB snapshot の server-generated key/digest と content SHA-256 が一致する場合だけ object storage へ put し、digest mismatch / snapshot mismatch / disabled storage は upload 前に fail closed する。
+  - [x] 2026-05-11T00:22Z: `OrcaReportDocumentResourceTest` は public report resource が `orca_report_snapshot` command を作成し、snapshot 保存失敗時に帳票取得成功へ進めず HTTP 503 で fail closed することを固定した。
 - [x] レセプト情報を OpenDolphinNext 正本として持たず、ORCA由来キャッシュまたは帳票スナップショットとして扱う。
   - [x] 2026-05-10T22:30Z: `orca_report_snapshot` は `source_system=ORCA` と固定 report type/status を持つ snapshot 境界であり、restore/recovery docs でも local snapshot を正本昇格しないことを明記した。
 
