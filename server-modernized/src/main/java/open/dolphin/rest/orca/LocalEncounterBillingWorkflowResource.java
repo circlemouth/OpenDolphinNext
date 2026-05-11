@@ -775,9 +775,30 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
             return false;
         }
         JsonNode snapshot = readProjectionFlags(record.snapshotJson());
+        String visitDate = textNode(snapshot, "visitDate");
+        String rowPerformDate = firstNonBlankLocal(
+                textNodeDeep(row, "Perform_Date"),
+                textNodeDeep(row, "Medical_Date"),
+                textNodeDeep(row, "Visit_Date"));
+        if (rowPerformDate != null && !rowPerformDate.equals(visitDate)) {
+            return false;
+        }
         String departmentCode = textNode(snapshot, "departmentCode");
         String rowDepartmentCode = textNodeDeep(row, "Department_Code");
         return departmentCode == null || departmentCode.equals(rowDepartmentCode);
+    }
+
+    private String firstNonBlankLocal(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            String normalized = normalize(value);
+            if (normalized != null) {
+                return normalized;
+            }
+        }
+        return null;
     }
 
     private JsonNode readTemporaryMedicalGetBody(String xml) {
