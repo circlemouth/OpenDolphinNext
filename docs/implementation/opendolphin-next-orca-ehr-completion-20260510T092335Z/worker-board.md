@@ -27,7 +27,7 @@ Checklist count when parallel board was created:
 
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
-| A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A05 live Trial patient/acceptance/insurance evidence watch | Active | 20260511T133240Z | this commit | - |
+| A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A05 live Trial patient/acceptance/insurance evidence watch | Active | 20260511T135642Z | this commit | - |
 | B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C01 prescription authority, medical candidate send-prep, disease handoff gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D01 live ORCA Trial execution, adapter contract, retry/idempotency evidence | Active | 20260511T063714Z | `1218aa1ef` base | - |
@@ -160,6 +160,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T135642Z | A | R2-A05 exact preflight artifact path gate | 18 live Trial patient/acceptance/insurance read-only evidence readiness; Phase 3 handoff exact summary path boundary | this commit | `acceptmodv2IdentityGate.test.ts`, web guard, Maven route inventory, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | R2-A05 continue live Trial patient/acceptance/insurance evidence watch |
 | 20260511T133240Z | A | R2-A05 exact preflight browser mutation abort guard | 18 live Trial patient/acceptance/insurance read-only evidence readiness; exact preflight sanitized mutationPolicy | this commit | `orcaTrialPreflight.test.ts`, web guard, Maven route inventory, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | R2-A05 continue live Trial patient/acceptance/insurance evidence watch |
 | 20260511T130803Z | A | R2-A05 candidate discovery mutation blocker parity | 18 live Trial patient/acceptance/insurance read-only evidence readiness; candidate discovery sanitized mutationPolicy | this commit | `orcaTrialPreflight.test.ts`, web guard, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | R2-A05 continue live Trial patient/acceptance/insurance evidence watch |
 | 20260511T124449Z | A | R2-A05 live Trial read-only preflight mutation guard | 18 live Trial patient/acceptance/insurance read-only evidence readiness; Phase 3 approved mutation handoff guard | this commit | `orcaTrialPreflight.test.ts`, web guard, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | R2-A05 continue live Trial patient/acceptance/insurance evidence watch |
