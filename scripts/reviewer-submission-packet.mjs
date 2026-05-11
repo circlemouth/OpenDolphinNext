@@ -132,6 +132,40 @@ const FORBIDDEN_CLOSEOUT_TEXT_PATTERNS = [
   },
 ];
 
+const REQUIRED_BILLING_REPORT_COMMAND_LOG_PATTERNS = [
+  {
+    label: 'billing_report_live_profile_dry_run',
+    pattern:
+      /qa-orca-billing-report-live-profile\.mjs(?=[\s\S]*--dry-run)(?=[\s\S]*--sanitized-evidence-only)(?=[\s\S]*--disable-browser-artifacts)/,
+  },
+  {
+    label: 'billing_report_live_handoff',
+    pattern:
+      /qa-orca-billing-report-live-handoff\.mjs(?=[\s\S]*--sanitized-evidence-only)(?=[\s\S]*--disable-browser-artifacts)(?=[\s\S]*--require-manual-approval)/,
+  },
+  {
+    label: 'billing_report_operator_template',
+    pattern: /qa-orca-billing-report-live-result\.mjs(?=[\s\S]*--print-operator-result-template)/,
+  },
+  {
+    label: 'billing_report_live_result_record',
+    pattern:
+      /qa-orca-billing-report-live-result\.mjs(?=[\s\S]*--sanitized-evidence-only)(?=[\s\S]*--disable-browser-artifacts)(?=[\s\S]*--handoff-summary)(?=[\s\S]*--operator-result-summary)/,
+  },
+];
+
+const FORBIDDEN_BILLING_REPORT_COMMAND_LOG_PATTERNS = [
+  {
+    label: 'billing_report_live_flag',
+    pattern: /qa-orca-billing-report-live-(?:profile|handoff|result)\.mjs[\s\S]*(?:^|\s)--live(?:\s|$)/m,
+  },
+  {
+    label: 'billing_report_artifact_capture_flag',
+    pattern:
+      /qa-orca-billing-report-live-(?:profile|handoff|result)\.mjs[\s\S]*(?:--(?:trace|har|video|screenshot|raw-network|raw-request|raw-response|raw-orca-body))(?:\s|$)/i,
+  },
+];
+
 const FORBIDDEN_BILLING_REPORT_KEY_NAMES = new Set([
   'authorization',
   'cookie',
@@ -522,6 +556,21 @@ function validateSanitizedFullflowSummary(summary) {
   }
 }
 
+function validateBillingReportCommandLog(content) {
+  for (const { label, pattern } of FORBIDDEN_BILLING_REPORT_COMMAND_LOG_PATTERNS) {
+    if (pattern.test(content)) {
+      fail(`reports/command-log.md contains forbidden billing/report command option: ${label}`);
+    }
+  }
+
+  const missing = REQUIRED_BILLING_REPORT_COMMAND_LOG_PATTERNS
+    .filter(({ pattern }) => !pattern.test(content))
+    .map(({ label }) => label);
+  if (missing.length > 0) {
+    fail(`reports/command-log.md is missing required billing/report command evidence:\n${missing.join('\n')}`);
+  }
+}
+
 function collectForbiddenBillingReportKeys(value, pathSegments = [], offenders = []) {
   if (Array.isArray(value)) {
     value.forEach((entry, index) => collectForbiddenBillingReportKeys(entry, [...pathSegments, String(index)], offenders));
@@ -793,6 +842,7 @@ function validateSourceInputs(repoRoot, runId, acceptedRef, acceptedHeadOverride
 
   validateSanitizedAcceptSummary(readJson(path.join(closeoutRoot, 'qa/acceptmodv2/accept-summary.sanitized.json')));
   validateSanitizedFullflowSummary(readJson(path.join(closeoutRoot, 'qa/fullflow/summary.json')));
+  validateBillingReportCommandLog(readText(path.join(closeoutRoot, 'reports/command-log.md')));
   validateBillingReportLiveProfileSummary(readJson(path.join(closeoutRoot, 'qa/billing-report-live-profile/summary.sanitized.json')));
   validateBillingReportLiveResultSummary(readJson(path.join(closeoutRoot, 'qa/billing-report-live-result/result.sanitized.json')));
 
@@ -934,6 +984,7 @@ function validatePacket(outputDir, runId, acceptedRef, acceptedHead) {
 
   validateSanitizedAcceptSummary(readJson(path.join(packetDir, 'closeout-packet/qa/acceptmodv2/accept-summary.sanitized.json')));
   validateSanitizedFullflowSummary(readJson(path.join(packetDir, 'closeout-packet/qa/fullflow/summary.json')));
+  validateBillingReportCommandLog(readText(path.join(packetDir, 'closeout-packet/reports/command-log.md')));
   validateBillingReportLiveProfileSummary(readJson(path.join(packetDir, 'closeout-packet/qa/billing-report-live-profile/summary.sanitized.json')));
   validateBillingReportLiveResultSummary(readJson(path.join(packetDir, 'closeout-packet/qa/billing-report-live-result/result.sanitized.json')));
 

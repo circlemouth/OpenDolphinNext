@@ -22,11 +22,17 @@ const baseURL = process.env.QA_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'h
 const artifactRoot =
   process.env.QA_ARTIFACT_DIR ??
   path.resolve(process.cwd(), '..', 'artifacts', 'orca-remediation', 'closeout', runId, 'qa', 'fullflow');
+const sanitizedEvidenceOnly =
+  process.env.QA_SANITIZED_EVIDENCE_ONLY === '1' || process.env.QA_SANITIZED_EVIDENCE_ONLY === 'true';
+const browserArtifactsDisabled =
+  sanitizedEvidenceOnly ||
+  process.env.QA_DISABLE_BROWSER_ARTIFACTS === '1' ||
+  process.env.QA_DISABLE_BROWSER_ARTIFACTS === 'true';
 const screenshotDir = path.join(artifactRoot, 'screenshots');
 const networkDir = path.join(artifactRoot, 'network');
 const harDir = path.join(artifactRoot, 'har');
 const requestXmlDir = path.join(artifactRoot, 'request-xml');
-const recordHar = process.env.QA_RECORD_HAR === '1';
+const recordHar = process.env.QA_RECORD_HAR === '1' && !browserArtifactsDisabled;
 const harPath = path.join(harDir, 'network.har');
 const stepLogPath = path.join(artifactRoot, 'steps.log');
 const summaryJsonPath = path.join(artifactRoot, 'summary.json');
@@ -38,10 +44,14 @@ const consoleJsonPath = path.join(artifactRoot, 'console.json');
 const pageErrorsJsonPath = path.join(artifactRoot, 'page-errors.json');
 const medicalmodv2XmlPath = path.join(requestXmlDir, 'medicalmodv2.xml');
 
-fs.mkdirSync(screenshotDir, { recursive: true });
-fs.mkdirSync(networkDir, { recursive: true });
 fs.mkdirSync(artifactRoot, { recursive: true });
-fs.mkdirSync(requestXmlDir, { recursive: true });
+if (!browserArtifactsDisabled) {
+  fs.mkdirSync(screenshotDir, { recursive: true });
+}
+if (!sanitizedEvidenceOnly) {
+  fs.mkdirSync(networkDir, { recursive: true });
+  fs.mkdirSync(requestXmlDir, { recursive: true });
+}
 if (recordHar) {
   fs.mkdirSync(harDir, { recursive: true });
 }
@@ -293,6 +303,7 @@ const recordRequest = (request) => {
 };
 
 const writeScreenshot = async (page, name, options = {}) => {
+  if (browserArtifactsDisabled) return null;
   if (!page || page.isClosed()) return null;
   const fileName = `${name}.png`;
   const filePath = path.join(screenshotDir, fileName);
@@ -476,6 +487,22 @@ const collectResponse = async (response) => {
   const url = response.url();
   if (!isTarget(url)) return;
   const request = response.request();
+  if (sanitizedEvidenceOnly) {
+    networkRecords.push({
+      url,
+      status: response.status(),
+      statusText: response.statusText(),
+      request: {
+        method: request.method(),
+        postDataBytes: request.postData()?.length ?? 0,
+      },
+      response: {
+        bodyBytes: Number(response.headers()['content-length'] ?? 0) || undefined,
+      },
+      rawSensitiveFieldsExcluded: true,
+    });
+    return;
+  }
   let responseText = '';
   try {
     responseText = await response.text();
@@ -505,25 +532,25 @@ const probeMedicalInformationOptions = async (context) => {
   requestRecords.push({
     url,
     method: 'GET',
-    headers: {},
-    postData: '',
+    ...(sanitizedEvidenceOnly ? { postDataBytes: 0, rawSensitiveFieldsExcluded: true } : { headers: {}, postData: '' }),
   });
   try {
     const response = await context.request.get(url);
-    const body = await response.text().catch(() => '');
+    const body = sanitizedEvidenceOnly ? '' : await response.text().catch(() => '');
     networkRecords.push({
       url,
       status: response.status(),
       statusText: response.statusText(),
       request: {
         method: 'GET',
-        headers: {},
-        postData: '',
+        ...(sanitizedEvidenceOnly ? { postDataBytes: 0 } : { headers: {}, postData: '' }),
       },
       response: {
-        headers: redactHeaders(response.headers()),
-        body,
+        ...(sanitizedEvidenceOnly
+          ? { bodyBytes: Number(response.headers()['content-length'] ?? 0) || undefined }
+          : { headers: redactHeaders(response.headers()), body }),
       },
+      rawSensitiveFieldsExcluded: true,
     });
     logStep(`medical information probe status=${response.status()}`);
     return {
@@ -539,13 +566,12 @@ const probeMedicalInformationOptions = async (context) => {
       statusText: 'probe-error',
       request: {
         method: 'GET',
-        headers: {},
-        postData: '',
+        ...(sanitizedEvidenceOnly ? { postDataBytes: 0 } : { headers: {}, postData: '' }),
       },
       response: {
-        headers: {},
-        body: message,
+        ...(sanitizedEvidenceOnly ? { errorClass: 'probe-error' } : { headers: {}, body: message }),
       },
+      rawSensitiveFieldsExcluded: true,
     });
     logStep(`medical information probe error=${message}`);
     return {
@@ -672,6 +698,20 @@ const readSelectedVisitRow = async (page) =>
     })
     .catch(() => null);
 
+const sanitizeSelectedVisitRow = (row) => {
+  if (!row || typeof row !== 'object') return null;
+  return {
+    present: true,
+    patientIdMatched: row.patientId === patientId,
+    timeLabelPresent: Boolean(row.timeLabel),
+    timeValuePresent: Boolean(row.timeValue),
+    statusPillCount: Array.isArray(row.statusPills) ? row.statusPills.length : 0,
+    subitemCount: Array.isArray(row.subitems) ? row.subitems.length : 0,
+    memoPresent: Boolean(row.memo),
+    rawSensitiveFieldsExcluded: true,
+  };
+};
+
 const buildBlockerSummary = (summary) => ({
   runId: summary.runId,
   traceId: summary.traceId,
@@ -699,6 +739,42 @@ const buildBlockerSummary = (summary) => ({
   selectedVisitRowPath: 'selected-visit-row.json',
   evidencePaths: summary.evidencePaths,
 });
+
+const sanitizedEvidencePaths = (paths) =>
+  Object.fromEntries(Object.entries(paths).filter(([, value]) => value !== undefined && value !== null));
+
+const buildEvidencePaths = (extra = {}) =>
+  sanitizedEvidencePaths({
+    summaryJson: 'summary.json',
+    summaryMd: 'summary.md',
+    blockerSummary: 'blocker-summary.json',
+    handoffState: 'handoff-state.json',
+    selectedVisitRow: 'selected-visit-row.json',
+    stepsLog: 'steps.log',
+    console: 'console.json',
+    pageErrors: 'page-errors.json',
+    network: sanitizedEvidenceOnly ? undefined : 'network/network.json',
+    requests: sanitizedEvidenceOnly ? undefined : 'network/requests.json',
+    requestXml: sanitizedEvidenceOnly ? undefined : extra.requestXml,
+    screenshots: browserArtifactsDisabled ? undefined : 'screenshots',
+    har: recordHar ? 'har/network.har' : undefined,
+  });
+
+const persistedHandoffState = () => {
+  if (!sanitizedEvidenceOnly) return lastHandoffState;
+  return {
+    status: lastHandoffState?.status ?? 'unknown',
+    source: lastHandoffState?.source,
+    scheduleKeyPresent: Boolean(lastHandoffState?.scheduleKey),
+    encounterKeyPresent: Boolean(lastHandoffState?.encounterKey),
+    titlePresent: Boolean(lastHandoffState?.title),
+    selectedVisitRowPresent: Boolean(lastHandoffState?.selectedVisitRowPresent),
+    leakedQueryKeys: lastHandoffState?.leakedQueryKeys,
+    acceptMutation: lastHandoffState?.acceptMutation,
+    receptionEntryDiagnostics: lastHandoffState?.receptionEntryDiagnostics,
+    rawSensitiveFieldsExcluded: true,
+  };
+};
 
 const evaluateFullflowMedicalInformationGate = () =>
   evaluateMedicalInformationGate({
@@ -740,17 +816,19 @@ const classifyMedicalInformationGateFailure = (gate) => {
 
 const persistArtifacts = (summary) => {
   lastSummary = summary;
-  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2));
-  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2));
+  if (!sanitizedEvidenceOnly) {
+    fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2));
+    fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2));
+  }
   fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2));
   fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2));
-  if (lastMedicalmodv2RequestXml) {
+  if (lastMedicalmodv2RequestXml && !sanitizedEvidenceOnly) {
     fs.writeFileSync(medicalmodv2XmlPath, lastMedicalmodv2RequestXml, 'utf8');
   }
   fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2));
   fs.writeFileSync(blockerSummaryJsonPath, JSON.stringify(buildBlockerSummary(summary), null, 2));
-  fs.writeFileSync(handoffStateJsonPath, JSON.stringify(lastHandoffState, null, 2));
-  fs.writeFileSync(selectedVisitRowJsonPath, JSON.stringify(lastSelectedVisitRow, null, 2));
+  fs.writeFileSync(handoffStateJsonPath, JSON.stringify(persistedHandoffState(), null, 2));
+  fs.writeFileSync(selectedVisitRowJsonPath, JSON.stringify(sanitizeSelectedVisitRow(lastSelectedVisitRow), null, 2));
 };
 
 const buildSummaryMarkdown = (summary) =>
@@ -781,12 +859,11 @@ const buildSummaryMarkdown = (summary) =>
   `- Handoff State: handoff-state.json\n` +
   `- Selected Visit Row: selected-visit-row.json\n` +
   `- Steps: steps.log\n` +
-  `- Network: network/network.json\n` +
-  `- Requests: network/requests.json\n` +
   `- Console: console.json\n` +
   `- Page errors: page-errors.json\n` +
-  `- Request XML: request-xml/medicalmodv2.xml\n` +
-  `- Screenshots: screenshots/\n` +
+  `${sanitizedEvidenceOnly ? '' : '- Network: network/network.json\n- Requests: network/requests.json\n'}` +
+  `${sanitizedEvidenceOnly ? '' : '- Request XML: request-xml/medicalmodv2.xml\n'}` +
+  `${browserArtifactsDisabled ? '' : '- Screenshots: screenshots/\n'}` +
   `${recordHar ? '- HAR: har/network.har\n' : ''}` +
   `\n## Rerun\n\n` +
   `- QA_BASE_URL=${baseURL} RUN_ID=${summary.runId} TRACE_ID=${summary.traceId} QA_PATIENT_ID=${summary.patientId} node scripts/qa-fullflow-weborca.mjs\n`;
@@ -852,7 +929,9 @@ const run = async () => {
   logStep(`outpatient scenario server-handoff=${String(scenarioApplied)}`);
   await page.locator('.reception-page').waitFor({ timeout: 20000 });
   logStep('reception page ready');
-  const openWorkflowButton = page.getByRole('button', { name: '既存患者受付/患者検索' });
+  const openWorkflowButton = page.getByRole('button', {
+    name: /(?:患者を受付する|既存患者受付(?:\/患者検索|へ)?)/,
+  });
   await openWorkflowButton.waitFor({ timeout: 20000 });
   await openWorkflowButton.click();
   logStep('opened reception workflow modal');
@@ -1054,20 +1133,7 @@ const run = async () => {
         pageErrors,
         blockerReason: `selector_missing:${selectorGate.missingFields.join(',') || 'unknown'}`,
         blockerClassification: SELECTOR_OPTION_MISSING_BLOCKER,
-        evidencePaths: {
-          summaryJson: 'summary.json',
-          summaryMd: 'summary.md',
-          blockerSummary: 'blocker-summary.json',
-          handoffState: 'handoff-state.json',
-          selectedVisitRow: 'selected-visit-row.json',
-          stepsLog: 'steps.log',
-          network: 'network/network.json',
-          requests: 'network/requests.json',
-          console: 'console.json',
-          pageErrors: 'page-errors.json',
-          screenshots: 'screenshots',
-          har: recordHar ? 'har/network.har' : undefined,
-        },
+        evidencePaths: buildEvidencePaths(),
       };
       throw new Error(lastSummary.blockerReason);
     }
@@ -1987,18 +2053,21 @@ const run = async () => {
       buttonAttrs: sendButtonAttrs ?? undefined,
       requestUrl: sendRequest?.url() ?? undefined,
       requestBodyBytes: sendRequest?.postData()?.length ?? undefined,
-      requestXmlPath: lastMedicalmodv2RequestXml ? 'request-xml/medicalmodv2.xml' : undefined,
+      requestXmlPath:
+        lastMedicalmodv2RequestXml && !sanitizedEvidenceOnly ? 'request-xml/medicalmodv2.xml' : undefined,
       validation,
     },
     billingResult,
     harPath: recordHar ? harPath : undefined,
     consoleMessages,
     pageErrors,
-    screenshots: {
-      beforeReception: beforeShot,
-      afterReception: afterShot,
-      charts: chartsShot,
-    },
+    screenshots: browserArtifactsDisabled
+      ? undefined
+      : {
+          beforeReception: beforeShot,
+          afterReception: afterShot,
+          charts: chartsShot,
+        },
     blockerReason,
     blockerClassification:
       sendBusinessOk
@@ -2016,21 +2085,9 @@ const run = async () => {
             : sendDisabled
               ? 'test-data-blocker'
               : 'repo-defect',
-    evidencePaths: {
-      summaryJson: 'summary.json',
-      summaryMd: 'summary.md',
-      blockerSummary: 'blocker-summary.json',
-      handoffState: 'handoff-state.json',
-      selectedVisitRow: 'selected-visit-row.json',
-      stepsLog: 'steps.log',
-      network: 'network/network.json',
-      requests: 'network/requests.json',
-      console: 'console.json',
-      pageErrors: 'page-errors.json',
+    evidencePaths: buildEvidencePaths({
       requestXml: lastMedicalmodv2RequestXml ? 'request-xml/medicalmodv2.xml' : undefined,
-      screenshots: 'screenshots',
-      har: recordHar ? 'har/network.har' : undefined,
-    },
+    }),
   };
   if (summary.blockerClassification !== SELECTOR_OPTION_MISSING_BLOCKER && summary.medicalInformationGate.ok === false) {
     summary.blockerClassification = 'repo-defect';
@@ -2089,30 +2146,18 @@ run().catch(async (error) => {
         validation: lastMedicalmodv2RequestXml
           ? { ok: true, requestXmlBytes: lastMedicalmodv2RequestXml.length }
           : { ok: false, reason: 'no_request_xml' },
-        requestXmlPath: lastMedicalmodv2RequestXml ? 'request-xml/medicalmodv2.xml' : undefined,
+        requestXmlPath:
+          lastMedicalmodv2RequestXml && !sanitizedEvidenceOnly ? 'request-xml/medicalmodv2.xml' : undefined,
       },
-      screenshots: {
-        failure: failureShot,
-      },
+      screenshots: browserArtifactsDisabled ? undefined : { failure: failureShot },
       consoleMessages,
       pageErrors,
       blockerReason,
       blockerClassification,
       fatalError: String(error),
-      evidencePaths: {
-        summaryJson: 'summary.json',
-        summaryMd: 'summary.md',
-        blockerSummary: 'blocker-summary.json',
-        handoffState: 'handoff-state.json',
-        selectedVisitRow: 'selected-visit-row.json',
-        stepsLog: 'steps.log',
-        network: 'network/network.json',
-        requests: 'network/requests.json',
-        console: 'console.json',
-        pageErrors: 'page-errors.json',
+      evidencePaths: buildEvidencePaths({
         requestXml: lastMedicalmodv2RequestXml ? 'request-xml/medicalmodv2.xml' : undefined,
-        screenshots: 'screenshots',
-      },
+      }),
     };
   if (summary.blockerClassification !== SELECTOR_OPTION_MISSING_BLOCKER && summary.medicalInformationGate?.ok === false) {
     summary.blockerClassification = 'repo-defect';

@@ -195,7 +195,17 @@ function populateCloseout(repoDir, acceptedHead, mergeBase, options = {}) {
     'git/git-diff-stat.txt': ' src/app.txt | 1 +\n 1 file changed, 1 insertion(+)\n',
     'git/git-log-oneline.txt': `${acceptedHead.slice(0, 7)} accepted\n`,
     'reports/final-report.md': options.finalReport ?? `# Final report\n\n- packet path: ${repoDir}/artifacts/orca-remediation/closeout/${RUN_ID}/qa/fullflow/summary.json\n`,
-    'reports/command-log.md': '# command log\n',
+    'reports/command-log.md':
+      options.commandLog ??
+      `# command log
+
+\`\`\`bash
+cd web-client && RUN_ID=${RUN_ID} node scripts/qa-orca-billing-report-live-profile.mjs --dry-run --sanitized-evidence-only --disable-browser-artifacts --candidate-discovery-summary closeout-packet/qa/weborca-candidate-discovery/summary.json --exact-preflight-summary closeout-packet/qa/weborca-readonly-preflight/summary.json
+cd web-client && RUN_ID=${RUN_ID} node scripts/qa-orca-billing-report-live-handoff.mjs --sanitized-evidence-only --disable-browser-artifacts --require-manual-approval --dry-run-summary closeout-packet/qa/billing-report-live-profile/summary.sanitized.json --approval-reference sanitized-approval-reference --report-types invoicereceipt
+cd web-client && node scripts/qa-orca-billing-report-live-result.mjs --print-operator-result-template
+cd web-client && RUN_ID=${RUN_ID} node scripts/qa-orca-billing-report-live-result.mjs --sanitized-evidence-only --disable-browser-artifacts --handoff-summary closeout-packet/qa/billing-report-live-handoff/handoff.sanitized.json --operator-result-summary operator-result.sanitized.json
+\`\`\`
+`,
     'reports/blocker-classification.md': options.blockerReport ?? '# blocker classification\n',
     'qa/acceptmodv2/accept-summary.sanitized.json': `${JSON.stringify(sanitizedAcceptSummary, null, 2)}\n`,
     'qa/acceptmodv2/steps.log': 'accept step\n',
@@ -399,6 +409,63 @@ test('dry-run fails when billing report live result evidence is missing', () => 
           { REVIEWER_PACKET_REPO_ROOT: repoDir },
         ),
       /Missing required files:\nqa\/billing-report-live-result\/result\.sanitized\.json/,
+    );
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('fails when billing report closeout command log omits result command evidence', () => {
+  const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
+  try {
+    populateCloseout(repoDir, acceptedHead, mergeBase, {
+      commandLog: `# command log
+
+\`\`\`bash
+cd web-client && RUN_ID=${RUN_ID} node scripts/qa-orca-billing-report-live-profile.mjs --dry-run --sanitized-evidence-only --disable-browser-artifacts --candidate-discovery-summary closeout-packet/qa/weborca-candidate-discovery/summary.json --exact-preflight-summary closeout-packet/qa/weborca-readonly-preflight/summary.json
+cd web-client && RUN_ID=${RUN_ID} node scripts/qa-orca-billing-report-live-handoff.mjs --sanitized-evidence-only --disable-browser-artifacts --require-manual-approval --dry-run-summary closeout-packet/qa/billing-report-live-profile/summary.sanitized.json --approval-reference sanitized-approval-reference --report-types invoicereceipt
+cd web-client && node scripts/qa-orca-billing-report-live-result.mjs --print-operator-result-template
+\`\`\`
+`,
+    });
+    assert.throws(
+      () =>
+        run(
+          process.execPath,
+          [SCRIPT_PATH, '--run-id', RUN_ID, '--accepted-ref', ACCEPTED_REF, '--dry-run'],
+          repoDir,
+          { REVIEWER_PACKET_REPO_ROOT: repoDir },
+        ),
+      /reports\/command-log\.md is missing required billing\/report command evidence:\nbilling_report_live_result_record/,
+    );
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('fails when billing report closeout command log records raw artifact capture flags', () => {
+  const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
+  try {
+    populateCloseout(repoDir, acceptedHead, mergeBase, {
+      commandLog: `# command log
+
+\`\`\`bash
+cd web-client && RUN_ID=${RUN_ID} node scripts/qa-orca-billing-report-live-profile.mjs --dry-run --sanitized-evidence-only --disable-browser-artifacts --candidate-discovery-summary closeout-packet/qa/weborca-candidate-discovery/summary.json --exact-preflight-summary closeout-packet/qa/weborca-readonly-preflight/summary.json
+cd web-client && RUN_ID=${RUN_ID} node scripts/qa-orca-billing-report-live-handoff.mjs --sanitized-evidence-only --disable-browser-artifacts --require-manual-approval --dry-run-summary closeout-packet/qa/billing-report-live-profile/summary.sanitized.json --approval-reference sanitized-approval-reference --report-types invoicereceipt
+cd web-client && node scripts/qa-orca-billing-report-live-result.mjs --print-operator-result-template
+cd web-client && RUN_ID=${RUN_ID} node scripts/qa-orca-billing-report-live-result.mjs --sanitized-evidence-only --disable-browser-artifacts --handoff-summary closeout-packet/qa/billing-report-live-handoff/handoff.sanitized.json --operator-result-summary operator-result.sanitized.json --trace
+\`\`\`
+`,
+    });
+    assert.throws(
+      () =>
+        run(
+          process.execPath,
+          [SCRIPT_PATH, '--run-id', RUN_ID, '--accepted-ref', ACCEPTED_REF, '--dry-run'],
+          repoDir,
+          { REVIEWER_PACKET_REPO_ROOT: repoDir },
+        ),
+      /reports\/command-log\.md contains forbidden billing\/report command option: billing_report_artifact_capture_flag/,
     );
   } finally {
     fs.rmSync(sandbox, { recursive: true, force: true });

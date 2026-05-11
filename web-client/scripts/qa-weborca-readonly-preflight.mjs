@@ -48,8 +48,13 @@ const summaryJsonPath = path.join(artifactRoot, 'summary.json');
 const summaryMdPath = path.join(artifactRoot, 'summary.md');
 const consoleJsonPath = path.join(artifactRoot, 'console.json');
 const pageErrorsJsonPath = path.join(artifactRoot, 'page-errors.json');
+const sanitizedEvidenceOnly =
+  process.env.QA_SANITIZED_EVIDENCE_ONLY === '1' || process.env.QA_SANITIZED_EVIDENCE_ONLY === 'true';
 
-fs.mkdirSync(networkDir, { recursive: true });
+fs.mkdirSync(artifactRoot, { recursive: true });
+if (!sanitizedEvidenceOnly) {
+  fs.mkdirSync(networkDir, { recursive: true });
+}
 
 const facilityId = resolveQaFacilityId();
 const authUserId = resolveQaUserId();
@@ -116,6 +121,16 @@ let unsafeRequestHeaders = { 'Content-Type': 'application/json' };
 
 const logStep = (label) => {
   fs.appendFileSync(stepLogPath, `[${new Date().toISOString()}] ${label}\n`, 'utf8');
+};
+
+const writeNetworkDiagnostics = () => {
+  if (sanitizedEvidenceOnly) {
+    logStep('sanitized evidence only: network diagnostics not written');
+    return;
+  }
+  fs.mkdirSync(networkDir, { recursive: true });
+  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
+  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
 };
 
 const redactHeaders = (headers) => {
@@ -955,7 +970,7 @@ try {
     await page.goto(`/f/${encodeURIComponent(facilityId)}/reception`, { waitUntil: 'domcontentloaded' });
     logStep('goto reception');
     await page.locator('.reception-page').waitFor({ timeout: 20_000 });
-    await page.getByRole('button', { name: '既存患者受付/患者検索' }).click();
+    await page.getByRole('button', { name: /(?:患者を受付する|既存患者受付(?:\/患者検索|へ)?)/ }).click();
     logStep('opened workflow modal');
     const workflowModal = page.locator('[data-test-id="reception-accept-workflow-modal"]');
     await workflowModal.waitFor({ timeout: 20_000 });
@@ -1204,8 +1219,7 @@ try {
     pageErrors,
   };
 
-  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
-  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
+  writeNetworkDiagnostics();
   fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2), 'utf8');
   fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2), 'utf8');
   fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), 'utf8');
@@ -1219,8 +1233,7 @@ try {
   }
 } catch (error) {
   logStep(`fatal errorCategory=${errorCategory(error)}`);
-  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
-  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
+  writeNetworkDiagnostics();
   fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2), 'utf8');
   fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2), 'utf8');
   const officialPatientEvidence = buildNotVerifiedOfficialEvidence('fatal_error');

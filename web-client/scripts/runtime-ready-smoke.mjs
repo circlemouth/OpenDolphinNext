@@ -121,13 +121,46 @@ const summarizeAppointmentEvidence = (evidence) => ({
   patientMatchedEntryCount: evidence.patientMatchedEntryCount,
   chartReadyEntryCount: evidence.chartReadyEntryCount,
   entryCount: evidence.entryCount,
-  smokeEntry: summarizeSmokeEntry(evidence.smokeEntry),
+  smokeEntry: evidence.smokeEntry ? summarizeSmokeEntry(evidence.smokeEntry) : null,
   rawSmoke: {
     slotsCount: evidence.rawSmoke?.slots?.length ?? 0,
     reservationsCount: evidence.rawSmoke?.reservations?.length ?? 0,
     visitsCount: evidence.rawSmoke?.visits?.length ?? 0,
   },
 });
+
+const writeRuntimeReadyBlocker = async ({ page, code, detail, appointmentEvidence, extra = {} }) => {
+  const receptionEvidence = page ? await collectReceptionRowEvidence(page).catch(() => ({})) : {};
+  const evidence = {
+    runId,
+    verdict: 'blocked',
+    blockerClassification: 'runtime_ready_not_ready',
+    blockerReason: code,
+    detail,
+    baseURL: redactUrl(baseURL),
+    facilityId,
+    appointmentEvidence: appointmentEvidence ? summarizeAppointmentEvidence(appointmentEvidence) : null,
+    ...receptionEvidence,
+    requestResponseSummary: {
+      requests: summarizeRequestLog(requestLog),
+      responses: summarizeResponseLog(responseLog),
+    },
+    counters: {
+      pauseFinishRequests,
+      billOperationBodies,
+      blockedRouteHits,
+    },
+    rawSensitiveFieldsExcluded: true,
+    liveMutationExecuted: false,
+    ...extra,
+  };
+  fs.writeFileSync(
+    path.join(artifactRoot, 'runtime-ready-before-row-wait.json'),
+    JSON.stringify(evidence, null, 2),
+    'utf8',
+  );
+  fs.writeFileSync(path.join(artifactRoot, 'runtime-ready-result.json'), JSON.stringify(evidence, null, 2), 'utf8');
+};
 
 const summarizeRequestLog = (records) =>
   records.map((entry) => ({
@@ -413,6 +446,21 @@ try {
   }, { queryDate, preferredSmokeEncounterKey, preferredSmokeScheduleKey, requestedPatientId });
 
   if (!appointmentEvidence.smokeEntry) {
+    const code = requestedPatientId ? 'runtime_ready_entry_missing_for_patient' : 'runtime_ready_entry_missing';
+    const detail = requestedPatientId
+      ? `runtime-ready entry not present for queryDate=${queryDate} and QA_PATIENT_ID=${requestedPatientId}`
+      : `runtime-ready entry not present for queryDate=${queryDate}`;
+    await writeRuntimeReadyBlocker({
+      page,
+      code,
+      detail,
+      appointmentEvidence,
+      extra: {
+        requestedPatientId: requestedPatientId || undefined,
+        requiredNextStep:
+          'rerun after current RUN_ID has a server-derived official visit row; do not proceed to candidate mutation from this blocker evidence',
+      },
+    });
     if (requestedPatientId) {
       throw new Error(`runtime-ready entry not present for queryDate=${queryDate} and QA_PATIENT_ID=${requestedPatientId}`);
     }

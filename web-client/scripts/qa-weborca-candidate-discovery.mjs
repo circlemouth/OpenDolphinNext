@@ -43,8 +43,17 @@ const consoleJsonPath = path.join(artifactRoot, 'console.json');
 const pageErrorsJsonPath = path.join(artifactRoot, 'page-errors.json');
 const preflightSummaryJsonPath = path.join(preflightArtifactRoot, 'summary.json');
 const preflightSummaryMdPath = path.join(preflightArtifactRoot, 'summary.md');
+const discoveryTimeoutMs = Number.parseInt(process.env.QA_CANDIDATE_DISCOVERY_TIMEOUT_MS ?? '180000', 10);
+const candidateEvaluationTimeoutMs = Number.parseInt(process.env.QA_CANDIDATE_EVALUATION_TIMEOUT_MS ?? '30000', 10);
+const sanitizedEvidenceOnly =
+  process.env.QA_SANITIZED_EVIDENCE_ONLY === '1' || process.env.QA_SANITIZED_EVIDENCE_ONLY === 'true';
+const browserArtifactsDisabled =
+  process.env.QA_DISABLE_BROWSER_ARTIFACTS === '1' || process.env.QA_DISABLE_BROWSER_ARTIFACTS === 'true';
 
-fs.mkdirSync(networkDir, { recursive: true });
+fs.mkdirSync(artifactRoot, { recursive: true });
+if (!sanitizedEvidenceOnly) {
+  fs.mkdirSync(networkDir, { recursive: true });
+}
 fs.mkdirSync(preflightArtifactRoot, { recursive: true });
 
 const facilityId = resolveQaFacilityId();
@@ -88,12 +97,109 @@ const pageErrors = [];
 const networkRecords = [];
 const requestRecords = [];
 const blockedMutationRequests = [];
+const candidateRows = [];
 let unsafeRequestHeaders = { 'Content-Type': 'application/json' };
 
 const currentReadonlyMutationPolicy = () => buildReadonlyMutationPolicy(blockedMutationRequests);
 
 const logStep = (label) => {
   fs.appendFileSync(stepLogPath, `[${new Date().toISOString()}] ${label}\n`, 'utf8');
+};
+
+const writeNetworkDiagnostics = () => {
+  if (sanitizedEvidenceOnly) {
+    logStep('sanitized evidence only: network diagnostics not written');
+    return;
+  }
+  fs.mkdirSync(networkDir, { recursive: true });
+  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
+  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
+};
+
+const writeCandidateRows = () => {
+  fs.writeFileSync(rowsJsonPath, JSON.stringify(candidateRows, null, 2), 'utf8');
+};
+
+const writeDiscoveryTimeoutSummary = (timeoutMs) => {
+  const executedAt = new Date().toISOString();
+  const acceptedRow = selectPreferredExactPreflightCandidate(candidateRows, undefined, { excludedPatientIds });
+  const acceptedCandidateCount = candidateRows.filter((row) => row.acceptedForExactPreflightProposal === true).length;
+  const selectedCandidate = acceptedRow
+    ? {
+        kind: 'partial-timeout-proposal',
+        patientId: acceptedRow.patientId,
+        rowPath: path.relative(artifactRoot, rowsJsonPath),
+        selectionPolicy:
+          'partial discovery timed out; exact selected-candidate preflight is still required and this proposal does not authorize mutation',
+        excludedPatientIds: [...excludedPatientIds].sort(),
+      }
+    : null;
+  const summary = {
+    runId,
+    executedAt,
+    source: CANDIDATE_DISCOVERY_SOURCE,
+    flowMode: CANDIDATE_DISCOVERY_FLOW_MODE,
+    baseURL: redactUrl(baseURL),
+    facilityId,
+    sessionRole,
+    candidateDiscoveryAloneAuthorizesPhase3: false,
+    candidateCount: candidateRows.length,
+    partialCandidateCount: candidateRows.length,
+    acceptedCandidateCount,
+    selectedCandidate,
+    acceptedForPhase3Attempt: false,
+    phase3AttemptPatientId: '',
+    releaseVerdict: 'BLOCKED',
+    verdict: 'blocked',
+    blockerClassification: 'candidate_discovery_timeout',
+    blockerReason: `candidate discovery exceeded timeoutMs=${timeoutMs}`,
+    timeoutMs,
+    candidateEvaluationTimeoutMs,
+    candidates: candidateRows,
+    readinessAxes: buildReadinessAxes(candidateRows),
+    mutationPolicy: {
+      prohibited: true,
+      blockedRequestCount: blockedMutationRequests.length,
+      blockedRequests: blockedMutationRequests,
+      targetMutationRequestCount: 0,
+    },
+    requiredNextStep:
+      'rerun candidate discovery with bounded timeout and inspect only sanitized summary fields before exact selected-candidate readonly preflight',
+    rawSensitiveFieldsExcluded: true,
+    browserArtifactsDisabled,
+    sanitizedEvidenceOnly,
+    liveMutationExecuted: false,
+  };
+  const preflightSummary = {
+    runId,
+    executedAt,
+    source: CANDIDATE_DISCOVERY_SOURCE,
+    flowMode: CANDIDATE_DISCOVERY_FLOW_MODE,
+    candidateDiscoveryAloneAuthorizesPhase3: false,
+    discoverySummaryPath: path.relative(preflightArtifactRoot, summaryJsonPath),
+    baseURL: redactUrl(baseURL),
+    facilityId,
+    sessionRole,
+    acceptedForPhase3Attempt: false,
+    selectedCandidate,
+    phase3AttemptPatientId: '',
+    exactSelectedCandidatePreflight: {
+      required: true,
+      accepted: false,
+      reason: 'candidate_discovery_timeout',
+      partialCandidateCount: candidateRows.length,
+    },
+    mutationPolicy: summary.mutationPolicy,
+    verdict: 'blocked',
+    blockerClassification: summary.blockerClassification,
+    blockerReason: summary.blockerReason,
+    rawSensitiveFieldsExcluded: true,
+  };
+  fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), 'utf8');
+  fs.writeFileSync(summaryMdPath, buildMarkdownSummary(summary), 'utf8');
+  fs.writeFileSync(preflightSummaryJsonPath, JSON.stringify(preflightSummary, null, 2), 'utf8');
+  fs.writeFileSync(preflightSummaryMdPath, buildPreflightMarkdown(preflightSummary), 'utf8');
+  writeCandidateRows();
 };
 
 const tokyoDate = () => {
@@ -595,7 +701,7 @@ const evaluateLocalUiReadiness = async (context, patientId) => {
 
     await page.goto(`/f/${encodeURIComponent(facilityId)}/reception`, { waitUntil: 'domcontentloaded' });
     await page.locator('.reception-page').waitFor({ timeout: 20_000 });
-    await page.getByRole('button', { name: '既存患者受付/患者検索' }).click();
+    await page.getByRole('button', { name: /(?:患者を受付する|既存患者受付(?:\/患者検索|へ)?)/ }).click();
     const workflowModal = page.locator('[data-test-id="reception-accept-workflow-modal"]');
     await workflowModal.waitFor({ timeout: 20_000 });
     const patientSearchForm = workflowModal.locator('[data-test-id="reception-patient-search-form"]');
@@ -807,6 +913,102 @@ const buildRejectedLegacySeedRow = (patientId, source) => ({
   },
 });
 
+const buildCandidateEvaluationTimeoutRow = (patientId, source, timeoutMs) => ({
+  candidateId: patientId,
+  patientId,
+  source,
+  accepted: false,
+  rejectionReason: 'candidate_evaluation_timeout',
+  primaryRejectionReason: 'candidate_evaluation_timeout',
+  rejectionReasons: ['candidate_evaluation_timeout'],
+  acceptedForExactPreflightProposal: false,
+  acceptedForPhase3Attempt: false,
+  timeoutMs,
+  officialPatientExistence: {
+    httpStatus: 0,
+    status: 0,
+    apiResult: '',
+    apiResultAccepted: false,
+    patientInformationPresent: false,
+    exactIdMatched: false,
+    verdict: 'not_verified',
+    accepted: false,
+    category: 'candidate_evaluation_timeout',
+    responseCategory: 'candidate_evaluation_timeout',
+    rejectionReason: 'candidate_evaluation_timeout',
+  },
+  insuranceReadiness: {
+    status: 0,
+    apiResult: '',
+    classification: 'candidate_evaluation_timeout',
+    accepted: false,
+    verdict: 'not_verified',
+  },
+  selectorReadiness: { verdict: 'not_verified', reason: 'candidate_evaluation_timeout', selectors: {} },
+  localSelectable: { verdict: 'not_verified', reason: 'candidate_evaluation_timeout', selectable: false },
+  medicalInformationReadiness: {
+    verdict: 'not_verified',
+    accepted: false,
+    reason: 'candidate_evaluation_timeout',
+    failedSubdimensions: ['required_identity_fields_match'],
+  },
+  appointmentDependency: {
+    flowMode: requestedAppointmentFlowMode,
+    required: requestedAppointmentFlowMode === 'appointment_row',
+    status: 0,
+    apiResult: '',
+    classification: 'candidate_evaluation_timeout',
+    accepted: false,
+    verdict: 'not_verified',
+  },
+  diagnosticNoPatientNotFound: { verdict: 'not_verified', accepted: false },
+  mutationProhibited: {
+    verdict: verdict(blockedMutationRequests.length === 0),
+    blockedRequestCount: blockedMutationRequests.length,
+  },
+  readinessAxes: {
+    officialPatient: { accepted: false, rejectionReason: 'candidate_evaluation_timeout' },
+    insurance: { accepted: false, classification: 'candidate_evaluation_timeout' },
+    appointment: { accepted: false, classification: 'candidate_evaluation_timeout' },
+    localSelectable: { accepted: false, reason: 'candidate_evaluation_timeout' },
+    selector: { accepted: false, reason: 'candidate_evaluation_timeout' },
+    medicalInformation: { accepted: false, reason: 'candidate_evaluation_timeout' },
+    mutationPolicy: { accepted: Number(blockedMutationRequests.length) === 0, blockedRequestCount: blockedMutationRequests.length },
+  },
+});
+
+const buildSkippedUiReadiness = (patientId, reason) => {
+  const localDiagnostic = summarizeLocalSelectableDiagnostic({
+    patientId,
+    selectableCount: 0,
+    exactResultCount: 0,
+    selectable: false,
+    verdict: 'not_verified',
+    reason,
+  });
+  const selectorDiagnostic = summarizeSelectorDiagnostic({
+    selectors: {},
+    localSelectableDiagnostic: localDiagnostic,
+  });
+  return {
+    localSelectable: {
+      ...localDiagnostic,
+      selectable: false,
+      selectableCount: 0,
+      exactResultCount: 0,
+      verdict: 'not_verified',
+      reason,
+    },
+    selectorReadiness: {
+      ...selectorDiagnostic,
+      verdict: 'not_verified',
+      reason,
+      selectors: {},
+    },
+    diagnosticPatientNotFound: false,
+  };
+};
+
 const buildCandidateRowReadinessAxes = ({
   officialPatientExistence,
   insuranceReadiness,
@@ -867,7 +1069,13 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId, so
   const officialPatientExistence = await evaluateOfficialPatientExistence(context, patientId);
   const insuranceReadiness = await evaluateInsuranceReadiness(context, patientId);
   const appointmentDependency = await evaluateAppointmentDependency(context, patientId);
-  const uiReadiness = await evaluateLocalUiReadiness(context, patientId);
+  const serverReadinessRejected =
+    officialPatientExistence.accepted !== true ||
+    insuranceReadiness.accepted !== true ||
+    appointmentDependency.accepted !== true;
+  const uiReadiness = serverReadinessRejected
+    ? buildSkippedUiReadiness(patientId, 'server_readiness_rejected_before_ui_probe')
+    : await evaluateLocalUiReadiness(context, patientId);
   const patientNotFoundDetected =
     officialPatientExistence.category === 'not_found' ||
     officialPatientExistence.apiResultMessageCategory === 'patient-not-found' ||
@@ -938,6 +1146,26 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId, so
   };
   logStep(`candidate ${patientId} acceptedForExactPreflightProposal=${acceptedForExactPreflightProposal}`);
   return row;
+};
+
+const evaluateCandidateBounded = async (context, medicalInformationProbe, patientId, source) => {
+  if (!Number.isFinite(candidateEvaluationTimeoutMs) || candidateEvaluationTimeoutMs <= 0) {
+    return await evaluateCandidate(context, medicalInformationProbe, patientId, source);
+  }
+  let timeoutHandle;
+  try {
+    return await Promise.race([
+      evaluateCandidate(context, medicalInformationProbe, patientId, source),
+      new Promise((resolve) => {
+        timeoutHandle = setTimeout(() => {
+          logStep(`candidate ${patientId} evaluation timeout after ${candidateEvaluationTimeoutMs}ms`);
+          resolve(buildCandidateEvaluationTimeoutRow(patientId, source, candidateEvaluationTimeoutMs));
+        }, candidateEvaluationTimeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }
 };
 
 const buildPreflightSummary = ({ acceptedRow, summary, medicalInformationProbe }) => {
@@ -1228,8 +1456,26 @@ const buildReadinessAxes = (rows) => ({
 
 let browser;
 let context;
+let timeoutHandle;
+let discoveryTimedOut = false;
 
 try {
+  if (Number.isFinite(discoveryTimeoutMs) && discoveryTimeoutMs > 0) {
+    timeoutHandle = setTimeout(() => {
+      discoveryTimedOut = true;
+      logStep(`candidate discovery timeout after ${discoveryTimeoutMs}ms`);
+      try {
+        writeDiscoveryTimeoutSummary(discoveryTimeoutMs);
+      } catch (error) {
+        fs.appendFileSync(
+          stepLogPath,
+          `[${new Date().toISOString()}] timeout summary write failed: ${error?.message ?? String(error)}\n`,
+          'utf8',
+        );
+      }
+      process.exit(124);
+    }, discoveryTimeoutMs);
+  }
   const { source: candidateSource, candidates } = parseCandidateEnv();
   if (candidates.includes(REJECTED_LEGACY_SEED)) {
     logStep(`${REJECTED_LEGACY_SEED} was provided and will be rejected without probing`);
@@ -1248,13 +1494,14 @@ try {
   await auth.page.close().catch(() => {});
 
   const medicalInformationProbe = await evaluateMedicalInformation(context);
-  const rows = [];
   for (const patientId of candidates) {
-    rows.push(await evaluateCandidate(context, medicalInformationProbe, patientId, candidateSource));
+    const row = await evaluateCandidateBounded(context, medicalInformationProbe, patientId, candidateSource);
+    candidateRows.push(row);
+    writeCandidateRows();
   }
 
-  const acceptedRow = selectPreferredExactPreflightCandidate(rows, undefined, { excludedPatientIds });
-  const acceptedCandidateCount = rows.filter((row) => row.acceptedForExactPreflightProposal === true).length;
+  const acceptedRow = selectPreferredExactPreflightCandidate(candidateRows, undefined, { excludedPatientIds });
+  const acceptedCandidateCount = candidateRows.filter((row) => row.acceptedForExactPreflightProposal === true).length;
   const mutationPolicy = currentReadonlyMutationPolicy();
   const selectedCandidate = acceptedRow
     ? {
@@ -1268,7 +1515,7 @@ try {
       }
     : null;
   const discoveryGate = buildCandidateDiscoveryGate({
-    candidateCount: rows.length,
+    candidateCount: candidateRows.length,
     acceptedCandidateCount,
     blockedRequestCount: mutationPolicy.blockedRequestCount,
     selectedCandidate,
@@ -1283,7 +1530,7 @@ try {
     sessionRole,
     login: { sessionMeStatus: sessionMe.status },
     candidateSource,
-    candidateCount: rows.length,
+    candidateCount: candidateRows.length,
     excludedPatientIds: [...excludedPatientIds].sort(),
     baseDate,
     requestedSelectorValues: {
@@ -1293,8 +1540,9 @@ try {
       visitKind,
     },
     medicalInformationProbe,
-    candidates: rows,
-    readinessAxes: buildReadinessAxes(rows),
+    candidateEvaluationTimeoutMs,
+    candidates: candidateRows,
+    readinessAxes: buildReadinessAxes(candidateRows),
     acceptedCandidateCount,
     selectedCandidate,
     ...discoveryGate,
@@ -1305,11 +1553,10 @@ try {
   };
   const preflightSummary = buildPreflightSummary({ acceptedRow, summary, medicalInformationProbe });
 
-  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
-  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
+  writeNetworkDiagnostics();
   fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2), 'utf8');
   fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2), 'utf8');
-  fs.writeFileSync(rowsJsonPath, JSON.stringify(rows, null, 2), 'utf8');
+  writeCandidateRows();
   fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), 'utf8');
   fs.writeFileSync(summaryMdPath, buildMarkdownSummary(summary), 'utf8');
   fs.writeFileSync(preflightSummaryJsonPath, JSON.stringify(preflightSummary, null, 2), 'utf8');
@@ -1317,14 +1564,21 @@ try {
 
   await context.close();
   await browser.close();
+  if (timeoutHandle) clearTimeout(timeoutHandle);
   console.log(JSON.stringify(buildStdoutSummary(summary), null, 2));
   if (!acceptedRow) {
     process.exit(1);
   }
 } catch (error) {
+  if (timeoutHandle) clearTimeout(timeoutHandle);
+  if (discoveryTimedOut) {
+    writeDiscoveryTimeoutSummary(discoveryTimeoutMs);
+    await context?.close().catch(() => {});
+    await browser?.close().catch(() => {});
+    process.exit(124);
+  }
   logStep(`fatal errorCategory=${errorCategory(error)}`);
-  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
-  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
+  writeNetworkDiagnostics();
   fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2), 'utf8');
   fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2), 'utf8');
   const summary = {

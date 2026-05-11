@@ -123,7 +123,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 ## 5. ORCA連携アダプタ
 
-- [ ] `OrcaClient` を唯一の ORCA通信口にする。
+- [x] `OrcaClient` を唯一の ORCA通信口にする。
+  - [x] 2026-05-11T11:17Z: `check-orca-transport-boundary.sh` を追加し、production server source の JDK HTTP usage を `OrcaTransport` / `OrcaHttpClient` と明示許可された push/master-update 補助面に限定する release guard を固定した。通常 ORCA API traffic を resource/service から直接送信する再混入は CI で fail する。
 - [ ] Webクライアントから ORCA URL へ直接到達できないようにする。
 - [ ] Vite開発プロキシから `/orca22`, `/api01rv2`, `/api21` 等の生ORCAプロキシを削除する。
 - [ ] ORCA接続URL、Basic認証、クライアント証明書、証明書パスワードはサーバー側設定だけに置く。
@@ -239,6 +240,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T03:03Z: reviewer submission packet は `qa/billing-report-live-result/result.sanitized.json` を allowlist copy / validate し、ready handoff hash、ORCA由来 hash-only cache/snapshot evidence、server-generated storage boundary、upload failure / blocker なしを要求する。raw identifier / raw artifact / storage key/digest が result evidence に混入した場合は packet 作成を拒否する。
   - [x] 2026-05-11T03:22Z: reviewer submission packet dry-run は `requiredCloseoutFiles` / `requiredPacketFiles` を JSON 出力し、`qa/billing-report-live-result/result.sanitized.json` の欠落を packet 生成前に fail する。dry-run は出力先へ書き込まず、closeout fixture が operator result evidence まで揃っていることを focused test で固定した。
   - [x] 2026-05-11T03:42Z: `qa-orca-billing-report-live-result.mjs --print-operator-result-template` を追加し、operator が raw ORCA body / 帳票本文 / raw patient / invoice / `Data_Id` / `Medical_Uid` / storage key/digest / browser artifact を追記せず、server-derived hash/status だけで sanitized result input を作る contract を固定した。
+  - [x] 2026-05-11T10:11Z: reviewer submission packet は `reports/command-log.md` に billing/report live profile dry-run、manual handoff、operator template、operator result record の sanitized command chain が残っていることを検証し、`--live` や raw artifact capture flag が混入した closeout を生成前に拒否する。
 - [x] レセプト情報を OpenDolphinNext 正本として持たず、ORCA由来キャッシュまたは帳票スナップショットとして扱う。
   - [x] 2026-05-10T22:30Z: `orca_report_snapshot` は `source_system=ORCA` と固定 report type/status を持つ snapshot 境界であり、restore/recovery docs でも local snapshot を正本昇格しないことを明記した。
 
@@ -377,11 +379,19 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] 2026-05-11T13:56Z: Phase 3 handoff の exact preflight gate を強化し、`QA_READONLY_PREFLIGHT_SUMMARY` は `qa/weborca-readonly-preflight/summary.json` の exact summary path だけを許可する。candidate discovery / acceptmodv2 / fullflow / network / raw browser artifact path は hash・input identity が揃っていても `preflight_artifact_invalid` で mutation 前に拒否する。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
 - [x] 2026-05-11T14:03Z: WebORCA Trial actual read-only candidate discovery を実行し、official patient / insurance / appointment dependency の外部ORCA軸は全候補 accepted、local patient search と reception selector readiness が全候補 unavailable のため exact selected-candidate preflight / approved mutation readiness は `test-data-or-harness-readiness-blocker` として停止することを確認した。stdout は sanitized aggregate のみへ変更し、credential、Cookie、Authorization、CSRF、raw ORCA body、患者氏名/住所/電話、保険詳細、HAR/trace/video/screenshot は tracked output に残さない。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
 - [x] 2026-05-11T14:51Z: actual Trial read-only blocker のうち local patient selectable 側を前進させ、直前の official `patientgetv2` で保存された `orca_patient_cache` CURRENT/FOUND row を `/api/local/patients/search` の patient ID exact miss 時だけ selectable 表示へ使えるようにした。これは local DB row を ORCA正本化するものではなく、stale / NOT_FOUND / NEEDS_REVIEW cache は返さない。actual live rerun は次 task。
+- [x] 2026-05-11T12:23Z: Trial 実行承認と実行時 secret 供給が揃った状態で `live-trial-checklist.sh --dry-run` は set/unset-only 表示で通過した。ただし `orca-trial-no-object-storage` runtime setup は host Flyway の DB auth/port resolution で停止し、runtime-ready smoke、medical-information probe、candidate discovery、exact selected-candidate preflight、live mutation、billing/report live profile は未実行のため、実ORCA接続試験の親項目は未完了のまま維持する。
+- [x] 2026-05-11T12:44Z: 既存 Postgres volume の role password を runtime env と再同期し、Flyway は `v0329` まで適用、server readiness は ORCA `UP` になった。authenticated readonly traffic は `system01lstv2 apiResult=00` に到達したが、runtime-ready smoke は current query date の official row 不在で停止し、candidate discovery は heartbeat 内に完了しなかったため、exact preflight / live mutation / billing-report live profile は未実行のまま維持する。
+- [x] 2026-05-11T13:18Z: `runtime-ready-smoke` の no official row blocker と `qa-weborca-candidate-discovery` timeout blocker が sanitized JSON-only summary を出して非 0 終了するよう固定した。これは blocker evidence の品質改善であり、exact selected-candidate preflight / live mutation / billing-report live profile の完了証跡ではない。
+- [x] 2026-05-11T13:41Z: bounded live read-only retry を実行し、runtime-ready は current query date の official row 不在で `runtime_ready_not_ready` blocker、candidate discovery は 60s 上限で `candidate_discovery_timeout` blocker を sanitized summary として残した。`runtime-ready-smoke` の null smokeEntry blocker bug と candidate timeout summary overwrite bug は修正したが、exact preflight / live mutation / billing-report live profile は未実行のまま維持する。
+- [x] 2026-05-11T14:03Z: `qa-weborca-candidate-discovery` を候補単位 timeout / 逐次 `candidate-rows.json` 保存 / `QA_SANITIZED_EVIDENCE_ONLY=1` の network JSON 非生成に更新し、server readiness rejected 候補では UI probe を省略するようにした。古い UI button locator drift を直した後の live retry は 11 件すべてを timeout なしで完走し、全候補で official / insurance / appointment は accepted だが local selectable UI search が exactResultCount=0 のため `acceptedCandidateCount=0`、`selectedCandidate=null`。exact selected-candidate preflight / live mutation / fullflow / billing-report live profile は未実行のまま維持する。
+- [x] 2026-05-11T14:31Z: current Reception entrypoint の button label drift を candidate discovery / readonly preflight / acceptmodv2 / fullflow harness で吸収し、Trial-native candidate discovery は `acceptedCandidateCount=11`、selected proposal `00001` まで到達した。同 RUN_ID の exact selected-candidate readonly preflight は `verdict=accepted` / `phase3AttemptPatientId=00001` / `rawSensitiveFieldsExcluded=true`、承認済み acceptmodv2 live mutation は sanitized summary で `businessAcceptedWithWarnings` / `mutationSuccess=true` を返した。fullflow diagnostic attempt は stale locator と raw artifact 生成経路が見えたため成果物を破棄し、fullflow / medicalmodv2 / billing-report live closeout は未完了のまま維持する。
+- [x] 2026-05-11T14:51Z: `qa-fullflow-weborca` の `QA_SANITIZED_EVIDENCE_ONLY=1` / `QA_DISABLE_BROWSER_ARTIFACTS=1` 経路を harden し、早期失敗・selector blocker・fatal blocker・send 到達後 summary のいずれでも retained evidence に `network/`、`screenshots/`、`har/`、`request-xml/`、raw selected patient row text を作らない contract を focused test で固定した。これは fullflow rerun 前の blocker 解消作業であり、fullflow / medicalmodv2 / billing-report live closeout 自体は未完了のまま維持する。
 - [ ] ORCA患者取得正常系/不在/更新成功/更新失敗を確認する。
 - [ ] ORCA受付一覧取得/受付取消/保険組合せ取得を確認する。
 - [ ] ORCA病名取得/追加/変更/削除/転帰更新/警告/不一致/ORCA側のみ病名を確認する。
 - [ ] ORCA診療行為送信成功/警告/失敗、他端末使用中、会計情報、収納情報、帳票取得を確認する。
 - [ ] 通信断後の再送、timeout 後の `UNKNOWN`、二重クリックで二重送信されないこと、サーバー再起動後の送信状態復元を確認する。
+  - [x] 2026-05-11T11:57Z: `check-orca-retry-recovery-contract.sh` を追加し、release-validation が `OrcaHttpClientResilienceTest` / `PatientModV2OutpatientResourceIdempotencyTest` / `OrcaBillingCorrectionScenarioSupportTest` / `OrcaOperationLedgerSchemaTest` を実行対象に含み、retry、idempotency、`ORCA_UNKNOWN`、`tmedicalgetv2`、`resendBlocked`、server restart / restore 後の自動再送禁止を contract/runbook から落とさないことを固定した。actual live Trial の通信断・timeout・二重クリック・再起動証跡ではないため親項目は未完了のまま維持する。
 
 ## 19. リリース判定チェック
 
@@ -389,6 +399,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 診療録確定済み直接更新経路、確定済み処方直接更新経路が残っていない。
 - [ ] ORCA認証情報がブラウザへ露出しない。
 - [ ] ORCA送信に idempotency key がある。
+  - [x] 2026-05-11T11:57Z: release gate guard が `idempotency_key` / `request_hash` schema contract と focused idempotency test の存在を検証し、ORCA mutation の重複送信防止証跡が受入れ手順から欠落しないことを固定した。全 ORCA 送信 live evidence は未完了のため親項目は未完了。
 - [ ] ORCA警告・エラー・不一致が UI と監査ログに保存される。
 - [ ] 患者ヘッダーが主要画面に表示され、重大操作に確認フローがある。
 - [ ] 診療録 PDF 出力と期間エクスポートができる。
