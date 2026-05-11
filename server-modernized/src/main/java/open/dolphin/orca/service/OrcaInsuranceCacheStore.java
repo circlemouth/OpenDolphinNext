@@ -89,6 +89,36 @@ public class OrcaInsuranceCacheStore {
              LIMIT 1
             """;
 
+    private static final String SQL_REFRESH_LINKS = """
+            UPDATE opendolphin.encounter_orca_acceptance_link link
+               SET insurance_cache_status = cache.cache_status,
+                   insurance_cache_fetched_at = cache.fetched_at,
+                   insurance_cache_expires_at = cache.cache_expires_at,
+                   insurance_warning_status = CASE cache.cache_status
+                       WHEN 'CURRENT' THEN 'CLEAR'
+                       WHEN 'DIFF_DETECTED' THEN 'ORCA_INSURANCE_DIFF_DETECTED'
+                       WHEN 'NEEDS_REVIEW' THEN 'ORCA_INSURANCE_NEEDS_REVIEW'
+                       WHEN 'UNAVAILABLE' THEN 'ORCA_INSURANCE_UNAVAILABLE'
+                       ELSE 'INSURANCE_CACHE_STALE_OR_UNRESOLVED'
+                   END,
+                   insurance_changed_fields_json = CASE cache.cache_status
+                       WHEN 'DIFF_DETECTED' THEN '["insuranceCombinationSummary"]'::jsonb
+                       ELSE '[]'::jsonb
+                   END,
+                   raw_sensitive_fields_excluded = TRUE,
+                   client_provided_identifiers_trusted = FALSE,
+                   server_derived_authority_required = TRUE,
+                   updated_at = ?
+              FROM opendolphin.orca_insurance_cache cache
+             WHERE link.facility_id = cache.facility_id
+               AND (link.orca_patient_id = cache.orca_patient_id OR link.patient_id = cache.orca_patient_id)
+               AND link.acceptance_date = cache.base_date
+               AND link.insurance_combination_number = cache.insurance_combination_number
+               AND cache.facility_id = ?
+               AND cache.orca_patient_id = ?
+               AND cache.base_date = ?
+            """;
+
     @Resource(lookup = "java:jboss/datasources/PostgresDS")
     DataSource dataSource;
 
@@ -124,6 +154,7 @@ public class OrcaInsuranceCacheStore {
                         existing != null && !Objects.equals(existing.rowHash(), row.rowHash()));
                 upserted++;
             }
+            refreshEncounterLinks(connection, command, fetchedAt);
             return new InsuranceCacheResult(upserted, diffDetected, needsReview);
         } catch (SQLException ex) {
             throw new IllegalStateException("Failed to save ORCA insurance cache", ex);
@@ -235,6 +266,17 @@ public class OrcaInsuranceCacheStore {
                         resultSet.getString("row_hash"),
                         resultSet.getString("cache_status"));
             }
+        }
+    }
+
+    private void refreshEncounterLinks(Connection connection, InsuranceCacheCommand command, Instant fetchedAt)
+            throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(SQL_REFRESH_LINKS)) {
+            statement.setTimestamp(1, Timestamp.from(fetchedAt));
+            statement.setString(2, command.facilityId().trim());
+            statement.setString(3, command.orcaPatientId().trim());
+            statement.setString(4, command.baseDate().trim());
+            statement.executeUpdate();
         }
     }
 

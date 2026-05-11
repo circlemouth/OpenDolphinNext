@@ -59,6 +59,22 @@ public class OrcaPatientCacheStore {
              LIMIT 1
             """;
 
+    private static final String SQL_REFRESH_LINKS = """
+            UPDATE opendolphin.encounter_orca_acceptance_link
+               SET orca_patient_id = ?,
+                   patient_cache_status = ?,
+                   patient_business_status = ?,
+                   patient_cache_fetched_at = ?,
+                   patient_cache_expires_at = ?,
+                   patient_warning_status = ?,
+                   raw_sensitive_fields_excluded = TRUE,
+                   client_provided_identifiers_trusted = FALSE,
+                   server_derived_authority_required = TRUE,
+                   updated_at = ?
+             WHERE facility_id = ?
+               AND (orca_patient_id = ? OR patient_id = ?)
+            """;
+
     @Resource(lookup = "java:jboss/datasources/PostgresDS")
     DataSource dataSource;
 
@@ -97,6 +113,7 @@ public class OrcaPatientCacheStore {
                 if (!resultSet.next()) {
                     throw new SQLException("ORCA patient cache upsert returned no id");
                 }
+                refreshEncounterLinks(connection, command, fetchedAt, cacheExpiresAt);
                 return resultSet.getLong(1);
             }
         } catch (SQLException ex) {
@@ -233,6 +250,44 @@ public class OrcaPatientCacheStore {
             throw new IllegalStateException("DataSource is not configured");
         }
         return dataSource;
+    }
+
+    private void refreshEncounterLinks(Connection connection,
+            PatientCacheCommand command,
+            Instant fetchedAt,
+            Instant cacheExpiresAt) throws SQLException {
+        String patientId = command.orcaPatientId().trim();
+        try (PreparedStatement statement = connection.prepareStatement(SQL_REFRESH_LINKS)) {
+            statement.setString(1, patientId);
+            statement.setString(2, command.cacheStatus().trim());
+            statement.setString(3, command.businessStatus().trim());
+            statement.setTimestamp(4, Timestamp.from(fetchedAt));
+            statement.setTimestamp(5, Timestamp.from(cacheExpiresAt));
+            statement.setString(6, patientWarningStatus(command.cacheStatus(), command.businessStatus()));
+            statement.setTimestamp(7, Timestamp.from(fetchedAt));
+            statement.setString(8, command.facilityId().trim());
+            statement.setString(9, patientId);
+            statement.setString(10, patientId);
+            statement.executeUpdate();
+        }
+    }
+
+    private static String patientWarningStatus(String cacheStatus, String businessStatus) {
+        String normalizedCache = normalize(cacheStatus);
+        String normalizedBusiness = normalize(businessStatus);
+        if ("CURRENT".equals(normalizedCache) && "ORCA_PATIENT_FOUND".equals(normalizedBusiness)) {
+            return "CLEAR";
+        }
+        if ("ORCA_PATIENT_NOT_FOUND".equals(normalizedBusiness)) {
+            return "ORCA_PATIENT_NOT_FOUND";
+        }
+        if ("NEEDS_REVIEW".equals(normalizedCache)) {
+            return "ORCA_PATIENT_NEEDS_REVIEW";
+        }
+        if ("UNAVAILABLE".equals(normalizedCache)) {
+            return "ORCA_PATIENT_UNAVAILABLE";
+        }
+        return "PATIENT_CACHE_STALE_OR_UNRESOLVED";
     }
 
     private static void requireText(String value, String field) {

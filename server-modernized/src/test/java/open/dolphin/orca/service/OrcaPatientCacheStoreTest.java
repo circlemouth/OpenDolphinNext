@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.Instant;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -21,6 +24,7 @@ class OrcaPatientCacheStoreTest {
 
             OrcaPatientCacheStore store = new OrcaPatientCacheStore();
             store.dataSource = dataSource;
+            insertEncounterLink(dataSource, "enc-1", "00001");
 
             long id = store.save(OrcaPatientCacheStore.fromOrcaResponse(
                     "F001",
@@ -45,6 +49,8 @@ class OrcaPatientCacheStoreTest {
                     || row.normalizedPayloadJson().contains("\"orcaPatientId\": \"00001\""));
             assertFalse(row.normalizedPayloadJson().contains("Patient_Information"));
             assertFalse(row.normalizedPayloadJson().contains("raw"));
+            assertEquals("CLEAR", linkPatientWarning(dataSource, "enc-1"));
+            assertEquals("CURRENT", linkPatientCacheStatus(dataSource, "enc-1"));
         }
     }
 
@@ -61,6 +67,30 @@ class OrcaPatientCacheStoreTest {
         assertEquals("ORCA_PATIENT_NOT_FOUND", command.businessStatus());
         assertEquals("NOT_FOUND", command.cacheStatus());
         assertEquals("99999", command.orcaPatientId());
+    }
+
+    @Test
+    void saveUpdatesEncounterLinkPatientWarningWithoutRawPayload() throws Exception {
+        try (EmbeddedPostgres postgres = EmbeddedPostgres.builder().start()) {
+            DataSource dataSource = postgres.getPostgresDatabase();
+            migrate(dataSource);
+
+            OrcaPatientCacheStore store = new OrcaPatientCacheStore();
+            store.dataSource = dataSource;
+            insertEncounterLink(dataSource, "enc-404", "99999");
+
+            store.save(OrcaPatientCacheStore.fromOrcaResponse(
+                    "F001",
+                    "99999",
+                    "req-404",
+                    "trace-404",
+                    Instant.parse("2026-05-10T20:40:21Z"),
+                    patientGetJson("99999", "10", "患者番号がありません")));
+
+            assertEquals("ORCA_PATIENT_NOT_FOUND", linkPatientWarning(dataSource, "enc-404"));
+            assertEquals("NOT_FOUND", linkPatientCacheStatus(dataSource, "enc-404"));
+            assertFalse(linkSummary(dataSource, "enc-404").contains("Patient_Information"));
+        }
     }
 
     private static String patientGetJson(String patientId, String apiResult, String message) {
@@ -89,5 +119,50 @@ class OrcaPatientCacheStoreTest {
                 .locations("classpath:db/migration")
                 .load()
                 .migrate();
+    }
+
+    private static void insertEncounterLink(DataSource dataSource, String encounterKey, String patientId)
+            throws Exception {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     INSERT INTO opendolphin.encounter_orca_acceptance_link (
+                         encounter_key, facility_id, patient_id, orca_acceptance_key, orca_acceptance_id,
+                         orca_patient_id, acceptance_date, link_status, warning_status
+                     ) VALUES (?, 'F001', ?, 'A-001', 'A-001', ?, '2026-05-10', 'CURRENT', 'CLEAR')
+                     """)) {
+            statement.setString(1, encounterKey);
+            statement.setString(2, patientId);
+            statement.setString(3, patientId);
+            statement.executeUpdate();
+        }
+    }
+
+    private static String linkPatientWarning(DataSource dataSource, String encounterKey) throws Exception {
+        return queryString(dataSource,
+                "select patient_warning_status from opendolphin.encounter_orca_acceptance_link where encounter_key = ?",
+                encounterKey);
+    }
+
+    private static String linkPatientCacheStatus(DataSource dataSource, String encounterKey) throws Exception {
+        return queryString(dataSource,
+                "select patient_cache_status from opendolphin.encounter_orca_acceptance_link where encounter_key = ?",
+                encounterKey);
+    }
+
+    private static String linkSummary(DataSource dataSource, String encounterKey) throws Exception {
+        return queryString(dataSource,
+                "select coalesce(patient_cache_status, '') || ':' || coalesce(patient_business_status, '') from opendolphin.encounter_orca_acceptance_link where encounter_key = ?",
+                encounterKey);
+    }
+
+    private static String queryString(DataSource dataSource, String sql, String value) throws Exception {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, value);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                assertTrue(resultSet.next());
+                return resultSet.getString(1);
+            }
+        }
     }
 }

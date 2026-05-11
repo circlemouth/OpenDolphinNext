@@ -26,17 +26,26 @@ class OrcaInsuranceCacheStoreTest {
 
             OrcaInsuranceCacheStore store = new OrcaInsuranceCacheStore();
             store.dataSource = dataSource;
+            insertEncounterLink(dataSource, "enc-1");
 
             InsuranceCombinationResponse first = response(combination("0001", "01", "協会", "30", "10"));
             OrcaInsuranceCacheStore.InsuranceCacheResult firstResult =
                     store.saveInsuranceCombinations(command(first));
             assertEquals(1, firstResult.upsertedCount());
             assertEquals(0, firstResult.diffDetectedCount());
+            assertEquals("CLEAR", linkInsuranceWarning(dataSource, "enc-1"));
+            assertEquals("CURRENT", linkInsuranceCacheStatus(dataSource, "enc-1"));
 
             InsuranceCombinationResponse changed = response(combination("0001", "01", "協会", "20", "10"));
             OrcaInsuranceCacheStore.InsuranceCacheResult changedResult =
                     store.saveInsuranceCombinations(command(changed));
             assertEquals(1, changedResult.diffDetectedCount());
+            assertEquals("ORCA_INSURANCE_DIFF_DETECTED", linkInsuranceWarning(dataSource, "enc-1"));
+            assertEquals("DIFF_DETECTED", linkInsuranceCacheStatus(dataSource, "enc-1"));
+            String changedFields = linkInsuranceChangedFields(dataSource, "enc-1");
+            assertTrue(changedFields.contains("insuranceCombinationSummary"));
+            assertFalse(changedFields.contains("SHOULD_NOT_STORE_NUMBER"));
+            assertFalse(changedFields.contains("SHOULD_NOT_STORE_WHOLE_NAME"));
 
             try (Connection connection = dataSource.getConnection();
                  PreparedStatement statement = connection.prepareStatement("""
@@ -161,5 +170,48 @@ class OrcaInsuranceCacheStoreTest {
                 .locations("classpath:db/migration")
                 .load()
                 .migrate();
+    }
+
+    private static void insertEncounterLink(DataSource dataSource, String encounterKey) throws Exception {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     INSERT INTO opendolphin.encounter_orca_acceptance_link (
+                         encounter_key, facility_id, patient_id, orca_acceptance_key, orca_acceptance_id,
+                         orca_patient_id, acceptance_date, link_status, warning_status, insurance_combination_number
+                     ) VALUES (?, 'F001', '000019', 'A-001', 'A-001', '000019', '2026-05-10',
+                         'CURRENT', 'CLEAR', '0001')
+                     """)) {
+            statement.setString(1, encounterKey);
+            statement.executeUpdate();
+        }
+    }
+
+    private static String linkInsuranceWarning(DataSource dataSource, String encounterKey) throws Exception {
+        return queryString(dataSource,
+                "select insurance_warning_status from opendolphin.encounter_orca_acceptance_link where encounter_key = ?",
+                encounterKey);
+    }
+
+    private static String linkInsuranceCacheStatus(DataSource dataSource, String encounterKey) throws Exception {
+        return queryString(dataSource,
+                "select insurance_cache_status from opendolphin.encounter_orca_acceptance_link where encounter_key = ?",
+                encounterKey);
+    }
+
+    private static String linkInsuranceChangedFields(DataSource dataSource, String encounterKey) throws Exception {
+        return queryString(dataSource,
+                "select insurance_changed_fields_json::text from opendolphin.encounter_orca_acceptance_link where encounter_key = ?",
+                encounterKey);
+    }
+
+    private static String queryString(DataSource dataSource, String sql, String value) throws Exception {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, value);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                assertTrue(resultSet.next());
+                return resultSet.getString(1);
+            }
+        }
     }
 }
