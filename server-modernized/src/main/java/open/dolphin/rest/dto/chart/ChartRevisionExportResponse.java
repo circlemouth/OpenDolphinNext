@@ -10,6 +10,8 @@ public class ChartRevisionExportResponse {
     private Integer exportSchemaVersion;
     private String exportHashAlgorithm;
     private String exportHash;
+    private Integer revisionCount;
+    private Integer eventCount;
     private List<ChartRevisionExportRevision> revisions = new ArrayList<>();
     private List<ChartRevisionExportEvent> events = new ArrayList<>();
 
@@ -51,6 +53,22 @@ public class ChartRevisionExportResponse {
 
     public void setExportHash(String exportHash) {
         this.exportHash = exportHash;
+    }
+
+    public Integer getRevisionCount() {
+        return revisionCount;
+    }
+
+    public void setRevisionCount(Integer revisionCount) {
+        this.revisionCount = revisionCount;
+    }
+
+    public Integer getEventCount() {
+        return eventCount;
+    }
+
+    public void setEventCount(Integer eventCount) {
+        this.eventCount = eventCount;
     }
 
     public List<ChartRevisionExportRevision> getRevisions() {

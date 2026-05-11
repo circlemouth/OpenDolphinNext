@@ -46,6 +46,8 @@ class ChartRevisionExportServiceTest {
         assertThat(response.getExportSchemaVersion()).isEqualTo(1);
         assertThat(response.getExportHashAlgorithm()).isEqualTo("SHA-256");
         assertThat(response.getExportHash()).matches("[0-9a-f]{64}");
+        assertThat(response.getRevisionCount()).isEqualTo(2);
+        assertThat(response.getEventCount()).isEqualTo(2);
         assertThat(response.getRevisions()).hasSize(2);
         assertThat(response.getRevisions().get(1).getStatus()).isEqualTo("AMENDED");
         assertThat(response.getRevisions().get(0).getSnapshotManifest())
@@ -65,6 +67,24 @@ class ChartRevisionExportServiceTest {
         assertThat(response.getEvents().get(1).getReasonText()).doesNotContain("Basic secret");
         assertThat(response.getEvents().get(1).getReasonText()).doesNotContain("<xml>");
         assertThat(response.getEvents().get(1).getBeforeSummary()).doesNotContainKey("csrfToken");
+    }
+
+    @Test
+    void exportChartReportsRecordCountsAndIncludesThemInHashContract() {
+        stubExportQueries(List.of(finalRevision()), List.of(amendedEvent()));
+
+        ChartRevisionExportResponse oneEvent = service.exportChart(10L, "F001");
+
+        stubExportQueries(List.of(finalRevision()), List.of(finalizedEvent(), amendedEvent()));
+
+        ChartRevisionExportResponse twoEvents = service.exportChart(10L, "F001");
+
+        assertThat(oneEvent.getRevisionCount()).isEqualTo(1);
+        assertThat(oneEvent.getEventCount()).isEqualTo(1);
+        assertThat(twoEvents.getRevisionCount()).isEqualTo(1);
+        assertThat(twoEvents.getEventCount()).isEqualTo(2);
+        assertThat(twoEvents.getExportHash()).matches("[0-9a-f]{64}");
+        assertThat(twoEvents.getExportHash()).isNotEqualTo(oneEvent.getExportHash());
     }
 
     @Test

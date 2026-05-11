@@ -113,6 +113,8 @@ public class ChartRevisionExportService {
         response.setExportHashAlgorithm(EXPORT_HASH_ALGORITHM);
         response.setRevisions(revisions.stream().map(this::toRevision).toList());
         response.setEvents(events.stream().map(this::toEvent).toList());
+        response.setRevisionCount(response.getRevisions().size());
+        response.setEventCount(response.getEvents().size());
         response.setExportHash(sha256(writeJson(exportHashMaterial(response))));
         return response;
     }
@@ -361,6 +363,8 @@ public class ChartRevisionExportService {
         material.put("exportHashAlgorithm", response.getExportHashAlgorithm());
         material.put("chartId", response.getChartId());
         material.put("currentRevisionId", response.getCurrentRevisionId());
+        material.put("revisionCount", response.getRevisionCount());
+        material.put("eventCount", response.getEventCount());
         material.put("revisions", response.getRevisions().stream().map(this::revisionHashMaterial).toList());
         material.put("events", response.getEvents().stream().map(this::eventHashMaterial).toList());
         return material;
