@@ -128,6 +128,62 @@ function populateCloseout(repoDir, acceptedHead, mergeBase, options = {}) {
     ],
     claimBoundary: 'dry-run gate only; not paid status, receipt authority, or live ORCA success evidence',
   };
+  const billingReportLiveResultSummary = options.billingReportLiveResultSummary ?? {
+    schemaVersion: 1,
+    source: 'qa-orca-billing-report-live-result',
+    runId: RUN_ID,
+    commandContract: 'orca-billing-report-live-result-sanitized-operator-record',
+    handoff: {
+      runId: RUN_ID,
+      summaryHash: 'a'.repeat(64),
+      readyForManualLiveExecution: true,
+    },
+    operatorOutcome: 'live_success_sanitized',
+    liveTrialOrca: {
+      executed: true,
+      acceptedAsBillingReportEvidence: true,
+    },
+    blockers: [],
+    incomeInfoEvidence: {
+      sourceSystem: 'ORCA',
+      requestHashValid: true,
+      responseHashPresent: true,
+      rowCount: 1,
+    },
+    reportSnapshotEvidence: [
+      {
+        reportType: 'invoicereceipt',
+        requestHashValid: true,
+        responseHashPresent: true,
+        invoiceDataIdHashPresent: true,
+        storageUploadStatus: 'NOT_UPLOADED',
+        reportBinaryAvailable: false,
+        serverGeneratedStorageKeyDigestPresent: true,
+        blockers: [],
+      },
+    ],
+    acceptedEvidenceFields: [
+      'sourceSystemOrca',
+      'requestResponseHash',
+      'rowCount',
+      'invoiceDataIdHash',
+      'serverGeneratedStorageKeyDigestPresent',
+      'storageUploadStatus',
+      'reportBinaryAvailable',
+    ],
+    forbiddenEvidenceFields: [
+      'rawOrcaBody',
+      'rawPatientId',
+      'rawInvoiceNumber',
+      'rawDataId',
+      'rawMedicalUid',
+      'rawNetworkJson',
+      'harTraceVideoScreenshot',
+      'clientProvidedStorageKeyDigest',
+    ],
+    claimBoundary: 'operator result records only sanitized ORCA-derived cache/snapshot evidence; it does not make billing, payment, receipt, or report body authoritative in OpenDolphinNext',
+    rawSensitiveFieldsExcluded: true,
+  };
 
   const files = {
     'git/run-id.txt': `${RUN_ID}\n`,
@@ -150,6 +206,7 @@ function populateCloseout(repoDir, acceptedHead, mergeBase, options = {}) {
     'qa/fullflow/console.json': '[]\n',
     'qa/fullflow/page-errors.json': '[]\n',
     'qa/billing-report-live-profile/summary.sanitized.json': `${JSON.stringify(billingReportLiveProfileSummary, null, 2)}\n`,
+    'qa/billing-report-live-result/result.sanitized.json': `${JSON.stringify(billingReportLiveResultSummary, null, 2)}\n`,
     'evidence/patients-import/import-summary.json': '{"status":"ok"}\n',
     'evidence/medical-information-probe/probe-summary.json': '{"status":"ok"}\n',
     'evidence/medical-information-probe/route-response.json': '{"status":200}\n',
@@ -278,6 +335,7 @@ test('creates a clean review-checkout and validates the packet layout', () => {
           'closeout-packet/evidence/patients-import/import-summary.json',
           'closeout-packet/qa/acceptmodv2/accept-summary.sanitized.json',
           'closeout-packet/qa/billing-report-live-profile/summary.sanitized.json',
+          'closeout-packet/qa/billing-report-live-result/result.sanitized.json',
           'closeout-packet/reports/final-report.md',
         ].includes(entry),
       ),
@@ -287,6 +345,7 @@ test('creates a clean review-checkout and validates the packet layout', () => {
         'closeout-packet/evidence/patients-import/import-summary.json',
         'closeout-packet/qa/acceptmodv2/accept-summary.sanitized.json',
         'closeout-packet/qa/billing-report-live-profile/summary.sanitized.json',
+        'closeout-packet/qa/billing-report-live-result/result.sanitized.json',
         'closeout-packet/reports/final-report.md',
         'manifest.json',
         'manifest.sha256',
@@ -294,6 +353,123 @@ test('creates a clean review-checkout and validates the packet layout', () => {
       ],
     );
     assert.ok(fs.existsSync(path.join(outputDir, `submission-packet-${RUN_ID}.zip`)));
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('fails when billing report live result contains raw billing identifiers', () => {
+  const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
+  try {
+    populateCloseout(repoDir, acceptedHead, mergeBase, {
+      billingReportLiveResultSummary: {
+        schemaVersion: 1,
+        source: 'qa-orca-billing-report-live-result',
+        runId: RUN_ID,
+        commandContract: 'orca-billing-report-live-result-sanitized-operator-record',
+        handoff: {
+          runId: RUN_ID,
+          summaryHash: 'a'.repeat(64),
+          readyForManualLiveExecution: true,
+        },
+        operatorOutcome: 'live_success_sanitized',
+        liveTrialOrca: {
+          executed: true,
+          acceptedAsBillingReportEvidence: true,
+        },
+        blockers: [],
+        incomeInfoEvidence: {
+          sourceSystem: 'ORCA',
+          requestHashValid: true,
+          responseHashPresent: true,
+          rowCount: 1,
+        },
+        reportSnapshotEvidence: [
+          {
+            reportType: 'invoicereceipt',
+            requestHashValid: true,
+            responseHashPresent: true,
+            invoiceDataIdHashPresent: true,
+            storageUploadStatus: 'NOT_UPLOADED',
+            reportBinaryAvailable: false,
+            serverGeneratedStorageKeyDigestPresent: true,
+            blockers: [],
+          },
+        ],
+        acceptedEvidenceFields: ['serverGeneratedStorageKeyDigestPresent'],
+        forbiddenEvidenceFields: ['rawOrcaBody', 'rawDataId', 'clientProvidedStorageKeyDigest'],
+        rawSensitiveFieldsExcluded: true,
+        rawDataId: 'must-not-leak',
+      },
+    });
+    assert.throws(
+      () =>
+        run(
+          process.execPath,
+          [SCRIPT_PATH, '--run-id', RUN_ID, '--accepted-ref', ACCEPTED_REF],
+          repoDir,
+          { REVIEWER_PACKET_REPO_ROOT: repoDir },
+        ),
+      /qa\/billing-report-live-result\/result\.sanitized\.json contains raw-sensitive key\(s\): rawDataId/,
+    );
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('fails when billing report live result includes upload failure evidence', () => {
+  const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
+  try {
+    populateCloseout(repoDir, acceptedHead, mergeBase, {
+      billingReportLiveResultSummary: {
+        schemaVersion: 1,
+        source: 'qa-orca-billing-report-live-result',
+        runId: RUN_ID,
+        commandContract: 'orca-billing-report-live-result-sanitized-operator-record',
+        handoff: {
+          runId: RUN_ID,
+          summaryHash: 'a'.repeat(64),
+          readyForManualLiveExecution: true,
+        },
+        operatorOutcome: 'live_success_sanitized',
+        liveTrialOrca: {
+          executed: true,
+          acceptedAsBillingReportEvidence: true,
+        },
+        blockers: [],
+        incomeInfoEvidence: {
+          sourceSystem: 'ORCA',
+          requestHashValid: true,
+          responseHashPresent: true,
+          rowCount: 1,
+        },
+        reportSnapshotEvidence: [
+          {
+            reportType: 'invoicereceipt',
+            requestHashValid: true,
+            responseHashPresent: true,
+            invoiceDataIdHashPresent: true,
+            storageUploadStatus: 'UPLOAD_FAILED',
+            reportBinaryAvailable: false,
+            serverGeneratedStorageKeyDigestPresent: true,
+            blockers: [],
+          },
+        ],
+        acceptedEvidenceFields: ['serverGeneratedStorageKeyDigestPresent'],
+        forbiddenEvidenceFields: ['rawOrcaBody', 'rawDataId', 'clientProvidedStorageKeyDigest'],
+        rawSensitiveFieldsExcluded: true,
+      },
+    });
+    assert.throws(
+      () =>
+        run(
+          process.execPath,
+          [SCRIPT_PATH, '--run-id', RUN_ID, '--accepted-ref', ACCEPTED_REF],
+          repoDir,
+          { REVIEWER_PACKET_REPO_ROOT: repoDir },
+        ),
+      /qa\/billing-report-live-result\/result\.sanitized\.json reportSnapshotEvidence\[0\] has unsupported storageUploadStatus/,
+    );
   } finally {
     fs.rmSync(sandbox, { recursive: true, force: true });
   }
