@@ -14,6 +14,8 @@ It applies to:
 
 Backup and restore evidence must never contain raw ORCA body, raw XML, ORCA URL, host, credentials, Cookies, Authorization headers, CSRF tokens, patient names, addresses, phone numbers, insurance details, HAR, trace, video, or screenshots.
 
+Production cutover / rollback の最低 stop condition は [production-operations-readiness.md](./production-operations-readiness.md) も併用する。restore read-only 解除、ORCA re-alignment、reviewer packet evidence の可否は同 runbook の production operations gate と矛盾させない。
+
 ## Trust Boundary
 
 - OpenDolphinNext chart, prescription, document, attachment metadata, and audit rows are local authoritative data.

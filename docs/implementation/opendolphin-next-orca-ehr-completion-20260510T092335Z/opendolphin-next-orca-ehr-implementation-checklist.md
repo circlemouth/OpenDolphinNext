@@ -377,6 +377,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] 監査ログ hash chain 検証ができる。
 - [ ] 実ORCA接続試験、ORCAモック試験、DADS観点 UI テストが完了している。
 - [ ] 本番運用前に ORCA接続情報、証明書期限監視、DB/監査/添付バックアップ、復元試験、障害時/再送/照合手順、患者取り違え防止 UI、ロール権限、監査ログ閲覧権限を確認する。
+  - [x] 2026-05-11T13:58Z: `docs/runbooks/production-operations-readiness.md` と `check-production-operations-runbook.sh` を追加し、pair release、deployment secret store、sanitized readiness、監査書込経路、object storage profile、backup/restore/hash verification、rollback、sanitized evidence policy を本番運用前 stop condition として固定した。actual live mutation と operator sign-off は未完了のため親項目は未完了のまま維持する。
 
 ## 20. 実装優先順位
 
@@ -421,4 +422,5 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] PDF・印刷・期間エクスポートを完成させる。
 - [ ] バックアップ・復元手順を整備する。
 - [ ] 実ORCA接続試験を完了する。
-- [ ] 本番運用手順書を整備する。
+- [x] 本番運用手順書を整備する。
+  - [x] 2026-05-11T13:58Z: `production-operations-readiness.md` を release validation / cutover / outage recovery / backup-restore / reviewer packet と相互参照し、`check-production-operations-runbook.sh` と `RepoGuardScriptsTest` で runbook drift を検出する。

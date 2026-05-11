@@ -32,7 +32,7 @@ Checklist count when parallel board was created:
 | C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C01 prescription authority, medical candidate send-prep, disease handoff gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D01 live ORCA Trial execution, adapter contract, retry/idempotency evidence | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | E | `codex/orca-ehr-r2-worker-e-safety-ui` | R2-E01 medical safety UI, DADS/a11y, patient header/modal rollout | Active | 20260511T063714Z | `1218aa1ef` base | - |
-| F | `codex/orca-ehr-r2-worker-f-security-gates` | R2-F06 live Trial gate evidence / production operations gap sweep | Active | 20260511T132926Z | this commit | `no_trial_native_mutation_ready_candidate`: Trial read connectivity OK; local selectable / selector / runtime-ready preconditions block mutation |
+| F | `codex/orca-ehr-r2-worker-f-security-gates` | R2-F06 production operations readiness guard / live Trial precondition blocker | Active | 20260511T135855Z | this commit | `no_trial_native_mutation_ready_candidate`: Trial read connectivity OK; local selectable / selector / runtime-ready preconditions block mutation |
 | G | `master` | G-04 monitor round 2 heartbeat output and integrate merge-ready branches | Active | 20260511T063714Z | `1218aa1ef` | - |
 
 ## Round 2 Assignment Snapshot
@@ -160,6 +160,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T135855Z | F | R2-F06 production operations readiness guard | 15/16/18/19/20 Phase 5 production operations, release gates, and sensitive evidence boundary | this commit | production operations guard, `RepoGuardScriptsTest`, doc/config/runtime/sensitive/audit/backup/live harness guards passed | Done | Hand off live Trial local selectable / selector / runtime-ready preconditions; rerun exact preflight before mutation |
 | 20260511T132926Z | F | R2-F06 live Trial gate evidence | 15/16/18/19/20 Phase 5 live ORCA release gate and sensitive evidence guard boundary | this commit | live checklist dry-run passed; Trial setup/server health passed; candidate discovery reached ORCA read APIs but returned `acceptedCandidateCount=0`; runtime-ready smoke blocked on no selected row for 2026-05-11 | Partial / blocked before mutation | Fix or hand off local selectable sync, selector availability, and runtime-ready row gap; rerun exact preflight before mutation |
 | 20260511T125522Z | F | R2-F05 reviewer packet protected export guard | 13/15/18/19/20 Phase 5 reviewer packet and sensitive evidence guard follow-up | this commit | `node --test tests/review-packet/reviewer-submission-packet.test.mjs` passed; sensitive-evidence/audit/backup/doc/config/runtime guards passed | Done | production operations gap sweep |
 | 20260511T123419Z | F | R2-F04 authorization matrix | 13/14.3/15/18/19/20 Phase 5 PHI/PDF/export/attachment authorization matrix | this commit | `ProtectedExportAuthorizationMatrixTest` passed; sensitive-evidence/audit/backup/doc/config/runtime guards passed | Done | residual reviewer packet guard or production operations gap sweep |

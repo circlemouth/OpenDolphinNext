@@ -13,6 +13,7 @@
 - [runbooks/](runbooks/)
 - [runbooks/backup-restore-hash-verification.md](runbooks/backup-restore-hash-verification.md)
 - [runbooks/orca-outage-recovery.md](runbooks/orca-outage-recovery.md)
+- [runbooks/production-operations-readiness.md](runbooks/production-operations-readiness.md)
 - [operations/](operations/)
 - [releases/](releases/)
 - [web-client/architecture/](web-client/architecture/)

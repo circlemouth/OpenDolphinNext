@@ -4,6 +4,8 @@
 
 reviewer 提出物を logs-only archive ではなく、同一 `RUN_ID` / 同一 accepted `HEAD` に固定した `review-checkout/` と `closeout-packet/` の組として生成・検証する。
 
+Production operations sign-off evidence を含める場合は [production-operations-readiness.md](./production-operations-readiness.md) の evidence policy に従い、pair release、secret store、readiness、audit/storage、backup/restore、rollback の状態を sanitized summary / hash / fixed reason code だけで示す。
+
 ## 入口
 
 - 生成: `./scripts/create-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <BRANCH>`

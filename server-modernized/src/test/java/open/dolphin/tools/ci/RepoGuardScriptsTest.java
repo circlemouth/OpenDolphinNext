@@ -126,6 +126,27 @@ class RepoGuardScriptsTest {
     }
 
     @Test
+    void checkProductionOperationsRunbookPassesForCompleteFixture() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-production-ops-ok");
+        createProductionOperationsFixture(repoRoot, true);
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-production-operations-runbook.sh", repoRoot);
+
+        assertThat(result.exitCode()).isZero();
+    }
+
+    @Test
+    void checkProductionOperationsRunbookFailsWhenSecretStoreBoundaryIsMissing() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-production-ops-ng");
+        createProductionOperationsFixture(repoRoot, false);
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-production-operations-runbook.sh", repoRoot);
+
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.output()).contains("secret-store-only credential boundary");
+    }
+
+    @Test
     void checkLiveOrcaTrialHarnessPassesForCompleteFixture() throws Exception {
         Path repoRoot = Files.createTempDirectory("repo-guard-live-orca-ok");
         createLiveOrcaTrialHarnessFixture(repoRoot, true);
@@ -316,6 +337,52 @@ class RepoGuardScriptsTest {
         Files.writeString(
                 repoRoot.resolve("docs/contracts/audit-log.md"),
                 "[backup](../runbooks/backup-restore-hash-verification.md)\n");
+    }
+
+    private static void createProductionOperationsFixture(Path repoRoot, boolean includeSecretStoreBoundary)
+            throws IOException {
+        Files.createDirectories(repoRoot.resolve("docs/runbooks"));
+        Files.createDirectories(repoRoot.resolve("docs/releases"));
+        String secretStoreLine = includeSecretStoreBoundary
+                ? "deployment secret store supplies production credentials.\n"
+                : "";
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/production-operations-readiness.md"),
+                """
+                # Production Operations Readiness Runbook
+
+                web-client and server-modernized pair release
+                deployed as a pair
+                %s
+                /api/health/readiness
+                auditLog.status=UP
+                audit logging is unavailable
+                object-storage-free Trial profile
+                AuditChainVerifier.verifyAll()
+                content hashes
+                ORCA_SENT ORCA_CONFIRMED ORCA_UNKNOWN ORCA_FAILED CORRECTION_REQUIRED
+                raw ORCA body and raw XML
+                Basic/Authorization/Cookie/JSESSIONID/CSRF
+                patient name, address, phone number
+                HAR, trace, video, screenshot
+                check-production-operations-runbook.sh
+                """
+                        .formatted(secretStoreLine));
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/release-validation.md"),
+                "[production](./production-operations-readiness.md)\ncheck-production-operations-runbook.sh\n");
+        Files.writeString(
+                repoRoot.resolve("docs/releases/orca-remediation-cutover.md"),
+                "[Production Operations Readiness](../runbooks/production-operations-readiness.md)\n");
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/orca-outage-recovery.md"),
+                "[Production Operations Readiness](./production-operations-readiness.md)\n");
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/backup-restore-hash-verification.md"),
+                "[Production Operations Readiness](./production-operations-readiness.md)\n");
+        Files.writeString(
+                repoRoot.resolve("docs/runbooks/reviewer-submission-packet.md"),
+                "[Production Operations Readiness](./production-operations-readiness.md)\n");
     }
 
     private static void createLiveOrcaTrialHarnessFixture(Path repoRoot, boolean includeSanitizedFlag) throws IOException {

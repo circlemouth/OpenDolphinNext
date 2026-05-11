@@ -9,6 +9,7 @@
 - `docs/managerdocs/` の release/readiness 説明が gate と矛盾していない。
 - ORCA outage / UNKNOWN recovery / DB read-only / backup restore reconciliation の運用手順は [orca-outage-recovery.md](./orca-outage-recovery.md) と `docs/contracts/orca-connection.md` が一致している。
 - backup / restore / hash verification の運用手順は [backup-restore-hash-verification.md](./backup-restore-hash-verification.md) と `docs/contracts/audit-log.md` が一致し、restore 後の read-only 解除前に audit hash chain と chart/prescription content hash を検証する。
+- production operations readiness の手順は [production-operations-readiness.md](./production-operations-readiness.md) と [../releases/orca-remediation-cutover.md](../releases/orca-remediation-cutover.md) が一致し、pair release、secret store、sanitized readiness、audit write path、object storage、rollback、reviewer packet evidence の stop condition を固定している。
 - `config/server-modernized.env.sample` が設定契約と一致している。
 - `target/` / `*.war` / `__MACOSX` / `.DS_Store` / `Thumbs.db` をレビュー対象に含めない。
 
@@ -258,6 +259,7 @@ bash server-modernized/tools/ci/check-config-contract.sh
 bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-audit-append-only.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-backup-restore-runbook.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-production-operations-runbook.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-live-orca-trial-harness.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-sensitive-evidence-redaction.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-no-runtime-ddl.sh
@@ -331,6 +333,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - `check-no-generated-artifacts.sh` は tracked / untracked の両方を検査する。
 - `check-sensitive-evidence-redaction.sh` は review-target の browser bundle / test-results / Playwright output / test snapshots を検査し、historical `artifacts/` 全体を release evidence として扱わない。reviewer packet に入れる証跡は reviewer-submission packet tool の allowlist 済み sanitized subset に限定する。
 - `check-backup-restore-runbook.sh` は backup / restore / hash verification runbook、release gate、outage recovery、audit contract が同じ restore fail-closed 境界を参照していることを検査する。
+- `check-production-operations-runbook.sh` は production operations readiness runbook、release validation、cutover、outage recovery、backup/restore、reviewer packet が同じ pair release / secret store / sanitized evidence / rollback stop condition を参照していることを検査する。
 - `check-live-orca-trial-harness.sh` は live ORCA Trial checklist harness と release validation が sanitized evidence / browser artifact disable / exact preflight before mutation の境界を維持していることを検査する。
 - `check-no-direct-runtime-lookup.sh` は `ServerConfigurationResolver.java` 以外の direct runtime lookup を許可しない。
 - どれか 1 つでも失敗したら release は見送る。
