@@ -249,12 +249,14 @@
 ### Current Fact
 - `patientId` は query `patientId` -> `location.state.patientId` -> deep link volatile context の順で解決します。
 - current screen は `ReturnToBar`、患者特定、アップロード、完了/参照の単一カラム構成です。
+- `MobileImagesUploadPage` は共通 `PatientIdentityBar` を使い、router state の `encounter` に診療日、診療科コード、担当医コード、保険組合せ、encounter/schedule key がある場合は同じ visible 医療安全患者ヘッダーへ表示します。Mobile Images 側では ORCA 正本再取得を行わないため、ORCA取得状態は `遷移文脈 / unverified` として表示し、アップロード完了や画像参照を ORCA 同期済みとは表示しません。
 - fallback は `from=reception` なら reception、`from=patients` なら patients、既定は charts です。
 - retry 後は送信ボタンへ、送信成功後は最初の参照リンクへ focus を戻します。
 - document/image lifecycle は `web-client/notes/document-image-lifecycle.md` を正本とし、print preview restore と attachment-linked saved document の再編集は fail-close します。
 
 ### Verification
 - code-confirm: deep link scrub 後の patient 復元、missing-patient error、feature-disabled message
+- code-confirm: router state encounter がある場合、Mobile Images の共通患者ヘッダーに診療日、診療科、担当医、保険組合せ、内部参照ID、ORCA取得状態が visible に出ること
 - manual: file picker、upload、retry、return CTA
 
 ## Admin Surface

@@ -236,6 +236,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [ ] 主要画面に患者ヘッダーを常時表示し、ORCA患者番号、内部参照ID、氏名、カナ、生年月日、年齢、性別、受付日、診療科、担当医、保険組合せ、ORCA取得日時、キャッシュ状態を表示する。
   - [x] 2026-05-10T21:16Z: 共通 `PatientIdentityBar` に医療安全患者ヘッダー行を追加し、Charts の患者ヘッダーで受付日、診療科、担当医、保険組合せ、ORCA source/cache status を visible 表示する段階適用を実施した。Patients / Mobile Images は同じ共通 component を継続利用し、全主要画面の完全統一は後続 heartbeat で Reception などへ拡張する。
+  - [x] 2026-05-11T10:11Z: Mobile Images の共通 `PatientIdentityBar` に router state `encounter` 由来の受付日、診療科、担当医、保険組合せ、内部参照ID、`遷移文脈 / unverified` の ORCA取得状態を visible 表示する段階適用を実施した。Mobile Images 側では ORCA正本再取得や同期済み表示は行わず、患者画像アップロード完了を ORCA同期済みと混同しない。
 - [ ] モーダル内の重大操作確認にも患者識別情報を再掲する。
   - [x] 2026-05-10T21:59Z: 共通 `CriticalOperationConfirmDialog` を追加し、患者識別情報、実行操作名、対象サマリ、distinct confirm label を alertdialog 内に再掲する契約を固定した。Charts の ORCA 送信確認へ適用し、confirm CTA を `ORCAへ送信する` に分離した。
 - [ ] 診療録確定/訂正/取消、処方確定/中止/取消、病名ORCA送信、診療行為ORCA送信、会計送信、診察終了に確認フローを実装する。
