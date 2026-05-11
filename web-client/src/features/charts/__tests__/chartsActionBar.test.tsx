@@ -689,6 +689,63 @@ describe('ChartsActionBar', () => {
     expect(screen.getAllByText(/編集内容は履歴として追記/).length).toBeGreaterThan(0);
   });
 
+  it('署名確定解除は共通重大操作確認で患者と影響範囲を再掲してから実行する', async () => {
+    const user = userEvent.setup();
+    const onApprovalUnlock = vi.fn();
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-310"
+          visitDate="2026-01-05"
+          orcaEncounterContext={{
+            patientId: 'P-310',
+            visitDate: '2026-01-05',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          }}
+          selectedEntry={{
+            patientId: 'P-310',
+            name: '署名患者',
+            appointmentId: 'APT-310',
+            receptionId: 'REC-310',
+            visitDate: '2026-01-05',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          } as any}
+          approvalLock={{ locked: true, runId: 'RUN-LOCK', action: 'send' }}
+          onApprovalUnlock={onApprovalUnlock}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: '署名確定解除' }));
+
+    const firstDialog = await screen.findByRole('alertdialog', { name: '署名確定解除' });
+    expect(within(firstDialog).getByText('実行操作:')).toBeInTheDocument();
+    expect(within(firstDialog).getByText('署名患者')).toBeInTheDocument();
+    expect(within(firstDialog).getByText('P-310')).toBeInTheDocument();
+    expect(within(firstDialog).getByText('REC-310')).toBeInTheDocument();
+    expect(within(firstDialog).getByText('APT-310')).toBeInTheDocument();
+    expect(within(firstDialog).getByText('診療録確定や会計済み確定ではありません')).toBeInTheDocument();
+    expect(onApprovalUnlock).not.toHaveBeenCalled();
+
+    await user.click(within(firstDialog).getByRole('button', { name: '最終確認へ' }));
+    const finalDialog = await screen.findByRole('alertdialog', { name: '署名確定解除: 最終確認' });
+    expect(within(finalDialog).getByText('最終確認')).toBeInTheDocument();
+
+    await user.click(within(finalDialog).getByRole('button', { name: '解除を実行' }));
+
+    expect(onApprovalUnlock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText(/署名確定を解除しました。/)).toBeInTheDocument();
+  });
+
   it('閲覧専用時は印刷がガードされる', () => {
     render(
       <MemoryRouter>

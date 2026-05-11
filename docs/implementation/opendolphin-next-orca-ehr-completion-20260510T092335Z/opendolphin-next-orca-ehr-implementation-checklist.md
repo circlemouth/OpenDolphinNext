@@ -245,6 +245,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T12:44Z: Charts の通常導線 `診察終了して会計へ送信` を共通 `CriticalOperationConfirmDialog` へ接続し、患者ID、診療日、受付/予約ID、終了対象サマリ、会計済み確定ではない旨を alertdialog 内に再掲した。
   - [x] 2026-05-11T13:56Z: Charts の `その他 > キャンセル` を `診療録取消` の共通 `CriticalOperationConfirmDialog` へ接続し、患者ID、診療日、受付/予約ID、取消対象サマリ、診療録取消の確定ではない旨を alertdialog 内に再掲した。
   - [x] 2026-05-11T14:21Z: `PrescriptionOrderEditorPanel` の `処方確定` を共通 `CriticalOperationConfirmDialog` へ接続し、患者ID、診療日、来院参照、RP/薬剤/コード付き薬剤数、開始日、ORCA送信や会計済み確定ではない旨を alertdialog 内に再掲した。
+  - [x] 2026-05-11T15:02Z: Charts の `署名確定解除` を共通 `CriticalOperationConfirmDialog` へ接続し、患者ID、診療日、受付/予約ID、署名状態、解除段階、影響範囲、診療録確定や会計済み確定ではない旨を alertdialog 内に再掲した。
 - [ ] 診療録確定/訂正/取消、処方確定/中止/取消、病名ORCA送信、診療行為ORCA送信、会計送信、診察終了に確認フローを実装する。
   - [x] 2026-05-10T21:59Z: 診療行為 ORCA 送信の確認フローを共通重大操作 modal へ移行した。診療録確定/処方確定/取消/診察終了など全操作の完全統一は後続で継続する。
   - [x] 2026-05-11T12:23Z: 病名 ORCA 送信（登録/更新/削除/削除病名整理）の確認フローを共通重大操作 modal へ移行した。UI confirm は患者取り違え防止と誤操作低減の補助であり、認可・永続化・監査 enforcement は server-side の責務として残す。
@@ -252,6 +253,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T13:32Z: `RevisionHistoryDrawer` の診療録訂正（改訂版追加）/ 診療録復元の確認を共通重大操作 modal へ移行した。患者ID、診療日、受付/予約ID、対象 revision、親 revision、影響範囲を再掲し、revision write API は confirm 後だけ呼ぶ。訂正/復元権限・append-only event・監査 enforcement は server-side chart revision workflow の責務として残す。
   - [x] 2026-05-11T13:56Z: Charts `その他 > キャンセル` の診療録取消導線を共通重大操作 modal へ移行した。未保存 guard を通過後に confirm を出し、診療録取消の確定ではないことを明示する。取消権限・永続化・append-only event・監査 enforcement は server-side chart revision workflow の責務として残す。
   - [x] 2026-05-11T14:21Z: 処方確定導線を共通重大操作 modal へ移行した。保存/入力 validation を通過後に confirm を出し、draft 作成後に server-returned `prescriptionId` で finalize route を呼ぶ。処方確定権限・状態遷移・content hash・監査 enforcement は server-side prescription workflow の責務として残す。
+  - [x] 2026-05-11T15:02Z: 署名確定解除導線を共通重大操作 modal へ移行した。既存二段階確認を維持し、解除 callback は最終確認後だけ呼ぶ。署名確定解除権限・履歴・再署名要否・監査 enforcement は server-side chart workflow の責務として残す。
 - [ ] 「診療録確定」「会計へ送信」「診察終了」「ORCA送信成功」を別概念として表示する。
 - [ ] 成功、失敗、警告、情報、要確認をセマンティックに分け、原因と次に取るべき行動を示す。
 - [ ] ORCA警告、不一致、ORCA側のみ存在する情報を隠さない。

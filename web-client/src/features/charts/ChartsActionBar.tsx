@@ -2593,66 +2593,44 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         testId="charts-cancel-dialog"
       />
 
-      <FocusTrapDialog
+      <CriticalOperationConfirmDialog
         open={approvalUnlockDialogStep !== null}
-        role="alertdialog"
         title={approvalUnlockDialogStep === 'final' ? '署名確定解除: 最終確認' : '署名確定解除'}
         description="署名確定を取り消します。編集自体は署名確定中でも履歴追記として実行できます。"
-        onClose={() => setApprovalUnlockDialogStep(null)}
+        operationLabel="署名確定解除"
+        patientName={selectedEntry?.name}
+        patientFields={[
+          { label: '患者ID', value: resolvedPatientId ?? '—' },
+          { label: '診療日', value: resolvedVisitDate ?? '—' },
+          { label: '受付ID', value: resolvedReceptionId ?? '—' },
+          { label: '予約ID', value: resolvedAppointmentId ?? '—' },
+        ]}
+        summaryTitle="解除対象サマリ"
+        summaryFields={[
+          { label: '署名状態', value: '承認済み（署名確定）' },
+          { label: '解除段階', value: approvalUnlockDialogStep === 'final' ? '最終確認' : '確認' },
+          { label: '影響範囲', value: '署名確定状態を解除します。履歴追記済みの編集内容は維持されます。' },
+          { label: '正本状態', value: '診療録確定や会計済み確定ではありません' },
+        ]}
+        confirmLabel={approvalUnlockDialogStep === 'final' ? '解除を実行' : '最終確認へ'}
+        tone="danger"
+        onCancel={() => setApprovalUnlockDialogStep(null)}
+        onConfirm={() => {
+          if (approvalUnlockDialogStep === 'confirm') {
+            setApprovalUnlockDialogStep('final');
+            return;
+          }
+          setApprovalUnlockDialogStep(null);
+          onApprovalUnlock?.();
+          setBanner({
+            tone: 'warning',
+            message: '署名確定を解除しました。',
+            nextAction: '編集前に内容確認と再署名が必要か確認してください。',
+          });
+          setToast(null);
+        }}
         testId="charts-approval-unlock-dialog"
-      >
-        <section className="charts-actions__send-confirm" aria-label="署名確定解除確認">
-          <dl className="charts-actions__send-confirm-list">
-            <div>
-              <dt>患者名</dt>
-              <dd>{selectedEntry?.name ?? '—'}</dd>
-            </div>
-            <div>
-              <dt>患者ID</dt>
-              <dd>{resolvedPatientId ?? '—'}</dd>
-            </div>
-            <div>
-              <dt>診療日</dt>
-              <dd>{resolvedVisitDate ?? '—'}</dd>
-            </div>
-            <div>
-              <dt>受付ID / 予約ID</dt>
-              <dd>{resolvedReceptionId ?? '—'} / {resolvedAppointmentId ?? '—'}</dd>
-            </div>
-            <div>
-              <dt>影響範囲</dt>
-              <dd>署名確定状態を解除します。履歴追記済みの編集内容は維持されます。</dd>
-            </div>
-          </dl>
-          <div className="charts-tab-guard__actions" role="group" aria-label="署名確定解除操作">
-            <button type="button" onClick={() => setApprovalUnlockDialogStep(null)}>
-              キャンセル
-            </button>
-            {approvalUnlockDialogStep === 'confirm' ? (
-              <button type="button" className="charts-tab-guard__danger" onClick={() => setApprovalUnlockDialogStep('final')}>
-                最終確認へ
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="charts-tab-guard__danger"
-                onClick={() => {
-                  setApprovalUnlockDialogStep(null);
-                  onApprovalUnlock?.();
-                  setBanner({
-                    tone: 'warning',
-                    message: '署名確定を解除しました。',
-                    nextAction: '編集前に内容確認と再署名が必要か確認してください。',
-                  });
-                  setToast(null);
-                }}
-              >
-                解除を実行
-              </button>
-            )}
-          </div>
-        </section>
-      </FocusTrapDialog>
+      />
 
       <FocusTrapDialog
         open={forceTakeoverDialogStep !== null}
