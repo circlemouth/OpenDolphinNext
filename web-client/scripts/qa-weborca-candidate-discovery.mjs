@@ -41,6 +41,7 @@ const consoleJsonPath = path.join(artifactRoot, 'console.json');
 const pageErrorsJsonPath = path.join(artifactRoot, 'page-errors.json');
 const preflightSummaryJsonPath = path.join(preflightArtifactRoot, 'summary.json');
 const preflightSummaryMdPath = path.join(preflightArtifactRoot, 'summary.md');
+const discoveryTimeoutMs = Number.parseInt(process.env.QA_CANDIDATE_DISCOVERY_TIMEOUT_MS ?? '180000', 10);
 
 fs.mkdirSync(networkDir, { recursive: true });
 fs.mkdirSync(preflightArtifactRoot, { recursive: true });
@@ -92,6 +93,70 @@ let unsafeRequestHeaders = { 'Content-Type': 'application/json' };
 
 const logStep = (label) => {
   fs.appendFileSync(stepLogPath, `[${new Date().toISOString()}] ${label}\n`, 'utf8');
+};
+
+const writeDiscoveryTimeoutSummary = (timeoutMs) => {
+  const executedAt = new Date().toISOString();
+  const summary = {
+    runId,
+    executedAt,
+    source: CANDIDATE_DISCOVERY_SOURCE,
+    flowMode: CANDIDATE_DISCOVERY_FLOW_MODE,
+    baseURL: redactUrl(baseURL),
+    facilityId,
+    sessionRole,
+    candidateDiscoveryAloneAuthorizesPhase3: false,
+    candidateCount: 0,
+    acceptedCandidateCount: 0,
+    selectedCandidate: null,
+    acceptedForPhase3Attempt: false,
+    phase3AttemptPatientId: '',
+    releaseVerdict: 'BLOCKED',
+    verdict: 'blocked',
+    blockerClassification: 'candidate_discovery_timeout',
+    blockerReason: `candidate discovery exceeded timeoutMs=${timeoutMs}`,
+    timeoutMs,
+    mutationPolicy: {
+      prohibited: true,
+      blockedRequestCount: blockedMutationRequests.length,
+      blockedRequests: blockedMutationRequests,
+      targetMutationRequestCount: 0,
+    },
+    requiredNextStep:
+      'rerun candidate discovery with bounded timeout and inspect only sanitized summary fields before exact selected-candidate readonly preflight',
+    rawSensitiveFieldsExcluded: true,
+    browserArtifactsDisabled: process.env.QA_DISABLE_BROWSER_ARTIFACTS === '1' || process.env.QA_DISABLE_BROWSER_ARTIFACTS === 'true',
+    liveMutationExecuted: false,
+  };
+  const preflightSummary = {
+    runId,
+    executedAt,
+    source: CANDIDATE_DISCOVERY_SOURCE,
+    flowMode: CANDIDATE_DISCOVERY_FLOW_MODE,
+    candidateDiscoveryAloneAuthorizesPhase3: false,
+    discoverySummaryPath: path.relative(preflightArtifactRoot, summaryJsonPath),
+    baseURL: redactUrl(baseURL),
+    facilityId,
+    sessionRole,
+    acceptedForPhase3Attempt: false,
+    selectedCandidate: null,
+    phase3AttemptPatientId: '',
+    exactSelectedCandidatePreflight: {
+      required: true,
+      accepted: false,
+      reason: 'candidate_discovery_timeout',
+    },
+    mutationPolicy: summary.mutationPolicy,
+    verdict: 'blocked',
+    blockerClassification: summary.blockerClassification,
+    blockerReason: summary.blockerReason,
+    rawSensitiveFieldsExcluded: true,
+  };
+  fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), 'utf8');
+  fs.writeFileSync(summaryMdPath, buildMarkdownSummary({ ...summary, candidates: [] }), 'utf8');
+  fs.writeFileSync(preflightSummaryJsonPath, JSON.stringify(preflightSummary, null, 2), 'utf8');
+  fs.writeFileSync(preflightSummaryMdPath, buildPreflightMarkdown(preflightSummary), 'utf8');
+  fs.writeFileSync(rowsJsonPath, JSON.stringify([], null, 2), 'utf8');
 };
 
 const tokyoDate = () => {
@@ -1188,8 +1253,43 @@ const buildReadinessAxes = (rows) => ({
 
 let browser;
 let context;
+let timeoutHandle;
 
 try {
+  if (Number.isFinite(discoveryTimeoutMs) && discoveryTimeoutMs > 0) {
+    timeoutHandle = setTimeout(() => {
+      logStep(`candidate discovery timeout after ${discoveryTimeoutMs}ms`);
+      (async () => {
+        try {
+          await context?.close();
+        } catch {
+          // best-effort cleanup before the fail-closed timeout exit
+        }
+        try {
+          await browser?.close();
+        } catch {
+          // best-effort cleanup before the fail-closed timeout exit
+        }
+        try {
+          writeDiscoveryTimeoutSummary(discoveryTimeoutMs);
+        } catch (error) {
+          fs.appendFileSync(
+            stepLogPath,
+            `[${new Date().toISOString()}] timeout summary write failed: ${error?.message ?? String(error)}\n`,
+            'utf8',
+          );
+        }
+        process.exit(124);
+      })().catch((error) => {
+        fs.appendFileSync(
+          stepLogPath,
+          `[${new Date().toISOString()}] timeout cleanup failed: ${error?.message ?? String(error)}\n`,
+          'utf8',
+        );
+        process.exit(124);
+      });
+    }, discoveryTimeoutMs);
+  }
   const { source: candidateSource, candidates } = parseCandidateEnv();
   if (candidates.includes(REJECTED_LEGACY_SEED)) {
     logStep(`${REJECTED_LEGACY_SEED} was provided and will be rejected without probing`);
@@ -1279,11 +1379,13 @@ try {
 
   await context.close();
   await browser.close();
+  if (timeoutHandle) clearTimeout(timeoutHandle);
   console.log(JSON.stringify(summary, null, 2));
   if (!acceptedRow) {
     process.exit(1);
   }
 } catch (error) {
+  if (timeoutHandle) clearTimeout(timeoutHandle);
   logStep(`fatal errorCategory=${errorCategory(error)}`);
   fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
   fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
