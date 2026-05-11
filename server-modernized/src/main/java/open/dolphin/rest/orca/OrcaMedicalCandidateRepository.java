@@ -9,6 +9,7 @@ import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,12 +107,19 @@ class OrcaMedicalCandidateRepository {
                                    candidate_status,
                                    sendable,
                                    cast(candidate_json as text),
-                                   cast(issue_summary_json as text)
-                              FROM opendolphin.orca_medical_candidate
-                             WHERE facility_id = ?
-                               AND chart_revision_id = ?
-                               AND source_system = 'LOCAL_PRESCRIPTION'
-                             ORDER BY created_at DESC, orca_medical_candidate_id DESC
+                                   cast(issue_summary_json as text),
+                                   pr.content_hash
+                              FROM opendolphin.orca_medical_candidate candidate
+                              LEFT JOIN opendolphin.prescription_order po
+                                ON po.prescription_order_id = candidate.prescription_order_id
+                               AND po.facility_id = candidate.facility_id
+                               AND po.chart_revision_id = candidate.chart_revision_id
+                              LEFT JOIN opendolphin.prescription_order_revision pr
+                                ON pr.prescription_order_revision_id = po.current_revision_id
+                             WHERE candidate.facility_id = ?
+                               AND candidate.chart_revision_id = ?
+                               AND candidate.source_system = 'LOCAL_PRESCRIPTION'
+                             ORDER BY candidate.created_at DESC, candidate.orca_medical_candidate_id DESC
                              LIMIT 1
                             """)
                     .setParameter(1, facilityId)
@@ -127,7 +135,8 @@ class OrcaMedicalCandidateRepository {
                     text(values[5]),
                     Boolean.TRUE.equals(values[6]),
                     text(values[7]),
-                    text(values[8]));
+                    text(values[8]),
+                    text(values[9]));
         } catch (NoResultException ex) {
             return null;
         }
@@ -135,21 +144,28 @@ class OrcaMedicalCandidateRepository {
 
     OrcaMedicalCandidateResponse toResponse(String chartRevisionId, LatestCandidateRecord record) {
         Map<String, Object> snapshot = readMap(record.candidateJson());
+        String candidateContentHash = text(snapshot.get("prescriptionContentHash"));
+        List<OrcaMedicalCandidateResponse.Issue> issues = new ArrayList<>(readIssues(record.issueSummaryJson()));
+        boolean sourceStale = !equalsTrimmed(candidateContentHash, record.currentPrescriptionContentHash());
         OrcaMedicalCandidateResponse response = new OrcaMedicalCandidateResponse();
         response.setApiResult("00");
         response.setApiResultMessage("処理終了");
         response.setCandidateId(record.candidateId());
-        response.setCandidateStatus(record.candidateStatus());
-        response.setSendable(record.sendable());
+        response.setCandidateStatus(sourceStale ? "NEEDS_REVIEW" : record.candidateStatus());
+        response.setSendable(!sourceStale && record.sendable());
         response.setNonAuthoritative(true);
         response.setPatientId(record.patientId());
         response.setEncounterId(record.encounterId());
         response.setChartRevisionId(chartRevisionId);
         response.setPrescriptionId(record.prescriptionOrderId());
         response.setPrescriptionRevisionId(record.prescriptionRevisionId());
-        response.setPrescriptionContentHash(text(snapshot.get("prescriptionContentHash")));
+        response.setPrescriptionContentHash(candidateContentHash);
         response.setMedicalInformation(readMedicalInformation(snapshot.get("medicalInformation")));
-        response.setIssues(readIssues(record.issueSummaryJson()));
+        if (sourceStale) {
+            issues.add(issue("prescription_candidate_source_stale",
+                    "candidate prescription content hash does not match current prescription revision"));
+        }
+        response.setIssues(issues);
         return response;
     }
 
@@ -202,6 +218,27 @@ class OrcaMedicalCandidateRepository {
         return value != null ? value.toString() : null;
     }
 
+    private boolean equalsTrimmed(String expected, String actual) {
+        String normalizedExpected = trimToNull(expected);
+        String normalizedActual = trimToNull(actual);
+        return normalizedExpected != null && normalizedExpected.equals(normalizedActual);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private OrcaMedicalCandidateResponse.Issue issue(String code, String message) {
+        OrcaMedicalCandidateResponse.Issue issue = new OrcaMedicalCandidateResponse.Issue();
+        issue.setCode(code);
+        issue.setMessage(message);
+        return issue;
+    }
+
     record PrescriptionRevisionRecord(
             long prescriptionOrderId,
             long prescriptionRevisionId,
@@ -221,6 +258,7 @@ class OrcaMedicalCandidateRepository {
             String candidateStatus,
             boolean sendable,
             String candidateJson,
-            String issueSummaryJson) {
+            String issueSummaryJson,
+            String currentPrescriptionContentHash) {
     }
 }

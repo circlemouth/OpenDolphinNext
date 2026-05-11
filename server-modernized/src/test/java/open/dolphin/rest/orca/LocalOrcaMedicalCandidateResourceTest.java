@@ -198,7 +198,8 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
                           ]
                         }
                         """.formatted(CONTENT_HASH),
-                "[]");
+                "[]",
+                CONTENT_HASH);
 
         OrcaMedicalCandidateResponse response = resource.latestFromChart(
                 request("/api/local/orca/medical-candidates/from-chart/CHART-REV-001/latest"),

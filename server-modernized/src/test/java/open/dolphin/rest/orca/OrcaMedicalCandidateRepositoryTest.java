@@ -88,7 +88,8 @@ class OrcaMedicalCandidateRepositoryTest {
                         "NEEDS_REVIEW",
                         false,
                         OBJECT_MAPPER.writeValueAsString(repository.candidateSnapshot(candidate)),
-                        OBJECT_MAPPER.writeValueAsString(List.of(issue)));
+                        OBJECT_MAPPER.writeValueAsString(List.of(issue)),
+                        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
 
         OrcaMedicalCandidateResponse response = repository.toResponse("CHART-REV-001", record);
 
@@ -107,5 +108,41 @@ class OrcaMedicalCandidateRepositoryTest {
         assertEquals(1, response.getMedicalInformation().get(0).getRpSequence());
         assertEquals("620000001", response.getMedicalInformation().get(0).getMedications().get(0).getCode());
         assertEquals("prescription_content_hash_missing", response.getIssues().get(0).getCode());
+    }
+
+    @Test
+    void toResponseMarksLatestCandidateNeedsReviewWhenCurrentPrescriptionHashChanged() throws Exception {
+        ChartSupportMedicalModV2Request.MedicalInformation information =
+                new ChartSupportMedicalModV2Request.MedicalInformation();
+        information.setRpSequence(1);
+        information.setMedicalClass("211");
+
+        OrcaMedicalCandidateResponse candidate = new OrcaMedicalCandidateResponse();
+        candidate.setNonAuthoritative(true);
+        candidate.setCandidateStatus("READY_TO_SEND");
+        candidate.setSendable(true);
+        candidate.setPrescriptionContentHash("cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc");
+        candidate.setMedicalInformation(List.of(information));
+
+        OrcaMedicalCandidateRepository repository = new OrcaMedicalCandidateRepository();
+        OrcaMedicalCandidateRepository.LatestCandidateRecord record =
+                new OrcaMedicalCandidateRepository.LatestCandidateRecord(
+                        301L,
+                        101L,
+                        201L,
+                        "DB-PATIENT",
+                        "DB-ENCOUNTER",
+                        "READY_TO_SEND",
+                        true,
+                        OBJECT_MAPPER.writeValueAsString(repository.candidateSnapshot(candidate)),
+                        "[]",
+                        "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd");
+
+        OrcaMedicalCandidateResponse response = repository.toResponse("CHART-REV-001", record);
+
+        assertEquals("NEEDS_REVIEW", response.getCandidateStatus());
+        assertFalse(response.isSendable());
+        assertTrue(response.getIssues().stream()
+                .anyMatch(issue -> "prescription_candidate_source_stale".equals(issue.getCode())));
     }
 }

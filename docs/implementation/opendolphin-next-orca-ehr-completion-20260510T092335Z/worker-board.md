@@ -73,6 +73,7 @@ Checklist count when parallel board was created:
 | C-12 | 8, 10.2 | Continue prescription authority integration watch after prescription content hash handoff. | No live send implementation; only source-of-truth contract reconciliation. | Focused cross-worker tests |
 | C-13 | 8, 10.2 | Continue prescription authority integration watch after sanitized candidate snapshot persistence. | No live send implementation; only source-of-truth contract reconciliation. | Focused cross-worker tests |
 | C-14 | 8, 10.2 | Continue prescription authority integration watch after latest candidate preview route. | No live send implementation; only source-of-truth contract reconciliation. | Focused cross-worker tests |
+| C-15 | 8, 10.2 | Continue prescription authority integration watch after stale latest candidate guard. | No live send implementation; only source-of-truth contract reconciliation. | Focused cross-worker tests |
 
 ### Worker D Queue
 
@@ -116,6 +117,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T024214Z | C | C-14 | 8/10.2 stale latest candidate guard; no checklist item newly closed | this commit | `LocalOrcaMedicalCandidateResourceTest`, `OrcaMedicalCandidateRepositoryTest`, `PublicRouteInventoryContractTest`, `orcaMedicalCandidateApi.test.ts`, web guard passed | Done | C-15 prescription authority integration watch |
 | 20260511T022210Z | C | C-13 | 8/10.2 latest candidate preview; no checklist item newly closed | this commit | `LocalOrcaMedicalCandidateResourceTest`, `OrcaMedicalCandidateRepositoryTest`, `PublicRouteInventoryContractTest`, `orcaMedicalCandidateApi.test.ts`, `typecheck`, web guard passed | Done | C-14 prescription authority integration watch |
 | 20260511T020217Z | C | C-12 | 8/10.2 sanitized candidate snapshot persistence; no checklist item newly closed | this commit | `LocalOrcaMedicalCandidateResourceTest`, `OrcaMedicalCandidateRepositoryTest`, `git diff --check` passed | Done | C-13 prescription authority integration watch |
 | 20260511T014205Z | C | C-11 | 8/10.2 prescription content hash handoff; no checklist item newly closed | this commit | `LocalOrcaMedicalCandidateResourceTest`, `orcaMedicalCandidateApi.test.ts`, `OrcaMedicalCandidatePanel.test.tsx`, `typecheck`, web guard passed | Done | C-12 prescription authority integration watch |
