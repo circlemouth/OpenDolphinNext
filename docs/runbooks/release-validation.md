@@ -218,6 +218,7 @@ cd web-client && RUN_ID=<RUN_ID> node scripts/qa-orca-billing-report-live-result
 - operator result JSON は `--print-operator-result-template` の出力を元に作る。template は dummy sha256 と allowlist field だけを含む no-write sample であり、operator は raw ORCA body、帳票本文、raw patient / invoice / `Data_Id` / `Medical_Uid`、storage key/digest、credential、HAR、trace、video、screenshot、raw network を追記してはならない。
 - reviewer submission packet に含める billing/report profile evidence は `qa/billing-report-live-profile/summary.sanitized.json` の dry-run sanitized summary だけとし、`liveTrialOrca.executed=false` を保持する。これは live Trial 実行成功、会計済み、収納済み、レセプト正本化の証跡ではなく、次の live 実行可否を判定する gate evidence に限定する。
 - reviewer submission packet に含める billing/report result evidence は `qa/billing-report-live-result/result.sanitized.json` の operator sanitized result record だけとする。packet validation は ready handoff hash、`rawSensitiveFieldsExcluded=true`、ORCA由来 income cache / report snapshot の hash-only evidence、server-generated storage key/digest presence、upload failure / expired / blocker なしを要求し、raw ORCA body、raw patient / invoice / `Data_Id` / `Medical_Uid`、帳票本文、storage key/digest、HAR、trace、video、screenshot、raw network を拒否する。
+- `reports/command-log.md` は billing/report live profile dry-run、manual handoff、operator result template、operator result record の 4 command を記録し、各 command は `--sanitized-evidence-only` / `--disable-browser-artifacts` と該当する dry-run/manual/result 入力を含む。`--live`、HAR/trace/video/screenshot/raw network/raw ORCA body capture flag、または raw artifact 参照が command log に残る packet は生成前に拒否する。
 - 証跡に raw ORCA body、帳票本文、raw invoice number、raw `Data_Id`、raw `Medical_Uid`、患者氏名・住所・電話番号、保険詳細、credential、Cookie、Authorization、HAR、trace、video、screenshot、raw network JSON を残さない。
 - `storageUploadStatus=UPLOADED` だけでは会計済み・収納済み・レセプト正本化を意味しない。ORCA由来 snapshot/cache の取得証跡に限定する。
 
@@ -232,6 +233,7 @@ cd web-client && RUN_ID=<RUN_ID> node scripts/qa-orca-billing-report-live-result
 - `review-checkout/HEAD`、`closeout-packet/git/git-head-current.txt`、`manifest.json.acceptedHead` が一致する。
 - packet 内テキストに絶対ローカルパスが残らない。
 - packet にコピーされた report / QA / evidence には raw XML、stacktrace、HAR、request XML、raw network dump 参照が残らない。
+- billing/report closeout evidence は sanitized JSON だけでなく `reports/command-log.md` にも dry-run / handoff / template / result の sanitized command chain が残り、raw capture flag がないことを validation で確認する。
 - `scripts/create-review-archive.sh` は reviewer 提出用の正本ではなく、受入れ手順に含めない。
 - evidence freeze 後に accepted branch が別 commit を指した場合は、`--accepted-head <ACCEPTED_HEAD>` を付けて packet HEAD を固定する。
 

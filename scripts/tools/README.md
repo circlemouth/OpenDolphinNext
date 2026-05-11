@@ -140,6 +140,7 @@
   - `cd web-client && node scripts/qa-orca-billing-report-live-result.mjs --print-operator-result-template`
   - no-write の JSON sample だけを出力する
   - dummy hash を server-derived hash へ置き換え、raw ORCA body / 帳票本文 / raw patient / invoice / `Data_Id` / `Medical_Uid` / storage key / storage digest / credential / HAR / trace / video / screenshot / raw network は追加しない
+- reviewer submission packet は `reports/command-log.md` に billing/report live profile dry-run、manual handoff、operator template、operator result record の sanitized command chain が残っていることを検証する。`--live` や HAR/trace/video/screenshot/raw network/raw ORCA body capture flag が command log に残る closeout は packet 生成前に拒否される。
 
 ## orca-artifacts-namer.js
 - 目的: `artifacts/orca-connectivity/` 以下の Evidence ディレクトリ名が UTC タイムスタンプ (`YYYYMMDDThhmmssZ`) に統一されているかを自動検証し、命名揺れがある場合は推奨名を提案する。

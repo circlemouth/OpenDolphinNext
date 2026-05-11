@@ -229,6 +229,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T03:03Z: reviewer submission packet は `qa/billing-report-live-result/result.sanitized.json` を allowlist copy / validate し、ready handoff hash、ORCA由来 hash-only cache/snapshot evidence、server-generated storage boundary、upload failure / blocker なしを要求する。raw identifier / raw artifact / storage key/digest が result evidence に混入した場合は packet 作成を拒否する。
   - [x] 2026-05-11T03:22Z: reviewer submission packet dry-run は `requiredCloseoutFiles` / `requiredPacketFiles` を JSON 出力し、`qa/billing-report-live-result/result.sanitized.json` の欠落を packet 生成前に fail する。dry-run は出力先へ書き込まず、closeout fixture が operator result evidence まで揃っていることを focused test で固定した。
   - [x] 2026-05-11T03:42Z: `qa-orca-billing-report-live-result.mjs --print-operator-result-template` を追加し、operator が raw ORCA body / 帳票本文 / raw patient / invoice / `Data_Id` / `Medical_Uid` / storage key/digest / browser artifact を追記せず、server-derived hash/status だけで sanitized result input を作る contract を固定した。
+  - [x] 2026-05-11T10:11Z: reviewer submission packet は `reports/command-log.md` に billing/report live profile dry-run、manual handoff、operator template、operator result record の sanitized command chain が残っていることを検証し、`--live` や raw artifact capture flag が混入した closeout を生成前に拒否する。
 - [x] レセプト情報を OpenDolphinNext 正本として持たず、ORCA由来キャッシュまたは帳票スナップショットとして扱う。
   - [x] 2026-05-10T22:30Z: `orca_report_snapshot` は `source_system=ORCA` と固定 report type/status を持つ snapshot 境界であり、restore/recovery docs でも local snapshot を正本昇格しないことを明記した。
 
