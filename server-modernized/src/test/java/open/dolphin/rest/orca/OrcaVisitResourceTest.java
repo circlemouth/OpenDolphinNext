@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,11 +25,13 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.encounter.ProjectionPatientSummaryRepository;
 import open.dolphin.infomodel.KarteBean;
 import open.dolphin.orca.converter.OrcaXmlMapper;
 import open.dolphin.orca.service.DefaultOrcaLiveGateway;
+import open.dolphin.orca.service.OrcaAcceptanceCacheStore;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.transport.StubOrcaTransport;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
@@ -43,6 +46,8 @@ import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListRequest;
 import open.dolphin.rest.dto.orca.VisitPatientListResponse;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.security.audit.AuditEventPayload;
+import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.KarteServiceBean;
 import org.junit.jupiter.api.Test;
 
@@ -50,6 +55,36 @@ class OrcaVisitResourceTest {
 
     private OrcaLiveGateway createService() {
         return new DefaultOrcaLiveGateway(new StubOrcaTransport(), new OrcaXmlMapper());
+    }
+
+    private static final class RecordingAcceptanceCacheStore extends OrcaAcceptanceCacheStore {
+        private AcceptanceInventoryCommand command;
+
+        @Override
+        public AcceptanceCacheResult saveInventory(AcceptanceInventoryCommand command) {
+            this.command = command;
+            return new AcceptanceCacheResult(1, 0, 0, 0);
+        }
+    }
+
+    private static final class FailingAcceptanceCacheStore extends OrcaAcceptanceCacheStore {
+        private AcceptanceInventoryCommand command;
+
+        @Override
+        public AcceptanceCacheResult saveInventory(AcceptanceInventoryCommand command) {
+            this.command = command;
+            throw new IllegalStateException("cache unavailable internal-marker");
+        }
+    }
+
+    private static final class CancelledAcceptanceCacheStore extends OrcaAcceptanceCacheStore {
+        private AcceptanceInventoryCommand command;
+
+        @Override
+        public AcceptanceCacheResult saveInventory(AcceptanceInventoryCommand command) {
+            this.command = command;
+            return new AcceptanceCacheResult(0, 0, 1, 0);
+        }
     }
 
     @Test
@@ -124,6 +159,8 @@ class OrcaVisitResourceTest {
 
         OrcaVisitResource resource = new OrcaVisitResource();
         resource.setWrapperService(wrapperService);
+        RecordingAcceptanceCacheStore cacheStore = new RecordingAcceptanceCacheStore();
+        resource.setAcceptanceCacheStoreForTest(cacheStore);
         resource.encounterProjectionRepository = encounterProjectionRepository;
         resource.projectionPatientSummaryRepository = projectionPatientSummaryRepository;
 
@@ -372,6 +409,8 @@ class OrcaVisitResourceTest {
 
         OrcaVisitResource resource = new OrcaVisitResource();
         resource.setWrapperService(wrapperService);
+        RecordingAcceptanceCacheStore cacheStore = new RecordingAcceptanceCacheStore();
+        resource.setAcceptanceCacheStoreForTest(cacheStore);
 
         AcceptanceInventoryRequest request = new AcceptanceInventoryRequest();
         request.setAcceptanceDate(LocalDate.of(2026, 4, 27));
@@ -385,7 +424,85 @@ class OrcaVisitResourceTest {
         assertTrue(response.isRawSensitiveFieldsExcluded());
         assertEquals(1, response.getRows().size());
         assertEquals("01", request.getClassCode());
+        assertEquals("F001", cacheStore.command.facilityId());
+        assertEquals("2026-04-27", cacheStore.command.acceptanceDate());
+        assertEquals(1, cacheStore.command.response().getRows().size());
         verify(wrapperService).getAcceptanceInventory("F001", request);
+    }
+
+    @Test
+    void acceptanceInventoryCacheWriteFailureDoesNotReturnCurrentSuccessOrLeakRawMessage() throws Exception {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        AcceptanceInventoryResponse stub = new AcceptanceInventoryResponse();
+        stub.setApiResult("00");
+        stub.setApiResultMessage("OK");
+        AcceptanceInventoryResponse.AcceptanceInventoryRow row =
+                new AcceptanceInventoryResponse.AcceptanceInventoryRow();
+        row.setRowHash("a".repeat(64));
+        row.setHasAcceptanceId(true);
+        row.setHasPatientId(true);
+        row.setHasAcceptanceDate(true);
+        row.setHasAcceptanceTime(true);
+        row.setHasDepartmentCode(true);
+        row.setHasPhysicianCode(true);
+        row.setHasInsuranceCombinationNumber(true);
+        stub.getRows().add(row);
+        when(wrapperService.getAcceptanceInventory(anyString(), any(AcceptanceInventoryRequest.class))).thenReturn(stub);
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        FailingAcceptanceCacheStore cacheStore = new FailingAcceptanceCacheStore();
+        resource.setAcceptanceCacheStoreForTest(cacheStore);
+        RecordingSessionAuditDispatcher auditDispatcher = new RecordingSessionAuditDispatcher();
+        injectField(resource, "sessionAuditDispatcher", auditDispatcher);
+
+        AcceptanceInventoryRequest request = new AcceptanceInventoryRequest();
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 27));
+        request.setClassCode("01");
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> resource.acceptanceInventory(createRequest("F001:doctor01", Map.of(
+                        "X-Run-Id", "run-acceptance",
+                        "X-Trace-Id", "trace-acceptance")), request));
+
+        assertEquals("acceptance cache write failed", exception.getMessage());
+        assertEquals("F001", cacheStore.command.facilityId());
+        assertNotNull(auditDispatcher.payload);
+        assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
+        assertEquals("failed", auditDispatcher.payload.getDetails().get("status"));
+        assertEquals(500, auditDispatcher.payload.getDetails().get("httpStatus"));
+        assertEquals("orca.acceptance.inventory.error", auditDispatcher.payload.getDetails().get("errorCode"));
+        assertEquals("acceptance cache write failed", auditDispatcher.payload.getDetails().get("errorMessage"));
+        assertNull(auditDispatcher.payload.getDetails().get("acceptanceCacheUpsertedCount"));
+        assertNull(auditDispatcher.payload.getDetails().get("acceptanceCacheCancelledCount"));
+        assertTrue(!auditDispatcher.payload.getDetails().toString().contains("internal-marker"));
+    }
+
+    @Test
+    void acceptanceInventoryCancellationDoesNotMutateEncounterWorkflowState() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        AcceptanceInventoryResponse stub = new AcceptanceInventoryResponse();
+        stub.setApiResult("00");
+        stub.setApiResultMessage("OK");
+        when(wrapperService.getAcceptanceInventory(anyString(), any(AcceptanceInventoryRequest.class))).thenReturn(stub);
+
+        EncounterProjectionRepository encounterProjectionRepository = mock(EncounterProjectionRepository.class);
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        CancelledAcceptanceCacheStore cacheStore = new CancelledAcceptanceCacheStore();
+        resource.setAcceptanceCacheStoreForTest(cacheStore);
+        resource.encounterProjectionRepository = encounterProjectionRepository;
+
+        AcceptanceInventoryRequest request = new AcceptanceInventoryRequest();
+        request.setAcceptanceDate(LocalDate.of(2026, 4, 27));
+        request.setClassCode("01");
+
+        AcceptanceInventoryResponse response =
+                resource.acceptanceInventory(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals("00", response.getApiResult());
+        assertEquals(0, cacheStore.command.response().getRows().size());
+        verifyNoInteractions(encounterProjectionRepository);
     }
 
     @Test
@@ -1075,6 +1192,34 @@ class OrcaVisitResourceTest {
                             return null;
                     }
                 });
+    }
+
+    private static void injectField(Object target, String fieldName, Object value) throws Exception {
+        Class<?> type = target.getClass();
+        while (type != null) {
+            try {
+                var field = type.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                field.set(target, value);
+                return;
+            } catch (NoSuchFieldException ex) {
+                type = type.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(fieldName);
+    }
+
+    private static final class RecordingSessionAuditDispatcher extends SessionAuditDispatcher {
+        private AuditEventPayload payload;
+        private AuditEventEnvelope.Outcome outcome;
+
+        @Override
+        public AuditEventEnvelope record(AuditEventPayload payload, AuditEventEnvelope.Outcome outcome, String errorCode,
+                String errorMessage) {
+            this.payload = payload;
+            this.outcome = outcome;
+            return null;
+        }
     }
 
     @SuppressWarnings("unchecked")

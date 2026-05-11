@@ -51,26 +51,26 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 ### 3.1 患者ローカル正本の撤去
 
 - [x] `/api/local/patients/mutation` を廃止する。
-- [ ] OpenDolphinNext 側だけで患者を作成・更新する API を削除する。
-- [ ] 患者作成・更新は ORCA `patientmodv2` 相当のサーバーアダプタ経由に一本化する。
-- [ ] 患者取得は ORCA `patientgetv2` または患者一覧系 API を経由する。
+- [x] OpenDolphinNext 側だけで患者を作成・更新する API を削除する。
+- [x] 患者作成・更新は ORCA `patientmodv2` 相当のサーバーアダプタ経由に一本化する。
+- [x] 患者取得は ORCA `patientgetv2` または患者一覧系 API を経由する。
 - [ ] `d_patient` 相当のテーブルはローカル正本ではなく `orca_patient_cache` に再設計する。
-- [ ] 患者キャッシュには取得日時、取得API、ORCA患者番号、ORCAレスポンス要約、最終照合日時を保存する。
-- [ ] 患者キャッシュ更新失敗時に古いキャッシュを現在の正本として表示しない。
+- [x] 患者キャッシュには取得日時、取得API、ORCA患者番号、ORCAレスポンス要約、最終照合日時を保存する。
+- [x] 患者キャッシュ更新失敗時に古いキャッシュを現在の正本として表示しない。
 - [ ] UI上で古い患者キャッシュには「ORCA再取得未完了」「取得日時」を表示する。
 
 ### 3.2 保険・公費・保険組合せローカル正本の撤去
 
 - [ ] `d_health_insurance` 相当のテーブルをローカル正本として使用しない。
-- [ ] 保険情報は `orca_insurance_cache` と `encounter_insurance_snapshot` に分離する。
-- [ ] 保険組合せ番号を診療日、受付、診療科、患者番号とセットで保持する。
-- [ ] 保険変更後に過去の診療録スナップショットを上書きしない。
+- [x] 保険情報は `orca_insurance_cache` と `encounter_insurance_snapshot` に分離する。
+- [x] 保険組合せ番号を診療日、受付、診療科、患者番号とセットで保持する。
+- [x] 保険変更後に過去の診療録スナップショットを上書きしない。
 - [ ] 保険変更後の ORCA送信では、送信前に保険組合せ差分を表示する。
 
 ### 3.3 受付ローカル正本の撤去
 
 - [ ] `d_patient_visit` 相当の受付情報を ORCA受付正本として扱わない。
-- [ ] ORCA受付情報は `orca_acceptance_cache` として保存する。
+- [x] ORCA受付情報は `orca_acceptance_cache` として保存する。
 - [ ] 院内ワークフロー状態は `encounter_workflow_state` として別管理する。
 - [ ] `encounter_workflow_state` は `NOT_STARTED`, `IN_PROGRESS`, `CHART_DRAFT`, `CHART_FINALIZED`, `ORCA_SEND_PREPARED`, `ORCA_SENDING`, `ORCA_SENT`, `ORCA_FAILED`, `ORCA_NEEDS_REVIEW`, `BILLING_WAITING`, `CLOSED` に限定する。
 - [ ] ORCA受付取消時に `encounter_workflow_state` を自動削除しない。
@@ -92,8 +92,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 ## 4. 新DB設計
 
 - [x] `orca_patient_cache` を作成し、ORCA患者ID、内部患者参照、氏名、カナ、生年月日、性別、住所/電話要約、source metadata、取得日時、cache expiry、raw response hash、normalized payload を保存する。
-- [ ] `orca_acceptance_cache` を作成し、ORCA患者ID、受付日/時刻/番号、診療科、担当医、保険組合せ、受付状態、source metadata、取消日時、normalized payload を保存する。
-- [ ] `encounter_insurance_snapshot` を作成し、encounter/chart revision、ORCA患者ID、受付日、保険組合せ、保険/公費要約、snapshot reason を固定する。
+- [x] `orca_acceptance_cache` を作成し、ORCA患者ID、受付日/時刻/番号、診療科、担当医、保険組合せ、受付状態、source metadata、取消日時、normalized payload を保存する。
+- [x] `encounter_insurance_snapshot` を作成し、encounter/chart revision、ORCA患者ID、受付日、保険組合せ、保険/公費要約、snapshot reason を固定する。
 - [ ] `chart_document`, `chart_revision`, `chart_revision_event`, `chart_module`, `chart_attachment` を作成または再設計する。
   - [x] `chart_document`, `chart_revision`, `chart_revision_event` の最小 schema と JPA entity を追加した。`chart_module` / `chart_attachment` の詳細再設計は後続 revision/export 実装で継続確認する。
 - [x] `chart_revision.status` は `DRAFT`, `FINAL`, `AMENDED`, `ADDENDUM`, `CANCELLED`, `VOIDED` に限定する。
@@ -132,11 +132,11 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [x] `GET /api/orca/official/patientgetv2?id={orcaPatientId}&format=json` または同等の official patient read wrapper を実装し、ORCA患者取得、`orca_patient_cache` 保存、取得日時、sourceSystem、cacheStatus、stale を返す。
 - [x] 患者不在時は単純な HTTP 404 ではなく業務エラー `ORCA_PATIENT_NOT_FOUND` として扱う。
-- [ ] `POST /api/orca/official/patientmodv2/outpatient/create` と `POST /api/orca/official/patientmodv2/outpatient/update` を唯一の患者 mutation route とし、送信前差分と送信後再取得を強制する。
-- [ ] ORCA送信失敗時にローカル患者情報を更新済みにしない。
-- [ ] 患者削除は原則実装しない。
+- [x] `POST /api/orca/official/patientmodv2/outpatient/create` と `POST /api/orca/official/patientmodv2/outpatient/update` を唯一の患者 mutation route とし、送信前差分と送信後再取得を強制する。
+- [x] ORCA送信失敗時にローカル患者情報を更新済みにしない。
+- [x] 患者削除は原則実装しない。
 - [ ] `GET /api/orca/official/appointments/list?date=...` と `GET /api/orca/official/appointments/patient?...` を受付取得 route として実装する。
-- [ ] 受付取得結果を `orca_acceptance_cache` に保存し、ORCA患者番号、受付日、診療科、担当医、保険組合せを保持する。
+- [x] 受付取得結果を `orca_acceptance_cache` に保存し、ORCA患者番号、受付日、診療科、担当医、保険組合せを保持する。
 - [ ] `encounter_id` と ORCA受付情報の紐付けテーブルを作る。
 - [ ] ORCA受付取消、診療科・担当医・保険組合せ変更を検知して診療録画面に警告/差分を表示する。
 - [ ] 保険情報取得結果を `orca_insurance_cache` に保存し、診療録確定時に `encounter_insurance_snapshot` を作る。

@@ -131,7 +131,7 @@ class OrcaBillingCorrectionScenarioSupportTest {
                         java.time.Instant.parse("2026-05-10T15:00:00Z"),
                         null,
                         """
-                        {"visitDate":"2026-05-10","departmentCode":"01","rawSensitiveFieldsExcluded":true}
+                        {"visitDate":"2026-05-10","departmentCode":"01","rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true}
                         """);
 
         String payload = resource.buildTemporaryMedicalGetPayload(record);
@@ -187,6 +187,253 @@ class OrcaBillingCorrectionScenarioSupportTest {
     }
 
     @Test
+    void temporaryMedicalReconcileRequiresSnapshotVisitDateAndDepartment() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord missingVisitDate =
+                new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                        43L,
+                        101L,
+                        "FAC-1",
+                        "encounter-missing-visit-date",
+                        "idem-missing-visit-date",
+                        "ORCA_UNKNOWN",
+                        null,
+                        "unknown",
+                        "result_unknown",
+                        200,
+                        "REQ-2",
+                        "TRACE-2",
+                        "00012",
+                        "schedule-2",
+                        Instant.parse("2026-05-10T15:00:00Z"),
+                        null,
+                        """
+                        {"departmentCode":"01","rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true}
+                        """);
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord missingDepartment =
+                new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                        44L,
+                        102L,
+                        "FAC-1",
+                        "encounter-missing-department",
+                        "idem-missing-department",
+                        "ORCA_UNKNOWN",
+                        null,
+                        "unknown",
+                        "result_unknown",
+                        200,
+                        "REQ-3",
+                        "TRACE-3",
+                        "00012",
+                        "schedule-3",
+                        Instant.parse("2026-05-10T15:00:00Z"),
+                        null,
+                        """
+                        {"visitDate":"2026-05-10","rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true}
+                        """);
+
+        IllegalArgumentException visitDateError = assertThrows(IllegalArgumentException.class,
+                () -> resource.buildTemporaryMedicalGetPayload(missingVisitDate));
+        IllegalArgumentException departmentError = assertThrows(IllegalArgumentException.class,
+                () -> resource.buildTemporaryMedicalGetPayload(missingDepartment));
+
+        assertTrue(visitDateError.getMessage().contains("visitDate"));
+        assertTrue(departmentError.getMessage().contains("departmentCode"));
+    }
+
+    @Test
+    void temporaryMedicalReconcileRequiresSanitizedServerDerivedSnapshot() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord clientTrustedSnapshot =
+                new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                        45L,
+                        103L,
+                        "FAC-1",
+                        "encounter-client-trusted",
+                        "idem-client-trusted",
+                        "ORCA_UNKNOWN",
+                        null,
+                        "unknown",
+                        "result_unknown",
+                        200,
+                        "REQ-4",
+                        "TRACE-4",
+                        "00012",
+                        "schedule-4",
+                        Instant.parse("2026-05-10T15:00:00Z"),
+                        null,
+                        """
+                        {"visitDate":"2026-05-10","departmentCode":"01","rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":true,"serverDerivedAuthorityRequired":true}
+                        """);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> resource.buildTemporaryMedicalGetPayload(clientTrustedSnapshot));
+
+        assertTrue(ex.getMessage().contains("server-derived"));
+    }
+
+    @Test
+    void temporaryMedicalReconcileDoesNotMatchDifferentPerformDate() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
+                new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                        46L,
+                        104L,
+                        "FAC-1",
+                        "encounter-date-mismatch",
+                        "idem-date-mismatch",
+                        "ORCA_UNKNOWN",
+                        null,
+                        "unknown",
+                        "result_unknown",
+                        200,
+                        "REQ-5",
+                        "TRACE-5",
+                        "00012",
+                        "schedule-5",
+                        Instant.parse("2026-05-10T15:00:00Z"),
+                        null,
+                        """
+                        {"visitDate":"2026-05-10","departmentCode":"01","rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true}
+                        """);
+
+        var response = new open.dolphin.rest.dto.orca.BillingOrcaTemporaryMedicalReconcileResponse();
+        resource.applyTemporaryMedicalGetResult(
+                response,
+                record,
+                OrcaTransportResult.fallback("""
+                        <xmlio2>
+                          <tmedicalgetres type="record">
+                            <Api_Result type="string">00</Api_Result>
+                            <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                            <Tmedical_List_Information type="array">
+                              <Tmedical_List_Information_child type="record">
+                                <Patient_Information type="record">
+                                  <Patient_ID type="string">00012</Patient_ID>
+                                </Patient_Information>
+                                <Perform_Date type="string">2026-05-11</Perform_Date>
+                                <Department_Code type="string">01</Department_Code>
+                                <Medical_Uid type="string">secret-medical-uid</Medical_Uid>
+                                <Medical_Mode type="string">0</Medical_Mode>
+                                <Medical_Mode2 type="string">0</Medical_Mode2>
+                              </Tmedical_List_Information_child>
+                            </Tmedical_List_Information>
+                          </tmedicalgetres>
+                        </xmlio2>
+                        """, "application/xml"));
+
+        assertTrue(!response.isOk());
+        assertEquals("NEEDS_REVIEW", response.getOperationStatus());
+        assertEquals("TEMPORARY_MEDICAL_NOT_FOUND", response.getReconciliationStatus());
+        assertEquals(1, response.getTemporaryMedicalRowCount());
+        assertEquals(0, response.getMatchingTemporaryMedicalRowCount());
+        assertTrue(!response.isMedicalUidPresent());
+    }
+
+    @Test
+    void temporaryMedicalReconcileDoesNotTreatNonNormalApiResultRowsAsMatch() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
+                new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                        47L,
+                        105L,
+                        "FAC-1",
+                        "encounter-api-result-error",
+                        "idem-api-result-error",
+                        "ORCA_UNKNOWN",
+                        null,
+                        "unknown",
+                        "result_unknown",
+                        200,
+                        "REQ-6",
+                        "TRACE-6",
+                        "00012",
+                        "schedule-6",
+                        Instant.parse("2026-05-10T15:00:00Z"),
+                        null,
+                        """
+                        {"visitDate":"2026-05-10","departmentCode":"01","rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true}
+                        """);
+
+        var response = new open.dolphin.rest.dto.orca.BillingOrcaTemporaryMedicalReconcileResponse();
+        resource.applyTemporaryMedicalGetResult(
+                response,
+                record,
+                OrcaTransportResult.fallback("""
+                        <xmlio2>
+                          <tmedicalgetres type="record">
+                            <Api_Result type="string">80</Api_Result>
+                            <Api_Result_Message type="string">照合不可</Api_Result_Message>
+                            <Tmedical_List_Information type="array">
+                              <Tmedical_List_Information_child type="record">
+                                <Patient_Information type="record">
+                                  <Patient_ID type="string">00012</Patient_ID>
+                                </Patient_Information>
+                                <Perform_Date type="string">2026-05-10</Perform_Date>
+                                <Department_Code type="string">01</Department_Code>
+                                <Medical_Uid type="string">secret-medical-uid</Medical_Uid>
+                                <Medical_Mode type="string">0</Medical_Mode>
+                                <Medical_Mode2 type="string">2</Medical_Mode2>
+                              </Tmedical_List_Information_child>
+                            </Tmedical_List_Information>
+                          </tmedicalgetres>
+                        </xmlio2>
+                        """, "application/xml"));
+
+        assertTrue(!response.isOk());
+        assertEquals("NEEDS_REVIEW", response.getOperationStatus());
+        assertEquals("TEMPORARY_MEDICAL_NOT_FOUND", response.getReconciliationStatus());
+        assertEquals(1, response.getTemporaryMedicalRowCount());
+        assertEquals(0, response.getMatchingTemporaryMedicalRowCount());
+        assertTrue(!response.isMedicalUidPresent());
+        assertTrue(!response.isResendBlocked());
+    }
+
+    @Test
+    void temporaryMedicalReconcileTreatsUnparseableBodyAsSanitizedNeedsReview() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
+                new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                        48L,
+                        106L,
+                        "FAC-1",
+                        "encounter-unparseable",
+                        "idem-unparseable",
+                        "ORCA_UNKNOWN",
+                        null,
+                        "unknown",
+                        "result_unknown",
+                        200,
+                        "REQ-7",
+                        "TRACE-7",
+                        "00012",
+                        "schedule-7",
+                        Instant.parse("2026-05-10T15:00:00Z"),
+                        null,
+                        """
+                        {"visitDate":"2026-05-10","departmentCode":"01","rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true}
+                        """);
+
+        var response = new open.dolphin.rest.dto.orca.BillingOrcaTemporaryMedicalReconcileResponse();
+        resource.applyTemporaryMedicalGetResult(
+                response,
+                record,
+                OrcaTransportResult.fallback(
+                        "<broken",
+                        "application/xml"));
+
+        assertTrue(!response.isOk());
+        assertEquals("unknown", response.getApiResult());
+        assertEquals("temporary_medical_reconcile_unparseable", response.getApiResultMessage());
+        assertEquals("NEEDS_REVIEW", response.getOperationStatus());
+        assertEquals("TEMPORARY_MEDICAL_NOT_FOUND", response.getReconciliationStatus());
+        assertEquals(0, response.getTemporaryMedicalRowCount());
+        assertEquals(0, response.getMatchingTemporaryMedicalRowCount());
+        assertTrue(!response.isMedicalUidPresent());
+        assertTrue(!response.isResendBlocked());
+    }
+
+    @Test
     void temporaryMedicalReconcileBlocksResendWhenOrcaModeIsLocked() {
         LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
         BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
@@ -210,7 +457,10 @@ class OrcaBillingCorrectionScenarioSupportTest {
                         """
                                 {
                                   "visitDate":"2026-05-10",
-                                  "departmentCode":"01"
+                                  "departmentCode":"01",
+                                  "rawSensitiveFieldsExcluded":true,
+                                  "clientProvidedIdentifiersTrusted":false,
+                                  "serverDerivedAuthorityRequired":true
                                 }
                                 """);
 

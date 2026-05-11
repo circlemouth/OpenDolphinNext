@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.encounter.EncounterProjectionRepository;
@@ -121,6 +122,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         if (transmissionId == null || transmissionId <= 0) {
             throw validationError(request, "transmissionId", "transmissionId is required");
         }
+        requireNoRequestBody(request, "reconcileTemporaryMedical");
         requireAuditWritePathAvailable(request);
         BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
                 workflowRepository.findReviewTransmission(facilityId, transmissionId);
@@ -210,8 +212,32 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         if (row == null || !facilityId.equals(normalize(row.facilityId()))) {
             throw restError(request, Response.Status.NOT_FOUND, "encounter_not_found", "Encounter was not found");
         }
-        if ("cancelled".equalsIgnoreCase(normalize(row.businessState()))) {
+        BillingOrcaWorkflowRepository.TransmissionRecord existing =
+                workflowRepository != null ? workflowRepository.findTransmission(facilityId, row.encounterKey(), idempotencyKey) : null;
+        boolean cancelled = "cancelled".equalsIgnoreCase(normalize(row.businessState()));
+        boolean blockedState = isNormalBillingSendBlockedState(row.businessState());
+        boolean missingAcceptance = normalize(row.orcaAcceptanceId()) == null || row.acceptanceDatetime() == null;
+        if (existing != null && (cancelled || blockedState || missingAcceptance)) {
+            BillingOrcaWorkflowRepository.SnapshotRecord existingSnapshot = new BillingOrcaWorkflowRepository.SnapshotRecord(
+                    existing.snapshotId(),
+                    facilityId,
+                    row.encounterKey(),
+                    row.patientId(),
+                    row.scheduleKey(),
+                    Math.max(1L, row.stateVersion()),
+                    existing.state());
+            return responseFromTransmission(existing, row, existingSnapshot, runId, traceId, 0, 0);
+        }
+        if (cancelled) {
             throw restError(request, Response.Status.CONFLICT, "encounter_cancelled", "Encounter is cancelled");
+        }
+        if (blockedState) {
+            throw restError(request, Response.Status.CONFLICT, "encounter_billing_send_blocked",
+                    "Encounter is already closed for billing");
+        }
+        if (missingAcceptance) {
+            throw restError(request, Response.Status.CONFLICT, "orca_acceptance_missing",
+                    "ORCA acceptance is required before billing send");
         }
         OrcaEncounterContext context = requireServerDerivedContext(request, row);
         PatientModel patient = patientServiceBean.getPatientById(facilityId, row.patientId());
@@ -239,12 +265,9 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
                 Math.max(1L, row.stateVersion()),
                 "READY_TO_SEND",
                 snapshotJson);
-        BillingOrcaWorkflowRepository.TransmissionRecord existing =
-                workflowRepository.findTransmission(facilityId, row.encounterKey(), idempotencyKey);
         if (existing != null) {
             return responseFromTransmission(existing, row, snapshot, runId, traceId, bundles.size(), medicalInformation.size());
         }
-
         BillingOrcaWorkflowRepository.TransmissionRecord transmission = workflowRepository.insertTransmission(
                 snapshot.snapshotId(),
                 facilityId,
@@ -388,6 +411,11 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
             voucherNumber = normalize(row.orcaAcceptanceId());
             sequentialNumber = "1";
         }
+        String acceptanceId = normalize(row.orcaAcceptanceId());
+        if (voucherNumber != null && acceptanceId != null && !acceptanceId.equals(voucherNumber)) {
+            throw validationError(request, "encounterProjection.officialVisitIdentifiers",
+                    "voucherNumber must match the server-derived ORCA acceptance");
+        }
         if (departmentCode == null || physicianCode == null || insuranceCombinationNumber == null
                 || voucherNumber == null || sequentialNumber == null) {
             throw validationError(request, "encounterProjection.officialVisitIdentifiers",
@@ -491,6 +519,8 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         snapshot.put("medicalInformationCount", medicalInformationCount);
         snapshot.put("diseaseSyncCount", 0);
         snapshot.put("rawSensitiveFieldsExcluded", Boolean.TRUE);
+        snapshot.put("clientProvidedIdentifiersTrusted", Boolean.FALSE);
+        snapshot.put("serverDerivedAuthorityRequired", Boolean.TRUE);
         try {
             return JSON_MAPPER.writeValueAsString(snapshot);
         } catch (JsonProcessingException ex) {
@@ -589,12 +619,68 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         return response;
     }
 
+    private void requireNoRequestBody(HttpServletRequest request, String fieldName) {
+        long contentLength = safeContentLengthLong(request);
+        if (contentLength > 0L) {
+            throw validationError(request, fieldName, "request body is not accepted");
+        }
+        int legacyContentLength = safeContentLength(request);
+        if (legacyContentLength > 0) {
+            throw validationError(request, fieldName, "request body is not accepted");
+        }
+        String transferEncoding = normalize(safeRequestHeader(request, "Transfer-Encoding"));
+        if (transferEncoding != null && !"identity".equalsIgnoreCase(transferEncoding)) {
+            throw validationError(request, fieldName, "request body is not accepted");
+        }
+    }
+
+    private long safeContentLengthLong(HttpServletRequest request) {
+        if (request == null) {
+            return -1L;
+        }
+        try {
+            return request.getContentLengthLong();
+        } catch (RuntimeException ex) {
+            return -1L;
+        }
+    }
+
+    private int safeContentLength(HttpServletRequest request) {
+        if (request == null) {
+            return -1;
+        }
+        try {
+            return request.getContentLength();
+        } catch (RuntimeException ex) {
+            return -1;
+        }
+    }
+
+    private boolean isNormalBillingSendBlockedState(String businessState) {
+        String normalized = normalize(businessState);
+        if (normalized == null) {
+            return false;
+        }
+        return switch (normalized.toLowerCase(Locale.ROOT)) {
+            case "accounting-wait", "billing-waiting", "billed", "closed",
+                    "chart-finalized", "orca-sent", "orca-medical-registered",
+                    "orca_medical_registered" -> true;
+            default -> false;
+        };
+    }
+
     String buildTemporaryMedicalGetPayload(BillingOrcaWorkflowRepository.TransmissionReviewRecord record) {
         JsonNode snapshot = readProjectionFlags(record != null ? record.snapshotJson() : null);
+        if (!isServerDerivedProjection(snapshot)) {
+            throw new IllegalArgumentException("server-derived sanitized snapshot is required");
+        }
         String performDate = textNode(snapshot, "visitDate");
         String departmentCode = textNode(snapshot, "departmentCode");
-        if (performDate == null && record != null && record.startedAt() != null) {
-            performDate = record.startedAt().atZone(TOKYO_ZONE).toLocalDate().toString();
+        if (performDate == null) {
+            throw new IllegalArgumentException("snapshot visitDate is required");
+        }
+        if (departmentCode == null) {
+            throw new IllegalArgumentException("snapshot departmentCode is required");
         }
         String patientId = normalize(record != null ? record.patientId() : null);
         StringBuilder builder = new StringBuilder();
@@ -603,7 +689,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         builder.append("<Perform_Date type=\"string\">").append(xmlToken(performDate, "performDate")).append("</Perform_Date>");
         builder.append("<InOut type=\"string\">2</InOut>");
         builder.append("<Department_Code type=\"string\">")
-                .append(departmentCode != null ? xmlToken(departmentCode, "departmentCode") : "")
+                .append(xmlToken(departmentCode, "departmentCode"))
                 .append("</Department_Code>");
         builder.append("<Patient_ID type=\"string\">").append(xmlToken(patientId, "patientId")).append("</Patient_ID>");
         builder.append("</tmedicalgetreq>");
@@ -626,16 +712,19 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
             return;
         }
         JsonNode body = readTemporaryMedicalGetBody(result.getBody());
-        String apiResult = xmlTextValue(body, "Api_Result");
+        String apiResult = firstNonBlankLocal(xmlTextValue(body, "Api_Result"), "unknown");
+        boolean apiSuccess = "00".equals(apiResult);
         response.setApiResult(apiResult);
-        response.setApiResultMessage(xmlTextValue(body, "Api_Result_Message"));
+        response.setApiResultMessage(firstNonBlankLocal(
+                xmlTextValue(body, "Api_Result_Message"),
+                apiSuccess ? null : "temporary_medical_reconcile_unparseable"));
         List<JsonNode> rows = arrayNodes(body.path("Tmedical_List_Information"));
         int matches = 0;
         String firstMode = null;
         String firstMode2 = null;
         boolean medicalUidPresent = false;
         for (JsonNode row : rows) {
-            if (!temporaryMedicalRowMatches(record, row)) {
+            if (!apiSuccess || !temporaryMedicalRowMatches(record, row)) {
                 continue;
             }
             matches++;
@@ -656,15 +745,21 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         boolean resendBlocked = found && temporaryMedicalModeRequiresAdminReview(firstMode, firstMode2);
         response.setResendBlocked(resendBlocked);
         response.setResendBlockReason(resendBlocked ? "ORCA_TEMPORARY_MEDICAL_MODE_LOCKED" : null);
-        response.setOk("00".equals(apiResult) && found && !resendBlocked);
-        response.setOperationStatus(resendBlocked
+        response.setOk(apiSuccess && found && !resendBlocked);
+        response.setOperationStatus(!apiSuccess
+                ? "NEEDS_REVIEW"
+                : resendBlocked
                 ? "ORCA_RESEND_BLOCKED"
                 : found ? "ORCA_TEMPORARY_MEDICAL_FOUND" : "NEEDS_REVIEW");
-        response.setReconciliationStatus(resendBlocked
+        response.setReconciliationStatus(!apiSuccess
+                ? "TEMPORARY_MEDICAL_NOT_FOUND"
+                : resendBlocked
                 ? "TEMPORARY_MEDICAL_FOUND_RESEND_BLOCKED"
                 : found ? "TEMPORARY_MEDICAL_FOUND" : "TEMPORARY_MEDICAL_NOT_FOUND");
         response.setNeedsUserReview(true);
-        response.setMessage(resendBlocked
+        response.setMessage(!apiSuccess
+                ? "ORCA中途終了データ照合が正常終了しませんでした。成功扱いにせず確認してください"
+                : resendBlocked
                 ? "ORCA側で会計済みまたは展開済みの可能性があるため、再送は停止します。管理者確認が必要です"
                 : found
                 ? "ORCA中途終了データに一致候補があります。内容確認後に再送可否を判断してください"
@@ -689,9 +784,30 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
             return false;
         }
         JsonNode snapshot = readProjectionFlags(record.snapshotJson());
+        String visitDate = textNode(snapshot, "visitDate");
+        String rowPerformDate = firstNonBlankLocal(
+                textNodeDeep(row, "Perform_Date"),
+                textNodeDeep(row, "Medical_Date"),
+                textNodeDeep(row, "Visit_Date"));
+        if (rowPerformDate != null && !rowPerformDate.equals(visitDate)) {
+            return false;
+        }
         String departmentCode = textNode(snapshot, "departmentCode");
         String rowDepartmentCode = textNodeDeep(row, "Department_Code");
         return departmentCode == null || departmentCode.equals(rowDepartmentCode);
+    }
+
+    private String firstNonBlankLocal(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            String normalized = normalize(value);
+            if (normalized != null) {
+                return normalized;
+            }
+        }
+        return null;
     }
 
     private JsonNode readTemporaryMedicalGetBody(String xml) {

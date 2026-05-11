@@ -8,6 +8,7 @@ import java.util.Set;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.orca.service.OrcaLiveGateway;
+import open.dolphin.orca.service.OrcaPatientCacheStore;
 import open.dolphin.orca.sync.OrcaPatientSyncService;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
@@ -25,7 +26,8 @@ record PatientModV2OutpatientOrcaCoordinator(
         PatientServiceBean patientServiceBean,
         OrcaTransport orcaTransport,
         OrcaLiveGateway orcaWrapperService,
-        OrcaPatientSyncService orcaPatientSyncService) {
+        OrcaPatientSyncService orcaPatientSyncService,
+        OrcaPatientCacheStore patientCacheStore) {
 
     private static final String ORCA_PATIENTMOD_CREATE_CLASS = "01";
     private static final String ORCA_PATIENTMOD_CLASS = "02";
@@ -46,12 +48,16 @@ record PatientModV2OutpatientOrcaCoordinator(
                     throw AbstractResource.restError(null, Response.Status.CONFLICT, "patient_exists",
                             "患者が既に存在します。患者IDと内容を確認してください。");
                 }
+                ensureOrcaSyncDependencies();
                 PatientModV2OutpatientSupport.OrcaMutationResult result = new PatientModV2OutpatientSupport.OrcaMutationResult();
                 result.apiResult = "00";
-                result.apiResultMessage = "既存患者のためスキップしました";
-                result.patient = existing;
+                result.apiResultMessage = "既存患者のためORCA正本を再取得しました";
+                result.patient = importFromOrcaAndFetchLocal(facilityId, requestedPatientId, runId, details);
                 result.idempotent = true;
                 result.idempotentReason = "existing_patient";
+                result.orcaMutationPrepared = false;
+                result.orcaMutationSent = false;
+                applyCanonicalResult(result, details);
                 return result;
             }
         }
@@ -90,6 +96,9 @@ record PatientModV2OutpatientOrcaCoordinator(
         result.apiResult = created.apiResult;
         result.apiResultMessage = created.apiResultMessage != null ? created.apiResultMessage : "ORCA登録完了";
         result.patient = synced;
+        result.orcaMutationPrepared = true;
+        result.orcaMutationSent = true;
+        applyCanonicalResult(result, details);
         return result;
     }
 
@@ -110,6 +119,9 @@ record PatientModV2OutpatientOrcaCoordinator(
             result.apiResult = "00";
             result.apiResultMessage = "変更なし（ORCAから再取り込み）";
             result.patient = synced;
+            result.orcaMutationPrepared = false;
+            result.orcaMutationSent = false;
+            applyCanonicalResult(result, details);
             return result;
         }
 
@@ -148,11 +160,20 @@ record PatientModV2OutpatientOrcaCoordinator(
         result.apiResult = last != null && last.apiResult != null ? last.apiResult : "00";
         result.apiResultMessage = last != null && last.apiResultMessage != null ? last.apiResultMessage : "ORCA更新完了";
         result.patient = synced;
+        result.orcaMutationPrepared = true;
+        result.orcaMutationSent = true;
+        applyCanonicalResult(result, details);
         return result;
     }
 
     PatientModel importFromOrcaAndFetchLocal(String facilityId, String patientId, String runId, Map<String, Object> details) {
         ensureAllDependencies();
+        OrcaPatientCacheStore.PatientCacheCommand canonical = canonicalRefetchPatientGetV2(facilityId, patientId, details);
+        if (!"ORCA_PATIENT_FOUND".equals(canonical.businessStatus()) || !"CURRENT".equals(canonical.cacheStatus())) {
+            throw AbstractResource.restError(null, Response.Status.BAD_GATEWAY, "orca_patient_canonical_refetch_failed",
+                    "ORCA patient canonical re-fetch did not confirm current patient state",
+                    Map.of("businessStatus", canonical.businessStatus(), "cacheStatus", canonical.cacheStatus()), null);
+        }
         PatientImportRequest request = new PatientImportRequest();
         request.getPatientIds().add(patientId);
         request.setIncludeInsurance(false);
@@ -185,7 +206,62 @@ record PatientModV2OutpatientOrcaCoordinator(
         if (model == null) {
             throw new IllegalStateException("Local patient record not found after import. patientId=" + patientId);
         }
+        if (details != null) {
+            details.put("localSynced", Boolean.TRUE);
+        }
         return model;
+    }
+
+    private OrcaPatientCacheStore.PatientCacheCommand canonicalRefetchPatientGetV2(
+            String facilityId,
+            String patientId,
+            Map<String, Object> details) {
+        if (orcaTransport() == null) {
+            throw new IllegalStateException("OrcaTransport is not available");
+        }
+        String query = "id=" + patientId + "&format=json";
+        OrcaTransportResult result = orcaTransport().invoke(
+                facilityId,
+                OrcaEndpoint.PATIENT_GET,
+                OrcaTransportRequest.get(query));
+        OrcaPatientCacheStore.PatientCacheCommand command = OrcaPatientCacheStore.fromOrcaResponse(
+                facilityId,
+                patientId,
+                details != null ? stringDetail(details, "requestId") : null,
+                details != null ? stringDetail(details, "traceId") : null,
+                java.time.Instant.now(),
+                result != null ? result.getBody() : null);
+        if (patientCacheStore() != null) {
+            patientCacheStore().save(command);
+        }
+        if (details != null) {
+            details.put("canonicalRefetched", Boolean.TRUE);
+            details.put("canonicalSourceApi", "patientgetv2");
+            details.put("canonicalCacheStatus", command.cacheStatus());
+            details.put("canonicalBusinessStatus", command.businessStatus());
+            details.put("canonicalRawResponseStored", Boolean.FALSE);
+        }
+        return command;
+    }
+
+    private static void applyCanonicalResult(PatientModV2OutpatientSupport.OrcaMutationResult result,
+            Map<String, Object> details) {
+        if (result == null || details == null) {
+            return;
+        }
+        result.canonicalRefetched = Boolean.TRUE.equals(details.get("canonicalRefetched"));
+        result.localSynced = Boolean.TRUE.equals(details.get("localSynced"));
+        result.canonicalSourceApi = stringDetail(details, "canonicalSourceApi");
+        result.canonicalCacheStatus = stringDetail(details, "canonicalCacheStatus");
+        result.canonicalBusinessStatus = stringDetail(details, "canonicalBusinessStatus");
+    }
+
+    private static String stringDetail(Map<String, Object> details, String key) {
+        if (details == null || key == null) {
+            return null;
+        }
+        Object value = details.get(key);
+        return value != null ? String.valueOf(value) : null;
     }
 
     private PatientModV2OutpatientSupport.OrcaUpdateExecution executeOrcaUpdate(

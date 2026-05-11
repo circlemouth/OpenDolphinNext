@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.Map;
 import open.dolphin.orca.converter.OrcaXmlMapper;
 import open.dolphin.orca.service.DefaultOrcaLiveGateway;
+import open.dolphin.orca.service.OrcaInsuranceCacheStore;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.transport.StubOrcaTransport;
 import open.dolphin.rest.dto.orca.FormerNameHistoryRequest;
@@ -29,6 +30,16 @@ class OrcaPatientBatchResourceTest {
 
     private OrcaLiveGateway createService() {
         return new DefaultOrcaLiveGateway(new StubOrcaTransport(), new OrcaXmlMapper());
+    }
+
+    private static final class RecordingInsuranceCacheStore extends OrcaInsuranceCacheStore {
+        private InsuranceCacheCommand command;
+
+        @Override
+        public InsuranceCacheResult saveInsuranceCombinations(InsuranceCacheCommand command) {
+            this.command = command;
+            return new InsuranceCacheResult(1, 0, 0);
+        }
     }
 
     @Test
@@ -147,6 +158,25 @@ class OrcaPatientBatchResourceTest {
 
         assertThrows(WebApplicationException.class, () ->
                 resource.insuranceCombinations(createRequest("F001:doctor01", "/api/orca/official/insurance/combinations", Map.of()), request));
+    }
+
+    @Test
+    void insuranceCombinationsWritesServerSideCache() {
+        OrcaPatientBatchResource resource = new OrcaPatientBatchResource();
+        resource.setWrapperService(createService());
+        RecordingInsuranceCacheStore cacheStore = new RecordingInsuranceCacheStore();
+        resource.setInsuranceCacheStoreForTest(cacheStore);
+        InsuranceCombinationRequest request = new InsuranceCombinationRequest();
+        request.setPatientId("000019");
+        request.setBaseDate("2026-05-10");
+
+        resource.insuranceCombinations(
+                createRequest("F001:doctor01", "/api/orca/official/insurance/combinations", Map.of()), request);
+
+        assertEquals("F001", cacheStore.command.facilityId());
+        assertEquals("000019", cacheStore.command.orcaPatientId());
+        assertEquals("2026-05-10", cacheStore.command.baseDate());
+        assertEquals(1, cacheStore.command.response().getCombinations().size());
     }
 
     private HttpServletRequest createRequest(String remoteUser, String uri, Map<String, String> headers) {

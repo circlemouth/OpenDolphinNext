@@ -114,6 +114,13 @@ class PublicRouteInventoryContractTest {
                 .containsExactly("GET /api/local/diagnoses/{*}");
         assertThat(localRoutes)
                 .allMatch(routeKey -> !isOfficialLike(routeKey));
+        assertThat(routeKeys).contains(
+                "GET /api/orca/official/patientgetv2",
+                "POST /api/orca/official/patientmodv2/outpatient/create",
+                "POST /api/orca/official/patientmodv2/outpatient/update",
+                "POST /api/local/patients/search");
+        assertThat(routeKeys)
+                .noneMatch(PublicRouteInventoryContractTest::isDisallowedPatientCrudSurface);
     }
 
     @Test
@@ -178,6 +185,29 @@ class PublicRouteInventoryContractTest {
                 || normalized.contains("manageusersv2")
                 || normalized.contains("incomeinfv2")
                 || normalized.contains("patientlst");
+    }
+
+    private static boolean isDisallowedPatientCrudSurface(String routeKey) {
+        String normalized = routeKey.toLowerCase(Locale.ROOT);
+        if (!normalized.contains("/api/local/patient")
+                && !normalized.contains("/api/orca/official/patient")) {
+            return false;
+        }
+        if (normalized.equals("post /api/local/patients/search")
+                || normalized.equals("get /api/orca/official/patientgetv2")
+                || normalized.equals("post /api/orca/official/patientmodv2/outpatient/create")
+                || normalized.equals("post /api/orca/official/patientmodv2/outpatient/update")) {
+            return false;
+        }
+        if (normalized.startsWith("delete ")) {
+            return true;
+        }
+        if (normalized.startsWith("put /api/local/patient")
+                || normalized.startsWith("patch /api/local/patient")
+                || normalized.startsWith("post " + "/api/local/patients/" + "mutation")) {
+            return true;
+        }
+        return normalized.contains("/api/local/patient") && !normalized.equals("post /api/local/patients/search");
     }
 
     private static boolean isTextPlain(String mediaType) {

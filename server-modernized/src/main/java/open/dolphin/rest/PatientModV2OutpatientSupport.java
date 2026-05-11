@@ -344,6 +344,13 @@ final class PatientModV2OutpatientSupport {
         PatientModel patient;
         Boolean idempotent;
         String idempotentReason;
+        Boolean orcaMutationPrepared;
+        Boolean orcaMutationSent;
+        Boolean canonicalRefetched;
+        Boolean localSynced;
+        String canonicalSourceApi;
+        String canonicalCacheStatus;
+        String canonicalBusinessStatus;
     }
 
     static void applyAuditMeta(Map<String, Object> details, OfficialPatientAuditMeta auditMeta) {
