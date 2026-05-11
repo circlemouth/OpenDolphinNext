@@ -157,7 +157,7 @@
 - diseasev3 と medicalmodv2 の response parser はこの分類を使い、病名の ORCA only / unmatch / warning、診療行為の warning / completion evidence 欠落を共通 status に正規化する。
 
 ## Close And Send Billing Workflow
-- 通常外来の初回 ORCA 会計送信は `POST /api/local/encounters/{encounterKey}/close-and-send-to-billing` から行う。client payload は `idempotencyKey` と任意 precheck flag に限定し、`patientId` / `facilityId` / voucher / sequential / insurance / `Medical_Uid` / `classCode` / raw XML / URL は受け付けない。
+- 通常外来の初回 ORCA 会計送信は `POST /api/local/encounters/{encounterKey}/close-and-send-to-billing` から行う。client payload は `idempotencyKey` と任意 precheck flag に限定し、`patientId` / `facilityId` / acceptance / department / physician / voucher / sequential / insurance / `Medical_Uid` / `classCode` / raw XML / URL は受け付けない。
 - server は認証 principal の facility、`encounter_projection`、保存済み order/disease から snapshot を作り、`d_billing_orca_snapshot` と `d_billing_orca_transmission` に状態を記録する。状態 enum は `DRAFT`, `READY_TO_SEND`, `ORCA_SENDING`, `ORCA_DISEASE_SYNCED`, `ORCA_MEDICAL_REGISTERED`, `ORCA_CONFIRMED`, `ORCA_FAILED`, `ORCA_UNKNOWN`, `DIRTY_AFTER_SENT`, `ORCA_LOCKED_OR_OPENED`, `CORRECTION_REQUIRED` に固定する。
 - `encounter_projection` に server-derived ORCA受付 ID と受付日時がない場合、通常外来の初回 ORCA 会計送信は `orca_acceptance_missing` で fail closed にする。client が voucher / sequential / insurance / patient を補っても authority にせず、患者・カルテ・ORCA transport lookup の前に止める。
 - `medicalmodv2 class=01` 成功時は `Medical_Uid` を保存する。通信断や `Medical_Uid` 欠落など結果不明時は `ORCA_UNKNOWN` とし、response / stored sanitized summary に `operationStatus=UNKNOWN` と `needsUserReview=true` を残す。`UNKNOWN` は成功扱いせず、無条件再送せず `tmedicalgetv2` で中途終了データを確認してから recovery 操作へ進める。

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -56,6 +57,27 @@ class LocalEncounterBillingWorkflowResourceTest {
                 () -> resource.closeAndSendToBilling(createRequest(), "F001:E100", payload));
 
         assertRestError(ex, Response.Status.CONFLICT.getStatusCode(), "orca_acceptance_missing");
+    }
+
+    @Test
+    void closeAndSendRejectsClientProvidedAcceptanceAuthorityAliasesBeforeEncounterLookup() throws Exception {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        EncounterProjectionRepository encounterRepository = mock(EncounterProjectionRepository.class);
+        AuthoritativeAuditRepository auditRepository = mock(AuthoritativeAuditRepository.class);
+        setField(resource, "encounterProjectionRepository", encounterRepository);
+        setField(resource, "authoritativeAuditRepository", auditRepository);
+
+        CloseAndSendToBillingRequest payload = new CloseAndSendToBillingRequest();
+        payload.setIdempotencyKey("idem-forged-acceptance");
+        payload.captureUnknownField("acceptanceId", "A-100");
+        payload.captureUnknownField("departmentCode", "01");
+        payload.captureUnknownField("physicianCode", "10001");
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.closeAndSendToBilling(createRequest(), "F001:E100", payload));
+
+        assertRestError(ex, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request");
+        verifyNoInteractions(encounterRepository, auditRepository);
     }
 
     private static HttpServletRequest createRequest() {

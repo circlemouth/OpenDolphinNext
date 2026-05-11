@@ -27,7 +27,7 @@ Checklist count when parallel board was created:
 
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
-| A | `codex/orca-ehr-worker-a-patient-boundary` | Worker A queue complete; missing acceptance billing-send guard | Done | 20260511T004806Z | this commit | - |
+| A | `codex/orca-ehr-worker-a-patient-boundary` | Worker A queue complete; billing-send client authority alias guard | Done | 20260511T010814Z | this commit | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
@@ -50,6 +50,7 @@ Checklist count when parallel board was created:
 | A-07 | 3.3, 6, 13 | Harden acceptlstv2 acceptance cache write failure audit boundary. | Cache write failure does not return a current-source success response; raw cache exception text is not copied into audit details; success cache counts are absent on failure. | Visit resource focused tests |
 | A-08 | 3.3, 6, 13 | Guard acceptance cancellation cache events from mutating encounter workflow state. | `ORCA_ACCEPTANCE_CANCELLED` cache result does not directly delete/cancel `encounter_projection`; workflow warning/state changes require a separate server-side workflow. | Visit resource focused tests |
 | A-09 | 3.3, 6, 13 | Fail closed normal billing send when server-derived ORCA acceptance is missing. | `close-and-send-to-billing` rejects missing ORCA acceptance before patient/karte/transport lookup; client-provided identifiers cannot fill the gap. | Billing workflow focused tests |
+| A-10 | 3.3, 6, 13 | Reject client-provided acceptance/department/physician aliases on billing send. | Client-provided acceptanceId/date/time, departmentCode, physicianCode, insurance aliases are forbidden before encounter lookup. | Billing workflow focused tests |
 
 ### Worker B Queue
 
@@ -111,6 +112,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T010814Z | A | A-10 | 3.3/6/13 billing-send client authority aliases rejected | this commit | focused billing workflow test and doc/config/runtime guards passed | Done | Await next Worker A queue item |
 | 20260511T004806Z | A | A-09 | 3.3/6/13 missing ORCA acceptance blocks normal billing send | this commit | focused billing/visit resource tests and doc/config/runtime guards passed | Done | Await next Worker A queue item |
 | 20260511T002812Z | A | A-08 | 3.3/6/13 acceptance cancellation cache event separated from encounter workflow mutation | this commit | focused visit resource/acceptance cache tests and doc/config/runtime guards passed | Done | Await next Worker A queue item |
 | 20260511T000803Z | A | A-07 | 3.3/6/13 acceptance cache write failure fail-closed and sanitized audit boundary | this commit | focused visit resource test and doc/config/runtime guards passed | Done | Await next Worker A queue item |
