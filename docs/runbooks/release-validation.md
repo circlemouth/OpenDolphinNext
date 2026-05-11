@@ -186,10 +186,20 @@ cd web-client && RUN_ID=<RUN_ID> node scripts/qa-orca-billing-report-live-profil
   --exact-preflight-summary ../artifacts/orca-remediation/closeout/<RUN_ID>/qa/weborca-readonly-preflight/summary.json
 ```
 
+manual live handoff:
+```bash
+cd web-client && RUN_ID=<RUN_ID> node scripts/qa-orca-billing-report-live-handoff.mjs \
+  --sanitized-evidence-only --disable-browser-artifacts --require-manual-approval \
+  --dry-run-summary ../artifacts/orca-remediation/closeout/<RUN_ID>/qa/billing-report-live-profile/summary.sanitized.json \
+  --approval-reference <approval-record-id> \
+  --report-types invoicereceipt
+```
+
 受入れ条件:
 - `income-info` は server-side facility と exact selected-candidate preflight で確認済みの患者・診療日だけを対象にし、結果は `orca_billing_cache` の `source_system=ORCA`、request/response hash、件数、sanitized summary で確認する。
 - `/api/orca/official/reports/{type}` は `orca_report_snapshot` の request/response hash、invoice/data id hash、server-generated storage key/digest、`storageUploadStatus`、`reportBinaryAvailable` だけを evidence にする。
 - object storage 有効時の帳票 binary は `OrcaReportBinaryStorageService` の digest verification を通過した場合だけ accepted とし、upload 失敗は fail-closed blocker とする。
+- live handoff は ready な dry-run summary と manual approval reference の hash だけを evidence にし、handoff command 自体は live ORCA traffic を実行しない。`--live`、HAR、trace、video、screenshot、raw network、raw patient / invoice / `Data_Id` / `Medical_Uid` / storage key / digest を渡す flag または環境変数が有効な場合は実行前に fail する。
 - reviewer submission packet に含める billing/report evidence は `qa/billing-report-live-profile/summary.sanitized.json` の dry-run sanitized summary だけとし、`liveTrialOrca.executed=false` を保持する。これは live Trial 実行成功、会計済み、収納済み、レセプト正本化の証跡ではなく、次の live 実行可否を判定する gate evidence に限定する。
 - 証跡に raw ORCA body、帳票本文、raw invoice number、raw `Data_Id`、raw `Medical_Uid`、患者氏名・住所・電話番号、保険詳細、credential、Cookie、Authorization、HAR、trace、video、screenshot、raw network JSON を残さない。
 - `storageUploadStatus=UPLOADED` だけでは会計済み・収納済み・レセプト正本化を意味しない。ORCA由来 snapshot/cache の取得証跡に限定する。

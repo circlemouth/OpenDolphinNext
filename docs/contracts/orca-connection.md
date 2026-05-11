@@ -154,6 +154,7 @@
 
 ## Billing / Report Live Validation Profile
 - Live Trial の会計・帳票検証は `docs/runbooks/release-validation.md` の ORCA billing/report live profile に従い、同一 RUN_ID の runtime-ready smoke、candidate discovery、exact selected-candidate preflight、accept/fullflow の後続として扱う。
+- live 実行へ進む前に `qa-orca-billing-report-live-profile.mjs` の ready dry-run summary と、`qa-orca-billing-report-live-handoff.mjs` の manual approval handoff summary を揃える。handoff summary は approval reference hash、dry-run summary hash、対象 report type、禁止 artifact policy だけを残し、handoff command 自体は live ORCA traffic を実行しない。
 - `income-info` は exact selected-candidate preflight で確認済みの患者・診療日だけを対象にし、`orca_billing_cache` の `source_system=ORCA`、request/response hash、件数、sanitized summary を accepted evidence とする。患者 ID 単独、UI 表示、client-provided voucher / sequential / insurance combination / invoice number は authority にしない。
 - `/api/orca/official/reports/{type}` は `orca_report_snapshot` の request/response hash、invoice/data id hash、server-generated storage key/digest、`storageUploadStatus`、`reportBinaryAvailable` だけを evidence にする。raw invoice number、raw `Data_Id`、帳票本文、storage URI/object key/digest の raw 値を reviewer evidence に出さない。
 - object storage 有効時は `OrcaReportBinaryStorageService` の digest verification と snapshot metadata 照合を通過した binary staging だけを accepted とし、upload 失敗・digest mismatch・retention 欠落は fail-closed blocker とする。

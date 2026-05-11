@@ -30,7 +30,7 @@ Checklist count when parallel board was created:
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
-| D | `codex/orca-ehr-worker-d-orca-operation` | D-04 follow-up live billing/report execution handoff | Done | 20260511T020213Z | this commit | - |
+| D | `codex/orca-ehr-worker-d-orca-operation` | D-04 follow-up live billing/report execution operator run | Done | 20260511T022207Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-02 common patient header staged rollout | Done | 20260510T204142Z | this commit | - |
 | F | `codex/orca-ehr-worker-f-audit-security-gates` | F-02 credential/PHI leakage guards | Done | 20260510T201318Z | this commit | - |
 | G | `codex/orca-ehr-integrator-g` | G-02 merge first worker batch in prescribed order | Done | 20260510T195822Z | this docs commit | - |
@@ -106,6 +106,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T022207Z | D | D-04 follow-up | 10.3/10.4 live billing/report handoff requires ready dry-run summary, manual approval hash, sanitized/no-artifact mode, and rejects raw identifier/artifact flags before live traffic | this commit | direct Node assertions, CLI ready/blocked leak scans, web guard pretest, `ReleaseValidationRunbookContractTest`, docs/config/runtime lookup guards passed; Vitest unavailable | Done | D-04 follow-up live billing/report execution operator run |
 | 20260511T020213Z | D | D-04 follow-up | 10.3/10.4 reviewer submission packet copies and validates only billing/report dry-run sanitized summary; rejects live execution claims and raw artifact/raw patient key references | this commit | `node --test tests/review-packet/reviewer-submission-packet.test.mjs`, `ReleaseValidationRunbookContractTest`, docs/config/runtime lookup guards passed | Done | D-04 follow-up live billing/report execution handoff |
 | 20260511T014209Z | D | D-04 follow-up | 10.3/10.4 billing/report live dry-run harness validates candidate discovery + exact preflight and emits sanitized evidence only | this commit | direct Node assertions, dry-run CLI leak scan, web guard, `ReleaseValidationRunbookContractTest` passed | Done | D-04 follow-up billing/report sanitized evidence integration |
 | 20260511T012208Z | D | D-04 follow-up | 10.3/10.4 ORCA billing/report live profile evidence boundary fixed to sanitized cache/snapshot hash and server-generated storage metadata only | this commit | `ReleaseValidationRunbookContractTest` passed | Done | D-04 follow-up billing/report live dry-run harness |

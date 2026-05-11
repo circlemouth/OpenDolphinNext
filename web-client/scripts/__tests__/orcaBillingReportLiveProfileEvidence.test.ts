@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildBillingReportLiveProfileSummary,
+  buildBillingReportLiveHandoffSummary,
   parseBillingReportLiveProfileArgs,
+  validateBillingReportLiveHandoffCommand,
   validateBillingReportLiveProfileCommand,
 } from '../qa-lib/orca-billing-report-live-profile-evidence.mjs';
 
@@ -86,6 +88,24 @@ describe('ORCA billing/report live profile dry-run evidence', () => {
     expect(result.blockers).toContain('forbidden flag: --trace');
   });
 
+  it('rejects artifact capture environment before dry-run evidence generation', () => {
+    const result = validateBillingReportLiveProfileCommand({
+      argv: [
+        '--dry-run',
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--candidate-discovery-summary',
+        'candidate.json',
+        '--exact-preflight-summary',
+        'exact.json',
+      ],
+      env: { QA_RECORD_HAR: '1' },
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.blockers).toContain('forbidden env enabled: QA_RECORD_HAR');
+  });
+
   it('marks the profile ready only after candidate discovery and exact preflight pass', () => {
     const summary = buildBillingReportLiveProfileSummary({
       runId: '20260511T014209Z',
@@ -123,5 +143,72 @@ describe('ORCA billing/report live profile dry-run evidence', () => {
     expect(summary.blockers).toContain('candidateDiscoveryDoesNotAuthorizeAlone');
     expect(summary.blockers).toContain('exactPreflightAccepted');
     expect(summary.blockers).toContain('exactPreflightNoMutationRequests');
+  });
+
+  it('builds a manual live handoff only from a ready sanitized dry-run summary', () => {
+    const dryRunSummary = buildBillingReportLiveProfileSummary({
+      runId: '20260511T014209Z',
+      commandGate,
+      candidateDiscoverySummary: candidateDiscovery(),
+      exactPreflightSummary: exactPreflight(),
+    });
+    const handoffGate = validateBillingReportLiveHandoffCommand({
+      argv: [
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--require-manual-approval',
+        '--dry-run-summary',
+        'summary.sanitized.json',
+        '--approval-reference',
+        'owner-approved-ticket-123',
+        '--report-types',
+        'invoicereceipt,statement',
+      ],
+      env: {},
+    });
+    const handoff = buildBillingReportLiveHandoffSummary({
+      runId: '20260511T022207Z',
+      commandGate: handoffGate,
+      dryRunSummary,
+    });
+
+    expect(handoff.readyForManualLiveExecution).toBe(true);
+    expect(handoff.liveTrialOrca.executedByThisHandoff).toBe(false);
+    expect(handoff.liveTrialOrca.nextStepRequiresHumanOperator).toBe(true);
+    expect(handoff.manualApproval.referenceCapturedRaw).toBe(false);
+    expect(handoff.reportTypes).toEqual(['invoicereceipt', 'statement']);
+    expect(handoff.acceptedEvidenceFields).toContain('approvalReferenceHash');
+    expect(JSON.stringify(handoff)).not.toMatch(/owner-approved-ticket-123|00002|WholeName|Insurance_Combination_Number|must-not-leak/);
+  });
+
+  it('blocks manual live handoff when the dry-run summary is not ready or raw artifact capture is requested', () => {
+    const handoffGate = validateBillingReportLiveHandoffCommand({
+      argv: [
+        '--sanitized-evidence-only',
+        '--disable-browser-artifacts',
+        '--require-manual-approval',
+        '--dry-run-summary',
+        'summary.sanitized.json',
+        '--approval-reference',
+        'owner-approved-ticket-123',
+        '--trace',
+      ],
+      env: { QA_TRACE: '1' },
+    });
+    const handoff = buildBillingReportLiveHandoffSummary({
+      runId: '20260511T022207Z',
+      commandGate: handoffGate,
+      dryRunSummary: {
+        commandContract: 'orca-billing-report-live-profile-dry-run-sanitized-only',
+        readyForBillingReportLiveProfile: false,
+        rawSensitiveFieldsExcluded: true,
+        liveTrialOrca: { executed: false },
+      },
+    });
+
+    expect(handoff.readyForManualLiveExecution).toBe(false);
+    expect(handoff.blockers).toContain('forbidden flag: --trace');
+    expect(handoff.blockers).toContain('forbidden env enabled: QA_TRACE');
+    expect(handoff.blockers).toContain('dryRunSummaryReady');
   });
 });
