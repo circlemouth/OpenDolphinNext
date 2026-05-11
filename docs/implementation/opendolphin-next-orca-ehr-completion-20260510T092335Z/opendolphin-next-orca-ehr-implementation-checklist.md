@@ -138,7 +138,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] `POST /api/orca/official/patientmodv2/outpatient/create` と `POST /api/orca/official/patientmodv2/outpatient/update` を唯一の患者 mutation route とし、送信前差分と送信後再取得を強制する。
 - [x] ORCA送信失敗時にローカル患者情報を更新済みにしない。
 - [x] 患者削除は原則実装しない。
-- [ ] `GET /api/orca/official/appointments/list?date=...` と `GET /api/orca/official/appointments/patient?...` を受付取得 route として実装する。
+- [x] `GET /api/orca/official/appointments/list?date=...` と `GET /api/orca/official/appointments/patient?...` を受付取得 route として実装する。
+  - [x] 2026-05-11T10:10Z: 既存 POST wrapper と同じ server-side official transport / audit path に正規化する GET query route を追加し、日付 query は `yyyy-MM-dd` 固定で ORCA transport 前に fail closed する。
 - [x] 受付取得結果を `orca_acceptance_cache` に保存し、ORCA患者番号、受付日、診療科、担当医、保険組合せを保持する。
 - [ ] `encounter_id` と ORCA受付情報の紐付けテーブルを作る。
 - [ ] ORCA受付取消、診療科・担当医・保険組合せ変更を検知して診療録画面に警告/差分を表示する。

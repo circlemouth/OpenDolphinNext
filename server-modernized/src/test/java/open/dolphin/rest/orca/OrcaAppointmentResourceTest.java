@@ -87,6 +87,47 @@ class OrcaAppointmentResourceTest {
     }
 
     @Test
+    void listAppointmentsGetQueryNormalizesToOfficialWrapperRequest() {
+        OrcaAppointmentResource resource = new OrcaAppointmentResource();
+        resource.setWrapperService(createService());
+
+        OrcaAppointmentListResponse response = resource.listAppointmentsByQuery(
+                createRequest("F001:doctor01", "/api/orca/official/appointments/list", Map.of()),
+                "2025-11-13",
+                null,
+                null,
+                null,
+                "01",
+                "10001",
+                "01");
+
+        assertEquals("2025-11-13", response.getAppointmentDate());
+        assertEquals(1, response.getSlots().size());
+        assertEquals("F001:AP-20251113-001", response.getSlots().get(0).getScheduleKey());
+        assertEquals("0000", response.getApiResult());
+        assertGeneratedRunId(response.getRunId());
+    }
+
+    @Test
+    void listAppointmentsGetQueryRejectsInvalidDateSafely() {
+        OrcaAppointmentResource resource = new OrcaAppointmentResource();
+        resource.setWrapperService(createService());
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.listAppointmentsByQuery(
+                        createRequest("F001:doctor01", "/api/orca/official/appointments/list", Map.of()),
+                        "2025/11/13",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null));
+
+        assertRestError(ex, Response.Status.BAD_REQUEST.getStatusCode(), "orca.appointment.invalid");
+    }
+
+    @Test
     void listAppointmentsAcceptsMaxRange31Days() {
         OrcaAppointmentResource resource = new OrcaAppointmentResource();
         resource.setWrapperService(createService());
@@ -139,6 +180,24 @@ class OrcaAppointmentResourceTest {
                 createRequest("F001:doctor01", "/api/orca/official/appointments/patient", Map.of()), request);
         assertEquals("0000", response.getApiResult());
         assertEquals("正常終了", response.getApiResultMessage());
+        assertEquals(1, response.getReservations().size());
+        assertEquals("F001:AP-20251113-001", response.getReservations().get(0).getScheduleKey());
+        assertEquals("000001", response.getPatient().getPatientId());
+        assertGeneratedRunId(response.getRunId());
+    }
+
+    @Test
+    void patientAppointmentsGetQueryNormalizesToOfficialWrapperRequest() {
+        OrcaAppointmentResource resource = new OrcaAppointmentResource();
+        resource.setWrapperService(createService());
+
+        PatientAppointmentListResponse response = resource.patientAppointmentsByQuery(
+                createRequest("F001:doctor01", "/api/orca/official/appointments/patient", Map.of()),
+                "000001",
+                "2025-11-12",
+                "01");
+
+        assertEquals("0000", response.getApiResult());
         assertEquals(1, response.getReservations().size());
         assertEquals("F001:AP-20251113-001", response.getReservations().get(0).getScheduleKey());
         assertEquals("000001", response.getPatient().getPatientId());

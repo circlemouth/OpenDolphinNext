@@ -7,12 +7,14 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -120,6 +122,34 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
     }
 
     @GET
+    @Path("/appointments/list")
+    @Produces(MediaType.APPLICATION_JSON)
+    public OrcaAppointmentListResponse listAppointmentsByQuery(@Context HttpServletRequest request,
+            @QueryParam("date") String date,
+            @QueryParam("appointmentDate") String appointmentDate,
+            @QueryParam("fromDate") String fromDate,
+            @QueryParam("toDate") String toDate,
+            @QueryParam("medicalInformation") String medicalInformation,
+            @QueryParam("physicianCode") String physicianCode,
+            @QueryParam("classCode") String classCode) {
+        OrcaAppointmentListRequest body = new OrcaAppointmentListRequest();
+        String singleDate = firstText(date, appointmentDate);
+        if (singleDate != null) {
+            body.setAppointmentDate(parseQueryDate(request, OPERATION_APPOINTMENT_LIST, "date", singleDate));
+        }
+        if (firstText(fromDate, null) != null) {
+            body.setFromDate(parseQueryDate(request, OPERATION_APPOINTMENT_LIST, "fromDate", fromDate));
+        }
+        if (firstText(toDate, null) != null) {
+            body.setToDate(parseQueryDate(request, OPERATION_APPOINTMENT_LIST, "toDate", toDate));
+        }
+        body.setMedicalInformation(normalize(medicalInformation));
+        body.setPhysicianCode(normalize(physicianCode));
+        body.setClassCode(normalize(classCode));
+        return listAppointments(request, body);
+    }
+
+    @GET
     @Path("/appointments/medical-information")
     @Produces(MediaType.APPLICATION_JSON)
     public OrcaMedicalInformationListResponse medicalInformationOptions(@Context HttpServletRequest request) {
@@ -198,6 +228,22 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
+    }
+
+    @GET
+    @Path("/appointments/patient")
+    @Produces(MediaType.APPLICATION_JSON)
+    public PatientAppointmentListResponse patientAppointmentsByQuery(@Context HttpServletRequest request,
+            @QueryParam("patientId") String patientId,
+            @QueryParam("baseDate") String baseDate,
+            @QueryParam("departmentCode") String departmentCode) {
+        PatientAppointmentListRequest body = new PatientAppointmentListRequest();
+        body.setPatientId(normalize(patientId));
+        if (firstText(baseDate, null) != null) {
+            body.setBaseDate(parseQueryDate(request, OPERATION_PATIENT_APPOINTMENTS, "baseDate", baseDate));
+        }
+        body.setDepartmentCode(normalize(departmentCode));
+        return patientAppointments(request, body);
     }
 
     @POST
@@ -453,6 +499,30 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
         PatientSummary fallback = new PatientSummary();
         fallback.setPatientId(normalizedPatientId);
         return fallback;
+    }
+
+    private LocalDate parseQueryDate(HttpServletRequest request, String operation, String field, String value) {
+        String normalized = normalize(value);
+        if (normalized == null) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(normalized);
+        } catch (DateTimeParseException ex) {
+            Map<String, Object> details = newAuditDetails(request);
+            details.put("operation", operation);
+            details.put("field", field);
+            markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
+                    "orca.appointment.invalid", field + " must be yyyy-MM-dd");
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.BAD_REQUEST, "orca.appointment.invalid",
+                    field + " must be yyyy-MM-dd");
+        }
+    }
+
+    private String firstText(String first, String second) {
+        String normalized = normalize(first);
+        return normalized != null ? normalized : normalize(second);
     }
 
     private void collectKey(HashSet<String> sink, String value) {
