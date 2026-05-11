@@ -181,7 +181,30 @@ class LocalEncounterBillingWorkflowResourceTest {
         assertRestError(ex, Response.Status.CONFLICT.getStatusCode(), "encounter_billing_send_blocked");
     }
 
+    @Test
+    void reconcileTemporaryMedicalRejectsRequestBodyBeforeAuditOrLookup() throws Exception {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        AuthoritativeAuditRepository auditRepository = mock(AuthoritativeAuditRepository.class);
+        BillingOrcaWorkflowRepository workflowRepository = mock(BillingOrcaWorkflowRepository.class);
+        setField(resource, "authoritativeAuditRepository", auditRepository);
+        setField(resource, "workflowRepository", workflowRepository);
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.reconcileTemporaryMedical(createRequestWithBody(), 42L));
+
+        assertRestError(ex, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request");
+        verifyNoInteractions(auditRepository, workflowRepository);
+    }
+
     private static HttpServletRequest createRequest() {
+        return createRequest(-1L, Map.of());
+    }
+
+    private static HttpServletRequest createRequestWithBody() {
+        return createRequest(64L, Map.of("Content-Type", "application/json"));
+    }
+
+    private static HttpServletRequest createRequest(long contentLength, Map<String, String> headers) {
         Map<String, Object> attributes = new HashMap<>();
         return (HttpServletRequest) Proxy.newProxyInstance(
                 LocalEncounterBillingWorkflowResourceTest.class.getClassLoader(),
@@ -190,7 +213,9 @@ class LocalEncounterBillingWorkflowResourceTest {
                     case "getRemoteUser" -> "F001:doctor01";
                     case "getRequestURI" -> "/api/local/encounters/F001:E100/close-and-send-to-billing";
                     case "getRemoteAddr" -> "127.0.0.1";
-                    case "getHeader" -> null;
+                    case "getHeader" -> args != null && args.length == 1 ? headers.get(String.valueOf(args[0])) : null;
+                    case "getContentLengthLong" -> contentLength;
+                    case "getContentLength" -> contentLength > Integer.MAX_VALUE ? -1 : (int) contentLength;
                     case "getAttribute" -> args != null && args.length == 1 ? attributes.get(String.valueOf(args[0])) : null;
                     case "setAttribute" -> {
                         if (args != null && args.length == 2) {

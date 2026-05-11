@@ -122,6 +122,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         if (transmissionId == null || transmissionId <= 0) {
             throw validationError(request, "transmissionId", "transmissionId is required");
         }
+        requireNoRequestBody(request, "reconcileTemporaryMedical");
         requireAuditWritePathAvailable(request);
         BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
                 workflowRepository.findReviewTransmission(facilityId, transmissionId);
@@ -614,6 +615,43 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         response.setReconciliationStatus("RECONCILE_PENDING");
         response.setMessage("ORCA中途終了データの再照合が必要です");
         return response;
+    }
+
+    private void requireNoRequestBody(HttpServletRequest request, String fieldName) {
+        long contentLength = safeContentLengthLong(request);
+        if (contentLength > 0L) {
+            throw validationError(request, fieldName, "request body is not accepted");
+        }
+        int legacyContentLength = safeContentLength(request);
+        if (legacyContentLength > 0) {
+            throw validationError(request, fieldName, "request body is not accepted");
+        }
+        String transferEncoding = normalize(safeRequestHeader(request, "Transfer-Encoding"));
+        if (transferEncoding != null && !"identity".equalsIgnoreCase(transferEncoding)) {
+            throw validationError(request, fieldName, "request body is not accepted");
+        }
+    }
+
+    private long safeContentLengthLong(HttpServletRequest request) {
+        if (request == null) {
+            return -1L;
+        }
+        try {
+            return request.getContentLengthLong();
+        } catch (RuntimeException ex) {
+            return -1L;
+        }
+    }
+
+    private int safeContentLength(HttpServletRequest request) {
+        if (request == null) {
+            return -1;
+        }
+        try {
+            return request.getContentLength();
+        } catch (RuntimeException ex) {
+            return -1;
+        }
     }
 
     private boolean isNormalBillingSendBlockedState(String businessState) {
