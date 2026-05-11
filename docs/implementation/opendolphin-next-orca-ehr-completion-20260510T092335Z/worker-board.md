@@ -29,7 +29,7 @@ Checklist count when parallel board was created:
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
-| C | `codex/orca-ehr-worker-c-prescription` | C-12 prescription authority integration watch | Done | 20260511T014205Z | this commit | - |
+| C | `codex/orca-ehr-worker-c-prescription` | C-13 prescription authority integration watch | Done | 20260511T020217Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-02 common patient header staged rollout | Done | 20260510T204142Z | this commit | - |
 | F | `codex/orca-ehr-worker-f-audit-security-gates` | F-02 credential/PHI leakage guards | Done | 20260510T201318Z | this commit | - |
@@ -71,6 +71,7 @@ Checklist count when parallel board was created:
 | C-10 | 8, 10.2 | Continue prescription authority integration watch after candidate context guard. | No live send implementation; only source-of-truth contract reconciliation. | Focused cross-worker tests |
 | C-11 | 8, 10.2 | Continue prescription authority integration watch after row-level candidate confirmation display. | No live send implementation; only source-of-truth contract reconciliation. | Focused cross-worker tests |
 | C-12 | 8, 10.2 | Continue prescription authority integration watch after prescription content hash handoff. | No live send implementation; only source-of-truth contract reconciliation. | Focused cross-worker tests |
+| C-13 | 8, 10.2 | Continue prescription authority integration watch after sanitized candidate snapshot persistence. | No live send implementation; only source-of-truth contract reconciliation. | Focused cross-worker tests |
 
 ### Worker D Queue
 
@@ -114,6 +115,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T020217Z | C | C-12 | 8/10.2 sanitized candidate snapshot persistence; no checklist item newly closed | this commit | `LocalOrcaMedicalCandidateResourceTest`, `OrcaMedicalCandidateRepositoryTest`, `git diff --check` passed | Done | C-13 prescription authority integration watch |
 | 20260511T014205Z | C | C-11 | 8/10.2 prescription content hash handoff; no checklist item newly closed | this commit | `LocalOrcaMedicalCandidateResourceTest`, `orcaMedicalCandidateApi.test.ts`, `OrcaMedicalCandidatePanel.test.tsx`, `typecheck`, web guard passed | Done | C-12 prescription authority integration watch |
 | 20260511T012207Z | C | C-10 | 8/10.2 candidate row-level confirmation display; no checklist item newly closed | this commit | `OrcaMedicalCandidatePanel.test.tsx`, `typecheck`, web guard passed | Done | C-11 prescription authority integration watch |
 | 20260511T010205Z | C | C-09 | 8/10.2 candidate summary context authority guard; no checklist item newly closed | this commit | `LocalOrcaMedicalCandidateResourceTest` passed | Done | C-10 prescription authority integration watch |

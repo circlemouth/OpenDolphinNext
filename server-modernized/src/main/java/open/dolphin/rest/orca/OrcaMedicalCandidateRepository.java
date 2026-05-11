@@ -8,6 +8,8 @@ import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import open.dolphin.rest.dto.orca.OrcaMedicalCandidateResponse;
 
 @ApplicationScoped
@@ -75,12 +77,22 @@ class OrcaMedicalCandidateRepository {
                 .setParameter(6, source.encounterId())
                 .setParameter(7, candidate.getCandidateStatus())
                 .setParameter(8, candidate.isSendable())
-                .setParameter(9, json(candidate.getMedicalInformation()))
+                .setParameter(9, json(candidateSnapshot(candidate)))
                 .setParameter(10, json(candidate.getIssues()))
                 .setParameter(11, Timestamp.from(now))
                 .setParameter(12, actor)
                 .getSingleResult();
         return number(id);
+    }
+
+    Map<String, Object> candidateSnapshot(OrcaMedicalCandidateResponse candidate) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("nonAuthoritative", candidate.isNonAuthoritative());
+        snapshot.put("candidateStatus", candidate.getCandidateStatus());
+        snapshot.put("sendable", candidate.isSendable());
+        snapshot.put("prescriptionContentHash", candidate.getPrescriptionContentHash());
+        snapshot.put("medicalInformation", candidate.getMedicalInformation());
+        return snapshot;
     }
 
     private String json(Object value) {
