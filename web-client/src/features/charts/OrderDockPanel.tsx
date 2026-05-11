@@ -977,13 +977,14 @@ export function OrderDockPanel(props: {
 
   const handleApplyRecommendation = useCallback(
     (candidate: OrderRecommendationCandidate, entity: string) => {
+      if (showEditBlockedNotice('頻用オーダー反映')) return;
       const resolved = resolveCanonicalOrderEntity(entity.trim()) ?? entity.trim();
       if (!isOrderEntity(resolved)) return;
       setQuickAddGroupKey(null);
       openEditor(resolved, { requestId: buildRequestId(), kind: 'recommendation', candidate }, { source: primaryOperationSource, reason: 'recommendation' });
       setRecommendModalOpen(false);
     },
-    [openEditor, primaryOperationSource],
+    [openEditor, primaryOperationSource, showEditBlockedNotice],
   );
 
   const latestPrescription = useMemo(() => {

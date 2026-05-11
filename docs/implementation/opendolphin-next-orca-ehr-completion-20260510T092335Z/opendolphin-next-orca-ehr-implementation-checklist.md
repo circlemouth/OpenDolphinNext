@@ -209,6 +209,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T00:22Z: `OrderDockPanel` の quick-add / group-add は patient context 不足、read-only、missing master、fallback data だけでは native disabled にせず、近傍理由 `order-dock-edit-block-reason` と押下時 `オーダー追加を停止` notice で不足条件を表示し、editor を開かないことを focused test で固定した。
   - [x] 2026-05-11T00:42Z: `OrderDockPanel` の bundle edit / copy / delete は patient context 不足、read-only、missing master、fallback data だけでは native disabled にせず、近傍理由 `order-dock-edit-block-reason` と押下時 `オーダー編集/コピー/削除を停止` notice で不足条件を表示し、editor / delete confirm を開かないことを focused test で固定した。
   - [x] 2026-05-11T01:02Z: `OrderDockPanel` の処方履歴 `新規（空）` / `直近処方をコピーして開始` は patient context 不足、read-only、missing master、fallback data だけでは native disabled にせず、近傍理由 `order-dock-edit-block-reason` と押下時 `処方履歴取り込み/直近処方コピーを停止` notice で不足条件を表示し、editor を開かないことを focused test で固定した。
+  - [x] 2026-05-11T01:22Z: `OrderDockPanel` の頻用オーダー apply は patient context 不足、read-only、missing master、fallback data で候補反映時に `頻用オーダー反映を停止` notice で不足条件を表示し、editor を開かず modal を維持することを focused test で固定した。
 - [ ] ボタン優先度、配置、44px以上の押下領域を DADS に沿って統一する。
 
 ## 12. 監査ログ・真正性

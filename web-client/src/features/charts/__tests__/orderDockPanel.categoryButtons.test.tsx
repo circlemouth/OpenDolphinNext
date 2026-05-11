@@ -4,6 +4,38 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 
+vi.mock('../orderRecommendationApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../orderRecommendationApi')>();
+  return {
+    ...actual,
+    fetchOrderRecommendations: vi.fn(async () => ({
+      ok: true,
+      runId: 'RUN-ORDER-DOCK',
+      patientId: 'P-100',
+      recordsScanned: 1,
+      recordsReturned: 1,
+      recommendations: [
+        {
+          key: 'recommend-amlodipine',
+          entity: 'medOrder',
+          source: 'patient',
+          count: 3,
+          lastUsedAt: '2026-02-10',
+          template: {
+            bundleName: '降圧薬セット',
+            admin: '分1',
+            bundleNumber: '7',
+            memo: '',
+            items: [{ name: 'A100 アムロジピン', quantity: '1', unit: '錠', memo: '' }],
+            materialItems: [],
+            commentItems: [],
+          },
+        },
+      ],
+    })),
+  };
+});
+
 import { OrderDockPanel } from '../OrderDockPanel';
 import { RightUtilityDock } from '../RightUtilityDock';
 
@@ -285,6 +317,30 @@ describe('OrderDockPanel category quick-add', () => {
     await user.click(copyButton);
     expect(screen.getByText('直近処方コピーを停止: マスター未同期のため操作できません。')).toBeInTheDocument();
     expect(screen.queryByLabelText('処方入力')).not.toBeInTheDocument();
+  });
+
+  it('編集不可時の頻用オーダー反映は押下時に理由を表示して editor を開かない', async () => {
+    const user = userEvent.setup();
+    renderWithClient(
+      <OrderDockPanel
+        patientId="P-100"
+        meta={{ ...baseMeta, missingMaster: true }}
+        visitDate="2026-02-17"
+        orderBundles={[]}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '頻用オーダーを開く' }));
+    await screen.findByRole('dialog', { name: '頻用オーダー' });
+    const modal = document.querySelector('[data-test-id="order-recommendation-modal"]') as HTMLElement;
+    expect(modal).not.toBeNull();
+    const candidateButton = await within(modal).findByRole('button', { name: /降圧薬セット/ });
+
+    await user.click(candidateButton);
+
+    expect(screen.getByText('頻用オーダー反映を停止: マスター未同期のため操作できません。')).toBeInTheDocument();
+    expect(screen.queryByLabelText('処方入力')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-test-id="order-recommendation-modal"]')).not.toBeNull();
   });
 
   it('quick-add は主要カテゴリの新規入力を開く', async () => {
