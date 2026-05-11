@@ -82,6 +82,32 @@ class ChartRevisionExportServiceTest {
     }
 
     @Test
+    void exportChartHashUsesCanonicalAllowlistedProjection() {
+        ChartRevisionModel firstRevision = finalRevision();
+        firstRevision.setSnapshotManifestJson("{\"snapshotVersion\":1,\"source\":\"CHART_FINALIZE\","
+                + "\"patientSnapshotStatus\":\"IDENTIFIER_ONLY\","
+                + "\"patientName\":\"Do Not Export\"}");
+        ChartRevisionEventModel firstEvent = amendedEvent();
+        firstEvent.setReasonText("Authorization: Basic first-secret\n<?xml version=\"1.0\"?><xml>raw</xml>");
+        stubExportQueries(List.of(firstRevision), List.of(firstEvent));
+        String firstHash = service.exportChart(10L, "F001").getExportHash();
+
+        ChartRevisionModel secondRevision = finalRevision();
+        secondRevision.setSnapshotManifestJson("{\"patientName\":\"Different Excluded Name\","
+                + "\"patientSnapshotStatus\":\"IDENTIFIER_ONLY\","
+                + "\"source\":\"CHART_FINALIZE\","
+                + "\"rawOrcaBody\":\"<xml>raw</xml>\","
+                + "\"snapshotVersion\":1}");
+        ChartRevisionEventModel secondEvent = amendedEvent();
+        secondEvent.setReasonText("Authorization: Basic second-secret\n<?xml version=\"1.0\"?><xml>different</xml>");
+        stubExportQueries(List.of(secondRevision), List.of(secondEvent));
+        String secondHash = service.exportChart(10L, "F001").getExportHash();
+
+        assertThat(firstHash).matches("[0-9a-f]{64}");
+        assertThat(secondHash).isEqualTo(firstHash);
+    }
+
+    @Test
     void exportChartCsvIncludesHistoryAndNeutralizesSpreadsheetFormulaInjection() {
         ChartRevisionEventModel event = amendedEvent();
         event.setReasonText("=HYPERLINK(\"https://example.test\",\"Authorization: Basic secret\")");

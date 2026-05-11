@@ -165,6 +165,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] reporting PDF payload の `chartRevisionEvents` を summary section に投影し、訂正・追記・取消履歴の reason、actor、hash、before/after summary を allowlist/redaction 付きで表示できるようにした。処方指示履歴、ORCA連携履歴、診療時点 full snapshot は Worker C-D 統合後に継続する。
   - [x] chart revision JSON/CSV export は server-generated snapshot manifest summary を allowlist/redaction 付きで含める。処方指示履歴、ORCA連携履歴、full snapshot entity は Worker A/C/D 統合後に継続する。
   - [x] chart revision JSON export は allowlist/redaction 済み payload から `exportHash` を計算し、revision/event/snapshot summary の欠落・差し替え検出に使えるようにする。
+  - [x] chart revision JSON export の `exportHash` は allowlist 順の canonical projection を使い、allowlist 外 key、raw secret 差分、JSON key order で揺れないことを focused test で固定する。
 
 ## 8. 処方指示正本実装
 

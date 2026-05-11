@@ -28,7 +28,7 @@ Checklist count when parallel board was created:
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
-| B | `codex/orca-ehr-worker-b-chart-revision` | B-08 full snapshot integration after A/C/D contracts | Done | 20260511T012811Z | this commit | - |
+| B | `codex/orca-ehr-worker-b-chart-revision` | B-08 full snapshot integration after A/C/D contracts | Done | 20260511T014810Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-02 common patient header staged rollout | Done | 20260510T204142Z | this commit | - |
@@ -60,6 +60,7 @@ Checklist count when parallel board was created:
 | B-08 | 7, 14 | Replace snapshot manifest pending statuses with full A/C/D snapshot references when contracts are integrated. | Finalized chart export links patient/acceptance/insurance/disease/prescription/ORCA operation snapshots without raw ORCA bodies or credentials. | Cross-worker focused Maven/reporting tests |
 | B-08a | 7, 14 | Add append-only DB guard for chart revision events while waiting on full snapshot contracts. | Revision event reasons, summaries, actor, and event hash cannot be updated or deleted after insert. | Focused schema tests |
 | B-08b | 14 | Add JSON export payload hash while waiting on full snapshot contracts. | JSON export returns a server-side SHA-256 over sanitized revision/event/snapshot payload. | Focused export tests |
+| B-08c | 14 | Canonicalize JSON export hash material while waiting on full snapshot contracts. | Hash is stable across allowlist-excluded keys, raw secret redaction differences, and JSON key order. | Focused export tests |
 
 ### Worker C Queue
 
@@ -112,6 +113,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T014810Z | B | B-08c | 14 canonical chart revision export hash projection | this commit | `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest` passed | Done | B-08 full snapshot integration after A/C/D contracts |
 | 20260511T012811Z | B | B-08b | 14 chart revision JSON export payload hash | this commit | `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest` passed | Done | B-08 full snapshot integration after A/C/D contracts |
 | 20260511T010815Z | B | B-08a | 7 chart revision event append-only guard | this commit | `ChartRevisionFinalizedWriteGuardSchemaTest`, `FreshSchemaBaselineTest` passed | Done | B-08 full snapshot integration after A/C/D contracts |
 | 20260511T004810Z | B | B-07a | 7/14 chart finalize snapshot manifest skeleton; export allowlist | this commit | `ChartRevisionFinalizeServiceTest`, `ChartRevisionExportServiceTest`, `FreshSchemaBaselineTest` passed | Done | B-08 full snapshot integration after A/C/D contracts |

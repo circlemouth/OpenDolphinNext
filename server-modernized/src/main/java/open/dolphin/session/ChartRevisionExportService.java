@@ -17,7 +17,6 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.StringJoiner;
 import java.util.regex.Pattern;
 import open.dolphin.infomodel.ChartDocumentModel;
@@ -35,7 +34,7 @@ public class ChartRevisionExportService {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
     private static final String EXPORT_DENIED = "chart_revision_export_denied";
     private static final String NOT_FOUND = "chart_revision_export_not_found";
-    private static final Set<String> SUMMARY_ALLOWLIST = Set.of(
+    private static final List<String> SUMMARY_ALLOWLIST = List.of(
             "status",
             "contentHash",
             "eventType",
@@ -55,7 +54,7 @@ public class ChartRevisionExportService {
             "hasSnapshotManifest",
             "hasOrcaAcceptanceId",
             "hasNoAcceptanceReason");
-    private static final Set<String> SNAPSHOT_MANIFEST_ALLOWLIST = Set.of(
+    private static final List<String> SNAPSHOT_MANIFEST_ALLOWLIST = List.of(
             "snapshotVersion",
             "source",
             "orcaPatientId",
@@ -222,7 +221,7 @@ public class ChartRevisionExportService {
         return sanitizeObject(snapshotManifestJson, SNAPSHOT_MANIFEST_ALLOWLIST);
     }
 
-    private Map<String, Object> sanitizeObject(String json, Set<String> allowlist) {
+    private Map<String, Object> sanitizeObject(String json, List<String> allowlist) {
         if (json == null || json.isBlank()) {
             return Map.of();
         }
@@ -232,14 +231,15 @@ public class ChartRevisionExportService {
                 return Map.of();
             }
             Map<String, Object> sanitized = new LinkedHashMap<>();
-            root.fields().forEachRemaining(entry -> {
-                if (allowlist.contains(entry.getKey())) {
-                    Object value = scalarValue(entry.getValue());
+            for (String key : allowlist) {
+                JsonNode node = root.get(key);
+                if (node != null) {
+                    Object value = scalarValue(node);
                     if (value != null) {
-                        sanitized.put(entry.getKey(), value);
+                        sanitized.put(key, value);
                     }
                 }
-            });
+            }
             return sanitized;
         } catch (JsonProcessingException ex) {
             return Map.of("summaryParseError", true);
