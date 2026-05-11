@@ -89,6 +89,7 @@
 - `OrderRecommendationModal` のカテゴリ scope は default entity がない場合 native disabled を維持し、近傍 `order-recommend-category-scope-reason` と `aria-describedby` で理由と横断 scope の代替を示します。
 - `OrderBundleEditPanel` embedded footer の `保存して閉じる` / `保存して続ける` / `保存して追加・更新` は read-only、missing master、fallback data だけでは native disabled にせず、`aria-disabled=true`、`data-disabled-reason=order_detail_submit_blocked`、近傍 edit block reason で理由を示し、押下時に `保存操作を停止: ...` notice と blocked audit を出して mutation へ進みません。保存中・禁忌チェック中など二重実行防止は native disabled を維持します。
 - `DoCopyDialog` の `適用` は転記元なし / Do対象未選択では native disabled を維持し、近傍 `charts-do-copy-apply-block-reason` と `aria-describedby` で理由を示します。
+- `PastHubPanel` の SOAP Do転記入口は転記可能 SOAP なし / セクション記載なしでは native disabled を維持し、近傍 `past-hub-do-copy-*` reason と `aria-describedby` で理由を示します。
 - `SoapNotePanel` の利用者向け見出しは `カルテ本文` とし、内部向けの `Primary Workspace` や折りたたみの記載メタ情報は通常表示に置きません。
 - page CTA の owner は `ChartsActionBar` です。通常 UI の primary は `診察終了して会計へ送信` で、`ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。低レベル `ORCA送信` direct bridge は debug / QA / focused test 用に限定し、通常画面の初回会計送信導線には出しません。
 - `PastHubPanel` は左列の historical reference / Do 補助 surface であり、comparison 専用主面ではありません。
@@ -128,6 +129,7 @@
   - `OrderRecommendationModal` category scope はカテゴリ未選択時に `order-recommend-category-scope-reason` で近傍理由と横断代替を表示すること
   - `OrderBundleEditPanel` embedded footer submit は read-only、missing master、fallback data で押下時理由を表示し、mutation へ進まないこと
   - `DoCopyDialog` apply は転記元なし / Do対象未選択で `charts-do-copy-apply-block-reason` による近傍理由を表示すること
+  - `PastHubPanel` SOAP Do転記入口は転記可能SOAPなし / セクション記載なしで近傍理由を表示すること
   - right rail は chooser-only を維持し、`document` / `ORCA` tool や embedded editor を再混入させない
   - canonical encounter context 不足時は `診察終了して会計へ送信` を fail-close
   - canonical encounter context 不足時は report print / incomeinfv2 取得も fail-close
