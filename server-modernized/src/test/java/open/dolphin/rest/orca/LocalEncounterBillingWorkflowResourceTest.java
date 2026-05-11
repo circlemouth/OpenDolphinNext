@@ -129,6 +129,58 @@ class LocalEncounterBillingWorkflowResourceTest {
         assertRestError(ex, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request");
     }
 
+    @Test
+    void closeAndSendRejectsAccountingWaitEncounterBeforePatientOrTransportLookup() throws Exception {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        EncounterProjectionRepository encounterRepository = mock(EncounterProjectionRepository.class);
+        when(encounterRepository.findByEncounterKey("F001:E100")).thenReturn(new EncounterProjectionRepository.EncounterRow(
+                "F001:E100",
+                "F001",
+                "000001",
+                100L,
+                "F001:S100",
+                "A-100",
+                Instant.parse("2026-04-27T00:30:00Z"),
+                "accounting-wait",
+                Instant.parse("2026-04-27T00:35:00Z"),
+                Instant.parse("2026-04-27T00:45:00Z"),
+                null,
+                "doctor01",
+                null,
+                """
+                {
+                  "rawSensitiveFieldsExcluded": true,
+                  "clientProvidedIdentifiersTrusted": false,
+                  "serverDerivedAuthorityRequired": true,
+                  "officialVisitIdentifiers": {
+                    "departmentCode": "01",
+                    "physicianCode": "10001",
+                    "insuranceCombinationNumber": "0001",
+                    "voucherNumber": "A-100",
+                    "sequentialNumber": "1"
+                  }
+                }
+                """,
+                null,
+                1L,
+                Instant.parse("2026-04-27T00:45:01Z")));
+        AuthoritativeAuditRepository auditRepository = mock(AuthoritativeAuditRepository.class);
+        when(auditRepository.isWritePathAvailable()).thenReturn(true);
+        BillingOrcaWorkflowRepository workflowRepository = mock(BillingOrcaWorkflowRepository.class);
+        when(workflowRepository.findTransmission("F001", "F001:E100", "idem-accounting-wait")).thenReturn(null);
+        setField(resource, "encounterProjectionRepository", encounterRepository);
+        setField(resource, "authoritativeAuditRepository", auditRepository);
+        setField(resource, "workflowRepository", workflowRepository);
+
+        CloseAndSendToBillingRequest payload = new CloseAndSendToBillingRequest();
+        payload.setIdempotencyKey("idem-accounting-wait");
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.closeAndSendToBilling(createRequest(), "F001:E100", payload));
+
+        assertRestError(ex, Response.Status.CONFLICT.getStatusCode(), "encounter_billing_send_blocked");
+    }
+
     private static HttpServletRequest createRequest() {
         Map<String, Object> attributes = new HashMap<>();
         return (HttpServletRequest) Proxy.newProxyInstance(

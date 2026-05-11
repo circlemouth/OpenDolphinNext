@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.encounter.EncounterProjectionRepository;
@@ -210,10 +211,30 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         if (row == null || !facilityId.equals(normalize(row.facilityId()))) {
             throw restError(request, Response.Status.NOT_FOUND, "encounter_not_found", "Encounter was not found");
         }
-        if ("cancelled".equalsIgnoreCase(normalize(row.businessState()))) {
+        BillingOrcaWorkflowRepository.TransmissionRecord existing =
+                workflowRepository != null ? workflowRepository.findTransmission(facilityId, row.encounterKey(), idempotencyKey) : null;
+        boolean cancelled = "cancelled".equalsIgnoreCase(normalize(row.businessState()));
+        boolean blockedState = isNormalBillingSendBlockedState(row.businessState());
+        boolean missingAcceptance = normalize(row.orcaAcceptanceId()) == null || row.acceptanceDatetime() == null;
+        if (existing != null && (cancelled || blockedState || missingAcceptance)) {
+            BillingOrcaWorkflowRepository.SnapshotRecord existingSnapshot = new BillingOrcaWorkflowRepository.SnapshotRecord(
+                    existing.snapshotId(),
+                    facilityId,
+                    row.encounterKey(),
+                    row.patientId(),
+                    row.scheduleKey(),
+                    Math.max(1L, row.stateVersion()),
+                    existing.state());
+            return responseFromTransmission(existing, row, existingSnapshot, runId, traceId, 0, 0);
+        }
+        if (cancelled) {
             throw restError(request, Response.Status.CONFLICT, "encounter_cancelled", "Encounter is cancelled");
         }
-        if (normalize(row.orcaAcceptanceId()) == null || row.acceptanceDatetime() == null) {
+        if (blockedState) {
+            throw restError(request, Response.Status.CONFLICT, "encounter_billing_send_blocked",
+                    "Encounter is already closed for billing");
+        }
+        if (missingAcceptance) {
             throw restError(request, Response.Status.CONFLICT, "orca_acceptance_missing",
                     "ORCA acceptance is required before billing send");
         }
@@ -243,12 +264,9 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
                 Math.max(1L, row.stateVersion()),
                 "READY_TO_SEND",
                 snapshotJson);
-        BillingOrcaWorkflowRepository.TransmissionRecord existing =
-                workflowRepository.findTransmission(facilityId, row.encounterKey(), idempotencyKey);
         if (existing != null) {
             return responseFromTransmission(existing, row, snapshot, runId, traceId, bundles.size(), medicalInformation.size());
         }
-
         BillingOrcaWorkflowRepository.TransmissionRecord transmission = workflowRepository.insertTransmission(
                 snapshot.snapshotId(),
                 facilityId,
@@ -596,6 +614,19 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         response.setReconciliationStatus("RECONCILE_PENDING");
         response.setMessage("ORCA中途終了データの再照合が必要です");
         return response;
+    }
+
+    private boolean isNormalBillingSendBlockedState(String businessState) {
+        String normalized = normalize(businessState);
+        if (normalized == null) {
+            return false;
+        }
+        return switch (normalized.toLowerCase(Locale.ROOT)) {
+            case "accounting-wait", "billing-waiting", "billed", "closed",
+                    "chart-finalized", "orca-sent", "orca-medical-registered",
+                    "orca_medical_registered" -> true;
+            default -> false;
+        };
     }
 
     String buildTemporaryMedicalGetPayload(BillingOrcaWorkflowRepository.TransmissionReviewRecord record) {
