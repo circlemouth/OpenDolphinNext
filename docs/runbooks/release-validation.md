@@ -40,13 +40,14 @@ bash server-modernized/tools/ci/check-finalized-write-guards.sh --root "$(git re
 2. server contract / inventory / exposure tests を current taxonomy で実行する。
 ```bash
 mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=PublicRouteInventoryContractTest,WebXmlEndpointExposureTest,AdminOrcaUserResourceTest,AdminOrcaUserLinkResourceTest,OrcaAppointmentResourceTest,OrcaChartSupportResourceTest,OrcaChartSupportSupportTest,OrcaLiveGatewaySupportTest \
+  -Dtest=PublicRouteInventoryContractTest,WebXmlEndpointExposureTest,AdminOrcaUserResourceTest,AdminOrcaUserLinkResourceTest,OrcaAppointmentResourceTest,OrcaChartSupportResourceTest,OrcaChartSupportSupportTest,OrcaLiveGatewaySupportTest,OrcaReportDocumentResourceTest,OrcaBillingCacheStoreTest,OperationsHealthResourceTest \
   test
 ```
 期待結果:
 - `PublicRouteInventoryContractTest` が `official=/api/orca/official/*`、`master=/api/orca/master/*`、`local=/api/local/*`、`admin-internal=/api/admin/internal/*` の inventory を固定できる。
 - `WebXmlEndpointExposureTest` が `/api/*` 以外の public exposure を拒否し、`/api/orca/*` 直下を official/master のみに制限できる。
 - `patientlst3v2` / `visitptlstv2` / `manageusersv2` / `contraindicationcheckv2` / `medicationgetv2` / `incomeinfv2` の XML 契約が current shape に一致する。
+- `OrcaReportDocumentResourceTest` と `OrcaBillingCacheStoreTest` が ORCA帳票 snapshot / binary staging / server-generated storage key/digest / fail-closed persistence を固定し、`OperationsHealthResourceTest` が `orcaBillingCache` readiness を sanitized schema availability として固定できる。
 
 3. patients official/local 境界の focused regression を実行する。
 ```bash

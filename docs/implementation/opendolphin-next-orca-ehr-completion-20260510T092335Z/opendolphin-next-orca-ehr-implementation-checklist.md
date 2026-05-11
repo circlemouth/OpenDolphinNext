@@ -200,6 +200,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T00:02Z: `OrcaReportBinaryStorageService` は DB snapshot の server-generated key/digest と content SHA-256 が一致する場合だけ object storage へ put し、digest mismatch / snapshot mismatch / disabled storage は upload 前に fail closed する。
   - [x] 2026-05-11T00:22Z: `OrcaReportDocumentResourceTest` は public report resource が `orca_report_snapshot` command を作成し、snapshot 保存失敗時に帳票取得成功へ進めず HTTP 503 で fail closed することを固定した。
   - [x] 2026-05-11T00:42Z: `/api/orca/official/reports/{type}` は snapshot receipt から server-internal binary upload command を作り、storage 有効時だけ object storage へ staging する。client 由来の storage key/digest/retention は受け取らず、response は `storageUploadStatus` / `reportBinaryAvailable` のみを返し、upload 失敗時は HTTP 503 で fail closed する。
+  - [x] 2026-05-11T01:02Z: release-validation の server contract gate は `OrcaReportDocumentResourceTest` / `OrcaBillingCacheStoreTest` / `OperationsHealthResourceTest` を含み、billing/report/readiness coverage を `ReleaseValidationRunbookContractTest` で固定した。
 - [x] レセプト情報を OpenDolphinNext 正本として持たず、ORCA由来キャッシュまたは帳票スナップショットとして扱う。
   - [x] 2026-05-10T22:30Z: `orca_report_snapshot` は `source_system=ORCA` と固定 report type/status を持つ snapshot 境界であり、restore/recovery docs でも local snapshot を正本昇格しないことを明記した。
 
