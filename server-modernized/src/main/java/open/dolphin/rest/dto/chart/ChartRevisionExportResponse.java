@@ -7,6 +7,7 @@ public class ChartRevisionExportResponse {
 
     private Long chartId;
     private Long currentRevisionId;
+    private String exportHash;
     private List<ChartRevisionExportRevision> revisions = new ArrayList<>();
     private List<ChartRevisionExportEvent> events = new ArrayList<>();
 
@@ -24,6 +25,14 @@ public class ChartRevisionExportResponse {
 
     public void setCurrentRevisionId(Long currentRevisionId) {
         this.currentRevisionId = currentRevisionId;
+    }
+
+    public String getExportHash() {
+        return exportHash;
+    }
+
+    public void setExportHash(String exportHash) {
+        this.exportHash = exportHash;
     }
 
     public List<ChartRevisionExportRevision> getRevisions() {

@@ -9,7 +9,11 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,6 +110,7 @@ public class ChartRevisionExportService {
         response.setCurrentRevisionId(document.getCurrentRevisionId());
         response.setRevisions(revisions.stream().map(this::toRevision).toList());
         response.setEvents(events.stream().map(this::toEvent).toList());
+        response.setExportHash(sha256(writeJson(exportHashMaterial(response))));
         return response;
     }
 
@@ -344,6 +349,71 @@ public class ChartRevisionExportService {
             return "'" + value;
         }
         return value;
+    }
+
+    private Map<String, Object> exportHashMaterial(ChartRevisionExportResponse response) {
+        Map<String, Object> material = new LinkedHashMap<>();
+        material.put("chartId", response.getChartId());
+        material.put("currentRevisionId", response.getCurrentRevisionId());
+        material.put("revisions", response.getRevisions().stream().map(this::revisionHashMaterial).toList());
+        material.put("events", response.getEvents().stream().map(this::eventHashMaterial).toList());
+        return material;
+    }
+
+    private Map<String, Object> revisionHashMaterial(ChartRevisionExportRevision revision) {
+        Map<String, Object> material = new LinkedHashMap<>();
+        material.put("revisionId", revision.getRevisionId());
+        material.put("revisionNumber", revision.getRevisionNumber());
+        material.put("status", revision.getStatus());
+        material.put("sourceDocumentId", revision.getSourceDocumentId());
+        material.put("title", revision.getTitle());
+        material.put("contentHash", revision.getContentHash());
+        material.put("encounterId", revision.getEncounterId());
+        material.put("encounterDate", revision.getEncounterDate());
+        material.put("departmentCode", revision.getDepartmentCode());
+        material.put("physicianCode", revision.getPhysicianCode());
+        material.put("insuranceCombinationNumber", revision.getInsuranceCombinationNumber());
+        material.put("snapshotManifest", revision.getSnapshotManifest());
+        material.put("enteredByUserId", revision.getEnteredByUserId());
+        material.put("entryMode", revision.getEntryMode());
+        material.put("delegatedByUserId", revision.getDelegatedByUserId());
+        material.put("finalizedByUserId", revision.getFinalizedByUserId());
+        material.put("finalizedAt", revision.getFinalizedAt());
+        return material;
+    }
+
+    private Map<String, Object> eventHashMaterial(ChartRevisionExportEvent event) {
+        Map<String, Object> material = new LinkedHashMap<>();
+        material.put("eventId", event.getEventId());
+        material.put("chartRevisionId", event.getChartRevisionId());
+        material.put("previousRevisionId", event.getPreviousRevisionId());
+        material.put("newRevisionId", event.getNewRevisionId());
+        material.put("eventType", event.getEventType());
+        material.put("actorUserId", event.getActorUserId());
+        material.put("occurredAt", event.getOccurredAt());
+        material.put("reasonCode", event.getReasonCode());
+        material.put("reasonText", event.getReasonText());
+        material.put("beforeSummary", event.getBeforeSummary());
+        material.put("afterSummary", event.getAfterSummary());
+        material.put("eventHash", event.getEventHash());
+        return material;
+    }
+
+    private String writeJson(Object value) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(value);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("failed to write chart revision export hash material", ex);
+        }
+    }
+
+    private String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 is unavailable", ex);
+        }
     }
 
     private WebApplicationException restError(Response.Status status, String code, String message,

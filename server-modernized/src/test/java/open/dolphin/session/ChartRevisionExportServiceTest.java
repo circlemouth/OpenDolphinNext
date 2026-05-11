@@ -43,6 +43,7 @@ class ChartRevisionExportServiceTest {
 
         assertThat(response.getChartId()).isEqualTo(10L);
         assertThat(response.getCurrentRevisionId()).isEqualTo(21L);
+        assertThat(response.getExportHash()).matches("[0-9a-f]{64}");
         assertThat(response.getRevisions()).hasSize(2);
         assertThat(response.getRevisions().get(1).getStatus()).isEqualTo("AMENDED");
         assertThat(response.getRevisions().get(0).getSnapshotManifest())
@@ -62,6 +63,22 @@ class ChartRevisionExportServiceTest {
         assertThat(response.getEvents().get(1).getReasonText()).doesNotContain("Basic secret");
         assertThat(response.getEvents().get(1).getReasonText()).doesNotContain("<xml>");
         assertThat(response.getEvents().get(1).getBeforeSummary()).doesNotContainKey("csrfToken");
+    }
+
+    @Test
+    void exportChartHashChangesWhenSanitizedEventPayloadChanges() {
+        ChartRevisionEventModel firstEvent = amendedEvent();
+        stubExportQueries(List.of(finalRevision()), List.of(firstEvent));
+        String firstHash = service.exportChart(10L, "F001").getExportHash();
+
+        ChartRevisionEventModel secondEvent = amendedEvent();
+        secondEvent.setReasonText("Clinically different reason");
+        stubExportQueries(List.of(finalRevision()), List.of(secondEvent));
+        String secondHash = service.exportChart(10L, "F001").getExportHash();
+
+        assertThat(firstHash).matches("[0-9a-f]{64}");
+        assertThat(secondHash).matches("[0-9a-f]{64}");
+        assertThat(secondHash).isNotEqualTo(firstHash);
     }
 
     @Test
