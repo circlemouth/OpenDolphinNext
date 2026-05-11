@@ -1802,14 +1802,17 @@ export function OrderDockPanel(props: {
                 <button
                   type="button"
                   className="order-dock__rx-action"
-                  onClick={(event) =>
+                  onClick={(event) => {
+                    if (showEditBlockedNotice('処方履歴取り込み')) return;
                     openEditor('medOrder', { requestId: buildRequestId(), kind: 'new' }, {
                       source: 'bottom-floating',
                       reason: 'rx_new',
                       triggerEl: event.currentTarget,
-                    })
-                  }
-                  disabled={!canEdit}
+                    });
+                  }}
+                  aria-disabled={!canEdit}
+                  aria-describedby={!canEdit ? 'order-dock-edit-block-reason' : undefined}
+                  data-disabled-reason={!canEdit ? 'order_edit_blocked' : undefined}
                   title={!canEdit ? editDisabledReason : undefined}
                 >
                   新規（空）
@@ -1818,6 +1821,7 @@ export function OrderDockPanel(props: {
                   type="button"
                   className="order-dock__rx-action"
                   onClick={(event) => {
+                    if (showEditBlockedNotice('直近処方コピー')) return;
                     if (!latestPrescriptionBundle) return;
                     openEditor('medOrder', { requestId: buildRequestId(), kind: 'copy', bundle: latestPrescriptionBundle }, {
                       source: 'bottom-floating',
@@ -1825,7 +1829,10 @@ export function OrderDockPanel(props: {
                       triggerEl: event.currentTarget,
                     });
                   }}
-                  disabled={!canEdit || !latestPrescriptionBundle}
+                  aria-disabled={!canEdit}
+                  aria-describedby={!canEdit ? 'order-dock-edit-block-reason' : undefined}
+                  data-disabled-reason={!canEdit ? 'order_edit_blocked' : undefined}
+                  disabled={!latestPrescriptionBundle}
                   title={
                     !latestPrescriptionBundle
                       ? '直近処方がないためコピーできません。'
