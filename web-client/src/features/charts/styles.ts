@@ -5722,6 +5722,37 @@ export const chartsStyles = css`
     font-weight: 700;
   }
 
+  .orca-medical-candidate__rows {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: var(--charts-space-xs);
+  }
+
+  .orca-medical-candidate__rows > li {
+    min-width: 0;
+  }
+
+  .orca-medical-candidate__row-main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--charts-space-2xs) var(--charts-space-sm);
+    color: #0f172a;
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  .orca-medical-candidate__medications {
+    margin: var(--charts-space-2xs) 0 0;
+    padding-left: 1rem;
+    color: #334155;
+    display: grid;
+    gap: 0.1rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+
   .charts-actions__guard {
     margin: 0;
     color: #b45309;

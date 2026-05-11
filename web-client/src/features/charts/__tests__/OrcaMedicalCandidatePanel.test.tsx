@@ -31,9 +31,12 @@ describe('OrcaMedicalCandidatePanel', () => {
       medicalInformation: [
         {
           entity: 'medOrder',
+          rpSequence: 1,
           medicalClass: '211',
           medicalClassName: '内服',
-          medications: [{ code: '620000001', name: '候補薬剤', number: '1' }],
+          usageCode: '001000',
+          usageName: '朝食後',
+          medications: [{ itemSequence: 1, code: '620000001', name: '候補薬剤', number: '1' }],
         },
       ],
       issues: [{ code: 'usage_code_unresolved', message: 'usage code is required', rpSequence: 1 }],
@@ -68,6 +71,10 @@ describe('OrcaMedicalCandidatePanel', () => {
     expect(screen.getByText('NEEDS_REVIEW / 要確認')).toBeInTheDocument();
     expect(screen.getByText('10')).toBeInTheDocument();
     expect(screen.getAllByText('1件')).toHaveLength(2);
+    expect(screen.getByRole('list', { name: '診療行為候補行' })).toHaveTextContent('RP1');
+    expect(screen.getByText('診療区分: 211 / 内服')).toBeInTheDocument();
+    expect(screen.getByText('用法: 001000 / 朝食後')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'RP1 薬剤行' })).toHaveTextContent('薬剤1: 620000001 / 候補薬剤 / 1');
     expect(screen.getByText(/usage_code_unresolved/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /送信/ })).not.toBeInTheDocument();
   });

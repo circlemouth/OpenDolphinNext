@@ -156,6 +156,33 @@ export function OrcaMedicalCandidatePanel({
               <dd>{totalMedications}件</dd>
             </div>
           </dl>
+          {candidate.medicalInformation.length > 0 ? (
+            <ol className="orca-medical-candidate__rows" aria-label="診療行為候補行">
+              {candidate.medicalInformation.map((item, index) => {
+                const rpLabel = `RP${display(item.rpSequence ?? index + 1)}`;
+                const classLabel = [item.medicalClass, item.medicalClassName].map(display).filter((value) => value !== '—').join(' / ') || '—';
+                const usageLabel = [item.usageCode, item.usageName].map(display).filter((value) => value !== '—').join(' / ') || '—';
+                return (
+                  <li key={`${rpLabel}-${item.medicalClass ?? 'class'}-${index}`}>
+                    <div className="orca-medical-candidate__row-main">
+                      <strong>{rpLabel}</strong>
+                      <span>診療区分: {classLabel}</span>
+                      <span>用法: {usageLabel}</span>
+                    </div>
+                    {item.medications && item.medications.length > 0 ? (
+                      <ul className="orca-medical-candidate__medications" aria-label={`${rpLabel} 薬剤行`}>
+                        {item.medications.map((medication, medicationIndex) => (
+                          <li key={`${medication.itemSequence ?? medicationIndex + 1}-${medication.code ?? 'code'}-${medicationIndex}`}>
+                            薬剤{display(medication.itemSequence ?? medicationIndex + 1)}: {display(medication.code)} / {display(medication.name)} / {display(medication.number)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ol>
+          ) : null}
           {candidate.issues.length > 0 ? (
             <ul className="orca-medical-candidate__issues" aria-label="要確認項目">
               {candidate.issues.map((issue, index) => (

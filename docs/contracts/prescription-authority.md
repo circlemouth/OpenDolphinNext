@@ -49,7 +49,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - candidate `medicalInformation` は処方正本 revision から `rpSequence` / `medicalClass` / `medicalClassNumber` / `usageCode` / `usageName` / 薬剤行を再構成し、薬剤行には `itemSequence` を付ける。live `medicalmodv2` 送信側はこの candidate を送信前確認材料として扱い、patient / encounter / voucher / sequential / insurance combination は server-side encounter context から別途解決する。
 - 薬剤コード、用法コード、medical class、薬剤行が未解決の場合は `NEEDS_REVIEW` / `sendable=false` とし、live `medicalmodv2` 送信へ進めない。
 - candidate と audit details に raw ORCA body、credential、患者氏名・住所・電話番号、保険詳細、voucher / sequential の client 提供値を保存しない。
-- Web client の候補確認 surface は patient / acceptance / department / physician / insurance combination を確認表示にだけ使う。candidate prepare request は `chartRevisionId` だけを route path として送り、facility / patient / insurance / voucher / sequential / URL / digest を body や query として送らない。
+- Web client の候補確認 surface は patient / acceptance / department / physician / insurance combination を確認表示にだけ使い、candidate response の RP / 診療区分 / 用法 / 薬剤行を送信前確認材料として表示する。candidate prepare request は `chartRevisionId` だけを route path として送り、facility / patient / insurance / voucher / sequential / URL / digest を body や query として送らない。
 - 候補確認 surface は candidate を ORCA 正本または送信完了として表示しない。live `medicalmodv2` 送信、送信後再取得、差分照合は別 workflow の責務とする。
 
 ## Misuse Cases Covered
