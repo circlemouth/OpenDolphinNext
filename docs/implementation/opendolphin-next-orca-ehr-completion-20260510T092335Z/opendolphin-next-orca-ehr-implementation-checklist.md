@@ -268,6 +268,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T03:22Z: `PatientSummaryPanel` の保存ボタンは read-only / 保存中 / 変更なしで native disabled を維持しつつ、近傍理由 `charts-patient-summary-save-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
   - [x] 2026-05-11T03:43Z: `SoapNotePanel` の保存ボタンは read-only / 履歴表示 / 保存中で native disabled を維持しつつ、近傍理由 `soap-note-save-block-reason` と `aria-describedby` で不足条件を表示することを focused test で固定した。
 - [ ] ボタン優先度、配置、44px以上の押下領域を DADS に沿って統一する。
+  - [x] 2026-05-11T13:09Z: 共通 `CriticalOperationConfirmDialog` の cancel / confirm button を secondary / primary class contract に分け、DADS の 44px 以上の touch target を CSS と focused test で固定した。これは誤操作低減の UI 補助であり、操作権限・永続化・監査 enforcement は server-side / owning workflow に残す。
 
 ## 12. 監査ログ・真正性
 

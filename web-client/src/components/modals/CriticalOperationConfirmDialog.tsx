@@ -92,10 +92,22 @@ export function CriticalOperationConfirmDialog({
           </dl>
         </section>
         <div className="critical-operation-confirm__actions" role="group" aria-label={`${operationLabel}操作`}>
-          <button type="button" onClick={onCancel} disabled={cancelDisabled}>
+          <button
+            type="button"
+            className="critical-operation-confirm__button critical-operation-confirm__button--secondary"
+            onClick={onCancel}
+            disabled={cancelDisabled}
+            aria-disabled={cancelDisabled || undefined}
+          >
             {cancelLabel}
           </button>
-          <button type="button" className="critical-operation-confirm__primary" onClick={onConfirm} disabled={confirmDisabled}>
+          <button
+            type="button"
+            className="critical-operation-confirm__button critical-operation-confirm__button--primary"
+            onClick={onConfirm}
+            disabled={confirmDisabled}
+            aria-disabled={confirmDisabled || undefined}
+          >
             {confirmLabel}
           </button>
         </div>
