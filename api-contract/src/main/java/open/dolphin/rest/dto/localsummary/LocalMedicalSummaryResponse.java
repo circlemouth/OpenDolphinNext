@@ -82,6 +82,7 @@ public class LocalMedicalSummaryResponse {
 
     public static class Payload {
         private List<MedicalSummaryItem> outpatientList = new ArrayList<>();
+        private OrcaContext orcaContext;
 
         public List<MedicalSummaryItem> getOutpatientList() {
             return outpatientList;
@@ -89,6 +90,14 @@ public class LocalMedicalSummaryResponse {
 
         public void setOutpatientList(List<MedicalSummaryItem> outpatientList) {
             this.outpatientList = outpatientList != null ? outpatientList : new ArrayList<>();
+        }
+
+        public OrcaContext getOrcaContext() {
+            return orcaContext;
+        }
+
+        public void setOrcaContext(OrcaContext orcaContext) {
+            this.orcaContext = orcaContext;
         }
     }
 
@@ -185,6 +194,207 @@ public class LocalMedicalSummaryResponse {
 
         public void setWholeName(String wholeName) {
             this.wholeName = wholeName;
+        }
+    }
+
+    public static class OrcaContext {
+        private String encounterKey;
+        private String orcaAcceptanceId;
+        private String acceptanceDate;
+        private String acceptanceTime;
+        private String departmentCode;
+        private String physicianCode;
+        private String insuranceCombinationNumber;
+        private String linkStatus;
+        private String warningStatus;
+        private List<String> changedFields = new ArrayList<>();
+        private String cacheFetchedAt;
+        private String cacheExpiresAt;
+        private String patientCacheStatus;
+        private String patientBusinessStatus;
+        private String patientWarningStatus;
+        private String patientCacheFetchedAt;
+        private String patientCacheExpiresAt;
+        private String insuranceCacheStatus;
+        private String insuranceWarningStatus;
+        private List<String> insuranceChangedFields = new ArrayList<>();
+        private String insuranceCacheFetchedAt;
+        private String insuranceCacheExpiresAt;
+
+        public String getEncounterKey() {
+            return encounterKey;
+        }
+
+        public void setEncounterKey(String encounterKey) {
+            this.encounterKey = encounterKey;
+        }
+
+        public String getOrcaAcceptanceId() {
+            return orcaAcceptanceId;
+        }
+
+        public void setOrcaAcceptanceId(String orcaAcceptanceId) {
+            this.orcaAcceptanceId = orcaAcceptanceId;
+        }
+
+        public String getAcceptanceDate() {
+            return acceptanceDate;
+        }
+
+        public void setAcceptanceDate(String acceptanceDate) {
+            this.acceptanceDate = acceptanceDate;
+        }
+
+        public String getAcceptanceTime() {
+            return acceptanceTime;
+        }
+
+        public void setAcceptanceTime(String acceptanceTime) {
+            this.acceptanceTime = acceptanceTime;
+        }
+
+        public String getDepartmentCode() {
+            return departmentCode;
+        }
+
+        public void setDepartmentCode(String departmentCode) {
+            this.departmentCode = departmentCode;
+        }
+
+        public String getPhysicianCode() {
+            return physicianCode;
+        }
+
+        public void setPhysicianCode(String physicianCode) {
+            this.physicianCode = physicianCode;
+        }
+
+        public String getInsuranceCombinationNumber() {
+            return insuranceCombinationNumber;
+        }
+
+        public void setInsuranceCombinationNumber(String insuranceCombinationNumber) {
+            this.insuranceCombinationNumber = insuranceCombinationNumber;
+        }
+
+        public String getLinkStatus() {
+            return linkStatus;
+        }
+
+        public void setLinkStatus(String linkStatus) {
+            this.linkStatus = linkStatus;
+        }
+
+        public String getWarningStatus() {
+            return warningStatus;
+        }
+
+        public void setWarningStatus(String warningStatus) {
+            this.warningStatus = warningStatus;
+        }
+
+        public List<String> getChangedFields() {
+            return changedFields;
+        }
+
+        public void setChangedFields(List<String> changedFields) {
+            this.changedFields = changedFields != null ? changedFields : new ArrayList<>();
+        }
+
+        public String getCacheFetchedAt() {
+            return cacheFetchedAt;
+        }
+
+        public void setCacheFetchedAt(String cacheFetchedAt) {
+            this.cacheFetchedAt = cacheFetchedAt;
+        }
+
+        public String getCacheExpiresAt() {
+            return cacheExpiresAt;
+        }
+
+        public void setCacheExpiresAt(String cacheExpiresAt) {
+            this.cacheExpiresAt = cacheExpiresAt;
+        }
+
+        public String getPatientCacheStatus() {
+            return patientCacheStatus;
+        }
+
+        public void setPatientCacheStatus(String patientCacheStatus) {
+            this.patientCacheStatus = patientCacheStatus;
+        }
+
+        public String getPatientBusinessStatus() {
+            return patientBusinessStatus;
+        }
+
+        public void setPatientBusinessStatus(String patientBusinessStatus) {
+            this.patientBusinessStatus = patientBusinessStatus;
+        }
+
+        public String getPatientWarningStatus() {
+            return patientWarningStatus;
+        }
+
+        public void setPatientWarningStatus(String patientWarningStatus) {
+            this.patientWarningStatus = patientWarningStatus;
+        }
+
+        public String getPatientCacheFetchedAt() {
+            return patientCacheFetchedAt;
+        }
+
+        public void setPatientCacheFetchedAt(String patientCacheFetchedAt) {
+            this.patientCacheFetchedAt = patientCacheFetchedAt;
+        }
+
+        public String getPatientCacheExpiresAt() {
+            return patientCacheExpiresAt;
+        }
+
+        public void setPatientCacheExpiresAt(String patientCacheExpiresAt) {
+            this.patientCacheExpiresAt = patientCacheExpiresAt;
+        }
+
+        public String getInsuranceCacheStatus() {
+            return insuranceCacheStatus;
+        }
+
+        public void setInsuranceCacheStatus(String insuranceCacheStatus) {
+            this.insuranceCacheStatus = insuranceCacheStatus;
+        }
+
+        public String getInsuranceWarningStatus() {
+            return insuranceWarningStatus;
+        }
+
+        public void setInsuranceWarningStatus(String insuranceWarningStatus) {
+            this.insuranceWarningStatus = insuranceWarningStatus;
+        }
+
+        public List<String> getInsuranceChangedFields() {
+            return insuranceChangedFields;
+        }
+
+        public void setInsuranceChangedFields(List<String> insuranceChangedFields) {
+            this.insuranceChangedFields = insuranceChangedFields != null ? insuranceChangedFields : new ArrayList<>();
+        }
+
+        public String getInsuranceCacheFetchedAt() {
+            return insuranceCacheFetchedAt;
+        }
+
+        public void setInsuranceCacheFetchedAt(String insuranceCacheFetchedAt) {
+            this.insuranceCacheFetchedAt = insuranceCacheFetchedAt;
+        }
+
+        public String getInsuranceCacheExpiresAt() {
+            return insuranceCacheExpiresAt;
+        }
+
+        public void setInsuranceCacheExpiresAt(String insuranceCacheExpiresAt) {
+            this.insuranceCacheExpiresAt = insuranceCacheExpiresAt;
         }
     }
 

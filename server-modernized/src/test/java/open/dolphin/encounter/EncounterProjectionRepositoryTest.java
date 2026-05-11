@@ -134,7 +134,38 @@ class EncounterProjectionRepositoryTest {
                 assertThat(queryString(connection,
                         "select department_code from opendolphin.encounter_orca_acceptance_link where encounter_key = ?",
                         "F001:E100")).isEqualTo("01");
+                try (PreparedStatement statement = connection.prepareStatement("""
+                        UPDATE opendolphin.encounter_orca_acceptance_link
+                           SET link_status = 'DIFF_DETECTED',
+                               warning_status = 'ORCA_ACCEPTANCE_DIFF_DETECTED',
+                               changed_fields_json = '["departmentCode","physicianCode"]'::jsonb,
+                               patient_cache_status = 'NOT_FOUND',
+                               patient_business_status = 'ORCA_PATIENT_NOT_FOUND',
+                               patient_warning_status = 'ORCA_PATIENT_NOT_FOUND',
+                               patient_cache_fetched_at = '2026-03-25T09:10:00Z',
+                               patient_cache_expires_at = '2026-03-25T09:25:00Z',
+                               insurance_cache_status = 'DIFF_DETECTED',
+                               insurance_warning_status = 'ORCA_INSURANCE_DIFF_DETECTED',
+                               insurance_changed_fields_json = '["insuranceCombinationSummary"]'::jsonb,
+                               insurance_cache_fetched_at = '2026-03-25T09:11:00Z',
+                               insurance_cache_expires_at = '2026-03-25T09:26:00Z'
+                         WHERE encounter_key = ?
+                        """)) {
+                    statement.setString(1, "F001:E100");
+                    assertThat(statement.executeUpdate()).isEqualTo(1);
+                }
             }
+
+            EncounterProjectionRepository.EncounterOrcaContextRow orcaContext =
+                    encounterRepository.findOrcaContextByEncounterKey("F001:E100");
+            assertThat(orcaContext).isNotNull();
+            assertThat(orcaContext.warningStatus()).isEqualTo("ORCA_ACCEPTANCE_DIFF_DETECTED");
+            assertThat(orcaContext.changedFields()).containsExactly("departmentCode", "physicianCode");
+            assertThat(orcaContext.patientWarningStatus()).isEqualTo("ORCA_PATIENT_NOT_FOUND");
+            assertThat(orcaContext.patientCacheFetchedAt()).isEqualTo(Instant.parse("2026-03-25T09:10:00Z"));
+            assertThat(orcaContext.insuranceWarningStatus()).isEqualTo("ORCA_INSURANCE_DIFF_DETECTED");
+            assertThat(orcaContext.insuranceChangedFields()).containsExactly("insuranceCombinationSummary");
+            assertThat(orcaContext.insuranceCacheFetchedAt()).isEqualTo(Instant.parse("2026-03-25T09:11:00Z"));
         }
     }
 

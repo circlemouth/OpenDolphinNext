@@ -59,6 +59,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] 患者キャッシュ更新失敗時に古いキャッシュを現在の正本として表示しない。
 - [ ] UI上で古い患者キャッシュには「ORCA再取得未完了」「取得日時」を表示する。
   - [x] 2026-05-11T11:55Z: `encounter_orca_acceptance_link` に `patient_cache_status` / `patient_business_status` / `patient_warning_status` / freshness timestamp を追加し、患者 cache 更新時に ORCA患者不在・要確認・取得不能・stale を診療録 read model へ sanitized handoff する。画面表示は Worker E / 後続 UI で継続。
+  - [x] 2026-05-11T12:23Z: `/api/local/encounters/{encounterKey}/medical-summary` payload `orcaContext` へ患者 cache warning/freshness を sanitized field として公開し、同一 facility の `encounter_projection` / link row 以外から warning を合成しない contract を固定した。UI 表示は Worker E / 後続 UI で継続。
 
 ### 3.2 保険・公費・保険組合せローカル正本の撤去
 
@@ -68,6 +69,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] 保険変更後に過去の診療録スナップショットを上書きしない。
 - [ ] 保険変更後の ORCA送信では、送信前に保険組合せ差分を表示する。
   - [x] 2026-05-11T11:55Z: `encounter_orca_acceptance_link` に `insurance_cache_status` / `insurance_warning_status` / freshness timestamp / field-level `insurance_changed_fields_json` を追加し、保険 cache diff を raw 保険詳細なしで診療録 read model へ handoff する。押下時 UI 表示は Worker E / 後続 UI で継続。
+  - [x] 2026-05-11T12:23Z: `/api/local/encounters/{encounterKey}/medical-summary` payload `orcaContext` へ保険 warning/freshness と field-level changed fields を公開し、raw 保険詳細や保険番号を返さない server DTO / test を追加した。押下時 UI 表示は Worker E / 後続 UI で継続。
 
 ### 3.3 受付ローカル正本の撤去
 
@@ -147,6 +149,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-11T10:18Z: `encounter_orca_acceptance_link` を追加し、`encounter_projection` の server-derived 受付 ID / 診療科 / 担当医 / 保険組合せと `orca_acceptance_cache` の取消・差分・要確認 status を警告 read model として同期する。link 更新は `encounter_projection.business_state` を直接変更せず、client-provided identifier を authority にしない DB constraint を固定した。
 - [ ] ORCA受付取消、診療科・担当医・保険組合せ変更を検知して診療録画面に警告/差分を表示する。
   - [x] 2026-05-11T11:55Z: 受付 link read model に患者/保険 freshness warning も統合し、受付・患者・保険の warning を同一 encounter handoff で表示可能にした。診療録画面での実表示は Worker E / 後続 UI で継続。
+  - [x] 2026-05-11T12:23Z: local medical summary response が `encounter_orca_acceptance_link` の受付 warning / changed fields と患者・保険 warning を同一 `orcaContext` で返すようになり、Charts UI が追加 backend route なしで表示へ進める handoff を固定した。
 - [ ] 保険情報取得結果を `orca_insurance_cache` に保存し、診療録確定時に `encounter_insurance_snapshot` を作る。
 - [ ] 保険組合せ未選択や保険変更後の再送では、押下時に具体理由と差分を表示する。
 

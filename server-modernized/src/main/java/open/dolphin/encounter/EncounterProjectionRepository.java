@@ -1,5 +1,7 @@
 package open.dolphin.encounter;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.sql.Connection;
@@ -14,6 +16,10 @@ import javax.sql.DataSource;
 
 @ApplicationScoped
 public class EncounterProjectionRepository {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {
+    };
 
     private static final String SQL_UPSERT_CHECKED_IN = """
             INSERT INTO opendolphin.encounter_projection (
@@ -72,6 +78,18 @@ public class EncounterProjectionRepository {
                AND acceptance_datetime >= ?
                AND acceptance_datetime < ?
              ORDER BY acceptance_datetime ASC, encounter_key ASC
+            """;
+
+    private static final String SQL_SELECT_ORCA_CONTEXT = """
+            SELECT encounter_key, facility_id, orca_acceptance_id, acceptance_date, acceptance_time,
+                   department_code, physician_code, insurance_combination_number, link_status,
+                   warning_status, changed_fields_json::text, cache_fetched_at, cache_expires_at,
+                   patient_cache_status, patient_business_status, patient_warning_status,
+                   patient_cache_fetched_at, patient_cache_expires_at, insurance_cache_status,
+                   insurance_warning_status, insurance_changed_fields_json::text,
+                   insurance_cache_fetched_at, insurance_cache_expires_at
+              FROM opendolphin.encounter_orca_acceptance_link
+             WHERE encounter_key = ?
             """;
 
     private static final String SQL_SYNC_ACCEPTANCE_LINK = """
@@ -255,6 +273,24 @@ public class EncounterProjectionRepository {
         }
     }
 
+    public EncounterOrcaContextRow findOrcaContextByEncounterKey(String encounterKey) {
+        if (normalize(encounterKey) == null || dataSource == null) {
+            return null;
+        }
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(SQL_SELECT_ORCA_CONTEXT)) {
+            statement.setString(1, encounterKey.trim());
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    return null;
+                }
+                return mapOrcaContextRow(resultSet);
+            }
+        } catch (SQLException ex) {
+            throw new IllegalStateException("Failed to load encounter ORCA context", ex);
+        }
+    }
+
     private EncounterRow mapRow(ResultSet resultSet) throws SQLException {
         return new EncounterRow(
                 resultSet.getString(1),
@@ -274,6 +310,33 @@ public class EncounterProjectionRepository {
                 toInstant(resultSet.getTimestamp(15)),
                 resultSet.getLong(16),
                 resultSet.getTimestamp(17).toInstant());
+    }
+
+    private EncounterOrcaContextRow mapOrcaContextRow(ResultSet resultSet) throws SQLException {
+        return new EncounterOrcaContextRow(
+                resultSet.getString(1),
+                resultSet.getString(2),
+                resultSet.getString(3),
+                resultSet.getString(4),
+                resultSet.getString(5),
+                resultSet.getString(6),
+                resultSet.getString(7),
+                resultSet.getString(8),
+                resultSet.getString(9),
+                resultSet.getString(10),
+                parseStringList(resultSet.getString(11)),
+                toInstant(resultSet.getTimestamp(12)),
+                toInstant(resultSet.getTimestamp(13)),
+                resultSet.getString(14),
+                resultSet.getString(15),
+                resultSet.getString(16),
+                toInstant(resultSet.getTimestamp(17)),
+                toInstant(resultSet.getTimestamp(18)),
+                resultSet.getString(19),
+                resultSet.getString(20),
+                parseStringList(resultSet.getString(21)),
+                toInstant(resultSet.getTimestamp(22)),
+                toInstant(resultSet.getTimestamp(23)));
     }
 
     private DataSource requireDataSource() {
@@ -296,6 +359,22 @@ public class EncounterProjectionRepository {
 
     private static Instant toInstant(Timestamp value) {
         return value != null ? value.toInstant() : null;
+    }
+
+    private static List<String> parseStringList(String json) {
+        String normalized = normalize(json);
+        if (normalized == null) {
+            return List.of();
+        }
+        try {
+            List<String> values = OBJECT_MAPPER.readValue(normalized, STRING_LIST);
+            return values.stream()
+                    .map(EncounterProjectionRepository::normalize)
+                    .filter(value -> value != null)
+                    .toList();
+        } catch (Exception ex) {
+            return List.of();
+        }
     }
 
     private static String require(String value, String label) {
@@ -353,6 +432,33 @@ public class EncounterProjectionRepository {
             Instant lastOrcaSyncAt,
             long stateVersion,
             Instant projectedAt
+    ) {
+    }
+
+    public record EncounterOrcaContextRow(
+            String encounterKey,
+            String facilityId,
+            String orcaAcceptanceId,
+            String acceptanceDate,
+            String acceptanceTime,
+            String departmentCode,
+            String physicianCode,
+            String insuranceCombinationNumber,
+            String linkStatus,
+            String warningStatus,
+            List<String> changedFields,
+            Instant cacheFetchedAt,
+            Instant cacheExpiresAt,
+            String patientCacheStatus,
+            String patientBusinessStatus,
+            String patientWarningStatus,
+            Instant patientCacheFetchedAt,
+            Instant patientCacheExpiresAt,
+            String insuranceCacheStatus,
+            String insuranceWarningStatus,
+            List<String> insuranceChangedFields,
+            Instant insuranceCacheFetchedAt,
+            Instant insuranceCacheExpiresAt
     ) {
     }
 }
