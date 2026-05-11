@@ -69,7 +69,7 @@
 - finalize event summary は hash、encounter、診療科、担当医、保険組合せ、入力者、確定者、代行入力 context、受付 context の有無だけを保存し、患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token を保存しない。
 - `POST /api/charts/{chartId}/revisions/{revisionId}/amend|addendum|cancel` は locked revision だけを対象にし、理由と actor を必須にする。訂正・追記は新 revision と event を作成し、元 revision は物理更新しない。取消は取消 event を追加し、元 revision 本文を物理削除しない。
 - chart PDF / CSV / JSON export は、current revision だけでなく `chart_revision_event` の `FINALIZED` / `AMENDED` / `ADDENDUM_ADDED` / `CANCELLED` / `VOIDED`、before/after summary、reason、actor、content hash、snapshot manifest summary を含める。export payload に raw ORCA body、credential、Cookie、Authorization、CSRF token、患者住所・電話などの不要 PHI を含めない。JSON export は sanitized payload から `exportHash` を server-side に計算し、保存後の revision/event 欠落や summary 差し替えを検出できるようにする。CSV export は spreadsheet formula injection を防ぐため、`=`, `+`, `-`, `@`, tab で始まるセル値を neutralize する。
-- `GET /api/charts/{chartId}/revisions/export` は chart revision JSON export の最小 contract とする。施設 ID は server-side session から解決し、request body / query の owner/facility は採用しない。応答は `exportSchemaVersion`, `exportHashAlgorithm`, `exportHash`, `currentRevisionNumber`, `currentRevisionStatus`, `revisionCount`, `eventCount`, revision list, event list を返す。summary JSON は allowlist された scalar key のみを投影する。reason/title/context 文字列に Authorization / Cookie / raw XML / SOAP body が混入している場合は redaction して返す。`exportHash` は redaction / allowlist 適用後の canonical export payload から計算し、allowlist 外 key や JSON key order では変化させない。`currentRevisionNumber` / `currentRevisionStatus` / `revisionCount` / `eventCount` は canonical hash material に含め、current revision の状態誤認と履歴行欠落の検出を補強する。`chart_document.current_revision_id` がある場合、対応する revision が export revision list に含まれない不整合は fail-closed で拒否する。
+- `GET /api/charts/{chartId}/revisions/export` は chart revision JSON export の最小 contract とする。施設 ID は server-side session から解決し、request body / query の owner/facility は採用しない。応答は `exportSchemaVersion`, `exportHashAlgorithm`, `exportHash`, `currentRevisionNumber`, `currentRevisionStatus`, `currentRevisionContentHash`, `revisionCount`, `eventCount`, revision list, event list を返す。summary JSON は allowlist された scalar key のみを投影する。reason/title/context 文字列に Authorization / Cookie / raw XML / SOAP body が混入している場合は redaction して返す。`exportHash` は redaction / allowlist 適用後の canonical export payload から計算し、allowlist 外 key や JSON key order では変化させない。`currentRevisionNumber` / `currentRevisionStatus` / `currentRevisionContentHash` / `revisionCount` / `eventCount` は canonical hash material に含め、current revision の状態誤認、本文 hash 誤認、履歴行欠落の検出を補強する。`chart_document.current_revision_id` がある場合、対応する revision が export revision list に含まれない不整合は fail-closed で拒否する。
 - `GET /api/charts/{chartId}/revisions/export.csv` は同じ施設境界と redaction / allowlist projection を使う CSV export とする。CSV には revision row と event row を含め、PDF/reporting integration が同じ provenance を表示できるよう `recordType`, revision identifiers, event identifiers, reason, actor, hash, summary を固定列で出力する。
 - reporting PDF payload は `chartRevisionEvents` を受け取り、既存 template の summary section に chart revision provenance を表示する。PDF 投影時も summary key allowlist と Authorization / Cookie / raw XML / SOAP body redaction を適用し、API caller が送った任意 nested JSON をそのまま帳票へ出さない。
 
@@ -112,6 +112,7 @@
 - [x] chart revision JSON export は `currentRevisionId` が export revision list に存在しない不整合を 409 で拒否する。
 - [x] chart revision JSON export に server-derived `currentRevisionStatus` を追加し、hash material に含める。
 - [x] chart revision JSON export に server-derived `currentRevisionNumber` を追加し、hash material に含める。
+- [x] chart revision JSON export に server-derived `currentRevisionContentHash` を追加し、hash material に含める。
 
 ## 受け入れ条件
 - [x] active key を変更しても旧文書が verify できる。
@@ -131,3 +132,4 @@
 - [x] JSON export は `currentRevisionId` が revision list から欠落した状態を返さない。
 - [x] JSON export は `currentRevisionStatus` を返し、canonical hash material に含める。
 - [x] JSON export は `currentRevisionNumber` を返し、canonical hash material に含める。
+- [x] JSON export は `currentRevisionContentHash` を返し、canonical hash material に含める。

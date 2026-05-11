@@ -45,6 +45,7 @@ class ChartRevisionExportServiceTest {
         assertThat(response.getCurrentRevisionId()).isEqualTo(21L);
         assertThat(response.getCurrentRevisionNumber()).isEqualTo(2);
         assertThat(response.getCurrentRevisionStatus()).isEqualTo("AMENDED");
+        assertThat(response.getCurrentRevisionContentHash()).isEqualTo("b".repeat(64));
         assertThat(response.getExportSchemaVersion()).isEqualTo(1);
         assertThat(response.getExportHashAlgorithm()).isEqualTo("SHA-256");
         assertThat(response.getExportHash()).matches("[0-9a-f]{64}");
@@ -102,8 +103,10 @@ class ChartRevisionExportServiceTest {
 
         assertThat(amendedCurrent.getCurrentRevisionNumber()).isEqualTo(2);
         assertThat(amendedCurrent.getCurrentRevisionStatus()).isEqualTo("AMENDED");
+        assertThat(amendedCurrent.getCurrentRevisionContentHash()).isEqualTo("b".repeat(64));
         assertThat(finalCurrent.getCurrentRevisionNumber()).isEqualTo(1);
         assertThat(finalCurrent.getCurrentRevisionStatus()).isEqualTo("FINAL");
+        assertThat(finalCurrent.getCurrentRevisionContentHash()).isEqualTo("a".repeat(64));
         assertThat(finalCurrent.getExportHash()).matches("[0-9a-f]{64}");
         assertThat(finalCurrent.getExportHash()).isNotEqualTo(amendedCurrent.getExportHash());
     }

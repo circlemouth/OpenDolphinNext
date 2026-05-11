@@ -118,6 +118,7 @@ public class ChartRevisionExportService {
         if (currentRevision != null) {
             response.setCurrentRevisionNumber(currentRevision.getRevisionNumber());
             response.setCurrentRevisionStatus(currentRevision.getStatus());
+            response.setCurrentRevisionContentHash(currentRevision.getContentHash());
         }
         response.setRevisionCount(response.getRevisions().size());
         response.setEventCount(response.getEvents().size());
@@ -385,6 +386,7 @@ public class ChartRevisionExportService {
         material.put("currentRevisionId", response.getCurrentRevisionId());
         material.put("currentRevisionNumber", response.getCurrentRevisionNumber());
         material.put("currentRevisionStatus", response.getCurrentRevisionStatus());
+        material.put("currentRevisionContentHash", response.getCurrentRevisionContentHash());
         material.put("revisionCount", response.getRevisionCount());
         material.put("eventCount", response.getEventCount());
         material.put("revisions", response.getRevisions().stream().map(this::revisionHashMaterial).toList());
