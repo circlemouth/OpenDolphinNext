@@ -35,6 +35,10 @@ Each event stores:
 
 `AuthoritativeAuditRepository.isWritePathAvailable()` locks `audit_chain_head` and fails closed when the authoritative audit write path is unavailable. Readiness exposes this only as `auditLog.status=DOWN` with `reasonCode=audit_log_write_unavailable`; it must not expose DB internals, exception text, host, URL, or credentials.
 
+## Backup / Restore Verification
+
+Backup restore and migration recovery must follow [backup-restore-hash-verification.md](../runbooks/backup-restore-hash-verification.md). Restore investigation is read-only until `AuditChainVerifier.verifyAll()` and chart/prescription content hash verification pass. The verifier must not repair the chain in place, and restored local ORCA transmission states must not be promoted to ORCA truth before server-side ORCA re-alignment.
+
 ## CI Guard
 
 `server-modernized/tools/ci/check-audit-append-only.sh` enforces the minimum contract:
@@ -58,6 +62,7 @@ Focused checks:
 
 ```bash
 bash server-modernized/tools/ci/check-audit-append-only.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-backup-restore-runbook.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-sensitive-evidence-redaction.sh --root "$(git rev-parse --show-toplevel)"
 mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=AuditChainVerifierTest,AuthoritativeAuditRepositoryTest,RepoGuardScriptsTest test
 ```

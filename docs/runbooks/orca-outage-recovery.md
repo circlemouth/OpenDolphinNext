@@ -33,6 +33,8 @@ ORCA / WebORCA が利用できない、または ORCA 送信結果が不明な�
 
 DB write path が利用できない、監査ログ書き込みが失敗する、または backup restore / migration recovery 中の場合は、OpenDolphinNext を read-only mode として扱う。ORCA が稼働していても、永続状態と監査ログを確定できない操作は実行しない。
 
+backup / restore / hash verification の詳細手順は [backup-restore-hash-verification.md](./backup-restore-hash-verification.md) を正本とする。復元中は read-only mode を維持し、監査ログ hash chain、診療録/処方 content hash、document integrity、object storage inventory の検証が通るまで ORCA 再照合・再送・追加送信・置換送信を開始しない。
+
 許可する操作:
 
 - 既に永続化済みの診療録、確定済みリビジョン、処方指示履歴、診療時点スナップショット、ORCA由来キャッシュの閲覧。
@@ -89,6 +91,7 @@ UI は DB degraded / read-only と ORCA outage を混同しない。DB write pat
 
 - `cd web-client && npm run verify:web-guard`
 - `cd web-client && npm run typecheck`
+- `bash server-modernized/tools/ci/check-backup-restore-runbook.sh --root "$(git rev-parse --show-toplevel)"`
 - `bash server-modernized/tools/ci/check-doc-links.sh`
 - `bash server-modernized/tools/ci/check-config-contract.sh`
 - `bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh --root "$(git rev-parse --show-toplevel)"`

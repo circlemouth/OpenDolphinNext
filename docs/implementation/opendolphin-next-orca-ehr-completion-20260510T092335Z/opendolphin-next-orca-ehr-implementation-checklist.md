@@ -226,9 +226,12 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] 診療録を印刷/PDF出力できる。
 - [ ] 患者単位、診療日単位、期間指定でエクスポートできる。
 - [ ] エクスポート対象に診療録本文、SOAP、処方指示、訂正・追記・取消履歴、ORCA連携履歴、ORCA由来スナップショットを含める。
-- [ ] 診療録正本DB、監査ログDB、添付文書ストレージのバックアップ手順を実装する。
-- [ ] ORCAキャッシュは復元対象だが正本ではないことを明記する。
-- [ ] 復元後に監査ログ hash chain と診療録 content hash を検証する。
+- [x] 診療録正本DB、監査ログDB、添付文書ストレージのバックアップ手順を実装する。
+  - [x] 2026-05-10T21:13Z: `docs/runbooks/backup-restore-hash-verification.md` を追加し、診療録/処方正本DB、監査ログDB、添付/患者画像 object storage inventory、ORCA cache/snapshot の backup preflight と restore read-only 手順を固定した。tracked evidence は sanitized summary/hash/count だけに限定し、raw DB dump/object payload/raw ORCA body/HAR/trace/video/screenshot/PHI/credential を禁止する。
+- [x] ORCAキャッシュは復元対象だが正本ではないことを明記する。
+  - [x] 2026-05-10T21:13Z: restore 後の local `ORCA_SENT` / `ORCA_CONFIRMED` / cache / snapshot を ORCA 正本へ昇格しないこと、server-side ORCA adapter による再取得・差分照合まで比較対象に限定することを runbook、ORCA outage recovery、audit contract に反映した。
+- [x] 復元後に監査ログ hash chain と診療録 content hash を検証する。
+  - [x] 2026-05-10T21:13Z: `check-backup-restore-runbook.sh` を追加し、`AuditChainVerifier.verifyAll()`、chart/prescription content hash verification、document integrity、object inventory digest、ORCA re-alignment 前の read-only fail-closed 境界が release validation から外れないことを CI guard と `RepoGuardScriptsTest` で固定した。
 - [ ] ORCA障害時でも OpenDolphinNext 正本データを閲覧できるようにする。
 
 ## 15. テスト実装
@@ -292,6 +295,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 ## 18. 実ORCA接続試験チェック
 
+- [x] 2026-05-10T21:59Z: `ops/tests/orca/live-trial-checklist.sh --dry-run --run-id <RUN_ID>` と `check-live-orca-trial-harness.sh` を追加し、runtime-ready、medical-information probe、candidate discovery、exact read-only preflight、approved acceptmodv2、fullflow、Phase 4 medicalmodv2、sensitive evidence guard の順序を sanitized dry-run で固定した。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
 - [ ] ORCA患者取得正常系/不在/更新成功/更新失敗を確認する。
 - [ ] ORCA受付一覧取得/受付取消/保険組合せ取得を確認する。
 - [ ] ORCA病名取得/追加/変更/削除/転帰更新/警告/不一致/ORCA側のみ病名を確認する。
