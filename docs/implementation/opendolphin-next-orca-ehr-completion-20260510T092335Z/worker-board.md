@@ -76,6 +76,7 @@ Checklist count when parallel board was created:
 | C-15 | 8, 10.2 | Continue prescription authority integration watch after stale latest candidate guard. | No live send implementation; only source-of-truth contract reconciliation. | Focused cross-worker tests |
 | C-16 | 8, 10.2 | Continue prescription authority integration watch after exact source revision candidate guard. | No live send implementation; only source-of-truth contract reconciliation. | Focused cross-worker tests |
 | C-17 | 8, 10.2 | Continue prescription authority integration watch after current chart source candidate guard. | No live send implementation; only source-of-truth contract reconciliation. | Focused cross-worker tests |
+| C-18 | 8, 10.2 | Continue prescription authority integration watch after current source status candidate guard. | No live send implementation; only source-of-truth contract reconciliation. | Focused cross-worker tests |
 
 ### Worker D Queue
 
@@ -119,6 +120,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T034221Z | C | C-17 | 8/10.2 current source status candidate guard; no checklist item newly closed | this commit | `LocalOrcaMedicalCandidateResourceTest`, `OrcaMedicalCandidateRepositoryTest`, `PublicRouteInventoryContractTest`, `orcaMedicalCandidateApi.test.ts`, web guard passed | Done | C-18 prescription authority integration watch |
 | 20260511T032217Z | C | C-16 | 8/10.2 current chart source candidate guard; no checklist item newly closed | this commit | `LocalOrcaMedicalCandidateResourceTest`, `OrcaMedicalCandidateRepositoryTest`, `PublicRouteInventoryContractTest`, `orcaMedicalCandidateApi.test.ts`, web guard passed | Done | C-17 prescription authority integration watch |
 | 20260511T030216Z | C | C-15 | 8/10.2 exact source revision candidate guard; no checklist item newly closed | this commit | `LocalOrcaMedicalCandidateResourceTest`, `OrcaMedicalCandidateRepositoryTest`, `PublicRouteInventoryContractTest`, `orcaMedicalCandidateApi.test.ts`, web guard passed | Done | C-16 prescription authority integration watch |
 | 20260511T024214Z | C | C-14 | 8/10.2 stale latest candidate guard; no checklist item newly closed | this commit | `LocalOrcaMedicalCandidateResourceTest`, `OrcaMedicalCandidateRepositoryTest`, `PublicRouteInventoryContractTest`, `orcaMedicalCandidateApi.test.ts`, web guard passed | Done | C-15 prescription authority integration watch |

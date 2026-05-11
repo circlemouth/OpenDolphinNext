@@ -90,6 +90,7 @@ class OrcaMedicalCandidateRepositoryTest {
                         OBJECT_MAPPER.writeValueAsString(repository.candidateSnapshot(candidate)),
                         OBJECT_MAPPER.writeValueAsString(List.of(issue)),
                         101L,
+                        "FINAL",
                         201L,
                         "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
 
@@ -139,6 +140,7 @@ class OrcaMedicalCandidateRepositoryTest {
                         OBJECT_MAPPER.writeValueAsString(repository.candidateSnapshot(candidate)),
                         "[]",
                         101L,
+                        "FINAL",
                         201L,
                         "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd");
 
@@ -177,6 +179,7 @@ class OrcaMedicalCandidateRepositoryTest {
                         OBJECT_MAPPER.writeValueAsString(repository.candidateSnapshot(candidate)),
                         "[]",
                         101L,
+                        "FINAL",
                         202L,
                         "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
 
@@ -215,8 +218,48 @@ class OrcaMedicalCandidateRepositoryTest {
                         OBJECT_MAPPER.writeValueAsString(repository.candidateSnapshot(candidate)),
                         "[]",
                         102L,
+                        "FINAL",
                         201L,
                         "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
+        OrcaMedicalCandidateResponse response = repository.toResponse("CHART-REV-001", record);
+
+        assertEquals("NEEDS_REVIEW", response.getCandidateStatus());
+        assertFalse(response.isSendable());
+        assertTrue(response.getIssues().stream()
+                .anyMatch(issue -> "prescription_candidate_source_stale".equals(issue.getCode())));
+    }
+
+    @Test
+    void toResponseMarksLatestCandidateNeedsReviewWhenCurrentPrescriptionStatusIsUnsendable() throws Exception {
+        ChartSupportMedicalModV2Request.MedicalInformation information =
+                new ChartSupportMedicalModV2Request.MedicalInformation();
+        information.setRpSequence(1);
+        information.setMedicalClass("211");
+
+        OrcaMedicalCandidateResponse candidate = new OrcaMedicalCandidateResponse();
+        candidate.setNonAuthoritative(true);
+        candidate.setCandidateStatus("READY_TO_SEND");
+        candidate.setSendable(true);
+        candidate.setPrescriptionContentHash("9999999999999999999999999999999999999999999999999999999999999999");
+        candidate.setMedicalInformation(List.of(information));
+
+        OrcaMedicalCandidateRepository repository = new OrcaMedicalCandidateRepository();
+        OrcaMedicalCandidateRepository.LatestCandidateRecord record =
+                new OrcaMedicalCandidateRepository.LatestCandidateRecord(
+                        301L,
+                        101L,
+                        201L,
+                        "DB-PATIENT",
+                        "DB-ENCOUNTER",
+                        "READY_TO_SEND",
+                        true,
+                        OBJECT_MAPPER.writeValueAsString(repository.candidateSnapshot(candidate)),
+                        "[]",
+                        101L,
+                        "CANCELLED",
+                        201L,
+                        "9999999999999999999999999999999999999999999999999999999999999999");
 
         OrcaMedicalCandidateResponse response = repository.toResponse("CHART-REV-001", record);
 

@@ -200,6 +200,7 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
                 """.formatted(CONTENT_HASH),
                 "[]",
                 101L,
+                "FINAL",
                 201L,
                 CONTENT_HASH);
 

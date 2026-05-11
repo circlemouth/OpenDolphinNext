@@ -109,11 +109,13 @@ class OrcaMedicalCandidateRepository {
                                    cast(candidate_json as text),
                                    cast(issue_summary_json as text),
                                    current_po.prescription_order_id,
+                                   current_po.status,
                                    current_pr.prescription_order_revision_id,
                                    current_pr.content_hash
                               FROM opendolphin.orca_medical_candidate candidate
                               LEFT JOIN LATERAL (
                                   SELECT po.prescription_order_id,
+                                         po.status,
                                          po.current_revision_id
                                     FROM opendolphin.prescription_order po
                                    WHERE po.facility_id = candidate.facility_id
@@ -144,8 +146,9 @@ class OrcaMedicalCandidateRepository {
                     text(values[7]),
                     text(values[8]),
                     numberOrNull(values[9]),
-                    numberOrNull(values[10]),
-                    text(values[11]));
+                    text(values[10]),
+                    numberOrNull(values[11]),
+                    text(values[12]));
         } catch (NoResultException ex) {
             return null;
         }
@@ -157,7 +160,11 @@ class OrcaMedicalCandidateRepository {
         List<OrcaMedicalCandidateResponse.Issue> issues = new ArrayList<>(readIssues(record.issueSummaryJson()));
         boolean orderStale = !Long.valueOf(record.prescriptionOrderId()).equals(record.currentPrescriptionOrderId());
         boolean revisionStale = !Long.valueOf(record.prescriptionRevisionId()).equals(record.currentPrescriptionRevisionId());
-        boolean sourceStale = orderStale || revisionStale || !equalsTrimmed(candidateContentHash, record.currentPrescriptionContentHash());
+        boolean statusStale = !isCandidateSourceStatus(record.currentPrescriptionStatus());
+        boolean sourceStale = orderStale
+                || revisionStale
+                || statusStale
+                || !equalsTrimmed(candidateContentHash, record.currentPrescriptionContentHash());
         OrcaMedicalCandidateResponse response = new OrcaMedicalCandidateResponse();
         response.setApiResult("00");
         response.setApiResultMessage("処理終了");
@@ -254,6 +261,10 @@ class OrcaMedicalCandidateRepository {
         return issue;
     }
 
+    private boolean isCandidateSourceStatus(String status) {
+        return "FINAL".equals(status) || "CHANGED".equals(status) || "REISSUED".equals(status);
+    }
+
     record PrescriptionRevisionRecord(
             long prescriptionOrderId,
             long prescriptionRevisionId,
@@ -275,6 +286,7 @@ class OrcaMedicalCandidateRepository {
             String candidateJson,
             String issueSummaryJson,
             Long currentPrescriptionOrderId,
+            String currentPrescriptionStatus,
             Long currentPrescriptionRevisionId,
             String currentPrescriptionContentHash) {
     }
