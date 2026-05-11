@@ -8,9 +8,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import jakarta.ws.rs.WebApplicationException;
 import java.lang.reflect.Field;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -52,6 +54,7 @@ class ChartRevisionExportServiceTest {
         assertThat(response.getRevisionCount()).isEqualTo(2);
         assertThat(response.getEventCount()).isEqualTo(2);
         assertThat(response.getRevisions()).hasSize(2);
+        assertThat(response.getPrescriptionEvents()).isEmpty();
         assertThat(response.getRevisions().get(1).getStatus()).isEqualTo("AMENDED");
         assertThat(response.getRevisions().get(0).getSnapshotManifest())
                 .containsEntry("snapshotVersion", 1L)
@@ -236,6 +239,70 @@ class ChartRevisionExportServiceTest {
     }
 
     @Test
+    void exportChartIncludesPrescriptionHistoryAndSanitizesUnsafePayloads() {
+        stubExportQueries(List.of(finalRevision()), List.of(finalizedEvent()), List.<Object[]>of(prescriptionEventRow(
+                401L,
+                "CHANGE",
+                "Authorization: Basic secret\n<?xml version=\"1.0\"?><xml>raw</xml>",
+                "{\"status\":\"FINAL\",\"patientName\":\"Do Not Export\",\"rawOrcaBody\":\"<xml>raw</xml>\"}",
+                "{\"eventType\":\"CHANGE\",\"contentHash\":\"" + "8".repeat(64)
+                        + "\",\"rawSensitiveFieldsExcluded\":true,\"insuranceDetail\":\"secret\"}",
+                "9".repeat(64))));
+
+        ChartRevisionExportResponse response = service.exportChart(10L, "F001");
+
+        assertThat(response.getPrescriptionEvents()).hasSize(1);
+        assertThat(response.getPrescriptionEvents().get(0).getPrescriptionOrderId()).isEqualTo(301L);
+        assertThat(response.getPrescriptionEvents().get(0).getPrescriptionRevisionId()).isEqualTo(401L);
+        assertThat(response.getPrescriptionEvents().get(0).getChartRevisionId()).isEqualTo("20");
+        assertThat(response.getPrescriptionEvents().get(0).getEventType()).isEqualTo("CHANGE");
+        assertThat(response.getPrescriptionEvents().get(0).getReasonText())
+                .contains("Authorization: [redacted]")
+                .contains("[redacted-xml-body]")
+                .doesNotContain("Basic secret")
+                .doesNotContain("<xml>");
+        assertThat(response.getPrescriptionEvents().get(0).getBeforeSummary())
+                .containsEntry("status", "FINAL")
+                .doesNotContainKey("patientName")
+                .doesNotContainKey("rawOrcaBody");
+        assertThat(response.getPrescriptionEvents().get(0).getAfterSummary())
+                .containsEntry("contentHash", "8".repeat(64))
+                .containsEntry("rawSensitiveFieldsExcluded", true)
+                .doesNotContainKey("insuranceDetail");
+
+        stubExportQueries(List.of(finalRevision()), List.of(finalizedEvent()), List.<Object[]>of(prescriptionEventRow(
+                402L,
+                "STOP",
+                "clinically different reason",
+                "{\"status\":\"FINAL\"}",
+                "{\"eventType\":\"STOP\",\"contentHash\":\"" + "7".repeat(64) + "\"}",
+                "a".repeat(64))));
+
+        ChartRevisionExportResponse changed = service.exportChart(10L, "F001");
+
+        assertThat(changed.getExportHash()).matches("[0-9a-f]{64}");
+        assertThat(changed.getExportHash()).isNotEqualTo(response.getExportHash());
+    }
+
+    @Test
+    void exportChartCsvIncludesPrescriptionHistoryRows() {
+        stubExportQueries(List.of(finalRevision()), List.of(finalizedEvent()), List.<Object[]>of(prescriptionEventRow(
+                401L,
+                "CANCEL",
+                "=HYPERLINK(\"https://example.test\",\"Authorization: Basic secret\")",
+                "{\"status\":\"FINAL\"}",
+                "{\"eventType\":\"CANCEL\",\"contentHash\":\"" + "8".repeat(64) + "\"}",
+                "9".repeat(64))));
+
+        String csv = service.exportChartCsv(10L, "F001");
+
+        assertThat(csv).contains("\"prescriptionEvent\",\"10\",\"20\",\"20\",\"2\",\"CHANGED\",\"401\",\"CANCEL\"");
+        assertThat(csv).contains("\"'=HYPERLINK(\"\"https://example.test\"\",\"\"Authorization: [redacted]");
+        assertThat(csv).contains("after.contentHash=" + "8".repeat(64));
+        assertThat(csv).doesNotContain("Basic secret");
+    }
+
+    @Test
     void exportChartCsvIncludesHistoryAndNeutralizesSpreadsheetFormulaInjection() {
         ChartRevisionEventModel event = amendedEvent();
         event.setReasonText("=HYPERLINK(\"https://example.test\",\"Authorization: Basic secret\")");
@@ -372,17 +439,55 @@ class ChartRevisionExportServiceTest {
 
     private void stubExportQueries(ChartDocumentModel document, List<ChartRevisionModel> revisions,
             List<ChartRevisionEventModel> events) {
+        stubExportQueries(document, revisions, events, List.of());
+    }
+
+    private void stubExportQueries(List<ChartRevisionModel> revisions, List<ChartRevisionEventModel> events,
+            List<Object[]> prescriptionEvents) {
+        Long currentRevisionId = revisions.isEmpty() ? null : revisions.get(revisions.size() - 1).getId();
+        stubExportQueries(chartDocument(currentRevisionId), revisions, events, prescriptionEvents);
+    }
+
+    private void stubExportQueries(ChartDocumentModel document, List<ChartRevisionModel> revisions,
+            List<ChartRevisionEventModel> events, List<Object[]> prescriptionEvents) {
         when(em.find(ChartDocumentModel.class, 10L)).thenReturn(document);
         TypedQuery<ChartRevisionModel> revisionQuery = mock(TypedQuery.class);
         TypedQuery<ChartRevisionEventModel> eventQuery = mock(TypedQuery.class);
+        Query prescriptionQuery = mock(Query.class);
         when(em.createQuery(startsWith("select r from ChartRevisionModel"), eq(ChartRevisionModel.class)))
                 .thenReturn(revisionQuery);
         when(em.createQuery(startsWith("select e from ChartRevisionEventModel"), eq(ChartRevisionEventModel.class)))
                 .thenReturn(eventQuery);
+        when(em.createNativeQuery(startsWith("SELECT po.prescription_order_id"))).thenReturn(prescriptionQuery);
         when(revisionQuery.setParameter("chartId", 10L)).thenReturn(revisionQuery);
         when(eventQuery.setParameter("chartId", 10L)).thenReturn(eventQuery);
+        when(prescriptionQuery.setParameter(eq("facilityId"), eq("F001"))).thenReturn(prescriptionQuery);
+        when(prescriptionQuery.setParameter(eq("chartRevisionIds"), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(prescriptionQuery);
         when(revisionQuery.getResultList()).thenReturn(revisions);
         when(eventQuery.getResultList()).thenReturn(events);
+        when(prescriptionQuery.getResultList()).thenReturn(prescriptionEvents);
+    }
+
+    private Object[] prescriptionEventRow(Long prescriptionRevisionId, String eventType, String reasonText,
+            String beforeSummaryJson, String afterSummaryJson, String eventHash) {
+        return new Object[]{
+                301L,
+                prescriptionRevisionId,
+                "20",
+                2,
+                "CHANGED",
+                "8".repeat(64),
+                401L,
+                eventType,
+                "doctor01",
+                Timestamp.from(Instant.parse("2026-05-11T11:00:00Z")),
+                "RX_REASON",
+                reasonText,
+                beforeSummaryJson,
+                afterSummaryJson,
+                eventHash
+        };
     }
 
     private void setField(Object target, String name, Object value) throws Exception {

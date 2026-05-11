@@ -28,7 +28,7 @@ Checklist count when parallel board was created:
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A01 patient/acceptance/insurance boundary plus live readiness gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
-| B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T101100Z | this commit | - |
+| B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T111120Z | this commit | - |
 | C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C01 prescription authority, medical candidate send-prep, disease handoff gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D01 live ORCA Trial execution, adapter contract, retry/idempotency evidence | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | E | `codex/orca-ehr-r2-worker-e-safety-ui` | R2-E01 medical safety UI, DADS/a11y, patient header/modal rollout | Active | 20260511T063714Z | `1218aa1ef` base | - |
@@ -160,6 +160,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T111120Z | B | B-05/B-08 follow-up | 7/14 chart revision export prescription event history integration | this commit | `ChartRevisionExportServiceTest`, `ReportingChartRevisionEventTest`, `PdfSigningServiceTest`, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | Continue B-05/B-08 with ORCA operation/transmission history export projection after D-owned stable read contract is available |
 | 20260511T101100Z | B | B-08 | 7/14 chart snapshot manifest A/C/D reference allowlist and export hash integration | this commit | `ChartRevisionExportServiceTest`, `ReportingChartRevisionEventTest`, `PdfSigningServiceTest`, doc/config/runtime lookup guards, sensitive evidence guard passed | Done | Continue B-08 by wiring server-generated A/C/D snapshot references at finalize once owning contracts expose stable lookup APIs |
 | 20260510T215924Z | F | F-04 | 18/19 live ORCA Trial execution harness and sanitized evidence policy | this commit | live trial dry-run harness, live ORCA harness guard, doc/config/runtime/audit/backup/sensitive guards passed; `RepoGuardScriptsTest` passed | Done | Worker F queue exhausted; support Integrator G release gates or new audit/security blocker |
 | 20260510T211308Z | F | F-03 | 14.3 backup/restore/hash verification workflow; 16 backup restore ORCA re-alignment boundary | this commit | backup/restore, doc/config/runtime/audit/sensitive guards passed; `RepoGuardScriptsTest` passed | Done | F-04 real ORCA connection trial checklist execution harness |

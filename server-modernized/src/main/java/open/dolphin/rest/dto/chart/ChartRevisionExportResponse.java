@@ -17,6 +17,7 @@ public class ChartRevisionExportResponse {
     private Integer eventCount;
     private List<ChartRevisionExportRevision> revisions = new ArrayList<>();
     private List<ChartRevisionExportEvent> events = new ArrayList<>();
+    private List<ChartRevisionExportPrescriptionEvent> prescriptionEvents = new ArrayList<>();
 
     public Long getChartId() {
         return chartId;
@@ -112,5 +113,15 @@ public class ChartRevisionExportResponse {
 
     public void setEvents(List<ChartRevisionExportEvent> events) {
         this.events = events == null ? new ArrayList<>() : new ArrayList<>(events);
+    }
+
+    public List<ChartRevisionExportPrescriptionEvent> getPrescriptionEvents() {
+        return prescriptionEvents;
+    }
+
+    public void setPrescriptionEvents(List<ChartRevisionExportPrescriptionEvent> prescriptionEvents) {
+        this.prescriptionEvents = prescriptionEvents == null
+                ? new ArrayList<>()
+                : new ArrayList<>(prescriptionEvents);
     }
 }

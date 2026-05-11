@@ -176,6 +176,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] chart revision JSON export は server-derived `currentRevisionNumber` を返し、canonical `exportHash` material に含める。
   - [x] chart revision JSON export は server-derived `currentRevisionContentHash` を返し、canonical `exportHash` material に含める。
   - [x] chart revision JSON/CSV export は snapshot manifest 内の A/C/D 統合 reference / hash / status metadata を allowlist 投影し、患者名・raw ORCA body・credential・保険詳細などの allowlist 外 key を返さず、canonical `exportHash` material に含める。
+  - [x] chart revision JSON/CSV export は診療録 revision に紐づく処方指示 event history を redaction / summary allowlist 付きで含め、処方 event / content hash / allowlist 済み summary を canonical `exportHash` material に含める。
 
 ## 8. 処方指示正本実装
 

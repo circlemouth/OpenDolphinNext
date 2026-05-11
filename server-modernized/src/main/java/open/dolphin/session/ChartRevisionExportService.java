@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
@@ -24,6 +25,7 @@ import open.dolphin.infomodel.ChartRevisionEventModel;
 import open.dolphin.infomodel.ChartRevisionModel;
 import open.dolphin.rest.AbstractResource;
 import open.dolphin.rest.dto.chart.ChartRevisionExportEvent;
+import open.dolphin.rest.dto.chart.ChartRevisionExportPrescriptionEvent;
 import open.dolphin.rest.dto.chart.ChartRevisionExportResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionExportRevision;
 
@@ -57,6 +59,21 @@ public class ChartRevisionExportService {
             "hasSnapshotManifest",
             "hasOrcaAcceptanceId",
             "hasNoAcceptanceReason");
+    private static final List<String> PRESCRIPTION_SUMMARY_ALLOWLIST = List.of(
+            "status",
+            "contentHash",
+            "eventType",
+            "revisionId",
+            "revisionNumber",
+            "prescriptionOrderId",
+            "prescriptionRevisionId",
+            "itemCount",
+            "hasReasonCode",
+            "newRevisionCreated",
+            "sendable",
+            "candidateStatus",
+            "needsUserReview",
+            "rawSensitiveFieldsExcluded");
     private static final List<String> SNAPSHOT_MANIFEST_ALLOWLIST = List.of(
             "snapshotVersion",
             "source",
@@ -134,6 +151,7 @@ public class ChartRevisionExportService {
         response.setExportHashAlgorithm(EXPORT_HASH_ALGORITHM);
         response.setRevisions(revisions.stream().map(this::toRevision).toList());
         response.setEvents(events.stream().map(this::toEvent).toList());
+        response.setPrescriptionEvents(loadPrescriptionEvents(document.getFacilityId(), response.getRevisions()));
         ChartRevisionExportRevision currentRevision = resolveCurrentRevision(document, response);
         if (currentRevision != null) {
             response.setCurrentRevisionNumber(currentRevision.getRevisionNumber());
@@ -204,6 +222,25 @@ public class ChartRevisionExportService {
                     event.getEventHash(),
                     flattenSummary(event.getBeforeSummary(), event.getAfterSummary()));
         }
+        for (ChartRevisionExportPrescriptionEvent event : export.getPrescriptionEvents()) {
+            appendCsvRow(csv,
+                    "prescriptionEvent",
+                    export.getChartId(),
+                    export.getCurrentRevisionId(),
+                    event.getChartRevisionId(),
+                    event.getRevisionNumber(),
+                    event.getStatus(),
+                    event.getEventId(),
+                    event.getEventType(),
+                    null,
+                    event.getPrescriptionRevisionId(),
+                    event.getActorUserId(),
+                    event.getOccurredAt(),
+                    event.getReasonCode(),
+                    event.getReasonText(),
+                    firstNonBlank(event.getEventHash(), event.getContentHash()),
+                    flattenSummary(event.getBeforeSummary(), event.getAfterSummary()));
+        }
         return csv.toString();
     }
 
@@ -257,6 +294,71 @@ public class ChartRevisionExportService {
         dto.setBeforeSummary(sanitizeSummary(event.getBeforeSummaryJson()));
         dto.setAfterSummary(sanitizeSummary(event.getAfterSummaryJson()));
         dto.setEventHash(event.getEventHash());
+        return dto;
+    }
+
+    private List<ChartRevisionExportPrescriptionEvent> loadPrescriptionEvents(String facilityId,
+            List<ChartRevisionExportRevision> revisions) {
+        if (facilityId == null || facilityId.isBlank() || revisions == null || revisions.isEmpty()) {
+            return List.of();
+        }
+        List<String> chartRevisionIds = revisions.stream()
+                .map(ChartRevisionExportRevision::getRevisionId)
+                .filter(id -> id != null)
+                .map(String::valueOf)
+                .toList();
+        if (chartRevisionIds.isEmpty()) {
+            return List.of();
+        }
+        Query query = em.createNativeQuery("""
+                SELECT po.prescription_order_id,
+                       pr.prescription_order_revision_id,
+                       po.chart_revision_id,
+                       pr.revision_number,
+                       pr.status,
+                       pr.content_hash,
+                       pe.prescription_order_event_id,
+                       pe.event_type,
+                       pe.actor_user_id,
+                       pe.occurred_at,
+                       pe.reason_code,
+                       pe.reason_text,
+                       CAST(pe.before_summary_json AS text),
+                       CAST(pe.after_summary_json AS text),
+                       pe.event_hash
+                  FROM opendolphin.prescription_order po
+                  JOIN opendolphin.prescription_order_event pe
+                    ON pe.prescription_order_id = po.prescription_order_id
+                  LEFT JOIN opendolphin.prescription_order_revision pr
+                    ON pr.prescription_order_revision_id = pe.prescription_order_revision_id
+                 WHERE po.facility_id = :facilityId
+                   AND po.chart_revision_id IN (:chartRevisionIds)
+                 ORDER BY po.chart_revision_id ASC, pe.occurred_at ASC, pe.prescription_order_event_id ASC
+                """);
+        query.setParameter("facilityId", facilityId);
+        query.setParameter("chartRevisionIds", chartRevisionIds);
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = query.getResultList();
+        return rows.stream().map(this::toPrescriptionEvent).toList();
+    }
+
+    private ChartRevisionExportPrescriptionEvent toPrescriptionEvent(Object[] row) {
+        ChartRevisionExportPrescriptionEvent dto = new ChartRevisionExportPrescriptionEvent();
+        dto.setPrescriptionOrderId(longValue(row[0]));
+        dto.setPrescriptionRevisionId(longValue(row[1]));
+        dto.setChartRevisionId(textValue(row[2]));
+        dto.setRevisionNumber(integerValue(row[3]));
+        dto.setStatus(redactUnsafeText(textValue(row[4])));
+        dto.setContentHash(redactUnsafeText(textValue(row[5])));
+        dto.setEventId(longValue(row[6]));
+        dto.setEventType(redactUnsafeText(textValue(row[7])));
+        dto.setActorUserId(redactUnsafeText(textValue(row[8])));
+        dto.setOccurredAt(row[9] != null ? row[9].toString() : null);
+        dto.setReasonCode(redactUnsafeText(textValue(row[10])));
+        dto.setReasonText(redactUnsafeText(textValue(row[11])));
+        dto.setBeforeSummary(sanitizeObject(textValue(row[12]), PRESCRIPTION_SUMMARY_ALLOWLIST));
+        dto.setAfterSummary(sanitizeObject(textValue(row[13]), PRESCRIPTION_SUMMARY_ALLOWLIST));
+        dto.setEventHash(redactUnsafeText(textValue(row[14])));
         return dto;
     }
 
@@ -411,6 +513,8 @@ public class ChartRevisionExportService {
         material.put("eventCount", response.getEventCount());
         material.put("revisions", response.getRevisions().stream().map(this::revisionHashMaterial).toList());
         material.put("events", response.getEvents().stream().map(this::eventHashMaterial).toList());
+        material.put("prescriptionEvents",
+                response.getPrescriptionEvents().stream().map(this::prescriptionEventHashMaterial).toList());
         return material;
     }
 
@@ -451,6 +555,68 @@ public class ChartRevisionExportService {
         material.put("afterSummary", event.getAfterSummary());
         material.put("eventHash", event.getEventHash());
         return material;
+    }
+
+    private Map<String, Object> prescriptionEventHashMaterial(ChartRevisionExportPrescriptionEvent event) {
+        Map<String, Object> material = new LinkedHashMap<>();
+        material.put("prescriptionOrderId", event.getPrescriptionOrderId());
+        material.put("prescriptionRevisionId", event.getPrescriptionRevisionId());
+        material.put("chartRevisionId", event.getChartRevisionId());
+        material.put("revisionNumber", event.getRevisionNumber());
+        material.put("status", event.getStatus());
+        material.put("contentHash", event.getContentHash());
+        material.put("eventId", event.getEventId());
+        material.put("eventType", event.getEventType());
+        material.put("actorUserId", event.getActorUserId());
+        material.put("occurredAt", event.getOccurredAt());
+        material.put("reasonCode", event.getReasonCode());
+        material.put("reasonText", event.getReasonText());
+        material.put("beforeSummary", event.getBeforeSummary());
+        material.put("afterSummary", event.getAfterSummary());
+        material.put("eventHash", event.getEventHash());
+        return material;
+    }
+
+    private Long longValue(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Long.valueOf(String.valueOf(value));
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private Integer integerValue(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(String.valueOf(value));
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private String textValue(Object value) {
+        return value != null ? String.valueOf(value) : null;
+    }
+
+    private String firstNonBlank(String first, String second) {
+        if (first != null && !first.isBlank()) {
+            return first;
+        }
+        if (second != null && !second.isBlank()) {
+            return second;
+        }
+        return null;
     }
 
     private String writeJson(Object value) {
