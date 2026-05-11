@@ -1024,7 +1024,14 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const logApproval = (action: ChartAction, state: 'open' | 'confirmed' | 'cancelled') => {
     const blockedReasons = state === 'cancelled' ? ['confirm_cancelled'] : undefined;
     logUiState({
-      action: action === 'print' ? 'print' : action === 'finish' ? 'finish' : 'send',
+      action:
+        action === 'print'
+          ? 'print'
+          : action === 'finish'
+            ? 'finish'
+            : action === 'cancel'
+              ? 'cancel'
+              : 'send',
       screen: 'charts/action-bar',
       controlId: `action-${action}-approval`,
       runId,
@@ -1064,7 +1071,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
 
   const handleAction = async (action: ChartAction) => {
     if (isRunning) return;
-    const criticalActionConfirmed = action === 'finish' ? confirmedCriticalActionRef.current.delete(action) : false;
+    const criticalActionConfirmed =
+      action === 'finish' || action === 'cancel' ? confirmedCriticalActionRef.current.delete(action) : false;
 
     if (readOnly) {
       const blockedReason = readOnlyReason;
@@ -1236,6 +1244,13 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       setConfirmAction('finish');
       approvalSessionRef.current = { action: 'finish', closed: false };
       logApproval('finish', 'open');
+      return;
+    }
+
+    if (action === 'cancel' && !criticalActionConfirmed) {
+      setConfirmAction('cancel');
+      approvalSessionRef.current = { action: 'cancel', closed: false };
+      logApproval('cancel', 'open');
       return;
     }
 
@@ -2537,6 +2552,45 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           void handleAction('finish');
         }}
         testId="charts-finish-dialog"
+      />
+
+      <CriticalOperationConfirmDialog
+        open={confirmAction === 'cancel'}
+        title="診療録取消の確認"
+        description="現在の診療録に対する取消操作です。実行前に患者と対象を確認してください。"
+        operationLabel="診療録取消"
+        patientName={sendDialogSummary.patientName}
+        patientFields={[
+          { label: '患者ID', value: sendDialogSummary.patientIdLabel },
+          {
+            label: '生年月日 / 年齢',
+            value: `${sendDialogSummary.birthDate}${sendDialogSummary.ageLabel ? ` / ${sendDialogSummary.ageLabel}` : ''}`,
+          },
+          { label: '診療日', value: sendDialogSummary.visitLabel },
+          { label: '受付ID', value: sendDialogSummary.receptionLabel },
+          { label: '予約ID', value: sendDialogSummary.appointmentLabel },
+        ]}
+        summaryTitle="取消対象サマリ"
+        summaryFields={[
+          { label: '病名', value: sendDialogSummary.diagnosisCount },
+          { label: 'オーダー', value: sendDialogSummary.orderCount },
+          { label: 'SOAP', value: sendDialogSummary.soapState },
+          { label: '画像添付', value: sendDialogSummary.imageCount },
+          { label: '正本状態', value: '診療録取消の確定ではありません' },
+        ]}
+        confirmLabel="診療録取消を実行する"
+        tone="danger"
+        onCancel={() => {
+          finalizeApproval('cancel', 'cancelled');
+          setConfirmAction(null);
+        }}
+        onConfirm={() => {
+          finalizeApproval('cancel', 'confirmed');
+          setConfirmAction(null);
+          confirmedCriticalActionRef.current.add('cancel');
+          void handleAction('cancel');
+        }}
+        testId="charts-cancel-dialog"
       />
 
       <FocusTrapDialog

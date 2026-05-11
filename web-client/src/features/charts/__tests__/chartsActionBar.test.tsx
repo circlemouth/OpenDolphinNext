@@ -311,6 +311,65 @@ describe('ChartsActionBar', () => {
     );
   });
 
+  it('診療録取消は共通重大操作確認で患者識別情報を再掲してから実行する', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-240"
+          visitDate="2026-01-06"
+          selectedEntry={{ patientId: 'P-240', appointmentId: 'APT-240', receptionId: 'REC-240', visitDate: '2026-01-06' } as any}
+          sendConfirmSummary={{
+            patientName: '確認 花子',
+            patientId: 'P-240',
+            birthDate: '1975-02-10',
+            age: '50歳',
+            visitDate: '2026-01-06',
+            receptionId: 'REC-240',
+            appointmentId: 'APT-240',
+            diagnosisCount: 1,
+            orderCount: 2,
+            soap: {
+              subjective: true,
+              objective: false,
+              assessment: true,
+              plan: false,
+            },
+            imageAttachmentCount: 0,
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByText('その他'));
+    await user.click(screen.getByRole('button', { name: 'キャンセル' }));
+
+    const confirmDialog = await screen.findByRole('alertdialog', { name: '診療録取消の確認' });
+    expect(within(confirmDialog).getByText('実行操作:')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('診療録取消')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('確認 花子')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('P-240')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('1975-02-10 / 50歳')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('REC-240')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('APT-240')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('診療録取消の確定ではありません')).toBeInTheDocument();
+    expect(screen.queryByText('キャンセルを完了')).not.toBeInTheDocument();
+
+    await user.click(within(confirmDialog).getByRole('button', { name: '診療録取消を実行する' }));
+
+    expect(await screen.findByText('キャンセルを完了')).toBeInTheDocument();
+    expect(recordChartsAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'DRAFT_CANCEL',
+        outcome: 'success',
+        patientId: 'P-240',
+        appointmentId: 'APT-240',
+      }),
+    );
+  });
+
   it('診察終了・会計送信の不足条件は disabled だけにせず押下時に理由を表示する', async () => {
     const user = userEvent.setup();
     const onAfterFinish = vi.fn();
