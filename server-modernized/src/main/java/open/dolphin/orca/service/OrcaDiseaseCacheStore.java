@@ -268,6 +268,14 @@ public class OrcaDiseaseCacheStore {
             Instant cacheExpiresAt,
             String rawResponseBody,
             DiseaseImportResponse response) {
+        public DiseaseCacheCommand {
+            response = copyResponse(response, DiseaseImportResponse.class);
+        }
+
+        @Override
+        public DiseaseImportResponse response() {
+            return copyResponse(response, DiseaseImportResponse.class);
+        }
     }
 
     public record DiseaseCacheRow(
@@ -287,5 +295,9 @@ public class OrcaDiseaseCacheStore {
             String normalizedPayloadJson,
             String warningsJson,
             String unmatchedJson) {
+    }
+
+    private static <T> T copyResponse(T response, Class<T> type) {
+        return response == null ? null : JSON.convertValue(response, type);
     }
 }

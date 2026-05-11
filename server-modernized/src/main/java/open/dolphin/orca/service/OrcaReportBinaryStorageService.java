@@ -270,6 +270,14 @@ public class OrcaReportBinaryStorageService {
             String contentType,
             Instant uploadedAt,
             Instant retentionUntil) {
+        public UploadCommand {
+            contentBytes = requireContent(contentBytes);
+        }
+
+        @Override
+        public byte[] contentBytes() {
+            return contentBytes.clone();
+        }
     }
 
     public record UploadResult(

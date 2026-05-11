@@ -296,7 +296,7 @@ public class OrcaInsuranceCacheStore {
                 firstText(startDate, ""),
                 firstText(expiredDate, ""),
                 String.valueOf(publicInsuranceCount),
-                fetchedAt != null ? "" : "");
+                "");
         return new InsuranceCacheRow(
                 command.facilityId().trim(),
                 command.orcaPatientId().trim(),
@@ -448,6 +448,14 @@ public class OrcaInsuranceCacheStore {
             Instant fetchedAt,
             Instant cacheExpiresAt,
             InsuranceCombinationResponse response) {
+        public InsuranceCacheCommand {
+            response = copyResponse(response);
+        }
+
+        @Override
+        public InsuranceCombinationResponse response() {
+            return copyResponse(response);
+        }
     }
 
     public record InsuranceCacheResult(int upsertedCount, int diffDetectedCount, int needsReviewCount) {
@@ -470,6 +478,14 @@ public class OrcaInsuranceCacheStore {
     }
 
     public record SnapshotResult(boolean created, boolean diffDetected, List<String> changedFields) {
+        public SnapshotResult {
+            changedFields = changedFields == null ? List.of() : List.copyOf(changedFields);
+        }
+
+        @Override
+        public List<String> changedFields() {
+            return List.copyOf(changedFields);
+        }
     }
 
     public record SnapshotRow(
@@ -506,5 +522,17 @@ public class OrcaInsuranceCacheStore {
             String certificateExpiredDate,
             int publicInsuranceCount,
             String rowHash) {
+    }
+
+    private static InsuranceCombinationResponse copyResponse(InsuranceCombinationResponse response) {
+        if (response == null) {
+            return null;
+        }
+        InsuranceCombinationResponse copy = JSON.convertValue(response, InsuranceCombinationResponse.class);
+        copy.getCombinations().clear();
+        for (InsuranceCombination combination : response.getCombinations()) {
+            copy.getCombinations().add(JSON.convertValue(combination, InsuranceCombination.class));
+        }
+        return copy;
     }
 }

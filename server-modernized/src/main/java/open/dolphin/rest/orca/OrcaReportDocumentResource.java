@@ -119,7 +119,7 @@ public class OrcaReportDocumentResource extends AbstractOrcaRestResource {
                     transportResult != null ? transportResult.getBody() : null,
                     response,
                     null));
-            response.setStorageUploadStatus(snapshot != null ? snapshot.storageUploadStatus() : "NOT_UPLOADED");
+            response.setStorageUploadStatus(storageUploadStatus(snapshot));
             response.setReportBinaryAvailable(false);
             return snapshot;
         } catch (RuntimeException ex) {
@@ -133,6 +133,10 @@ public class OrcaReportDocumentResource extends AbstractOrcaRestResource {
             throw restError(request, jakarta.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE,
                     "orca_report_snapshot_unavailable", "ORCA report snapshot is unavailable");
         }
+    }
+
+    private static String storageUploadStatus(OrcaBillingCacheStore.ReportSnapshotReceipt snapshot) {
+        return snapshot != null ? snapshot.storageUploadStatus() : "NOT_UPLOADED";
     }
 
     private void stageReportBinaryIfAvailable(

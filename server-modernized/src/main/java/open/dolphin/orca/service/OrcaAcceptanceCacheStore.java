@@ -348,6 +348,14 @@ public class OrcaAcceptanceCacheStore {
             Instant fetchedAt,
             Instant cacheExpiresAt,
             AcceptanceInventoryResponse response) {
+        public AcceptanceInventoryCommand {
+            response = copyResponse(response);
+        }
+
+        @Override
+        public AcceptanceInventoryResponse response() {
+            return copyResponse(response);
+        }
     }
 
     public record AcceptanceCacheResult(
@@ -370,5 +378,41 @@ public class OrcaAcceptanceCacheStore {
             String insuranceCombinationNumber,
             String rowHash,
             String acceptanceStatus) {
+    }
+
+    private static AcceptanceInventoryResponse copyResponse(AcceptanceInventoryResponse response) {
+        if (response == null) {
+            return null;
+        }
+        AcceptanceInventoryResponse copy = JSON.convertValue(response, AcceptanceInventoryResponse.class);
+        copy.getRows().clear();
+        for (AcceptanceInventoryResponse.AcceptanceInventoryRow row : response.getRows()) {
+            copy.getRows().add(copyRow(row));
+        }
+        return copy;
+    }
+
+    private static AcceptanceInventoryResponse.AcceptanceInventoryRow copyRow(
+            AcceptanceInventoryResponse.AcceptanceInventoryRow row) {
+        AcceptanceInventoryResponse.AcceptanceInventoryRow copy = new AcceptanceInventoryResponse.AcceptanceInventoryRow();
+        copy.setRowHash(row.getRowHash());
+        copy.setHasAcceptanceId(row.isHasAcceptanceId());
+        copy.setHasPatientId(row.isHasPatientId());
+        copy.setHasAcceptanceDate(row.isHasAcceptanceDate());
+        copy.setHasAcceptanceTime(row.isHasAcceptanceTime());
+        copy.setHasDepartmentCode(row.isHasDepartmentCode());
+        copy.setHasPhysicianCode(row.isHasPhysicianCode());
+        copy.setHasMedicalInformation(row.isHasMedicalInformation());
+        copy.setHasInsuranceCombinationNumber(row.isHasInsuranceCombinationNumber());
+        copy.setRawSensitiveFieldsExcluded(row.isRawSensitiveFieldsExcluded());
+        copy.setServerAcceptanceId(row.getServerAcceptanceId());
+        copy.setServerPatientId(row.getServerPatientId());
+        copy.setServerAcceptanceDate(row.getServerAcceptanceDate());
+        copy.setServerAcceptanceTime(row.getServerAcceptanceTime());
+        copy.setServerDepartmentCode(row.getServerDepartmentCode());
+        copy.setServerPhysicianCode(row.getServerPhysicianCode());
+        copy.setServerMedicalInformation(row.getServerMedicalInformation());
+        copy.setServerInsuranceCombinationNumber(row.getServerInsuranceCombinationNumber());
+        return copy;
     }
 }

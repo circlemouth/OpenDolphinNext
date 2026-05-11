@@ -112,7 +112,7 @@ public class ChartRevisionExportRevision {
     }
 
     public Map<String, Object> getSnapshotManifest() {
-        return snapshotManifest;
+        return new LinkedHashMap<>(snapshotManifest);
     }
 
     public void setSnapshotManifest(Map<String, Object> snapshotManifest) {
