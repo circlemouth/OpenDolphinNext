@@ -114,7 +114,7 @@ public class ChartRevisionExportService {
         response.setExportHashAlgorithm(EXPORT_HASH_ALGORITHM);
         response.setRevisions(revisions.stream().map(this::toRevision).toList());
         response.setEvents(events.stream().map(this::toEvent).toList());
-        requireCurrentRevisionInExport(document, response);
+        response.setCurrentRevisionStatus(resolveCurrentRevisionStatus(document, response));
         response.setRevisionCount(response.getRevisions().size());
         response.setEventCount(response.getEvents().size());
         response.setExportHash(sha256(writeJson(exportHashMaterial(response))));
@@ -182,18 +182,18 @@ public class ChartRevisionExportService {
         return csv.toString();
     }
 
-    private void requireCurrentRevisionInExport(ChartDocumentModel document, ChartRevisionExportResponse response) {
+    private String resolveCurrentRevisionStatus(ChartDocumentModel document, ChartRevisionExportResponse response) {
         Long currentRevisionId = document.getCurrentRevisionId();
         if (currentRevisionId == null) {
-            return;
+            return null;
         }
-        boolean found = response.getRevisions().stream()
-                .anyMatch(revision -> currentRevisionId.equals(revision.getRevisionId()));
-        if (!found) {
-            throw restError(Response.Status.CONFLICT, EXPORT_INCONSISTENT,
-                    "Chart revision export is inconsistent",
-                    Map.of("chartId", document.getId(), "currentRevisionId", currentRevisionId));
-        }
+        return response.getRevisions().stream()
+                .filter(revision -> currentRevisionId.equals(revision.getRevisionId()))
+                .findFirst()
+                .map(ChartRevisionExportRevision::getStatus)
+                .orElseThrow(() -> restError(Response.Status.CONFLICT, EXPORT_INCONSISTENT,
+                        "Chart revision export is inconsistent",
+                        Map.of("chartId", document.getId(), "currentRevisionId", currentRevisionId)));
     }
 
     private ChartRevisionExportRevision toRevision(ChartRevisionModel revision) {
@@ -379,6 +379,7 @@ public class ChartRevisionExportService {
         material.put("exportHashAlgorithm", response.getExportHashAlgorithm());
         material.put("chartId", response.getChartId());
         material.put("currentRevisionId", response.getCurrentRevisionId());
+        material.put("currentRevisionStatus", response.getCurrentRevisionStatus());
         material.put("revisionCount", response.getRevisionCount());
         material.put("eventCount", response.getEventCount());
         material.put("revisions", response.getRevisions().stream().map(this::revisionHashMaterial).toList());
