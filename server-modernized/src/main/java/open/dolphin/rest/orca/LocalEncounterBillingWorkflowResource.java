@@ -712,10 +712,12 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
             return;
         }
         JsonNode body = readTemporaryMedicalGetBody(result.getBody());
-        String apiResult = xmlTextValue(body, "Api_Result");
+        String apiResult = firstNonBlankLocal(xmlTextValue(body, "Api_Result"), "unknown");
         boolean apiSuccess = "00".equals(apiResult);
         response.setApiResult(apiResult);
-        response.setApiResultMessage(xmlTextValue(body, "Api_Result_Message"));
+        response.setApiResultMessage(firstNonBlankLocal(
+                xmlTextValue(body, "Api_Result_Message"),
+                apiSuccess ? null : "temporary_medical_reconcile_unparseable"));
         List<JsonNode> rows = arrayNodes(body.path("Tmedical_List_Information"));
         int matches = 0;
         String firstMode = null;

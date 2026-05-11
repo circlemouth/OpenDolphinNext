@@ -27,7 +27,7 @@ Checklist count when parallel board was created:
 
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
-| A | `codex/orca-ehr-worker-a-patient-boundary` | Worker A queue complete; temporary reconcile API-result guard | Done | 20260511T033122Z | this commit | - |
+| A | `codex/orca-ehr-worker-a-patient-boundary` | Worker A queue complete; temporary reconcile parse guard | Done | 20260511T035005Z | this commit | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
@@ -58,6 +58,7 @@ Checklist count when parallel board was created:
 | A-15 | 3.3, 6, 13 | Require sanitized server-derived snapshot metadata for temporary medical reconcile. | `tmedicalgetv2` reconcile payload is generated only from snapshots with raw-sensitive exclusion and server-derived authority flags. | Billing correction focused tests |
 | A-16 | 3.3, 6, 13 | Require ORCA temporary medical response date to match saved snapshot when present. | `tmedicalgetv2` response rows with a different perform date are not counted as matching temporary medical candidates. | Billing correction focused tests |
 | A-17 | 3.3, 6, 13 | Ignore temporary medical reconcile rows when ORCA Api_Result is non-normal. | Non-00 `tmedicalgetv2` responses do not count matching rows, `Medical_Uid` presence, or resend-block decisions. | Billing correction focused tests |
+| A-18 | 3.3, 6, 13 | Sanitize unparseable temporary medical reconcile responses. | Parse failures or missing `Api_Result` return `apiResult=unknown`, sanitized message, and needs-review status without raw body or parser details. | Billing correction focused tests |
 
 ### Worker B Queue
 
@@ -119,6 +120,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T035005Z | A | A-18 | 3.3/6/13 temporary reconcile parse failure sanitized | this commit | focused billing correction test and doc/config/runtime guards passed | Done | Await next Worker A queue item |
 | 20260511T033122Z | A | A-17 | 3.3/6/13 temporary reconcile non-normal Api_Result fail-closed | this commit | focused billing correction test and doc/config/runtime guards passed | Done | Await next Worker A queue item |
 | 20260511T031021Z | A | A-16 | 3.3/6/13 temporary reconcile response date mismatch rejected | this commit | focused billing correction test and doc/config/runtime guards passed | Done | Await next Worker A queue item |
 | 20260511T025019Z | A | A-15 | 3.3/6/13 temporary reconcile sanitized snapshot fail-closed | this commit | focused billing correction test and doc/config/runtime guards passed | Done | Await next Worker A queue item |

@@ -390,6 +390,50 @@ class OrcaBillingCorrectionScenarioSupportTest {
     }
 
     @Test
+    void temporaryMedicalReconcileTreatsUnparseableBodyAsSanitizedNeedsReview() {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
+                new BillingOrcaWorkflowRepository.TransmissionReviewRecord(
+                        48L,
+                        106L,
+                        "FAC-1",
+                        "encounter-unparseable",
+                        "idem-unparseable",
+                        "ORCA_UNKNOWN",
+                        null,
+                        "unknown",
+                        "result_unknown",
+                        200,
+                        "REQ-7",
+                        "TRACE-7",
+                        "00012",
+                        "schedule-7",
+                        Instant.parse("2026-05-10T15:00:00Z"),
+                        null,
+                        """
+                        {"visitDate":"2026-05-10","departmentCode":"01","rawSensitiveFieldsExcluded":true,"clientProvidedIdentifiersTrusted":false,"serverDerivedAuthorityRequired":true}
+                        """);
+
+        var response = new open.dolphin.rest.dto.orca.BillingOrcaTemporaryMedicalReconcileResponse();
+        resource.applyTemporaryMedicalGetResult(
+                response,
+                record,
+                OrcaTransportResult.fallback(
+                        "<broken",
+                        "application/xml"));
+
+        assertTrue(!response.isOk());
+        assertEquals("unknown", response.getApiResult());
+        assertEquals("temporary_medical_reconcile_unparseable", response.getApiResultMessage());
+        assertEquals("NEEDS_REVIEW", response.getOperationStatus());
+        assertEquals("TEMPORARY_MEDICAL_NOT_FOUND", response.getReconciliationStatus());
+        assertEquals(0, response.getTemporaryMedicalRowCount());
+        assertEquals(0, response.getMatchingTemporaryMedicalRowCount());
+        assertTrue(!response.isMedicalUidPresent());
+        assertTrue(!response.isResendBlocked());
+    }
+
+    @Test
     void temporaryMedicalReconcileBlocksResendWhenOrcaModeIsLocked() {
         LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
         BillingOrcaWorkflowRepository.TransmissionReviewRecord record =
