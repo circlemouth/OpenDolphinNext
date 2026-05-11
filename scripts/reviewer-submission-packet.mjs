@@ -26,6 +26,7 @@ const REQUIRED_CLOSEOUT_FILES = [
   'qa/fullflow/steps.log',
   'qa/fullflow/console.json',
   'qa/fullflow/page-errors.json',
+  'qa/billing-report-live-profile/summary.sanitized.json',
   'evidence/patients-import/import-summary.json',
   'evidence/medical-information-probe/probe-summary.json',
   'evidence/medical-information-probe/route-response.json',
@@ -64,6 +65,7 @@ const REQUIRED_PACKET_FILES = [
   'closeout-packet/qa/fullflow/steps.log',
   'closeout-packet/qa/fullflow/console.json',
   'closeout-packet/qa/fullflow/page-errors.json',
+  'closeout-packet/qa/billing-report-live-profile/summary.sanitized.json',
   'closeout-packet/evidence/patients-import/import-summary.json',
   'closeout-packet/evidence/medical-information-probe/probe-summary.json',
   'closeout-packet/evidence/medical-information-probe/route-response.json',
@@ -103,6 +105,33 @@ const FORBIDDEN_CLOSEOUT_TEXT_PATTERNS = [
     pattern: /\bhar\/|\.har\b/i,
   },
 ];
+
+const FORBIDDEN_BILLING_REPORT_KEY_NAMES = new Set([
+  'authorization',
+  'cookie',
+  'csrf',
+  'dataid',
+  'data_id',
+  'insurancecombinationnumber',
+  'insurance_combination_number',
+  'invoicenumber',
+  'invoice_number',
+  'jsessionid',
+  'medicaluid',
+  'medical_uid',
+  'patientid',
+  'patient_id',
+  'patientname',
+  'patient_name',
+  'rawdataid',
+  'rawinvoice',
+  'rawinvoicenumber',
+  'rawmedicaluid',
+  'rawpatientid',
+  'rawpatientname',
+  'whole_name',
+  'wholename',
+]);
 
 const TEXT_EXTENSIONS = new Set([
   '.json',
@@ -448,6 +477,78 @@ function validateSanitizedFullflowSummary(summary) {
   }
 }
 
+function collectForbiddenBillingReportKeys(value, pathSegments = [], offenders = []) {
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => collectForbiddenBillingReportKeys(entry, [...pathSegments, String(index)], offenders));
+    return offenders;
+  }
+  if (!value || typeof value !== 'object') {
+    return offenders;
+  }
+  for (const [key, nestedValue] of Object.entries(value)) {
+    const normalized = key.replace(/[^a-z0-9_]/gi, '').toLowerCase();
+    if (FORBIDDEN_BILLING_REPORT_KEY_NAMES.has(normalized)) {
+      offenders.push([...pathSegments, key].join('.'));
+    }
+    collectForbiddenBillingReportKeys(nestedValue, [...pathSegments, key], offenders);
+  }
+  return offenders;
+}
+
+function validateBillingReportLiveProfileSummary(summary) {
+  if (summary?.source !== 'qa-orca-billing-report-live-profile') {
+    fail('qa/billing-report-live-profile/summary.sanitized.json must come from qa-orca-billing-report-live-profile');
+  }
+  if (summary?.commandContract !== 'orca-billing-report-live-profile-dry-run-sanitized-only') {
+    fail('qa/billing-report-live-profile/summary.sanitized.json must assert the dry-run sanitized-only command contract');
+  }
+  if (summary?.dryRun !== true || summary?.liveTrialOrca?.executed !== false) {
+    fail('qa/billing-report-live-profile/summary.sanitized.json must not claim live ORCA execution');
+  }
+  if (summary?.sanitizedEvidenceOnly !== true || summary?.disableBrowserArtifacts !== true) {
+    fail('qa/billing-report-live-profile/summary.sanitized.json must assert sanitized evidence without browser artifacts');
+  }
+  if (summary?.rawSensitiveFieldsExcluded !== true) {
+    fail('qa/billing-report-live-profile/summary.sanitized.json must assert rawSensitiveFieldsExcluded=true');
+  }
+
+  const patientIdHash = summary?.target?.patientIdHash;
+  if (patientIdHash !== null && patientIdHash !== undefined && !/^[a-f0-9]{64}$/.test(String(patientIdHash))) {
+    fail('qa/billing-report-live-profile/summary.sanitized.json target.patientIdHash must be null or sha256 hex');
+  }
+
+  const acceptedFields = Array.isArray(summary?.acceptedEvidenceFields) ? summary.acceptedEvidenceFields : [];
+  const forbiddenFields = Array.isArray(summary?.forbiddenEvidenceFields) ? summary.forbiddenEvidenceFields : [];
+  if (!acceptedFields.includes('serverGeneratedStorageKeyDigest')) {
+    fail('qa/billing-report-live-profile/summary.sanitized.json must include server-generated storage key/digest evidence boundary');
+  }
+  if (!forbiddenFields.includes('rawOrcaBody') || !forbiddenFields.includes('rawDataId')) {
+    fail('qa/billing-report-live-profile/summary.sanitized.json must forbid raw ORCA body and raw Data_Id evidence');
+  }
+
+  const forbiddenKeys = collectForbiddenBillingReportKeys(summary);
+  if (forbiddenKeys.length > 0) {
+    fail(`qa/billing-report-live-profile/summary.sanitized.json contains raw-sensitive key(s): ${forbiddenKeys.join(', ')}`);
+  }
+
+  const serialized = JSON.stringify(summary);
+  const additionalSensitivePatterns = [
+    {
+      label: 'credential_reference',
+      pattern: /\b(?:Authorization|Cookie|JSESSIONID|CSRF)\b/i,
+    },
+    {
+      label: 'patient_or_insurance_detail_reference',
+      pattern: /\b(?:WholeName|Whole_Name|Patient_Name|Insurance_Combination_Number|Medical_Uid)\b/i,
+    },
+  ];
+  for (const { label, pattern } of [...FORBIDDEN_CLOSEOUT_TEXT_PATTERNS, ...additionalSensitivePatterns]) {
+    if (pattern.test(serialized)) {
+      fail(`qa/billing-report-live-profile/summary.sanitized.json contains forbidden ${label}`);
+    }
+  }
+}
+
 function buildManifest(packetDir, runId, acceptedRef, acceptedHead, mergeBaseOriginMaster) {
   const files = walkFiles(packetDir, { includeDotDirs: true })
     .filter((filePath) => !['manifest.json', 'manifest.sha256'].includes(path.basename(filePath)))
@@ -554,6 +655,7 @@ function validateSourceInputs(repoRoot, runId, acceptedRef, acceptedHeadOverride
 
   validateSanitizedAcceptSummary(readJson(path.join(closeoutRoot, 'qa/acceptmodv2/accept-summary.sanitized.json')));
   validateSanitizedFullflowSummary(readJson(path.join(closeoutRoot, 'qa/fullflow/summary.json')));
+  validateBillingReportLiveProfileSummary(readJson(path.join(closeoutRoot, 'qa/billing-report-live-profile/summary.sanitized.json')));
 
   return {
     acceptedHead,
@@ -693,6 +795,7 @@ function validatePacket(outputDir, runId, acceptedRef, acceptedHead) {
 
   validateSanitizedAcceptSummary(readJson(path.join(packetDir, 'closeout-packet/qa/acceptmodv2/accept-summary.sanitized.json')));
   validateSanitizedFullflowSummary(readJson(path.join(packetDir, 'closeout-packet/qa/fullflow/summary.json')));
+  validateBillingReportLiveProfileSummary(readJson(path.join(packetDir, 'closeout-packet/qa/billing-report-live-profile/summary.sanitized.json')));
 
   validateNoAbsolutePaths(packetDir);
   validateNoForbiddenCloseoutText(packetDir);

@@ -190,6 +190,7 @@ cd web-client && RUN_ID=<RUN_ID> node scripts/qa-orca-billing-report-live-profil
 - `income-info` は server-side facility と exact selected-candidate preflight で確認済みの患者・診療日だけを対象にし、結果は `orca_billing_cache` の `source_system=ORCA`、request/response hash、件数、sanitized summary で確認する。
 - `/api/orca/official/reports/{type}` は `orca_report_snapshot` の request/response hash、invoice/data id hash、server-generated storage key/digest、`storageUploadStatus`、`reportBinaryAvailable` だけを evidence にする。
 - object storage 有効時の帳票 binary は `OrcaReportBinaryStorageService` の digest verification を通過した場合だけ accepted とし、upload 失敗は fail-closed blocker とする。
+- reviewer submission packet に含める billing/report evidence は `qa/billing-report-live-profile/summary.sanitized.json` の dry-run sanitized summary だけとし、`liveTrialOrca.executed=false` を保持する。これは live Trial 実行成功、会計済み、収納済み、レセプト正本化の証跡ではなく、次の live 実行可否を判定する gate evidence に限定する。
 - 証跡に raw ORCA body、帳票本文、raw invoice number、raw `Data_Id`、raw `Medical_Uid`、患者氏名・住所・電話番号、保険詳細、credential、Cookie、Authorization、HAR、trace、video、screenshot、raw network JSON を残さない。
 - `storageUploadStatus=UPLOADED` だけでは会計済み・収納済み・レセプト正本化を意味しない。ORCA由来 snapshot/cache の取得証跡に限定する。
 
