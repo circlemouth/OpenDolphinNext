@@ -206,6 +206,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-10T22:30Z: Charts の低レベル `ORCA 送信` は precheck 不足だけでは native disabled にせず、近傍 guard note / `aria-disabled=true` / 押下時 warning banner で不足条件を表示し、確認 modal と transport へ進まないことを focused test で固定した。
   - [x] 2026-05-10T23:13Z: Charts の通常導線 `診察終了して会計へ送信` も precheck 不足だけでは native disabled にせず、近傍 guard note / `aria-disabled=true` / 押下時 warning banner で不足条件を表示し、finish hook と transport へ進まないことを focused test で固定した。
   - [x] 2026-05-11T00:02Z: `DiagnosisEditPanel` の quick ORCA病名登録ボタンは ORCA mirror unavailable / read-only だけでは native disabled にせず、近傍理由 `diagnosis-mutation-block-reason` と押下時 `ORCA病名操作を停止` notice で不足条件を表示し、confirm / mutation へ進まないことを focused test で固定した。
+  - [x] 2026-05-11T00:22Z: `OrderDockPanel` の quick-add / group-add は patient context 不足、read-only、missing master、fallback data だけでは native disabled にせず、近傍理由 `order-dock-edit-block-reason` と押下時 `オーダー追加を停止` notice で不足条件を表示し、editor を開かないことを focused test で固定した。
 - [ ] ボタン優先度、配置、44px以上の押下領域を DADS に沿って統一する。
 
 ## 12. 監査ログ・真正性

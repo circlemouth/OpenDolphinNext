@@ -188,6 +188,29 @@ describe('OrderDockPanel category quick-add', () => {
     expect(screen.getByLabelText('処方入力')).toBeInTheDocument();
   });
 
+  it('編集不可時の quick-add は disabled だけにせず押下時に理由を表示する', async () => {
+    const user = userEvent.setup();
+    renderWithClient(
+      <OrderDockPanel
+        patientId="P-100"
+        meta={{ ...baseMeta, missingMaster: true }}
+        visitDate="2026-02-17"
+        orderBundles={[]}
+      />,
+    );
+
+    expect(screen.getByText('オーダー追加はブロックされています: マスター未同期のため操作できません。')).toBeInTheDocument();
+    const quickAddButton = document.querySelector('[data-test-id="order-dock-quick-add-prescription"]') as HTMLButtonElement;
+    expect(quickAddButton).not.toBeDisabled();
+    expect(quickAddButton).toHaveAttribute('aria-disabled', 'true');
+    expect(quickAddButton).toHaveAttribute('aria-describedby', 'order-dock-edit-block-reason');
+
+    await user.click(quickAddButton);
+
+    expect(screen.getByText('オーダー追加を停止: マスター未同期のため操作できません。')).toBeInTheDocument();
+    expect(screen.queryByLabelText('処方入力')).not.toBeInTheDocument();
+  });
+
   it('quick-add は主要カテゴリの新規入力を開く', async () => {
     const user = userEvent.setup();
     renderWithClient(

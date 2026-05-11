@@ -527,6 +527,11 @@ export function OrderDockPanel(props: {
         : meta.fallbackUsed
           ? 'フォールバックデータのため操作できません。'
           : undefined;
+  const showEditBlockedNotice = useCallback(() => {
+    if (canEdit) return false;
+    setNotice({ tone: 'error', message: `オーダー追加を停止: ${editDisabledReason ?? '編集不可のため追加できません。'}` });
+    return true;
+  }, [canEdit, editDisabledReason]);
 
   const quickSearchCandidates = useMemo<SearchCandidate[]>(() => {
     const keyword = quickSearch.trim().toLowerCase();
@@ -928,6 +933,7 @@ export function OrderDockPanel(props: {
 
   const handleQuickAdd = useCallback(
     (groupKey: OrderGroupKey, triggerEl?: HTMLElement | null) => {
+      if (showEditBlockedNotice()) return;
       setQuickAddGroupKey(groupKey);
       openEditor(
         quickAddEntityByGroup[groupKey],
@@ -935,7 +941,7 @@ export function OrderDockPanel(props: {
         { source: primaryOperationSource, reason: 'quick_add', triggerEl },
       );
     },
-    [openEditor, primaryOperationSource, quickAddEntityByGroup],
+    [openEditor, primaryOperationSource, quickAddEntityByGroup, showEditBlockedNotice],
   );
 
   const handleQuickAddExit = useCallback(() => {
@@ -952,7 +958,7 @@ export function OrderDockPanel(props: {
   const handleQuickSearchApply = useCallback(
     (candidate: SearchCandidate) => {
       if (!canEdit) {
-        setNotice({ tone: 'error', message: editDisabledReason ?? '編集不可のため追加できません。' });
+        showEditBlockedNotice();
         return;
       }
       setQuickAddGroupKey(null);
@@ -966,7 +972,7 @@ export function OrderDockPanel(props: {
       }
       setQuickSearch('');
     },
-    [canEdit, editDisabledReason, openEditor, primaryOperationSource],
+    [canEdit, openEditor, primaryOperationSource, showEditBlockedNotice],
   );
 
   const handleApplyRecommendation = useCallback(
@@ -1049,7 +1055,9 @@ export function OrderDockPanel(props: {
             className="order-dock__mini-add"
             data-test-id={`order-dock-quick-add-${quickAddModeSpec.key}`}
             onClick={(event) => handleQuickAdd(quickAddModeSpec.key, event.currentTarget)}
-            disabled={!canEdit}
+            aria-disabled={!canEdit}
+            aria-describedby={!canEdit ? 'order-dock-edit-block-reason' : undefined}
+            data-disabled-reason={!canEdit ? 'order_edit_blocked' : undefined}
             title={!canEdit ? editDisabledReason : undefined}
             aria-label={`${quickAddModeSpec.label.replace('+', '')}を追加`}
           >
@@ -1076,7 +1084,9 @@ export function OrderDockPanel(props: {
             className="order-dock__mini-add"
             data-test-id={`order-dock-quick-add-${item.key}`}
             onClick={(event) => handleQuickAdd(item.key, event.currentTarget)}
-            disabled={!canEdit}
+            aria-disabled={!canEdit}
+            aria-describedby={!canEdit ? 'order-dock-edit-block-reason' : undefined}
+            data-disabled-reason={!canEdit ? 'order_edit_blocked' : undefined}
             title={!canEdit ? editDisabledReason : undefined}
             aria-label={`${item.label.replace('+', '')}を追加`}
           >
@@ -1208,9 +1218,10 @@ export function OrderDockPanel(props: {
             className="order-dock__group-action order-dock__group-action--add"
             data-test-id={`order-dock-group-add-${group.key}`}
             aria-label={`${groupLabel}を追加して編集開始`}
-            aria-describedby="order-dock-edit-context-status"
             onClick={(event) => handleQuickAdd(group.key, event.currentTarget)}
-            disabled={!canEdit}
+            aria-disabled={!canEdit}
+            aria-describedby={!canEdit ? 'order-dock-edit-block-reason order-dock-edit-context-status' : 'order-dock-edit-context-status'}
+            data-disabled-reason={!canEdit ? 'order_edit_blocked' : undefined}
             title={!canEdit ? editDisabledReason : undefined}
           >
             ＋
@@ -1735,6 +1746,11 @@ export function OrderDockPanel(props: {
         </div>
       ) : null}
 
+      {!canEdit && editDisabledReason ? (
+        <div id="order-dock-edit-block-reason" className="order-dock__notice order-dock__notice--info">
+          オーダー追加はブロックされています: {editDisabledReason}
+        </div>
+      ) : null}
       {notice ? <div className={`order-dock__notice order-dock__notice--${notice.tone}`}>{notice.message}</div> : null}
       {orderBundlesLoading ? <p className="order-dock__empty">オーダー情報を取得しています...</p> : null}
       {orderBundlesError ? <p className="order-dock__empty">{resolveUserSafeFetchFailure('オーダー情報', orderBundlesError)}</p> : null}

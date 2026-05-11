@@ -31,7 +31,7 @@ Checklist count when parallel board was created:
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
-| E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-04 follow-on disabled reason expansion to prescription controls | Done | 20260511T000208Z | this commit | - |
+| E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-04 follow-on disabled reason expansion to OrderDock quick-add/group-add | Done | 20260511T002208Z | this commit | - |
 | F | `codex/orca-ehr-worker-f-audit-security-gates` | F-02 credential/PHI leakage guards | Done | 20260510T201318Z | this commit | - |
 | G | `codex/orca-ehr-integrator-g` | G-02 merge first worker batch in prescribed order | Done | 20260510T195822Z | this docs commit | - |
 
@@ -106,6 +106,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T002208Z | E | E-04 follow-on | 11 disabled dependency reduction for OrderDock quick-add/group-add; 20 Phase 4 push-time reason expansion | this commit | targeted `orderDockPanel.categoryButtons.test.tsx`, explicit `verify:web-guard`, and `typecheck` passed | Done | E-04 follow-on: expand disabled reason contract to remaining order/search/detail controls |
 | 20260511T000208Z | E | E-04 follow-on | 11 disabled dependency reduction for Diagnosis quick ORCA disease create; 20 Phase 4 push-time reason expansion | this commit | targeted `DiagnosisEditPanel.orcaMirrorConnection.test.tsx` / `dadsClinicalInputContract.test.tsx`, explicit `verify:web-guard`, and `typecheck` passed | Done | E-04 follow-on: expand disabled reason contract to prescription controls |
 | 20260510T231345Z | E | E-04 follow-on | 11 disabled dependency reduction for Charts finish/billing send; 20 Phase 4 push-time reason expansion | this commit | targeted `chartsActionBar.test.tsx` / `chartsActionBar.orca-send.test.tsx`, explicit `verify:web-guard`, and `typecheck` passed | Done | E-04 follow-on: expand disabled reason contract to diagnosis/prescription controls |
 | 20260510T223025Z | E | E-04 | 11 disabled dependency reduction for Charts low-level ORCA send; 20 Phase 4 push-time reason foundation | this commit | targeted `chartsActionBar.test.tsx`, explicit `verify:web-guard`, and `typecheck` passed | Done | E-04 follow-on: expand push-time reasons to remaining major controls/screens |
