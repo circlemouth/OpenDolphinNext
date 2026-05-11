@@ -114,7 +114,11 @@ public class ChartRevisionExportService {
         response.setExportHashAlgorithm(EXPORT_HASH_ALGORITHM);
         response.setRevisions(revisions.stream().map(this::toRevision).toList());
         response.setEvents(events.stream().map(this::toEvent).toList());
-        response.setCurrentRevisionStatus(resolveCurrentRevisionStatus(document, response));
+        ChartRevisionExportRevision currentRevision = resolveCurrentRevision(document, response);
+        if (currentRevision != null) {
+            response.setCurrentRevisionNumber(currentRevision.getRevisionNumber());
+            response.setCurrentRevisionStatus(currentRevision.getStatus());
+        }
         response.setRevisionCount(response.getRevisions().size());
         response.setEventCount(response.getEvents().size());
         response.setExportHash(sha256(writeJson(exportHashMaterial(response))));
@@ -182,7 +186,8 @@ public class ChartRevisionExportService {
         return csv.toString();
     }
 
-    private String resolveCurrentRevisionStatus(ChartDocumentModel document, ChartRevisionExportResponse response) {
+    private ChartRevisionExportRevision resolveCurrentRevision(ChartDocumentModel document,
+            ChartRevisionExportResponse response) {
         Long currentRevisionId = document.getCurrentRevisionId();
         if (currentRevisionId == null) {
             return null;
@@ -190,7 +195,6 @@ public class ChartRevisionExportService {
         return response.getRevisions().stream()
                 .filter(revision -> currentRevisionId.equals(revision.getRevisionId()))
                 .findFirst()
-                .map(ChartRevisionExportRevision::getStatus)
                 .orElseThrow(() -> restError(Response.Status.CONFLICT, EXPORT_INCONSISTENT,
                         "Chart revision export is inconsistent",
                         Map.of("chartId", document.getId(), "currentRevisionId", currentRevisionId)));
@@ -379,6 +383,7 @@ public class ChartRevisionExportService {
         material.put("exportHashAlgorithm", response.getExportHashAlgorithm());
         material.put("chartId", response.getChartId());
         material.put("currentRevisionId", response.getCurrentRevisionId());
+        material.put("currentRevisionNumber", response.getCurrentRevisionNumber());
         material.put("currentRevisionStatus", response.getCurrentRevisionStatus());
         material.put("revisionCount", response.getRevisionCount());
         material.put("eventCount", response.getEventCount());

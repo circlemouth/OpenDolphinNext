@@ -28,7 +28,7 @@ Checklist count when parallel board was created:
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
 | A | `codex/orca-ehr-worker-a-patient-boundary` | A-02 patientmodv2 prepare/send + canonical re-fetch | Done | 20260510T203921Z | this commit | - |
-| B | `codex/orca-ehr-worker-b-chart-revision` | B-08 full snapshot integration after A/C/D contracts | Done | 20260511T031011Z | this commit | - |
+| B | `codex/orca-ehr-worker-b-chart-revision` | B-08 full snapshot integration after A/C/D contracts | Done | 20260511T033012Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
 | E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-02 common patient header staged rollout | Done | 20260510T204142Z | this commit | - |
@@ -65,6 +65,7 @@ Checklist count when parallel board was created:
 | B-08e | 14 | Add JSON export count metadata while waiting on full snapshot contracts. | JSON export returns revision/event counts and includes them in hash material. | Focused export tests |
 | B-08f | 14 | Add JSON export current revision consistency guard while waiting on full snapshot contracts. | JSON export refuses to return a current revision pointer that is absent from the revision list. | Focused export tests |
 | B-08g | 14 | Add JSON export current revision status metadata while waiting on full snapshot contracts. | JSON export returns server-derived current revision status and includes it in hash material. | Focused export tests |
+| B-08h | 14 | Add JSON export current revision number metadata while waiting on full snapshot contracts. | JSON export returns server-derived current revision number and includes it in hash material. | Focused export tests |
 
 ### Worker C Queue
 
@@ -117,6 +118,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T033012Z | B | B-08h | 14 chart revision JSON export current revision number metadata | this commit | `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest` passed | Done | B-08 full snapshot integration after A/C/D contracts |
 | 20260511T031011Z | B | B-08g | 14 chart revision JSON export current revision status metadata | this commit | `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest` passed | Done | B-08 full snapshot integration after A/C/D contracts |
 | 20260511T025011Z | B | B-08f | 14 chart revision JSON export current revision consistency | this commit | `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest` passed | Done | B-08 full snapshot integration after A/C/D contracts |
 | 20260511T023113Z | B | B-08e | 14 chart revision JSON export count metadata | this commit | `ChartRevisionExportServiceTest`, `PublicRouteInventoryContractTest` passed | Done | B-08 full snapshot integration after A/C/D contracts |

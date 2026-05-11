@@ -7,6 +7,7 @@ public class ChartRevisionExportResponse {
 
     private Long chartId;
     private Long currentRevisionId;
+    private Integer currentRevisionNumber;
     private String currentRevisionStatus;
     private Integer exportSchemaVersion;
     private String exportHashAlgorithm;
@@ -30,6 +31,14 @@ public class ChartRevisionExportResponse {
 
     public void setCurrentRevisionId(Long currentRevisionId) {
         this.currentRevisionId = currentRevisionId;
+    }
+
+    public Integer getCurrentRevisionNumber() {
+        return currentRevisionNumber;
+    }
+
+    public void setCurrentRevisionNumber(Integer currentRevisionNumber) {
+        this.currentRevisionNumber = currentRevisionNumber;
     }
 
     public String getCurrentRevisionStatus() {

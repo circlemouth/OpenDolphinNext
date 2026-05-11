@@ -43,6 +43,7 @@ class ChartRevisionExportServiceTest {
 
         assertThat(response.getChartId()).isEqualTo(10L);
         assertThat(response.getCurrentRevisionId()).isEqualTo(21L);
+        assertThat(response.getCurrentRevisionNumber()).isEqualTo(2);
         assertThat(response.getCurrentRevisionStatus()).isEqualTo("AMENDED");
         assertThat(response.getExportSchemaVersion()).isEqualTo(1);
         assertThat(response.getExportHashAlgorithm()).isEqualTo("SHA-256");
@@ -89,7 +90,7 @@ class ChartRevisionExportServiceTest {
     }
 
     @Test
-    void exportChartReportsCurrentRevisionStatusAndIncludesItInHashContract() {
+    void exportChartReportsCurrentRevisionMetadataAndIncludesItInHashContract() {
         stubExportQueries(List.of(finalRevision(), amendedRevision()), List.of(finalizedEvent(), amendedEvent()));
 
         ChartRevisionExportResponse amendedCurrent = service.exportChart(10L, "F001");
@@ -99,7 +100,9 @@ class ChartRevisionExportServiceTest {
 
         ChartRevisionExportResponse finalCurrent = service.exportChart(10L, "F001");
 
+        assertThat(amendedCurrent.getCurrentRevisionNumber()).isEqualTo(2);
         assertThat(amendedCurrent.getCurrentRevisionStatus()).isEqualTo("AMENDED");
+        assertThat(finalCurrent.getCurrentRevisionNumber()).isEqualTo(1);
         assertThat(finalCurrent.getCurrentRevisionStatus()).isEqualTo("FINAL");
         assertThat(finalCurrent.getExportHash()).matches("[0-9a-f]{64}");
         assertThat(finalCurrent.getExportHash()).isNotEqualTo(amendedCurrent.getExportHash());
