@@ -128,7 +128,7 @@
 - `orca_acceptance_cache` は `source_system=ORCA`, `source_api=acceptlstv2`, `source_request_id`, `source_trace_id`, `fetched_at`, `cache_expires_at`, `orca_patient_id`, `orca_acceptance_id` または受付複合 key、受付日/時刻、診療科、担当医、診療情報、保険組合せ、受付状態、取消日時、row hash、normalized payload、sanitized response summary を保存する。raw ORCA body、credential、接続先 URL、患者氏名・住所・電話、保険詳細、Cookie、Authorization、CSRF は保存しない。
 - 同一 facility/date の前回 cache に存在し、今回の ORCA inventory に存在しない受付は物理削除せず、`acceptance_status=CANCELLED`、`event_type=ORCA_ACCEPTANCE_CANCELLED`、`cancelled_at` を記録する。
 - 同じ受付 key の患者番号、受付時刻、診療科、担当医、診療情報、保険組合せが変化した場合は `DIFF_DETECTED` / `ORCA_ACCEPTANCE_DIFF_DETECTED` として保存し、変更 field 名だけを sanitized summary に入れる。必須 server-derived field が欠落した行は `NEEDS_REVIEW` とし、成功表示に潰さない。
-- cache 書き込みに失敗した場合は official wrapper 全体を成功扱いせず、古い受付 cache を current source として返さない。
+- cache 書き込みに失敗した場合は official wrapper 全体を成功扱いせず、古い受付 cache を current source として返さない。failure audit は固定 error code と sanitized error message に限定し、cache upsert / diff / cancel count などの成功系 metadata を付けない。
 
 ## Official Insurance Cache And Snapshot
 - 保険組合せ取得は `/api/orca/official/insurance/combinations` から ORCA `insuranceinf1v2` を呼び、取得ごとに `orca_insurance_cache` を更新する。cache は表示・照合・送信前確認用であり、OpenDolphinNext 側の保険正本ではない。

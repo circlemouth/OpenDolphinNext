@@ -455,14 +455,18 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             return new OrcaAcceptanceCacheStore.AcceptanceCacheResult(0, 0, 0, 0);
         }
         Instant fetchedAt = Instant.now();
-        return acceptanceCacheStore.saveInventory(new OrcaAcceptanceCacheStore.AcceptanceInventoryCommand(
-                facilityId,
-                body.getAcceptanceDate().toString(),
-                stringDetail(details, "requestId"),
-                stringDetail(details, "traceId"),
-                fetchedAt,
-                fetchedAt.plusSeconds(300),
-                response));
+        try {
+            return acceptanceCacheStore.saveInventory(new OrcaAcceptanceCacheStore.AcceptanceInventoryCommand(
+                    facilityId,
+                    body.getAcceptanceDate().toString(),
+                    stringDetail(details, "requestId"),
+                    stringDetail(details, "traceId"),
+                    fetchedAt,
+                    fetchedAt.plusSeconds(300),
+                    response));
+        } catch (RuntimeException ex) {
+            throw new IllegalStateException("acceptance cache write failed", ex);
+        }
     }
 
     private void publishReceptionRealtimeUpdateIfNeeded(HttpServletRequest request,

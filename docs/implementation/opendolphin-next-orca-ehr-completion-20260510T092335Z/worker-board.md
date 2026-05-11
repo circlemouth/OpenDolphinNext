@@ -27,7 +27,7 @@ Checklist count when parallel board was created:
 
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
-| A | `codex/orca-ehr-worker-a-patient-boundary` | Worker A queue complete; patient cache fail-closed guard | Done | 20260510T233304Z | this commit | - |
+| A | `codex/orca-ehr-worker-a-patient-boundary` | Worker A queue complete; acceptance cache fail-closed guard | Done | 20260511T000803Z | this commit | - |
 | B | `codex/orca-ehr-worker-b-chart-revision` | B-02 FINAL direct-write denial | Done | 20260510T203944Z | this commit | - |
 | C | `codex/orca-ehr-worker-c-prescription` | C-02 finalize/change/stop/cancel/reissue API | Done | 20260510T204040Z | this commit | - |
 | D | `codex/orca-ehr-worker-d-orca-operation` | D-02 `orca_operation` / `orca_transmission` migration | Done | 20260510T204050Z | this commit | - |
@@ -47,6 +47,7 @@ Checklist count when parallel board was created:
 | A-04 | 3.2, 4, 6 | Implement insurance cache and encounter insurance snapshot boundary. | Past snapshots do not change after ORCA insurance changes; resend shows diff. | Focused Maven tests |
 | A-05 | 3.1, 6, 13 | Harden route inventory guard for absent local patient CRUD and absent patient delete. | Only official patientmodv2 create/update, official patientgetv2, and local search are permitted; local patient mutation/delete aliases fail. | Route inventory/web.xml tests, web guard |
 | A-06 | 3.1, 6, 13 | Harden patientgetv2 cache write failure behavior. | Cache write failure does not return a current-source success response; old cache is not promoted to live ORCA success. | Patient API focused tests |
+| A-07 | 3.3, 6, 13 | Harden acceptlstv2 acceptance cache write failure audit boundary. | Cache write failure does not return a current-source success response; raw cache exception text is not copied into audit details; success cache counts are absent on failure. | Visit resource focused tests |
 
 ### Worker B Queue
 
@@ -108,6 +109,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T000803Z | A | A-07 | 3.3/6/13 acceptance cache write failure fail-closed and sanitized audit boundary | this commit | focused visit resource test and doc/config/runtime guards passed | Done | Await next Worker A queue item |
 | 20260510T233304Z | A | A-06 | 3.1/6 patient cache metadata and cache-write fail-closed behavior | this commit | focused patient API/cache tests and doc/config/runtime guards passed | Done | Await next Worker A queue item |
 | 20260510T230645Z | A | A-05 | 3.1/6/13 local patient CRUD absent, patient delete absent, route inventory guard | this commit | focused route inventory/web.xml tests, web guard, doc/config/runtime guards passed | Done | Await next Worker A queue item |
 | 20260510T221955Z | A | A-04 | 3.2/4 insurance cache + immutable encounter insurance snapshot boundary | this commit | focused Maven insurance/resource/fresh schema tests and doc/config/runtime guards passed | Done | Await next Worker A queue item |
