@@ -529,16 +529,64 @@ describe('PatientsPage initial selection', () => {
     expect(screen.queryByRole('tab', { name: '保険' })).not.toBeInTheDocument();
   });
 
-  it('location state の patientId と一致する患者を自動選択する', () => {
+  it('location state の encounter と一致する患者を自動選択し医療安全ヘッダーへ文脈を再掲する', () => {
     mockPatients();
-    setRouterState({ patientId: 'P-001' });
+    setRouterState({
+      encounter: {
+        patientId: 'P-001',
+        encounterKey: 'ENC-P-001',
+        visitDate: '2026-02-03',
+        departmentCode: '01',
+        physicianCode: '10001',
+        insuranceCombinationNumber: '0001',
+      },
+    });
     renderPatientsPage();
 
     const identityBar = screen.getByRole('region', { name: '患者識別帯' });
     expect(within(identityBar).getByRole('heading', { name: '山田 花子' })).toBeInTheDocument();
     expect(identityBar).toHaveTextContent('患者ID');
     expect(identityBar).toHaveTextContent('P-001');
+    const medicalSafetyHeader = within(identityBar).getByLabelText('医療安全患者ヘッダー');
+    expect(medicalSafetyHeader).toHaveTextContent('内部参照ID');
+    expect(medicalSafetyHeader).toHaveTextContent('ENC-P-001');
+    expect(medicalSafetyHeader).toHaveTextContent('受付日');
+    expect(medicalSafetyHeader).toHaveTextContent('2026-02-03');
+    expect(medicalSafetyHeader).toHaveTextContent('診療科');
+    expect(medicalSafetyHeader).toHaveTextContent('01');
+    expect(medicalSafetyHeader).toHaveTextContent('担当医');
+    expect(medicalSafetyHeader).toHaveTextContent('10001');
+    expect(medicalSafetyHeader).toHaveTextContent('保険組合せ');
+    expect(medicalSafetyHeader).toHaveTextContent('0001');
+    expect(medicalSafetyHeader).toHaveTextContent('ORCA取得');
+    expect(medicalSafetyHeader).toHaveTextContent('患者管理同期状態 / unverified');
     expect(screen.getByRole('button', { name: /山田 花子/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('選択患者と一致しない encounter 文脈は患者詳細ヘッダーへ混ぜない', async () => {
+    mockPatients();
+    setRouterState({
+      encounter: {
+        patientId: 'P-999',
+        encounterKey: 'ENC-P-999',
+        visitDate: '2026-02-04',
+        departmentCode: '99',
+        physicianCode: '99999',
+        insuranceCombinationNumber: '9999',
+      },
+    });
+    renderPatientsPage();
+    const user = userEvent.setup();
+
+    await clickPatientRowByName(user, '山田 花子');
+
+    const identityBar = screen.getByRole('region', { name: '患者識別帯' });
+    const medicalSafetyHeader = within(identityBar).getByLabelText('医療安全患者ヘッダー');
+    expect(medicalSafetyHeader).not.toHaveTextContent('ENC-P-999');
+    expect(medicalSafetyHeader).not.toHaveTextContent('99');
+    expect(medicalSafetyHeader).not.toHaveTextContent('99999');
+    expect(medicalSafetyHeader).not.toHaveTextContent('9999');
+    expect(medicalSafetyHeader).toHaveTextContent('患者管理同期状態 / unverified');
   });
 
   it('location state の patientId が不一致の場合は警告を表示して未選択を維持する', async () => {

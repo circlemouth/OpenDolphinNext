@@ -238,6 +238,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
   - [x] 2026-05-10T21:16Z: 共通 `PatientIdentityBar` に医療安全患者ヘッダー行を追加し、Charts の患者ヘッダーで受付日、診療科、担当医、保険組合せ、ORCA source/cache status を visible 表示する段階適用を実施した。Patients / Mobile Images は同じ共通 component を継続利用し、全主要画面の完全統一は後続 heartbeat で Reception などへ拡張する。
   - [x] 2026-05-11T10:11Z: Mobile Images の共通 `PatientIdentityBar` に router state `encounter` 由来の受付日、診療科、担当医、保険組合せ、内部参照ID、`遷移文脈 / unverified` の ORCA取得状態を visible 表示する段階適用を実施した。Mobile Images 側では ORCA正本再取得や同期済み表示は行わず、患者画像アップロード完了を ORCA同期済みと混同しない。
   - [x] 2026-05-11T11:17Z: Reception の既存患者受付/患者検索モーダル内受付登録ペインへ共通 `PatientIdentityBar` を追加し、患者ID、氏名/カナ、受付日、診療科、担当医、保険 context、`ORCA受付対象確認 / verified|checking|unverified` を visible 表示する段階適用を実施した。未確定の保険組合せは `保険（組合せ未確定）` と表示し、client 側で ORCA 組合せ番号や受付成立を捏造しない。
+  - [x] 2026-05-11T11:55Z: Patients 詳細ペインの共通 `PatientIdentityBar` に、選択患者と一致する encounter context 由来の内部参照ID、受付/診療日、診療科、担当医、保険組合せ、`患者管理同期状態 / fresh|stale|missing|unverified` を visible 表示する段階適用を実施した。不一致 patientId の encounter context はヘッダーへ混ぜず、Patients UI を server-side authority の代替にしない。
 - [ ] モーダル内の重大操作確認にも患者識別情報を再掲する。
   - [x] 2026-05-10T21:59Z: 共通 `CriticalOperationConfirmDialog` を追加し、患者識別情報、実行操作名、対象サマリ、distinct confirm label を alertdialog 内に再掲する契約を固定した。Charts の ORCA 送信確認へ適用し、confirm CTA を `ORCAへ送信する` に分離した。
 - [ ] 診療録確定/訂正/取消、処方確定/中止/取消、病名ORCA送信、診療行為ORCA送信、会計送信、診察終了に確認フローを実装する。

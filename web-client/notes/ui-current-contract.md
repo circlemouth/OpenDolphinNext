@@ -228,6 +228,7 @@
 - 患者基本情報の official create/update/import は単一路線に混ぜず、`create` / `update` / `import` を別導線として扱います。
 - official create/update/import 成功後は canonical source を再取得し、その canonical record で local sync を確定します。
 - chart の患者基本情報編集 dialog も Patients と同じ official update route を使います。
+- Patients 詳細ペインの共通 `PatientIdentityBar` は、選択患者と `location.state.encounter` / volatile encounter context の patientId が一致する場合だけ、内部参照ID、受付/診療日、診療科、担当医、保険組合せ、`患者管理同期状態` を医療安全患者ヘッダーへ表示します。patientId が一致しない encounter context は表示文脈へ混ぜず、Patients 側の表示は患者基本情報と同期状態の UI 補助に限定し、ORCA受付・保険・権限・永続化の server-side authority を代替しません。
 - chart support では、patient-aware な official `contraindicationcheckv2` と、ORCA master を使う static interaction check を UI copy で明確に分離します。
 - SOAP 補助入力、chart summary、Patients の diff/review は local-only surface として表示し、official ORCA write と誤認させる copy を残しません。
 - local-only wording は `症状詳記（院内ローカル）`、`院内ローカル診療サマリ`、`院内メモはローカル編集のみ` に寄せ、official write surface と見分けられる状態を current contract とします。
@@ -241,6 +242,7 @@
 
 ### Verification
 - code-confirm: `PatientsPage` の初期選択、warning copy、fallback CTA
+- code-confirm: `PatientsPage` の詳細患者ヘッダーは一致する encounter context だけを医療安全メタへ表示し、不一致 patientId の encounter / schedule / 診療科 / 担当医 / 保険組合せを表示しないこと
 - code-confirm: `PatientsPage` の local search 明示、official create/update/import の分岐、成功後 canonical re-fetch/local sync
 - code-confirm: `PatientInfoEditDialog` の official update route 呼び出しと、成功後 callback による canonical/local sync refresh
 - code-confirm: `DiagnosisEditPanel` の `保険病名` / `ORCA mirror` / `候補` 分離、candidate-not-truth、manual-resolution は対象病名がある時だけ visible
