@@ -360,6 +360,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 
 - [x] 2026-05-10T21:59Z: `ops/tests/orca/live-trial-checklist.sh --dry-run --run-id <RUN_ID>` と `check-live-orca-trial-harness.sh` を追加し、runtime-ready、medical-information probe、candidate discovery、exact read-only preflight、approved acceptmodv2、fullflow、Phase 4 medicalmodv2、sensitive evidence guard の順序を sanitized dry-run で固定した。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
 - [x] 2026-05-11T12:23Z: Trial 実行承認と実行時 secret 供給が揃った状態で `live-trial-checklist.sh --dry-run` は set/unset-only 表示で通過した。ただし `orca-trial-no-object-storage` runtime setup は host Flyway の DB auth/port resolution で停止し、runtime-ready smoke、medical-information probe、candidate discovery、exact selected-candidate preflight、live mutation、billing/report live profile は未実行のため、実ORCA接続試験の親項目は未完了のまま維持する。
+- [x] 2026-05-11T12:44Z: 既存 Postgres volume の role password を runtime env と再同期し、Flyway は `v0329` まで適用、server readiness は ORCA `UP` になった。authenticated readonly traffic は `system01lstv2 apiResult=00` に到達したが、runtime-ready smoke は current query date の official row 不在で停止し、candidate discovery は heartbeat 内に完了しなかったため、exact preflight / live mutation / billing-report live profile は未実行のまま維持する。
 - [ ] ORCA患者取得正常系/不在/更新成功/更新失敗を確認する。
 - [ ] ORCA受付一覧取得/受付取消/保険組合せ取得を確認する。
 - [ ] ORCA病名取得/追加/変更/削除/転帰更新/警告/不一致/ORCA側のみ病名を確認する。
