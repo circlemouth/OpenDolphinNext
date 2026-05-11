@@ -304,6 +304,7 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [ ] セキュリティテストで bundle への ORCA URL/Basic/証明書情報混入、生ORCAパス到達、ログ/監査ログ credential 混入、患者情報過剰エラー、権限なし操作を拒否できることを確認する。
   - [x] 2026-05-10T20:42Z: `verify:no-public-secrets`、`verify:no-direct-orca-proxy-config`、`verify:no-blocked-orca-route-strings`、`check-audit-append-only.sh`、`check-sensitive-evidence-redaction.sh`、`RepoGuardScriptsTest` で bundle/test output/snapshot/audit guard の credential/PHI leakage regression を固定した。権限なし操作の full authorization matrix は各 owning worker の server resource tests と release gate で継続確認する。
   - [x] 2026-05-11T10:12Z: reviewer submission packet validator が copied report / QA / evidence 内の `error-context.md`、trace zip、video、screenshot、raw body / raw JSON / raw text 参照を拒否するよう強化し、sanitized evidence から raw browser diagnostic artifact へ誘導できないことを focused test で固定した。
+  - [x] 2026-05-11T11:45Z: billing/report live profile の sanitized evidence test を、safe correlation `traceId` は許容しつつ trace zip / HAR / video / screenshot / raw `Medical_Uid` / raw patient-insurance field を拒否する形へ修正し、`npm run ci` が security/web gate を通過することを確認した。
 
 ## 16. 運用・設定
 

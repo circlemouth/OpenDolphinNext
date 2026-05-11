@@ -278,7 +278,7 @@ describe('ChartsActionBar ORCA send', () => {
         }),
       }),
     );
-    expect(screen.getByText(/ORCA送信/)).toBeInTheDocument();
+    expect(screen.getByText('ORCA送信を完了')).toBeInTheDocument();
     expect(screen.queryByText(/Invoice_Number=INV-999/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Data_Id=DATA-999/)).not.toBeInTheDocument();
   });
