@@ -43,6 +43,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 
 - `POST /api/local/orca/medical-candidates/from-chart/{chartRevisionId}` は chart revision に紐付く current prescription revision から候補を作る。
 - candidate 生成時の facility は認証済み request context から解決し、patient / encounter / prescription revision は DB 上の処方正本から解決する。
+- candidate source にできる処方状態は `FINAL` / `CHANGED` / `REISSUED` のみとする。`DRAFT` / `STOPPED` / `CANCELLED` は ORCA 送信候補化を 409 で拒否し、payload を保存しない。
 - candidate response は `nonAuthoritative=true`、`candidateStatus=READY_TO_SEND|NEEDS_REVIEW`、`sendable` を返す。
 - candidate `medicalInformation` は処方正本 revision から `medicalClass` / `medicalClassNumber` / `usageCode` / `usageName` / 薬剤行を再構成する。live `medicalmodv2` 送信側はこの candidate を送信前確認材料として扱い、patient / encounter / voucher / sequential / insurance combination は server-side encounter context から別途解決する。
 - 薬剤コード、用法コード、medical class、薬剤行が未解決の場合は `NEEDS_REVIEW` / `sendable=false` とし、live `medicalmodv2` 送信へ進めない。
@@ -60,6 +61,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - client が finalize 時に偽 digest を送信し、保存済み処方内容とは異なる hash を正本化する。
 - client が candidate prepare に別患者・別施設・保険組合せ・voucher / sequential を混入させて ORCA 送信候補の authority を乗っ取る。
 - candidate handoff から `usageCode` / `usageName` が欠落し、live send 側で client payload や display text から用法を再推測する。
+- client が DRAFT / STOPPED / CANCELLED の処方を chart revision 経由で candidate 化し、未確定または中止済み指示を送信前確認へ進める。
 
 ## Verification
 

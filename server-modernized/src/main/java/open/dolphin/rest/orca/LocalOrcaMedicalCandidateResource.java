@@ -60,6 +60,11 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
                     "prescription_source_not_found",
                     "Prescription source for chart revision was not found");
         }
+        if (!isCandidateSourceStatus(source.status())) {
+            throw restError(request, Response.Status.CONFLICT,
+                    "prescription_source_not_sendable",
+                    "Prescription source is not finalized for ORCA medical candidate preparation");
+        }
 
         PrescriptionOrder order = decodeOrder(request, source.summaryJson());
         OrcaMedicalCandidateResponse response = buildCandidate(runId, normalizedChartRevisionId, source, order);
@@ -189,6 +194,10 @@ public class LocalOrcaMedicalCandidateResource extends AbstractOrcaRestResource 
         audit.put("runId", runId);
         markSuccessDetails(audit);
         recordAudit(request, AUDIT_PREPARE, audit, AuditEventEnvelope.Outcome.SUCCESS);
+    }
+
+    private boolean isCandidateSourceStatus(String status) {
+        return "FINAL".equals(status) || "CHANGED".equals(status) || "REISSUED".equals(status);
     }
 
     private String trimToNull(String value) {

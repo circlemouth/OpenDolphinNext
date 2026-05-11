@@ -88,6 +88,25 @@ class LocalOrcaMedicalCandidateResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void prepareFromChartRejectsDraftStoppedAndCancelledPrescriptionSources() throws Exception {
+        for (String status : List.of("DRAFT", "STOPPED", "CANCELLED")) {
+            repository.source = new OrcaMedicalCandidateRepository.PrescriptionRevisionRecord(
+                    101L,
+                    201L,
+                    "00001",
+                    "ENC-001",
+                    status,
+                    OBJECT_MAPPER.writeValueAsString(order("211", "001000", "620000001")));
+
+            WebApplicationException ex = assertThrows(WebApplicationException.class,
+                    () -> resource.prepareFromChart(request, "CHART-REV-001"));
+
+            assertEquals(409, ex.getResponse().getStatus());
+        }
+        assertEquals(0, repository.saveCalls);
+    }
+
+    @Test
     void prepareFromChartFailsClosedWhenAuditUnavailable() throws Exception {
         injectField(resource, "authoritativeAuditRepository", new StubAuditRepository(false));
 
