@@ -80,6 +80,55 @@ class LocalEncounterBillingWorkflowResourceTest {
         verifyNoInteractions(encounterRepository, auditRepository);
     }
 
+    @Test
+    void closeAndSendRejectsMismatchedProjectionVoucherBeforePatientOrTransportLookup() throws Exception {
+        LocalEncounterBillingWorkflowResource resource = new LocalEncounterBillingWorkflowResource();
+        EncounterProjectionRepository encounterRepository = mock(EncounterProjectionRepository.class);
+        when(encounterRepository.findByEncounterKey("F001:E100")).thenReturn(new EncounterProjectionRepository.EncounterRow(
+                "F001:E100",
+                "F001",
+                "000001",
+                100L,
+                "F001:S100",
+                "A-100",
+                Instant.parse("2026-04-27T00:30:00Z"),
+                "chart_opened",
+                Instant.parse("2026-04-27T00:35:00Z"),
+                null,
+                null,
+                "doctor01",
+                null,
+                """
+                {
+                  "rawSensitiveFieldsExcluded": true,
+                  "clientProvidedIdentifiersTrusted": false,
+                  "serverDerivedAuthorityRequired": true,
+                  "officialVisitIdentifiers": {
+                    "departmentCode": "01",
+                    "physicianCode": "10001",
+                    "insuranceCombinationNumber": "0001",
+                    "voucherNumber": "A-999",
+                    "sequentialNumber": "1"
+                  }
+                }
+                """,
+                null,
+                1L,
+                Instant.parse("2026-04-27T00:35:01Z")));
+        AuthoritativeAuditRepository auditRepository = mock(AuthoritativeAuditRepository.class);
+        when(auditRepository.isWritePathAvailable()).thenReturn(true);
+        setField(resource, "encounterProjectionRepository", encounterRepository);
+        setField(resource, "authoritativeAuditRepository", auditRepository);
+
+        CloseAndSendToBillingRequest payload = new CloseAndSendToBillingRequest();
+        payload.setIdempotencyKey("idem-mismatched-voucher");
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.closeAndSendToBilling(createRequest(), "F001:E100", payload));
+
+        assertRestError(ex, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request");
+    }
+
     private static HttpServletRequest createRequest() {
         Map<String, Object> attributes = new HashMap<>();
         return (HttpServletRequest) Proxy.newProxyInstance(

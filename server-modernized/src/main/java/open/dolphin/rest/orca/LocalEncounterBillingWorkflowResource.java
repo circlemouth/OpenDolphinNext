@@ -392,6 +392,11 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
             voucherNumber = normalize(row.orcaAcceptanceId());
             sequentialNumber = "1";
         }
+        String acceptanceId = normalize(row.orcaAcceptanceId());
+        if (voucherNumber != null && acceptanceId != null && !acceptanceId.equals(voucherNumber)) {
+            throw validationError(request, "encounterProjection.officialVisitIdentifiers",
+                    "voucherNumber must match the server-derived ORCA acceptance");
+        }
         if (departmentCode == null || physicianCode == null || insuranceCombinationNumber == null
                 || voucherNumber == null || sequentialNumber == null) {
             throw validationError(request, "encounterProjection.officialVisitIdentifiers",
