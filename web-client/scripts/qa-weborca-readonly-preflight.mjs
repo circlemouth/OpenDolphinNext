@@ -853,6 +853,47 @@ const buildMarkdownSummary = (summary) =>
   `- appointmentDependency: ${summary.appointmentDependency.verdict} flowMode=${summary.appointmentDependency.flowMode ?? 'unknown'} required=${summary.appointmentDependency.required ? 'yes' : 'no'} status=${summary.appointmentDependency.status ?? 'none'} apiResult=${summary.appointmentDependency.apiResult || 'none'} classification=${summary.appointmentDependency.classification ?? 'none'} accepted=${summary.appointmentDependency.accepted ? 'yes' : 'no'}\n` +
   `- acceptmodv2ReadOnlyDiagnostic: ${summary.acceptmodv2ReadOnlyDiagnostic.verdict} apiResult=${summary.acceptmodv2ReadOnlyDiagnostic.apiResult || 'none'} mutationSuccess=${summary.acceptmodv2ReadOnlyDiagnostic.mutationSuccess ? 'yes' : 'no'}\n`;
 
+const buildStdoutSummary = (summary) => ({
+  runId: summary.runId,
+  source: summary.source,
+  flowMode: summary.flowMode,
+  kind: summary.kind,
+  verdict: summary.verdict,
+  blockerClassification: summary.blockerClassification,
+  blockerReason: summary.blockerReason,
+  acceptedForPhase3Attempt: summary.acceptedForPhase3Attempt === true,
+  officialPatient: {
+    accepted: officialPatientEvidenceAccepted(summary.officialPatientExistence),
+    responseCategory: summary.officialPatientExistence?.responseCategory ?? summary.officialPatientExistence?.category ?? 'unknown',
+    rejectionReason: summary.officialPatientExistence?.rejectionReason ?? 'none',
+  },
+  insurance: {
+    verdict: summary.insuranceReadiness?.verdict ?? 'not_verified',
+    classification: summary.insuranceReadiness?.classification ?? 'unknown',
+    effectiveCount: summary.insuranceReadiness?.effectiveCount ?? 0,
+    accepted: summary.insuranceReadiness?.accepted === true,
+  },
+  localSelectable: {
+    verdict: summary.localSelectableReadiness?.verdict ?? 'not_verified',
+    reason: summary.localSelectableReadiness?.reason ?? 'unknown',
+    exactMatchCount: summary.localSelectableReadiness?.exactMatchCount ?? 0,
+  },
+  selector: {
+    verdict: summary.selectorReadiness?.verdict ?? 'not_verified',
+    reason: summary.selectorReadiness?.reason ?? 'unknown',
+  },
+  appointment: {
+    verdict: summary.appointmentDependency?.verdict ?? 'not_verified',
+    flowMode: summary.appointmentDependency?.flowMode ?? 'unknown',
+    classification: summary.appointmentDependency?.classification ?? 'unknown',
+    accepted: summary.appointmentDependency?.accepted === true,
+  },
+  mutationBlockedRequests: summary.mutationPolicy?.blockedRequestCount ?? 0,
+  rawSensitiveFieldsExcluded: summary.rawSensitiveFieldsExcluded === true,
+  sanitizedStdout: true,
+  summaryPath: path.relative(process.cwd(), summaryJsonPath),
+});
+
 let browser;
 let context;
 
@@ -1172,7 +1213,7 @@ try {
 
   await context.close();
   await browser.close();
-  console.log(JSON.stringify(summary, null, 2));
+  console.log(JSON.stringify(buildStdoutSummary(summary), null, 2));
   if (!acceptedForPhase3Attempt) {
     process.exit(1);
   }

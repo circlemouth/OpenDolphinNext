@@ -1100,6 +1100,37 @@ const buildPreflightMarkdown = (summary) =>
   `- selectedCandidate: ${summary.selectedCandidate?.patientId ?? 'none'}\n` +
   `- discoverySummaryPath: ${summary.discoverySummaryPath}\n`;
 
+const countAcceptedAxis = (rows, axis, accepted = true) =>
+  rows.filter((row) => row.readinessAxes?.[axis]?.accepted === accepted).length;
+
+const countAxisReason = (rows, axis, reason) =>
+  rows.filter((row) => row.readinessAxes?.[axis]?.reason === reason).length;
+
+const buildStdoutSummary = (summary) => ({
+  runId: summary.runId,
+  source: summary.source,
+  verdict: summary.verdict,
+  releaseVerdict: summary.releaseVerdict,
+  blockerClassification: summary.blockerClassification,
+  blockerReason: summary.blockerReason,
+  candidateCount: summary.candidateCount,
+  acceptedCandidateCount: summary.acceptedCandidateCount ?? 0,
+  acceptedForPhase3Attempt: summary.acceptedForPhase3Attempt === true,
+  candidateDiscoveryAloneAuthorizesPhase3: summary.candidateDiscoveryAloneAuthorizesPhase3 === false ? false : 'unknown',
+  readinessCounts: {
+    officialPatientAccepted: countAcceptedAxis(summary.candidates ?? [], 'officialPatient'),
+    insuranceAccepted: countAcceptedAxis(summary.candidates ?? [], 'insurance'),
+    appointmentAccepted: countAcceptedAxis(summary.candidates ?? [], 'appointment'),
+    localSearchFailed: countAxisReason(summary.candidates ?? [], 'localSelectable', 'local_search_failed'),
+    selectorUnavailable: countAxisReason(summary.candidates ?? [], 'selector', 'selector_unavailable'),
+  },
+  mutationBlockedRequests: summary.mutationPolicy?.blockedRequestCount ?? 0,
+  rawSensitiveFieldsExcluded: true,
+  sanitizedStdout: true,
+  summaryPath: path.relative(process.cwd(), summaryJsonPath),
+  preflightSummaryPath: path.relative(process.cwd(), preflightSummaryJsonPath),
+});
+
 const buildReadinessAxes = (rows) => ({
   meaning:
     '00001-00011 are official ORCA Trial initial patients; zero accepted candidates means Phase 3 mutation-ready read-only evidence is incomplete and does not contradict official initial patient registration.',
@@ -1286,7 +1317,7 @@ try {
 
   await context.close();
   await browser.close();
-  console.log(JSON.stringify(summary, null, 2));
+  console.log(JSON.stringify(buildStdoutSummary(summary), null, 2));
   if (!acceptedRow) {
     process.exit(1);
   }
