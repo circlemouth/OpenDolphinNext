@@ -213,6 +213,10 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         if ("cancelled".equalsIgnoreCase(normalize(row.businessState()))) {
             throw restError(request, Response.Status.CONFLICT, "encounter_cancelled", "Encounter is cancelled");
         }
+        if (normalize(row.orcaAcceptanceId()) == null || row.acceptanceDatetime() == null) {
+            throw restError(request, Response.Status.CONFLICT, "orca_acceptance_missing",
+                    "ORCA acceptance is required before billing send");
+        }
         OrcaEncounterContext context = requireServerDerivedContext(request, row);
         PatientModel patient = patientServiceBean.getPatientById(facilityId, row.patientId());
         if (patient == null) {
