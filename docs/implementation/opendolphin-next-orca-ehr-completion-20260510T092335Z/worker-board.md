@@ -27,13 +27,26 @@ Checklist count when parallel board was created:
 
 | Worker | Branch/worktree | Current queue head | Status | Last RUN_ID | Last commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
-| A | `codex/orca-ehr-worker-a-patient-boundary` | Worker A queue complete; temporary reconcile parse guard | Done | 20260511T035005Z | this commit | - |
-| B | `codex/orca-ehr-worker-b-chart-revision` | B-08 full snapshot integration after A/C/D contracts | Done | 20260511T035017Z | this commit | - |
-| D | `codex/orca-ehr-worker-d-orca-operation` | D-04 follow-up billing/report reviewer packet result evidence | Done | 20260511T024210Z | this commit | - |
-| C | `codex/orca-ehr-worker-c-prescription` | C-13 prescription authority integration watch | Done | 20260511T020217Z | this commit | - |
-| F | `codex/orca-ehr-worker-f-audit-security-gates` | F-04 real ORCA connection trial checklist execution harness | Done | 20260510T215924Z | this commit | - |
-| E | `codex/orca-ehr-worker-e-medical-safety-ui` | E-04 remaining disabled surface audit for SoapNotePanel save | Done | 20260511T034335Z | this commit | - |
-| G | `master` | G-03 post-merge verification / release-validation reconciliation | Done | 20260511T035538Z | pending docs commit | - |
+| A | `codex/orca-ehr-r2-worker-a-orca-boundary-live` | R2-A01 patient/acceptance/insurance boundary plus live readiness gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
+| B | `codex/orca-ehr-r2-worker-b-chart-export` | R2-B01 chart snapshot/export/PDF integration after A/C/D contracts landed | Active | 20260511T063714Z | `1218aa1ef` base | - |
+| C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C01 prescription authority, medical candidate send-prep, disease handoff gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
+| D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D01 live ORCA Trial execution, adapter contract, retry/idempotency evidence | Active | 20260511T063714Z | `1218aa1ef` base | - |
+| E | `codex/orca-ehr-r2-worker-e-safety-ui` | R2-E01 medical safety UI, DADS/a11y, patient header/modal rollout | Active | 20260511T063714Z | `1218aa1ef` base | - |
+| F | `codex/orca-ehr-r2-worker-f-security-gates` | R2-F01 audit/security authorization matrix and release gate hardening | Active | 20260511T063714Z | `1218aa1ef` base | - |
+| G | `master` | G-04 monitor round 2 heartbeat output and integrate merge-ready branches | Active | 20260511T063714Z | `1218aa1ef` | - |
+
+## Round 2 Assignment Snapshot
+
+RUN_ID `20260511T063714Z` reset the stale first-batch worktrees after confirming each old worker branch was clean and merged into `master`. Round 2 uses six implementation workers plus Integrator G because the remaining checklist is split across live ORCA evidence, backend source boundaries, chart/prescription export integration, medical safety UI, and security/release gates.
+
+| Worker | Worktree | Automation | Primary open checklist focus | First heartbeat target |
+| --- | --- | --- | --- | --- |
+| A | `/Users/Hayato/.codex/worktrees/opendolphinnext-orca-ehr-r2-worker-a/OpenDolphin_WebClient` | `opendolphinnext-orca-ehr-r2-worker-a-boundary-live` | 3.1-3.3, 6, 13, 18 | official appointments routes, encounter/acceptance link, stale patient/insurance/acceptance warning gaps |
+| B | `/Users/Hayato/.codex/worktrees/opendolphinnext-orca-ehr-r2-worker-b/OpenDolphin_WebClient` | `opendolphinnext-orca-ehr-r2-worker-b-chart-export` | 7, 14, 19, 20 Phase 3/5 | full snapshot/export/PDF integration using merged A/C/D sanitized references |
+| C | `/Users/Hayato/.codex/worktrees/opendolphinnext-orca-ehr-r2-worker-c/OpenDolphin_WebClient` | `opendolphinnext-orca-ehr-r2-worker-c-prescription-reconcile` | 8, 9, 10.1-10.2, 14 | prepare/send boundary DTOs, prescription history allowlist snapshot, disease request contract gaps |
+| D | `/Users/Hayato/.codex/worktrees/opendolphinnext-orca-ehr-r2-worker-d/OpenDolphin_WebClient` | `opendolphinnext-orca-ehr-r2-worker-d-live-orca` | 5, 10.2-10.4, 15, 16, 18, 19 | live Trial sanitized execution or blocker evidence, adapter contract/mock coverage, retry/idempotency checks |
+| E | `/Users/Hayato/.codex/worktrees/opendolphinnext-orca-ehr-r2-worker-e/OpenDolphin_WebClient` | `opendolphinnext-orca-ehr-r2-worker-e-safety-ui` | 11, 15 UI/a11y, 17, 19, 20 Phase 4 | patient header/modal rollout, ORCA warning mismatch display, disabled reason and button layout audit |
+| F | `/Users/Hayato/.codex/worktrees/opendolphinnext-orca-ehr-r2-worker-f/OpenDolphin_WebClient` | `opendolphinnext-orca-ehr-r2-worker-f-security-gates` | 12, 13, 14.3, 15, 16, 18, 19, 20 Phase 5 | audit coverage, authorization matrix, PHI/secret leakage guards, daily full-gate blocker record |
 
 ## Worker Queues
 
@@ -245,6 +258,7 @@ Append newest rows at the top.
 
 | RUN_ID | Integrator action | Included workers | Verification | Result |
 | --- | --- | --- | --- | --- |
+| 20260511T063714Z | Prepared round 2 heartbeat workstream: removed stale merged worker worktrees, deleted stale paused first-batch automations, created six master-based round 2 worker worktrees, and registered active workspace automations. | A, B, C, D, E, F, G | worktree/branch/status inventory; automation inventory; docs updated | Done |
 | 20260511T035538Z | Merged first complete A-F batch into `master`; resolved ledger/doc conflicts; renumbered migration additions to `V0318`-`V0329` without deleting worker branches/worktrees. Merge commits: F `2de83ae16`, A `65ad06e49`, D `169cdf29d`, B `921fd7906`, C `835f5c787`, E `46762fad2`. | F, A, D, B, C, E | `git diff --check`, doc/config/runtime guards, audit guard, sensitive evidence guard, focused Maven, `verify:web-guard`, `typecheck`, targeted Vitest passed | Done |
 | 20260510T195822Z | Initialized parallel worker board and queues. | G | doc links/config/runtime lookup guards passed | Done |
 
