@@ -11,6 +11,7 @@ fi
 
 AUDIT_REPOSITORY="$ROOT/server-modernized/src/main/java/open/dolphin/security/audit/AuthoritativeAuditRepository.java"
 AUDIT_VERIFIER="$ROOT/server-modernized/src/main/java/open/dolphin/security/audit/AuditChainVerifier.java"
+AUDIT_CONTRACT="$ROOT/docs/contracts/audit-log.md"
 
 if [[ ! -f "$AUDIT_REPOSITORY" ]]; then
   echo "authoritative audit repository missing: $AUDIT_REPOSITORY" >&2
@@ -19,6 +20,11 @@ fi
 
 if [[ ! -f "$AUDIT_VERIFIER" ]]; then
   echo "audit hash-chain verifier missing: $AUDIT_VERIFIER" >&2
+  exit 1
+fi
+
+if [[ ! -f "$AUDIT_CONTRACT" ]]; then
+  echo "audit contract missing: $AUDIT_CONTRACT" >&2
   exit 1
 fi
 
@@ -62,5 +68,45 @@ if rg -n --pcre2 "$forbidden_pattern" "${existing_roots[@]}"; then
   echo "audit_event must remain append-only; production code may not update/delete/truncate it" >&2
   exit 1
 fi
+
+required_event_labels=(
+  "AUTH_LOGIN"
+  "AUTH_LOGOUT"
+  "AUTH_FAILURE"
+  "AUTHZ_DENIED"
+  "ADMIN_ROLE_CHANGE"
+  "ADMIN_ACCOUNT_STATE_CHANGE"
+  "PATIENT_READ"
+  "CHART_SAVE"
+  "CHART_FINALIZE"
+  "CHART_REVISION"
+  "PRESCRIPTION_FINALIZE"
+  "PRESCRIPTION_CHANGE"
+  "DOCUMENT_ATTACHMENT"
+  "PROTECTED_EXPORT"
+  "ORCA_PATIENT_READ"
+  "ORCA_PATIENT_MUTATION"
+  "ORCA_ACCEPTANCE_READ"
+  "ORCA_INSURANCE_READ"
+  "ORCA_DISEASE_MUTATION"
+  "ORCA_MEDICAL_SEND"
+  "ORCA_BILLING_READ"
+  "ORCA_REPORT_CREATE"
+  "ORCA_SEND_FAILURE"
+  "AUDIT_CHAIN_VERIFY"
+  "BACKUP_RESTORE_VERIFY"
+)
+
+if ! rg -q "Required Event Coverage" "$AUDIT_CONTRACT"; then
+  echo "audit contract must define Required Event Coverage" >&2
+  exit 1
+fi
+
+for label in "${required_event_labels[@]}"; do
+  if ! rg -q "\\b${label}\\b" "$AUDIT_CONTRACT"; then
+    echo "audit contract missing required event coverage label: $label" >&2
+    exit 1
+  fi
+done
 
 echo "audit append-only guard passed"

@@ -35,6 +35,40 @@ Each event stores:
 
 `AuthoritativeAuditRepository.isWritePathAvailable()` locks `audit_chain_head` and fails closed when the authoritative audit write path is unavailable. Readiness exposes this only as `auditLog.status=DOWN` with `reasonCode=audit_log_write_unavailable`; it must not expose DB internals, exception text, host, URL, or credentials.
 
+## Required Event Coverage
+
+The following labels are the minimum audit event coverage matrix for release gates. Implementations may use more specific event names, but they must map back to these labels in tests, contracts, or release evidence. Missing coverage is a release blocker; UI hiding, local-only logs, or reviewer notes are not substitutes for authoritative audit events.
+
+| Label | Minimum coverage |
+| --- | --- |
+| `AUTH_LOGIN` | Successful login and session establishment. |
+| `AUTH_LOGOUT` | Logout and session cleanup, including unsupported server logout classification. |
+| `AUTH_FAILURE` | Failed login, lockout, MFA failure, and authentication policy rejection. |
+| `AUTHZ_DENIED` | Permission denial for user, patient, export, admin, ORCA, and audit-log surfaces. |
+| `ADMIN_ROLE_CHANGE` | Role, privileged capability, ORCA link, MFA reset, or equivalent authority change. |
+| `ADMIN_ACCOUNT_STATE_CHANGE` | Account suspension, reactivation, password reset/change, and session/token revocation. |
+| `PATIENT_READ` | Patient chart/context read where patient context is established. |
+| `CHART_SAVE` | Draft chart/SOAP/body/module persistence. |
+| `CHART_FINALIZE` | Chart finalization and immutable snapshot creation. |
+| `CHART_REVISION` | Amendment, addendum, cancellation, or void event. |
+| `PRESCRIPTION_FINALIZE` | Prescription authority finalize event. |
+| `PRESCRIPTION_CHANGE` | Prescription change, stop, cancel, reissue, or DO/import event. |
+| `DOCUMENT_ATTACHMENT` | Attachment, patient image, document upload/download/delete, and storage guard decision. |
+| `PROTECTED_EXPORT` | PDF, print, period export, chart export, and protected report export/download. |
+| `ORCA_PATIENT_READ` | Official patient read/cache update and patient-not-found classification. |
+| `ORCA_PATIENT_MUTATION` | Official patient create/update/import send plus canonical re-fetch/local sync result. |
+| `ORCA_ACCEPTANCE_READ` | Acceptance list read/cache/diff/cancel detection. |
+| `ORCA_INSURANCE_READ` | Insurance combination read/cache/snapshot and mismatch detection. |
+| `ORCA_DISEASE_MUTATION` | Disease create/update/delete/outcome/organize send and post-send re-fetch result. |
+| `ORCA_MEDICAL_SEND` | medicalmodv2 preparation/send/re-fetch/reconcile and idempotency result. |
+| `ORCA_BILLING_READ` | Billing/income cache read and fail-closed persistence result. |
+| `ORCA_REPORT_CREATE` | ORCA report snapshot/binary storage gate and protected report result. |
+| `ORCA_SEND_FAILURE` | `ORCA_REJECTED`, `ORCA_WARNING`, `ORCA_UNMATCHED`, `NETWORK_FAILED`, `CERTIFICATE_FAILED`, `AUTH_FAILED`, `UNKNOWN`, and `NEEDS_REVIEW` classifications. |
+| `AUDIT_CHAIN_VERIFY` | Hash-chain verification batch result and tamper/read-only investigation outcome. |
+| `BACKUP_RESTORE_VERIFY` | Backup, restore, object inventory digest, chart/prescription content hash, and ORCA re-alignment gate result. |
+
+Each event must use sanitized details only: actor, role, target type, target hash or server identifier, facility, outcome, fixed reason/status code, request/trace ID, and hash/classification fields. Do not store raw ORCA bodies, credentials, cookies, session tokens, CSRF values, patient names, addresses, phone numbers, insurance details, raw invoice numbers, raw `Data_Id`, raw `Medical_Uid`, HAR, trace, video, screenshots, or raw network dumps.
+
 ## Backup / Restore Verification
 
 Backup restore and migration recovery must follow [backup-restore-hash-verification.md](../runbooks/backup-restore-hash-verification.md). Restore investigation is read-only until `AuditChainVerifier.verifyAll()` and chart/prescription content hash verification pass. The verifier must not repair the chain in place, and restored local ORCA transmission states must not be promoted to ORCA truth before server-side ORCA re-alignment.
@@ -47,6 +81,7 @@ Backup restore and migration recovery must follow [backup-restore-hash-verificat
 - public update/delete/remove/truncate methods are not exposed by the authoritative repository.
 - `AuditChainVerifier.verifyAll()` exists.
 - production source roots do not mutate `opendolphin.audit_event` with `UPDATE`, `DELETE FROM`, or `TRUNCATE TABLE`.
+- the required audit event coverage matrix remains present in this contract.
 
 The guard intentionally scans production source only. Tests may deliberately tamper with `audit_event` to prove verifier failure detection.
 

@@ -105,6 +105,18 @@ class RepoGuardScriptsTest {
     }
 
     @Test
+    void checkAuditAppendOnlyFailsWhenRequiredCoverageMatrixIsMissing() throws Exception {
+        Path repoRoot = Files.createTempDirectory("repo-guard-audit-coverage-ng");
+        createAuditAppendOnlyFixture(repoRoot, false);
+        Files.writeString(repoRoot.resolve("docs/contracts/audit-log.md"), "# Audit Log Contract\n");
+
+        CommandResult result = runScript("server-modernized/tools/ci/check-audit-append-only.sh", repoRoot);
+
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.output()).contains("Required Event Coverage");
+    }
+
+    @Test
     void checkBackupRestoreRunbookPassesForCompleteFixture() throws Exception {
         Path repoRoot = Files.createTempDirectory("repo-guard-backup-restore-ok");
         createBackupRestoreFixture(repoRoot, true);
@@ -261,6 +273,7 @@ class RepoGuardScriptsTest {
         Path auditDir = repoRoot.resolve("server-modernized/src/main/java/open/dolphin/security/audit");
         Files.createDirectories(auditDir);
         Files.createDirectories(repoRoot.resolve("domain/src/main/java"));
+        Files.createDirectories(repoRoot.resolve("docs/contracts"));
         Files.writeString(
                 auditDir.resolve("AuthoritativeAuditRepository.java"),
                 """
@@ -294,6 +307,39 @@ class RepoGuardScriptsTest {
                     public record VerificationResult() {
                     }
                 }
+                """);
+        Files.writeString(
+                repoRoot.resolve("docs/contracts/audit-log.md"),
+                """
+                # Audit Log Contract
+
+                ## Required Event Coverage
+
+                AUTH_LOGIN
+                AUTH_LOGOUT
+                AUTH_FAILURE
+                AUTHZ_DENIED
+                ADMIN_ROLE_CHANGE
+                ADMIN_ACCOUNT_STATE_CHANGE
+                PATIENT_READ
+                CHART_SAVE
+                CHART_FINALIZE
+                CHART_REVISION
+                PRESCRIPTION_FINALIZE
+                PRESCRIPTION_CHANGE
+                DOCUMENT_ATTACHMENT
+                PROTECTED_EXPORT
+                ORCA_PATIENT_READ
+                ORCA_PATIENT_MUTATION
+                ORCA_ACCEPTANCE_READ
+                ORCA_INSURANCE_READ
+                ORCA_DISEASE_MUTATION
+                ORCA_MEDICAL_SEND
+                ORCA_BILLING_READ
+                ORCA_REPORT_CREATE
+                ORCA_SEND_FAILURE
+                AUDIT_CHAIN_VERIFY
+                BACKUP_RESTORE_VERIFY
                 """);
         if (includeForbiddenMutation) {
             Files.writeString(
