@@ -232,6 +232,7 @@ cd web-client && RUN_ID=<RUN_ID> node scripts/qa-orca-billing-report-live-result
 - `review-checkout/HEAD`、`closeout-packet/git/git-head-current.txt`、`manifest.json.acceptedHead` が一致する。
 - packet 内テキストに絶対ローカルパスが残らない。
 - packet にコピーされた report / QA / evidence には raw XML、stacktrace、HAR、request XML、raw network dump 参照が残らない。
+- packet にコピーされた report / QA / evidence には `error-context.md`、trace zip、video、screenshot、raw body / raw JSON / raw text 参照も残らない。
 - `scripts/create-review-archive.sh` は reviewer 提出用の正本ではなく、受入れ手順に含めない。
 - evidence freeze 後に accepted branch が別 commit を指した場合は、`--accepted-head <ACCEPTED_HEAD>` を付けて packet HEAD を固定する。
 

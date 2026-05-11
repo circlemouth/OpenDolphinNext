@@ -23,12 +23,12 @@ class ChartRevisionAuthorityMigrationTest {
             "tools",
             "flyway",
             "sql",
-            "V0318__chart_revision_finalized_write_guards.sql");
+            "V0323__chart_revision_finalized_write_guards.sql");
     private static final Path FINALIZE_CONTEXT_MIGRATION = Path.of(
             "tools",
             "flyway",
             "sql",
-            "V0319__chart_revision_finalize_context.sql");
+            "V0324__chart_revision_finalize_context.sql");
 
     @Test
     void migrationCreatesMinimumChartRevisionAuthorityTables() throws Exception {

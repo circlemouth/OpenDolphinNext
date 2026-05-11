@@ -32,7 +32,7 @@ Checklist count when parallel board was created:
 | C | `codex/orca-ehr-r2-worker-c-prescription-reconcile` | R2-C01 prescription authority, medical candidate send-prep, disease handoff gaps | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D01 live ORCA Trial execution, adapter contract, retry/idempotency evidence | Active | 20260511T063714Z | `1218aa1ef` base | - |
 | E | `codex/orca-ehr-r2-worker-e-safety-ui` | R2-E01 medical safety UI, DADS/a11y, patient header/modal rollout | Active | 20260511T063714Z | `1218aa1ef` base | - |
-| F | `codex/orca-ehr-r2-worker-f-security-gates` | R2-F01 audit/security authorization matrix and release gate hardening | Active | 20260511T063714Z | `1218aa1ef` base | - |
+| F | `codex/orca-ehr-r2-worker-f-security-gates` | R2-F03 full-gate blocker cleanup / PHI export authorization matrix | Active | 20260511T101225Z | this commit | Web CI blocked by evidence/UI test regressions; Maven static-analysis blocked by 35 SpotBugs medium findings |
 | G | `master` | G-04 monitor round 2 heartbeat output and integrate merge-ready branches | Active | 20260511T063714Z | `1218aa1ef` | - |
 
 ## Round 2 Assignment Snapshot
@@ -160,6 +160,7 @@ Append newest rows at the top.
 
 | RUN_ID | Worker | Queue item | Checklist item(s) | Commit | Verification | Result | Next task |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20260511T101225Z | F | R2-F02 follow-up | 13/18/19 reviewer submission packet rejects copied evidence references to `error-context.md`, trace zip, video, screenshot, and raw body/text/json artifacts; release gate blockers recorded | this commit | reviewer packet focused test, sensitive-evidence/audit/doc/config/runtime guards, focused Maven migration test passed; web CI and Maven static verify blockers recorded | Done | R2-F03 full-gate blocker cleanup or PHI/PDF/export/attachment authorization matrix |
 | 20260510T215924Z | F | F-04 | 18/19 live ORCA Trial execution harness and sanitized evidence policy | this commit | live trial dry-run harness, live ORCA harness guard, doc/config/runtime/audit/backup/sensitive guards passed; `RepoGuardScriptsTest` passed | Done | Worker F queue exhausted; support Integrator G release gates or new audit/security blocker |
 | 20260510T211308Z | F | F-03 | 14.3 backup/restore/hash verification workflow; 16 backup restore ORCA re-alignment boundary | this commit | backup/restore, doc/config/runtime/audit/sensitive guards passed; `RepoGuardScriptsTest` passed | Done | F-04 real ORCA connection trial checklist execution harness |
 | 20260511T035005Z | A | A-18 | 3.3/6/13 temporary reconcile parse failure sanitized | this commit | focused billing correction test and doc/config/runtime guards passed | Done | Await next Worker A queue item |

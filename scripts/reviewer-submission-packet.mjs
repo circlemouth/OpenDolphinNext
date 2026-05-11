@@ -106,6 +106,26 @@ const FORBIDDEN_CLOSEOUT_TEXT_PATTERNS = [
     label: 'har_reference',
     pattern: /\bhar\/|\.har\b/i,
   },
+  {
+    label: 'playwright_error_context_reference',
+    pattern: /\berror-context\.md\b/i,
+  },
+  {
+    label: 'trace_archive_reference',
+    pattern: /(?:^|[/"'\s])trace[^/"'\s]*\.zip\b/i,
+  },
+  {
+    label: 'browser_video_reference',
+    pattern: /\.(?:webm|mp4)\b/i,
+  },
+  {
+    label: 'browser_screenshot_reference',
+    pattern: /\.(?:png|jpe?g)\b/i,
+  },
+  {
+    label: 'raw_body_reference',
+    pattern: /\braw-(?:request|response|body|network)\.(?:json|txt|xml)\b/i,
+  },
 ];
 
 const FORBIDDEN_BILLING_REPORT_KEY_NAMES = new Set([

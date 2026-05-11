@@ -667,11 +667,61 @@ test('fails when a sanitized summary still references request XML', () => {
   }
 });
 
+test('fails when a sanitized summary still references browser diagnostic artifacts', () => {
+  const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
+  try {
+    populateCloseout(repoDir, acceptedHead, mergeBase, {
+      fullflowSummary: {
+        runId: RUN_ID,
+        blockerClassification: 'none',
+        sendResult: {
+          status: '200',
+          traceArchive: 'trace-20260511.zip',
+        },
+        rawSensitiveFieldsExcluded: true,
+      },
+    });
+    assert.throws(
+      () =>
+        run(
+          process.execPath,
+          [SCRIPT_PATH, '--run-id', RUN_ID, '--accepted-ref', ACCEPTED_REF],
+          repoDir,
+          { REVIEWER_PACKET_REPO_ROOT: repoDir },
+        ),
+      /qa\/fullflow\/summary\.json contains forbidden trace_archive_reference/,
+    );
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
 test('fails when copied reports still reference raw artifacts', () => {
   const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
   try {
     populateCloseout(repoDir, acceptedHead, mergeBase, {
       finalReport: '# Final report\n\n- raw response: raw-response.xml\n',
+    });
+    assert.throws(
+      () =>
+        run(
+          process.execPath,
+          [SCRIPT_PATH, '--run-id', RUN_ID, '--accepted-ref', ACCEPTED_REF],
+          repoDir,
+          { REVIEWER_PACKET_REPO_ROOT: repoDir },
+        ),
+      /Forbidden raw artifact references remain in packet evidence/,
+    );
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('fails when copied reports still reference Playwright error context or screenshots', () => {
+  const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
+  try {
+    populateCloseout(repoDir, acceptedHead, mergeBase, {
+      finalReport: '# Final report\n\n- diagnostic context: test-results/run/error-context.md\n- screenshot: screenshots/failure.png\n',
     });
     assert.throws(
       () =>
