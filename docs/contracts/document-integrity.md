@@ -61,7 +61,7 @@
 - `DRAFT` 以外の revision は直接更新不可の対象であり、後続の訂正・追記・取消は `chart_revision_event` と新 revision で表す。既存 revision の本文や title を物理上書きしない。
 - `FINAL` / `AMENDED` / `ADDENDUM` / `CANCELLED` / `VOIDED` の revision は DB trigger でも `chart_revision` の UPDATE / DELETE を拒否する。legacy `d_document` / `d_module` が locked revision に紐付く場合、title と SOAP / module payload の直接 UPDATE / DELETE も拒否する。
 - `chart_document.current_revision_id` は、現在 revision が locked 状態になった後に別 revision へ直接差し替えない。訂正・追記・取消 API は event と新 revision の作成を authority とし、current pointer の単独差し替えで履歴を隠さない。
-- `chart_revision_event` は revision chain の状態遷移、理由、変更前後 summary を保存する。summary には raw 患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token を保存しない。
+- `chart_revision_event` は revision chain の状態遷移、理由、変更前後 summary を保存する。event 行は append-only とし、DB trigger でも UPDATE / DELETE を拒否する。summary には raw 患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token を保存しない。
 - `POST /api/charts/{chartId}/revisions/{revisionId}/finalize` は `DRAFT` revision だけを対象にする。確定時は ORCA患者番号、患者氏名、生年月日、性別、encounter、診療日、ORCA受付IDまたは受付なし理由、診療科、担当医、保険組合せ、確定者、保存済み入力者、canonical content JSON を必須検証する。
 - `entered_by_user_id` は draft revision の保存済み入力者を authority とし、finalize request の role / owner claim で上書きしない。`entered_by_user_id` と `finalized_by_user_id` が一致する場合は `entry_mode=DIRECT`、異なる場合は `entry_mode=DELEGATED` として保存する。client が `entryMode` / `delegatedByUserId` を送る場合も、保存済み入力者と確定者から導出される値に一致しないものは拒否する。
 - `snapshot_manifest_json` は chart finalize API が server-side に生成する。現時点では ORCA患者番号、encounter、受付IDまたは受付なし理由、診療科、担当医、保険組合せ、および Worker A/C/D の full snapshot 統合待ち status を保存する。患者氏名、住所、電話番号、保険詳細、raw ORCA body、credential、Cookie、Authorization、CSRF token は manifest に保存しない。
@@ -104,6 +104,7 @@
 - [x] reporting PDF payload に chart revision event provenance を追加し、summary section へ allowlist/redaction 付きで表示する。
 - [x] chart revision finalize context に `entry_mode` / `delegated_by_user_id` を追加し、保存済み入力者と確定者から代行入力 context を server-side 検証する。
 - [x] chart revision finalize 時に server-generated `snapshot_manifest_json` skeleton を保存し、content hash と export summary に含める。
+- [x] `chart_revision_event` の UPDATE / DELETE を DB trigger で拒否し、revision event 履歴を append-only 化する。
 
 ## 受け入れ条件
 - [x] active key を変更しても旧文書が verify できる。
@@ -115,3 +116,4 @@
 - [x] finalize API は client role claim を信用せず、保存済み `entered_by_user_id` と `finalized_by_user_id` が不一致の場合だけ `entry_mode=DELEGATED` を保存する。
 - [x] snapshot manifest は client body を採用せず、finalize API の server-side validated context から生成され、export では allowlist projection だけを返す。
 - [x] amend/addendum/cancel API は理由欠落、chart/revision 不一致、DRAFT 対象を拒否し、元 revision を物理更新せず event を記録する。
+- [x] `chart_revision_event` は UPDATE / DELETE が `chart_revision_event_append_only` で拒否される。

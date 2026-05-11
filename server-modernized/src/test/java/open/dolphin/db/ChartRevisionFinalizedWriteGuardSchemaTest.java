@@ -64,6 +64,19 @@ class ChartRevisionFinalizedWriteGuardSchemaTest {
                          WHERE id = %d
                         """.formatted(ids.draftRevisionId, ids.chartDocumentId)));
                 assertDenied(currentRevisionRepoint, "chart_document_finalized_revision_repoint_denied");
+
+                SQLException eventRewrite = assertThrows(SQLException.class, () -> statement.executeUpdate("""
+                        UPDATE opendolphin.chart_revision_event
+                           SET reason_text = 'client direct rewrite'
+                         WHERE id = %d
+                        """.formatted(ids.eventId)));
+                assertDenied(eventRewrite, "chart_revision_event_append_only");
+
+                SQLException eventDelete = assertThrows(SQLException.class, () -> statement.executeUpdate("""
+                        DELETE FROM opendolphin.chart_revision_event
+                         WHERE id = %d
+                        """.formatted(ids.eventId)));
+                assertDenied(eventDelete, "chart_revision_event_append_only");
             }
         }
     }
@@ -145,7 +158,18 @@ class ChartRevisionFinalizedWriteGuardSchemaTest {
                    SET current_revision_id = %d
                  WHERE id = %d
                 """.formatted(revisionId, chartDocumentId));
-        return new TestIds(chartDocumentId, revisionId, draftRevisionId, legacyDocumentId, moduleId);
+        long eventId = nextId(statement, """
+                INSERT INTO opendolphin.chart_revision_event
+                    (chart_document_id, chart_revision_id, new_revision_id, event_type, actor_user_id,
+                     reason_code, reason_text, before_summary_json, after_summary_json, event_hash)
+                VALUES
+                    (%d, %d, %d, 'FINALIZED', %d, 'FINALIZE', 'Finalized by server',
+                     '{"status":"DRAFT"}'::jsonb,
+                     '{"status":"FINAL","contentHash":"%s"}'::jsonb,
+                     repeat('b', 64))
+                RETURNING id
+                """.formatted(chartDocumentId, revisionId, revisionId, userId, "a".repeat(64)));
+        return new TestIds(chartDocumentId, revisionId, draftRevisionId, legacyDocumentId, moduleId, eventId);
     }
 
     private long nextId(Statement statement, String sql) throws SQLException {
@@ -161,6 +185,6 @@ class ChartRevisionFinalizedWriteGuardSchemaTest {
     }
 
     private record TestIds(long chartDocumentId, long revisionId, long draftRevisionId,
-            long legacyDocumentId, long moduleId) {
+            long legacyDocumentId, long moduleId, long eventId) {
     }
 }
