@@ -16,7 +16,9 @@ class PublicRouteInventoryContractTest {
 
     private static final Set<String> EXPECTED_OFFICIAL_ROUTE_KEYS = Set.of(
             "GET /api/orca/official/disease-master/name/{*}",
+            "GET /api/orca/official/appointments/list",
             "GET /api/orca/official/appointments/medical-information",
+            "GET /api/orca/official/appointments/patient",
             "GET /api/orca/official/appointments/selector-options",
             "GET /api/orca/official/patientgetv2",
             "POST /api/orca/official/appointments/list",

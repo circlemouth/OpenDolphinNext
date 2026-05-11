@@ -21,6 +21,8 @@ import {
 } from './qa-lib/acceptmodv2-identity-gate.mjs';
 import {
   buildOfficialPatientReadinessAxes,
+  buildReadonlyMutationPolicy,
+  isReadonlyBlockedMutationUrl,
   normalizeCandidateExclusionSet,
   officialPatientEvidenceAccepted,
   sanitizeOfficialPatientExistenceEvidence,
@@ -109,6 +111,7 @@ const consoleMessages = [];
 const pageErrors = [];
 const networkRecords = [];
 const requestRecords = [];
+const blockedMutationRequestKeys = new Set();
 let unsafeRequestHeaders = { 'Content-Type': 'application/json' };
 
 const logStep = (label) => {
@@ -161,6 +164,15 @@ const verdict = (accepted, verified = true) => {
   return accepted ? 'accepted' : 'rejected';
 };
 const isTarget = (url) => TARGET_PATHS.some((pathName) => url.includes(pathName));
+const sanitizedReadonlyMutationRequest = (url, method) => buildReadonlyMutationPolicy([{ url, method }]).blockedRequests[0];
+const recordReadonlyMutationRequest = (url, method) => {
+  const record = sanitizedReadonlyMutationRequest(url, method);
+  if (!record) return;
+  const key = `${record.method}:${record.path}:${record.reason}`;
+  if (blockedMutationRequestKeys.has(key)) return;
+  blockedMutationRequestKeys.add(key);
+  requestRecords.push(record);
+};
 const urlFor = (pathName, query) => {
   const url = new URL(pathName, baseURL);
   for (const [key, value] of Object.entries(query ?? {})) {
@@ -194,6 +206,10 @@ const summarizeBody = (body) => {
 
 const recordRequest = (request) => {
   const url = request.url();
+  if (isReadonlyBlockedMutationUrl(url)) {
+    recordReadonlyMutationRequest(url, request.method());
+    return;
+  }
   if (!isTarget(url)) return;
   requestRecords.push({
     url: redactUrl(url),
@@ -746,7 +762,11 @@ const classify = ({
   medicalInformationReadiness,
   acceptmodv2ReadOnlyDiagnostic,
   appointmentDependency,
+  mutationPolicy,
 }) => {
+  if (Number(mutationPolicy?.blockedRequestCount ?? 0) > 0) {
+    return { blockerClassification: 'readonly-mutation-blocker', blockerReason: 'readonly_mutation_attempt_blocked' };
+  }
   if (sessionMe.status === 401 || sessionMe.status === 403 || medicalInformationProbe.status === 401 || medicalInformationProbe.status === 403) {
     return { blockerClassification: 'auth-blocker', blockerReason: 'authentication_or_authorization_failed' };
   }
@@ -833,6 +853,47 @@ const buildMarkdownSummary = (summary) =>
   `- appointmentDependency: ${summary.appointmentDependency.verdict} flowMode=${summary.appointmentDependency.flowMode ?? 'unknown'} required=${summary.appointmentDependency.required ? 'yes' : 'no'} status=${summary.appointmentDependency.status ?? 'none'} apiResult=${summary.appointmentDependency.apiResult || 'none'} classification=${summary.appointmentDependency.classification ?? 'none'} accepted=${summary.appointmentDependency.accepted ? 'yes' : 'no'}\n` +
   `- acceptmodv2ReadOnlyDiagnostic: ${summary.acceptmodv2ReadOnlyDiagnostic.verdict} apiResult=${summary.acceptmodv2ReadOnlyDiagnostic.apiResult || 'none'} mutationSuccess=${summary.acceptmodv2ReadOnlyDiagnostic.mutationSuccess ? 'yes' : 'no'}\n`;
 
+const buildStdoutSummary = (summary) => ({
+  runId: summary.runId,
+  source: summary.source,
+  flowMode: summary.flowMode,
+  kind: summary.kind,
+  verdict: summary.verdict,
+  blockerClassification: summary.blockerClassification,
+  blockerReason: summary.blockerReason,
+  acceptedForPhase3Attempt: summary.acceptedForPhase3Attempt === true,
+  officialPatient: {
+    accepted: officialPatientEvidenceAccepted(summary.officialPatientExistence),
+    responseCategory: summary.officialPatientExistence?.responseCategory ?? summary.officialPatientExistence?.category ?? 'unknown',
+    rejectionReason: summary.officialPatientExistence?.rejectionReason ?? 'none',
+  },
+  insurance: {
+    verdict: summary.insuranceReadiness?.verdict ?? 'not_verified',
+    classification: summary.insuranceReadiness?.classification ?? 'unknown',
+    effectiveCount: summary.insuranceReadiness?.effectiveCount ?? 0,
+    accepted: summary.insuranceReadiness?.accepted === true,
+  },
+  localSelectable: {
+    verdict: summary.localSelectableReadiness?.verdict ?? 'not_verified',
+    reason: summary.localSelectableReadiness?.reason ?? 'unknown',
+    exactMatchCount: summary.localSelectableReadiness?.exactMatchCount ?? 0,
+  },
+  selector: {
+    verdict: summary.selectorReadiness?.verdict ?? 'not_verified',
+    reason: summary.selectorReadiness?.reason ?? 'unknown',
+  },
+  appointment: {
+    verdict: summary.appointmentDependency?.verdict ?? 'not_verified',
+    flowMode: summary.appointmentDependency?.flowMode ?? 'unknown',
+    classification: summary.appointmentDependency?.classification ?? 'unknown',
+    accepted: summary.appointmentDependency?.accepted === true,
+  },
+  mutationBlockedRequests: summary.mutationPolicy?.blockedRequestCount ?? 0,
+  rawSensitiveFieldsExcluded: summary.rawSensitiveFieldsExcluded === true,
+  sanitizedStdout: true,
+  summaryPath: path.relative(process.cwd(), summaryJsonPath),
+});
+
 let browser;
 let context;
 
@@ -849,6 +910,16 @@ try {
   unsafeRequestHeaders = buildQaUnsafeRequestHeaders({ baseURL, csrfToken: auth.csrfToken });
   const page = auth.page;
   const sessionMe = auth.sessionMe;
+
+  await page.route('**/*', async (route) => {
+    const request = route.request();
+    if (!isReadonlyBlockedMutationUrl(request.url())) {
+      await route.continue();
+      return;
+    }
+    recordReadonlyMutationRequest(request.url(), request.method());
+    await route.abort('blockedbyclient');
+  });
 
   page.on('console', (msg) => {
     const type = msg.type();
@@ -1001,6 +1072,7 @@ try {
     selectorDiagnostic: selectorReadiness,
     localSelectableDiagnostic,
   });
+  const mutationPolicy = buildReadonlyMutationPolicy(requestRecords);
   const classification = classify({
     sessionMe,
     medicalInformationProbe,
@@ -1012,6 +1084,7 @@ try {
     medicalInformationReadiness,
     appointmentDependency,
     acceptmodv2ReadOnlyDiagnostic,
+    mutationPolicy,
   });
   const acceptedForPhase3Attempt =
     classification.blockerClassification === 'none' &&
@@ -1025,6 +1098,7 @@ try {
     selectorReadiness.verdict === 'accepted' &&
     appointmentDependency.verdict === 'accepted' &&
     acceptmodv2ReadOnlyDiagnostic.acceptedForPhase3Attempt === true &&
+    mutationPolicy.blockedRequestCount === 0 &&
     rawSensitiveFieldsExcluded === true;
   const inputIdentity = buildInputIdentity({
     runId,
@@ -1121,12 +1195,7 @@ try {
     appointmentDependency,
     acceptmodv2ReadOnlyDiagnostic,
     acceptedForPhase3Attempt,
-    mutationPolicy: {
-      prohibited: true,
-      blockedRequestCount: 0,
-      blockedRequests: [],
-      targetMutationRequestCount: 0,
-    },
+    mutationPolicy,
     verdict: acceptedForPhase3Attempt ? 'accepted' : 'rejected',
     blockerClassification: classification.blockerClassification,
     blockerReason: classification.blockerReason,
@@ -1144,7 +1213,7 @@ try {
 
   await context.close();
   await browser.close();
-  console.log(JSON.stringify(summary, null, 2));
+  console.log(JSON.stringify(buildStdoutSummary(summary), null, 2));
   if (!acceptedForPhase3Attempt) {
     process.exit(1);
   }
@@ -1261,12 +1330,7 @@ try {
       mutationSuccess: false,
       acceptedForPhase3Attempt: false,
     },
-    mutationPolicy: {
-      prohibited: true,
-      blockedRequestCount: 0,
-      blockedRequests: [],
-      targetMutationRequestCount: 0,
-    },
+    mutationPolicy: buildReadonlyMutationPolicy(requestRecords),
     acceptedForPhase3Attempt: false,
     verdict: 'rejected',
     blockerClassification: 'environment-blocker',

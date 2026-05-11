@@ -59,6 +59,9 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] 患者キャッシュには取得日時、取得API、ORCA患者番号、ORCAレスポンス要約、最終照合日時を保存する。
 - [x] 患者キャッシュ更新失敗時に古いキャッシュを現在の正本として表示しない。
 - [ ] UI上で古い患者キャッシュには「ORCA再取得未完了」「取得日時」を表示する。
+  - [x] 2026-05-11T11:55Z: `encounter_orca_acceptance_link` に `patient_cache_status` / `patient_business_status` / `patient_warning_status` / freshness timestamp を追加し、患者 cache 更新時に ORCA患者不在・要確認・取得不能・stale を診療録 read model へ sanitized handoff する。画面表示は Worker E / 後続 UI で継続。
+  - [x] 2026-05-11T12:23Z: `/api/local/encounters/{encounterKey}/medical-summary` payload `orcaContext` へ患者 cache warning/freshness を sanitized field として公開し、同一 facility の `encounter_projection` / link row 以外から warning を合成しない contract を固定した。UI 表示は Worker E / 後続 UI で継続。
+  - [x] 2026-05-11T14:51Z: `/api/local/patients/search` の patient ID exact search が local row 0 件の場合、同一 facility の `orca_patient_cache` が `CURRENT` / `ORCA_PATIENT_FOUND` / 期限内のときだけ最小表示 record を返す fallback を追加した。NOT_FOUND / stale cache は返さず、住所・電話・raw ORCA body・保険詳細・credential は返さない。
 
 ### 3.2 保険・公費・保険組合せローカル正本の撤去
 
@@ -67,6 +70,8 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] 保険組合せ番号を診療日、受付、診療科、患者番号とセットで保持する。
 - [x] 保険変更後に過去の診療録スナップショットを上書きしない。
 - [ ] 保険変更後の ORCA送信では、送信前に保険組合せ差分を表示する。
+  - [x] 2026-05-11T11:55Z: `encounter_orca_acceptance_link` に `insurance_cache_status` / `insurance_warning_status` / freshness timestamp / field-level `insurance_changed_fields_json` を追加し、保険 cache diff を raw 保険詳細なしで診療録 read model へ handoff する。押下時 UI 表示は Worker E / 後続 UI で継続。
+  - [x] 2026-05-11T12:23Z: `/api/local/encounters/{encounterKey}/medical-summary` payload `orcaContext` へ保険 warning/freshness と field-level changed fields を公開し、raw 保険詳細や保険番号を返さない server DTO / test を追加した。押下時 UI 表示は Worker E / 後続 UI で継続。
 
 ### 3.3 受付ローカル正本の撤去
 
@@ -139,10 +144,14 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 - [x] `POST /api/orca/official/patientmodv2/outpatient/create` と `POST /api/orca/official/patientmodv2/outpatient/update` を唯一の患者 mutation route とし、送信前差分と送信後再取得を強制する。
 - [x] ORCA送信失敗時にローカル患者情報を更新済みにしない。
 - [x] 患者削除は原則実装しない。
-- [ ] `GET /api/orca/official/appointments/list?date=...` と `GET /api/orca/official/appointments/patient?...` を受付取得 route として実装する。
+- [x] `GET /api/orca/official/appointments/list?date=...` と `GET /api/orca/official/appointments/patient?...` を受付取得 route として実装する。
+  - [x] 2026-05-11T10:10Z: 既存 POST wrapper と同じ server-side official transport / audit path に正規化する GET query route を追加し、日付 query は `yyyy-MM-dd` 固定で ORCA transport 前に fail closed する。
 - [x] 受付取得結果を `orca_acceptance_cache` に保存し、ORCA患者番号、受付日、診療科、担当医、保険組合せを保持する。
-- [ ] `encounter_id` と ORCA受付情報の紐付けテーブルを作る。
+- [x] `encounter_id` と ORCA受付情報の紐付けテーブルを作る。
+  - [x] 2026-05-11T10:18Z: `encounter_orca_acceptance_link` を追加し、`encounter_projection` の server-derived 受付 ID / 診療科 / 担当医 / 保険組合せと `orca_acceptance_cache` の取消・差分・要確認 status を警告 read model として同期する。link 更新は `encounter_projection.business_state` を直接変更せず、client-provided identifier を authority にしない DB constraint を固定した。
 - [ ] ORCA受付取消、診療科・担当医・保険組合せ変更を検知して診療録画面に警告/差分を表示する。
+  - [x] 2026-05-11T11:55Z: 受付 link read model に患者/保険 freshness warning も統合し、受付・患者・保険の warning を同一 encounter handoff で表示可能にした。診療録画面での実表示は Worker E / 後続 UI で継続。
+  - [x] 2026-05-11T12:23Z: local medical summary response が `encounter_orca_acceptance_link` の受付 warning / changed fields と患者・保険 warning を同一 `orcaContext` で返すようになり、Charts UI が追加 backend route なしで表示へ進める handoff を固定した。
 - [ ] 保険情報取得結果を `orca_insurance_cache` に保存し、診療録確定時に `encounter_insurance_snapshot` を作る。
 - [ ] 保険組合せ未選択や保険変更後の再送では、押下時に具体理由と差分を表示する。
 
@@ -362,6 +371,12 @@ ORCA API は患者取得・受付・診療行為・病名・患者登録・収�
 ## 18. 実ORCA接続試験チェック
 
 - [x] 2026-05-10T21:59Z: `ops/tests/orca/live-trial-checklist.sh --dry-run --run-id <RUN_ID>` と `check-live-orca-trial-harness.sh` を追加し、runtime-ready、medical-information probe、candidate discovery、exact read-only preflight、approved acceptmodv2、fullflow、Phase 4 medicalmodv2、sensitive evidence guard の順序を sanitized dry-run で固定した。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
+- [x] 2026-05-11T12:44Z: exact read-only preflight に `mutationPolicy` guard を追加し、patientmodv2 / appointments・visits mutation / acceptance operation / medicalmodv2 / diseasev3 / local billing send / temporary medical reconcile が記録された場合は `readonly_mutation_attempt_blocked` で Phase 3 handoff を拒否する。blocked request evidence は route template、method、固定 reason のみに sanitize し、患者 ID、保険 detail、credential、Cookie、Authorization、CSRF、raw body は残さない。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
+- [x] 2026-05-11T13:08Z: candidate discovery も exact read-only preflight と同じ `mutationPolicy` guard を使うようにし、acceptance operation / medicalmodv2 / diseasev3 / local billing send / temporary medical reconcile を含む mutation request を browser route で abort する。blocked request evidence は route template、method、固定 reason だけに正規化し、患者 ID、query、保険 detail、credential、Cookie、Authorization、CSRF、raw body を summary / request evidence に残さない。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
+- [x] 2026-05-11T13:32Z: exact read-only preflight の browser page に共有 read-only mutation blocker を直接設置し、UI が予期せず mutation route を発火した場合も abort して `mutationPolicy` へ sanitized route template / method / reason だけを記録する。重複 request event は route template 単位で dedupe し、Phase 3 handoff は `readonly_mutation_attempt_blocked` のまま拒否する。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
+- [x] 2026-05-11T13:56Z: Phase 3 handoff の exact preflight gate を強化し、`QA_READONLY_PREFLIGHT_SUMMARY` は `qa/weborca-readonly-preflight/summary.json` の exact summary path だけを許可する。candidate discovery / acceptmodv2 / fullflow / network / raw browser artifact path は hash・input identity が揃っていても `preflight_artifact_invalid` で mutation 前に拒否する。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
+- [x] 2026-05-11T14:03Z: WebORCA Trial actual read-only candidate discovery を実行し、official patient / insurance / appointment dependency の外部ORCA軸は全候補 accepted、local patient search と reception selector readiness が全候補 unavailable のため exact selected-candidate preflight / approved mutation readiness は `test-data-or-harness-readiness-blocker` として停止することを確認した。stdout は sanitized aggregate のみへ変更し、credential、Cookie、Authorization、CSRF、raw ORCA body、患者氏名/住所/電話、保険詳細、HAR/trace/video/screenshot は tracked output に残さない。actual live pass ではないため、下記の実ORCA接続試験項目は未完了のまま維持する。
+- [x] 2026-05-11T14:51Z: actual Trial read-only blocker のうち local patient selectable 側を前進させ、直前の official `patientgetv2` で保存された `orca_patient_cache` CURRENT/FOUND row を `/api/local/patients/search` の patient ID exact miss 時だけ selectable 表示へ使えるようにした。これは local DB row を ORCA正本化するものではなく、stale / NOT_FOUND / NEEDS_REVIEW cache は返さない。actual live rerun は次 task。
 - [ ] ORCA患者取得正常系/不在/更新成功/更新失敗を確認する。
 - [ ] ORCA受付一覧取得/受付取消/保険組合せ取得を確認する。
 - [ ] ORCA病名取得/追加/変更/削除/転帰更新/警告/不一致/ORCA側のみ病名を確認する。

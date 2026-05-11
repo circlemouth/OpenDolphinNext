@@ -53,6 +53,14 @@ describe('charts medical summary api', () => {
           outcome: 'SUCCESS',
           sourcePath: '/api/local/encounters/{encounterKey}/medical-summary',
           payload: {
+            orcaContext: {
+              encounterKey: 'F001:E100',
+              warningStatus: 'ORCA_ACCEPTANCE_DIFF_DETECTED',
+              changedFields: ['departmentCode'],
+              patientWarningStatus: 'PATIENT_CACHE_STALE_OR_UNRESOLVED',
+              insuranceWarningStatus: 'ORCA_INSURANCE_DIFF_DETECTED',
+              insuranceChangedFields: ['insuranceCombinationSummary'],
+            },
             outpatientList: [
               {
                 encounterKey: 'F001:E100',
@@ -92,8 +100,13 @@ describe('charts medical summary api', () => {
       }),
     );
     expect(summary.payload).toEqual(
-      expect.objectContaining({
-        outpatientList: expect.arrayContaining([
+          expect.objectContaining({
+            orcaContext: expect.objectContaining({
+              warningStatus: 'ORCA_ACCEPTANCE_DIFF_DETECTED',
+              patientWarningStatus: 'PATIENT_CACHE_STALE_OR_UNRESOLVED',
+              insuranceWarningStatus: 'ORCA_INSURANCE_DIFF_DETECTED',
+            }),
+            outpatientList: expect.arrayContaining([
           expect.objectContaining({
             encounterKey: 'F001:E100',
           }),

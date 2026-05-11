@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import {
   READINESS_FAILURE_CATEGORIES,
@@ -7,12 +9,14 @@ import {
   buildCandidateDiscoveryGate,
   buildOfficialPatientReadinessAxes,
   buildReadinessRejectionReasons,
+  buildReadonlyMutationPolicy,
   collectCandidateRejectionReasons,
   classifyLocalExactMatchTaxonomy,
   classifyReadinessFailureDiagnostic,
   classifyAcceptmodReadOnlyDiagnostic,
   evaluatePreflightSummary,
   officialPatientEvidenceAccepted,
+  isReadonlyBlockedMutationUrl,
   isRejectedTrialCandidate,
   normalizeCandidateExclusionSet,
   sanitizeOfficialPatientExistenceEvidence,
@@ -35,6 +39,15 @@ const acceptedSelectors = {
 };
 
 describe('orca trial-native preflight gates', () => {
+  it('exact read-only preflight installs the shared browser mutation blocker before Phase 3 handoff', () => {
+    const script = fs.readFileSync(path.resolve(process.cwd(), 'scripts/qa-weborca-readonly-preflight.mjs'), 'utf8');
+
+    expect(script).toContain('isReadonlyBlockedMutationUrl');
+    expect(script).toContain("await page.route('**/*'");
+    expect(script).toContain('recordReadonlyMutationRequest(request.url(), request.method())');
+    expect(script).toContain("await route.abort('blockedbyclient')");
+  });
+
   it('builds same-origin CSRF headers for QA direct read-only POST probes without cookie or authorization', () => {
     const headers = buildQaUnsafeRequestHeaders({
       baseURL: 'https://localhost:5173/f/1.2.3/reception',
@@ -1645,6 +1658,31 @@ describe('orca trial-native preflight gates', () => {
     });
   });
 
+  it('candidate discovery rejects read-only evidence when a shared blocked mutation route is seen', () => {
+    const policy = buildReadonlyMutationPolicy([
+      { url: '/api/orca/official/visits/acceptance-operation?patientId=00001', method: 'POST' },
+    ]);
+    const gate = buildCandidateDiscoveryGate({
+      candidateCount: 11,
+      acceptedCandidateCount: 1,
+      blockedRequestCount: policy.blockedRequestCount,
+      selectedCandidate: { kind: 'proposal', patientId: '00001' },
+    });
+
+    expect(gate).toMatchObject({
+      candidateDiscoveryAloneAuthorizesPhase3: false,
+      acceptedForPhase3Attempt: false,
+      releaseVerdict: 'PARTIAL / READONLY MUTATION BLOCKER',
+      blockerClassification: 'readonly-mutation-blocker',
+      blockerReason: 'readonly_mutation_attempt_blocked',
+      mutationPolicy: {
+        prohibited: true,
+        blockedRequestCount: 1,
+      },
+    });
+    expect(JSON.stringify(policy)).not.toMatch(/00001|patientId/);
+  });
+
   it('keeps acceptedCandidateCount at 0 when request contract rejection prevents readiness', () => {
     const insuranceReadiness = summarizeInsuranceReadiness({
       httpStatus: 200,
@@ -1724,5 +1762,69 @@ describe('orca trial-native preflight gates', () => {
       'medical_information_not_ready',
     ]);
     expect(JSON.stringify(reasons)).not.toMatch(/WholeName|Address|Phone|Insurance_Symbol|Authorization|Cookie/);
+  });
+
+  it('summarizes read-only preflight mutation route attempts without preserving query or body details', () => {
+    const policy = buildReadonlyMutationPolicy([
+      { url: '/api/orca/official/patientgetv2?id=00001', method: 'GET' },
+      {
+        url: '/api/orca/official/patientmodv2/outpatient/update?patientId=00001&token=SHOULD_NOT_LEAK',
+        method: 'POST',
+        postData: { keys: ['Patient_Name', 'Insurance_Symbol'] },
+      },
+      {
+        url: 'https://localhost:5173/api/local/encounters/enc-1/close-and-send-to-billing?patientId=00001',
+        method: 'POST',
+      },
+      { url: '/api/local/encounters/enc-1/medical-summary', method: 'GET' },
+    ]);
+
+    expect(policy).toMatchObject({
+      prohibited: true,
+      verdict: 'rejected',
+      blockedRequestCount: 2,
+      targetMutationRequestCount: 2,
+      rawSensitiveFieldsExcluded: true,
+    });
+    expect(policy.blockedRequests).toEqual([
+      {
+        path: '/api/orca/official/patientmodv2/outpatient/update',
+        method: 'POST',
+        reason: 'patientmodv2_update_mutation',
+      },
+      {
+        path: '/api/local/encounters/{encounterKey}/close-and-send-to-billing',
+        method: 'POST',
+        reason: 'local_encounter_billing_mutation',
+      },
+    ]);
+    expect(JSON.stringify(policy)).not.toMatch(/00001|SHOULD_NOT_LEAK|Patient_Name|Insurance_Symbol|token/);
+  });
+
+  it('matches candidate discovery mutation routes with the shared read-only blocker list', () => {
+    expect(isReadonlyBlockedMutationUrl('/api/orca/official/visits/acceptance-operation?patientId=00001')).toBe(true);
+    expect(isReadonlyBlockedMutationUrl('/api/orca/official/chart-support/medical-mod-v2')).toBe(true);
+    expect(isReadonlyBlockedMutationUrl('/api/orca/official/chart-support/disease-mod-v3')).toBe(true);
+    expect(isReadonlyBlockedMutationUrl('/api/local/encounters/enc-1/close-and-send-to-billing')).toBe(true);
+    expect(
+      isReadonlyBlockedMutationUrl(
+        '/api/local/encounters/orca-transmissions/transmission-1/reconcile-temporary-medical?token=SHOULD_NOT_LEAK',
+      ),
+    ).toBe(true);
+    expect(isReadonlyBlockedMutationUrl('/api/orca/official/patientgetv2?id=00001')).toBe(false);
+    expect(isReadonlyBlockedMutationUrl('/api/local/encounters/enc-1/medical-summary?patientId=00001')).toBe(false);
+  });
+
+  it('preflight summary is rejected when read-only evidence includes a mutation attempt', () => {
+    expect(evaluatePreflightSummary({
+      candidateId: '00001',
+      officialPatientExistence: { accepted: true },
+      insuranceReadiness: { accepted: true },
+      selectorReadiness: { accepted: true },
+      localSelectableReadiness: { accepted: true },
+      appointmentDependency: { flowMode: 'direct_acceptance', required: false, accepted: true },
+      mutationPolicy: buildReadonlyMutationPolicy([{ url: '/api/orca/official/appointments/mutation', method: 'POST' }]),
+      secretScanClean: true,
+    })).toBe('readonly_mutation_attempt_blocked');
   });
 });

@@ -91,7 +91,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0329", appliedVersion(connection));
+                assertEquals("0331", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -101,6 +101,7 @@ class FreshSchemaBaselineTest {
                 assertTrue(tableExists(connection, "opendolphin", "d_orca_push_seen_event"));
                 assertTrue(tableExists(connection, "opendolphin", "schedule_projection"));
                 assertTrue(tableExists(connection, "opendolphin", "encounter_projection"));
+                assertTrue(tableExists(connection, "opendolphin", "encounter_orca_acceptance_link"));
                 assertTrue(tableExists(connection, "opendolphin", "encounter_transition_log"));
                 assertTrue(tableExists(connection, "opendolphin", "reconciliation_task"));
                 assertTrue(tableExists(connection, "opendolphin", "encounter_patient_snapshot"));
@@ -185,6 +186,22 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "orca_patient_cache", "cache_status"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_patient_cache", "business_status"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_patient_cache", "raw_response_hash"));
+                assertTrue(columnExists(connection, "opendolphin", "encounter_orca_acceptance_link", "warning_status"));
+                assertTrue(columnExists(connection, "opendolphin", "encounter_orca_acceptance_link", "changed_fields_json"));
+                assertTrue(columnExists(connection, "opendolphin", "encounter_orca_acceptance_link",
+                        "patient_cache_status"));
+                assertTrue(columnExists(connection, "opendolphin", "encounter_orca_acceptance_link",
+                        "patient_business_status"));
+                assertTrue(columnExists(connection, "opendolphin", "encounter_orca_acceptance_link",
+                        "patient_warning_status"));
+                assertTrue(columnExists(connection, "opendolphin", "encounter_orca_acceptance_link",
+                        "insurance_cache_status"));
+                assertTrue(columnExists(connection, "opendolphin", "encounter_orca_acceptance_link",
+                        "insurance_warning_status"));
+                assertTrue(columnExists(connection, "opendolphin", "encounter_orca_acceptance_link",
+                        "insurance_changed_fields_json"));
+                assertTrue(columnExists(connection, "opendolphin", "encounter_orca_acceptance_link",
+                        "client_provided_identifiers_trusted"));
                 assertTrue(columnExists(connection, "opendolphin", "chart_document", "document_key"));
                 assertTrue(columnExists(connection, "opendolphin", "chart_document", "current_revision_id"));
                 assertTrue(columnExists(connection, "opendolphin", "chart_revision", "status"));
@@ -246,6 +263,11 @@ class FreshSchemaBaselineTest {
                 assertTrue(indexExists(connection, "opendolphin", "idx_schedule_projection_patient_time"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_encounter_projection_patient_time"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_encounter_projection_state"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_encounter_orca_acceptance_link_acceptance"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_encounter_orca_acceptance_link_warning"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_encounter_orca_acceptance_link_patient_warning"));
+                assertTrue(indexExists(connection, "opendolphin",
+                        "idx_encounter_orca_acceptance_link_insurance_warning"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_encounter_transition_log_request"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_reconciliation_task_open"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_d_orca_sync_run_facility_time"));

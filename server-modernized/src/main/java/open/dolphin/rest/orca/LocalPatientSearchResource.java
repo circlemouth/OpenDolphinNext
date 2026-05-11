@@ -1,5 +1,7 @@
 package open.dolphin.rest.orca;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.Consumes;
@@ -17,6 +19,7 @@ import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.ModelUtils;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.SimpleAddressModel;
+import open.dolphin.orca.service.OrcaPatientCacheStore;
 import open.dolphin.rest.AbstractResource;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 import open.dolphin.rest.dto.outpatient.OutpatientFlagResponse;
@@ -32,10 +35,14 @@ import open.dolphin.session.PatientServiceBean.PatientSearchType;
 @Path("/local/patients/search")
 public class LocalPatientSearchResource extends AbstractResource {
 
+    private static final ObjectMapper JSON = AbstractResource.getSerializeMapper();
     private static final String DATA_SOURCE = "local";
     private static final String ROUTE_NAMESPACE = "local";
     @Inject
     private PatientServiceBean patientServiceBean;
+
+    @Inject
+    private OrcaPatientCacheStore patientCacheStore;
 
     @Inject
     private SessionAuditDispatcher sessionAuditDispatcher;
@@ -61,6 +68,14 @@ public class LocalPatientSearchResource extends AbstractResource {
                 records.add(record);
             }
         }
+        boolean patientCacheFallback = false;
+        if (records.isEmpty() && searchType == PatientSearchType.PATIENT_ID) {
+            PatientOutpatientResponse.PatientRecord cachedRecord = toCurrentPatientCacheRecord(facilityId, keyword);
+            if (cachedRecord != null) {
+                records.add(cachedRecord);
+                patientCacheFallback = true;
+            }
+        }
 
         PatientOutpatientResponse response = new PatientOutpatientResponse();
         response.setRunId(runId);
@@ -69,7 +84,7 @@ public class LocalPatientSearchResource extends AbstractResource {
         response.setRouteNamespace(ROUTE_NAMESPACE);
         response.setDataSource(DATA_SOURCE);
         response.setDataSourceTransition(DATA_SOURCE);
-        response.setCacheHit(false);
+        response.setCacheHit(patientCacheFallback);
         response.setMissingMaster(false);
         response.setFallbackUsed(false);
         response.setFetchedAt(Instant.now().toString());
@@ -87,11 +102,16 @@ public class LocalPatientSearchResource extends AbstractResource {
         details.put("runId", runId);
         details.put("dataSource", DATA_SOURCE);
         details.put("dataSourceTransition", DATA_SOURCE);
-        details.put("cacheHit", false);
+        details.put("cacheHit", patientCacheFallback);
         details.put("missingMaster", false);
         details.put("fallbackUsed", false);
         details.put("fetchedAt", response.getFetchedAt());
         details.put("recordsReturned", records.size());
+        if (patientCacheFallback) {
+            details.put("patientCacheFallback", true);
+            details.put("patientCacheStatus", "CURRENT");
+            details.put("patientBusinessStatus", "ORCA_PATIENT_FOUND");
+        }
         String operation = getOperationName();
         if (operation != null && !operation.isBlank()) {
             details.put("operation", operation);
@@ -236,6 +256,58 @@ public class LocalPatientSearchResource extends AbstractResource {
             record.setAddress(address.getAddress());
         }
         return record;
+    }
+
+    private PatientOutpatientResponse.PatientRecord toCurrentPatientCacheRecord(String facilityId, String keyword) {
+        if (patientCacheStore == null || facilityId == null || facilityId.isBlank() || keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        OrcaPatientCacheStore.PatientCacheRow row = patientCacheStore.findLatest(facilityId, keyword.trim());
+        if (row == null) {
+            return null;
+        }
+        if (!"CURRENT".equals(row.cacheStatus()) || !"ORCA_PATIENT_FOUND".equals(row.businessStatus())) {
+            return null;
+        }
+        if (row.cacheExpiresAt() != null && !row.cacheExpiresAt().isAfter(Instant.now())) {
+            return null;
+        }
+        try {
+            JsonNode root = JSON.readTree(row.normalizedPayloadJson());
+            JsonNode patient = root.path("patient");
+            String patientId = firstText(patient, "patientId", "Patient_ID");
+            if (patientId == null) {
+                patientId = row.orcaPatientId();
+            }
+            if (!keyword.trim().equals(patientId)) {
+                return null;
+            }
+            PatientOutpatientResponse.PatientRecord record = new PatientOutpatientResponse.PatientRecord();
+            record.setPatientId(patientId);
+            record.setName(firstText(patient, "wholeName", "WholeName"));
+            record.setKana(firstText(patient, "wholeNameKana", "WholeName_inKana"));
+            record.setBirthDate(firstText(patient, "birthDate", "BirthDate"));
+            record.setSex(firstText(patient, "sex", "Sex"));
+            return record;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private static String firstText(JsonNode node, String... names) {
+        if (node == null || node.isMissingNode()) {
+            return null;
+        }
+        for (String name : names) {
+            JsonNode value = node.path(name);
+            if (!value.isMissingNode() && !value.isNull()) {
+                String text = value.asText();
+                if (text != null && !text.isBlank()) {
+                    return text.trim();
+                }
+            }
+        }
+        return null;
     }
 
     private String toString(Object value) {

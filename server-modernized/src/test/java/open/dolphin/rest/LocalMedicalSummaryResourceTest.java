@@ -78,6 +78,15 @@ class LocalMedicalSummaryResourceTest {
         assertEquals("SUCCESS", item.getSections().get("lab").getOutcome());
         assertEquals("SUCCESS", item.getSections().get("procedure").getOutcome());
         assertEquals("SUCCESS", item.getSections().get("memo").getOutcome());
+        LocalMedicalSummaryResponse.OrcaContext orcaContext = response.getPayload().getOrcaContext();
+        assertEquals("F001:E100", orcaContext.getEncounterKey());
+        assertEquals("A-100", orcaContext.getOrcaAcceptanceId());
+        assertEquals("ORCA_ACCEPTANCE_DIFF_DETECTED", orcaContext.getWarningStatus());
+        assertEquals(List.of("departmentCode", "physicianCode"), orcaContext.getChangedFields());
+        assertEquals("ORCA_PATIENT_NOT_FOUND", orcaContext.getPatientWarningStatus());
+        assertEquals("ORCA_INSURANCE_DIFF_DETECTED", orcaContext.getInsuranceWarningStatus());
+        assertEquals(List.of("insuranceCombinationSummary"), orcaContext.getInsuranceChangedFields());
+        assertThat(orcaContext.getInsuranceCacheFetchedAt()).isEqualTo("2026-03-25T09:05:00Z");
     }
 
     @Test
@@ -215,10 +224,40 @@ class LocalMedicalSummaryResourceTest {
 
     private final class StubEncounterProjectionRepository extends EncounterProjectionRepository {
         private EncounterProjectionRepository.EncounterRow row = encounterRow("F001", "00001", 1001L);
+        private EncounterProjectionRepository.EncounterOrcaContextRow orcaContext =
+                new EncounterProjectionRepository.EncounterOrcaContextRow(
+                "F001:E100",
+                "F001",
+                "A-100",
+                "2026-03-25",
+                "0900",
+                "01",
+                "10001",
+                "0001",
+                "DIFF_DETECTED",
+                "ORCA_ACCEPTANCE_DIFF_DETECTED",
+                List.of("departmentCode", "physicianCode"),
+                Instant.parse("2026-03-25T09:00:00Z"),
+                Instant.parse("2026-03-25T09:15:00Z"),
+                "NOT_FOUND",
+                "ORCA_PATIENT_NOT_FOUND",
+                "ORCA_PATIENT_NOT_FOUND",
+                Instant.parse("2026-03-25T09:02:00Z"),
+                Instant.parse("2026-03-25T09:17:00Z"),
+                "DIFF_DETECTED",
+                "ORCA_INSURANCE_DIFF_DETECTED",
+                List.of("insuranceCombinationSummary"),
+                Instant.parse("2026-03-25T09:05:00Z"),
+                Instant.parse("2026-03-25T09:20:00Z"));
 
         @Override
         public EncounterRow findByEncounterKey(String encounterKey) {
             return row;
+        }
+
+        @Override
+        public EncounterProjectionRepository.EncounterOrcaContextRow findOrcaContextByEncounterKey(String encounterKey) {
+            return orcaContext;
         }
     }
 

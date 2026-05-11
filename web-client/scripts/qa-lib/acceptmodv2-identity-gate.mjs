@@ -15,6 +15,12 @@ export const PREFLIGHT_TARGET_MUTATION_COUNT_BLOCKER = 'preflight_target_mutatio
 
 const normalizeString = (value) => (typeof value === 'string' ? value.trim() : '');
 
+const normalizeArtifactPathSegments = (artifactPath) =>
+  normalizeString(artifactPath)
+    .replaceAll('\\', '/')
+    .split('/')
+    .filter(Boolean);
+
 const stableNormalize = (value) => {
   if (Array.isArray(value)) {
     return value.map((item) => stableNormalize(item));
@@ -195,6 +201,58 @@ export const collectPhase3PreflightReadinessFailures = (summary, expectedPatient
     .map(([key]) => key);
 };
 
+export const classifyExactPreflightArtifactPath = (artifactPath = '') => {
+  const segments = normalizeArtifactPathSegments(artifactPath);
+  const joined = segments.join('/').toLowerCase();
+  const fileName = segments[segments.length - 1] ?? '';
+  const parent = segments[segments.length - 2] ?? '';
+
+  if (fileName === 'summary.json' && parent === 'weborca-readonly-preflight') {
+    return {
+      accepted: true,
+      classification: 'exact_readonly_preflight_summary',
+    };
+  }
+
+  if (joined.includes('weborca-candidate-discovery')) {
+    return {
+      accepted: false,
+      reason: 'candidate_discovery_artifact_path',
+    };
+  }
+
+  if (
+    joined.includes('/acceptmodv2/') ||
+    joined.includes('/fullflow/') ||
+    joined.endsWith('/accept-summary.json') ||
+    joined.endsWith('/fullflow-summary.json')
+  ) {
+    return {
+      accepted: false,
+      reason: 'mutation_or_fullflow_artifact_path',
+    };
+  }
+
+  if (joined.includes('/network/') || joined.endsWith('/requests.json') || joined.endsWith('/network.json')) {
+    return {
+      accepted: false,
+      reason: 'network_artifact_path',
+    };
+  }
+
+  if (/\.(har|zip|png|jpe?g|webm|mp4)$/u.test(joined)) {
+    return {
+      accepted: false,
+      reason: 'raw_browser_artifact_path',
+    };
+  }
+
+  return {
+    accepted: false,
+    reason: 'not_exact_readonly_preflight_summary_path',
+  };
+};
+
 export const validatePreflightSummary = ({
   summary,
   expected,
@@ -244,6 +302,21 @@ export const validatePreflightSummary = ({
       preflightIdentity,
       mismatches: [],
       error: 'candidate discovery output is only a proposal and cannot authorize Phase 3 mutation',
+    };
+  }
+
+  const artifactPathDiagnostic = classifyExactPreflightArtifactPath(artifactPath);
+  if (!artifactPathDiagnostic.accepted) {
+    return {
+      ok: false,
+      mutationAllowed: false,
+      blockerClassification: PREFLIGHT_ARTIFACT_INVALID_BLOCKER,
+      expectedIdentity,
+      preflightIdentity,
+      mismatches: [],
+      missingFields: [],
+      artifactPathReason: artifactPathDiagnostic.reason,
+      error: `exact read-only WebORCA preflight artifact path must be qa/weborca-readonly-preflight/summary.json; reason=${artifactPathDiagnostic.reason}`,
     };
   }
 

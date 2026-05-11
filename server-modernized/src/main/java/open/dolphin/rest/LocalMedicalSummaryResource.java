@@ -56,6 +56,7 @@ public class LocalMedicalSummaryResource extends AbstractResource {
         }
         try {
             LocalMedicalSummaryResponse response = localMedicalSummaryService.buildSummary(row);
+            attachOrcaContext(response, row);
             response.setRequestId(resolveRequestId(request));
             response.setTraceId(resolveTraceId(request));
             response.setRunId(resolveRunId(request));
@@ -70,6 +71,45 @@ public class LocalMedicalSummaryResource extends AbstractResource {
                     "Failed to load local summary.",
                     Map.of("encounterKey", encounterKey));
         }
+    }
+
+    private void attachOrcaContext(LocalMedicalSummaryResponse response, EncounterProjectionRepository.EncounterRow row) {
+        if (response == null || response.getPayload() == null || row == null) {
+            return;
+        }
+        EncounterProjectionRepository.EncounterOrcaContextRow context =
+                encounterProjectionRepository.findOrcaContextByEncounterKey(row.encounterKey());
+        if (context == null || context.facilityId() == null || !context.facilityId().equals(row.facilityId())) {
+            return;
+        }
+        LocalMedicalSummaryResponse.OrcaContext dto = new LocalMedicalSummaryResponse.OrcaContext();
+        dto.setEncounterKey(context.encounterKey());
+        dto.setOrcaAcceptanceId(context.orcaAcceptanceId());
+        dto.setAcceptanceDate(context.acceptanceDate());
+        dto.setAcceptanceTime(context.acceptanceTime());
+        dto.setDepartmentCode(context.departmentCode());
+        dto.setPhysicianCode(context.physicianCode());
+        dto.setInsuranceCombinationNumber(context.insuranceCombinationNumber());
+        dto.setLinkStatus(context.linkStatus());
+        dto.setWarningStatus(context.warningStatus());
+        dto.setChangedFields(context.changedFields());
+        dto.setCacheFetchedAt(toIsoString(context.cacheFetchedAt()));
+        dto.setCacheExpiresAt(toIsoString(context.cacheExpiresAt()));
+        dto.setPatientCacheStatus(context.patientCacheStatus());
+        dto.setPatientBusinessStatus(context.patientBusinessStatus());
+        dto.setPatientWarningStatus(context.patientWarningStatus());
+        dto.setPatientCacheFetchedAt(toIsoString(context.patientCacheFetchedAt()));
+        dto.setPatientCacheExpiresAt(toIsoString(context.patientCacheExpiresAt()));
+        dto.setInsuranceCacheStatus(context.insuranceCacheStatus());
+        dto.setInsuranceWarningStatus(context.insuranceWarningStatus());
+        dto.setInsuranceChangedFields(context.insuranceChangedFields());
+        dto.setInsuranceCacheFetchedAt(toIsoString(context.insuranceCacheFetchedAt()));
+        dto.setInsuranceCacheExpiresAt(toIsoString(context.insuranceCacheExpiresAt()));
+        response.getPayload().setOrcaContext(dto);
+    }
+
+    private static String toIsoString(Instant value) {
+        return value != null ? value.toString() : null;
     }
 
     private WebApplicationException localSummaryError(HttpServletRequest request, Response.Status status, String code,

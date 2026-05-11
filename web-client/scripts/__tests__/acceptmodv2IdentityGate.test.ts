@@ -7,6 +7,7 @@ import {
   EXACT_PREFLIGHT_SOURCE,
   SELECTOR_OPTION_MISSING_BLOCKER,
   buildInputIdentity,
+  classifyExactPreflightArtifactPath,
   resolveSelectableOption,
   validatePreflightSummary,
 } from '../qa-lib/acceptmodv2-identity-gate.mjs';
@@ -22,6 +23,9 @@ const baseInput = {
   visitKind: '1',
   medicalInformation: '',
 };
+
+const exactPreflightPath =
+  '/tmp/artifacts/orca-remediation/closeout/20260419T013630Z/qa/weborca-readonly-preflight/summary.json';
 
 const acceptedSummary = (overrides = {}) => {
   const input = { ...baseInput, ...overrides };
@@ -129,13 +133,28 @@ const acceptedSummary = (overrides = {}) => {
 };
 
 describe('acceptmodv2 preflight identity gate', () => {
+  it('classifies only exact read-only preflight summary paths as accepted', () => {
+    expect(classifyExactPreflightArtifactPath(exactPreflightPath)).toMatchObject({
+      accepted: true,
+      classification: 'exact_readonly_preflight_summary',
+    });
+    expect(
+      classifyExactPreflightArtifactPath(
+        '/tmp/artifacts/orca-remediation/closeout/20260419T013630Z/qa/weborca-candidate-discovery/summary.json',
+      ),
+    ).toMatchObject({
+      accepted: false,
+      reason: 'candidate_discovery_artifact_path',
+    });
+  });
+
   it('current exact selected-candidate shape proceeds without stale candidates map', () => {
     const summary = acceptedSummary();
     expect(summary.officialPatientExistence).not.toHaveProperty('candidates');
 
     const result = validatePreflightSummary({
       summary,
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -145,10 +164,43 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.blockerClassification).toBe('none');
   });
 
+  it.each([
+    [
+      '/tmp/artifacts/orca-remediation/closeout/20260419T013630Z/qa/weborca-candidate-discovery/summary.json',
+      'candidate_discovery_artifact_path',
+    ],
+    [
+      '/tmp/artifacts/orca-remediation/closeout/20260419T013630Z/qa/acceptmodv2/accept-summary.json',
+      'mutation_or_fullflow_artifact_path',
+    ],
+    [
+      '/tmp/artifacts/orca-remediation/closeout/20260419T013630Z/qa/fullflow/summary.json',
+      'mutation_or_fullflow_artifact_path',
+    ],
+    [
+      '/tmp/artifacts/orca-remediation/closeout/20260419T013630Z/qa/weborca-readonly-preflight/network/requests.json',
+      'network_artifact_path',
+    ],
+  ])('rejects non-exact preflight artifact path before mutation: %s', (artifactPath, reason) => {
+    const result = validatePreflightSummary({
+      summary: acceptedSummary(),
+      artifactPath,
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_artifact_invalid');
+    expect(result.artifactPathReason).toBe(reason);
+    expect(result.error).toContain('qa/weborca-readonly-preflight/summary.json');
+    expect(result.error).not.toContain(artifactPath);
+  });
+
   it('rejects artifact hash mismatch when a pinned hash is provided', () => {
     const result = validatePreflightSummary({
       summary: acceptedSummary(),
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expectedArtifactSha256: 'def456',
       expected: baseInput,
@@ -163,7 +215,7 @@ describe('acceptmodv2 preflight identity gate', () => {
   it('rejects exact preflight input identity hash mismatch when a pinned hash is provided', () => {
     const result = validatePreflightSummary({
       summary: acceptedSummary(),
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expectedInputIdentitySha256: 'wrong-hash',
       expected: baseInput,
@@ -186,7 +238,7 @@ describe('acceptmodv2 preflight identity gate', () => {
           targetMutationRequestCount: 1,
         },
       },
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -208,7 +260,7 @@ describe('acceptmodv2 preflight identity gate', () => {
   ])('%s mismatch fails closed before mutation', (_label, expectedOverride, mismatchField) => {
     const result = validatePreflightSummary({
       summary: acceptedSummary(),
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: { ...baseInput, ...expectedOverride },
     });
@@ -266,7 +318,7 @@ describe('acceptmodv2 preflight identity gate', () => {
         flowMode: EXACT_PREFLIGHT_FLOW_MODE,
         candidateDiscoveryAloneAuthorizesPhase3: false,
       },
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -286,7 +338,7 @@ describe('acceptmodv2 preflight identity gate', () => {
           absenceBlocker: true,
         },
       },
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -306,7 +358,7 @@ describe('acceptmodv2 preflight identity gate', () => {
   ])('rejects non-boolean true acceptedForPhase3Attempt value: %s', (_label, acceptedForPhase3Attempt) => {
     const result = validatePreflightSummary({
       summary: { ...acceptedSummary(), acceptedForPhase3Attempt },
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -321,7 +373,7 @@ describe('acceptmodv2 preflight identity gate', () => {
     delete (summary as Record<string, unknown>).inputIdentity;
     const result = validatePreflightSummary({
       summary,
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -336,7 +388,7 @@ describe('acceptmodv2 preflight identity gate', () => {
     delete (summary as Record<string, unknown>).acceptmodv2ReadOnlyDiagnostic;
     const result = validatePreflightSummary({
       summary,
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -353,7 +405,7 @@ describe('acceptmodv2 preflight identity gate', () => {
       delete (summary as Record<string, unknown>)[field];
       const result = validatePreflightSummary({
         summary,
-        artifactPath: '/tmp/summary.json',
+        artifactPath: exactPreflightPath,
         artifactSha256: 'abc123',
         expected: baseInput,
       });
@@ -367,7 +419,7 @@ describe('acceptmodv2 preflight identity gate', () => {
   it('rejects exact preflight when raw sensitive field exclusion is not asserted', () => {
     const result = validatePreflightSummary({
       summary: { ...acceptedSummary(), rawSensitiveFieldsExcluded: false },
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -382,7 +434,7 @@ describe('acceptmodv2 preflight identity gate', () => {
     delete (summary as Record<string, unknown>).medicalInformationReadiness;
     const result = validatePreflightSummary({
       summary,
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -406,7 +458,7 @@ describe('acceptmodv2 preflight identity gate', () => {
           },
         },
       },
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -467,7 +519,7 @@ describe('acceptmodv2 preflight identity gate', () => {
           },
         },
       },
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -500,7 +552,7 @@ describe('acceptmodv2 preflight identity gate', () => {
           acceptedForPhase3Attempt: false,
         },
       },
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -534,7 +586,7 @@ describe('acceptmodv2 preflight identity gate', () => {
           targetMutationRequestCount: 0,
         },
       },
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -565,7 +617,7 @@ describe('acceptmodv2 preflight identity gate', () => {
 
     const result = validatePreflightSummary({
       summary,
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -600,7 +652,7 @@ describe('acceptmodv2 preflight identity gate', () => {
           targetMutationRequestCount: 1,
         },
       },
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
@@ -625,7 +677,7 @@ describe('acceptmodv2 preflight identity gate', () => {
   it('rejects selected preflight when current run omits medicalInformation', () => {
     const result = validatePreflightSummary({
       summary: acceptedSummary({ medicalInformation: '01' }),
-      artifactPath: '/tmp/summary.json',
+      artifactPath: exactPreflightPath,
       artifactSha256: 'abc123',
       expected: baseInput,
     });
