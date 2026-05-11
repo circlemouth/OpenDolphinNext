@@ -69,6 +69,7 @@
 - chart PDF / CSV / JSON export は、current revision だけでなく `chart_revision_event` の `FINALIZED` / `AMENDED` / `ADDENDUM_ADDED` / `CANCELLED` / `VOIDED`、before/after summary、reason、actor、content hash を含める。export payload に raw ORCA body、credential、Cookie、Authorization、CSRF token、患者住所・電話などの不要 PHI を含めない。CSV export は spreadsheet formula injection を防ぐため、`=`, `+`, `-`, `@`, tab で始まるセル値を neutralize する。
 - `GET /api/charts/{chartId}/revisions/export` は chart revision JSON export の最小 contract とする。施設 ID は server-side session から解決し、request body / query の owner/facility は採用しない。応答は revision list と event list を時系列で返し、summary JSON は allowlist された scalar key のみを投影する。reason/title/context 文字列に Authorization / Cookie / raw XML / SOAP body が混入している場合は redaction して返す。
 - `GET /api/charts/{chartId}/revisions/export.csv` は同じ施設境界と redaction / allowlist projection を使う CSV export とする。CSV には revision row と event row を含め、PDF/reporting integration が同じ provenance を表示できるよう `recordType`, revision identifiers, event identifiers, reason, actor, hash, summary を固定列で出力する。
+- reporting PDF payload は `chartRevisionEvents` を受け取り、既存 template の summary section に chart revision provenance を表示する。PDF 投影時も summary key allowlist と Authorization / Cookie / raw XML / SOAP body redaction を適用し、API caller が送った任意 nested JSON をそのまま帳票へ出さない。
 
 ## reasonCode 一覧
 - `integrity_record_missing`
@@ -98,6 +99,7 @@
 - [x] amend/addendum/cancel API skeleton、理由必須 validation、before/after summary、event/new revision 記録を追加する。
 - [x] chart revision JSON export API を追加し、event 履歴、before/after summary、reason、actor、content hash を allowlist/redaction 付きで返す。
 - [x] chart revision CSV export API を追加し、JSON export と同じ event 履歴を spreadsheet formula injection 対策付きで返す。
+- [x] reporting PDF payload に chart revision event provenance を追加し、summary section へ allowlist/redaction 付きで表示する。
 
 ## 受け入れ条件
 - [x] active key を変更しても旧文書が verify できる。

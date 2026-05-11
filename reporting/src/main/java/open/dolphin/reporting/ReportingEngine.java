@@ -10,10 +10,18 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.StringJoiner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
+import open.dolphin.reporting.api.ReportingChartRevisionEventPayload;
 import open.dolphin.reporting.api.ReportingPayload;
 import open.dolphin.reporting.api.ReportingPatientPayload;
 import open.dolphin.reporting.api.ReportingSigningPayload;
@@ -27,6 +35,26 @@ public final class ReportingEngine {
     private static final Logger LOGGER = Logger.getLogger(ReportingEngine.class.getName());
     private static final String DEFAULT_TEMPLATE = "patient_summary";
     private static final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final Set<String> REVISION_SUMMARY_ALLOWLIST = Collections.unmodifiableSet(new LinkedHashSet<>(
+            Arrays.asList(
+                    "status",
+                    "contentHash",
+                    "eventType",
+                    "newRevisionCreated",
+                    "hasReasonCode",
+                    "revisionId",
+                    "revisionNumber",
+                    "encounterId",
+                    "encounterDate",
+                    "departmentCode",
+                    "physicianCode",
+                    "insuranceCombinationNumber",
+                    "hasOrcaAcceptanceId",
+                    "hasNoAcceptanceReason")));
+    private static final Pattern AUTHORIZATION_LINE = Pattern.compile("(?i)authorization\\s*:\\s*[^\\r\\n]+");
+    private static final Pattern COOKIE_LINE = Pattern.compile("(?i)cookie\\s*:\\s*[^\\r\\n]+");
+    private static final Pattern RAW_XML = Pattern.compile("(?is)<\\?xml.*");
+    private static final Pattern SOAP_BODY = Pattern.compile("(?is)<soap[^>]*>.*?</soap[^>]*>");
 
     private final PdfRenderer renderer;
 
@@ -89,10 +117,84 @@ public final class ReportingEngine {
                 builder.addSummaryItem(label, labelEn, value);
             }
         }
+        appendChartRevisionEvents(payload, builder);
         ReportContext context = builder.build();
         SigningConfig signingConfig = buildSigningConfig(payload.getSigning());
         String fileName = resolveFileName(payload.getOutputFileName(), templateName, locale, generatedAt);
         return new RenderingContext(context, signingConfig, fileName);
+    }
+
+    void appendChartRevisionEvents(ReportingPayload payload, ReportContext.Builder builder) {
+        if (payload.getChartRevisionEvents() == null) {
+            return;
+        }
+        for (ReportingChartRevisionEventPayload event : payload.getChartRevisionEvents()) {
+            if (event == null) {
+                continue;
+            }
+            String eventType = safeText(event.getEventType());
+            String labelSuffix = isBlank(eventType) ? "event" : eventType;
+            builder.addSummaryItem("診療録履歴: " + labelSuffix,
+                    "Chart revision event: " + labelSuffix,
+                    chartRevisionEventValue(event));
+        }
+    }
+
+    private String chartRevisionEventValue(ReportingChartRevisionEventPayload event) {
+        StringJoiner joiner = new StringJoiner("; ");
+        addValue(joiner, "eventId", event.getEventId());
+        addValue(joiner, "revisionId", event.getChartRevisionId());
+        addValue(joiner, "previousRevisionId", event.getPreviousRevisionId());
+        addValue(joiner, "newRevisionId", event.getNewRevisionId());
+        addValue(joiner, "actorUserId", event.getActorUserId());
+        addValue(joiner, "occurredAt", safeText(event.getOccurredAt()));
+        addValue(joiner, "reasonCode", safeText(event.getReasonCode()));
+        addValue(joiner, "reasonText", safeText(event.getReasonText()));
+        addValue(joiner, "contentHash", safeText(event.getContentHash()));
+        appendSummary(joiner, "before", event.getBeforeSummary());
+        appendSummary(joiner, "after", event.getAfterSummary());
+        return joiner.toString();
+    }
+
+    private void appendSummary(StringJoiner joiner, String prefix, Map<String, Object> summary) {
+        if (summary == null || summary.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<String, Object> entry : summary.entrySet()) {
+            if (REVISION_SUMMARY_ALLOWLIST.contains(entry.getKey())) {
+                Object value = safeScalar(entry.getValue());
+                if (value != null) {
+                    addValue(joiner, prefix + "." + entry.getKey(), value);
+                }
+            }
+        }
+    }
+
+    private Object safeScalar(Object value) {
+        if (value instanceof String) {
+            return safeText((String) value);
+        }
+        if (value instanceof Number || value instanceof Boolean) {
+            return value;
+        }
+        return null;
+    }
+
+    private void addValue(StringJoiner joiner, String key, Object value) {
+        if (value != null && !isBlank(String.valueOf(value))) {
+            joiner.add(key + "=" + value);
+        }
+    }
+
+    private String safeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String sanitized = AUTHORIZATION_LINE.matcher(value).replaceAll("Authorization: [redacted]");
+        sanitized = COOKIE_LINE.matcher(sanitized).replaceAll("Cookie: [redacted]");
+        sanitized = SOAP_BODY.matcher(sanitized).replaceAll("[redacted-soap-body]");
+        sanitized = RAW_XML.matcher(sanitized).replaceAll("[redacted-xml-body]");
+        return sanitized;
     }
 
     private String resolveFileName(String requested, String templateName, Locale locale, ZonedDateTime generatedAt) {
