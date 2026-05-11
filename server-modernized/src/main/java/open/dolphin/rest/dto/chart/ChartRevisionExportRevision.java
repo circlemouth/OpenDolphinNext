@@ -14,6 +14,8 @@ public class ChartRevisionExportRevision {
     private String physicianCode;
     private String insuranceCombinationNumber;
     private Long enteredByUserId;
+    private String entryMode;
+    private Long delegatedByUserId;
     private Long finalizedByUserId;
     private String finalizedAt;
 
@@ -111,6 +113,22 @@ public class ChartRevisionExportRevision {
 
     public void setEnteredByUserId(Long enteredByUserId) {
         this.enteredByUserId = enteredByUserId;
+    }
+
+    public String getEntryMode() {
+        return entryMode;
+    }
+
+    public void setEntryMode(String entryMode) {
+        this.entryMode = entryMode;
+    }
+
+    public Long getDelegatedByUserId() {
+        return delegatedByUserId;
+    }
+
+    public void setDelegatedByUserId(Long delegatedByUserId) {
+        this.delegatedByUserId = delegatedByUserId;
     }
 
     public Long getFinalizedByUserId() {

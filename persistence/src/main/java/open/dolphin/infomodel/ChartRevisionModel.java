@@ -78,6 +78,13 @@ public class ChartRevisionModel implements Serializable {
     @Column(name = "entered_by_user_id", nullable = false)
     private Long enteredByUserId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "entry_mode", nullable = false, length = 16)
+    private ChartRevisionEntryMode entryMode;
+
+    @Column(name = "delegated_by_user_id")
+    private Long delegatedByUserId;
+
     @Column(name = "finalized_by_user_id")
     private Long finalizedByUserId;
 
@@ -102,6 +109,9 @@ public class ChartRevisionModel implements Serializable {
         if (finalizeContextJson == null || finalizeContextJson.isBlank()) {
             finalizeContextJson = "{}";
         }
+        if (entryMode == null) {
+            entryMode = ChartRevisionEntryMode.DIRECT;
+        }
     }
 
     @PreUpdate
@@ -109,6 +119,9 @@ public class ChartRevisionModel implements Serializable {
         updatedAt = Instant.now();
         if (finalizeContextJson == null || finalizeContextJson.isBlank()) {
             finalizeContextJson = "{}";
+        }
+        if (entryMode == null) {
+            entryMode = ChartRevisionEntryMode.DIRECT;
         }
     }
 
@@ -250,6 +263,22 @@ public class ChartRevisionModel implements Serializable {
 
     public void setEnteredByUserId(Long enteredByUserId) {
         this.enteredByUserId = enteredByUserId;
+    }
+
+    public ChartRevisionEntryMode getEntryMode() {
+        return entryMode;
+    }
+
+    public void setEntryMode(ChartRevisionEntryMode entryMode) {
+        this.entryMode = entryMode;
+    }
+
+    public Long getDelegatedByUserId() {
+        return delegatedByUserId;
+    }
+
+    public void setDelegatedByUserId(Long delegatedByUserId) {
+        this.delegatedByUserId = delegatedByUserId;
     }
 
     public Long getFinalizedByUserId() {

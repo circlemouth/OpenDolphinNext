@@ -19,6 +19,7 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import open.dolphin.infomodel.ChartDocumentModel;
+import open.dolphin.infomodel.ChartRevisionEntryMode;
 import open.dolphin.infomodel.ChartRevisionEventModel;
 import open.dolphin.infomodel.ChartRevisionEventType;
 import open.dolphin.infomodel.ChartRevisionModel;
@@ -89,11 +90,16 @@ public class ChartRevisionFinalizeService {
                     "Current chart revision does not match finalize target",
                     Map.of("chartId", chartId, "revisionId", revisionId));
         }
+        Long enteredByUserId = requirePositiveUserId(revision.getEnteredByUserId(), "enteredByUserId");
+        ChartRevisionEntryMode entryMode = resolveEntryMode(request.getEntryMode(), enteredByUserId,
+                finalizedByUserId);
+        Long delegatedByUserId = resolveDelegatedByUserId(entryMode, request.getDelegatedByUserId(),
+                finalizedByUserId);
 
         String canonicalContent = canonicalizeContent(contentJson);
         String finalizeContextJson = writeContextJson(orcaPatientId, patientBirthDate, patientGender, encounterId,
                 encounterDate, orcaAcceptanceId, noAcceptanceReason, departmentCode, physicianCode,
-                insuranceCombinationNumber, finalizedByUserId);
+                insuranceCombinationNumber, enteredByUserId, entryMode, delegatedByUserId, finalizedByUserId);
         String contentHash = sha256(writeHashMaterial(chartId, revisionId, revision.getTitle(), finalizeContextJson,
                 canonicalContent));
         Instant finalizedAt = Instant.now();
@@ -109,6 +115,8 @@ public class ChartRevisionFinalizeService {
         revision.setInsuranceCombinationNumber(insuranceCombinationNumber);
         revision.setFinalizeContextJson(finalizeContextJson);
         revision.setContentHash(contentHash);
+        revision.setEntryMode(entryMode);
+        revision.setDelegatedByUserId(delegatedByUserId);
         revision.setFinalizedByUserId(finalizedByUserId);
         revision.setFinalizedAt(finalizedAt);
         document.setCurrentRevisionId(revisionId);
@@ -122,7 +130,8 @@ public class ChartRevisionFinalizeService {
         event.setReasonCode("FINALIZE");
         event.setBeforeSummaryJson("{\"status\":\"DRAFT\"}");
         event.setAfterSummaryJson(writeEventSummary(contentHash, encounterId, encounterDate, departmentCode,
-                physicianCode, insuranceCombinationNumber, orcaAcceptanceId != null, noAcceptanceReason != null));
+                physicianCode, insuranceCombinationNumber, enteredByUserId, entryMode, delegatedByUserId,
+                finalizedByUserId, orcaAcceptanceId != null, noAcceptanceReason != null));
         event.setEventHash(sha256(event.getAfterSummaryJson()));
         em.persist(event);
         em.flush();
@@ -188,6 +197,8 @@ public class ChartRevisionFinalizeService {
             newRevision.setTitle(title);
             newRevision.setContentHash(contentHash);
             newRevision.setEnteredByUserId(source.getEnteredByUserId());
+            newRevision.setEntryMode(normalizeEntryMode(source.getEntryMode()));
+            newRevision.setDelegatedByUserId(source.getDelegatedByUserId());
             newRevision.setFinalizedByUserId(actorUserId);
             newRevision.setFinalizedAt(now);
             newRevision.setEncounterId(source.getEncounterId());
@@ -297,9 +308,62 @@ public class ChartRevisionFinalizeService {
         }
     }
 
+    private Long requirePositiveUserId(Long userId, String field) {
+        if (userId == null || userId <= 0L) {
+            throw badRequest(field, field + " is required");
+        }
+        return userId;
+    }
+
+    private ChartRevisionEntryMode resolveEntryMode(String requestedEntryMode, Long enteredByUserId,
+            Long finalizedByUserId) {
+        ChartRevisionEntryMode derived = enteredByUserId.equals(finalizedByUserId)
+                ? ChartRevisionEntryMode.DIRECT
+                : ChartRevisionEntryMode.DELEGATED;
+        String normalized = trimToNull(requestedEntryMode);
+        if (normalized == null) {
+            return derived;
+        }
+        ChartRevisionEntryMode requested;
+        try {
+            requested = ChartRevisionEntryMode.valueOf(normalized.toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw badRequest("entryMode", "entryMode must be DIRECT or DELEGATED");
+        }
+        if (requested != derived) {
+            throw badRequest("entryMode", "entryMode must match stored enteredByUserId and finalizedByUserId");
+        }
+        return requested;
+    }
+
+    private Long resolveDelegatedByUserId(ChartRevisionEntryMode entryMode, Long requestedDelegatedByUserId,
+            Long finalizedByUserId) {
+        if (entryMode == ChartRevisionEntryMode.DIRECT) {
+            if (requestedDelegatedByUserId != null) {
+                throw badRequest("delegatedByUserId", "delegatedByUserId is only allowed for DELEGATED entryMode");
+            }
+            return null;
+        }
+        if (requestedDelegatedByUserId == null) {
+            return finalizedByUserId;
+        }
+        if (requestedDelegatedByUserId <= 0L) {
+            throw badRequest("delegatedByUserId", "delegatedByUserId must be positive");
+        }
+        if (!requestedDelegatedByUserId.equals(finalizedByUserId)) {
+            throw badRequest("delegatedByUserId", "delegatedByUserId must match finalizedByUserId");
+        }
+        return requestedDelegatedByUserId;
+    }
+
+    private ChartRevisionEntryMode normalizeEntryMode(ChartRevisionEntryMode entryMode) {
+        return entryMode != null ? entryMode : ChartRevisionEntryMode.DIRECT;
+    }
+
     private String writeContextJson(String orcaPatientId, LocalDate patientBirthDate, String patientGender,
             String encounterId, LocalDate encounterDate, String orcaAcceptanceId, String noAcceptanceReason,
-            String departmentCode, String physicianCode, String insuranceCombinationNumber, Long finalizedByUserId) {
+            String departmentCode, String physicianCode, String insuranceCombinationNumber, Long enteredByUserId,
+            ChartRevisionEntryMode entryMode, Long delegatedByUserId, Long finalizedByUserId) {
         Map<String, Object> context = new LinkedHashMap<>();
         context.put("orcaPatientId", orcaPatientId);
         context.put("patientBirthDate", patientBirthDate.toString());
@@ -311,12 +375,16 @@ public class ChartRevisionFinalizeService {
         context.put("departmentCode", departmentCode);
         context.put("physicianCode", physicianCode);
         context.put("insuranceCombinationNumber", insuranceCombinationNumber);
+        context.put("enteredByUserId", enteredByUserId);
+        context.put("entryMode", entryMode.name());
+        context.put("delegatedByUserId", delegatedByUserId);
         context.put("finalizedByUserId", finalizedByUserId);
         return writeJson(context);
     }
 
     private String writeEventSummary(String contentHash, String encounterId, LocalDate encounterDate,
             String departmentCode, String physicianCode, String insuranceCombinationNumber,
+            Long enteredByUserId, ChartRevisionEntryMode entryMode, Long delegatedByUserId, Long finalizedByUserId,
             boolean hasOrcaAcceptanceId, boolean hasNoAcceptanceReason) {
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("status", ChartRevisionStatus.FINAL.name());
@@ -326,6 +394,10 @@ public class ChartRevisionFinalizeService {
         summary.put("departmentCode", departmentCode);
         summary.put("physicianCode", physicianCode);
         summary.put("insuranceCombinationNumber", insuranceCombinationNumber);
+        summary.put("enteredByUserId", enteredByUserId);
+        summary.put("entryMode", entryMode.name());
+        summary.put("delegatedByUserId", delegatedByUserId);
+        summary.put("finalizedByUserId", finalizedByUserId);
         summary.put("hasOrcaAcceptanceId", hasOrcaAcceptanceId);
         summary.put("hasNoAcceptanceReason", hasNoAcceptanceReason);
         return writeJson(summary);

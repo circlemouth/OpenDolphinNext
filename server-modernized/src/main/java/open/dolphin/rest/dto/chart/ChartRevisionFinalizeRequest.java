@@ -13,6 +13,8 @@ public class ChartRevisionFinalizeRequest {
     private String departmentCode;
     private String physicianCode;
     private String insuranceCombinationNumber;
+    private String entryMode;
+    private Long delegatedByUserId;
     private Long finalizedByUserId;
     private String contentJson;
 
@@ -102,6 +104,22 @@ public class ChartRevisionFinalizeRequest {
 
     public void setInsuranceCombinationNumber(String insuranceCombinationNumber) {
         this.insuranceCombinationNumber = insuranceCombinationNumber;
+    }
+
+    public String getEntryMode() {
+        return entryMode;
+    }
+
+    public void setEntryMode(String entryMode) {
+        this.entryMode = entryMode;
+    }
+
+    public Long getDelegatedByUserId() {
+        return delegatedByUserId;
+    }
+
+    public void setDelegatedByUserId(Long delegatedByUserId) {
+        this.delegatedByUserId = delegatedByUserId;
     }
 
     public Long getFinalizedByUserId() {

@@ -44,6 +44,10 @@ public class ChartRevisionExportService {
             "departmentCode",
             "physicianCode",
             "insuranceCombinationNumber",
+            "enteredByUserId",
+            "entryMode",
+            "delegatedByUserId",
+            "finalizedByUserId",
             "hasOrcaAcceptanceId",
             "hasNoAcceptanceReason");
     private static final Pattern AUTHORIZATION_LINE = Pattern.compile("(?i)authorization\\s*:\\s*[^\\r\\n]+");
@@ -162,6 +166,8 @@ public class ChartRevisionExportService {
         dto.setPhysicianCode(redactUnsafeText(revision.getPhysicianCode()));
         dto.setInsuranceCombinationNumber(redactUnsafeText(revision.getInsuranceCombinationNumber()));
         dto.setEnteredByUserId(revision.getEnteredByUserId());
+        dto.setEntryMode(revision.getEntryMode() != null ? revision.getEntryMode().name() : null);
+        dto.setDelegatedByUserId(revision.getDelegatedByUserId());
         dto.setFinalizedByUserId(revision.getFinalizedByUserId());
         dto.setFinalizedAt(revision.getFinalizedAt() != null ? revision.getFinalizedAt().toString() : null);
         return dto;
@@ -257,6 +263,8 @@ public class ChartRevisionExportService {
         addSummary(joiner, "physicianCode", revision.getPhysicianCode());
         addSummary(joiner, "insuranceCombinationNumber", revision.getInsuranceCombinationNumber());
         addSummary(joiner, "enteredByUserId", revision.getEnteredByUserId());
+        addSummary(joiner, "entryMode", revision.getEntryMode());
+        addSummary(joiner, "delegatedByUserId", revision.getDelegatedByUserId());
         addSummary(joiner, "finalizedByUserId", revision.getFinalizedByUserId());
         return joiner.toString();
     }

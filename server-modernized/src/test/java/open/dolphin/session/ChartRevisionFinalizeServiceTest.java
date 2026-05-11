@@ -11,6 +11,7 @@ import jakarta.persistence.TypedQuery;
 import jakarta.ws.rs.WebApplicationException;
 import java.lang.reflect.Field;
 import open.dolphin.infomodel.ChartDocumentModel;
+import open.dolphin.infomodel.ChartRevisionEntryMode;
 import open.dolphin.infomodel.ChartRevisionEventModel;
 import open.dolphin.infomodel.ChartRevisionEventType;
 import open.dolphin.infomodel.ChartRevisionModel;
@@ -54,7 +55,11 @@ class ChartRevisionFinalizeServiceTest {
         assertThat(revision.getDepartmentCode()).isEqualTo("01");
         assertThat(revision.getPhysicianCode()).isEqualTo("10001");
         assertThat(revision.getInsuranceCombinationNumber()).isEqualTo("0001");
+        assertThat(revision.getEntryMode()).isEqualTo(ChartRevisionEntryMode.DIRECT);
+        assertThat(revision.getDelegatedByUserId()).isNull();
         assertThat(revision.getFinalizeContextJson()).contains("\"orcaPatientId\":\"00001\"");
+        assertThat(revision.getFinalizeContextJson()).contains("\"enteredByUserId\":101");
+        assertThat(revision.getFinalizeContextJson()).contains("\"entryMode\":\"DIRECT\"");
         assertThat(revision.getFinalizeContextJson()).doesNotContain("Sanitized Patient");
         assertThat(document.getCurrentRevisionId()).isEqualTo(20L);
 
@@ -63,8 +68,65 @@ class ChartRevisionFinalizeServiceTest {
         ChartRevisionEventModel event = eventCaptor.getValue();
         assertThat(event.getEventType()).isEqualTo(ChartRevisionEventType.FINALIZED);
         assertThat(event.getAfterSummaryJson()).contains(response.getContentHash());
+        assertThat(event.getAfterSummaryJson()).contains("\"entryMode\":\"DIRECT\"");
         assertThat(event.getAfterSummaryJson()).doesNotContain("Sanitized Patient");
         verify(em).flush();
+    }
+
+    @Test
+    void finalizeRevisionRecordsDelegatedEntryMetadataFromStoredEnteredAndFinalizer() {
+        ChartDocumentModel document = chartDocument();
+        ChartRevisionModel revision = draftRevision();
+        revision.setEnteredByUserId(303L);
+        when(em.find(ChartDocumentModel.class, 10L)).thenReturn(document);
+        when(em.find(ChartRevisionModel.class, 20L)).thenReturn(revision);
+        ChartRevisionFinalizeRequest request = validRequest();
+        request.setEntryMode("DELEGATED");
+        request.setDelegatedByUserId(101L);
+
+        ChartRevisionFinalizeResponse response = service.finalizeRevision(10L, 20L, "F001", request);
+
+        assertThat(response.getStatus()).isEqualTo("FINAL");
+        assertThat(revision.getEnteredByUserId()).isEqualTo(303L);
+        assertThat(revision.getFinalizedByUserId()).isEqualTo(101L);
+        assertThat(revision.getEntryMode()).isEqualTo(ChartRevisionEntryMode.DELEGATED);
+        assertThat(revision.getDelegatedByUserId()).isEqualTo(101L);
+        assertThat(revision.getFinalizeContextJson()).contains("\"enteredByUserId\":303");
+        assertThat(revision.getFinalizeContextJson()).contains("\"entryMode\":\"DELEGATED\"");
+        assertThat(revision.getFinalizeContextJson()).contains("\"delegatedByUserId\":101");
+        assertThat(revision.getFinalizeContextJson()).contains("\"finalizedByUserId\":101");
+    }
+
+    @Test
+    void finalizeRevisionRejectsClientClaimedDirectModeWhenEnteredAndFinalizerDiffer() {
+        ChartDocumentModel document = chartDocument();
+        ChartRevisionModel revision = draftRevision();
+        revision.setEnteredByUserId(303L);
+        when(em.find(ChartDocumentModel.class, 10L)).thenReturn(document);
+        when(em.find(ChartRevisionModel.class, 20L)).thenReturn(revision);
+        ChartRevisionFinalizeRequest request = validRequest();
+        request.setEntryMode("DIRECT");
+
+        Throwable thrown = catchThrowable(() -> service.finalizeRevision(10L, 20L, "F001", request));
+
+        assertThat(thrown).isInstanceOf(WebApplicationException.class);
+        assertThat(((WebApplicationException) thrown).getResponse().getStatus()).isEqualTo(400);
+    }
+
+    @Test
+    void finalizeRevisionRejectsClientClaimedDelegatedModeWhenSameUserFinalizes() {
+        ChartDocumentModel document = chartDocument();
+        ChartRevisionModel revision = draftRevision();
+        when(em.find(ChartDocumentModel.class, 10L)).thenReturn(document);
+        when(em.find(ChartRevisionModel.class, 20L)).thenReturn(revision);
+        ChartRevisionFinalizeRequest request = validRequest();
+        request.setEntryMode("DELEGATED");
+        request.setDelegatedByUserId(101L);
+
+        Throwable thrown = catchThrowable(() -> service.finalizeRevision(10L, 20L, "F001", request));
+
+        assertThat(thrown).isInstanceOf(WebApplicationException.class);
+        assertThat(((WebApplicationException) thrown).getResponse().getStatus()).isEqualTo(400);
     }
 
     @Test
@@ -146,6 +208,9 @@ class ChartRevisionFinalizeServiceTest {
         assertThat(newRevision.getStatus()).isEqualTo(ChartRevisionStatus.AMENDED);
         assertThat(newRevision.getRevisionNumber()).isEqualTo(2);
         assertThat(newRevision.getTitle()).isEqualTo("Amended title");
+        assertThat(newRevision.getEnteredByUserId()).isEqualTo(source.getEnteredByUserId());
+        assertThat(newRevision.getEntryMode()).isEqualTo(source.getEntryMode());
+        assertThat(newRevision.getDelegatedByUserId()).isEqualTo(source.getDelegatedByUserId());
         assertThat(newRevision.getFinalizedByUserId()).isEqualTo(202L);
 
         ChartRevisionEventModel event = persistCaptor.getAllValues().stream()
@@ -232,6 +297,7 @@ class ChartRevisionFinalizeServiceTest {
         ChartRevisionModel revision = draftRevision();
         revision.setStatus(ChartRevisionStatus.FINAL);
         revision.setContentHash("a".repeat(64));
+        revision.setEntryMode(ChartRevisionEntryMode.DIRECT);
         revision.setFinalizedByUserId(101L);
         revision.setOrcaPatientId("00001");
         revision.setEncounterId("ENC-001");

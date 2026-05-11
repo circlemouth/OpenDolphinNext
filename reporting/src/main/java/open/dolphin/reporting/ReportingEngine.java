@@ -49,6 +49,10 @@ public final class ReportingEngine {
                     "departmentCode",
                     "physicianCode",
                     "insuranceCombinationNumber",
+                    "enteredByUserId",
+                    "entryMode",
+                    "delegatedByUserId",
+                    "finalizedByUserId",
                     "hasOrcaAcceptanceId",
                     "hasNoAcceptanceReason")));
     private static final Pattern AUTHORIZATION_LINE = Pattern.compile("(?i)authorization\\s*:\\s*[^\\r\\n]+");
