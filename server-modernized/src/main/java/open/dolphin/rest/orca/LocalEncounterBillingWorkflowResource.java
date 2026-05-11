@@ -713,6 +713,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         }
         JsonNode body = readTemporaryMedicalGetBody(result.getBody());
         String apiResult = xmlTextValue(body, "Api_Result");
+        boolean apiSuccess = "00".equals(apiResult);
         response.setApiResult(apiResult);
         response.setApiResultMessage(xmlTextValue(body, "Api_Result_Message"));
         List<JsonNode> rows = arrayNodes(body.path("Tmedical_List_Information"));
@@ -721,7 +722,7 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         String firstMode2 = null;
         boolean medicalUidPresent = false;
         for (JsonNode row : rows) {
-            if (!temporaryMedicalRowMatches(record, row)) {
+            if (!apiSuccess || !temporaryMedicalRowMatches(record, row)) {
                 continue;
             }
             matches++;
@@ -742,15 +743,21 @@ public class LocalEncounterBillingWorkflowResource extends AbstractOrcaRestResou
         boolean resendBlocked = found && temporaryMedicalModeRequiresAdminReview(firstMode, firstMode2);
         response.setResendBlocked(resendBlocked);
         response.setResendBlockReason(resendBlocked ? "ORCA_TEMPORARY_MEDICAL_MODE_LOCKED" : null);
-        response.setOk("00".equals(apiResult) && found && !resendBlocked);
-        response.setOperationStatus(resendBlocked
+        response.setOk(apiSuccess && found && !resendBlocked);
+        response.setOperationStatus(!apiSuccess
+                ? "NEEDS_REVIEW"
+                : resendBlocked
                 ? "ORCA_RESEND_BLOCKED"
                 : found ? "ORCA_TEMPORARY_MEDICAL_FOUND" : "NEEDS_REVIEW");
-        response.setReconciliationStatus(resendBlocked
+        response.setReconciliationStatus(!apiSuccess
+                ? "TEMPORARY_MEDICAL_NOT_FOUND"
+                : resendBlocked
                 ? "TEMPORARY_MEDICAL_FOUND_RESEND_BLOCKED"
                 : found ? "TEMPORARY_MEDICAL_FOUND" : "TEMPORARY_MEDICAL_NOT_FOUND");
         response.setNeedsUserReview(true);
-        response.setMessage(resendBlocked
+        response.setMessage(!apiSuccess
+                ? "ORCA中途終了データ照合が正常終了しませんでした。成功扱いにせず確認してください"
+                : resendBlocked
                 ? "ORCA側で会計済みまたは展開済みの可能性があるため、再送は停止します。管理者確認が必要です"
                 : found
                 ? "ORCA中途終了データに一致候補があります。内容確認後に再送可否を判断してください"
