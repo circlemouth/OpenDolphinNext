@@ -243,6 +243,25 @@ describe('OrderDockPanel category quick-add', () => {
     expect(screen.queryByLabelText('処方入力')).not.toBeInTheDocument();
   });
 
+  it('編集不可時の検索して追加は native disabled を維持し近傍理由を示す', () => {
+    renderWithClient(
+      <OrderDockPanel
+        patientId="P-100"
+        meta={{ ...baseMeta, missingMaster: true }}
+        visitDate="2026-02-17"
+        orderBundles={[]}
+      />,
+    );
+
+    expect(screen.getByText('検索して追加はブロックされています: マスター未同期のため操作できません。')).toBeInTheDocument();
+    const searchInput = screen.getByRole('searchbox', { name: 'オーダー検索' });
+    const categorySelect = screen.getByRole('combobox', { name: 'カテゴリ選択' });
+    expect(searchInput).toBeDisabled();
+    expect(searchInput).toHaveAttribute('aria-describedby', 'order-dock-search-block-reason');
+    expect(categorySelect).toBeDisabled();
+    expect(categorySelect).toHaveAttribute('aria-describedby', 'order-dock-search-block-reason');
+  });
+
   it('編集不可時の束操作は disabled だけにせず押下時に理由を表示する', async () => {
     const user = userEvent.setup();
     renderWithClient(

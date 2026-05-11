@@ -1718,12 +1718,14 @@ export function OrderDockPanel(props: {
               placeholder="オーダー名・薬剤名・コード"
               disabled={!patientId || !canEdit}
               aria-label="オーダー検索"
+              aria-describedby={!canEdit && editDisabledReason ? 'order-dock-search-block-reason' : undefined}
             />
             <select
               value={quickSearchGroup}
               onChange={(event) => setQuickSearchGroup(event.target.value as OrderGroupKey | 'all')}
               disabled={!patientId || !canEdit}
               aria-label="カテゴリ選択"
+              aria-describedby={!canEdit && editDisabledReason ? 'order-dock-search-block-reason' : undefined}
             >
               <option value="all">全カテゴリ</option>
               <option value="prescription">処方</option>
@@ -1733,6 +1735,11 @@ export function OrderDockPanel(props: {
               <option value="charge">算定</option>
             </select>
           </div>
+          {!canEdit && editDisabledReason ? (
+            <p id="order-dock-search-block-reason" className="order-dock__search-empty">
+              検索して追加はブロックされています: {editDisabledReason}
+            </p>
+          ) : null}
           {quickSearchCandidates.length > 0 ? (
             <ul className="order-dock__search-results" role="listbox" aria-label="検索候補">
               {quickSearchCandidates.map((candidate) => (
