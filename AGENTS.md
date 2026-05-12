@@ -1,6 +1,38 @@
 # AGENTS GUIDE
 
 ## ⚠️ 最重要: 遂行責任 (Critical: Responsibility to Complete)
+
+## ⚠️ 最重要: 電子カルテ・ORCA連携の安全境界
+
+OpenDolphinNext は、ORCA / WebORCA 連携電子カルテとして扱う。
+
+このリポジトリでの実装・レビュー・テスト・ドキュメント更新では、一般的なWebアプリの品質だけではなく、電子カルテとしての以下を最上位制約とする。
+
+- 正本境界
+- 診療録の真正性
+- 処方指示の真正性
+- ORCA連携の冪等性
+- 二重送信防止
+- UNKNOWN状態の安全な扱い
+- 監査ログのappend-only性
+- 患者取り違え防止UI
+- 見読性・保存性・説明可能性
+- ORCA認証情報と患者情報の秘匿
+
+後方互換性や過去DB遺産よりも、本番運用上の安全性を優先する。
+危険な旧仕様を温存するための互換レイヤー、旧API、旧テーブル、旧UI導線を追加してはならない。
+
+詳細仕様は次を正本として参照する。
+
+- `docs/architecture/ehr-orca-source-of-truth-boundary.md`
+- `docs/architecture/ehr-chart-prescription-authority.md`
+- `docs/architecture/orca-integration-safety-contract.md`
+- `docs/testing/ehr-orca-required-test-matrix.md`
+- `docs/operations/orca-unknown-state-runbook.md`
+- `docs/web-client/ux/medical-safety-ui-rules.md`
+
+これらに反する変更は、たとえテストが通っても Done とみなさない。
+
 **割り当てられたタスクは、可能な限り自律的に完遂せよ。**
 - 「方法を提案して終了」ではなく、「設計し、実装し、テストし、動作確認まで完了した状態」で報告すること。
 - ユーザーの手を煩わせない。必要な調査、修正、再試行、検証、追加テスト、ドキュメント更新は自律的に行え。
@@ -16,6 +48,27 @@
 - UI 変更では `docs/web-client/ux/dads_app_ui_design_rules_20260411.md`、`docs/web-client/ux/web-client-ui-guideline.md`、`web-client/notes/ui-current-contract.md` を確認する。
 - セキュリティ・認証・患者文脈・ORCA・添付/画像・health/readiness に関わる場合は、該当する `docs/contracts/*.md` と `web-client/notes/security-spec.md` を必ず確認する。
 - 変更対象、信頼境界、攻撃面、最低 3 件の misuse case、実行する検証コマンドを短く整理してから実装する。
+
+### 0.1 医療安全プリフライト
+
+電子カルテ、患者、受付、保険、病名、診療録、処方、診療行為、会計、収納、領収、レセプト、ORCA連携、監査ログ、Web UI重大操作に触れる作業では、実装前に必ず以下を短く整理すること。
+
+- この変更が触る正本は何か。
+  - ORCA / WebORCA 正本か。
+  - OpenDolphinNext 正本か。
+  - cache / snapshot / candidate / audit log か。
+- ORCA正本情報をlocal正本化していないか。
+- 診療録確定、処方確定、ORCA送信、診察終了、会計送信を混同していないか。
+- 確定済み診療録または確定済み処方指示を直接上書きしていないか。
+- ORCA送信失敗、警告、不一致、UNKNOWNを成功扱いしていないか。
+- idempotency key、再送制御、二重送信防止があるか。
+- 監査ログに操作者、対象患者、対象診療録、対象処方、ORCA結果が残るか。
+- 患者取り違え防止UIがあるか。
+- 重大操作モーダルに患者識別情報が再掲されるか。
+- DADSに反するplaceholder依存、disabled依存、重要情報の初期非表示がないか。
+- ORCA URL、Basic認証、証明書、証明書パスワードがブラウザ側へ露出していないか。
+
+この整理をせずに実装へ入ってはならない。
 
 ## 1. プロジェクト基本ルール
 - **目的**: Webクライアント (`web-client`) とモダナイズ版サーバー (`server-modernized`) を、本番運用を前提とした品質で連携・改善すること。
@@ -51,6 +104,13 @@
 | --- | --- |
 | 認証・認可・セッション | `web-client/notes/auth-check.md`, `web-client/notes/auth-transition.md`, `web-client/notes/security-spec.md`, `docs/contracts/runtime-config.md` |
 | ORCA route / 接続 / readiness | `docs/contracts/orca-route-taxonomy.md`, `docs/contracts/orca-connection.md`, `docs/contracts/orca-master-api.md`, `docs/operations/ORCA_CERTIFICATION_ONLY.md` |
+| 電子カルテ正本境界 / ORCA正本境界 | `docs/architecture/ehr-orca-source-of-truth-boundary.md`, `docs/architecture/orca-integration-safety-contract.md`, `docs/contracts/orca-route-taxonomy.md` |
+| 診療録確定 / 訂正 / 追記 / 取消 / PDF / export | `docs/architecture/ehr-chart-prescription-authority.md`, `docs/testing/ehr-orca-required-test-matrix.md` |
+| 処方指示 / 処方確定 / 変更 / 中止 / 取消 / 再発行 | `docs/architecture/ehr-chart-prescription-authority.md`, `docs/architecture/orca-integration-safety-contract.md` |
+| ORCA病名 / diseaseget / diseasev3 | `docs/architecture/ehr-orca-source-of-truth-boundary.md`, `docs/architecture/orca-integration-safety-contract.md`, `docs/testing/ehr-orca-required-test-matrix.md` |
+| ORCA診療行為 / medicalmod / 会計送信 / UNKNOWN | `docs/architecture/orca-integration-safety-contract.md`, `docs/operations/orca-unknown-state-runbook.md` |
+| 監査ログ / hash chain / append-only | `docs/architecture/ehr-chart-prescription-authority.md`, `docs/testing/ehr-orca-required-test-matrix.md` |
+| 医療安全UI / 患者取り違え防止 / 重大操作確認 | `docs/web-client/ux/medical-safety-ui-rules.md`, `docs/web-client/ux/dads_app_ui_design_rules_20260411.md`, `web-client/notes/ui-current-contract.md` |
 | health / readiness / runtime config | `docs/contracts/health-endpoints.md`, `docs/contracts/runtime-config.md`, `docs/architecture/server-modernization-overview.md` |
 | 添付・文書・患者画像 | `docs/contracts/document-integrity.md`, `docs/contracts/patient-images.md`, `docs/web-client/architecture/document-embedded-attachment-policy.md` |
 | Web UI / 患者文脈 | `web-client/notes/ui-current-contract.md`, `web-client/notes/patient-context-contract.md`, `docs/web-client/ux/` |
@@ -309,6 +369,43 @@
 - サブエージェントを使った場合は、**ハングしている場合を除き**、原則として作業終了まで待機し、完了結果を確認してから次の判断に進むこと。
 - ただし、セキュリティに関わる判断（認可、秘密情報、外部接続、権限変更）は、最終的に自分で整合性を確認してから報告すること。
 
+### 11.1 電子カルテ・ORCA連携サブエージェント追加仕様
+
+作業量が多い場合、マネージャーエージェントは積極的にサブエージェントを使うこと。
+
+ただし、サブエージェントは単なる調査係ではなく、明確な成果物、検証コマンド、差分、残リスクを返す単位で起動する。
+
+サブエージェントを使う場合、原則として次を守る。
+
+- 各サブエージェントは専用worktreeで作業する。
+- 各サブエージェントは他worktreeのコンテナ、成果物、未追跡ファイルを操作しない。
+- サブエージェントのモデル指定が可能な場合、原則 `gpt-5.4 high` を使う。
+- サブエージェントには、担当範囲、禁止事項、読むべき正本、検証コマンド、報告形式を明示する。
+- セキュリティ、ORCA正本境界、診療録真正性、処方真正性、監査ログ、患者取り違え防止UIの最終判断は、マネージャーが再確認する。
+- サブエージェントの報告をそのまま鵜呑みにせず、マネージャーが矛盾、漏れ、過剰実装、危険な互換維持を確認する。
+
+大きな作業では、原則として次の分割を使う。
+
+| サブエージェント | 主担当 | 主な確認対象 |
+| --- | --- | --- |
+| Server Authority Agent | 診療録・処方・監査ログ | chart revision、prescription authority、DB guard、append-only、hash chain |
+| ORCA Integration Agent | ORCA連携 | patientget、patientmod、accept、diseaseget、diseasev3、medicalmod、UNKNOWN、idempotency |
+| Web Safety UI Agent | Web UI | 患者ヘッダー、重大操作確認、ORCA警告、不一致、DADS準拠、アクセシビリティ |
+| Test Gate Agent | テスト・CI | required test matrix、focused tests、route inventory、security guard、CI evidence |
+| Docs/Runbook Agent | 文書・運用 | current contract、runbook、UNKNOWN運用、監査ログ保全、reviewer packet |
+
+マネージャーは次を行う。
+
+1. 作業工程表を作成する。
+2. 各サブエージェントへ専用worktree作成を指示する。
+3. 各サブエージェントの担当範囲が重複しすぎないようにする。
+4. サブエージェントの成果をレビューする。
+5. マージ順を決める。
+6. コンフリクトを解消する。
+7. 統合後に必要なfocused testとfull gateを実行する。
+8. AGENTS.md、docs、runbook、test matrixの更新漏れを確認する。
+9. 最終報告では、サブエージェント別の成果、検証結果、残リスク、未実行コマンドを明記する。
+
 ## 12. worktree 整理ルール
 - 作業完了後、作業ブランチや `master` へ必要な内容を取り込んだら、現在のリポジトリに紐づく補助 `worktree` を棚卸しすること。
   - `git worktree list --porcelain` で登録済み worktree を確認する。
@@ -324,6 +421,301 @@
   - 削除後は `git worktree prune` を実行し、`git worktree list --porcelain` で登録が main worktree のみになったことを確認する。
   - 空になった親ディレクトリだけが残った場合は、内容が空であることを確認してから `rmdir` で削除してよい。
 - 最終報告には、削除した worktree、取り込んだ未反映内容、残したディレクトリがあればその理由、最終 `git status --short` を明記すること。
+
+## 13. 電子カルテ・ORCA連携 最上位仕様
+
+### 13.1 正本境界
+
+次は ORCA / WebORCA が正本である。OpenDolphinNext 側で独立正本として作成・更新・削除してはならない。
+
+- 患者番号
+- 患者基本情報
+- 保険情報
+- 公費情報
+- 保険組合せ
+- 受付
+- 診療科
+- ORCA受付に紐づく担当医・担当者情報
+- 病名
+- 診療行為
+- 算定
+- 会計
+- 収納
+- 領収
+- レセプト
+- 請求関連情報
+
+OpenDolphinNext 側で保持できるのは、表示キャッシュ、診療時点スナップショット、送信候補、ORCAリクエスト、ORCAレスポンス、警告、エラー、不一致、UNKNOWN、監査ログに限る。
+
+次は OpenDolphinNext が正本である。
+
+- 診療録本文
+- SOAP
+- 診療経過
+- 所見
+- 医師の判断
+- 患者への説明内容
+- 処方指示の記録
+- 処方変更・中止・取消・再発行の記録
+- 診療録に添付・紐付く文書
+- 診療録確定履歴
+- 診療録訂正・追記・取消・無効化履歴
+- ORCA送信候補
+- ORCA送信リクエスト
+- ORCAレスポンス
+- ORCA警告
+- ORCAエラー
+- ORCA不一致
+- ORCA監査ログ
+- ORCAから取得した患者・受付・保険・病名・会計情報の参照スナップショット
+
+ORCA送信成功だけをもって診療録確定としてはならない。診療録確定、処方確定、ORCA送信、診察終了、会計送信は別概念として管理する。
+
+### 13.2 ORCA連携APIの原則
+
+ORCA連携は必ずサーバー側アダプタを経由する。WebクライアントからORCA APIを直接呼んではならない。
+
+原則として次の公式API系統を使う。
+
+- 患者基本情報取得: `patientgetv2`
+- 患者作成・更新: `patientmodv2`
+- 受付: `acceptmodv2`, `acceptlstv2`
+- 病名取得: `diseasegetv2?class=01` 相当
+- 病名追加・変更・削除・転帰更新: `diseasev3` 相当
+- 診療行為・処方・算定候補送信: `medicalmodv2` 相当
+- 会計・収納・領収・帳票・請求関連情報: ORCA公式API経由の参照cacheまたはsnapshot
+
+禁止する方式:
+
+- CLAIM連携への新規依存
+- `diseasev2` への新規依存
+- ORCA DB直接参照
+- ORCA DB直接更新
+- Web clientから `/api01rv2`, `/orca22`, `/api21` などの生ORCA pathへ到達する構成
+- ORCA URL、Basic認証、証明書、証明書パスワードのブラウザ露出
+
+### 13.3 診療録仕様
+
+診療録には少なくとも次の状態を持たせる。
+
+- DRAFT
+- FINAL
+- AMENDED
+- ADDENDUM
+- CANCELLED
+- VOIDED
+
+FINAL以後は、本文、SOAP、所見、説明内容、タイトル、添付文書を直接更新してはならない。変更は必ず訂正、追記、取消、無効化のeventとして追加する。
+
+診療録確定時には、少なくとも次を保存する。
+
+- 入力者
+- 代行入力者
+- 医師確定者
+- 確定日時
+- 作成日時
+- 更新日時
+- 対象患者
+- 診療日
+- ORCA患者番号
+- ORCA受付ID
+- 診療科
+- 担当医
+- 保険組合せ
+- 確定時点のORCA患者snapshot
+- 確定時点のORCA受付snapshot
+- 確定時点のORCA保険snapshot
+- 確定時点のORCA病名snapshot
+- 確定時点の処方指示snapshot
+- 確定時点のORCA送信候補snapshot
+- 確定時点のORCA警告・不一致snapshot
+
+### 13.4 処方指示仕様
+
+処方指示は OpenDolphinNext 側の正本として構造化保存する。少なくとも次を保存する。
+
+- 薬剤名
+- 薬剤コード
+- 規格
+- 剤形
+- 用法
+- 用量
+- 単位
+- 日数
+- 院内 / 院外
+- 内服 / 外用 / 注射
+- 頓用
+- コメント
+- 入力者
+- 代行入力者
+- 確定者
+- 確定日時
+- 変更、中止、取消、再発行、再送信の履歴
+
+確定済み処方指示を直接上書きしてはならない。ORCA送信結果で処方指示を無断変更してはならない。
+
+### 13.5 ORCA送信状態・冪等性
+
+ORCA送信には必ず idempotency key を持たせる。
+
+次の状態を区別する。
+
+- DRAFT
+- READY_TO_SEND
+- SENDING
+- SENT
+- ORCA_ACCEPTED
+- ORCA_WARNING
+- ORCA_REJECTED
+- ORCA_UNMATCHED
+- UNKNOWN
+- NEEDS_REVIEW
+- RETRY_REQUESTED
+- CANCEL_REQUESTED
+- CANCELLED
+
+UNKNOWNは成功ではない。
+UNKNOWN状態では、ORCA側再取得、照合、手動確認、再送可否判断を経るまで、登録済み、会計済み、反映済みとして表示してはならない。
+
+### 13.6 監査ログ・真正性
+
+次の操作は必ず監査ログに残す。
+
+- ログイン
+- ログアウト
+- 患者閲覧
+- 診療録作成
+- 診療録更新
+- 診療録確定
+- 訂正
+- 追記
+- 取消
+- 無効化
+- 処方作成
+- 処方確定
+- 処方変更
+- 処方中止
+- 処方取消
+- 処方再発行
+- ORCA送信
+- ORCA再送
+- ORCA送信取消
+- ORCA警告確認
+- ORCA不一致確認
+- 会計送信
+- 監査ログ閲覧
+
+監査ログには少なくとも次を含める。
+
+- 操作者
+- 対象患者
+- 対象診療録
+- 対象処方
+- 操作時刻
+- 操作種別
+- 変更前後
+- 端末情報
+- request id
+- ORCA連携結果
+- payload hash
+- previous hash
+- event hash
+
+監査ログはappend-onlyとし、一般ユーザーが更新・削除できないようにする。可能な限りhash chain等の改ざん検知を実装する。
+
+### 13.7 Web UI 医療安全仕様
+
+主要画面では患者識別情報を常時表示する。少なくとも次を確認できること。
+
+- 患者番号
+- 氏名
+- 生年月日
+- 性別
+- 年齢
+- 受付日
+- 診療科
+- 担当医
+- 保険組合せ
+- ORCA受付ID
+- ORCA由来情報の取得日時
+
+重大操作モーダルには患者識別情報を再掲する。
+
+重大操作には確認フローを置く。
+
+- 診療録確定
+- 診療録訂正
+- 診療録取消
+- 処方確定
+- 処方変更
+- 処方中止
+- 処方取消
+- ORCA送信
+- 再送
+- 診察終了
+- 会計送信
+
+ORCA警告、エラー、不一致、ORCA側のみ存在する情報、送信失敗、UNKNOWN、保留を初期非表示にしてはならない。
+
+フォームでは以下を守る。
+
+- labelを必ず置く
+- 必須 / 任意を示す
+- 入力条件をsupport textで示す
+- placeholderで説明を代用しない
+- エラーは原因と次に取るべき行動を具体的に示す
+- disabledボタンに安易に頼らない
+- disabledを使う場合は、直近に理由と有効化条件を明示する
+- 入力値変更だけで突然ORCA送信、画面遷移、ダイアログ表示を行わない
+
+## 14. レビュー・実装時の必須ゲート
+
+### 14.1 Criticalとして扱う危険経路
+
+次を見つけた場合はCriticalまたはHighとして扱い、原則として同一作業内で塞ぐ。
+
+- ORCA正本情報をlocal正本化するAPI
+- local患者CRUD
+- local病名CRUD
+- ORCA DB直接参照・直接更新
+- CLAIM連携への新規依存
+- `diseasev2` への新規依存
+- Web clientからORCA APIを直接呼ぶ実装
+- ORCA認証情報のブラウザ露出
+- 確定済み診療録の直接上書き
+- 確定済み処方指示の直接上書き
+- ORCA送信失敗を登録済み・会計済み扱いする実装
+- UNKNOWNを成功扱いする実装
+- 患者識別情報なしで重大操作できるUI
+- ORCA警告・不一致・ORCA側のみ情報を利用者に見せないUI
+- 監査ログなしの診療録確定、処方確定、ORCA送信、会計送信
+
+### 14.2 必須テスト
+
+該当する変更では、最低限次のテストを追加または更新する。
+
+- ORCA正本領域のlocal CRUDが本番到達不能であること
+- Web clientからORCA APIへ直接到達できないこと
+- ブラウザbundleにORCA認証情報が含まれないこと
+- ORCA送信失敗時に反映済み扱いしないこと
+- UNKNOWN状態を成功扱いしないこと
+- 確定済み診療録を直接上書きできないこと
+- 確定済み診療録タイトルを直接更新できないこと
+- 確定済み処方指示を直接上書きできないこと
+- 診療録確定時snapshotが保存されること
+- ORCA警告、不一致、ORCA側のみ情報が保存・表示されること
+- idempotency key により二重送信を防止すること
+- 監査ログがappend-onlyであること
+- 重大操作モーダルに患者識別情報が表示されること
+- disabled理由、フォームラベル、support text、具体的エラーが表示されること
+- placeholderで説明を代用していないこと
+- 重要情報をaccordion/details/disclosure内だけに隠していないこと
+
+### 14.3 実ORCA確認が必要な場合
+
+ORCA連携の実動作確認が必要な場合は、`docs/operations/ORCA_CERTIFICATION_ONLY.md` と `docs/operations/orca-unknown-state-runbook.md` に従う。
+
+公開TrialのBasic値や認証情報は、repo、review package、実行ログ、summary、test fixtureにraw値で残さない。証跡では set/unset、sanitized classification、接続先種別だけを記録する。
 
 ---
 **「ユーザーは君の成功を待っている。言い訳ではなく、成果を届けよ。」**

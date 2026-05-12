@@ -11,14 +11,20 @@
 - [contracts/protected-export-authorization-matrix.md](contracts/protected-export-authorization-matrix.md)
 - [architecture/](architecture/)
 - [architecture/repository-doc-taxonomy.md](architecture/repository-doc-taxonomy.md)
+- [architecture/ehr-orca-source-of-truth-boundary.md](architecture/ehr-orca-source-of-truth-boundary.md)
+- [architecture/ehr-chart-prescription-authority.md](architecture/ehr-chart-prescription-authority.md)
+- [architecture/orca-integration-safety-contract.md](architecture/orca-integration-safety-contract.md)
 - [runbooks/](runbooks/)
 - [runbooks/backup-restore-hash-verification.md](runbooks/backup-restore-hash-verification.md)
 - [runbooks/orca-outage-recovery.md](runbooks/orca-outage-recovery.md)
 - [runbooks/production-operations-readiness.md](runbooks/production-operations-readiness.md)
 - [operations/](operations/)
+- [operations/orca-unknown-state-runbook.md](operations/orca-unknown-state-runbook.md)
+- [testing/ehr-orca-required-test-matrix.md](testing/ehr-orca-required-test-matrix.md)
 - [releases/](releases/)
 - [web-client/architecture/](web-client/architecture/)
 - [web-client/ux/](web-client/ux/)
+- [web-client/ux/medical-safety-ui-rules.md](web-client/ux/medical-safety-ui-rules.md)
 - [../web-client/README.md](../web-client/README.md)
 - [../web-client/notes/README.md](../web-client/notes/README.md)
 
@@ -52,6 +58,7 @@
 - [codex/clinical-input-cwp01-karte-order-persistence-20260421/README.md](codex/clinical-input-cwp01-karte-order-persistence-20260421/README.md)
 - [codex/clinical-input-wave2a-20260421/README.md](codex/clinical-input-wave2a-20260421/README.md)
 - [codex/clinical-input-test-wave1-20260421/README.md](codex/clinical-input-test-wave1-20260421/README.md)
+- [agent-prompts/README.md](agent-prompts/README.md)
 - current workflow の実行正本は [runbooks/release-validation.md](runbooks/release-validation.md)、[runbooks/reviewer-submission-packet.md](runbooks/reviewer-submission-packet.md)、[releases/orca-remediation-cutover.md](releases/orca-remediation-cutover.md) です。
 - `docs/implementation/` には workstream index と active workflow background を置き、dated packet / closeout / recovery を current 導線に混ぜません。
 
@@ -87,11 +94,15 @@ CI の正本は `.github/workflows/` の実ジョブです。`runtime-ready-smok
 - manager current state: `docs/managerdocs/`
 - runtime contracts: `docs/contracts/`
 - architecture summary: `docs/architecture/`
+- EHR / ORCA safety boundary: `docs/architecture/ehr-orca-source-of-truth-boundary.md`、`docs/architecture/ehr-chart-prescription-authority.md`、`docs/architecture/orca-integration-safety-contract.md`
 - live runbooks: `docs/runbooks/`
 - operations runbook: `docs/operations/`
+- EHR / ORCA UNKNOWN operations: `docs/operations/orca-unknown-state-runbook.md`
+- EHR / ORCA required test matrix: `docs/testing/ehr-orca-required-test-matrix.md`
 - release / cutover: `docs/releases/`
 - web-client current contract: `web-client/README.md` と `web-client/notes/`
 - UI / UX basis: `docs/web-client/ux/` と `docs/web-client/architecture/`
+- Medical safety UI: `docs/web-client/ux/medical-safety-ui-rules.md`
 - evidence: `artifacts/`
 
 ## Rules
