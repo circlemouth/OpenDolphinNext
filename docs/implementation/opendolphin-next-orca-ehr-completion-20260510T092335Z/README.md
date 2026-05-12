@@ -6,6 +6,7 @@
 - Primary checklist: [opendolphin-next-orca-ehr-implementation-checklist.md](./opendolphin-next-orca-ehr-implementation-checklist.md)
 - Parallel heartbeat plan: [parallel-heartbeat-plan.md](./parallel-heartbeat-plan.md)
 - Worker board: [worker-board.md](./worker-board.md)
+- Local Trial runtime handoff: [orca-trial-local-runtime.md](./orca-trial-local-runtime.md)
 
 ## Purpose
 
@@ -28,6 +29,7 @@ The checklist in this directory is an implementation planning document. It does 
 - Begin each iteration with a fresh `RUN_ID`, `git status --short`, and current branch check.
 - Use a dedicated worker branch/worktree for parallel execution. Integrator G owns merge ordering and cross-worker conflict resolution.
 - Select work from [worker-board.md](./worker-board.md), and update the board plus an `iteration-<RUN_ID>.md` file before reporting.
+- For live WebORCA Trial work in this checkout, use the repo-root `orca.env.local` prepared by Integrator G. It is intentionally untracked, ignored, and mode `600`; do not copy its raw Basic values into commits, logs, docs, review packets, screenshots, HAR, traces, or artifacts. See [orca-trial-local-runtime.md](./orca-trial-local-runtime.md) before rerunning A/D live evidence.
 - Treat browser/client input as untrusted. ORCA identifiers, facility, owner, storage keys, digest, URL, voucher, sequential number, insurance combination, and role claims must be resolved or verified server-side.
 - Keep ORCA credentials, connection URL, certificate material, raw XML, patient details, insurance details, cookies, CSRF tokens, HAR, trace, video, and screenshots out of tracked evidence.
 - Work only in `web-client/`, `server-modernized/`, sibling modernized modules, `docs/`, `ops/`, `scripts/`, and `tests/` unless explicitly instructed otherwise.

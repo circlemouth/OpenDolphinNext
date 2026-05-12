@@ -5,6 +5,7 @@
 - Created: 2026-05-10
 - Parallel plan: [parallel-heartbeat-plan.md](./parallel-heartbeat-plan.md)
 - Primary checklist: [opendolphin-next-orca-ehr-implementation-checklist.md](./opendolphin-next-orca-ehr-implementation-checklist.md)
+- Local Trial runtime handoff: [orca-trial-local-runtime.md](./orca-trial-local-runtime.md)
 
 ## Board Rules
 
@@ -33,7 +34,7 @@ Checklist count after round 2 integration reconciliation:
 | D | `codex/orca-ehr-r2-worker-d-live-orca` | R2-D11 fullflow sanitized artifact hardening | Merged to `master` | 20260511T145138Z | `3e589b764` merge | Fullflow rerun and billing/report closeout remain blocked until live runtime is rerun with the same prerequisites. |
 | E | `codex/orca-ehr-r2-worker-e-safety-ui` | R2-E03/E04 medical safety UI confirmations and disabled reasons | Merged to `master` | 20260511T150214Z | `ed279bc2d` merge | None for merged slice; remaining UI coverage can continue for prescription stop/cancel and residual flows. |
 | F | `codex/orca-ehr-r2-worker-f-security-gates` | R2-F09 audit event coverage inventory / release gate hardening | Merged to `master` | 20260511T150603Z | `faae9e89f` merge | Audit inventory still has owner-verification rows for owning workers; live Trial mutation/fullflow remains outside F. |
-| G | `master` | G-05 post-merge validation, cleanup, and next-worker handoff | Active | 20260511T151412Z | pending G docs commit | Post-merge validation and safe branch/worktree cleanup in progress. |
+| G | `master` | G-06 local WebORCA Trial runtime handoff for next workers | Active | 20260511T151412Z | pending G docs commit | Repo-root `orca.env.local` exists locally, is ignored/untracked, and should be used by A/D live reruns without copying raw Basic values into tracked files or evidence. |
 
 ## Round 2 Assignment Snapshot
 
