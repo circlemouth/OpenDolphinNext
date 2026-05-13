@@ -31,6 +31,8 @@ export type DiseaseEntry = {
   unmatchInformation?: DiseaseUnmatchInformation[];
   readOnly?: boolean;
   candidateOnly?: boolean;
+  candidateKind?: 'candidate' | 'draftCandidate';
+  sourceOfTruth?: 'orca' | 'local-candidate' | 'chart-text';
   note?: string;
 };
 
@@ -72,7 +74,7 @@ export type DiseaseUnmatchInformation = {
   messageCategory?: string;
 };
 
-export type DiseaseLayer = 'insurance-local' | 'orca-mirror' | 'candidate';
+export type DiseaseLayer = 'orca-mirror' | 'candidate';
 export type DiseaseSyncStatus = 'PENDING' | 'SYNCED' | 'WARNING' | 'ERROR';
 export type DiseaseSyncState =
   | 'none'
@@ -385,7 +387,13 @@ const normalizeDiseaseLayer = (value?: string | null): DiseaseLayer => {
   if (normalized === 'orca-mirror' || normalized === 'candidate') {
     return normalized;
   }
-  return 'insurance-local';
+  return 'candidate';
+};
+
+const normalizeCandidateKind = (value?: string | null, layer?: DiseaseLayer): DiseaseEntry['candidateKind'] => {
+  const normalized = normalizeTerm(value);
+  if (normalized === 'draftCandidate' || normalized === 'candidate') return normalized;
+  return layer === 'candidate' ? 'draftCandidate' : undefined;
 };
 
 const normalizeDiseaseSyncState = (value?: string | null): DiseaseSyncState => {
@@ -416,8 +424,17 @@ const normalizeDiseaseEntry = (entry: DiseaseEntry): DiseaseEntry => {
     layer,
     syncState: normalizeDiseaseSyncState(entry.syncState),
     syncStatus: normalizeDiseaseSyncStatus(entry.syncStatus),
-    readOnly: typeof entry.readOnly === 'boolean' ? entry.readOnly : layer === 'orca-mirror',
+    readOnly: typeof entry.readOnly === 'boolean' ? entry.readOnly : layer === 'orca-mirror' || layer === 'candidate',
     candidateOnly: typeof entry.candidateOnly === 'boolean' ? entry.candidateOnly : layer === 'candidate',
+    candidateKind: normalizeCandidateKind(entry.candidateKind, layer),
+    sourceOfTruth:
+      entry.sourceOfTruth === 'orca' || entry.sourceOfTruth === 'local-candidate' || entry.sourceOfTruth === 'chart-text'
+        ? entry.sourceOfTruth
+        : layer === 'orca-mirror'
+          ? 'orca'
+          : layer === 'candidate'
+            ? 'local-candidate'
+            : undefined,
     note: normalizeTerm(entry.note) || undefined,
   };
 };

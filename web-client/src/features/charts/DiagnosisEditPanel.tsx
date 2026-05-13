@@ -192,7 +192,8 @@ const toFormState = (entry: DiseaseEntry, today: string): DiagnosisFormState => 
   subDiseaseClass: '',
 });
 
-const resolveDiseaseLayer = (entry: DiseaseEntry): DiseaseLayer => entry.layer ?? 'insurance-local';
+const resolveDiseaseLayer = (entry: DiseaseEntry): DiseaseLayer => entry.layer ?? 'candidate';
+const isLocalCandidateDisease = (entry: DiseaseEntry) => resolveDiseaseLayer(entry) === 'candidate';
 const isMainDisease = (entry: DiseaseEntry) => entry.category?.includes('主') ?? false;
 const isSuspectedDisease = (entry: DiseaseEntry) => entry.suspectedFlag?.includes('疑い') ?? entry.category?.includes('疑い') ?? false;
 const formatEntryName = (entry?: DiseaseEntry | null) => entry?.diagnosisName?.trim() || '名称未設定';
@@ -451,12 +452,14 @@ function DiseaseRow({
   const hasDiagnosisCode = Boolean(entry.diagnosisCode?.trim());
   const hasOutcome = Boolean(entry.outcome?.trim());
   const hasEnded = Boolean(entry.endDate?.trim());
-  const hasAttributes = isMain || isSuspected || !hasDiagnosisCode;
+  const isCandidate = isLocalCandidateDisease(entry);
+  const hasAttributes = isMain || isSuspected || !hasDiagnosisCode || isCandidate;
 
   return (
     <tr className="charts-diagnosis__row">
       <th scope="row" className="charts-diagnosis__cell charts-diagnosis__cell--name">
         <span className="charts-diagnosis__name">{formatEntryName(entry)}</span>
+        {isCandidate ? <span className="charts-diagnosis__subvalue">ORCA未登録の送信候補</span> : null}
       </th>
       <td className="charts-diagnosis__cell charts-diagnosis__cell--attrs">
         {hasAttributes ? (
@@ -474,6 +477,11 @@ function DiseaseRow({
             {!hasDiagnosisCode ? (
               <span className="charts-diagnosis__code-state charts-diagnosis__code-state--warn" role="listitem">
                 コード未設定
+              </span>
+            ) : null}
+            {isCandidate ? (
+              <span className="charts-diagnosis__badge" role="listitem">
+                候補
               </span>
             ) : null}
           </span>
@@ -599,9 +607,9 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
   const pendingLocalList = useMemo(() => {
     const pendingLocalDiseases = diagnosisQuery.data?.pendingLocalDiseases;
     if (Array.isArray(pendingLocalDiseases) && pendingLocalDiseases.length > 0) {
-      return pendingLocalDiseases.filter((entry) => resolveDiseaseLayer(entry) === 'insurance-local');
+      return pendingLocalDiseases.filter((entry) => isLocalCandidateDisease(entry));
     }
-    return list.filter((entry) => resolveDiseaseLayer(entry) === 'insurance-local');
+    return list.filter((entry) => isLocalCandidateDisease(entry));
   }, [diagnosisQuery.data?.pendingLocalDiseases, list]);
   const activeMirrorList = useMemo(() => mirrorList.filter((entry) => !entry.endDate), [mirrorList]);
   const endedMirrorList = useMemo(() => mirrorList.filter((entry) => Boolean(entry.endDate)), [mirrorList]);
@@ -1003,7 +1011,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
       addNote(DISEASE_CONFLICT_NOTE, 'error');
     }
     if (pendingLocalList.length > 0) {
-      addNote('院内未送信の病名があります。ORCAへ登録するまで主一覧には表示しません。');
+      addNote('ORCA未登録の送信候補があります。ORCAへ登録するまで主一覧には表示しません。');
     }
     if (list.some((entry) => entry.syncState === 'manual-resolution')) {
       addNote(DISEASE_MANUAL_RESOLUTION_NOTE);
@@ -1430,14 +1438,17 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
       </section>
 
       {pendingLocalList.length > 0 ? (
-        <section className="charts-diagnosis__quick-add" aria-label="院内未送信病名">
+        <section className="charts-diagnosis__quick-add" aria-label="ORCA未登録の送信候補">
           <div className="charts-side-panel__subheader">
-            <strong>院内未送信</strong>
-            <span className="charts-side-panel__help">{pendingLocalList.length}件 / ORCA正本には未反映</span>
+            <strong>送信候補</strong>
+            <span className="charts-side-panel__help">{pendingLocalList.length}件 / ORCA登録済みではありません</span>
+          </div>
+          <div className="charts-side-panel__notice charts-side-panel__notice--info">
+            local候補はORCA未登録です。明示確認後に diseasev3 へ送信し、再取得できるまでORCA登録病名には表示しません。
           </div>
           <DiseaseTable
             entries={pendingLocalList}
-            ariaLabel="院内未送信病名"
+            ariaLabel="ORCA未登録の送信候補"
             actions={(entry) => (
               <button
                 type="button"

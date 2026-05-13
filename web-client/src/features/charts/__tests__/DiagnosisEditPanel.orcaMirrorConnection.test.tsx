@@ -108,13 +108,6 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
       orcaMirrorStatus: 'connected',
       diseases: [
         {
-          diagnosisId: 10,
-          diagnosisName: 'ローカル病名',
-          diagnosisCode: 'L001',
-          startDate: '2026-05-01',
-          layer: 'insurance-local',
-        },
-        {
           diagnosisName: 'ORCA登録済み病名',
           diagnosisCode: '8839001',
           startDate: '2026-05-01',
@@ -132,6 +125,19 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
           ],
         },
       ],
+      pendingLocalDiseases: [
+        {
+          diagnosisId: 10,
+          diagnosisName: 'ローカル病名',
+          diagnosisCode: 'L001',
+          startDate: '2026-05-01',
+          layer: 'candidate',
+          candidateKind: 'draftCandidate',
+          sourceOfTruth: 'local-candidate',
+          candidateOnly: true,
+          readOnly: true,
+        },
+      ],
     });
 
     renderPanel('2026-05-08');
@@ -139,6 +145,9 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     const mirrorList = await screen.findByRole('table', { name: 'ORCA登録病名（活動中）' });
     expect(within(mirrorList).getByText('ORCA登録済み病名')).toBeInTheDocument();
     expect(within(mirrorList).queryByText('ローカル病名')).not.toBeInTheDocument();
+    const candidateSection = screen.getByRole('region', { name: 'ORCA未登録の送信候補' });
+    expect(within(candidateSection).getByText('ローカル病名')).toBeInTheDocument();
+    expect(within(candidateSection).getByText(/ORCA登録済みではありません/)).toBeInTheDocument();
     expect(screen.getByText('ORCA側と差分があります')).toBeInTheDocument();
     expect(screen.queryByText(/まだ接続されていない/)).not.toBeInTheDocument();
     expect(mutateOrcaDisease).not.toHaveBeenCalled();
@@ -186,7 +195,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     expect(mutateOrcaDisease).not.toHaveBeenCalled();
   });
 
-  it('sends ORCA disease create only after explicit confirmation and does not call local diagnosis mutation', async () => {
+  it('sends ORCA disease create only after explicit confirmation and does not call a local candidate mutation route', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchDiseases).mockResolvedValue({
       ok: true,

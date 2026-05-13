@@ -97,10 +97,13 @@ public class LocalDiagnosisResource extends AbstractResource {
             item.put("outcome", diagnosis.getOutcome());
             item.put("category", diagnosis.getCategory());
             item.put("suspectedFlag", diagnosis.getCategoryDesc());
-            item.put("layer", "insurance-local");
-            item.put("syncState", "none");
-            item.put("readOnly", Boolean.FALSE);
-            item.put("candidateOnly", Boolean.FALSE);
+            item.put("layer", "candidate");
+            item.put("candidateKind", "draftCandidate");
+            item.put("sourceOfTruth", "local-candidate");
+            item.put("syncState", "candidate");
+            item.put("readOnly", Boolean.TRUE);
+            item.put("candidateOnly", Boolean.TRUE);
+            item.put("note", "ORCA未登録の送信候補です。ORCA登録済み病名ではありません。");
             pendingLocalItems.add(item);
         }
         DiseaseImportResponse mirrorResponse =

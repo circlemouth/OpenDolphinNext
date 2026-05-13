@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearDevVolatilePlainPassword } from './devAuthVolatile';
-import { shouldNotifySessionExpired } from './httpClient';
+import { OUTPATIENT_API_ENDPOINTS, shouldNotifySessionExpired } from './httpClient';
 
 const AUTH_KEY = 'opendolphin:web-client:auth';
 const OFFICIAL_ORCA_APPOINTMENTS_ROUTE = '/api/orca/official/appointments/list';
@@ -83,6 +83,33 @@ describe('shouldNotifySessionExpired', () => {
   it('returns false for non expiry statuses', () => {
     setSession();
     expect(shouldNotifySessionExpired(500)).toBe(false);
+  });
+});
+
+describe('OUTPATIENT_API_ENDPOINTS disease boundary metadata', () => {
+  it('classifies disease metadata as official diseasegetv2, official diseasev3, and local candidate without local CRUD wording', () => {
+    const diseaseEndpoints = OUTPATIENT_API_ENDPOINTS.filter((endpoint) => endpoint.id.toLowerCase().includes('disease'));
+    expect(diseaseEndpoints.map((endpoint) => endpoint.id)).toEqual([
+      'orcaDiseaseMirrorRead',
+      'officialDiseaseGetV2',
+      'officialDiseaseV3Mutation',
+    ]);
+    expect(diseaseEndpoints.find((endpoint) => endpoint.id === 'orcaDiseaseMirrorRead')).toMatchObject({
+      scope: 'local',
+      method: 'GET',
+      path: '/api/local/diagnoses/{patientId}',
+    });
+    expect(diseaseEndpoints.find((endpoint) => endpoint.id === 'officialDiseaseGetV2')?.purpose).toContain(
+      'diseasegetv2?class=01',
+    );
+    expect(diseaseEndpoints.find((endpoint) => endpoint.id === 'officialDiseaseV3Mutation')).toMatchObject({
+      scope: 'official',
+      method: 'POST',
+      path: '/api/orca/official/chart-support/disease-mod-v3',
+    });
+    const metadataText = diseaseEndpoints.map((endpoint) => `${endpoint.id} ${endpoint.purpose}`).join('\n');
+    expect(metadataText).toContain('local candidate');
+    expect(metadataText).not.toMatch(/local diagnosis CRUD|local diagnosis 編集|local diagnosis mutation/i);
   });
 });
 

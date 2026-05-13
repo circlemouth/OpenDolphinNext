@@ -239,7 +239,7 @@
 - chart support では、patient-aware な official `contraindicationcheckv2` と、ORCA master を使う static interaction check を UI copy で明確に分離します。
 - SOAP 補助入力、chart summary、Patients の diff/review は local-only surface として表示し、official ORCA write と誤認させる copy を残しません。
 - local-only wording は `症状詳記（院内ローカル）`、`院内ローカル診療サマリ`、`院内メモはローカル編集のみ` に寄せ、official write surface と見分けられる状態を current contract とします。
-- Disease は ORCA 正本です。Charts の主病名一覧は `/api/local/diagnoses/{patientId}?baseMonth=yyyyMM` が返す ORCA `diseasegetv2?class=01` 再取得結果だけを `ORCA登録病名` として表示します。`baseMonth` は診療日から導出して送信し、server-side 検証後に ORCA `Base_Date` と cache `base_month` の根拠になります。既存 local-only disease は `院内未送信` 枠に隔離し、主一覧へ混ぜません。`院内未送信` 枠は対象がある場合だけ表示します。ORCA `Api_Result=21` は「対象病名なし」の正常 0 件として扱います。
+- Disease は ORCA 正本です。Charts の主病名一覧は `/api/local/diagnoses/{patientId}?baseMonth=yyyyMM` が返す ORCA `diseasegetv2?class=01` 再取得結果だけを `ORCA登録病名` として表示します。`baseMonth` は診療日から導出して送信し、server-side 検証後に ORCA `Base_Date` と cache `base_month` の根拠になります。既存 local-only disease は `送信候補` 枠に `layer=candidate` / `candidateKind=draftCandidate` として隔離し、主一覧へ混ぜません。`送信候補` 枠は対象がある場合だけ表示し、ORCA登録済みではないことを明示します。ORCA `Api_Result=21` は「対象病名なし」の正常 0 件として扱います。
 - SOAP / カルテ本文中の病名らしい記載は `診療録本文中の病名記載` 枠に表示し、`ORCA登録病名` と混ぜません。この枠はカルテ本文正本の参照であり、ORCA送信ボタンを置かず、明示 confirm なしに `diseasev3` payload へ昇格しません。
 - 病名マスター候補は補助入力です。`/api/orca/official/disease-master/name/{param}/` は server-side ORCA master datasource を参照し、日付を `yyyyMMdd` に正規化します。ローカル開発DBで `tbl_byomei` が無い、または ORCA master datasource が未起動の場合だけ最小 bootstrap 候補を返せますが、明示 confirm なしに ORCA 登録 payload や主一覧へ昇格しません。
 - ORCA unavailable 時は local-only disease を fallback 表示せず、「ORCA病名を取得できませんでした。ORCA正本を確認できないため、病名の登録・更新・削除はできません。」を表示し、ORCA 病名操作を disabled にします。
