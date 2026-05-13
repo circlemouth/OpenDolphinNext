@@ -8,7 +8,7 @@ export const DEFAULT_DIST_DIR = path.resolve(process.cwd(), 'dist');
 export const FORBIDDEN_BUNDLE_PATTERNS = [
   {
     id: 'orca-url',
-    re: /(?:https?|wss?):\/\/[^"'`\s<>)\\]*orca[^"'`\s<>)\\]*/gi,
+    re: /(?:https?|wss?):\/\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]*orca[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]*/gi,
     reason: 'ORCA/WebORCA connection URLs must remain server-side',
   },
   {

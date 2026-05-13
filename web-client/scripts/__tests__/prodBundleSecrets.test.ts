@@ -40,4 +40,13 @@ describe('production bundle secret scanner', () => {
 
     expect(findings).toEqual([]);
   });
+
+  it('does not span Japanese UI copy from a generic ws scheme into later ORCA wording', () => {
+    const findings = scanBundleContent({
+      file: 'assets/app.js',
+      content: 'const hint = "Push URL は ws:// または wss:// の絶対 URL で入力してください。ORCA 接続設定はサーバー側で保存します。";',
+    });
+
+    expect(findings).toEqual([]);
+  });
 });
