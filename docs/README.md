@@ -33,6 +33,7 @@
 - [validation/orca-live-validation.md](validation/orca-live-validation.md)
 - [testing/ehr-orca-required-test-matrix.md](testing/ehr-orca-required-test-matrix.md)
 - [validation/release-validation-report.md](validation/release-validation-report.md)
+- [validation/backend-contract-gui-handoff-closeout.md](validation/backend-contract-gui-handoff-closeout.md)
 - [releases/](releases/)
 - [web-client/architecture/](web-client/architecture/)
 - [web-client/ux/](web-client/ux/)
