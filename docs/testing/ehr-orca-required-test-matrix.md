@@ -1,5 +1,22 @@
 # EHR / ORCA Required Test Matrix
 
+## GUI Handoff Closeout Boundary
+
+RUN_ID `20260513T225000Z` の backend / contract / ops closeout は、GUI 改修へ渡すための gate 整理であり、release-ready 判定ではない。詳細は [../validation/backend-contract-gui-handoff-closeout.md](../validation/backend-contract-gui-handoff-closeout.md) を参照する。
+
+GUI 改修前 closeout の判定:
+
+- backend / contract / ops の P0/P1/P2 領域は current docs と focused gate entrypoint に接続済みとして扱う。
+- P1-H の DADS 医療安全 UI は GUI 改修へ移管する。患者取り違え防止 UI、重大操作モーダル、placeholder / disabled / focus / contrast は GUI 改修後に検証する。
+- P3-L の live ORCA validation、operator approval、repo-external secret/config sign-off、full gate、reviewer packet validation は release-ready 前の未完了 gate として残す。
+- GUI 改修前に `GO` と書かない。report 判定は原則 `PENDING` とし、security / medical safety / secret / PHI / source-of-truth / UNKNOWN / audit / idempotency の失敗があれば `NO-GO` とする。
+
+GUI 改修前 closeout の追加 misuse case:
+
+- GUI 改修前なのに release-ready `GO` と誤記する。
+- UNKNOWN / ORCA失敗 / warning / unmatch / reconciliation pending を成功扱いしない検証が final gate から漏れる。
+- export / PDF / CSV / JSON / validation evidence / reviewer packet に secret、実在患者情報、ORCA認証情報、raw ORCA body、HAR、trace、video、screenshot が残る。
+
 ## 1. 正本境界
 
 - ORCA正本領域のlocal CRUDが存在しないこと
@@ -155,6 +172,7 @@ Round 3 時点の横断 guard:
 - G 担当 DADS / 医療安全 UI の追加 hook は `cd web-client && npm run verify:medical-safety-ui-copy` と `*medical-safety*` / `*dads*` Vitest 命名の focused test を `verify:web-guard` または release-validation の targeted UI command に追加する。
 - H 担当 export security / readability hook は `docs/contracts/protected-export-authorization-matrix.md`、`OrcaReportDocumentResourceTest`、`web-client/src/features/charts/__tests__/chartsPrintAudit.test.ts`、`web-client/src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx` を final gate に接続する。raw ORCA body、帳票本文、storage key/digest、患者情報、HAR、trace、video、screenshot を validation evidence に含めない。
 - J 担当 backup/restore / live ORCA hook は `server-modernized/tools/ci/check-backup-restore-runbook.sh`、`server-modernized/tools/ci/check-live-orca-trial-harness.sh`、`ops/tests/orca/live-trial-checklist.sh --dry-run --run-id <RUN_ID>` を release validation に接続する。restore 後の自動再送禁止、sanitize 済み evidence、operator approval を検査する。
+- K 担当 backend / contract safety closeout hook は `docs/validation/backend-contract-gui-handoff-closeout.md` を参照する。route inventory、public route guard、production bundle secret scan、ORCA ledger / UNKNOWN / snapshot / disease / prescription / export / backup focused entrypoint が current repo と矛盾しないことを確認し、GUI 改修前 closeout を release-ready `GO` と扱わない。
 
 ## 11. 実ORCA接続試験
 

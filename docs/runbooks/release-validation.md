@@ -3,6 +3,12 @@
 ## 目的
 本番投入前に、`web-client` と `server-modernized` の現行契約、設定、静的検証、最小 smoke が揃っていることを確認する。
 
+## GUI 改修後の Final Gate 境界
+
+Backend / contract / ops closeout は [../validation/backend-contract-gui-handoff-closeout.md](../validation/backend-contract-gui-handoff-closeout.md) に記録する。この closeout は GUI 改修工程へ渡すための土台確認であり、release-ready `GO` ではない。
+
+release-ready 判定は GUI 医療安全改修、UI targeted tests、live ORCA dry-run / operator approval、repo-external secret/config sign-off、full gate、reviewer packet validation の後に、この runbook と [../validation/release-validation-report.md](../validation/release-validation-report.md) を使って RUN_ID ごとに記録する。GUI 改修前の report は原則 `PENDING` とし、UNKNOWN / warning / unmatch / reconciliation pending の成功扱い、secret / PHI / raw ORCA body の evidence 混入、source-of-truth 境界違反があれば `NO-GO` とする。
+
 ## 事前確認
 - `docs/contracts/` が今回の変更を反映している。
 - `docs/architecture/` の summary が current contract と矛盾していない。
