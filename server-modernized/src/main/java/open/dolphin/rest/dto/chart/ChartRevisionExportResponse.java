@@ -117,7 +117,7 @@ public class ChartRevisionExportResponse {
     }
 
     public List<ChartRevisionExportPrescriptionEvent> getPrescriptionEvents() {
-        return prescriptionEvents;
+        return new ArrayList<>(prescriptionEvents);
     }
 
     public void setPrescriptionEvents(List<ChartRevisionExportPrescriptionEvent> prescriptionEvents) {
@@ -127,7 +127,7 @@ public class ChartRevisionExportResponse {
     }
 
     public List<ChartRevisionExportOrcaEvent> getOrcaEvents() {
-        return orcaEvents;
+        return new ArrayList<>(orcaEvents);
     }
 
     public void setOrcaEvents(List<ChartRevisionExportOrcaEvent> orcaEvents) {

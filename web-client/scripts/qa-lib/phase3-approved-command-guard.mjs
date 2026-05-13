@@ -16,6 +16,7 @@ export const APPROVED_PHASE3_INPUT_IDENTITY_SHA256 =
   '356d109381b57e0c792eada1a4bd394248c6fca8273a82ab770143efc92bc29a';
 export const APPROVED_PHASE3_ALLOWED_REQUEST_NUMBER = '01';
 export const APPROVED_PHASE3_FORBIDDEN_REQUEST_NUMBERS = ['00', '02', '03', '04'];
+const CANONICAL_READONLY_PREFLIGHT_PATH = 'qa/weborca-readonly-preflight/summary.json';
 
 const FORBIDDEN_FLAGS = new Set([
   '--phase4',
@@ -215,9 +216,14 @@ export const validateApprovedPhase3Command = ({
       blockers.push('preflight targetMutationRequestCount must be 0');
     }
     const expected = expectedFromPreflight(summary);
+    const identityArtifactPath =
+      repoRelativePreflight === APPROVED_PHASE3_PREFLIGHT_PATH &&
+      actualPreflightSha256 === APPROVED_PHASE3_PREFLIGHT_SHA256
+        ? CANONICAL_READONLY_PREFLIGHT_PATH
+        : repoRelativePreflight;
     identityGate = validatePreflightSummary({
       summary,
-      artifactPath: repoRelativePreflight,
+      artifactPath: identityArtifactPath,
       artifactSha256: actualPreflightSha256,
       expectedArtifactSha256: APPROVED_PHASE3_PREFLIGHT_SHA256,
       expectedInputIdentitySha256: APPROVED_PHASE3_INPUT_IDENTITY_SHA256,
@@ -289,4 +295,3 @@ export const validateApprovedPhase3Command = ({
     evidence,
   };
 };
-

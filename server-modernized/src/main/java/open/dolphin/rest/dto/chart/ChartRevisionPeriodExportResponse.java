@@ -71,7 +71,7 @@ public class ChartRevisionPeriodExportResponse {
     }
 
     public List<ChartRevisionExportResponse> getCharts() {
-        return charts;
+        return new ArrayList<>(charts);
     }
 
     public void setCharts(List<ChartRevisionExportResponse> charts) {

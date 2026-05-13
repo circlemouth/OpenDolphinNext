@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { beforeEach } from 'vitest';
+import { beforeEach, vi } from 'vitest';
 
 // BroadcastChannel が Node 環境で Event インスタンスを要求して失敗するため、テストでは簡易モックを適用
 class MockBroadcastChannel {
@@ -17,6 +17,21 @@ class MockBroadcastChannel {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 globalThis.BroadcastChannel = MockBroadcastChannel;
+
+const installObjectUrlMock = () => {
+  const urlObject = globalThis.URL;
+  if (!urlObject) return;
+  Object.defineProperty(urlObject, 'createObjectURL', {
+    configurable: true,
+    value: vi.fn(() => 'blob:opendolphin-test-object-url'),
+  });
+  Object.defineProperty(urlObject, 'revokeObjectURL', {
+    configurable: true,
+    value: vi.fn(),
+  });
+};
+
+installObjectUrlMock();
 
 if (typeof window !== 'undefined' && typeof window.PointerEvent === 'undefined') {
   class MockPointerEvent extends MouseEvent {
