@@ -1151,14 +1151,14 @@ describe('prescriptionOrderApi first-class contract', () => {
     );
     expect(vi.mocked(httpFetch)).toHaveBeenNthCalledWith(
       1,
-      '/api/prescriptions',
+      '/api/local/prescription-orders/authority',
       expect.objectContaining({
         method: 'POST',
       }),
     );
     expect(vi.mocked(httpFetch)).toHaveBeenNthCalledWith(
       2,
-      '/api/prescriptions/55/finalize',
+      '/api/local/prescription-orders/authority/55/finalize',
       expect.objectContaining({
         method: 'POST',
       }),

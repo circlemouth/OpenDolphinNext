@@ -110,16 +110,19 @@ CREATE TABLE IF NOT EXISTS opendolphin.prescription_order_event (
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     before_summary_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     after_summary_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-    event_hash VARCHAR(64),
-    previous_event_hash VARCHAR(64),
+    event_hash VARCHAR(64) NOT NULL,
+    previous_event_hash VARCHAR(64) NOT NULL,
     CONSTRAINT ck_prescription_order_event_type CHECK (event_type IN (
         'CREATE',
         'FINALIZE',
         'CHANGE',
         'STOP',
         'CANCEL',
-        'REISSUE'
-    ))
+        'REISSUE',
+        'RESEND'
+    )),
+    CONSTRAINT ck_prescription_order_event_hash_format CHECK (event_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_prescription_order_event_previous_hash_format CHECK (previous_event_hash ~ '^[0-9a-f]{64}$')
 );
 
 CREATE INDEX IF NOT EXISTS idx_prescription_order_event_order

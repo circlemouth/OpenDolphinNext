@@ -43,7 +43,7 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
         injectField(resource, "patientServiceBean", new FakePatientServiceBean());
         injectField(resource, "prescriptionAuthorityRepository", repository);
         injectField(resource, "authoritativeAuditRepository", new StubAuditRepository(true));
-        request = request("/api/prescriptions");
+        request = request("/api/local/prescription-orders/authority");
     }
 
     @Test
@@ -92,6 +92,18 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("STOPPED", repository.status);
         assertEquals("P-SERVER", response.getPatientId());
         assertEquals("adverse event", repository.reasonText);
+    }
+
+    @Test
+    void resendRecordsAppendOnlyEventWithoutChangingPrescriptionStatus() {
+        PrescriptionAuthorityMutationRequest payload = new PrescriptionAuthorityMutationRequest();
+        payload.setReasonText("UNKNOWN reconciliation confirmed no duplicate");
+
+        PrescriptionAuthorityMutationResponse response = resource.resend(request, 101L, payload);
+
+        assertEquals("FINAL", response.getStatus());
+        assertEquals("RESEND", repository.eventType);
+        assertEquals("UNKNOWN reconciliation confirmed no duplicate", repository.reasonText);
     }
 
     @Test
@@ -229,6 +241,15 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
             this.reasonText = reasonText;
             this.order = order;
             return new PrescriptionMutationResult(orderId, 202L, status, contentHash, "P-SERVER", "ENC-SERVER");
+        }
+
+        @Override
+        PrescriptionMutationResult recordResend(long orderId, String reasonCode, String reasonText, String actor, Instant now) {
+            transitionCalls += 1;
+            this.status = "FINAL";
+            this.eventType = "RESEND";
+            this.reasonText = reasonText;
+            return new PrescriptionMutationResult(orderId, 202L, "FINAL", "a".repeat(64), "P-SERVER", "ENC-SERVER");
         }
     }
 

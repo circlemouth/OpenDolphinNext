@@ -79,6 +79,13 @@ class PublicRouteInventoryContractTest {
             "POST /api/local/orca/medical-candidates/from-chart/{*}",
             "POST /api/local/order/bundles",
             "POST /api/local/patients/search",
+            "POST /api/local/prescription-orders/authority",
+            "POST /api/local/prescription-orders/authority/{*}/cancel",
+            "POST /api/local/prescription-orders/authority/{*}/change",
+            "POST /api/local/prescription-orders/authority/{*}/finalize",
+            "POST /api/local/prescription-orders/authority/{*}/reissue",
+            "POST /api/local/prescription-orders/authority/{*}/resend",
+            "POST /api/local/prescription-orders/authority/{*}/stop",
             "POST /api/local/prescription-orders",
             "POST /api/local/prescription-orders/do-import");
 
@@ -118,6 +125,8 @@ class PublicRouteInventoryContractTest {
         assertThat(routeKeys)
                 .filteredOn(routeKey -> routeKey.contains(" /api/local/diagnoses"))
                 .containsExactly("GET /api/local/diagnoses/{*}");
+        assertThat(routeKeys)
+                .noneMatch(routeKey -> routeKey.contains(" /api/prescriptions"));
         assertThat(localRoutes)
                 .allMatch(routeKey -> !isOfficialLike(routeKey));
         assertThat(routeKeys).contains(

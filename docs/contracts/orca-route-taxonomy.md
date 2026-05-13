@@ -114,6 +114,13 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/local/orca/medical-candidates/from-chart/{chartRevisionId}`
 - `/api/local/orca/medical-candidates/from-chart/{chartRevisionId}/latest`
 - `/api/local/prescription-orders`
+- `/api/local/prescription-orders/authority`
+- `/api/local/prescription-orders/authority/{prescriptionId}/finalize`
+- `/api/local/prescription-orders/authority/{prescriptionId}/change`
+- `/api/local/prescription-orders/authority/{prescriptionId}/stop`
+- `/api/local/prescription-orders/authority/{prescriptionId}/cancel`
+- `/api/local/prescription-orders/authority/{prescriptionId}/reissue`
+- `/api/local/prescription-orders/authority/{prescriptionId}/resend`
 - `/api/local/prescription-orders/do-import`
 
 `/api/local/diagnoses/{patientId}?baseMonth=yyyyMM` は Charts 向けの ORCA disease read model です。`baseMonth` は server が `yyyyMM` として検証し、ORCA `Base_Date` と cache `base_month` の authority にします。主 `diseases` は ORCA `diseasegetv2?class=01` 再取得結果だけを返し、既存 local-only disease は `pendingLocalDiseases` に隔離します。ORCA `Api_Result=21` は正常 0 件として扱います。`includeEnded=true` は server が `Select_Mode=All` に変換します。ORCA unavailable 時に local-only disease を主 `diseases` へ fallback してはいけません。`POST /api/local/diagnoses` は公開しません。ORCA 病名 mutation は local route ではなく official `/api/orca/official/chart-support/disease-mod-v3` を使用します。
@@ -143,6 +150,8 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 `/api/local/orca/medical-candidates/from-chart/{chartRevisionId}/latest` は同じ facility / chart revision の最新 local prescription candidate を再確認用に返します。新規 candidate 作成や live `medicalmodv2` 送信は行わず、保存済みの sanitized candidate snapshot と issue summary からレスポンスを再構成します。facility は認証済み request context だけを authority とし、client 提供の patient / facility / insurance / voucher / sequential / URL / raw XML / digest は受け取りません。保存済み candidate の処方 order id、revision id、content hash、または現在 status が現在の chart revision の送信候補化可能な処方 source と一致しない場合は `prescription_candidate_source_stale` として `NEEDS_REVIEW` / `sendable=false` を返します。
 
 `/api/local/prescription-orders` と `/api/local/prescription-orders/do-import` は local draft prescription payload の保存口ですが、encounter に紐づく mutation では `encounter_projection` を server-side authority として参照します。projection の facility/patient が request context と一致しない場合は `encounter_not_found`、会計待ち・取消・閉鎖相当の business state では `prescription_order_finalized_update_denied` として、payload 永続化前に fail closed します。client 提供の encounter/patient/facility は確定済み処方更新可否の権威にしません。
+
+`/api/local/prescription-orders/authority` と `/api/local/prescription-orders/authority/{prescriptionId}/finalize|change|stop|cancel|reissue|resend` は OpenDolphinNext 正本の処方 authority mutation route です。旧 `/api/prescriptions` は taxonomy 外 route として公開しません。処方 event は append-only で、`previous_event_hash` / `event_hash` を server が必須投入し、hash chain 検証で DB 上の過去 event 改ざんを検出できる必要があります。`resend` は ORCA 送信成功扱いではなく、UNKNOWN 解消や二重送信防止判断後の再送判断 event に限定します。
 
 ### Admin-Internal
 

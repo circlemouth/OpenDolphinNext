@@ -23,7 +23,7 @@ import open.dolphin.rest.dto.orca.PrescriptionOrder;
 import open.dolphin.security.audit.AuthoritativeAuditRepository;
 import open.dolphin.session.PatientServiceBean;
 
-@Path("/prescriptions")
+@Path("/local/prescription-orders/authority")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class PrescriptionAuthorityResource extends AbstractOrcaRestResource {
@@ -35,6 +35,7 @@ public class PrescriptionAuthorityResource extends AbstractOrcaRestResource {
     private static final String AUDIT_STOP = "PRESCRIPTION_ORDER_STOP";
     private static final String AUDIT_CANCEL = "PRESCRIPTION_ORDER_CANCEL";
     private static final String AUDIT_REISSUE = "PRESCRIPTION_ORDER_REISSUE";
+    private static final String AUDIT_RESEND = "PRESCRIPTION_ORDER_RESEND";
 
     @Inject
     PatientServiceBean patientServiceBean;
@@ -140,6 +141,37 @@ public class PrescriptionAuthorityResource extends AbstractOrcaRestResource {
             @PathParam("prescriptionId") long prescriptionId,
             PrescriptionAuthorityMutationRequest payload) {
         return transition(request, prescriptionId, payload, "REISSUED", "REISSUE", AUDIT_REISSUE, true);
+    }
+
+    @POST
+    @Path("/{prescriptionId}/resend")
+    @Transactional
+    public PrescriptionAuthorityMutationResponse resend(
+            @Context HttpServletRequest request,
+            @PathParam("prescriptionId") long prescriptionId,
+            PrescriptionAuthorityMutationRequest payload) {
+        String runId = resolveRunId(request);
+        String actor = requireRemoteUser(request);
+        String facilityId = requireFacilityId(request);
+        requireAuditWritePathAvailable(request);
+        if (payload == null || trimToNull(payload.getReasonText()) == null) {
+            failValidation(request, AUDIT_RESEND, facilityId, null, runId, "reasonText", "reasonText is required");
+        }
+        PrescriptionAuthorityRepository.PrescriptionMutationResult result;
+        try {
+            result = prescriptionAuthorityRepository.recordResend(
+                    prescriptionId,
+                    trimToNull(payload.getReasonCode()),
+                    trimToNull(payload.getReasonText()),
+                    actor,
+                    Instant.now());
+        } catch (IllegalStateException ex) {
+            throw restError(request, statusForStateError(ex),
+                    ex.getMessage(),
+                    "Prescription resend cannot be recorded in its current state");
+        }
+        recordSuccess(request, AUDIT_RESEND, facilityId, result.patientId(), runId, result, trimToNull(payload.getReasonText()));
+        return response(runId, result);
     }
 
     private PrescriptionAuthorityMutationResponse transition(HttpServletRequest request,
