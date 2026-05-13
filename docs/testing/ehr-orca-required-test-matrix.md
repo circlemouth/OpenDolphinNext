@@ -154,6 +154,11 @@ Round 3 時点の横断 guard:
 - production bundle の ORCA URL / Basic / 証明書 / 証明書パスワード / secret 混入検査: `cd web-client && npm run verify:prod-bundle-secrets`
 - `npm run build` は `vite build` 後に `verify:prod-bundle-secrets` を実行してから production artifact pruning へ進む。
 
+GUI 改修 handoff:
+
+- GUI 改修前の残件分類と後工程検証は [../validation/gui-remediation-handoff.md](../validation/gui-remediation-handoff.md) を参照する。
+- この handoff は release-ready 判定ではない。患者ヘッダー、重大操作モーダル、UNKNOWN / warning / unmatch 初期表示、placeholder 依存排除、disabled 理由表示、focus / keyboard / contrast / 44px target、PDF / print visual polish、visual regression、UI E2E は GUI 改修後に focused UI tests と release validation gate へ接続する。
+
 ## 10. route inventory
 
 - public mutation routeがtaxonomyに分類されていること

@@ -30,6 +30,7 @@
 - [runbooks/production-operations-readiness.md](runbooks/production-operations-readiness.md)
 - [operations/](operations/)
 - [operations/orca-unknown-state-runbook.md](operations/orca-unknown-state-runbook.md)
+- [validation/gui-remediation-handoff.md](validation/gui-remediation-handoff.md)
 - [validation/orca-live-validation.md](validation/orca-live-validation.md)
 - [testing/ehr-orca-required-test-matrix.md](testing/ehr-orca-required-test-matrix.md)
 - [validation/release-validation-report.md](validation/release-validation-report.md)
