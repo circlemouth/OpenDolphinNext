@@ -33,6 +33,8 @@
 - 保険組合せ
 - 確定時snapshot
 
+確定時 snapshot は [../contracts/chart-finalize-snapshot.md](../contracts/chart-finalize-snapshot.md) を正本とする。`patientSnapshotStatus=IDENTIFIER_ONLY` や `PENDING_WORKER_INTEGRATION` は本番 manifest として許容しない。ORCA 取得不能、通信断、認証失敗、UNKNOWN は `NO_ACCEPTANCE_REASON` とは別の `chart_revision_snapshot_incomplete` として扱い、完全 snapshot があるように見せてはならない。
+
 ## 4. 確定後変更
 
 FINAL以降は直接更新不可。
@@ -132,6 +134,8 @@ ORCA結果は次として保存する。
 - 会計反映状態
 - UNKNOWN状態
 - 照合結果
+
+診療録確定 snapshot では、ORCA operation / transmission / reconciliation の status と hash を保存し、警告、不一致、ORCA 側のみ情報、UNKNOWN を成功扱いへ丸めない。
 
 ## 9. 監査・hash chain
 

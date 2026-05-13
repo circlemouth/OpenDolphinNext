@@ -2,6 +2,7 @@ package open.dolphin.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,14 +32,18 @@ class ChartRevisionFinalizeServiceTest {
     private ChartRevisionFinalizeService service;
     private EntityManager em;
     private AuditTrailService auditTrailService;
+    private ChartFinalizeSnapshotResolver snapshotResolver;
 
     @BeforeEach
     void setUp() throws Exception {
         service = new ChartRevisionFinalizeService();
         em = mock(EntityManager.class);
         auditTrailService = mock(AuditTrailService.class);
+        snapshotResolver = mock(ChartFinalizeSnapshotResolver.class);
         setField(service, "em", em);
         setField(service, "auditTrailService", auditTrailService);
+        setField(service, "snapshotResolver", snapshotResolver);
+        when(snapshotResolver.buildManifest(any())).thenReturn(completeSnapshotManifest("2026-05-13T12:00:00Z"));
     }
 
     @Test
@@ -66,9 +71,20 @@ class ChartRevisionFinalizeServiceTest {
         assertThat(revision.getFinalizeContextJson()).contains("\"enteredByUserId\":101");
         assertThat(revision.getFinalizeContextJson()).contains("\"entryMode\":\"DIRECT\"");
         assertThat(revision.getFinalizeContextJson()).doesNotContain("Sanitized Patient");
-        assertThat(revision.getSnapshotManifestJson()).contains("\"snapshotVersion\":1");
-        assertThat(revision.getSnapshotManifestJson()).contains("\"patientSnapshotStatus\":\"IDENTIFIER_ONLY\"");
-        assertThat(revision.getSnapshotManifestJson()).contains("\"prescriptionCandidateSnapshotStatus\":\"PENDING_WORKER_INTEGRATION\"");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"snapshotVersion\":2");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"sourceSystem\":\"ORCA\"");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"sourceApi\":\"chart-finalize-composite-snapshot\"");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"fetchedAt\":\"2026-05-13T11:59:00Z\"");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"patientSnapshotStatus\":\"SNAPSHOT_RECORDED\"");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"acceptanceSnapshotStatus\":\"SNAPSHOT_RECORDED\"");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"insuranceSnapshotStatus\":\"SNAPSHOT_RECORDED\"");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"diseaseSnapshotStatus\":\"SNAPSHOT_RECORDED\"");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"prescriptionSnapshotStatus\":\"SNAPSHOT_RECORDED\"");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"prescriptionCandidateSnapshotStatus\":\"SNAPSHOT_RECORDED\"");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"orcaTransmissionSnapshotStatus\":\"SNAPSHOT_RECORDED\"");
+        assertThat(revision.getSnapshotManifestJson()).contains("\"snapshotMissingPolicy\":\"DENY_FINALIZE_EXCEPT_NO_ORCA_ACCEPTANCE\"");
+        assertThat(revision.getSnapshotManifestJson()).doesNotContain("IDENTIFIER_ONLY");
+        assertThat(revision.getSnapshotManifestJson()).doesNotContain("PENDING_WORKER_INTEGRATION");
         assertThat(revision.getSnapshotManifestJson()).doesNotContain("Sanitized Patient");
         assertThat(document.getCurrentRevisionId()).isEqualTo(20L);
 
@@ -81,6 +97,16 @@ class ChartRevisionFinalizeServiceTest {
         assertThat(event.getAfterSummaryJson()).contains("\"hasSnapshotManifest\":true");
         assertThat(event.getAfterSummaryJson()).doesNotContain("Sanitized Patient");
         verify(em).flush();
+
+        ArgumentCaptor<AuditEventPayload> auditCaptor = ArgumentCaptor.forClass(AuditEventPayload.class);
+        verify(auditTrailService).record(auditCaptor.capture());
+        AuditEventPayload audit = auditCaptor.getValue();
+        assertThat(audit.getAction()).isEqualTo("CHART_FINALIZE");
+        assertThat(audit.getDetails())
+                .containsEntry("snapshotCompletenessStatus", "COMPLETE")
+                .containsEntry("patientSnapshotStatus", "SNAPSHOT_RECORDED")
+                .containsEntry("rawSensitiveFieldsExcluded", true);
+        assertThat(audit.getDetails()).doesNotContainKey("patientName");
     }
 
     @Test
@@ -148,6 +174,25 @@ class ChartRevisionFinalizeServiceTest {
 
         assertThat(thrown).isInstanceOf(WebApplicationException.class);
         assertThat(((WebApplicationException) thrown).getResponse().getStatus()).isEqualTo(400);
+    }
+
+    @Test
+    void finalizeRevisionRejectsIncompleteOrcaSnapshotBeforeFinalStateMutation() {
+        ChartDocumentModel document = chartDocument();
+        ChartRevisionModel revision = draftRevision();
+        when(em.find(ChartDocumentModel.class, 10L)).thenReturn(document);
+        when(em.find(ChartRevisionModel.class, 20L)).thenReturn(revision);
+        when(snapshotResolver.buildManifest(any())).thenThrow(new WebApplicationException(
+                jakarta.ws.rs.core.Response.status(409)
+                        .entity(java.util.Map.of("code", "chart_revision_snapshot_incomplete"))
+                        .build()));
+
+        Throwable thrown = catchThrowable(() -> service.finalizeRevision(10L, 20L, "F001", validRequest()));
+
+        assertThat(thrown).isInstanceOf(WebApplicationException.class);
+        assertThat(((WebApplicationException) thrown).getResponse().getStatus()).isEqualTo(409);
+        assertThat(revision.getStatus()).isEqualTo(ChartRevisionStatus.DRAFT);
+        assertThat(revision.getSnapshotManifestJson()).isNull();
     }
 
     @Test
@@ -346,8 +391,61 @@ class ChartRevisionFinalizeServiceTest {
         revision.setPhysicianCode("10001");
         revision.setInsuranceCombinationNumber("0001");
         revision.setFinalizeContextJson("{\"orcaPatientId\":\"00001\"}");
-        revision.setSnapshotManifestJson("{\"snapshotVersion\":1,\"source\":\"CHART_FINALIZE\"}");
+        revision.setSnapshotManifestJson(completeSnapshotManifest("2026-05-13T12:00:00Z"));
         return revision;
+    }
+
+    private String completeSnapshotManifest(String capturedAt) {
+        return "{"
+                + "\"snapshotVersion\":2,"
+                + "\"source\":\"CHART_FINALIZE\","
+                + "\"sourceSystem\":\"ORCA\","
+                + "\"sourceApi\":\"chart-finalize-composite-snapshot\","
+                + "\"snapshotCapturedAt\":\"" + capturedAt + "\","
+                + "\"fetchedAt\":\"2026-05-13T11:59:00Z\","
+                + "\"orcaPatientId\":\"00001\","
+                + "\"encounterId\":\"ENC-001\","
+                + "\"visitDate\":\"2026-05-10\","
+                + "\"encounterDate\":\"2026-05-10\","
+                + "\"orcaAcceptanceId\":\"ACC-001\","
+                + "\"acceptanceId\":\"ACC-001\","
+                + "\"hasNoAcceptanceReason\":false,"
+                + "\"department\":\"01\","
+                + "\"departmentCode\":\"01\","
+                + "\"physician\":\"10001\","
+                + "\"physicianCode\":\"10001\","
+                + "\"insuranceCombination\":\"0001\","
+                + "\"insuranceCombinationNumber\":\"0001\","
+                + "\"patientSnapshotStatus\":\"SNAPSHOT_RECORDED\","
+                + "\"patientSnapshotReference\":\"orca_patient_cache:101\","
+                + "\"patientSnapshotHash\":\"" + "1".repeat(64) + "\","
+                + "\"acceptanceSnapshotStatus\":\"SNAPSHOT_RECORDED\","
+                + "\"acceptanceSnapshotReference\":\"orca_acceptance_cache:201\","
+                + "\"acceptanceSnapshotHash\":\"" + "2".repeat(64) + "\","
+                + "\"insuranceSnapshotStatus\":\"SNAPSHOT_RECORDED\","
+                + "\"insuranceSnapshotReference\":\"orca_insurance_cache:301\","
+                + "\"insuranceSnapshotHash\":\"" + "3".repeat(64) + "\","
+                + "\"diseaseSnapshotStatus\":\"SNAPSHOT_RECORDED\","
+                + "\"diseaseSnapshotReference\":\"orca_disease_snapshot:401\","
+                + "\"diseaseSnapshotHash\":\"" + "4".repeat(64) + "\","
+                + "\"prescriptionSnapshotStatus\":\"SNAPSHOT_RECORDED\","
+                + "\"prescriptionOrderId\":501,"
+                + "\"prescriptionOrderRevisionId\":502,"
+                + "\"prescriptionContentHash\":\"" + "5".repeat(64) + "\","
+                + "\"prescriptionCandidateSnapshotStatus\":\"SNAPSHOT_RECORDED\","
+                + "\"prescriptionCandidateSnapshotReference\":\"orca_medical_candidate:601\","
+                + "\"prescriptionCandidateSnapshotHash\":\"" + "6".repeat(64) + "\","
+                + "\"orcaTransmissionSnapshotStatus\":\"SNAPSHOT_RECORDED\","
+                + "\"orcaOperationReference\":\"orca_operation:701\","
+                + "\"orcaOperationStatus\":\"ORCA_WARNING\","
+                + "\"orcaTransmissionReference\":\"orca_transmission:702\","
+                + "\"orcaTransmissionHash\":\"" + "7".repeat(64) + "\","
+                + "\"orcaReconciliationStatus\":\"NEEDS_REVIEW\","
+                + "\"snapshotCompletenessStatus\":\"COMPLETE\","
+                + "\"snapshotMissingPolicy\":\"DENY_FINALIZE_EXCEPT_NO_ORCA_ACCEPTANCE\","
+                + "\"orcaUnavailableStatus\":\"DENY_FINALIZE_ORCA_SNAPSHOT_UNAVAILABLE\","
+                + "\"rawSensitiveFieldsExcluded\":true"
+                + "}";
     }
 
     private ChartRevisionFinalizeRequest validRequest() {

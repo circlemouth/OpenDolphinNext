@@ -46,6 +46,10 @@
 - 確定済み診療録タイトルの直接更新禁止
 - 代行入力者と医師確定者の区別
 - 診療録確定時snapshot
+- 診療録確定時 snapshot が患者・受付・保険・病名・処方指示・medical candidate・ORCA operation metadata を含むこと
+- `patientSnapshotStatus=IDENTIFIER_ONLY` と `PENDING_WORKER_INTEGRATION` が本番 snapshot / export に出ないこと
+- ORCA snapshot 欠落時に `chart_revision_snapshot_incomplete` で確定を拒否すること
+- ORCA 取得不能を `NO_ACCEPTANCE_REASON` として成功扱いしないこと
 - PDF
 - 印刷
 - 患者単位export
