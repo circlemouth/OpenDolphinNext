@@ -182,6 +182,10 @@ export function ChartsPatientSummaryBar({
         patientId={patientId}
         patientName={displayName}
         patientKana={kana}
+        birthDateIso={birthIso}
+        birthDateEra={birthEra}
+        sex={sex}
+        age={age}
         acceptanceDate={normalizedVisitDate}
         department={normalizedDepartment}
         physician={normalizedPhysician}

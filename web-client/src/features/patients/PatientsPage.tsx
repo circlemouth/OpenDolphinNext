@@ -2458,6 +2458,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               internalPatientId={patientHeaderInternalReference}
               patientName={form.name}
               patientKana={form.kana}
+              birthDateIso={form.birthDate}
               sex={resolveSexLabel(form.sex)}
               age={resolveAgeLabel(form.birthDate)}
               visitDate={patientHeaderVisitDate}

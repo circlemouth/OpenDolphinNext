@@ -1721,11 +1721,18 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
         title={pendingAction ? `${pendingAction.title}の確認` : '病名ORCA送信の確認'}
         description="この操作は ORCA へ送信し、成功後に再取得した結果だけを ORCA登録病名として表示します。"
         operationLabel="病名ORCA送信"
+        patientName={patientId}
         patientFields={[
-          { label: 'ORCA患者番号', value: patientId },
-          { label: '診療日', value: meta.visitDate ?? '-' },
-          { label: '診療科', value: meta.departmentCode ?? '-' },
+          { label: '患者番号', value: patientId ?? '—' },
+          { label: '氏名', value: '—' },
+          { label: '生年月日', value: '—' },
+          { label: '性別', value: '—' },
+          { label: '年齢', value: '—' },
+          { label: '受付日', value: meta.visitDate ?? '—' },
+          { label: '診療科', value: meta.departmentCode ?? '—' },
+          { label: '担当医', value: '—' },
           { label: '保険組合せ', value: formatInsuranceCombination(meta.insuranceCombinationNumber ?? pendingEntry?.insuranceCombinationNumber) },
+          { label: 'ORCA受付ID', value: meta.receptionId ?? '—' },
         ]}
         summaryTitle="病名ORCA送信対象"
         summaryFields={[

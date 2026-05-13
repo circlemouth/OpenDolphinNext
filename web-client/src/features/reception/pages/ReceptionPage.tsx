@@ -4637,6 +4637,7 @@ export function ReceptionPage({
           internalPatientId={acceptInternalReference}
           patientName={acceptPatientName}
           patientKana={acceptPatientKana}
+          birthDateIso={acceptTarget.birthDate}
           sex={acceptTarget.sex}
           age={formatAgeJa(acceptPatientAge)}
           acceptanceDate={selectedDate}

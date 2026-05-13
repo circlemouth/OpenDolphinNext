@@ -224,7 +224,7 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     await user.click(within(authoring).getByRole('button', { name: '主病名として登録' }));
 
     const confirmDialog = await screen.findByRole('alertdialog', { name: '主病名として登録の確認' });
-    expect(within(confirmDialog).getByText('P-TEST-001')).toBeInTheDocument();
+    expect(within(confirmDialog).getAllByText('P-TEST-001').length).toBeGreaterThan(0);
     expect(within(confirmDialog).getByText('2026-05-08')).toBeInTheDocument();
     expect(within(confirmDialog).getByText('01')).toBeInTheDocument();
     expect(within(confirmDialog).getByText('0001')).toBeInTheDocument();

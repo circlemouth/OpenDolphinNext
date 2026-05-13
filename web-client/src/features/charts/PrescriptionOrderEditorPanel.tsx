@@ -1310,8 +1310,16 @@ export function PrescriptionOrderEditorPanel({
         operationLabel="処方確定"
         patientName={patientId}
         patientFields={[
-          { label: '患者ID', value: patientId },
-          { label: '診療日', value: finalizeSummary.visitDate },
+          { label: '患者番号', value: patientId ?? '—' },
+          { label: '氏名', value: '—' },
+          { label: '生年月日', value: '—' },
+          { label: '性別', value: '—' },
+          { label: '年齢', value: '—' },
+          { label: '受付日', value: finalizeSummary.visitDate },
+          { label: '診療科', value: '—' },
+          { label: '担当医', value: '—' },
+          { label: '保険組合せ', value: '—' },
+          { label: 'ORCA受付ID', value: meta.receptionId ?? '—' },
           { label: '来院参照', value: finalizeSummary.encounterId },
         ]}
         summaryTitle="確定対象サマリ"
