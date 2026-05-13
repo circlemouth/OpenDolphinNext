@@ -10,6 +10,8 @@ export interface PatientIdentityBarProps {
   internalPatientId?: string;
   patientName?: string;
   patientKana?: string;
+  birthDateIso?: string;
+  birthDateEra?: string;
   sex?: string;
   age?: string;
   visitDate?: string;
@@ -48,6 +50,8 @@ export function PatientIdentityBar({
   internalPatientId,
   patientName,
   patientKana,
+  birthDateIso,
+  birthDateEra,
   sex,
   age,
   visitDate,
@@ -133,6 +137,8 @@ export function PatientIdentityBar({
               patientId={resolvedPatientId}
               receptionId={normalizeValue(receptionId)}
               appointmentId={normalizeValue(appointmentId)}
+              birthDateIso={normalizeValue(birthDateIso)}
+              birthDateEra={normalizeValue(birthDateEra)}
               sex={normalizeValue(sex)}
               age={normalizeValue(age)}
               variant="detailed"

@@ -99,10 +99,14 @@ type SendConfirmSummary = {
   patientName?: string;
   patientId?: string;
   birthDate?: string;
+  sex?: string;
   age?: string;
   visitDate?: string;
   receptionId?: string;
   appointmentId?: string;
+  department?: string;
+  physician?: string;
+  insuranceCombination?: string;
   diagnosisCount?: number;
   orderCount?: number;
   soap?: {
@@ -887,12 +891,43 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const sendDialogSummary = useMemo(() => {
     const patientName = sendConfirmSummary?.patientName?.trim() || selectedEntry?.name?.trim() || '—';
     const patientIdLabel = sendConfirmSummary?.patientId?.trim() || resolvedPatientId?.trim() || '—';
-    const selectedBirthDate = (selectedEntry as Partial<{ birthDate?: string }> | undefined)?.birthDate;
+    const selectedEntryIdentity = selectedEntry as
+      | Partial<{
+          birthDate?: string;
+          sex?: string;
+          department?: string;
+          departmentCode?: string;
+          physician?: string;
+          physicianCode?: string;
+          insurance?: string;
+          insuranceCombinationNumber?: string;
+        }>
+      | undefined;
+    const selectedBirthDate = selectedEntryIdentity?.birthDate;
     const birthDate = sendConfirmSummary?.birthDate?.trim() || selectedBirthDate?.trim() || '—';
-    const ageLabel = sendConfirmSummary?.age?.trim() || '';
+    const sexLabel = sendConfirmSummary?.sex?.trim() || selectedEntryIdentity?.sex?.trim() || '—';
+    const ageLabel = sendConfirmSummary?.age?.trim() || '—';
     const visitLabel = sendConfirmSummary?.visitDate?.trim() || resolvedVisitDate?.trim() || '—';
     const receptionLabel = sendConfirmSummary?.receptionId?.trim() || resolvedReceptionId?.trim() || '—';
     const appointmentLabel = sendConfirmSummary?.appointmentId?.trim() || resolvedAppointmentId?.trim() || '—';
+    const departmentLabel =
+      sendConfirmSummary?.department?.trim() ||
+      selectedEntryIdentity?.department?.trim() ||
+      selectedEntryIdentity?.departmentCode?.trim() ||
+      resolvedOrcaEncounterContext.departmentCode?.trim() ||
+      '—';
+    const physicianLabel =
+      sendConfirmSummary?.physician?.trim() ||
+      selectedEntryIdentity?.physician?.trim() ||
+      selectedEntryIdentity?.physicianCode?.trim() ||
+      resolvedOrcaEncounterContext.physicianCode?.trim() ||
+      '—';
+    const insuranceCombinationLabel =
+      sendConfirmSummary?.insuranceCombination?.trim() ||
+      selectedEntryIdentity?.insuranceCombinationNumber?.trim() ||
+      selectedEntryIdentity?.insurance?.trim() ||
+      resolvedOrcaEncounterContext.insuranceCombinationNumber?.trim() ||
+      '—';
     const diagnosisCount = typeof sendConfirmSummary?.diagnosisCount === 'number' ? `${sendConfirmSummary.diagnosisCount}件` : '—';
     const orderCount = typeof sendConfirmSummary?.orderCount === 'number' ? `${sendConfirmSummary.orderCount}件` : '—';
     const imageCount = typeof sendConfirmSummary?.imageAttachmentCount === 'number' ? `${sendConfirmSummary.imageAttachmentCount}件` : '—';
@@ -905,10 +940,14 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       patientName,
       patientIdLabel,
       birthDate,
+      sexLabel,
       ageLabel,
       visitLabel,
       receptionLabel,
       appointmentLabel,
+      departmentLabel,
+      physicianLabel,
+      insuranceCombinationLabel,
       diagnosisCount,
       orderCount,
       imageCount,
@@ -916,6 +955,9 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     };
   }, [
     resolvedAppointmentId,
+    resolvedOrcaEncounterContext.departmentCode,
+    resolvedOrcaEncounterContext.insuranceCombinationNumber,
+    resolvedOrcaEncounterContext.physicianCode,
     resolvedPatientId,
     resolvedReceptionId,
     resolvedVisitDate,
@@ -1559,13 +1601,19 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             }
             setBanner({
               tone: outcome === 'error' ? 'error' : 'warning',
-              message: outcome === 'error' ? 'ORCA送信に失敗しました。' : 'ORCA送信に警告があります。',
-              nextAction: 'ORCA 応答を確認し再送してください。',
+              message:
+                outcome === 'error'
+                  ? 'ORCA送信は完了確認できませんでした。診療録確定・会計済みには進めていません。'
+                  : 'ORCA送信に警告があります。警告内容を確認するまで会計済み扱いにはしません。',
+              nextAction: '患者・受付・診療日を確認し、ORCA 応答と送信履歴を照合してから再送可否を判断してください。',
             });
             setToast({
               tone: outcome === 'error' ? 'error' : 'warning',
               message: outcome === 'error' ? 'ORCA送信に失敗' : 'ORCA送信に警告',
-              detail: outcome === 'error' ? CHARTS_SUPPORT_GUIDE : 'ORCA 応答を確認し、必要なら再送してください。',
+              detail:
+                outcome === 'error'
+                  ? `会計済み扱いにせず、送信履歴と ORCA 側状態を照合してください。${CHARTS_SUPPORT_GUIDE}`
+                  : 'ORCA 応答を確認し、二重送信リスクを評価してから再送してください。',
             });
           }
 
@@ -1886,7 +1934,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         setRetryAction(action);
         setBanner({
           tone: 'error',
-          message: `${ACTION_LABEL[action]}に失敗しました。${userSafeFailure}`,
+          message: `${ACTION_LABEL[action]}は完了確認できませんでした。${userSafeFailure}`,
           nextAction: nextSteps,
         });
         setToast({
@@ -2155,8 +2203,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         resolvedReportType === 'prescription'
           ? '代替: 診療記録（外来サマリ）をローカル印刷で出力してください。'
           : 'ORCA 応答を確認し、再試行してください。';
-      setBanner({ tone: 'error', message: '帳票出力に失敗しました。', nextAction });
-      setToast({ tone: 'error', message: '帳票出力に失敗', detail: CHARTS_SUPPORT_GUIDE });
+      setBanner({ tone: 'error', message: '帳票出力は完了確認できませんでした。患者・受付とORCA帳票状態を確認してください。', nextAction });
+      setToast({ tone: 'error', message: '帳票出力に失敗', detail: `出力済み扱いにせず、画面とORCA側状態を照合してください。${CHARTS_SUPPORT_GUIDE}` });
     } finally {
       setIsRunning(false);
       setRunningAction(null);
@@ -2487,13 +2535,16 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         operationLabel="診療行為ORCA送信"
         patientName={sendDialogSummary.patientName}
         patientFields={[
-          { label: '患者ID', value: sendDialogSummary.patientIdLabel },
-          {
-            label: '生年月日 / 年齢',
-            value: `${sendDialogSummary.birthDate}${sendDialogSummary.ageLabel ? ` / ${sendDialogSummary.ageLabel}` : ''}`,
-          },
-          { label: '診療日', value: sendDialogSummary.visitLabel },
-          { label: '受付ID', value: sendDialogSummary.receptionLabel },
+          { label: '患者番号', value: sendDialogSummary.patientIdLabel },
+          { label: '氏名', value: sendDialogSummary.patientName },
+          { label: '生年月日', value: sendDialogSummary.birthDate },
+          { label: '性別', value: sendDialogSummary.sexLabel },
+          { label: '年齢', value: sendDialogSummary.ageLabel },
+          { label: '受付日', value: sendDialogSummary.visitLabel },
+          { label: '診療科', value: sendDialogSummary.departmentLabel },
+          { label: '担当医', value: sendDialogSummary.physicianLabel },
+          { label: '保険組合せ', value: sendDialogSummary.insuranceCombinationLabel },
+          { label: 'ORCA受付ID', value: sendDialogSummary.receptionLabel },
           { label: '予約ID', value: sendDialogSummary.appointmentLabel },
         ]}
         summaryTitle="送信対象サマリ"
@@ -2523,13 +2574,16 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         operationLabel="診察終了して会計へ送信"
         patientName={sendDialogSummary.patientName}
         patientFields={[
-          { label: '患者ID', value: sendDialogSummary.patientIdLabel },
-          {
-            label: '生年月日 / 年齢',
-            value: `${sendDialogSummary.birthDate}${sendDialogSummary.ageLabel ? ` / ${sendDialogSummary.ageLabel}` : ''}`,
-          },
-          { label: '診療日', value: sendDialogSummary.visitLabel },
-          { label: '受付ID', value: sendDialogSummary.receptionLabel },
+          { label: '患者番号', value: sendDialogSummary.patientIdLabel },
+          { label: '氏名', value: sendDialogSummary.patientName },
+          { label: '生年月日', value: sendDialogSummary.birthDate },
+          { label: '性別', value: sendDialogSummary.sexLabel },
+          { label: '年齢', value: sendDialogSummary.ageLabel },
+          { label: '受付日', value: sendDialogSummary.visitLabel },
+          { label: '診療科', value: sendDialogSummary.departmentLabel },
+          { label: '担当医', value: sendDialogSummary.physicianLabel },
+          { label: '保険組合せ', value: sendDialogSummary.insuranceCombinationLabel },
+          { label: 'ORCA受付ID', value: sendDialogSummary.receptionLabel },
           { label: '予約ID', value: sendDialogSummary.appointmentLabel },
         ]}
         summaryTitle="終了対象サマリ"
@@ -2561,13 +2615,16 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         operationLabel="診療録取消"
         patientName={sendDialogSummary.patientName}
         patientFields={[
-          { label: '患者ID', value: sendDialogSummary.patientIdLabel },
-          {
-            label: '生年月日 / 年齢',
-            value: `${sendDialogSummary.birthDate}${sendDialogSummary.ageLabel ? ` / ${sendDialogSummary.ageLabel}` : ''}`,
-          },
-          { label: '診療日', value: sendDialogSummary.visitLabel },
-          { label: '受付ID', value: sendDialogSummary.receptionLabel },
+          { label: '患者番号', value: sendDialogSummary.patientIdLabel },
+          { label: '氏名', value: sendDialogSummary.patientName },
+          { label: '生年月日', value: sendDialogSummary.birthDate },
+          { label: '性別', value: sendDialogSummary.sexLabel },
+          { label: '年齢', value: sendDialogSummary.ageLabel },
+          { label: '受付日', value: sendDialogSummary.visitLabel },
+          { label: '診療科', value: sendDialogSummary.departmentLabel },
+          { label: '担当医', value: sendDialogSummary.physicianLabel },
+          { label: '保険組合せ', value: sendDialogSummary.insuranceCombinationLabel },
+          { label: 'ORCA受付ID', value: sendDialogSummary.receptionLabel },
           { label: '予約ID', value: sendDialogSummary.appointmentLabel },
         ]}
         summaryTitle="取消対象サマリ"
@@ -2600,9 +2657,16 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         operationLabel="署名確定解除"
         patientName={selectedEntry?.name}
         patientFields={[
-          { label: '患者ID', value: resolvedPatientId ?? '—' },
-          { label: '診療日', value: resolvedVisitDate ?? '—' },
-          { label: '受付ID', value: resolvedReceptionId ?? '—' },
+          { label: '患者番号', value: sendDialogSummary.patientIdLabel },
+          { label: '氏名', value: sendDialogSummary.patientName },
+          { label: '生年月日', value: sendDialogSummary.birthDate },
+          { label: '性別', value: sendDialogSummary.sexLabel },
+          { label: '年齢', value: sendDialogSummary.ageLabel },
+          { label: '受付日', value: sendDialogSummary.visitLabel },
+          { label: '診療科', value: sendDialogSummary.departmentLabel },
+          { label: '担当医', value: sendDialogSummary.physicianLabel },
+          { label: '保険組合せ', value: sendDialogSummary.insuranceCombinationLabel },
+          { label: 'ORCA受付ID', value: sendDialogSummary.receptionLabel },
           { label: '予約ID', value: resolvedAppointmentId ?? '—' },
         ]}
         summaryTitle="解除対象サマリ"

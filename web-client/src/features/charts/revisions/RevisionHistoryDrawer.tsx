@@ -203,11 +203,18 @@ export function RevisionHistoryDrawer({ open, onClose, meta, soapHistory }: Revi
         title={`${resolveCriticalOperationLabel(confirmAction?.operation)}の確認`}
         description="診療録の版履歴操作を実行します。対象患者と対象revisionを確認してください。"
         operationLabel={resolveCriticalOperationLabel(confirmAction?.operation)}
-        patientName={undefined}
+        patientName={meta.patientId ?? undefined}
         patientFields={[
-          { label: '患者ID', value: meta.patientId ?? '—' },
-          { label: '診療日', value: meta.visitDate ?? '—' },
-          { label: '受付ID', value: meta.receptionId ?? '—' },
+          { label: '患者番号', value: meta.patientId ?? '—' },
+          { label: '氏名', value: '—' },
+          { label: '生年月日', value: '—' },
+          { label: '性別', value: '—' },
+          { label: '年齢', value: '—' },
+          { label: '受付日', value: meta.visitDate ?? '—' },
+          { label: '診療科', value: '—' },
+          { label: '担当医', value: '—' },
+          { label: '保険組合せ', value: '—' },
+          { label: 'ORCA受付ID', value: meta.receptionId ?? '—' },
           { label: '予約ID', value: meta.appointmentId ?? '—' },
         ]}
         summaryTitle="版履歴操作サマリ"

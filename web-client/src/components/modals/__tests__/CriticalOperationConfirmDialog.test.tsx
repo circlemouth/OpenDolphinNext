@@ -19,8 +19,14 @@ describe('CriticalOperationConfirmDialog', () => {
         operationLabel="診療行為ORCA送信"
         patientName="山田太郎"
         patientFields={[
-          { label: '患者ID', value: 'P-001' },
-          { label: '診療日', value: '2026-05-10' },
+          { label: '患者番号', value: 'P-001' },
+          { label: '氏名', value: '山田太郎' },
+          { label: '生年月日', value: '1980-05-20' },
+          { label: '性別', value: '男性' },
+          { label: '年齢', value: '45歳' },
+          { label: '受付日', value: '2026-05-10' },
+          { label: '診療科', value: '内科' },
+          { label: '担当医', value: '医師A' },
           { label: '保険組合せ', value: '0001' },
         ]}
         summaryTitle="送信対象サマリ"
@@ -37,9 +43,17 @@ describe('CriticalOperationConfirmDialog', () => {
     const dialog = screen.getByRole('alertdialog', { name: '診療行為ORCA送信の確認' });
     expect(within(dialog).getByText('実行操作:')).toBeInTheDocument();
     expect(within(dialog).getByText('診療行為ORCA送信')).toBeInTheDocument();
-    expect(within(dialog).getByText('山田太郎')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('山田太郎').length).toBeGreaterThan(0);
+    for (const label of ['患者番号', '氏名', '生年月日', '性別', '年齢', '受付日', '診療科', '担当医', '保険組合せ']) {
+      expect(within(dialog).getByText(label)).toBeInTheDocument();
+    }
     expect(within(dialog).getByText('P-001')).toBeInTheDocument();
+    expect(within(dialog).getByText('1980-05-20')).toBeInTheDocument();
+    expect(within(dialog).getByText('男性')).toBeInTheDocument();
+    expect(within(dialog).getByText('45歳')).toBeInTheDocument();
     expect(within(dialog).getByText('2026-05-10')).toBeInTheDocument();
+    expect(within(dialog).getByText('内科')).toBeInTheDocument();
+    expect(within(dialog).getByText('医師A')).toBeInTheDocument();
     expect(within(dialog).getByText('0001')).toBeInTheDocument();
     expect(within(dialog).getByText('3件')).toBeInTheDocument();
     expect(within(dialog).getByText('5件')).toBeInTheDocument();

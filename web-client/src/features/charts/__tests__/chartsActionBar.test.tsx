@@ -172,10 +172,14 @@ describe('ChartsActionBar', () => {
             patientName: '山田太郎',
             patientId: 'P-777',
             birthDate: '1980-05-20',
+            sex: '男性',
             age: '45歳',
             visitDate: '2026-01-08',
             receptionId: 'R-777',
             appointmentId: 'A-777',
+            department: '内科',
+            physician: '医師A',
+            insuranceCombination: '0001',
             diagnosisCount: 3,
             orderCount: 5,
             soap: {
@@ -197,9 +201,17 @@ describe('ChartsActionBar', () => {
     expect(screen.getByRole('button', { name: 'ORCAへ送信する' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '送信する' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '患者確認' })).toBeInTheDocument();
-    expect(screen.getByText('山田太郎')).toBeInTheDocument();
+    const dialog = screen.getByRole('alertdialog', { name: '診療行為ORCA送信の確認' });
+    for (const label of ['患者番号', '氏名', '生年月日', '性別', '年齢', '受付日', '診療科', '担当医', '保険組合せ', 'ORCA受付ID']) {
+      expect(within(dialog).getByText(label)).toBeInTheDocument();
+    }
+    expect(screen.getAllByText('山田太郎').length).toBeGreaterThan(0);
     expect(screen.getByText('P-777')).toBeInTheDocument();
-    expect(screen.getByText('1980-05-20 / 45歳')).toBeInTheDocument();
+    expect(screen.getByText('1980-05-20')).toBeInTheDocument();
+    expect(screen.getByText('男性')).toBeInTheDocument();
+    expect(screen.getByText('45歳')).toBeInTheDocument();
+    expect(screen.getByText('内科')).toBeInTheDocument();
+    expect(screen.getByText('医師A')).toBeInTheDocument();
     expect(screen.getByText('R-777')).toBeInTheDocument();
     expect(screen.getByText('A-777')).toBeInTheDocument();
     expect(screen.getByText('3件')).toBeInTheDocument();
@@ -325,10 +337,14 @@ describe('ChartsActionBar', () => {
             patientName: '確認 花子',
             patientId: 'P-240',
             birthDate: '1975-02-10',
+            sex: '女性',
             age: '50歳',
             visitDate: '2026-01-06',
             receptionId: 'REC-240',
             appointmentId: 'APT-240',
+            department: '小児科',
+            physician: '医師B',
+            insuranceCombination: '0002',
             diagnosisCount: 1,
             orderCount: 2,
             soap: {
@@ -349,9 +365,17 @@ describe('ChartsActionBar', () => {
     const confirmDialog = await screen.findByRole('alertdialog', { name: '診療録取消の確認' });
     expect(within(confirmDialog).getByText('実行操作:')).toBeInTheDocument();
     expect(within(confirmDialog).getByText('診療録取消')).toBeInTheDocument();
-    expect(within(confirmDialog).getByText('確認 花子')).toBeInTheDocument();
+    for (const label of ['患者番号', '氏名', '生年月日', '性別', '年齢', '受付日', '診療科', '担当医', '保険組合せ', 'ORCA受付ID']) {
+      expect(within(confirmDialog).getByText(label)).toBeInTheDocument();
+    }
+    expect(within(confirmDialog).getAllByText('確認 花子').length).toBeGreaterThan(0);
     expect(within(confirmDialog).getByText('P-240')).toBeInTheDocument();
-    expect(within(confirmDialog).getByText('1975-02-10 / 50歳')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('1975-02-10')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('女性')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('50歳')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('小児科')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('医師B')).toBeInTheDocument();
+    expect(within(confirmDialog).getByText('0002')).toBeInTheDocument();
     expect(within(confirmDialog).getByText('REC-240')).toBeInTheDocument();
     expect(within(confirmDialog).getByText('APT-240')).toBeInTheDocument();
     expect(within(confirmDialog).getByText('診療録取消の確定ではありません')).toBeInTheDocument();
@@ -579,7 +603,7 @@ describe('ChartsActionBar', () => {
 
     await waitFor(() => expect(onAfterStart).toHaveBeenCalledTimes(1));
     expect(screen.queryByText('診察開始を完了')).not.toBeInTheDocument();
-    expect(screen.getByText(/診察開始に失敗しました。状態を確認してからやり直してください。/)).toBeInTheDocument();
+    expect(screen.getByText(/診察開始は完了確認できませんでした。状態を確認してからやり直してください。/)).toBeInTheDocument();
     expect(screen.queryByText(/encounterKey がないため診察開始を実行できません。/)).not.toBeInTheDocument();
   });
 
@@ -729,7 +753,7 @@ describe('ChartsActionBar', () => {
 
     const firstDialog = await screen.findByRole('alertdialog', { name: '署名確定解除' });
     expect(within(firstDialog).getByText('実行操作:')).toBeInTheDocument();
-    expect(within(firstDialog).getByText('署名患者')).toBeInTheDocument();
+    expect(within(firstDialog).getAllByText('署名患者').length).toBeGreaterThan(0);
     expect(within(firstDialog).getByText('P-310')).toBeInTheDocument();
     expect(within(firstDialog).getByText('REC-310')).toBeInTheDocument();
     expect(within(firstDialog).getByText('APT-310')).toBeInTheDocument();

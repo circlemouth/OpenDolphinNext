@@ -61,7 +61,7 @@ describe('RevisionHistoryDrawer', () => {
     const dialog = await screen.findByRole('alertdialog', { name: '診療録訂正の確認' });
     expect(within(dialog).getByText('実行操作:')).toBeInTheDocument();
     expect(within(dialog).getByText('診療録訂正')).toBeInTheDocument();
-    expect(within(dialog).getByText('P-REV-1')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('P-REV-1').length).toBeGreaterThan(0);
     expect(within(dialog).getByText('2026-05-11')).toBeInTheDocument();
     expect(within(dialog).getByText('R-100')).toBeInTheDocument();
     expect(within(dialog).getByText('A-200')).toBeInTheDocument();

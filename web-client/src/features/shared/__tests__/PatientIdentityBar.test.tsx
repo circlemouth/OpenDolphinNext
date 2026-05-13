@@ -14,6 +14,7 @@ describe('PatientIdentityBar', () => {
         internalPatientId="local-123"
         patientName="山田 太郎"
         patientKana="ヤマダ タロウ"
+        birthDateIso="1984-05-20"
         sex="男"
         age="42歳"
         acceptanceDate="2026-05-10"
@@ -36,6 +37,8 @@ describe('PatientIdentityBar', () => {
     expect(screen.getByText('最終受診 2026-01-08')).toBeInTheDocument();
     expect(screen.getByText('編集ブロック中')).toBeInTheDocument();
     const medicalSafetyHeader = screen.getByLabelText('医療安全患者ヘッダー');
+    expect(screen.getByText(/生年月日:/)).toBeInTheDocument();
+    expect(screen.getByText(/1984-05-20/)).toBeInTheDocument();
     expect(medicalSafetyHeader).toHaveTextContent('内部参照ID');
     expect(medicalSafetyHeader).toHaveTextContent('local-123');
     expect(medicalSafetyHeader).toHaveTextContent('受付日');
