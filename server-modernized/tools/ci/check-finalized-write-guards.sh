@@ -27,7 +27,7 @@ fi
 
 karte_service="server-modernized/src/main/java/open/dolphin/session/KarteDocumentWriteService.java"
 karte_test="server-modernized/src/test/java/open/dolphin/session/KarteServiceBeanDocPkTest.java"
-chart_revision_migration="server-modernized/tools/flyway/sql/V0318__chart_revision_finalized_write_guards.sql"
+chart_revision_migration="server-modernized/tools/flyway/sql/V0323__chart_revision_finalized_write_guards.sql"
 chart_revision_test="server-modernized/src/test/java/open/dolphin/db/ChartRevisionFinalizedWriteGuardSchemaTest.java"
 prescription_resource="server-modernized/src/main/java/open/dolphin/rest/orca/LocalPrescriptionOrderResource.java"
 prescription_test="server-modernized/src/test/java/open/dolphin/rest/orca/LocalPrescriptionOrderResourceTest.java"

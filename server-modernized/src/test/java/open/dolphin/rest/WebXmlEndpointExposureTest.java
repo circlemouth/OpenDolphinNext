@@ -34,7 +34,6 @@ class WebXmlEndpointExposureTest {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
 
         assertThat(classNames)
-                .contains("open.dolphin.rest.KarteDocumentWriteResource")
                 .contains("open.dolphin.rest.ScheduleResource")
                 .contains("open.dolphin.rest.EncounterResource")
                 .contains("open.dolphin.rest.LocalMedicalSummaryResource")
@@ -48,6 +47,7 @@ class WebXmlEndpointExposureTest {
                 .contains("open.dolphin.rest.orca.OrcaReportDocumentResource")
                 .contains("open.dolphin.rest.orca.OrcaOrderMasterResource")
                 .contains("open.dolphin.rest.orca.OrcaPatientSyncStatusResource")
+                .doesNotContain("open.dolphin.rest.KarteDocumentWriteResource")
                 .doesNotContain("open.dolphin.touch.DolphinResourceASP")
                 .doesNotContain("open.dolphin.rest.PatientResource")
                 .doesNotContain("open.dolphin.rest.NLabResource")
@@ -80,13 +80,18 @@ class WebXmlEndpointExposureTest {
         assertThat(routeKeys)
                 .contains(
                         "POST /api/orca/official/appointments/list",
+                        "POST /api/charts/document-drafts",
                         "GET /api/orca/master/drug",
                         "GET /api/local/order/bundles",
                         "GET /api/admin/internal/orca/patients/sync/status")
                 .doesNotContain(
                         "GET /api/orca/queue",
                         "POST /api/orca/pusheventgetv2",
-                        "DELETE /api/orca/queue")
+                        "DELETE /api/orca/queue",
+                        "POST /api/karte/document",
+                        "PUT /api/karte/document",
+                        "DELETE /api/karte/document/{*}",
+                        "PUT /api/karte/document/{*}")
                 .allMatch(routeKey -> !routeKey.contains(" /api/orca/")
                         || routeKey.contains(" /api/orca/official/")
                         || routeKey.contains(" /api/orca/master/"));

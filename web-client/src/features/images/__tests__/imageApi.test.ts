@@ -168,7 +168,7 @@ describe('image api', () => {
       }),
     );
 
-    const result = await sendKarteDocumentWithAttachments(payload, { method: 'PUT' });
+    const result = await sendKarteDocumentWithAttachments(payload, { method: 'POST' });
 
     expect(result.ok).toBe(true);
     expect(result.docPk).toBe(124);
@@ -185,7 +185,7 @@ describe('image api', () => {
       new Response('123', { status: 200, headers: { 'Content-Type': 'text/plain' } }),
     );
 
-    const result = await sendKarteDocumentWithAttachments(payload, { method: 'PUT' });
+    const result = await sendKarteDocumentWithAttachments(payload, { method: 'POST' });
 
     expect(result.ok).toBe(true);
     expect(result.docPk).toBe(123);
@@ -201,7 +201,7 @@ describe('image api', () => {
       new Response(JSON.stringify({ docPk: 123 }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
     );
 
-    const result = await sendKarteDocumentWithAttachments(payload, { method: 'PUT' });
+    const result = await sendKarteDocumentWithAttachments(payload, { method: 'POST' });
 
     expect(result.ok).toBe(true);
     expect(result.docPk).toBe(123);
@@ -220,7 +220,7 @@ describe('image api', () => {
       }),
     );
 
-    const result = await sendKarteDocumentWithAttachments(payload, { method: 'PUT' });
+    const result = await sendKarteDocumentWithAttachments(payload, { method: 'POST' });
 
     expect(result.ok).toBe(true);
     expect(result.docPk).toBe(123);
@@ -284,7 +284,7 @@ describe('image api', () => {
       }),
     );
 
-    const result = await sendKarteDocumentWithAttachments(payload, { method: 'PUT' });
+    const result = await sendKarteDocumentWithAttachments(payload, { method: 'POST' });
 
     expect(result.ok).toBe(true);
     expect(result.docPk).toBe(456);
@@ -312,14 +312,14 @@ describe('image api', () => {
       }),
     );
 
-    const result = await sendKarteDocumentWithAttachments(payload, { method: 'PUT' });
+    const result = await sendKarteDocumentWithAttachments(payload, { method: 'POST' });
 
     expect(result.ok).toBe(true);
     expect(result.docPk).toBe(123);
     expect(mockHttpFetch).toHaveBeenCalledWith(
-      '/karte/document',
+      '/api/charts/document-drafts',
       expect.objectContaining({
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       }),
     );
@@ -349,7 +349,7 @@ describe('image api', () => {
     );
 
     const started = Date.now();
-    const result = await sendKarteDocumentWithAttachments(payload, { method: 'PUT' });
+    const result = await sendKarteDocumentWithAttachments(payload, { method: 'POST' });
     const elapsed = Date.now() - started;
 
     expect(result.ok).toBe(true);
@@ -441,7 +441,7 @@ describe('image api', () => {
       new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
     );
 
-    const result = await sendKarteDocumentWithAttachments(payload, { method: 'PUT' });
+    const result = await sendKarteDocumentWithAttachments(payload, { method: 'POST' });
 
     expect(result.ok).toBe(false);
     expect(result.error).toBe('invalid_doc_pk');

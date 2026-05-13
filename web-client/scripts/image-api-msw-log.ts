@@ -39,7 +39,7 @@ const server = setupServer(
       { status: 200, headers: { 'x-run-id': runId, 'x-trace-id': traceId } },
     );
   }),
-  http.put(`${baseUrl}/karte/document`, async ({ request }) => {
+  http.post(`${baseUrl}/api/charts/document-drafts`, async ({ request }) => {
     const { runId, traceId } = logRequest('document-put', request);
     const payload = await request.json().catch(() => null);
     return HttpResponse.json(
@@ -57,8 +57,8 @@ const main = async () => {
   await fetch(`${baseUrl}/karte/iamges`, { headers });
   await fetch(`${baseUrl}/karte/image/901`, { headers });
   await fetch(`${baseUrl}/karte/attachment/777`, { headers });
-  await fetch(`${baseUrl}/karte/document`, {
-    method: 'PUT',
+  await fetch(`${baseUrl}/api/charts/document-drafts`, {
+    method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({ attachment: [{ fileName: 'mock.png', contentType: 'image/png', contentSize: 10, bytes: 'AA==' }] }),
   });

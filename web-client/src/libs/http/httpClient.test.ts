@@ -297,7 +297,7 @@ describe('httpFetch session expiry reasons', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
     const { httpClient } = await importSubjects();
 
-    await httpClient.httpFetch('/api/admin/orca/connection', { method: 'PUT' });
+    await httpClient.httpFetch('/api/admin/orca/connection', { method: 'POST' });
     const headers = new Headers((fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined)?.headers ?? {});
     expect(headers.get('X-CSRF-Token')).toBe('csrf-token-123');
   });
@@ -317,7 +317,7 @@ describe('httpFetch session expiry reasons', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
     const { httpClient } = await importSubjects();
 
-    await httpClient.httpFetch('https://evil.example/api/admin/orca/connection', { method: 'PUT' });
+    await httpClient.httpFetch('https://evil.example/api/admin/orca/connection', { method: 'POST' });
     const headers = new Headers((fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined)?.headers ?? {});
     expect(headers.get('X-CSRF-Token')).toBeNull();
   });
@@ -424,10 +424,10 @@ describe('buildHttpHeaders CSRF policy', () => {
 
     const headers = httpClient.buildHttpHeaders(
       {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       },
-      '/karte/document',
+      '/api/charts/document-drafts',
     );
 
     expect(readCsrfHeader(headers)).toBe('csrf-token-xhr');

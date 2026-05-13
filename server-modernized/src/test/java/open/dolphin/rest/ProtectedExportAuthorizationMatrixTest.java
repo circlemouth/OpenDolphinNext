@@ -49,7 +49,7 @@ class ProtectedExportAuthorizationMatrixTest {
         if (path.startsWith("/api/patients/") && path.contains("/images")) {
             return true;
         }
-        if (path.equals("/api/karte/document") || path.startsWith("/api/karte/document/")) {
+        if (path.equals("/api/charts/document-drafts")) {
             return true;
         }
         return path.startsWith("/api/karte/attachment/")

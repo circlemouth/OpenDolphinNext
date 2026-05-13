@@ -187,13 +187,13 @@ export const KARTE_IMAGE_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     sourceDocs: ['docs/contracts/document-integrity.md'],
   },
   {
-    id: 'karteDocumentUpdate',
+    id: 'chartDocumentDraft',
     group: 'images',
-    method: 'PUT',
-    path: '/karte/document',
-    purpose: 'カルテ文書（Document）への添付送信と本文更新を行う。',
-    auditMetadata: ['runId', 'traceId', 'documentId', 'attachmentsSent', 'fetchedAt'],
-    sourceDocs: ['docs/contracts/document-integrity.md', 'docs/web-client/architecture/document-embedded-attachment-policy.md'],
+    method: 'POST',
+    path: '/api/charts/document-drafts',
+    purpose: 'chart_revision authority 経由で診療録下書きを作成し、旧 karte/document 書込 route を使わない。',
+    auditMetadata: ['runId', 'traceId', 'chartId', 'revisionId', 'attachmentsSent', 'fetchedAt'],
+    sourceDocs: ['docs/contracts/chart-authority-api.md', 'docs/contracts/document-integrity.md', 'docs/web-client/architecture/document-embedded-attachment-policy.md'],
   },
 ];
 

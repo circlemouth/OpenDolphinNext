@@ -6,7 +6,7 @@ const baseUrl = 'http://localhost';
 const delayMs = 3200;
 
 const server = setupServer(
-  http.put(`${baseUrl}/karte/document`, async ({ request }) => {
+  http.post(`${baseUrl}/api/charts/document-drafts`, async ({ request }) => {
     const traceId = request.headers.get('x-trace-id') ?? `trace-${RUN_ID}`;
     const started = Date.now();
     await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -28,8 +28,8 @@ const main = async () => {
   server.listen({ onUnhandledRequest: 'warn' });
 
   const start = Date.now();
-  const response = await fetch(`${baseUrl}/karte/document`, {
-    method: 'PUT',
+  const response = await fetch(`${baseUrl}/api/charts/document-drafts`, {
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-run-id': RUN_ID,

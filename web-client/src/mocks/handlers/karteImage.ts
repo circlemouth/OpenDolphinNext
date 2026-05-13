@@ -119,7 +119,7 @@ export const karteImageHandlers = [
       },
     );
   }),
-  http.put('/karte/document', async ({ request }) => {
+  http.post('/api/charts/document-drafts', async ({ request }) => {
     const { runId, traceId } = logRequest('document-put', request);
     const payload = await request.json().catch(() => null);
     const attachments = Array.isArray((payload as any)?.attachment) ? ((payload as any).attachment as unknown[]) : [];
@@ -156,7 +156,7 @@ export const karteImageHandlers = [
       200,
     );
   }),
-  http.post('/karte/document', async ({ request }) => {
+  http.post('/api/charts/document-drafts', async ({ request }) => {
     const { runId, traceId } = logRequest('document-post', request);
     const payload = await request.json().catch(() => null);
     const attachments = Array.isArray((payload as any)?.attachment) ? ((payload as any).attachment as unknown[]) : [];

@@ -499,7 +499,7 @@ describe('DocumentCreatePanel', () => {
     vi.mocked(sendKarteDocumentWithAttachments).mockResolvedValue({
       ok: true,
       status: 200,
-      endpoint: '/karte/document',
+      endpoint: '/api/charts/document-drafts',
       docPk: 2001,
       payload: { docPk: 2001 },
     });
@@ -561,7 +561,7 @@ describe('DocumentCreatePanel', () => {
     vi.mocked(sendKarteDocumentWithAttachments).mockResolvedValue({
       ok: false,
       status: 500,
-      endpoint: '/karte/document',
+      endpoint: '/api/charts/document-drafts',
       docPk: -1,
       error: 'HTTP 500',
     });
@@ -597,7 +597,7 @@ describe('DocumentCreatePanel', () => {
     vi.mocked(sendKarteDocumentWithAttachments).mockResolvedValue({
       ok: true,
       status: 200,
-      endpoint: '/karte/document',
+      endpoint: '/api/charts/document-drafts',
       docPk: 3001,
       payload: { docPk: 3001 },
     });
@@ -660,7 +660,7 @@ describe('DocumentCreatePanel', () => {
     vi.mocked(sendKarteDocumentWithAttachments).mockResolvedValue({
       ok: false,
       status: 500,
-      endpoint: '/karte/document',
+      endpoint: '/api/charts/document-drafts',
       docPk: -1,
       error: 'java.lang.IllegalStateException: s3://internal-bucket failed',
     });

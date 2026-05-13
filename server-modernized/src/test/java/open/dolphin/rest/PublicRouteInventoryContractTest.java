@@ -107,7 +107,9 @@ class PublicRouteInventoryContractTest {
         assertThat(adminInternalRoutes).containsExactlyInAnyOrderElementsOf(EXPECTED_ADMIN_INTERNAL_ROUTE_KEYS);
         assertThat(routeKeys)
                 .noneMatch(routeKey -> routeKey.contains(" /api/orca/queue"))
-                .noneMatch(routeKey -> routeKey.contains(" /api/orca/pusheventgetv2"));
+                .noneMatch(routeKey -> routeKey.contains(" /api/orca/pusheventgetv2"))
+                .noneMatch(PublicRouteInventoryContractTest::isLegacyKarteDocumentWriteRoute);
+        assertThat(routeKeys).contains("POST /api/charts/document-drafts");
 
         assertThat(routes)
                 .filteredOn(route -> route.path().startsWith("/api/orca/"))
@@ -138,6 +140,7 @@ class PublicRouteInventoryContractTest {
                 "open.dolphin.rest.orca.OrcaPatientSyncStatusResource");
         assertThat(classNames).doesNotContain(
                 "open.dolphin.rest.AdminAccessPasswordResetResource",
+                "open.dolphin.rest.KarteDocumentWriteResource",
                 "open.dolphin.rest.PVTResource",
                 "open.dolphin.rest.orca.OrcaMedicalOutpatientResource",
                 "open.dolphin.rest.orca.OrcaDiseaseResource",
@@ -224,6 +227,13 @@ class PublicRouteInventoryContractTest {
             normalized = normalized.substring(0, separator).trim();
         }
         return MediaType.TEXT_PLAIN.equalsIgnoreCase(normalized);
+    }
+
+    private static boolean isLegacyKarteDocumentWriteRoute(String routeKey) {
+        return routeKey.equals("POST /api/karte/document")
+                || routeKey.equals("PUT /api/karte/document")
+                || routeKey.equals("PUT /api/karte/document/{*}")
+                || routeKey.equals("DELETE /api/karte/document/{*}");
     }
 
     private static String readStringConstant(Class<?> type, String fieldName) throws Exception {

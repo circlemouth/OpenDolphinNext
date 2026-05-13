@@ -12,7 +12,7 @@ const server = setupServer(
   http.get(`${baseUrl}/karte/attachment/:id`, ({ params }) =>
     HttpResponse.json({ id: Number(params.id), title: 'mock-attachment' }, { status: 200 }),
   ),
-  http.put(`${baseUrl}/karte/document`, () =>
+  http.post(`${baseUrl}/api/charts/document-drafts`, () =>
     HttpResponse.json({ ok: true, docPk: 9024, receivedAttachments: 1 }, { status: 200 }),
   ),
 );
@@ -30,8 +30,8 @@ const main = async () => {
   const attachmentRes = await fetch(`${baseUrl}/karte/attachment/777`);
   responses.push({ url: attachmentRes.url, status: attachmentRes.status, body: await attachmentRes.text() });
 
-  const docRes = await fetch(`${baseUrl}/karte/document`, {
-    method: 'PUT',
+  const docRes = await fetch(`${baseUrl}/api/charts/document-drafts`, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ attachment: [{ fileName: 'mock.png' }] }),
   });

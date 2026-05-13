@@ -177,7 +177,7 @@ const main = async () => {
     });
     page.on('response', async (res) => {
       const url = res.url();
-      if (!url.includes('/karte/document') && !url.includes('/karte/revisions') && !url.includes('/karte/pid/')) return;
+      if (!url.includes('/api/charts/document-drafts') && !url.includes('/karte/revisions') && !url.includes('/karte/pid/')) return;
       try {
         networkMemo.push({
           url,
@@ -215,7 +215,7 @@ const main = async () => {
     const reviseBtn = items.nth(0).getByRole('button', { name: 'この版を編集（改訂版追加）' });
     await reviseBtn.waitFor({ timeout: 10_000 });
     const reviseResponse = page.waitForResponse(
-      (res) => res.url().includes('/karte/document') && res.request().method() === 'POST' && [200, 201].includes(res.status()),
+      (res) => res.url().includes('/api/charts/document-drafts') && res.request().method() === 'POST' && [200, 201].includes(res.status()),
       { timeout: 60_000 },
     );
     await reviseBtn.click({ timeout: 10_000 });
@@ -235,7 +235,7 @@ const main = async () => {
     const restoreBtn = items.nth(restoreTargetIndex).getByRole('button', { name: 'この版を現在として採用（restore）' });
     await restoreBtn.waitFor({ timeout: 10_000 });
     const restoreResponse = page.waitForResponse(
-      (res) => res.url().includes('/karte/document') && res.request().method() === 'POST' && [200, 201].includes(res.status()),
+      (res) => res.url().includes('/api/charts/document-drafts') && res.request().method() === 'POST' && [200, 201].includes(res.status()),
       { timeout: 60_000 },
     );
     await restoreBtn.click({ timeout: 10_000 });
@@ -269,10 +269,10 @@ const main = async () => {
   notes.push('## Evidence');
   notes.push('');
   notes.push('- 01-before.png: Drawer open (source: server) before actions');
-  notes.push('- 02-after-revise.png: After "改訂版追加" (POST /karte/document 200/201) and history refreshed');
-  notes.push('- 03-after-restore.png: After "restore" (POST /karte/document 200/201) and history refreshed');
+  notes.push('- 02-after-revise.png: After "改訂版追加" (POST /api/charts/document-drafts 200/201) and history refreshed');
+  notes.push('- 03-after-restore.png: After "restore" (POST /api/charts/document-drafts 200/201) and history refreshed');
   notes.push('');
-  notes.push('## Network memo (filtered to /karte/pid, /karte/revisions*, /karte/document)');
+  notes.push('## Network memo (filtered to /karte/pid, /karte/revisions*, /api/charts/document-drafts)');
   notes.push('');
   notes.push('```json');
   notes.push(JSON.stringify(networkMemo, null, 2));
