@@ -61,14 +61,7 @@ beforeEach(() => {
     patientId: 'P-TEST-001',
     karteId: 1001,
     orcaMirrorStatus: 'connected',
-    diseases: [
-      {
-        diagnosisId: 1,
-        diagnosisName: '院内未送信病名',
-        diagnosisCode: 'E78.5',
-        startDate: '2026-04-01',
-        layer: 'insurance-local',
-      },
+      diseases: [
       {
         diagnosisId: 2,
         diagnosisName: 'ORCA登録済み病名',
@@ -86,6 +79,21 @@ beforeEach(() => {
             name: 'ORCA登録済み病名',
           },
         ],
+      },
+    ],
+    pendingLocalDiseases: [
+      {
+        diagnosisId: 1,
+        diagnosisName: '送信候補病名',
+        diagnosisCode: 'E78.5',
+        startDate: '2026-04-01',
+        layer: 'candidate',
+        candidateKind: 'draftCandidate',
+        sourceOfTruth: 'local-candidate',
+        readOnly: true,
+        candidateOnly: true,
+        syncState: 'candidate',
+        note: 'ORCA未登録の送信候補です。ORCA登録済み病名ではありません。',
       },
     ],
   });
@@ -107,10 +115,17 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
 
     const mirrorList = await screen.findByRole('table', { name: 'ORCA登録病名（活動中）' });
     expect(within(mirrorList).getByText('ORCA登録済み病名')).toBeInTheDocument();
-    expect(within(mirrorList).queryByText('院内未送信病名')).not.toBeInTheDocument();
+    expect(within(mirrorList).queryByText('送信候補病名')).not.toBeInTheDocument();
     expect(within(mirrorList).getByText('8839001')).toBeInTheDocument();
     expect(within(mirrorList).queryByText('副')).not.toBeInTheDocument();
     expect(screen.getByText('ORCA再取得結果を正本として表示')).toBeInTheDocument();
+    const candidateSection = screen.getByRole('region', { name: 'ORCA未登録の送信候補' });
+    expect(within(candidateSection).getByText('送信候補')).toBeInTheDocument();
+    expect(within(candidateSection).getByText('1件 / ORCA登録済みではありません')).toBeInTheDocument();
+    expect(within(candidateSection).getByText('送信候補病名')).toBeInTheDocument();
+    expect(within(candidateSection).getByText('ORCA未登録の送信候補')).toBeInTheDocument();
+    expect(within(candidateSection).getByText('候補')).toBeInTheDocument();
+    expect(within(candidateSection).getByText(/local候補はORCA未登録です/)).toBeInTheDocument();
     expect(screen.queryByText('保険病名の確認が必要です')).not.toBeInTheDocument();
   });
 

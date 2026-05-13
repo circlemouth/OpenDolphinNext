@@ -126,10 +126,12 @@ describe('diseaseApi', () => {
       }),
       expect.objectContaining({
         diagnosisName: '脂質異常症',
-        layer: 'insurance-local',
+        layer: 'candidate',
         syncState: 'none',
-        readOnly: false,
-        candidateOnly: false,
+        readOnly: true,
+        candidateOnly: true,
+        candidateKind: 'draftCandidate',
+        sourceOfTruth: 'local-candidate',
       }),
     ]);
   });
@@ -629,9 +631,13 @@ describe('diseaseApi', () => {
             ],
             pendingLocalDiseases: [
               {
-                diagnosisName: '院内未送信病名',
+                diagnosisName: '送信候補病名',
                 diagnosisCode: '8839002',
-                layer: 'insurance-local',
+                layer: 'candidate',
+                candidateKind: 'draftCandidate',
+                sourceOfTruth: 'local-candidate',
+                candidateOnly: true,
+                readOnly: true,
               },
             ],
           },
@@ -670,8 +676,12 @@ describe('diseaseApi', () => {
     ]);
     expect(result.postMutationMirror?.pendingLocalDiseases).toEqual([
       expect.objectContaining({
-        diagnosisName: '院内未送信病名',
-        layer: 'insurance-local',
+        diagnosisName: '送信候補病名',
+        layer: 'candidate',
+        candidateKind: 'draftCandidate',
+        sourceOfTruth: 'local-candidate',
+        readOnly: true,
+        candidateOnly: true,
       }),
     ]);
   });

@@ -50,7 +50,7 @@ class LocalDiagnosisResourceTest {
     }
 
     @Test
-    void getDiagnosesReturnsOrcaSourceOfTruthAndSeparatesPendingLocalPayload() {
+    void getDiagnosesReturnsOrcaSourceOfTruthAndSeparatesDraftCandidatePayload() {
         Map<String, Object> response = resource.getDiagnoses(request, "00001", "2026-03-25", null, false);
 
         assertEquals("00001", response.get("patientId"));
@@ -63,8 +63,14 @@ class LocalDiagnosisResourceTest {
         List<Map<String, Object>> pending = (List<Map<String, Object>>) response.get("pendingLocalDiseases");
         assertEquals(1, pending.size());
         assertEquals(55L, pending.get(0).get("diagnosisId"));
-        assertEquals("insurance-local", pending.get(0).get("layer"));
-        assertEquals(false, pending.get(0).get("readOnly"));
+        assertEquals("candidate", pending.get(0).get("layer"));
+        assertEquals("draftCandidate", pending.get(0).get("candidateKind"));
+        assertEquals("local-candidate", pending.get(0).get("sourceOfTruth"));
+        assertEquals("candidate", pending.get(0).get("syncState"));
+        assertEquals(true, pending.get(0).get("readOnly"));
+        assertEquals(true, pending.get(0).get("candidateOnly"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                String.valueOf(pending.get(0).get("note")).contains("ORCA登録済み病名ではありません"));
     }
 
     @Test
@@ -103,7 +109,9 @@ class LocalDiagnosisResourceTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> pending = (List<Map<String, Object>>) response.get("pendingLocalDiseases");
         assertEquals(1, pending.size());
-        assertEquals("insurance-local", pending.get(0).get("layer"));
+        assertEquals("candidate", pending.get(0).get("layer"));
+        assertEquals("draftCandidate", pending.get(0).get("candidateKind"));
+        assertEquals(true, pending.get(0).get("candidateOnly"));
     }
 
     @Test
@@ -186,7 +194,9 @@ class LocalDiagnosisResourceTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> pending = (List<Map<String, Object>>) response.get("pendingLocalDiseases");
         assertEquals(1, pending.size());
-        assertEquals("insurance-local", pending.get(0).get("layer"));
+        assertEquals("candidate", pending.get(0).get("layer"));
+        assertEquals("draftCandidate", pending.get(0).get("candidateKind"));
+        assertEquals(true, pending.get(0).get("candidateOnly"));
         org.junit.jupiter.api.Assertions.assertFalse(response.toString().contains("https://orca.internal.example"));
         assertEquals(0, diseaseCacheStore.saveCount());
     }
