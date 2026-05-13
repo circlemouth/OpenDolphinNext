@@ -124,12 +124,29 @@
 - サーバーログ・監査ログ・ブラウザログにORCA認証情報が出ないこと
 - 権限なしユーザーが診療録確定、処方確定、ORCA送信、監査ログ閲覧をできないこと
 
+Round 3 時点の横断 guard:
+
+- source/config/docs の公開 `VITE_` secret 名検査: `cd web-client && npm run verify:no-public-secrets`
+- web-client raw ORCA path / taxonomy drift 検査: `cd web-client && npm run verify:no-blocked-orca-route-strings`
+- web-client dev proxy の生 ORCA / credential config 検査: `cd web-client && npm run verify:no-direct-orca-proxy-config`
+- production bundle の ORCA URL / Basic / 証明書 / 証明書パスワード / secret 混入検査: `cd web-client && npm run verify:prod-bundle-secrets`
+- `npm run build` は `vite build` 後に `verify:prod-bundle-secrets` を実行してから production artifact pruning へ進む。
+
 ## 10. route inventory
 
 - public mutation routeがtaxonomyに分類されていること
 - `/api/prescriptions` のようなtaxonomy外routeがないこと
 - local patient/disease CRUDが本番到達不能であること
 - raw ORCA pathがweb-client runtime sourceにないこと
+
+Round 3 時点の横断 guard:
+
+- server public route inventory: `mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=PublicRouteInventoryContractTest,WebXmlEndpointExposureTest test`
+- `PublicRouteInventoryContractTest` は `/api/orca/*` が `official` / `master` だけに収まること、`karte/document` 書込系、local patient CRUD、local disease mutation、`/api/prescriptions`、`/api/orca/queue`、`/api/orca/pusheventgetv2` が本番 route inventory に存在しないことを検査する。
+- `WebXmlEndpointExposureTest` は `/api/*` 以外の REST exposure と legacy resource 登録を拒否する。
+- 横断入口: `scripts/ci/verify-ehr-orca-round3-guards.sh`
+- E 担当 UNKNOWN / retry / ledger の追加 hook は `OrcaOperationLedgerSchemaTest`、`OrcaHttpClientResilienceTest`、`PatientModV2OutpatientResourceIdempotencyTest`、および今後の `*Unknown*` / `*Resend*` focused test を上記横断入口または release-validation の focused Maven command に追加する。
+- G 担当 DADS / 医療安全 UI の追加 hook は `cd web-client && npm run verify:medical-safety-ui-copy` と `*medical-safety*` / `*dads*` Vitest 命名の focused test を `verify:web-guard` または release-validation の targeted UI command に追加する。
 
 ## 11. 実ORCA接続試験
 
