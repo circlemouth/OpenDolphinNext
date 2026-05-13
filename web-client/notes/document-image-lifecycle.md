@@ -18,7 +18,7 @@
   - 患者画像 upload/list/download は `/patients/{patientId}/images` を正本にします。
   - asset 保存成功を document attachment success と同一視しません。
 - reference:
-  - `/karte/document` へ送る attachment は server 側で asset metadata を再解決した reference だけを採用します。
+  - `/api/charts/document-drafts` へ送る attachment は chart_revision authority 内で server 側の asset metadata を再解決した reference だけを採用します。
   - client が送った `uri` / `digest` / `storageKey` は権威入力として扱いません。
   - reference remove は snapshot/history 側の relation 削除であり、asset 実体削除ではありません。
 - preview:

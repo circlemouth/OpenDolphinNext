@@ -1,6 +1,7 @@
 package open.dolphin.rest.orca;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
@@ -289,7 +290,7 @@ public class LocalPatientSearchResource extends AbstractResource {
             record.setBirthDate(firstText(patient, "birthDate", "BirthDate"));
             record.setSex(firstText(patient, "sex", "Sex"));
             return record;
-        } catch (Exception ex) {
+        } catch (JsonProcessingException ex) {
             return null;
         }
     }

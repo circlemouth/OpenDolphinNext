@@ -1,6 +1,7 @@
 package open.dolphin.encounter;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -372,7 +373,7 @@ public class EncounterProjectionRepository {
                     .map(EncounterProjectionRepository::normalize)
                     .filter(value -> value != null)
                     .toList();
-        } catch (Exception ex) {
+        } catch (JsonProcessingException ex) {
             return List.of();
         }
     }
@@ -460,5 +461,19 @@ public class EncounterProjectionRepository {
             Instant insuranceCacheFetchedAt,
             Instant insuranceCacheExpiresAt
     ) {
+        public EncounterOrcaContextRow {
+            changedFields = changedFields == null ? List.of() : List.copyOf(changedFields);
+            insuranceChangedFields = insuranceChangedFields == null ? List.of() : List.copyOf(insuranceChangedFields);
+        }
+
+        @Override
+        public List<String> changedFields() {
+            return List.copyOf(changedFields);
+        }
+
+        @Override
+        public List<String> insuranceChangedFields() {
+            return List.copyOf(insuranceChangedFields);
+        }
     }
 }

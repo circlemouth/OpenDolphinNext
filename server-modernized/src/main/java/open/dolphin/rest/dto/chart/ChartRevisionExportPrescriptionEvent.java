@@ -118,7 +118,7 @@ public class ChartRevisionExportPrescriptionEvent {
     }
 
     public Map<String, Object> getBeforeSummary() {
-        return beforeSummary;
+        return new LinkedHashMap<>(beforeSummary);
     }
 
     public void setBeforeSummary(Map<String, Object> beforeSummary) {
@@ -126,7 +126,7 @@ public class ChartRevisionExportPrescriptionEvent {
     }
 
     public Map<String, Object> getAfterSummary() {
-        return afterSummary;
+        return new LinkedHashMap<>(afterSummary);
     }
 
     public void setAfterSummary(Map<String, Object> afterSummary) {

@@ -5,7 +5,7 @@ import { fetchPatientImages } from './patientImagesApi';
 
 const IMAGE_DETAIL_ENDPOINT = '/karte/image';
 const ATTACHMENT_ENDPOINT = '/karte/attachment';
-const DOCUMENT_ENDPOINT = '/karte/document';
+const DOCUMENT_ENDPOINT = '/api/charts/document-drafts';
 const INVALID_DOC_PK = -1;
 
 export type KarteImageListItem = {
@@ -460,7 +460,7 @@ export async function fetchKarteAttachmentDetail(id: number | string): Promise<K
 export async function sendKarteDocumentWithAttachments(
   payload: KarteDocumentAttachmentPayload,
   options: {
-    method?: 'POST' | 'PUT';
+    method?: 'POST';
     validate?: boolean;
     validationOptions?: AttachmentValidationOptions;
   } = {},
@@ -498,7 +498,7 @@ export async function sendKarteDocumentWithAttachments(
   }
 
   const response = await httpFetch(DOCUMENT_ENDPOINT, {
-    method: options.method ?? 'PUT',
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
@@ -567,13 +567,13 @@ const parseXhrHeaders = (xhr: XMLHttpRequest) => {
 export function sendKarteDocumentWithAttachmentsViaXhr(
   payload: KarteDocumentAttachmentPayload,
   options: {
-    method?: 'POST' | 'PUT';
+    method?: 'POST';
     onProgress?: (event: UploadProgressEvent) => void;
   } = {},
 ): Promise<KarteDocumentSendResult & { progressMode: UploadProgressMode }> {
   const metaBefore = ensureObservabilityMeta();
   const endpoint = DOCUMENT_ENDPOINT;
-  const method = options.method ?? 'PUT';
+  const method = 'POST';
   const body = JSON.stringify(payload);
   let progressMode: UploadProgressMode = 'indeterminate';
 

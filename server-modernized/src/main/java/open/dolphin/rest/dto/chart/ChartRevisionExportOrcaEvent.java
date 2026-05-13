@@ -207,7 +207,7 @@ public class ChartRevisionExportOrcaEvent {
     }
 
     public Map<String, Object> getOperationSummary() {
-        return operationSummary;
+        return new LinkedHashMap<>(operationSummary);
     }
 
     public void setOperationSummary(Map<String, Object> operationSummary) {
@@ -215,7 +215,7 @@ public class ChartRevisionExportOrcaEvent {
     }
 
     public Map<String, Object> getTransmissionSummary() {
-        return transmissionSummary;
+        return new LinkedHashMap<>(transmissionSummary);
     }
 
     public void setTransmissionSummary(Map<String, Object> transmissionSummary) {

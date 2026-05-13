@@ -16,13 +16,16 @@ import jakarta.ws.rs.core.Response;
 import open.dolphin.reporting.ReportingResult;
 import open.dolphin.rest.dto.chart.ChartRevisionChangeRequest;
 import open.dolphin.rest.dto.chart.ChartRevisionChangeResponse;
+import open.dolphin.rest.dto.chart.ChartRevisionDraftResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionExportResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionFinalizeRequest;
 import open.dolphin.rest.dto.chart.ChartRevisionFinalizeResponse;
 import open.dolphin.rest.dto.chart.ChartRevisionPeriodExportResponse;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
+import open.dolphin.session.ChartRevisionDraftService;
 import open.dolphin.session.ChartRevisionExportService;
 import open.dolphin.session.ChartRevisionFinalizeService;
+import open.dolphin.session.UserServiceBean;
 
 @Path("/charts")
 @Produces(MediaType.APPLICATION_JSON)
@@ -32,7 +35,25 @@ public class ChartRevisionResource extends AbstractOrcaRestResource {
     private ChartRevisionFinalizeService finalizeService;
 
     @Inject
+    private ChartRevisionDraftService draftService;
+
+    @Inject
     private ChartRevisionExportService exportService;
+
+    @Inject
+    private UserServiceBean userServiceBean;
+
+    @POST
+    @Path("/document-drafts")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Transactional
+    public ChartRevisionDraftResponse createDocumentDraft(
+            @Context HttpServletRequest request,
+            String payload) {
+        String actor = requireRemoteUser(request);
+        String facilityId = requireFacilityId(request);
+        return draftService.createDraft(facilityId, resolveActorUserId(actor), payload);
+    }
 
     @GET
     @Path("/revision-exports")
@@ -207,5 +228,18 @@ public class ChartRevisionResource extends AbstractOrcaRestResource {
         return Response.ok(pdf.getData(), "application/pdf")
                 .header("Content-Disposition", disposition + "; filename=\"" + pdf.getFileName() + "\"")
                 .build();
+    }
+
+    private long resolveActorUserId(String actor) {
+        if (userServiceBean == null) {
+            throw restError(null, Response.Status.UNAUTHORIZED, "actor_unresolved",
+                    "Authenticated actor could not be resolved");
+        }
+        try {
+            return userServiceBean.getUser(actor).getId();
+        } catch (RuntimeException ex) {
+            throw restError(null, Response.Status.UNAUTHORIZED, "actor_unresolved",
+                    "Authenticated actor could not be resolved");
+        }
     }
 }

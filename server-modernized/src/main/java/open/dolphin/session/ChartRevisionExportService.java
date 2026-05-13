@@ -1179,7 +1179,7 @@ public class ChartRevisionExportService {
             return bool;
         }
         if (value == null) {
-            return null;
+            return Boolean.FALSE;
         }
         return Boolean.valueOf(String.valueOf(value));
     }
