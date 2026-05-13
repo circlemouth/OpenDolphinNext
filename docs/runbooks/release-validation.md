@@ -7,8 +7,9 @@
 - `docs/contracts/` が今回の変更を反映している。
 - `docs/architecture/` の summary が current contract と矛盾していない。
 - `docs/managerdocs/` の release/readiness 説明が gate と矛盾していない。
-- ORCA outage / UNKNOWN recovery / DB read-only / backup restore reconciliation の運用手順は [orca-outage-recovery.md](./orca-outage-recovery.md) と `docs/contracts/orca-connection.md` が一致している。
-- backup / restore / hash verification の運用手順は [backup-restore-hash-verification.md](./backup-restore-hash-verification.md) と `docs/contracts/audit-log.md` が一致し、restore 後の read-only 解除前に audit hash chain と chart/prescription content hash を検証する。
+- ORCA outage / UNKNOWN recovery / DB read-only / backup restore reconciliation の運用手順は [orca-outage.md](./orca-outage.md)、[orca-outage-recovery.md](./orca-outage-recovery.md)、[orca-unknown-resolution.md](./orca-unknown-resolution.md)、`docs/contracts/orca-connection.md` が一致している。
+- backup / restore / hash verification の運用手順は [backup-restore.md](./backup-restore.md)、[backup-restore-hash-verification.md](./backup-restore-hash-verification.md)、`docs/contracts/audit-log.md` が一致し、restore 後の read-only 解除前に audit hash chain と chart/prescription content hash を検証する。
+- ORCA live validation の計画、sanitize ルール、failure injection は [../validation/orca-live-validation.md](../validation/orca-live-validation.md) と `ops/tests/orca/live-trial-checklist.sh` が一致している。
 - production operations readiness の手順は [production-operations-readiness.md](./production-operations-readiness.md) と [../releases/orca-remediation-cutover.md](../releases/orca-remediation-cutover.md) が一致し、pair release、secret store、sanitized readiness、audit write path、object storage、rollback、reviewer packet evidence の stop condition を固定している。
 - `config/server-modernized.env.sample` が設定契約と一致している。
 - `target/` / `*.war` / `__MACOSX` / `.DS_Store` / `Thumbs.db` をレビュー対象に含めない。
@@ -31,6 +32,9 @@ bash server-modernized/tools/ci/check-no-legacy-disease-authority.sh --root "$(g
 bash server-modernized/tools/ci/check-finalized-write-guards.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-orca-transport-boundary.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-orca-retry-recovery-contract.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-backup-restore-runbook.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-live-orca-trial-harness.sh --root "$(git rev-parse --show-toplevel)"
+bash server-modernized/tools/ci/check-production-operations-runbook.sh --root "$(git rev-parse --show-toplevel)"
 ```
 期待結果:
 - taxonomy grep は current route と docs 正本だけを返し、legacy alias や blocked route を返さない。

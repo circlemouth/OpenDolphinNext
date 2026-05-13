@@ -18,7 +18,7 @@ UNKNOWNは、ORCA送信結果が成功とも失敗とも判定できない状態
 
 UNKNOWNは成功ではない。
 
-状態名、UNKNOWN分類、reconciliation status、UI向けの安全なDTO境界は [../contracts/orca-ledger-and-unknown-state.md](../contracts/orca-ledger-and-unknown-state.md) を正本とする。
+状態名、UNKNOWN分類、reconciliation status、UI向けの安全なDTO境界は [../contracts/orca-ledger-and-unknown-state.md](../contracts/orca-ledger-and-unknown-state.md) を正本とする。担当者、確認期限、再送/手動照合判断の運用手順は [../runbooks/orca-unknown-resolution.md](../runbooks/orca-unknown-resolution.md) を使用する。
 
 ## 2. 禁止事項
 

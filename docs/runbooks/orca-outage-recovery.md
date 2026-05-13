@@ -2,7 +2,7 @@
 
 ## Purpose
 
-ORCA / WebORCA が利用できない、または ORCA 送信結果が不明な場合に、OpenDolphinNext 正本を保護しながら診療継続・送信停止・復旧後再照合を行うための運用手順を固定する。
+ORCA / WebORCA が利用できない、または ORCA 送信結果が不明な場合に、OpenDolphinNext 正本を保護しながら診療継続・送信停止・復旧後再照合を行うための運用手順を固定する。障害発生時の入口は [orca-outage.md](./orca-outage.md)、UNKNOWN の担当者・期限・再送判断は [orca-unknown-resolution.md](./orca-unknown-resolution.md) を併用する。
 
 この runbook は `docs/contracts/orca-connection.md` と `docs/contracts/health-endpoints.md` の current contract に従う。接続先 URL、host、credential、raw ORCA body、患者氏名、住所、電話番号、保険詳細は証跡に残さない。
 
