@@ -150,8 +150,11 @@ Round 3 時点の横断 guard:
 - `PublicRouteInventoryContractTest` は `/api/orca/*` が `official` / `master` だけに収まること、`karte/document` 書込系、local patient CRUD、local disease mutation、`/api/prescriptions`、`/api/orca/queue`、`/api/orca/pusheventgetv2` が本番 route inventory に存在しないことを検査する。
 - `WebXmlEndpointExposureTest` は `/api/*` 以外の REST exposure と legacy resource 登録を拒否する。
 - 横断入口: `scripts/ci/verify-ehr-orca-round3-guards.sh`
+- Round 4 final gate entrypoint dry-run: `bash scripts/ci/verify-release-validation-entrypoints.sh --dry-run`
 - E 担当 UNKNOWN / retry / ledger の追加 hook は `OrcaOperationLedgerSchemaTest`、`OrcaHttpClientResilienceTest`、`PatientModV2OutpatientResourceIdempotencyTest`、および今後の `*Unknown*` / `*Resend*` focused test を上記横断入口または release-validation の focused Maven command に追加する。
 - G 担当 DADS / 医療安全 UI の追加 hook は `cd web-client && npm run verify:medical-safety-ui-copy` と `*medical-safety*` / `*dads*` Vitest 命名の focused test を `verify:web-guard` または release-validation の targeted UI command に追加する。
+- H 担当 export security / readability hook は `docs/contracts/protected-export-authorization-matrix.md`、`OrcaReportDocumentResourceTest`、`web-client/src/features/charts/__tests__/chartsPrintAudit.test.ts`、`web-client/src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx` を final gate に接続する。raw ORCA body、帳票本文、storage key/digest、患者情報、HAR、trace、video、screenshot を validation evidence に含めない。
+- J 担当 backup/restore / live ORCA hook は `server-modernized/tools/ci/check-backup-restore-runbook.sh`、`server-modernized/tools/ci/check-live-orca-trial-harness.sh`、`ops/tests/orca/live-trial-checklist.sh --dry-run --run-id <RUN_ID>` を release validation に接続する。restore 後の自動再送禁止、sanitize 済み evidence、operator approval を検査する。
 
 ## 11. 実ORCA接続試験
 

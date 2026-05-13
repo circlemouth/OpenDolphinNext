@@ -26,6 +26,7 @@
 - [operations/](operations/)
 - [operations/orca-unknown-state-runbook.md](operations/orca-unknown-state-runbook.md)
 - [testing/ehr-orca-required-test-matrix.md](testing/ehr-orca-required-test-matrix.md)
+- [validation/release-validation-report.md](validation/release-validation-report.md)
 - [releases/](releases/)
 - [web-client/architecture/](web-client/architecture/)
 - [web-client/ux/](web-client/ux/)
@@ -105,6 +106,7 @@ CI の正本は `.github/workflows/` の実ジョブです。`runtime-ready-smok
 - architecture summary: `docs/architecture/`
 - EHR / ORCA safety boundary: `docs/architecture/ehr-orca-source-of-truth-boundary.md`、`docs/architecture/ehr-chart-prescription-authority.md`、`docs/architecture/orca-integration-safety-contract.md`
 - live runbooks: `docs/runbooks/`
+- release validation report template: `docs/validation/release-validation-report.md`
 - operations runbook: `docs/operations/`
 - EHR / ORCA UNKNOWN operations: `docs/operations/orca-unknown-state-runbook.md`
 - EHR / ORCA required test matrix: `docs/testing/ehr-orca-required-test-matrix.md`
