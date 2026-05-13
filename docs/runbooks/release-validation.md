@@ -16,10 +16,83 @@
 
 ## 必須コマンド
 ```bash
+bash scripts/ci/verify-release-validation-entrypoints.sh --dry-run
 cd web-client && npm run ci
 mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify
 cd web-client && node scripts/runtime-ready-smoke.mjs
 ```
+
+判定記録は [../validation/release-validation-report.md](../validation/release-validation-report.md) をコピーして RUN_ID ごとに埋める。結果は `GO` / `NO-GO` / `PENDING` で記録し、未実行理由、残リスク、証跡 path/hash を必ず残す。raw ORCA body、ORCA credential、患者氏名・住所・電話番号・保険記号番号、内部 URL、HAR、trace、video、screenshot、raw network JSON は報告テンプレートや reviewer packet に貼り付けない。
+
+## Final Gate 実行順
+
+1. **entrypoint / docs preflight**
+   ```bash
+   bash scripts/ci/verify-release-validation-entrypoints.sh --dry-run
+   bash server-modernized/tools/ci/check-doc-links.sh
+   bash server-modernized/tools/ci/check-config-contract.sh
+   bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh --root "$(git rev-parse --show-toplevel)"
+   ```
+   期待結果: validation report template、route / secret / DADS / ledger / UNKNOWN / snapshot / disease / prescription / export / backup / live ORCA の検査入口が存在し、release validation と test matrix から辿れる。
+
+2. **route inventory / transport / finalized guard**
+   ```bash
+   bash scripts/ci/verify-ehr-orca-round3-guards.sh
+   bash server-modernized/tools/ci/check-no-legacy-disease-authority.sh --root "$(git rev-parse --show-toplevel)"
+   bash server-modernized/tools/ci/check-finalized-write-guards.sh --root "$(git rev-parse --show-toplevel)"
+   bash server-modernized/tools/ci/check-orca-transport-boundary.sh --root "$(git rev-parse --show-toplevel)"
+   bash server-modernized/tools/ci/check-orca-retry-recovery-contract.sh --root "$(git rev-parse --show-toplevel)"
+   mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false \
+     -Dtest=PublicRouteInventoryContractTest,WebXmlEndpointExposureTest test
+   ```
+   期待結果: `/api/orca/*` は official/master に限定され、taxonomy 外 route、旧 `karte/document` 書込、local patient/disease mutation、`/api/prescriptions`、legacy ORCA queue/push route は本番 public surface に存在しない。
+
+3. **web-client security / DADS / bundle scan**
+   ```bash
+   cd web-client && npm run verify:web-guard
+   cd web-client && npm run typecheck
+   cd web-client && npm run test:ci
+   cd web-client && npm run build
+   cd web-client && npm run verify:prod-bundle-secrets
+   bash server-modernized/tools/ci/check-sensitive-evidence-redaction.sh --root "$(git rev-parse --show-toplevel)"
+   ```
+   期待結果: public secret 名、生 ORCA route、direct ORCA proxy config、local patient mutation、legacy auth drift、DADS/medical-safety copy drift、production bundle secret 混入、review-target artifact の secret/PHI/raw ORCA 混入が検出されない。
+
+4. **EHR / ORCA focused tests**
+   ```bash
+   mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false \
+     -Dtest=OrcaOperationLedgerSchemaTest,OrcaOperationLedgerRepositoryTest,OrcaHttpClientResilienceTest,PatientModV2OutpatientResourceIdempotencyTest,OrcaBillingCorrectionScenarioSupportTest \
+     test
+   mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false \
+     -Dtest=ChartFinalizeSnapshotResolverTest,KarteRevisionSnapshotContractTest,KarteDocumentSnapshotContractTest,LocalPrescriptionOrderResourceTest,PrescriptionAuthorityResourceTest,PrescriptionAuthoritySchemaTest,OrcaDiseaseOperationStoreTest,OrcaDiseaseCacheStoreTest,OrcaDiseaseQuerySupportTest,OrcaReportDocumentResourceTest,OperationsHealthResourceTest,AuditHashServiceTest \
+     test
+   cd web-client && npm test -- --run \
+     src/features/charts/__tests__/chartsPrintAudit.test.ts \
+     src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx \
+     src/features/charts/__tests__/dadsOrderContract.test.ts \
+     src/features/charts/__tests__/dadsClinicalInputContract.test.tsx \
+     src/features/charts/__tests__/prescriptionOrderApi.test.ts
+   ```
+   期待結果: ORCA ledger / UNKNOWN / retry / idempotency、snapshot、disease boundary、prescription hash chain、report/export readability、operations health、audit hash が focused gate で実行される。UNKNOWN、warning、unmatch、reconciliation pending/block は成功扱いにしない。
+
+5. **H/J post-merge gate**
+   ```bash
+   bash server-modernized/tools/ci/check-backup-restore-runbook.sh --root "$(git rev-parse --show-toplevel)"
+   bash server-modernized/tools/ci/check-production-operations-runbook.sh --root "$(git rev-parse --show-toplevel)"
+   bash server-modernized/tools/ci/check-live-orca-trial-harness.sh --root "$(git rev-parse --show-toplevel)"
+   ops/tests/orca/live-trial-checklist.sh --dry-run --run-id <RUN_ID>
+   ```
+   H の export security / readability 実装が統合されたら、H が追加した focused test 名または npm test path を Step 4 に追記してから実行する。J の backup/restore / ORCA live validation runbook が統合されたら、dry-run checklist、operator approval、sanitized evidence root、hard stop を確認してから live 手順へ進む。
+
+6. **full gate / smoke / reviewer packet**
+   ```bash
+   cd web-client && npm run ci
+   mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify
+   cd web-client && node scripts/runtime-ready-smoke.mjs
+   ./scripts/create-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>
+   ./scripts/validate-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>
+   ```
+   期待結果: closeout evidence、reviewer packet、manifest、accepted HEAD が一致し、packet 内に raw ORCA body、credential、PHI、内部 URL、HAR、trace、video、screenshot、raw network dump、絶対ローカルパスが残らない。
 
 ## ORCA是正 最終受入れの実行順
 1. route taxonomy / wording drift を grep で確認する。
