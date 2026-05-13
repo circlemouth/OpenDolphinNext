@@ -120,6 +120,8 @@ snapshotには少なくとも次を含める。
 
 過去snapshotは、ORCA側で情報が変わっても上書きしない。
 
+chart finalize snapshot の詳細契約は `docs/contracts/chart-finalize-snapshot.md` を正本とする。ORCA 取得不能、通信断、認証失敗、UNKNOWN は受付なし理由ではなく snapshot 欠落として扱い、完全 snapshot が保存されたかのように記録してはならない。
+
 ## 8. レビュー時の確認ポイント
 
 - そのtable/APIは正本、cache、snapshot、candidate、audit logのどれか。

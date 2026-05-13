@@ -48,6 +48,9 @@ public class ChartRevisionFinalizeService {
     @Inject
     private AuditTrailService auditTrailService;
 
+    @Inject
+    private ChartFinalizeSnapshotResolver snapshotResolver;
+
     public ChartRevisionFinalizeResponse finalizeRevision(long chartId, long revisionId,
             String facilityId, ChartRevisionFinalizeRequest request) {
         requireRequest(request);
@@ -103,14 +106,15 @@ public class ChartRevisionFinalizeService {
                 finalizedByUserId);
 
         String canonicalContent = canonicalizeContent(contentJson);
+        Instant finalizedAt = Instant.now();
         String finalizeContextJson = writeContextJson(orcaPatientId, patientBirthDate, patientGender, encounterId,
                 encounterDate, orcaAcceptanceId, noAcceptanceReason, departmentCode, physicianCode,
                 insuranceCombinationNumber, enteredByUserId, entryMode, delegatedByUserId, finalizedByUserId);
-        String snapshotManifestJson = writeSnapshotManifestJson(orcaPatientId, encounterId, encounterDate,
-                orcaAcceptanceId, noAcceptanceReason, departmentCode, physicianCode, insuranceCombinationNumber);
+        String snapshotManifestJson = resolveSnapshotManifest(chartId, revisionId, facilityId, document, orcaPatientId,
+                encounterId, encounterDate, orcaAcceptanceId, noAcceptanceReason, departmentCode, physicianCode,
+                insuranceCombinationNumber, finalizedAt);
         String contentHash = sha256(writeHashMaterial(chartId, revisionId, revision.getTitle(), finalizeContextJson,
                 snapshotManifestJson, canonicalContent));
-        Instant finalizedAt = Instant.now();
 
         revision.setStatus(ChartRevisionStatus.FINAL);
         revision.setOrcaPatientId(orcaPatientId);
@@ -144,6 +148,7 @@ public class ChartRevisionFinalizeService {
         event.setEventHash(sha256(event.getAfterSummaryJson()));
         em.persist(event);
         em.flush();
+        recordFinalizeAudit(facilityId, document, revision, event, contentHash, snapshotManifestJson);
 
         ChartRevisionFinalizeResponse response = new ChartRevisionFinalizeResponse();
         response.setChartId(chartId);
@@ -153,6 +158,30 @@ public class ChartRevisionFinalizeService {
         response.setFinalizedAt(finalizedAt.toString());
         response.setFinalizedByUserId(finalizedByUserId);
         return response;
+    }
+
+    private String resolveSnapshotManifest(long chartId, long revisionId, String facilityId, ChartDocumentModel document,
+            String orcaPatientId, String encounterId, LocalDate encounterDate, String orcaAcceptanceId,
+            String noAcceptanceReason, String departmentCode, String physicianCode, String insuranceCombinationNumber,
+            Instant capturedAt) {
+        if (snapshotResolver == null) {
+            throw restError(Response.Status.SERVICE_UNAVAILABLE, "chart_revision_snapshot_resolver_unavailable",
+                    "Chart finalization snapshot resolver is unavailable", Map.of("chartId", chartId,
+                            "revisionId", revisionId));
+        }
+        return snapshotResolver.buildManifest(new ChartFinalizeSnapshotResolver.FinalizeSnapshotRequest(
+                facilityId != null && !facilityId.isBlank() ? facilityId : document.getFacilityId(),
+                chartId,
+                revisionId,
+                orcaPatientId,
+                encounterId,
+                encounterDate,
+                orcaAcceptanceId,
+                noAcceptanceReason,
+                departmentCode,
+                physicianCode,
+                insuranceCombinationNumber,
+                capturedAt));
     }
 
     public ChartRevisionChangeResponse amendRevision(long chartId, long revisionId, String facilityId,
@@ -396,31 +425,6 @@ public class ChartRevisionFinalizeService {
         return writeJson(context);
     }
 
-    private String writeSnapshotManifestJson(String orcaPatientId, String encounterId, LocalDate encounterDate,
-            String orcaAcceptanceId, String noAcceptanceReason, String departmentCode, String physicianCode,
-            String insuranceCombinationNumber) {
-        Map<String, Object> manifest = new LinkedHashMap<>();
-        manifest.put("snapshotVersion", 1);
-        manifest.put("source", "CHART_FINALIZE");
-        manifest.put("orcaPatientId", orcaPatientId);
-        manifest.put("encounterId", encounterId);
-        manifest.put("encounterDate", encounterDate.toString());
-        manifest.put("orcaAcceptanceId", orcaAcceptanceId);
-        manifest.put("hasNoAcceptanceReason", noAcceptanceReason != null);
-        manifest.put("departmentCode", departmentCode);
-        manifest.put("physicianCode", physicianCode);
-        manifest.put("insuranceCombinationNumber", insuranceCombinationNumber);
-        manifest.put("patientSnapshotStatus", "IDENTIFIER_ONLY");
-        manifest.put("acceptanceSnapshotStatus", orcaAcceptanceId != null
-                ? "REFERENCED_BY_ORCA_ACCEPTANCE_ID"
-                : "NO_ACCEPTANCE_REASON_RECORDED");
-        manifest.put("insuranceSnapshotStatus", "COMBINATION_REFERENCED");
-        manifest.put("diseaseSnapshotStatus", "PENDING_WORKER_INTEGRATION");
-        manifest.put("prescriptionCandidateSnapshotStatus", "PENDING_WORKER_INTEGRATION");
-        manifest.put("orcaTransmissionSnapshotStatus", "PENDING_WORKER_INTEGRATION");
-        return writeJson(manifest);
-    }
-
     private String writeEventSummary(String contentHash, String encounterId, LocalDate encounterDate,
             String departmentCode, String physicianCode, String insuranceCombinationNumber,
             Long enteredByUserId, ChartRevisionEntryMode entryMode, Long delegatedByUserId, Long finalizedByUserId,
@@ -494,6 +498,64 @@ public class ChartRevisionFinalizeService {
         payload.setOutcome("SUCCESS");
         payload.setDetails(details);
         auditTrailService.record(payload);
+    }
+
+    private void recordFinalizeAudit(String facilityId, ChartDocumentModel document, ChartRevisionModel revision,
+            ChartRevisionEventModel event, String contentHash, String snapshotManifestJson) {
+        if (auditTrailService == null) {
+            throw restError(Response.Status.SERVICE_UNAVAILABLE, "audit_log_write_unavailable",
+                    "Audit log write path is unavailable", Map.of("reasonCode", "audit_log_write_unavailable"));
+        }
+        Map<String, Object> details = new LinkedHashMap<>();
+        Map<String, Object> snapshot = readFlatJson(snapshotManifestJson);
+        details.put("facilityId", facilityId != null && !facilityId.isBlank() ? facilityId : document.getFacilityId());
+        details.put("subjectType", "chart_revision");
+        details.put("subjectId", document.getId() + ":" + revision.getId());
+        details.put("chartId", document.getId());
+        details.put("revisionId", revision.getId());
+        details.put("eventId", event.getId());
+        details.put("contentHash", contentHash);
+        details.put("snapshotVersion", snapshot.get("snapshotVersion"));
+        details.put("snapshotCompletenessStatus", snapshot.get("snapshotCompletenessStatus"));
+        details.put("patientSnapshotStatus", snapshot.get("patientSnapshotStatus"));
+        details.put("acceptanceSnapshotStatus", snapshot.get("acceptanceSnapshotStatus"));
+        details.put("insuranceSnapshotStatus", snapshot.get("insuranceSnapshotStatus"));
+        details.put("diseaseSnapshotStatus", snapshot.get("diseaseSnapshotStatus"));
+        details.put("prescriptionSnapshotStatus", snapshot.get("prescriptionSnapshotStatus"));
+        details.put("prescriptionCandidateSnapshotStatus", snapshot.get("prescriptionCandidateSnapshotStatus"));
+        details.put("orcaTransmissionSnapshotStatus", snapshot.get("orcaTransmissionSnapshotStatus"));
+        details.put("rawSensitiveFieldsExcluded", true);
+        details.put("outcome", "SUCCESS");
+
+        AuditEventPayload payload = new AuditEventPayload();
+        payload.setAction("CHART_FINALIZE");
+        payload.setResource("/api/charts/{chartId}/revisions/{revisionId}/finalize");
+        payload.setActorId(String.valueOf(revision.getFinalizedByUserId()));
+        payload.setOutcome("SUCCESS");
+        payload.setDetails(details);
+        auditTrailService.record(payload);
+    }
+
+    private Map<String, Object> readFlatJson(String json) {
+        JsonNode root = readJson(jsonOrEmpty(json));
+        Map<String, Object> values = new LinkedHashMap<>();
+        if (!root.isObject()) {
+            return values;
+        }
+        root.fields().forEachRemaining(entry -> {
+            JsonNode value = entry.getValue();
+            if (value == null || value.isNull()) {
+                return;
+            }
+            if (value.isTextual()) {
+                values.put(entry.getKey(), value.asText());
+            } else if (value.isNumber()) {
+                values.put(entry.getKey(), value.numberValue());
+            } else if (value.isBoolean()) {
+                values.put(entry.getKey(), value.asBoolean());
+            }
+        });
+        return values;
     }
 
     private String revisionEventPath(ChartRevisionEventType eventType) {

@@ -68,7 +68,7 @@ class ChartRevisionExportServiceTest {
         assertThat(response.getRevisions().get(1).getStatus()).isEqualTo("AMENDED");
         assertThat(response.getRevisions().get(0).getSnapshotManifest())
                 .containsEntry("snapshotVersion", 1L)
-                .containsEntry("patientSnapshotStatus", "IDENTIFIER_ONLY")
+                .containsEntry("patientSnapshotStatus", "SNAPSHOT_RECORDED")
                 .doesNotContainKey("patientName")
                 .doesNotContainKey("rawOrcaBody");
         assertThat(response.getEvents()).hasSize(2);
@@ -144,7 +144,7 @@ class ChartRevisionExportServiceTest {
     void exportChartHashUsesCanonicalAllowlistedProjection() {
         ChartRevisionModel firstRevision = finalRevision();
         firstRevision.setSnapshotManifestJson("{\"snapshotVersion\":1,\"source\":\"CHART_FINALIZE\","
-                + "\"patientSnapshotStatus\":\"IDENTIFIER_ONLY\","
+                + "\"patientSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"patientName\":\"Do Not Export\"}");
         ChartRevisionEventModel firstEvent = amendedEvent();
         firstEvent.setReasonText("Authorization: Basic first-secret\n<?xml version=\"1.0\"?><xml>raw</xml>");
@@ -153,7 +153,7 @@ class ChartRevisionExportServiceTest {
 
         ChartRevisionModel secondRevision = finalRevision();
         secondRevision.setSnapshotManifestJson("{\"patientName\":\"Different Excluded Name\","
-                + "\"patientSnapshotStatus\":\"IDENTIFIER_ONLY\","
+                + "\"patientSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"source\":\"CHART_FINALIZE\","
                 + "\"rawOrcaBody\":\"<xml>raw</xml>\","
                 + "\"snapshotVersion\":1}");
@@ -170,25 +170,25 @@ class ChartRevisionExportServiceTest {
     void exportChartIncludesSanitizedWorkerSnapshotReferencesInHashMaterial() {
         ChartRevisionModel firstRevision = finalRevision();
         firstRevision.setSnapshotManifestJson("{\"snapshotVersion\":1,\"source\":\"CHART_FINALIZE\","
-                + "\"patientSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"patientSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"patientSnapshotReference\":\"orca_patient_cache:101\","
                 + "\"patientSnapshotHash\":\"" + "1".repeat(64) + "\","
-                + "\"acceptanceSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"acceptanceSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"acceptanceSnapshotReference\":\"orca_acceptance_cache:202\","
                 + "\"acceptanceSnapshotHash\":\"" + "2".repeat(64) + "\","
-                + "\"insuranceSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"insuranceSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"insuranceSnapshotReference\":\"encounter_insurance_snapshot:303\","
                 + "\"insuranceSnapshotHash\":\"" + "3".repeat(64) + "\","
-                + "\"diseaseSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"diseaseSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"diseaseSnapshotReference\":\"orca_disease_snapshot:404\","
                 + "\"diseaseSnapshotHash\":\"" + "4".repeat(64) + "\","
-                + "\"prescriptionCandidateSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"prescriptionCandidateSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"prescriptionCandidateSnapshotReference\":\"orca_medical_candidate:505\","
                 + "\"prescriptionCandidateSnapshotHash\":\"" + "5".repeat(64) + "\","
                 + "\"prescriptionOrderId\":606,"
                 + "\"prescriptionOrderRevisionId\":707,"
                 + "\"prescriptionContentHash\":\"" + "6".repeat(64) + "\","
-                + "\"orcaTransmissionSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"orcaTransmissionSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"orcaOperationReference\":\"orca_operation:808\","
                 + "\"orcaOperationStatus\":\"ORCA_ACCEPTED\","
                 + "\"orcaTransmissionReference\":\"orca_transmission:909\","
@@ -224,16 +224,16 @@ class ChartRevisionExportServiceTest {
 
         ChartRevisionModel secondRevision = finalRevision();
         secondRevision.setSnapshotManifestJson("{\"snapshotVersion\":1,\"source\":\"CHART_FINALIZE\","
-                + "\"patientSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"patientSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"patientSnapshotReference\":\"orca_patient_cache:101\","
                 + "\"patientSnapshotHash\":\"" + "1".repeat(64) + "\","
-                + "\"prescriptionCandidateSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"prescriptionCandidateSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"prescriptionCandidateSnapshotReference\":\"orca_medical_candidate:999\","
                 + "\"prescriptionCandidateSnapshotHash\":\"" + "9".repeat(64) + "\","
                 + "\"prescriptionOrderId\":606,"
                 + "\"prescriptionOrderRevisionId\":707,"
                 + "\"prescriptionContentHash\":\"" + "8".repeat(64) + "\","
-                + "\"orcaTransmissionSnapshotStatus\":\"SNAPSHOT_REFERENCED\","
+                + "\"orcaTransmissionSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"orcaOperationReference\":\"orca_operation:808\","
                 + "\"orcaOperationStatus\":\"ORCA_ACCEPTED\","
                 + "\"orcaTransmissionReference\":\"orca_transmission:909\","
@@ -522,7 +522,7 @@ class ChartRevisionExportServiceTest {
 
         assertThat(csv).contains("\"recordType\",\"chartId\",\"currentRevisionId\"");
         assertThat(csv).contains("\"revision\",\"10\",\"20\",\"20\",\"1\",\"FINAL\"");
-        assertThat(csv).contains("snapshot.patientSnapshotStatus=IDENTIFIER_ONLY");
+        assertThat(csv).contains("snapshot.patientSnapshotStatus=SNAPSHOT_RECORDED");
         assertThat(csv).contains("\"event\",\"10\",\"20\",\"20\",,,\"31\",\"AMENDED\"");
         assertThat(csv).contains("\"'=HYPERLINK(\"\"https://example.test\"\",\"\"Authorization: [redacted]");
         assertThat(csv).contains("after.eventType=AMENDED");
@@ -621,7 +621,7 @@ class ChartRevisionExportServiceTest {
         revision.setPhysicianCode("10001");
         revision.setInsuranceCombinationNumber("0001");
         revision.setSnapshotManifestJson("{\"snapshotVersion\":1,\"source\":\"CHART_FINALIZE\","
-                + "\"patientSnapshotStatus\":\"IDENTIFIER_ONLY\","
+                + "\"patientSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"patientName\":\"Do Not Export\","
                 + "\"rawOrcaBody\":\"<xml>raw</xml>\"}");
         revision.setEnteredByUserId(101L);
