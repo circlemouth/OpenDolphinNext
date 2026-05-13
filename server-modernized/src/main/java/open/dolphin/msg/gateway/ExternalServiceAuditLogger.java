@@ -145,7 +145,7 @@ public final class ExternalServiceAuditLogger {
 
     private static String buildOrcaRequestDetail(String url, String method,
             String contentType, String accept, String body) {
-        String resolvedUrl = url != null ? url : "unknown";
+        String resolvedUrl = sanitizeOrcaUrl(url);
         String resolvedMethod = method != null ? method : "POST";
         String resolvedContentType = contentType != null ? contentType : "";
         String resolvedAccept = accept != null ? accept : "";
@@ -159,7 +159,7 @@ public final class ExternalServiceAuditLogger {
 
     private static String buildOrcaRequestFull(String url, String method,
             java.util.Map<String, java.util.List<String>> headers, String body) {
-        String resolvedUrl = url != null ? url : "unknown";
+        String resolvedUrl = sanitizeOrcaUrl(url);
         String resolvedMethod = method != null ? method : "POST";
         String headerText = formatHeaders(headers);
         String payload = body != null ? body : "";
@@ -171,7 +171,7 @@ public final class ExternalServiceAuditLogger {
 
     private static String buildOrcaResponseDetail(String url, int status,
             java.util.Map<String, java.util.List<String>> headers, String body) {
-        String resolvedUrl = url != null ? url : "unknown";
+        String resolvedUrl = sanitizeOrcaUrl(url);
         String headerText = formatHeaders(headers);
         String payload = body != null ? body : "";
         return "orca.url=" + resolvedUrl
@@ -185,6 +185,19 @@ public final class ExternalServiceAuditLogger {
             return "";
         }
         return body.replace("\r", "\\r").replace("\n", "\\n");
+    }
+
+    private static String sanitizeOrcaUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return "unknown";
+        }
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            String path = uri.getPath();
+            return path == null || path.isBlank() ? "configured-orca-target" : path;
+        } catch (RuntimeException ex) {
+            return "configured-orca-target";
+        }
     }
 
     private static String formatHeaders(java.util.Map<String, java.util.List<String>> headers) {

@@ -113,4 +113,28 @@ class OrcaHttpClientLogTest {
         assertTrue(log.contains("apiMessageHash="));
         assertTrue(log.contains("warningsHash="));
     }
+
+    @Test
+    void externalServiceOrcaDetailUrlIsReducedToPathOnly() throws Exception {
+        Method buildOrcaRequestDetail = open.dolphin.msg.gateway.ExternalServiceAuditLogger.class.getDeclaredMethod(
+                "buildOrcaRequestDetail",
+                String.class,
+                String.class,
+                String.class,
+                String.class,
+                String.class);
+        buildOrcaRequestDetail.setAccessible(true);
+        String rawTarget = "https://" + "admin:pass@" + "facility.example.orca/secret-prefix/api01rv2/patientgetv2";
+        String log = (String) buildOrcaRequestDetail.invoke(
+                null,
+                rawTarget,
+                "GET",
+                "application/xml",
+                "application/xml",
+                "");
+
+        assertTrue(log.contains("orca.url=/secret-prefix/api01rv2/patientgetv2"));
+        assertFalse(log.contains("facility.example.orca"));
+        assertFalse(log.contains("admin:pass"));
+    }
 }
