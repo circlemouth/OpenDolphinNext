@@ -81,7 +81,7 @@
 ## 7. ログ/証跡ポリシー
 - `setup-modernized-env.sh` / `setup-modernized-env.ps1` の `ORCA_CONFIG` ログで **set/unset** のみ記録する。
 - `setup-modernized-env.sh` / `setup-modernized-env.ps1` / `ops/tests/orca/api-smoke.sh` は、`./orca.env.local` と `~/.config/opendolphin/orca.env` を自動読込する。`web-client` の `npm run dev` 単体起動は ORCA env file を読まず、ORCA 通信・資格情報は server-modernized 側に閉じる。
-- release validation の live Trial 実行前に `ops/tests/orca/live-trial-checklist.sh --dry-run --run-id <RUN_ID>` を実行し、同一 RUN_ID で runtime smoke、candidate discovery、exact read-only preflight、approved acceptmodv2、fullflow、Phase 4 medicalmodv2 の順序と sanitized evidence roots を確認する。この dry-run は ORCA credential 値、raw ORCA body、患者詳細、HAR/trace/video/screenshot を表示しない。
+- release validation の live Trial 実行前に `ops/tests/orca/live-trial-checklist.sh --dry-run --run-id <RUN_ID>` を実行し、同一 RUN_ID で runtime smoke、candidate discovery、exact read-only preflight、approved acceptmodv2、fullflow、Phase 4 medicalmodv2 の順序と sanitized evidence roots を確認する。詳細な live validation 計画は [../validation/orca-live-validation.md](../validation/orca-live-validation.md) を参照する。この dry-run は ORCA credential 値、raw ORCA body、患者詳細、HAR/trace/video/screenshot を表示しない。
 - 機微情報は `<MASKED>` で保存し、必要であれば別途共有する。
 - 実環境接続を行った場合は `artifacts/orca-connectivity/<RUN_ID>/` に証跡を残す。
 - release cutover で使う接続確認は `docs/releases/orca-remediation-cutover.md` の事前チェック / smoke と同じ RUN_ID に束ねる。

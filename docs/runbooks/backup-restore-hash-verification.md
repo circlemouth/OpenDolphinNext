@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This runbook fixes the operational gate for backing up and restoring OpenDolphinNext authoritative data without promoting stale local ORCA state to source-of-truth status.
+This runbook fixes the operational gate for backing up and restoring OpenDolphinNext authoritative data without promoting stale local ORCA state to source-of-truth status. The operator entrypoint and rehearsal checklist are [backup-restore.md](./backup-restore.md).
 
 It applies to:
 

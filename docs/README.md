@@ -20,11 +20,15 @@
 - [architecture/ehr-chart-prescription-authority.md](architecture/ehr-chart-prescription-authority.md)
 - [architecture/orca-integration-safety-contract.md](architecture/orca-integration-safety-contract.md)
 - [runbooks/](runbooks/)
+- [runbooks/backup-restore.md](runbooks/backup-restore.md)
 - [runbooks/backup-restore-hash-verification.md](runbooks/backup-restore-hash-verification.md)
+- [runbooks/orca-outage.md](runbooks/orca-outage.md)
 - [runbooks/orca-outage-recovery.md](runbooks/orca-outage-recovery.md)
+- [runbooks/orca-unknown-resolution.md](runbooks/orca-unknown-resolution.md)
 - [runbooks/production-operations-readiness.md](runbooks/production-operations-readiness.md)
 - [operations/](operations/)
 - [operations/orca-unknown-state-runbook.md](operations/orca-unknown-state-runbook.md)
+- [validation/orca-live-validation.md](validation/orca-live-validation.md)
 - [testing/ehr-orca-required-test-matrix.md](testing/ehr-orca-required-test-matrix.md)
 - [releases/](releases/)
 - [web-client/architecture/](web-client/architecture/)
@@ -106,6 +110,7 @@ CI の正本は `.github/workflows/` の実ジョブです。`runtime-ready-smok
 - EHR / ORCA safety boundary: `docs/architecture/ehr-orca-source-of-truth-boundary.md`、`docs/architecture/ehr-chart-prescription-authority.md`、`docs/architecture/orca-integration-safety-contract.md`
 - live runbooks: `docs/runbooks/`
 - operations runbook: `docs/operations/`
+- ORCA live validation plan: `docs/validation/orca-live-validation.md`
 - EHR / ORCA UNKNOWN operations: `docs/operations/orca-unknown-state-runbook.md`
 - EHR / ORCA required test matrix: `docs/testing/ehr-orca-required-test-matrix.md`
 - release / cutover: `docs/releases/`
