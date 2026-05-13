@@ -116,6 +116,8 @@ class PublicRouteInventoryContractTest {
                 .noneMatch(routeKey -> routeKey.contains(" /api/orca/queue"))
                 .noneMatch(routeKey -> routeKey.contains(" /api/orca/pusheventgetv2"))
                 .noneMatch(PublicRouteInventoryContractTest::isLegacyKarteDocumentWriteRoute);
+        assertThat(routeKeys)
+                .noneMatch(PublicRouteInventoryContractTest::isKarteDocumentRouteSurface);
         assertThat(routeKeys).contains("POST /api/charts/document-drafts");
 
         assertThat(routes)
@@ -127,6 +129,8 @@ class PublicRouteInventoryContractTest {
                 .containsExactly("GET /api/local/diagnoses/{*}");
         assertThat(routeKeys)
                 .noneMatch(routeKey -> routeKey.contains(" /api/prescriptions"));
+        assertThat(routeKeys)
+                .noneMatch(PublicRouteInventoryContractTest::isDisallowedLocalDiseaseMutationSurface);
         assertThat(localRoutes)
                 .allMatch(routeKey -> !isOfficialLike(routeKey));
         assertThat(routeKeys).contains(
@@ -226,6 +230,21 @@ class PublicRouteInventoryContractTest {
         return normalized.contains("/api/local/patient") && !normalized.equals("post /api/local/patients/search");
     }
 
+    private static boolean isDisallowedLocalDiseaseMutationSurface(String routeKey) {
+        String normalized = routeKey.toLowerCase(Locale.ROOT);
+        if (!normalized.contains(" /api/local/diagnos")
+                && !normalized.contains(" /api/local/disease")) {
+            return false;
+        }
+        if (normalized.equals("get /api/local/diagnoses/{*}")) {
+            return false;
+        }
+        return normalized.startsWith("post ")
+                || normalized.startsWith("put ")
+                || normalized.startsWith("patch ")
+                || normalized.startsWith("delete ");
+    }
+
     private static boolean isTextPlain(String mediaType) {
         if (mediaType == null || mediaType.isBlank()) {
             return false;
@@ -243,6 +262,12 @@ class PublicRouteInventoryContractTest {
                 || routeKey.equals("PUT /api/karte/document")
                 || routeKey.equals("PUT /api/karte/document/{*}")
                 || routeKey.equals("DELETE /api/karte/document/{*}");
+    }
+
+    private static boolean isKarteDocumentRouteSurface(String routeKey) {
+        String normalized = routeKey.toLowerCase(Locale.ROOT);
+        return normalized.endsWith(" /api/karte/document")
+                || normalized.contains(" /api/karte/document/{*}");
     }
 
     private static String readStringConstant(Class<?> type, String fieldName) throws Exception {

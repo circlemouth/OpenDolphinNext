@@ -107,6 +107,7 @@ cd web-client && npm run ci
 - guard allowlist は `path + route + category + reason` で管理され、allowlist にない `/api/orca/queue` または `/api/orca/pusheventgetv2` は failure。`/api/orca/(official|master 以外)` の新規 route、および production source に混入した mock/test-only legacy route surface も failure。
 - public route は `/api/orca/official/*` と `/api/orca/master/*` だけを意味する。production fail-close sentinel、MSW mock/test-only legacy route surface、e2e/QA fixture surface、blocked-route detector、docs/reference、server route inventory negative assertion、web.xml exposure negative assertion は public route ではない。
 - `verify:no-direct-orca-proxy-config` が Vite config / env sample / tracked env files を検査し、生 ORCA/WebORCA path、ORCA credential/certificate variable、ORCA TLS bypass、ORCA header filtering config の web-client 再混入を failure にする。
+- `verify:prod-bundle-secrets` が production bundle を検査し、ORCA URL、Basic 認証文字列、ORCA credential / certificate env 名、秘密鍵、証明書、証明書パスワード key の混入を failure にする。`npm run build` は `vite build` 後、artifact pruning 前にこの検査を実行する。
 - `verify:medical-safety-ui-copy` が production UI/current docs を検査し、ORCA送信成功と診療録確定/会計済み/登録済み/反映済みを混同する文言、`ORCAへ反映` / `会計へ反映`、重要警告を details/disclosure へ戻す記述の再混入を failure にする。
 - typecheck / test / build まで成功する。
 

@@ -164,7 +164,7 @@ export function WebOrcaConnectionCard({
               htmlFor="orca-connection-server-url"
               required
               error={fieldErrors.serverUrl}
-              hint="例: https://weborca.cloud.orcamo.jp"
+              hint="施設のサーバー側設定で許可された接続先 URL のみ保存します。"
             >
               <input
                 id="orca-connection-server-url"
@@ -243,7 +243,7 @@ export function WebOrcaConnectionCard({
               label="Push URL"
               htmlFor="orca-connection-push-url"
               error={fieldErrors.pushUrl}
-              hint="例: wss://push.example.orca/ws。ws:// または wss:// の絶対 URL のみ保存します。"
+              hint="Push URL はサーバー側で許可された ws:// または wss:// の絶対 URL のみ保存します。"
             >
               <input
                 id="orca-connection-push-url"
