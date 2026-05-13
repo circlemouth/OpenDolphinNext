@@ -1436,7 +1436,7 @@ export async function finalizePrescriptionAuthority(params: {
     patientId: params.patientId,
     encounterId,
   });
-  const createResponse = await httpFetch('/api/prescriptions', {
+  const createResponse = await httpFetch('/api/local/prescription-orders/authority', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1460,14 +1460,17 @@ export async function finalizePrescriptionAuthority(params: {
       : created;
   }
 
-  const finalizeResponse = await httpFetch(`/api/prescriptions/${encodeURIComponent(String(created.prescriptionId))}/finalize`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      patientId: params.patientId,
-      encounterId,
-    }),
-  });
+  const finalizeResponse = await httpFetch(
+    `/api/local/prescription-orders/authority/${encodeURIComponent(String(created.prescriptionId))}/finalize`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: params.patientId,
+        encounterId,
+      }),
+    },
+  );
   const finalizeParsed = await parseOrcaApiResponse(finalizeResponse, {
     fallbackMessage: '処方確定に失敗しました。',
   });

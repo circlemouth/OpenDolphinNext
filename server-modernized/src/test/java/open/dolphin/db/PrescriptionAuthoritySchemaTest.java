@@ -6,9 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import javax.sql.DataSource;
+import open.dolphin.rest.orca.PrescriptionOrderEventHashChainVerifier;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 
@@ -54,9 +59,10 @@ class PrescriptionAuthoritySchemaTest {
                         """.formatted(revisionId));
                 statement.executeUpdate("""
                         INSERT INTO opendolphin.prescription_order_event
-                            (prescription_order_id, prescription_order_revision_id, event_type, actor_user_id)
+                            (prescription_order_id, prescription_order_revision_id, event_type, actor_user_id,
+                             previous_event_hash, event_hash)
                         VALUES
-                            (%d, %d, 'CREATE', 'doctor-1')
+                            (%d, %d, 'CREATE', 'doctor-1', repeat('0', 64), repeat('1', 64))
                         """.formatted(orderId, revisionId));
 
                 statement.executeUpdate("""
@@ -131,10 +137,71 @@ class PrescriptionAuthoritySchemaTest {
                         """.formatted(changedRevisionId, orderId));
                 statement.executeUpdate("""
                         INSERT INTO opendolphin.prescription_order_event
-                            (prescription_order_id, prescription_order_revision_id, event_type, reason_text, actor_user_id)
+                            (prescription_order_id, prescription_order_revision_id, event_type, reason_text, actor_user_id,
+                             previous_event_hash, event_hash)
                         VALUES
-                            (%d, %d, 'CHANGE', 'required clinical reason', 'doctor-1')
+                            (%d, %d, 'CHANGE', 'required clinical reason', 'doctor-1', repeat('1', 64), repeat('2', 64))
                         """.formatted(orderId, changedRevisionId));
+            }
+        }
+    }
+
+    @Test
+    void prescriptionEventHashChainVerifierDetectsTamperedHistoricalEvent() throws Exception {
+        try (EmbeddedPostgres postgres = EmbeddedPostgres.builder().start()) {
+            DataSource dataSource = postgres.getPostgresDatabase();
+            Flyway.configure()
+                    .dataSource(dataSource)
+                    .defaultSchema("opendolphin")
+                    .schemas("opendolphin")
+                    .locations("classpath:db/migration")
+                    .load()
+                    .migrate();
+
+            try (Connection connection = dataSource.getConnection();
+                    Statement statement = connection.createStatement()) {
+                long orderId = nextId(statement, """
+                        INSERT INTO opendolphin.prescription_order
+                            (facility_id, patient_id, encounter_id, chart_revision_id, created_by)
+                        VALUES
+                            ('F001', 'P001', 'ENC-001', 'REV-001', 'doctor-1')
+                        RETURNING prescription_order_id
+                        """);
+                long revisionId = nextId(statement, """
+                        INSERT INTO opendolphin.prescription_order_revision
+                            (prescription_order_id, revision_number, status, content_hash, finalized_by, finalized_at, created_by,
+                             before_summary_json, after_summary_json)
+                        VALUES
+                            (%d, 1, 'FINAL', repeat('a', 64), 'doctor-1', '2026-05-13T10:00:00Z', 'doctor-1',
+                             '{}'::jsonb, '{"drug":"A"}'::jsonb)
+                        RETURNING prescription_order_revision_id
+                        """.formatted(orderId));
+                statement.executeUpdate("""
+                        UPDATE opendolphin.prescription_order
+                           SET current_revision_id = %d, status = 'FINAL'
+                         WHERE prescription_order_id = %d
+                        """.formatted(revisionId, orderId));
+                insertHashedEvent(statement, orderId, revisionId, "FINALIZE", "doctor-1",
+                        "2026-05-13T10:00:00Z", "{}", "{\"drug\": \"A\"}",
+                        PrescriptionOrderEventHashChainVerifier.GENESIS_HASH);
+                String firstHash = eventHash(statement, orderId, 1);
+                insertHashedEvent(statement, orderId, revisionId, "RESEND", "doctor-1",
+                        "2026-05-13T10:01:00Z", "{\"drug\": \"A\"}", "{\"drug\": \"A\"}", firstHash);
+
+                assertTrue(PrescriptionOrderEventHashChainVerifier.verify(loadEventRows(statement, orderId)).isEmpty());
+
+                statement.execute("ALTER TABLE opendolphin.prescription_order_event DISABLE TRIGGER USER");
+                statement.executeUpdate("""
+                        UPDATE opendolphin.prescription_order_event
+                           SET after_summary_json = '{"drug":"TAMPERED"}'::jsonb
+                         WHERE prescription_order_id = %d
+                           AND event_type = 'FINALIZE'
+                        """.formatted(orderId));
+                statement.execute("ALTER TABLE opendolphin.prescription_order_event ENABLE TRIGGER USER");
+
+                List<PrescriptionOrderEventHashChainVerifier.HashChainError> errors =
+                        PrescriptionOrderEventHashChainVerifier.verify(loadEventRows(statement, orderId));
+                assertTrue(errors.stream().anyMatch(error -> "event_hash_mismatch".equals(error.reason())));
             }
         }
     }
@@ -149,5 +216,88 @@ class PrescriptionAuthoritySchemaTest {
     private void assertPrescriptionOverwriteDenied(SQLException exception) {
         assertEquals("23514", exception.getSQLState());
         assertTrue(exception.getMessage().contains("prescription_order_finalized_update_denied"));
+    }
+
+    private void insertHashedEvent(Statement statement,
+            long orderId,
+            long revisionId,
+            String eventType,
+            String actor,
+            String occurredAt,
+            String beforeJson,
+            String afterJson,
+            String previousHash) throws SQLException {
+        String eventHash = PrescriptionOrderEventHashChainVerifier.computeEventHash(
+                orderId,
+                revisionId,
+                eventType,
+                actor,
+                Instant.parse(occurredAt),
+                normalizeJson(statement, beforeJson),
+                normalizeJson(statement, afterJson),
+                previousHash);
+        statement.executeUpdate("""
+                INSERT INTO opendolphin.prescription_order_event
+                    (prescription_order_id, prescription_order_revision_id, event_type, actor_user_id, occurred_at,
+                     before_summary_json, after_summary_json, previous_event_hash, event_hash)
+                VALUES
+                    (%d, %d, '%s', '%s', '%s'::timestamptz, '%s'::jsonb, '%s'::jsonb, '%s', '%s')
+                """.formatted(orderId, revisionId, eventType, actor, occurredAt, beforeJson, afterJson, previousHash, eventHash));
+    }
+
+    private String eventHash(Statement statement, long orderId, int offset) throws SQLException {
+        try (ResultSet resultSet = statement.executeQuery("""
+                SELECT event_hash
+                  FROM opendolphin.prescription_order_event
+                 WHERE prescription_order_id = %d
+                 ORDER BY occurred_at ASC, prescription_order_event_id ASC
+                 OFFSET %d
+                 LIMIT 1
+                """.formatted(orderId, offset - 1))) {
+            assertTrue(resultSet.next());
+            return resultSet.getString(1);
+        }
+    }
+
+    private List<PrescriptionOrderEventHashChainVerifier.EventRow> loadEventRows(Statement statement, long orderId)
+            throws SQLException {
+        List<PrescriptionOrderEventHashChainVerifier.EventRow> rows = new ArrayList<>();
+        try (ResultSet resultSet = statement.executeQuery("""
+                SELECT prescription_order_event_id,
+                       prescription_order_id,
+                       prescription_order_revision_id,
+                       event_type,
+                       actor_user_id,
+                       occurred_at,
+                       before_summary_json::text,
+                       after_summary_json::text,
+                       previous_event_hash,
+                       event_hash
+                  FROM opendolphin.prescription_order_event
+                 WHERE prescription_order_id = %d
+                 ORDER BY occurred_at ASC, prescription_order_event_id ASC
+                """.formatted(orderId))) {
+            while (resultSet.next()) {
+                rows.add(new PrescriptionOrderEventHashChainVerifier.EventRow(
+                        resultSet.getLong(1),
+                        resultSet.getLong(2),
+                        resultSet.getLong(3),
+                        resultSet.getString(4),
+                        resultSet.getString(5),
+                        resultSet.getTimestamp(6).toInstant(),
+                        resultSet.getString(7),
+                        resultSet.getString(8),
+                        resultSet.getString(9),
+                        resultSet.getString(10)));
+            }
+        }
+        return rows;
+    }
+
+    private String normalizeJson(Statement statement, String json) throws SQLException {
+        try (ResultSet resultSet = statement.executeQuery("SELECT '" + json.replace("'", "''") + "'::jsonb::text")) {
+            assertTrue(resultSet.next());
+            return resultSet.getString(1);
+        }
     }
 }

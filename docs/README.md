@@ -8,6 +8,7 @@
 - [contracts/audit-log.md](contracts/audit-log.md)
 - [contracts/audit-event-coverage-inventory.md](contracts/audit-event-coverage-inventory.md)
 - [contracts/prescription-authority.md](contracts/prescription-authority.md)
+- [contracts/prescription-authority-api.md](contracts/prescription-authority-api.md)
 - [contracts/protected-export-authorization-matrix.md](contracts/protected-export-authorization-matrix.md)
 - [architecture/](architecture/)
 - [architecture/repository-doc-taxonomy.md](architecture/repository-doc-taxonomy.md)

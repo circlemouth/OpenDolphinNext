@@ -6,12 +6,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.HexFormat;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import open.dolphin.rest.dto.orca.PrescriptionDrug;
 import open.dolphin.rest.dto.orca.PrescriptionOrder;
@@ -116,6 +113,23 @@ class PrescriptionAuthorityRepository {
         return new PrescriptionMutationResult(orderId, revisionId, status, resolvedContentHash, text(row[3]), text(row[4]));
     }
 
+    PrescriptionMutationResult recordResend(long orderId,
+            String reasonCode,
+            String reasonText,
+            String actor,
+            Instant now) {
+        Object[] row = loadOrderForUpdate(orderId);
+        String currentStatus = text(row[2]);
+        if ("DRAFT".equals(currentStatus)) {
+            throw new IllegalStateException("prescription_order_not_finalized");
+        }
+        long revisionId = number(row[1]);
+        Object currentSummary = summaryFromRevision(revisionId);
+        insertEvent(orderId, revisionId, "RESEND", reasonCode, reasonText, actor, now, currentSummary, currentSummary);
+        return new PrescriptionMutationResult(orderId, revisionId, currentStatus,
+                contentHashFromRevision(revisionId), text(row[3]), text(row[4]));
+    }
+
     private Object summaryFromRevision(long revisionId) {
         return entityManager.createNativeQuery("""
                         SELECT after_summary_json
@@ -124,6 +138,16 @@ class PrescriptionAuthorityRepository {
                         """)
                 .setParameter(1, revisionId)
                 .getSingleResult();
+    }
+
+    private String contentHashFromRevision(long revisionId) {
+        return text(entityManager.createNativeQuery("""
+                        SELECT content_hash
+                          FROM opendolphin.prescription_order_revision
+                         WHERE prescription_order_revision_id = ?
+                        """)
+                .setParameter(1, revisionId)
+                .getSingleResult());
     }
 
     private Object[] loadOrderForUpdate(long orderId) {
@@ -354,11 +378,25 @@ class PrescriptionAuthorityRepository {
             Instant now,
             Object before,
             Object after) {
+        Instant occurredAt = now.truncatedTo(ChronoUnit.MICROS);
+        String beforeJson = normalizedJson(before);
+        String afterJson = normalizedJson(after);
+        String previousHash = previousEventHash(orderId);
+        String eventHash = PrescriptionOrderEventHashChainVerifier.computeEventHash(
+                orderId,
+                revisionId,
+                eventType,
+                actor,
+                occurredAt,
+                beforeJson,
+                afterJson,
+                previousHash);
         entityManager.createNativeQuery("""
                         INSERT INTO opendolphin.prescription_order_event
                             (prescription_order_id, prescription_order_revision_id, event_type, reason_code,
-                             reason_text, actor_user_id, occurred_at, before_summary_json, after_summary_json)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), cast(? as jsonb))
+                             reason_text, actor_user_id, occurred_at, before_summary_json, after_summary_json,
+                             previous_event_hash, event_hash)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), cast(? as jsonb), ?, ?)
                         """)
                 .setParameter(1, orderId)
                 .setParameter(2, revisionId)
@@ -366,10 +404,32 @@ class PrescriptionAuthorityRepository {
                 .setParameter(4, reasonCode)
                 .setParameter(5, reasonText)
                 .setParameter(6, actor)
-                .setParameter(7, Timestamp.from(now))
-                .setParameter(8, json(before))
-                .setParameter(9, json(after))
+                .setParameter(7, Timestamp.from(occurredAt))
+                .setParameter(8, beforeJson)
+                .setParameter(9, afterJson)
+                .setParameter(10, previousHash)
+                .setParameter(11, eventHash)
                 .executeUpdate();
+    }
+
+    private String previousEventHash(long orderId) {
+        @SuppressWarnings("unchecked")
+        List<String> hashes = entityManager.createNativeQuery("""
+                        SELECT event_hash
+                          FROM opendolphin.prescription_order_event
+                         WHERE prescription_order_id = ?
+                         ORDER BY occurred_at DESC, prescription_order_event_id DESC
+                         LIMIT 1
+                        """)
+                .setParameter(1, orderId)
+                .getResultList();
+        return hashes.isEmpty() ? PrescriptionOrderEventHashChainVerifier.GENESIS_HASH : hashes.get(0);
+    }
+
+    private String normalizedJson(Object value) {
+        return text(entityManager.createNativeQuery("SELECT cast(cast(? as jsonb) as text)")
+                .setParameter(1, json(value))
+                .getSingleResult());
     }
 
     private void enableAuthorityMutation() {
@@ -392,12 +452,7 @@ class PrescriptionAuthorityRepository {
     }
 
     private String sha256(String value) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("sha256_unavailable", ex);
-        }
+        return PrescriptionOrderEventHashChainVerifier.sha256(value);
     }
 
     private long number(Object value) {
