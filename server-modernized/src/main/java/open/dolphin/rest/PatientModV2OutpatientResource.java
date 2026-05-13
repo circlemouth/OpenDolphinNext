@@ -12,7 +12,9 @@ import jakarta.ws.rs.core.Response;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.orca.service.OrcaPatientCacheStore;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.sync.OrcaPatientSyncService;
@@ -105,9 +107,6 @@ public class PatientModV2OutpatientResource extends AbstractResource {
         String traceId = resolveTraceId(request);
         String requestId = resolveRequestId(request, traceId);
         String facilityId = requireFacilityId(request);
-        if (facilityId == null || facilityId.isBlank()) {
-            throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing", "Facility is required");
-        }
         PatientModV2OutpatientSupport.PatientPatch patch = PatientModV2OutpatientSupport.toCreatePatch(body);
         OfficialPatientMutationResponse response = createBaseResponse(runId, traceId, requestId);
         Map<String, Object> details = createAuditDetails(request, "create", patch, runId, facilityId, response.getFetchedAt());
@@ -124,7 +123,7 @@ public class PatientModV2OutpatientResource extends AbstractResource {
             applyObservabilityHeaders(builder, runId, traceId, requestId, DATA_SOURCE_SERVER, false);
             return builder.build();
         } catch (RuntimeException ex) {
-            details.put("errorMessage", ex.getMessage());
+            details.put("failureClass", ex.getClass().getSimpleName());
             dispatchAuditEvent(request, details, CREATE_AUDIT_ACTION, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
@@ -135,9 +134,6 @@ public class PatientModV2OutpatientResource extends AbstractResource {
         String traceId = resolveTraceId(request);
         String requestId = resolveRequestId(request, traceId);
         String facilityId = requireFacilityId(request);
-        if (facilityId == null || facilityId.isBlank()) {
-            throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing", "Facility is required");
-        }
         PatientModV2OutpatientSupport.PatientPatch patch = PatientModV2OutpatientSupport.toUpdatePatch(body);
         if (patch.patientId == null || patch.patientId.isBlank() || "*".equals(patch.patientId)) {
             throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "patientId is required");
@@ -158,7 +154,7 @@ public class PatientModV2OutpatientResource extends AbstractResource {
             applyObservabilityHeaders(builder, runId, traceId, requestId, DATA_SOURCE_SERVER, false);
             return builder.build();
         } catch (RuntimeException ex) {
-            details.put("errorMessage", ex.getMessage());
+            details.put("failureClass", ex.getClass().getSimpleName());
             dispatchAuditEvent(request, details, UPDATE_AUDIT_ACTION, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
@@ -199,7 +195,12 @@ public class PatientModV2OutpatientResource extends AbstractResource {
                 : ("create".equals(operation) ? CREATE_RESOURCE_PATH : UPDATE_RESOURCE_PATH));
         details.put("operation", operation);
         details.put("patientId", patch.patientId);
+        details.put("orcaPatientId", patch.patientId);
         details.put("runId", runId);
+        details.put("operationId", createOperationId(operation, runId, facilityId, patch.patientId));
+        if (request != null && request.getRemoteUser() != null && !request.getRemoteUser().isBlank()) {
+            details.put("actor", request.getRemoteUser().trim());
+        }
         String scope = AbstractOrcaRestResource.resolveAuditScope(
                 request != null ? request.getRequestURI() : ("create".equals(operation) ? CREATE_RESOURCE_PATH : UPDATE_RESOURCE_PATH));
         if (scope != null && !scope.isBlank()) {
@@ -213,6 +214,7 @@ public class PatientModV2OutpatientResource extends AbstractResource {
         details.put("fallbackUsed", Boolean.FALSE);
         details.put("fetchedAt", fetchedAt);
         details.put("facilityId", facilityId);
+        details.put("resolvedFacilityId", facilityId);
         if (patch.changedKeys != null && !patch.changedKeys.isEmpty()) {
             details.put("changedKeys", List.copyOf(patch.changedKeys));
         }
@@ -230,6 +232,7 @@ public class PatientModV2OutpatientResource extends AbstractResource {
         response.setPatientDbId(result.patient != null ? result.patient.getId() : null);
         response.setPatientId(result.patient != null ? result.patient.getPatientId() : details.get("patientId").toString());
         response.setPatient(result.patient != null ? PatientModV2OutpatientSupport.toPatientRecord(result.patient) : null);
+        details.put("orcaPatientId", response.getPatientId());
         response.setIdempotent(result.idempotent);
         response.setIdempotentReason(result.idempotentReason);
         response.setOrcaMutationPrepared(result.orcaMutationPrepared);
@@ -267,19 +270,29 @@ public class PatientModV2OutpatientResource extends AbstractResource {
     }
 
     private String requireFacilityId(HttpServletRequest request) {
-        if (request == null) {
-            return null;
+        if (request == null || request.getRemoteUser() == null || request.getRemoteUser().isBlank()) {
+            throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing",
+                    "Authenticated facility is required");
         }
-        String remoteUser = request.getRemoteUser();
+        String remoteUser = request.getRemoteUser().trim();
+        if (remoteUser.indexOf(IInfoModel.COMPOSITE_KEY_MAKER) < 0) {
+            throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing",
+                    "Authenticated principal must include facility and user id");
+        }
         String facilityId = getRemoteFacility(remoteUser);
-        if (facilityId != null && !facilityId.isBlank()) {
-            return facilityId;
+        if (facilityId == null || facilityId.isBlank()) {
+            throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing",
+                    "Authenticated facility is required");
         }
-        String header = request.getHeader("X-Facility-Id");
-        if (header != null && !header.isBlank()) {
-            return header.trim();
-        }
-        return null;
+        return facilityId;
+    }
+
+    private String createOperationId(String operation, String runId, String facilityId, String patientId) {
+        String safeOperation = operation != null && !operation.isBlank() ? operation : "patientmodv2";
+        String safeRunId = runId != null && !runId.isBlank() ? runId : "run";
+        String safeFacility = facilityId != null && !facilityId.isBlank() ? facilityId : "facility";
+        String patientPart = patientId != null && !patientId.isBlank() ? patientId : "auto";
+        return safeOperation + ":" + safeRunId + ":" + safeFacility + ":" + patientPart + ":" + UUID.randomUUID();
     }
 
     private void dispatchAuditEvent(HttpServletRequest request,
