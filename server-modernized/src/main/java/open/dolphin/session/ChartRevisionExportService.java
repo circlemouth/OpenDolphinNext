@@ -32,6 +32,9 @@ import java.util.regex.Pattern;
 import open.dolphin.infomodel.ChartDocumentModel;
 import open.dolphin.infomodel.ChartRevisionEventModel;
 import open.dolphin.infomodel.ChartRevisionModel;
+import open.dolphin.infomodel.AttachmentModel;
+import open.dolphin.infomodel.DocumentModel;
+import open.dolphin.infomodel.ModuleModel;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.reporting.ReportingEngine;
 import open.dolphin.reporting.ReportingResult;
@@ -313,6 +316,34 @@ public class ChartRevisionExportService {
         items.add(reportSummaryItem("Current revision", "Current revision",
                 String.valueOf(export.getCurrentRevisionNumber())));
         items.add(reportSummaryItem("Current status", "Current status", export.getCurrentRevisionStatus()));
+        ChartRevisionExportRevision current = currentRevision(export);
+        items.add(reportSummaryItem("Encounter date", "Encounter date", current.getEncounterDate()));
+        items.add(reportSummaryItem("ORCA acceptance ID", "ORCA acceptance ID",
+                textSummaryValue(current.getSnapshotManifest(), "orcaAcceptanceId", current.getEncounterId())));
+        items.add(reportSummaryItem("Department", "Department", current.getDepartmentCode()));
+        items.add(reportSummaryItem("Physician", "Physician", current.getPhysicianCode()));
+        items.add(reportSummaryItem("Insurance combination", "Insurance combination",
+                current.getInsuranceCombinationNumber()));
+        items.add(reportSummaryItem("OpenDolphinNext chart authority sections",
+                "OpenDolphinNext chart authority sections",
+                String.valueOf(current.getClinicalSections().size())));
+        items.add(reportSummaryItem("OpenDolphinNext attachment metadata",
+                "OpenDolphinNext attachment metadata",
+                String.valueOf(current.getAttachments().size())));
+        for (Map<String, Object> section : current.getClinicalSections()) {
+            items.add(reportSummaryItem(
+                    "Clinical section (" + textSummaryValue(section, "title", "untitled") + ")",
+                    "Clinical section (" + textSummaryValue(section, "title", "untitled") + ")",
+                    textSummaryValue(section, "text", "unavailable")));
+        }
+        for (Map<String, Object> attachment : current.getAttachments()) {
+            items.add(reportSummaryItem(
+                    "Attachment (" + textSummaryValue(attachment, "fileName", "unnamed") + ")",
+                    "Attachment (" + textSummaryValue(attachment, "fileName", "unnamed") + ")",
+                    "digest=" + textSummaryValue(attachment, "digest", "unavailable")
+                            + "; contentType=" + textSummaryValue(attachment, "contentType", "unavailable")
+                            + "; size=" + textSummaryValue(attachment, "contentSize", "0")));
+        }
         items.add(reportSummaryItem("Revision count", "Revision count", String.valueOf(export.getRevisionCount())));
         items.add(reportSummaryItem("Chart event count", "Chart event count", String.valueOf(export.getEventCount())));
         items.add(reportSummaryItem("Prescription event count", "Prescription event count",
@@ -320,6 +351,14 @@ public class ChartRevisionExportService {
         items.add(reportSummaryItem("ORCA event count", "ORCA event count",
                 String.valueOf(export.getOrcaEvents().size())));
         return items;
+    }
+
+    private String textSummaryValue(Map<String, Object> summary, String key, String fallback) {
+        Object value = summary != null ? summary.get(key) : null;
+        if (value != null && !String.valueOf(value).isBlank()) {
+            return String.valueOf(value);
+        }
+        return fallback;
     }
 
     private ReportingSummaryItemPayload reportSummaryItem(String label, String labelEn, String value) {
@@ -682,6 +721,9 @@ public class ChartRevisionExportService {
         dto.setDepartmentCode(redactUnsafeText(revision.getDepartmentCode()));
         dto.setPhysicianCode(redactUnsafeText(revision.getPhysicianCode()));
         dto.setInsuranceCombinationNumber(redactUnsafeText(revision.getInsuranceCombinationNumber()));
+        DocumentModel sourceDocument = loadSourceDocument(revision.getSourceDocumentId());
+        dto.setClinicalSections(clinicalSections(sourceDocument));
+        dto.setAttachments(attachmentSummaries(sourceDocument));
         dto.setSnapshotManifest(sanitizeSnapshotManifest(revision.getSnapshotManifestJson()));
         dto.setEnteredByUserId(revision.getEnteredByUserId());
         dto.setEntryMode(revision.getEntryMode() != null ? revision.getEntryMode().name() : null);
@@ -689,6 +731,144 @@ public class ChartRevisionExportService {
         dto.setFinalizedByUserId(revision.getFinalizedByUserId());
         dto.setFinalizedAt(revision.getFinalizedAt() != null ? revision.getFinalizedAt().toString() : null);
         return dto;
+    }
+
+    private DocumentModel loadSourceDocument(Long sourceDocumentId) {
+        if (sourceDocumentId == null) {
+            return null;
+        }
+        return em.find(DocumentModel.class, sourceDocumentId);
+    }
+
+    private List<Map<String, Object>> clinicalSections(DocumentModel sourceDocument) {
+        if (sourceDocument == null || sourceDocument.getModules() == null) {
+            return List.of();
+        }
+        List<Map<String, Object>> sections = new ArrayList<>();
+        for (ModuleModel module : sourceDocument.getModules()) {
+            if (module == null) {
+                continue;
+            }
+            String text = extractClinicalText(module.getBeanJson());
+            if (text == null || text.isBlank()) {
+                continue;
+            }
+            Map<String, Object> section = new LinkedHashMap<>();
+            section.put("sourceOfTruth", "OpenDolphinNext");
+            section.put("sourceLayer", "chart-authority");
+            section.put("moduleId", module.getId());
+            if (module.getModuleInfoBean() != null) {
+                section.put("entity", redactUnsafeText(module.getModuleInfoBean().getEntity()));
+                section.put("title", redactUnsafeText(module.getModuleInfoBean().getStampName()));
+            }
+            section.put("text", redactUnsafeText(text));
+            Map<String, Object> hashMaterial = new LinkedHashMap<>();
+            hashMaterial.put("moduleId", module.getId());
+            hashMaterial.put("entity", module.getModuleInfoBean() != null ? module.getModuleInfoBean().getEntity() : null);
+            hashMaterial.put("text", redactUnsafeText(text));
+            section.put("contentHash", sha256(writeJson(hashMaterial)));
+            sections.add(section);
+        }
+        return sections;
+    }
+
+    private String extractClinicalText(String beanJson) {
+        if (beanJson == null || beanJson.isBlank()) {
+            return null;
+        }
+        try {
+            JsonNode root = OBJECT_MAPPER.readTree(beanJson);
+            List<String> text = new ArrayList<>();
+            collectClinicalText(root, text);
+            if (!text.isEmpty()) {
+                return String.join("\n", text);
+            }
+        } catch (JsonProcessingException ignored) {
+            return null;
+        }
+        return null;
+    }
+
+    private void collectClinicalText(JsonNode node, List<String> text) {
+        if (node == null || node.isNull()) {
+            return;
+        }
+        if (node.isTextual()) {
+            String value = node.asText();
+            if (looksLikeJsonObject(value)) {
+                try {
+                    collectClinicalText(OBJECT_MAPPER.readTree(value), text);
+                } catch (JsonProcessingException ignored) {
+                    // Ignore nested parse failures; raw JSON strings are not exported.
+                }
+            }
+            return;
+        }
+        if (node.isObject()) {
+            node.fields().forEachRemaining(entry -> {
+                String key = entry.getKey();
+                JsonNode value = entry.getValue();
+                if (isClinicalTextKey(key) && value != null && value.isTextual()) {
+                    String normalized = redactUnsafeText(value.asText());
+                    if (normalized != null && !normalized.isBlank()) {
+                        text.add(key + ": " + normalized);
+                    }
+                    return;
+                }
+                collectClinicalText(value, text);
+            });
+            return;
+        }
+        if (node.isArray()) {
+            node.forEach(item -> collectClinicalText(item, text));
+        }
+    }
+
+    private boolean looksLikeJsonObject(String value) {
+        String trimmed = value != null ? value.trim() : "";
+        return trimmed.startsWith("{") && trimmed.endsWith("}");
+    }
+
+    private boolean isClinicalTextKey(String key) {
+        if (key == null) {
+            return false;
+        }
+        String normalized = key.toLowerCase();
+        return normalized.equals("freetext")
+                || normalized.equals("soap")
+                || normalized.equals("subjective")
+                || normalized.equals("objective")
+                || normalized.equals("assessment")
+                || normalized.equals("plan")
+                || normalized.equals("findings")
+                || normalized.equals("explanation")
+                || normalized.equals("patientexplanation")
+                || normalized.equals("description");
+    }
+
+    private List<Map<String, Object>> attachmentSummaries(DocumentModel sourceDocument) {
+        if (sourceDocument == null || sourceDocument.getAttachment() == null) {
+            return List.of();
+        }
+        List<Map<String, Object>> attachments = new ArrayList<>();
+        for (AttachmentModel attachment : sourceDocument.getAttachment()) {
+            if (attachment == null) {
+                continue;
+            }
+            Map<String, Object> summary = new LinkedHashMap<>();
+            summary.put("sourceOfTruth", "OpenDolphinNext");
+            summary.put("sourceLayer", "chart-attachment");
+            summary.put("attachmentId", attachment.getId());
+            summary.put("fileName", redactUnsafeText(attachment.getFileName()));
+            summary.put("title", redactUnsafeText(attachment.getTitle()));
+            summary.put("contentType", redactUnsafeText(attachment.getContentType()));
+            summary.put("contentSize", attachment.getContentSize());
+            summary.put("digest", redactUnsafeText(attachment.getDigest()));
+            summary.put("status", redactUnsafeText(attachment.getStatus()));
+            summary.put("externalized", attachment.getUri() != null && !attachment.getUri().isBlank());
+            attachments.add(summary);
+        }
+        return attachments;
     }
 
     private ChartRevisionExportEvent toEvent(ChartRevisionEventModel event) {
@@ -958,6 +1138,8 @@ public class ChartRevisionExportService {
         addSummary(joiner, "physicianCode", revision.getPhysicianCode());
         addSummary(joiner, "insuranceCombinationNumber", revision.getInsuranceCombinationNumber());
         flattenSummaryMap(joiner, "snapshot", revision.getSnapshotManifest());
+        addSummary(joiner, "clinicalSectionCount", revision.getClinicalSections().size());
+        addSummary(joiner, "attachmentCount", revision.getAttachments().size());
         addSummary(joiner, "enteredByUserId", revision.getEnteredByUserId());
         addSummary(joiner, "entryMode", revision.getEntryMode());
         addSummary(joiner, "delegatedByUserId", revision.getDelegatedByUserId());
@@ -1083,6 +1265,8 @@ public class ChartRevisionExportService {
         material.put("departmentCode", revision.getDepartmentCode());
         material.put("physicianCode", revision.getPhysicianCode());
         material.put("insuranceCombinationNumber", revision.getInsuranceCombinationNumber());
+        material.put("clinicalSections", revision.getClinicalSections());
+        material.put("attachments", revision.getAttachments());
         material.put("snapshotManifest", revision.getSnapshotManifest());
         material.put("enteredByUserId", revision.getEnteredByUserId());
         material.put("entryMode", revision.getEntryMode());

@@ -58,7 +58,9 @@ Read-write service may resume only after all of the following pass:
 2. Chart and prescription content hash verification confirms restored authoritative payloads match their stored hash metadata.
 3. Document integrity verification confirms active and historical keyring entries can verify stored documents under `document.integrity.mode=enforce`.
 4. Object storage inventory digest comparison confirms every referenced attachment/image object exists with the expected digest or provider checksum.
-5. Verification output is summarized with counts, fixed status, and digest values only. It must not include patient names, addresses, phone numbers, insurance identifiers, raw document contents, object keys beyond sanitized references, raw ORCA body, raw XML, or credentials.
+5. Export/readability hash verification confirms chart export JSON/PDF/CSV projections can be regenerated from restored OpenDolphinNext chart authority rows, prescription event rows, and ORCA operation ledger summaries without raw ORCA body, ORCA credentials, certificate material, storage URI, object key, or raw report binary references. The contract is [../contracts/export-readability.md](../contracts/export-readability.md).
+6. Accounting cache boundary verification confirms restored `orca_billing_cache` and `orca_report_snapshot` rows remain ORCA-derived cache/snapshot/log rows with `sourceSystem`, `sourceApi`, `fetchedAt`, visit boundary metadata where available, request/response hash, and sanitized summary only. The contract is [../contracts/accounting-cache-boundary.md](../contracts/accounting-cache-boundary.md).
+7. Verification output is summarized with counts, fixed status, and digest values only. It must not include patient names, addresses, phone numbers, insurance identifiers, raw document contents, object keys beyond sanitized references, raw ORCA body, raw XML, or credentials.
 
 If any check fails, keep the environment in read-only mode, create an incident record with sanitized failure classification, and do not run ORCA re-alignment or resend operations.
 

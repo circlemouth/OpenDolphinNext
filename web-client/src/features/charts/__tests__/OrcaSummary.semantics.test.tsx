@@ -291,9 +291,10 @@ describe('OrcaSummary semantics', () => {
     expectVisibleOutsideDetails('Transmission / medical-mod-v2');
     expectVisibleOutsideDetails('medical-mod-v2 の送信結果です。会計済み判定や診療録確定とは別に扱ってください。');
     expect(screen.queryByText(/medical-mod-v2.*診療録確定.*完了/)).not.toBeInTheDocument();
-    expectVisibleOutsideDetails('ORCA収納情報');
-    expectVisibleOutsideDetails('official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。');
+    expectVisibleOutsideDetails('ORCA由来 収納 cache');
+    expectVisibleOutsideDetails('ORCA正本由来の official incomeinfv2 cache です。OpenDolphinNext の会計・収納・領収正本ではありません。');
     expectVisibleOutsideDetails('対象日: 2026-03-09');
+    expectVisibleOutsideDetails(/ORCA受付ID: 1234-1/);
     expectVisibleOutsideDetails(/保険組合せ: 0001/);
     expectVisibleOutsideDetails('未収金合計 (Unpaid_Money_Total)');
     expectVisibleOutsideDetails('請求金額 (Ac_Money)');

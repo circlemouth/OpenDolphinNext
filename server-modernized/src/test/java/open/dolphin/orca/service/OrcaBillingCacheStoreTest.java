@@ -48,6 +48,7 @@ class OrcaBillingCacheStoreTest {
             response.setUnpaidMoneyTotal(1200.0);
             ChartSupportIncomeInfoResponse.Entry entry = new ChartSupportIncomeInfoResponse.Entry();
             entry.setPerformDate("2026-03-22");
+            entry.setDepartmentName("内科");
             entry.setInvoiceNumber("INV-SECRET-001");
             entry.setInsuranceCombinationNumber("INS-SECRET-001");
             entry.setAcMoney(1200.0);
@@ -66,6 +67,16 @@ class OrcaBillingCacheStoreTest {
                         "select source_system from opendolphin.orca_billing_cache"));
                 assertEquals("CURRENT", singleText(connection,
                         "select cache_status from opendolphin.orca_billing_cache"));
+                assertEquals("incomeinfv2", singleText(connection,
+                        "select source_api from opendolphin.orca_billing_cache"));
+                assertEquals("2026-03-22", singleText(connection,
+                        "select visit_date from opendolphin.orca_billing_cache"));
+                assertEquals("内科", singleText(connection,
+                        "select department from opendolphin.orca_billing_cache"));
+                assertEquals("INS-SECRET-001", singleText(connection,
+                        "select insurance_combination from opendolphin.orca_billing_cache"));
+                assertEquals("true", singleText(connection,
+                        "select (fetched_at is not null)::text from opendolphin.orca_billing_cache"));
             }
         }
     }

@@ -25,6 +25,10 @@ import open.dolphin.infomodel.ChartRevisionEventModel;
 import open.dolphin.infomodel.ChartRevisionEventType;
 import open.dolphin.infomodel.ChartRevisionModel;
 import open.dolphin.infomodel.ChartRevisionStatus;
+import open.dolphin.infomodel.AttachmentModel;
+import open.dolphin.infomodel.DocumentModel;
+import open.dolphin.infomodel.ModuleInfoBean;
+import open.dolphin.infomodel.ModuleModel;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.reporting.ReportingResult;
 import open.dolphin.reporting.api.ReportingPayload;
@@ -368,6 +372,39 @@ class ChartRevisionExportServiceTest {
     }
 
     @Test
+    void exportChartIncludesOpenDolphinChartTextAndAttachmentMetadataWithoutStorageAuthority() {
+        ChartRevisionModel revision = finalRevision();
+        revision.setSourceDocumentId(910L);
+        stubExportQueries(List.of(revision), List.of(finalizedEvent()));
+        when(em.find(DocumentModel.class, 910L)).thenReturn(sourceDocument());
+
+        ChartRevisionExportResponse response = service.exportChart(10L, "F001");
+
+        assertThat(response.getRevisions().get(0).getClinicalSections()).hasSize(1);
+        assertThat(response.getRevisions().get(0).getClinicalSections().get(0))
+                .containsEntry("sourceOfTruth", "OpenDolphinNext")
+                .containsEntry("sourceLayer", "chart-authority")
+                .containsEntry("entity", "progressCourse")
+                .containsEntry("title", "SOAP");
+        assertThat(String.valueOf(response.getRevisions().get(0).getClinicalSections().get(0).get("text")))
+                .contains("freeText: S: 発熱")
+                .contains("assessment: 急性上気道炎")
+                .contains("Authorization: [redacted]")
+                .doesNotContain("Basic secret")
+                .doesNotContain("rawOrcaBody");
+        assertThat(response.getRevisions().get(0).getAttachments()).hasSize(1);
+        assertThat(response.getRevisions().get(0).getAttachments().get(0))
+                .containsEntry("sourceOfTruth", "OpenDolphinNext")
+                .containsEntry("sourceLayer", "chart-attachment")
+                .containsEntry("fileName", "explanation.pdf")
+                .containsEntry("digest", "sha256:" + "1".repeat(64))
+                .containsEntry("externalized", true)
+                .doesNotContainKey("uri")
+                .doesNotContainKey("storageKey");
+        assertThat(response.getExportHash()).matches("[0-9a-f]{64}");
+    }
+
+    @Test
     void exportChartCsvIncludesOrcaHistoryRowsAndNeutralizesSpreadsheetFormulaInjection() {
         stubExportQueries(
                 List.of(finalRevision()),
@@ -392,8 +429,10 @@ class ChartRevisionExportServiceTest {
 
     @Test
     void exportChartReportingPayloadUsesServerDerivedPatientAndHistoryProjection() {
+        ChartRevisionModel revision = finalRevision();
+        revision.setSourceDocumentId(910L);
         stubExportQueries(
-                List.of(finalRevision()),
+                List.of(revision),
                 List.of(amendedEvent()),
                 List.<Object[]>of(prescriptionEventRow(
                         401L,
@@ -409,6 +448,7 @@ class ChartRevisionExportServiceTest {
                         "{\"operationStatus\":\"ORCA_ACCEPTED\",\"rawOrcaBody\":\"<xml>raw</xml>\"}",
                         "{\"apiResult\":\"00\",\"rawSensitiveFieldsExcluded\":true}",
                         "8".repeat(64))));
+        when(em.find(DocumentModel.class, 910L)).thenReturn(sourceDocument());
         when(em.find(PatientModel.class, 501L)).thenReturn(patient("F001"));
 
         ReportingPayload payload = service.exportChartReportingPayload(10L, "F001");
@@ -441,6 +481,14 @@ class ChartRevisionExportServiceTest {
                 .anySatisfy(item -> {
                     assertThat(item.getLabel()).isEqualTo("ORCA event count");
                     assertThat(item.getValue()).isEqualTo("1");
+                })
+                .anySatisfy(item -> {
+                    assertThat(item.getLabel()).startsWith("Clinical section");
+                    assertThat(item.getValue()).contains("急性上気道炎");
+                })
+                .anySatisfy(item -> {
+                    assertThat(item.getLabel()).startsWith("Attachment");
+                    assertThat(item.getValue()).contains("digest=sha256:");
                 });
     }
 
@@ -627,6 +675,41 @@ class ChartRevisionExportServiceTest {
         revision.setEnteredByUserId(101L);
         revision.setFinalizedByUserId(202L);
         return revision;
+    }
+
+    private DocumentModel sourceDocument() {
+        DocumentModel document = new DocumentModel();
+        document.setModules(List.of(progressModule()));
+        document.setAttachment(List.of(attachment()));
+        return document;
+    }
+
+    private ModuleModel progressModule() {
+        ModuleModel module = new ModuleModel();
+        module.setId(701L);
+        ModuleInfoBean info = new ModuleInfoBean();
+        info.setEntity("progressCourse");
+        info.setStampName("SOAP");
+        module.setModuleInfoBean(info);
+        module.setBeanJson("{\"schemaVersion\":1,\"moduleType\":\"progressCourse\","
+                + "\"payloadJson\":\"{\\\"freeText\\\":\\\"S: 発熱\\\\nO: 咽頭発赤\\\","
+                + "\\\"assessment\\\":\\\"急性上気道炎\\\","
+                + "\\\"description\\\":\\\"Authorization: Basic secret\\\\n<?xml version=\\\\\\\"1.0\\\\\\\"?><xml>raw</xml>\\\"}\"}");
+        return module;
+    }
+
+    private AttachmentModel attachment() {
+        AttachmentModel attachment = new AttachmentModel();
+        attachment.setId(801L);
+        attachment.setFileName("explanation.pdf");
+        attachment.setTitle("説明文書");
+        attachment.setContentType("application/pdf");
+        attachment.setContentSize(12345L);
+        attachment.setDigest("sha256:" + "1".repeat(64));
+        attachment.setUri("s3://secret-bucket/patient/raw-key.pdf");
+        attachment.setStorageKey("patient/raw-key.pdf");
+        attachment.setStatus("F");
+        return attachment;
     }
 
     private ChartRevisionEventModel finalizedEvent() {

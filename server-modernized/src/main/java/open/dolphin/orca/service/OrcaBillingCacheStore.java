@@ -40,13 +40,17 @@ public class OrcaBillingCacheStore {
                 request_hash,
                 response_hash,
                 entry_count,
+                acceptance_id,
+                visit_date,
+                department,
+                insurance_combination,
                 invoice_hashes_json,
                 unpaid_money_total,
                 unpaid_money_overflow,
                 normalized_summary_json,
                 fetched_at,
                 cache_expires_at
-            ) VALUES (?, 'incomeinfv2', ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, cast(? as jsonb), ?, ?)
+            ) VALUES (?, 'incomeinfv2', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, cast(? as jsonb), ?, ?)
             """;
 
     private static final String SQL_INSERT_REPORT_SNAPSHOT = """
@@ -91,6 +95,7 @@ public class OrcaBillingCacheStore {
         String responseHash = normalize(command.responseBody()) != null ? HashUtil.sha256(command.responseBody()) : null;
         String cacheStatus = response != null && response.isOk() ? "CURRENT" : "UNAVAILABLE";
         List<String> invoiceHashes = invoiceHashes(response);
+        BillingBoundary boundary = billingBoundary(response, command.baseDate());
         String summaryJson = toJson(incomeSummary(response, invoiceHashes));
 
         try (Connection connection = requireDataSource().getConnection();
@@ -105,16 +110,20 @@ public class OrcaBillingCacheStore {
             statement.setString(8, requestHash);
             statement.setString(9, responseHash);
             statement.setInt(10, response != null && response.getEntries() != null ? response.getEntries().size() : 0);
-            statement.setString(11, toJson(invoiceHashes));
+            statement.setString(11, boundary.acceptanceId());
+            statement.setString(12, boundary.visitDate());
+            statement.setString(13, boundary.department());
+            statement.setString(14, boundary.insuranceCombination());
+            statement.setString(15, toJson(invoiceHashes));
             if (response != null && response.getUnpaidMoneyTotal() != null) {
-                statement.setDouble(12, response.getUnpaidMoneyTotal());
+                statement.setDouble(16, response.getUnpaidMoneyTotal());
             } else {
-                statement.setObject(12, null);
+                statement.setObject(16, null);
             }
-            statement.setBoolean(13, response != null && Boolean.TRUE.equals(response.getUnpaidMoneyInformationOverflow()));
-            statement.setString(14, summaryJson);
-            statement.setTimestamp(15, Timestamp.from(fetchedAt));
-            statement.setTimestamp(16, Timestamp.from(cacheExpiresAt));
+            statement.setBoolean(17, response != null && Boolean.TRUE.equals(response.getUnpaidMoneyInformationOverflow()));
+            statement.setString(18, summaryJson);
+            statement.setTimestamp(19, Timestamp.from(fetchedAt));
+            statement.setTimestamp(20, Timestamp.from(cacheExpiresAt));
             statement.executeUpdate();
         } catch (SQLException ex) {
             throw new IllegalStateException("Failed to persist sanitized ORCA billing cache", ex);
@@ -194,6 +203,23 @@ public class OrcaBillingCacheStore {
         summary.put("unpaidMoneyOverflow", response != null && Boolean.TRUE.equals(response.getUnpaidMoneyInformationOverflow()));
         summary.put("entries", sanitizedIncomeEntries(response));
         return summary;
+    }
+
+    private static BillingBoundary billingBoundary(ChartSupportIncomeInfoResponse response, String baseDate) {
+        if (response == null || response.getEntries() == null || response.getEntries().isEmpty()) {
+            return new BillingBoundary(null, normalize(baseDate), null, null);
+        }
+        ChartSupportIncomeInfoResponse.Entry entry = response.getEntries().get(0);
+        String department = firstNonBlank(entry.getDepartmentName(), entry.getDepartmentCode());
+        return new BillingBoundary(
+                null,
+                firstNonBlank(entry.getPerformDate(), baseDate),
+                normalize(department),
+                normalize(entry.getInsuranceCombinationNumber()));
+    }
+
+    private record BillingBoundary(String acceptanceId, String visitDate, String department,
+                                   String insuranceCombination) {
     }
 
     private static List<Map<String, Object>> sanitizedIncomeEntries(ChartSupportIncomeInfoResponse response) {
@@ -322,6 +348,11 @@ public class OrcaBillingCacheStore {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String firstNonBlank(String first, String second) {
+        String normalized = normalize(first);
+        return normalized != null ? normalized : normalize(second);
     }
 
     private static String requireText(String value, String name) {
