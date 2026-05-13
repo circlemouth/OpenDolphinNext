@@ -10,11 +10,17 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -22,6 +28,7 @@ import java.util.regex.Pattern;
 import open.dolphin.msg.gateway.ExternalServiceAuditLogger;
 import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
+import open.dolphin.orca.service.OrcaOperationLedgerRepository;
 import open.dolphin.orca.transport.OrcaHttpClient.OrcaHttpResponse;
 import open.dolphin.orca.transport.OrcaTransportRegistry.OrcaResolvedTransport;
 import open.dolphin.rest.OrcaApiProxySupport;
@@ -51,6 +58,9 @@ public class RestOrcaTransport implements OrcaTransport {
 
     @Inject
     ServerConfigurationResolver configurationResolver;
+
+    @Inject
+    OrcaOperationLedgerRepository operationLedgerRepository;
 
     @PostConstruct
     private void initialize() {
@@ -107,6 +117,7 @@ public class RestOrcaTransport implements OrcaTransport {
         String query = resolveQuery(endpoint, payload, request);
         String url = resolved.buildUrl(endpoint, query);
         String accept = resolveAccept(endpoint, request);
+        Instant startedAt = Instant.now();
         try {
             ExternalServiceAuditLogger.logOrcaRequest(traceId, action, endpoint.getPath(), resolved.auditSummary());
             OrcaHttpResponse response = isGet
@@ -131,9 +142,11 @@ public class RestOrcaTransport implements OrcaTransport {
                     }
                 }
             }
+            recordLedger(facilityId, endpoint, method, query, payload, response, headers, traceId, startedAt, null);
             return new OrcaTransportResult(url, method, response.status(), response.body(), response.contentType(), headers);
         } catch (RuntimeException ex) {
             ExternalServiceAuditLogger.logOrcaFailure(traceId, action, endpoint.getPath(), resolved.auditSummary(), ex);
+            recordLedger(facilityId, endpoint, method, query, payload, null, Map.of(), traceId, startedAt, ex);
             throw ex;
         }
     }
@@ -163,7 +176,366 @@ public class RestOrcaTransport implements OrcaTransport {
     }
 
     private String resolveTraceId() {
+        return UUID.randomUUID().toString();
+    }
+
+    private void recordLedger(String facilityId, OrcaEndpoint endpoint, String method, String query, String payload,
+            OrcaHttpResponse response, Map<String, List<String>> headers, String traceId, Instant startedAt,
+            RuntimeException failure) {
+        if (operationLedgerRepository == null || endpoint == null) {
+            return;
+        }
+        String requestHash = sha256(method + "\n" + endpoint.getPath() + "\n" + nullToEmpty(query) + "\n" + nullToEmpty(payload));
+        String responseHash = response != null && response.body() != null
+                ? sha256(response.status() + "\n" + response.body())
+                : null;
+        String apiResult = resolveApiResult(response, headers);
+        String operationStatus = classifyOperationStatus(response, apiResult, failure);
+        String transportStatus = classifyTransportStatus(response, failure);
+        boolean needsReview = needsUserReview(operationStatus);
+        String sourceApi = sourceApi(endpoint);
+        String requestSummary = jsonObject(
+                "endpoint", endpoint.getPath(),
+                "method", method,
+                "requestHash", requestHash,
+                "rawSensitiveFieldsExcluded", "true",
+                "clientProvidedIdentifiersTrusted", "false");
+        String responseSummary = jsonObject(
+                "httpStatus", response != null ? Integer.toString(response.status()) : null,
+                "apiResult", apiResult,
+                "operationStatus", operationStatus,
+                "responseHash", responseHash,
+                "rawSensitiveFieldsExcluded", "true");
+        String errorSummary = failure != null
+                ? jsonObject("errorClass", failure.getClass().getSimpleName(), "operationStatus", operationStatus)
+                : "{}";
+        String warningsJson = "ORCA_WARNING".equals(operationStatus)
+                ? "[{\"classification\":\"WARNING_NEEDS_REVIEW\"}]"
+                : "[]";
+        String errorsJson = isErrorStatus(operationStatus)
+                ? "[{\"classification\":\"" + jsonEscape(operationStatus) + "\"}]"
+                : "[]";
+        String unmatchedJson = "ORCA_UNMATCHED".equals(operationStatus)
+                ? "[{\"classification\":\"UNMATCHED\"}]"
+                : "[]";
+        String reconciliationStatus = reconciliationStatus(endpoint, operationStatus);
+        String reconciliationType = reconciliationType(endpoint);
+        String reconciliationSourceApi = reconciliationSourceApi(endpoint);
+        var command = new OrcaOperationLedgerRepository.RecordCommand(
+                facilityId,
+                operationScope(endpoint),
+                operationType(endpoint),
+                sourceApi,
+                operationStatus,
+                sha256(facilityId + "\n" + sourceApi + "\n" + requestHash),
+                "server-orca-transport",
+                extractXmlValue(payload, "Patient_ID"),
+                firstNonBlank(extractXmlValue(payload, "Perform_Date"), extractXmlValue(payload, "Base_Date"),
+                        extractXmlValue(payload, "Acceptance_Date"), extractXmlValue(payload, "Visit_Date")),
+                firstNonBlank(extractXmlValue(payload, "Department_Code"), extractXmlValue(payload, "Department")),
+                firstNonBlank(extractXmlValue(payload, "Physician_Code"), extractXmlValue(payload, "Physician")),
+                extractXmlValue(payload, "Insurance_Combination_Number"),
+                requestHash,
+                responseHash,
+                response != null ? response.status() : null,
+                apiResult,
+                classifyApiResultMessage(apiResult, operationStatus),
+                transportStatus,
+                failure != null ? operationStatus : null,
+                needsReview,
+                requestSummary,
+                responseSummary,
+                errorSummary,
+                warningsJson,
+                errorsJson,
+                unmatchedJson,
+                responseSummary,
+                traceId,
+                "ORCA_HTTP",
+                classifyUnknown(operationStatus, failure),
+                reconciliationStatus,
+                reconciliationType,
+                reconciliationSourceApi,
+                "BLOCKED".equals(reconciliationStatus),
+                "BLOCKED".equals(reconciliationStatus) ? "ORCA_RESULT_NOT_CONFIRMED" : null,
+                jsonObject("status", reconciliationStatus, "sourceApi", reconciliationSourceApi),
+                Math.max(0L, Duration.between(startedAt, Instant.now()).toMillis()),
+                Instant.now());
+        operationLedgerRepository.record(command);
+    }
+
+    private static String classifyOperationStatus(OrcaHttpResponse response, String apiResult, RuntimeException failure) {
+        if (failure != null) {
+            return classifyFailure(failure);
+        }
+        if (response == null) {
+            return "UNKNOWN";
+        }
+        int status = response.status();
+        if (status == 401 || status == 403) {
+            return "AUTH_FAILED";
+        }
+        if (status >= 500) {
+            return "NETWORK_FAILED";
+        }
+        if (status >= 400) {
+            return "ORCA_REJECTED";
+        }
+        if (apiResult == null || apiResult.isBlank()) {
+            return "UNKNOWN";
+        }
+        String normalized = apiResult.trim().toUpperCase(Locale.ROOT);
+        if (normalized.contains("UNMATCH") || normalized.contains("MISMATCH")) {
+            return "ORCA_UNMATCHED";
+        }
+        if (normalized.startsWith("K") || normalized.startsWith("W")) {
+            return "ORCA_WARNING";
+        }
+        if (OrcaApiProxySupport.isApiResultSuccess(normalized)) {
+            return "ORCA_ACCEPTED";
+        }
+        return "ORCA_REJECTED";
+    }
+
+    private static String classifyFailure(RuntimeException failure) {
+        String text = failure != null ? failure.toString().toLowerCase(Locale.ROOT) : "";
+        if (text.contains("cert") || text.contains("ssl") || text.contains("tls")) {
+            return "CERTIFICATE_FAILED";
+        }
+        if (text.contains("401") || text.contains("403") || text.contains("auth")) {
+            return "AUTH_FAILED";
+        }
+        return "NETWORK_FAILED";
+    }
+
+    private static String classifyTransportStatus(OrcaHttpResponse response, RuntimeException failure) {
+        if (failure != null) {
+            String status = classifyFailure(failure);
+            return "CERTIFICATE_FAILED".equals(status) ? "CERTIFICATE_FAILED"
+                    : "AUTH_FAILED".equals(status) ? "AUTH_FAILED" : "NETWORK_FAILED";
+        }
+        if (response == null) {
+            return "UNKNOWN";
+        }
+        int status = response.status();
+        if (status == 401 || status == 403) {
+            return "AUTH_FAILED";
+        }
+        if (status >= 400) {
+            return "HTTP_ERROR";
+        }
+        return "HTTP_OK";
+    }
+
+    private static String classifyUnknown(String operationStatus, RuntimeException failure) {
+        if ("NETWORK_FAILED".equals(operationStatus)) {
+            return "NETWORK_FAILED";
+        }
+        if ("AUTH_FAILED".equals(operationStatus)) {
+            return "AUTH_FAILED";
+        }
+        if ("CERTIFICATE_FAILED".equals(operationStatus)) {
+            return "CERT_FAILED";
+        }
+        if ("ORCA_REJECTED".equals(operationStatus) || "ORCA_CONFLICT".equals(operationStatus)) {
+            return "BUSINESS_ERROR";
+        }
+        if ("ORCA_WARNING".equals(operationStatus)) {
+            return "WARNING_NEEDS_REVIEW";
+        }
+        if ("ORCA_UNMATCHED".equals(operationStatus)) {
+            return "UNMATCHED";
+        }
+        if ("UNKNOWN".equals(operationStatus) || failure != null) {
+            return "UNKNOWN";
+        }
         return null;
+    }
+
+    private static boolean needsUserReview(String operationStatus) {
+        return switch (operationStatus) {
+            case "ORCA_ACCEPTED", "CANCELLED" -> false;
+            default -> true;
+        };
+    }
+
+    private static boolean isErrorStatus(String operationStatus) {
+        return switch (operationStatus) {
+            case "ORCA_REJECTED", "ORCA_CONFLICT", "NETWORK_FAILED", "CERTIFICATE_FAILED", "AUTH_FAILED",
+                    "UNKNOWN", "NEEDS_REVIEW" -> true;
+            default -> false;
+        };
+    }
+
+    private static String reconciliationStatus(OrcaEndpoint endpoint, String operationStatus) {
+        if (endpoint == OrcaEndpoint.TEMP_MEDICAL_GET) {
+            return "ORCA_ACCEPTED".equals(operationStatus) ? "MATCHED" : "NEEDS_REVIEW";
+        }
+        if (endpoint == OrcaEndpoint.MEDICAL_MOD || endpoint == OrcaEndpoint.DISEASE_MOD_V3
+                || endpoint == OrcaEndpoint.PATIENT_MOD || endpoint == OrcaEndpoint.ACCEPTANCE_MUTATION) {
+            return "ORCA_ACCEPTED".equals(operationStatus) ? "PENDING" : "BLOCKED";
+        }
+        if (endpoint == OrcaEndpoint.INCOME_INFO || isReportEndpoint(endpoint)) {
+            return "ORCA_ACCEPTED".equals(operationStatus) ? "MATCHED" : "NEEDS_REVIEW";
+        }
+        return "NOT_REQUIRED";
+    }
+
+    private static String reconciliationType(OrcaEndpoint endpoint) {
+        if (endpoint == OrcaEndpoint.TEMP_MEDICAL_GET || endpoint == OrcaEndpoint.MEDICAL_MOD) {
+            return "TEMPORARY_MEDICAL_REFETCH";
+        }
+        if (endpoint == OrcaEndpoint.DISEASE_MOD_V3 || endpoint == OrcaEndpoint.PATIENT_MOD) {
+            return "POST_MUTATION_REFETCH";
+        }
+        if (endpoint == OrcaEndpoint.INCOME_INFO) {
+            return "INCOME_REFETCH";
+        }
+        return isReportEndpoint(endpoint) ? "REPORT_REFETCH" : null;
+    }
+
+    private static String reconciliationSourceApi(OrcaEndpoint endpoint) {
+        if (endpoint == OrcaEndpoint.MEDICAL_MOD || endpoint == OrcaEndpoint.TEMP_MEDICAL_GET) {
+            return "tmedicalgetv2";
+        }
+        if (endpoint == OrcaEndpoint.DISEASE_MOD_V3) {
+            return "diseasegetv2";
+        }
+        if (endpoint == OrcaEndpoint.PATIENT_MOD) {
+            return "patientgetv2";
+        }
+        if (endpoint == OrcaEndpoint.INCOME_INFO) {
+            return "incomeinfv2";
+        }
+        return isReportEndpoint(endpoint) ? sourceApi(endpoint) : null;
+    }
+
+    private static String operationScope(OrcaEndpoint endpoint) {
+        return switch (endpoint) {
+            case PATIENT_GET, PATIENT_MOD, PATIENT_BATCH, PATIENT_ID_LIST, PATIENT_NAME_SEARCH,
+                    PATIENT_APPOINTMENT_LIST, FORMER_NAME_HISTORY -> "PATIENT";
+            case ACCEPTANCE_LIST, ACCEPTANCE_MUTATION, APPOINTMENT_LIST, APPOINTMENT_MUTATION, VISIT_LIST -> "ACCEPTANCE";
+            case INSURANCE_COMBINATION, INSURANCE_LIST, INSURANCE_PROVIDER -> "INSURANCE";
+            case DISEASE_GET, DISEASE_MOD_V3 -> "DISEASE";
+            case MEDICAL_GET, MEDICAL_MOD, TEMP_MEDICAL_GET, MEDICATION_GET, MEDICATION_MOD,
+                    CONTRAINDICATION_CHECK, SUBJECTIVES_LIST, SUBJECTIVES_MOD, MEDICAL_SET -> "MEDICAL";
+            case BILLING_SIMULATION -> "BILLING";
+            case INCOME_INFO -> "INCOME";
+            case PRESCRIPTION_REPORT, MEDICINE_NOTEBOOK_REPORT, KARTENO1_REPORT, KARTENO3_REPORT,
+                    INVOICE_RECEIPT_REPORT, STATEMENT_REPORT -> "REPORT";
+            default -> "SYSTEM";
+        };
+    }
+
+    private static String operationType(OrcaEndpoint endpoint) {
+        return endpoint.name();
+    }
+
+    private static String sourceApi(OrcaEndpoint endpoint) {
+        String path = endpoint.getPath();
+        int slash = path.lastIndexOf('/');
+        return slash >= 0 ? path.substring(slash + 1) : path;
+    }
+
+    private static boolean isReportEndpoint(OrcaEndpoint endpoint) {
+        return endpoint == OrcaEndpoint.PRESCRIPTION_REPORT
+                || endpoint == OrcaEndpoint.MEDICINE_NOTEBOOK_REPORT
+                || endpoint == OrcaEndpoint.KARTENO1_REPORT
+                || endpoint == OrcaEndpoint.KARTENO3_REPORT
+                || endpoint == OrcaEndpoint.INVOICE_RECEIPT_REPORT
+                || endpoint == OrcaEndpoint.STATEMENT_REPORT;
+    }
+
+    private static String resolveApiResult(OrcaHttpResponse response, Map<String, List<String>> headers) {
+        if (response != null && response.apiResult() != null && response.apiResult().apiResult() != null) {
+            return response.apiResult().apiResult();
+        }
+        if (headers != null && headers.containsKey("X-Orca-Api-Result") && !headers.get("X-Orca-Api-Result").isEmpty()) {
+            return headers.get("X-Orca-Api-Result").get(0);
+        }
+        return null;
+    }
+
+    private static String classifyApiResultMessage(String apiResult, String operationStatus) {
+        if (apiResult == null || apiResult.isBlank()) {
+            return "api_result_absent";
+        }
+        if ("ORCA_ACCEPTED".equals(operationStatus)) {
+            return "accepted";
+        }
+        if ("ORCA_WARNING".equals(operationStatus)) {
+            return "warning_needs_review";
+        }
+        if ("ORCA_UNMATCHED".equals(operationStatus)) {
+            return "unmatched";
+        }
+        return "not_accepted";
+    }
+
+    private static String extractXmlValue(String payload, String tag) {
+        if (payload == null || tag == null) {
+            return null;
+        }
+        Pattern pattern = Pattern.compile("<" + Pattern.quote(tag) + "(?:\\s+[^>]*)?>([^<]{1,128})</"
+                + Pattern.quote(tag) + ">", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(payload);
+        if (!matcher.find()) {
+            return null;
+        }
+        String value = matcher.group(1);
+        return value != null && !value.isBlank() ? value.trim() : null;
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    private static String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(nullToEmpty(value).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 unavailable", ex);
+        }
+    }
+
+    private static String nullToEmpty(String value) {
+        return value != null ? value : "";
+    }
+
+    private static String jsonObject(String... keysAndValues) {
+        StringBuilder builder = new StringBuilder("{");
+        boolean first = true;
+        for (int i = 0; i + 1 < keysAndValues.length; i += 2) {
+            String value = keysAndValues[i + 1];
+            if (value == null) {
+                continue;
+            }
+            if (!first) {
+                builder.append(',');
+            }
+            first = false;
+            builder.append('"').append(jsonEscape(keysAndValues[i])).append("\":\"")
+                    .append(jsonEscape(value)).append('"');
+        }
+        builder.append('}');
+        return builder.toString();
+    }
+
+    private static String jsonEscape(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\r", "\\r").replace("\n", "\\n");
     }
 
     public HttpClient rawHttpClient(String facilityId) {

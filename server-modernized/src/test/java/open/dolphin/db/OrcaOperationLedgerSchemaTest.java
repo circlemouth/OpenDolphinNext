@@ -29,6 +29,8 @@ class OrcaOperationLedgerSchemaTest {
                 insertTransmission(connection, operationId, "ORCA_WARNING", "HTTP_OK", HASH);
                 insertResponseSummary(connection, operationId, "ORCA_WARNING", HASH);
                 insertReconciliation(connection, operationId, "NEEDS_REVIEW", 0, 1, HASH);
+                assertEquals(1, countRows(connection,
+                        "select count(*) from opendolphin.orca_operation where central_audit_trace_id = 'trace-001'"));
 
                 SQLException invalidStatus = assertThrows(SQLException.class,
                         () -> insertOperation(connection, "SUCCESS", "idem-invalid-status", HASH));
@@ -37,6 +39,40 @@ class OrcaOperationLedgerSchemaTest {
                 SQLException invalidHash = assertThrows(SQLException.class,
                         () -> insertOperation(connection, "PREPARED", "idem-invalid-hash", "raw-request-body"));
                 assertEquals("23514", invalidHash.getSQLState());
+            }
+        }
+    }
+
+    @Test
+    void operationLedgerConstrainedUnknownClassificationAndReconciliationStatus() throws Exception {
+        try (EmbeddedPostgres postgres = EmbeddedPostgres.builder().start()) {
+            DataSource dataSource = postgres.getPostgresDatabase();
+            migrate(dataSource);
+
+            try (Connection connection = dataSource.getConnection()) {
+                insertOperation(connection, "UNKNOWN", "idem-unknown", HASH);
+
+                SQLException invalidUnknown = assertThrows(SQLException.class, () -> {
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            UPDATE opendolphin.orca_operation
+                               SET unknown_classification = 'SUCCESS'
+                             WHERE idempotency_key = 'idem-unknown'
+                            """)) {
+                        statement.executeUpdate();
+                    }
+                });
+                assertEquals("23514", invalidUnknown.getSQLState());
+
+                SQLException invalidReconciliation = assertThrows(SQLException.class, () -> {
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            UPDATE opendolphin.orca_operation
+                               SET reconciliation_status = 'REGISTERED'
+                             WHERE idempotency_key = 'idem-unknown'
+                            """)) {
+                        statement.executeUpdate();
+                    }
+                });
+                assertEquals("23514", invalidReconciliation.getSQLState());
             }
         }
     }
@@ -84,9 +120,13 @@ class OrcaOperationLedgerSchemaTest {
                     idempotency_key,
                     requested_by,
                     orca_patient_id,
-                    request_hash
+                    request_hash,
+                    central_audit_trace_id,
+                    central_audit_action,
+                    unknown_classification,
+                    reconciliation_status
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING orca_operation_id
                 """)) {
             statement.setString(1, "F001");
@@ -98,6 +138,10 @@ class OrcaOperationLedgerSchemaTest {
             statement.setString(7, "user-1");
             statement.setString(8, "00001");
             statement.setString(9, requestHash);
+            statement.setString(10, "trace-001");
+            statement.setString(11, "ORCA_HTTP");
+            statement.setString(12, status.equals("UNKNOWN") ? "UNKNOWN" : null);
+            statement.setString(13, status.equals("UNKNOWN") ? "PENDING" : null);
             try (ResultSet rs = statement.executeQuery()) {
                 rs.next();
                 return rs.getLong(1);
@@ -192,6 +236,14 @@ class OrcaOperationLedgerSchemaTest {
             try (ResultSet rs = statement.executeQuery()) {
                 return rs.next();
             }
+        }
+    }
+
+    private static int countRows(Connection connection, String sql) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet rs = statement.executeQuery()) {
+            rs.next();
+            return rs.getInt(1);
         }
     }
 }

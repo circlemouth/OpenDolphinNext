@@ -18,6 +18,8 @@ UNKNOWNは、ORCA送信結果が成功とも失敗とも判定できない状態
 
 UNKNOWNは成功ではない。
 
+状態名、UNKNOWN分類、reconciliation status、UI向けの安全なDTO境界は [../contracts/orca-ledger-and-unknown-state.md](../contracts/orca-ledger-and-unknown-state.md) を正本とする。
+
 ## 2. 禁止事項
 
 UNKNOWN状態で次をしてはならない。
@@ -35,18 +37,21 @@ UNKNOWN状態で次をしてはならない。
 
 1. 対象患者、ORCA患者番号、ORCA受付ID、診療日、診療科、保険組合せを確認する。
 2. 元送信request hashとidempotency keyを確認する。
-3. ORCA側を再取得する。
-4. OpenDolphinNext側の送信候補とORCA側登録内容を照合する。
-5. 次のいずれかに分類する。
+3. `orca_operation`、`orca_transmission`、`orca_response_summary`、`orca_reconciliation_result` と central audit trace id を確認する。
+4. ORCA側を再取得する。
+5. OpenDolphinNext側の送信候補とORCA側登録内容を照合する。
+6. 次のいずれかに分類する。
    - ORCA登録あり
    - ORCA登録なし
    - ORCA登録ありだが差分あり
    - ORCA側のみ情報あり
    - なお照合不能
-6. 二重送信リスクを評価する。
-7. 再送、取消、手動修正、保留のいずれかを選ぶ。
-8. 操作者、判断理由、照合結果を監査ログに残す。
-9. UI状態を更新する。
+7. 二重送信リスクを評価する。
+8. 再送、取消、手動修正、保留のいずれかを選ぶ。
+9. 操作者、判断理由、照合結果を監査ログに残す。
+10. UI状態を更新する。
+
+再送は同じ logical operation の追加 `orca_transmission` として記録する。request hash が変わる場合は、既存 operation の再送ではなく、訂正または新規候補作成の監査 event を先に作る。`reconciliation_status=PENDING|BLOCKED|UNKNOWN|NEEDS_REVIEW|CONFLICT|UNMATCHED` のまま自動再送してはならない。
 
 ## 4. UI表示
 
@@ -80,7 +85,9 @@ UNKNOWN発生時と解消時に監査ログを残す。
 - request hash
 - response hash
 - 発生理由
+- UNKNOWN分類
 - 照合結果
+- central audit trace id
 - 解消操作
 - 解消日時
 
@@ -92,4 +99,6 @@ UNKNOWN発生時と解消時に監査ログを残す。
 - UNKNOWN中に二重送信できないこと
 - 再取得・照合後だけ状態遷移すること
 - UNKNOWN発生・解消が監査ログに残ること
+- 同一 idempotency key の再試行が operation を増やさず transmission だけ追加すること
+- ORCA URL、Basic認証、証明書情報、raw ORCA body が ledger / audit / log / bundle に残らないこと
 - UIに患者識別情報と次の操作が表示されること

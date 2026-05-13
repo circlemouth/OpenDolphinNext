@@ -69,6 +69,7 @@
 - ORCA送信失敗
 - ORCA送信失敗時に反映済み扱いしないこと
 - 二重送信防止
+- 同一 idempotency key の再試行で `orca_operation` が1件に保たれ、`orca_transmission` だけが追加されること
 - 再送
 - 取消
 - 差分照合
@@ -80,6 +81,8 @@
 - ORCA会計結果取得
 - ORCA会計済み情報を未送信候補で上書きしないこと
 - UNKNOWN状態の扱い
+- `NETWORK_FAILED`、`AUTH_FAILED`、`CERT_FAILED`、`BUSINESS_ERROR`、`WARNING_NEEDS_REVIEW`、`UNMATCHED`、`UNKNOWN` の分類保存
+- `reconciliation_status=PENDING|BLOCKED|UNKNOWN|NEEDS_REVIEW|CONFLICT|UNMATCHED` を成功扱いしないこと
 - 他端末使用中
 - 通信断
 - 証明書異常
@@ -94,6 +97,8 @@
 - ORCA送信失敗監査
 - ORCA再送監査
 - ORCA警告・不一致の監査保存
+- ORCA operation ledger と central audit trace id の相互参照
+- request/response hash が保存され、raw ORCA body / credential / ORCA URL が保存されないこと
 - hash chainまたは改ざん検知
 - 一般ユーザーが監査ログを更新・削除できないこと
 

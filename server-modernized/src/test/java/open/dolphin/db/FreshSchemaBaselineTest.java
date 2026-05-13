@@ -91,7 +91,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0332", appliedVersion(connection));
+                assertEquals("0333", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -231,6 +231,9 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "orca_operation", "response_hash"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_operation", "request_summary_json"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_operation", "response_summary_json"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_operation", "central_audit_trace_id"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_operation", "unknown_classification"));
+                assertTrue(columnExists(connection, "opendolphin", "orca_operation", "reconciliation_status"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_transmission", "request_hash"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_transmission", "response_hash"));
                 assertTrue(columnExists(connection, "opendolphin", "orca_transmission", "transport_status"));
@@ -293,6 +296,8 @@ class FreshSchemaBaselineTest {
                 assertTrue(indexExists(connection, "opendolphin", "idx_prescription_order_event_order"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_prescription_orca_transmission_order"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_operation_status"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_orca_operation_audit_trace"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_orca_operation_unknown_review"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_transmission_operation"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_response_summary_review"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_reconciliation_status"));
