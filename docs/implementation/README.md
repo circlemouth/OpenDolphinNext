@@ -3,6 +3,8 @@
 `docs/implementation/` は current implementation workstream の入口だけを置く領域です。ここには index を残し、current contract、live runbook、dated packet、evidence dump を混在させません。
 
 ## Current Workstreams
+- [OpenDolphinNext remaining tasks completion 2026-05-13](opendolphin-next-remaining-tasks-20260513T113016Z/README.md)
+- [OpenDolphinNext remaining tasks Round 1 worker prompts 2026-05-13](opendolphin-next-remaining-tasks-20260513T113016Z/WORKER_PROMPTS_ROUND1.md)
 - [ORCA Trial Phase 3 retry evidence 2026-04-21](orca-trial-phase3-retry-20260421T060636Z/MAIN_AGENT_REPORT.md)
 - [ORCA Trial Phase 3 command/sanitize fix 2026-04-20](orca-trial-phase3-command-sanitize-fix-20260420T220528Z/README.md)
 - [ORCA Trial read-only contract fix Subagent A report 2026-04-20](orca-trial-readonly-contract-fix-20260420T000000Z/subagent-A-orca-wrapper-contract-report.md)
