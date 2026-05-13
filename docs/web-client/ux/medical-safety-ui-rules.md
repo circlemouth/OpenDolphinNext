@@ -6,6 +6,8 @@
 
 DADSの原則である、アクセシビリティ、一貫性、重要情報を隠さないこと、フォームでplaceholderやdisabledに依存しないことを、電子カルテ向けに具体化する。
 
+GUI 改修前の残件棚卸しと後工程 backlog は [../../validation/gui-remediation-handoff.md](../../validation/gui-remediation-handoff.md) を参照する。この backlog は未完項目の引き渡しであり、current contract の達成済み事実や release-ready 判定ではない。
+
 ## 2. 患者識別
 
 主要画面では患者ヘッダーを常時表示する。

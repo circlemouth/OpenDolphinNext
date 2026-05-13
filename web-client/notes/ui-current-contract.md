@@ -2,6 +2,12 @@
 
 この文書は、docs-only で確定できる current screen / route / required state / verification を棚卸しします。docs にない route 名や UI 詳細は補完しません。
 
+## GUI Remediation Boundary
+
+[docs/validation/gui-remediation-handoff.md](../../docs/validation/gui-remediation-handoff.md) は GUI 改修工程へ渡す backlog です。そこに列挙された患者ヘッダー、重大操作モーダル、UNKNOWN / warning / unmatch 初期表示、placeholder 依存排除、disabled 理由表示、focus / keyboard / contrast / 44px target、PDF / print visual polish、visual regression、UI E2E の残件は、この文書の current fact と混同しません。
+
+GUI 改修ではこの文書の safety contract を下回らず、ORCA送信失敗・警告・不一致・UNKNOWNを成功扱いする文言や、患者文脈を URL / browser storage に戻す実装を追加しません。GUI 改修後に focused UI tests、visual verification、release validation gate を通すまで release-ready / GO 判定に使いません。
+
 ## Scope
 - Auth
 - 受付
