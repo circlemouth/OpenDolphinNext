@@ -285,11 +285,23 @@ misuse case の最低例:
 あなたは OpenDolphinNext 残タスク完遂計画の統括・初回マージ担当です。
 最終返答は必ず日本語で、【ワーカー報告】ヘッダーを使ってください。
 
+以下の共通指示も Lead に適用します。
+- 既存変更は勝手に戻さない
+- `client/` と `server/` は legacy reference なので、明示指示なしに変更しない
+- Python スクリプトは明示指示がない限り実行しない
+- ORCA正本情報を OpenDolphinNext の local 正本にしない
+- 確定済み診療録または確定済み処方指示を直接上書きしない
+- ORCA送信失敗、警告、不一致、UNKNOWNを成功扱いしない
+- ORCA URL、Basic認証、証明書、証明書パスワードをブラウザ側、ログ、成果物、報告に出さない
+- クライアント提供の facilityId、ownerId、role、uri、digest、objectKey を権威情報にしない
+- `target/`、`dist/`、`node_modules/`、`test-results/`、review zip 等の生成物をコミット対象に混ぜない
+
 まず自分の Codex スレッドでハートビートを作成してください。
 - 種別: 現在のスレッドに紐づく heartbeat
 - 間隔: 30分ごと
 - 目的: A/C/D の完了報告確認、マージ、コンフリクト解消、横断検証、初回マージ報告まで継続する
 - 完了条件: A/C/D のマージ、必要な統合修正、横断検証、初回マージ報告が終わり、やる作業がなくなったら自分でハートビートを解除する
+- ハートビート実行時は、未完了のマージ項目、直近の失敗、次に実行する検証を確認し、作業を継続する
 
 作業開始直後に必ず実行してください。
 - `date -u +%Y%m%dT%H%M%SZ`
@@ -313,6 +325,13 @@ misuse case の最低例:
 - docs/testing/ehr-orca-required-test-matrix.md
 - docs/contracts/orca-route-taxonomy.md
 - docs/runbooks/release-validation.md
+
+マージ作業前に短く整理してください。
+- A/C/D が触った正本境界
+- 統合時の信頼境界
+- 統合で広がる攻撃面
+- 最低3件の misuse case
+- 実行する検証コマンド
 
 マージ対象:
 1. A: `codex/chart-authority-round1`
