@@ -846,7 +846,7 @@ export function OrcaSummary({
         )}
         <div className="orca-summary__card" data-test-id="orca-income-summary-card">
           <header>
-            <strong>ORCA収納情報</strong>
+            <strong>ORCA由来 収納 cache</strong>
             <span className="orca-summary__card-meta">
               {performDate ? `対象日: ${performDate}` : '来院日未解決'}
             </span>
@@ -878,7 +878,9 @@ export function OrcaSummary({
               ariaLive={resolveAriaLive(resolvedIncomeTone ?? 'info')}
             />
           ) : null}
-          <p className="orca-summary__help">official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。</p>
+          <p className="orca-summary__help">
+            ORCA正本由来の official incomeinfv2 cache です。OpenDolphinNext の会計・収納・領収正本ではありません。
+          </p>
           <div className="orca-summary__income-highlight">
             <div>
               <span className="orca-summary__label">直近請求</span>
@@ -898,6 +900,11 @@ export function OrcaSummary({
           <ul>
             <li>Api_Result: {incomeInfoQuery.data?.apiResult ?? '—'}</li>
             <li>件数: {incomeEntries.length} 件</li>
+            <li>
+              ORCA受付ID: {orcaEncounterContext?.voucherNumber && orcaEncounterContext?.sequentialNumber
+                ? `${orcaEncounterContext.voucherNumber}-${orcaEncounterContext.sequentialNumber}`
+                : '—'}
+            </li>
             <li>保険組合せ: {orcaEncounterContext?.insuranceCombinationNumber ?? incomeLatest?.insuranceCombinationNumber ?? '—'}</li>
             <li>
               取得: {incomeInfoQuery.data?.informationDate ?? '—'} {incomeInfoQuery.data?.informationTime ?? ''}

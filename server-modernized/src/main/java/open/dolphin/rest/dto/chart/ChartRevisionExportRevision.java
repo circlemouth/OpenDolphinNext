@@ -1,6 +1,8 @@
 package open.dolphin.rest.dto.chart;
 
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class ChartRevisionExportRevision {
@@ -16,6 +18,8 @@ public class ChartRevisionExportRevision {
     private String departmentCode;
     private String physicianCode;
     private String insuranceCombinationNumber;
+    private List<Map<String, Object>> clinicalSections = new ArrayList<>();
+    private List<Map<String, Object>> attachments = new ArrayList<>();
     private Map<String, Object> snapshotManifest = new LinkedHashMap<>();
     private Long enteredByUserId;
     private String entryMode;
@@ -109,6 +113,22 @@ public class ChartRevisionExportRevision {
 
     public void setInsuranceCombinationNumber(String insuranceCombinationNumber) {
         this.insuranceCombinationNumber = insuranceCombinationNumber;
+    }
+
+    public List<Map<String, Object>> getClinicalSections() {
+        return new ArrayList<>(clinicalSections);
+    }
+
+    public void setClinicalSections(List<Map<String, Object>> clinicalSections) {
+        this.clinicalSections = clinicalSections == null ? new ArrayList<>() : new ArrayList<>(clinicalSections);
+    }
+
+    public List<Map<String, Object>> getAttachments() {
+        return new ArrayList<>(attachments);
+    }
+
+    public void setAttachments(List<Map<String, Object>> attachments) {
+        this.attachments = attachments == null ? new ArrayList<>() : new ArrayList<>(attachments);
     }
 
     public Map<String, Object> getSnapshotManifest() {
