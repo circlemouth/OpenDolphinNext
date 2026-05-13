@@ -325,6 +325,36 @@ class PatientModV2OutpatientSupportTest {
         verify(orcaPatientSyncService, never()).importPatients(any(), any(), any());
     }
 
+    @Test
+    void createDoesNotImportLocalPatientWhenPatientModFails() {
+        PatientServiceBean patientServiceBean = mock(PatientServiceBean.class);
+        OrcaTransport orcaTransport = mock(OrcaTransport.class);
+        OrcaLiveGateway orcaWrapperService = mock(OrcaLiveGateway.class);
+        OrcaPatientSyncService orcaPatientSyncService = mock(OrcaPatientSyncService.class);
+        RecordingPatientCacheStore patientCacheStore = new RecordingPatientCacheStore();
+        PatientModV2OutpatientOrcaCoordinator coordinator = new PatientModV2OutpatientOrcaCoordinator(
+                patientServiceBean, orcaTransport, orcaWrapperService, orcaPatientSyncService, patientCacheStore);
+
+        when(orcaTransport.invoke(anyString(), any(), any())).thenReturn(new OrcaTransportResult(null, "POST", 200,
+                "<xmlio2><patientmodres><Api_Result>10</Api_Result><Api_Result_Message>rejected</Api_Result_Message></patientmodres></xmlio2>",
+                "application/xml", Map.of()));
+
+        PatientModV2OutpatientSupport.PatientPatch patch = new PatientModV2OutpatientSupport.PatientPatch();
+        patch.patientId = "*";
+        patch.name = "山田 太郎";
+        patch.kana = "ヤマダ タロウ";
+        patch.birthDate = "1980-01-01";
+        patch.sex = "M";
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> coordinator.createOrcaAndSyncLocal("facility", patch, "20260321T221345Z", new LinkedHashMap<>()));
+
+        assertEquals(502, ex.getResponse().getStatus());
+        verify(orcaPatientSyncService, never()).importPatients(any(), any(), any());
+        verify(patientServiceBean, never()).addPatient(any());
+        verify(patientServiceBean, never()).update(any());
+    }
+
     private static PatientModel buildPatient(String facilityId, String patientId) {
         PatientModel model = new PatientModel();
         model.setFacilityId(facilityId);

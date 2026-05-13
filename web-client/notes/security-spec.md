@@ -46,6 +46,7 @@
 - `index.html` の `meta[name="csrf-token"]` へ実トークンを注入する（`__CSRF_TOKEN__` を本番値へ置換）。配信時はキャッシュでトークンが残留しないよう `Cache-Control: private, no-store`（または同等以上）を設定する。
 - `/api/logout` は `POST` + `credentials` + CSRF 必須で受け付ける。frontend は 404 を `unsupported` 扱いで継続するため、404 が継続する環境では監査ログ上の未実装警告が残る点に注意する。
 - 画像機能ヘッダは `X-Client-Feature-Images` のみを利用する。`X-Feature-Images` は廃止済みのため受理前提にしない。
+- ORCA official 患者作成・更新の facility は backend が認証済み session / remote user / server-side tenant context からだけ解決する。Web client は `X-Facility-Id` や body/query の facility / owner / role を mutation authority として送らず、backend はそれらを採用しない。
 
 ## 8. Backend Error Responses
 - REST エラー応答の `details` は client-safe allowlist に限定し、患者ID、施設ID、接続先、origin、credential、内部 URL、raw exception message を含めない。

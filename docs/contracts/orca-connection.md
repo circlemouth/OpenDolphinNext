@@ -116,11 +116,12 @@
 
 ## Official Patient Mutation
 - 患者作成・更新は `/api/orca/official/patientmodv2/outpatient/create` と `/api/orca/official/patientmodv2/outpatient/update` だけを public mutation route とする。local patient mutation route、admin wrapper、browser-side ORCA direct call は復活させない。
-- create は server が `patientmodv2 class=01`、update は server が `patientmodv2 class=02` を選ぶ。client が class、facility、owner、role、任意 URL、storage key、digest を送っても authority にしない。
+- create は server が `patientmodv2 class=01`、update は server が `patientmodv2 class=02` を選ぶ。facility は認証済み session / remote user / server-side tenant context からだけ解決する。`X-Facility-Id`、request body、query、client state の facility / owner / role / 任意 URL / storage key / digest は authority にせず、remote user に facility を解決できない場合は ORCA transport / local sync / audit success の前に fail closed にする。
 - update は送信前に ORCA から現 baseline を server-side に取得し、editable field の差分を解決する。client の `changedKeys` は UX hint であり、server allowlist にない key は捨てる。
 - ORCA mutation が失敗した場合、local patient sync や `d_patient` 投影更新を実行しない。failure response / audit details は固定 error code と safe metadata だけにし、raw XML、接続先 URL、credential、患者住所・電話などの詳細は含めない。
 - ORCA mutation が受け付けられた後も、`patientgetv2` canonical re-fetch が `ORCA_PATIENT_FOUND` / `CURRENT` を返し、`orca_patient_cache` 保存と local sync が終わるまで同期確認済み応答にしない。応答は `orcaMutationPrepared`、`orcaMutationSent`、`canonicalRefetched`、`localSynced`、`canonicalSourceApi=patientgetv2`、`canonicalCacheStatus`、`canonicalBusinessStatus` の allowlist field だけを返す。
 - 既存 local patient と同一内容で create が idempotent と判断される場合も、local row を ORCA 正本として扱わない。patientmodv2 は送らず、`patientgetv2` canonical re-fetch と local sync 確認を必須にする。
+- patient create/update audit は actor、resolvedFacilityId、orcaPatientId、operationId、runId、traceId、requestId、canonical re-fetch / local sync の allowlist metadata を残す。raw ORCA body、接続先、credential、患者住所・電話、保険詳細、Cookie、Authorization、CSRF、client-provided facility は保存しない。
 
 ## Official Acceptance Cache
 - 受付 inventory は `/api/orca/official/visits/acceptance-list` から ORCA `acceptlstv2` を呼び、取得ごとに `orca_acceptance_cache` を更新する。cache は表示・照合・警告用であり、OpenDolphinNext 側の受付正本ではない。
