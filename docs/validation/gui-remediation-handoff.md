@@ -97,4 +97,3 @@ GUI 改修で screenshot / visual regression を追加した場合は、sanitize
 - UI E2E / screenshot 全面検証: この工程は backend / contract / ops closeout handoff であり、大規模 UI 実装を行っていないため省く。GUI 改修後の visual / E2E gate として上記へ記録した。
 - ブラウザ目視確認: UI 実装差分がないため省く。GUI 改修後に患者ヘッダー、重大操作モーダル、UNKNOWN 初期表示、PDF/print を対象に実施する。
 - release-ready / GO 判定: GUI 改修前であり、この文書は backlog のため判定しない。
-
