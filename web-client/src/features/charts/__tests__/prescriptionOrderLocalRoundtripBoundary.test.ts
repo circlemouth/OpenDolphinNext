@@ -39,9 +39,13 @@ const responseJson = (body: unknown, status = 200) =>
 
 const calledUrls = () => vi.mocked(httpFetch).mock.calls.map((call) => String(call[0]));
 
-const expectOnlyLocalPrescriptionCalls = () => {
-  expect(calledUrls().every((url) => url.startsWith('/api/local/prescription-orders'))).toBe(true);
-  for (const url of calledUrls()) {
+const expectAuthorityWriteAndLocalReadOnlyCalls = () => {
+  for (const [index, url] of calledUrls().entries()) {
+    const method = String((vi.mocked(httpFetch).mock.calls[index]?.[1] as RequestInit | undefined)?.method ?? 'GET').toUpperCase();
+    expect(url.startsWith('/api/local/prescription-orders')).toBe(true);
+    if (method === 'POST') {
+      expect(url).toBe('/api/local/prescription-orders/authority');
+    }
     expect(ORCA_MUTATION_ENDPOINTS.some((endpoint) => url.includes(endpoint))).toBe(false);
   }
 };
@@ -87,16 +91,16 @@ const buildPrescriptionOrder = (): PrescriptionOrder => ({
   ],
 });
 
-describe('prescription local roundtrip and ORCA boundary', () => {
+describe('prescription authority write and ORCA boundary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(httpFetch).mockReset();
   });
 
-  it('save -> reload -> edit -> delete -> copy from previous chart stays on local prescription API', async () => {
+  it('save -> reload -> edit -> copy from previous chart keeps reads on local projection and writes on authority API', async () => {
     const initialOrder = buildPrescriptionOrder();
     vi.mocked(httpFetch)
-      .mockResolvedValueOnce(responseJson({ runId: 'RUN-SAVE-1' }))
+      .mockResolvedValueOnce(responseJson({ runId: 'RUN-SAVE-1', prescriptionId: 101, revisionId: 201, status: 'DRAFT' }))
       .mockResolvedValueOnce(
         responseJson({
           found: true,
@@ -139,9 +143,8 @@ describe('prescription local roundtrip and ORCA boundary', () => {
           },
         }),
       )
-      .mockResolvedValueOnce(responseJson({ runId: 'RUN-SAVE-EDIT' }))
-      .mockResolvedValueOnce(responseJson({ runId: 'RUN-SAVE-DELETE' }))
-      .mockResolvedValueOnce(responseJson({ runId: 'RUN-SAVE-COPY' }));
+      .mockResolvedValueOnce(responseJson({ runId: 'RUN-SAVE-EDIT', prescriptionId: 102, revisionId: 202, status: 'DRAFT' }))
+      .mockResolvedValueOnce(responseJson({ runId: 'RUN-SAVE-COPY', prescriptionId: 103, revisionId: 203, status: 'DRAFT' }));
 
     await savePrescriptionOrder({ patientId: '000001', order: initialOrder });
     const reloaded = await fetchPrescriptionOrder({
@@ -173,13 +176,6 @@ describe('prescription local roundtrip and ORCA boundary', () => {
     };
     await savePrescriptionOrder({ patientId: '000001', order: editedOrder });
 
-    const deletedOrder: PrescriptionOrder = {
-      ...editedOrder,
-      rps: [],
-      deletedDocumentIds: [],
-    };
-    await savePrescriptionOrder({ patientId: '000001', order: deletedOrder });
-
     const emptyCurrent: PrescriptionOrder = {
       ...buildEmptyPrescriptionOrder('000001', '2026-04-21', 'F001:E501'),
       rps: [],
@@ -188,12 +184,15 @@ describe('prescription local roundtrip and ORCA boundary', () => {
     const copiedOrder = importPrescriptionDoInput(emptyCurrent, { type: 'order', order: reloaded.order });
     await savePrescriptionOrder({ patientId: '000001', order: copiedOrder });
 
-    expectOnlyLocalPrescriptionCalls();
+    expectAuthorityWriteAndLocalReadOnlyCalls();
 
     const bodies = vi
       .mocked(httpFetch)
-      .mock.calls.filter((call) => String(call[0]) === '/api/local/prescription-orders')
-      .map((call) => JSON.parse(String((call[1] as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>);
+      .mock.calls.filter((call) => String(call[0]) === '/api/local/prescription-orders/authority')
+      .map((call) => {
+        const envelope = JSON.parse(String((call[1] as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+        return (envelope.order ?? {}) as Record<string, any>;
+      });
 
     expect(bodies[0]?.rps[0]).toEqual(
       expect.objectContaining({
@@ -226,10 +225,8 @@ describe('prescription local roundtrip and ORCA boundary', () => {
     );
     expect(bodies[1]?.doctorComments).toEqual([{ text: '全体医師コメント edited' }]);
     expect(bodies[1]?.rps[0]?.drugs[0]).toEqual(expect.objectContaining({ quantity: '2', drugComment: '眠気注意' }));
-
-    expect(bodies[2]?.rps).toEqual([]);
-    expect(bodies[3]?.encounterId).toBe('F001:E501');
-    expect(bodies[3]?.rps[0]).toEqual(
+    expect(bodies[2]?.encounterId).toBe('F001:E501');
+    expect(bodies[2]?.rps[0]).toEqual(
       expect.objectContaining({
         rpNumber: 'rp-local-1',
         usageCode: '001000',
@@ -244,6 +241,20 @@ describe('prescription local roundtrip and ORCA boundary', () => {
 
     await expect(savePrescriptionOrder({ patientId: '000001', order })).rejects.toThrow(
       '請求コメントコード未入力のコメントは保存できません',
+    );
+
+    expect(httpFetch).not.toHaveBeenCalled();
+  });
+
+  it('delete-only save is rejected before any legacy or authority write endpoint is called', async () => {
+    const order: PrescriptionOrder = {
+      ...buildPrescriptionOrder(),
+      rps: [],
+      deletedDocumentIds: [10],
+    };
+
+    await expect(savePrescriptionOrder({ patientId: '000001', order })).rejects.toThrow(
+      '処方オーダーの保存には少なくとも1件の薬剤が必要です。',
     );
 
     expect(httpFetch).not.toHaveBeenCalled();
