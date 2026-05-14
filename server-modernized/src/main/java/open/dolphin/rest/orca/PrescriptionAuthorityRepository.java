@@ -46,19 +46,20 @@ class PrescriptionAuthorityRepository {
                 .getSingleResult());
         long revisionId = insertRevision(orderId, 1, "DRAFT", null, null, null, null, actor, now, order, null, order);
         insertItems(revisionId, order, actor);
-        setCurrentRevision(orderId, revisionId, "DRAFT", actor, now);
-        insertEvent(orderId, revisionId, "CREATE", null, null, actor, now, null, order);
+        setCurrentRevision(facilityId, orderId, revisionId, "DRAFT", actor, now);
+        insertEvent(facilityId, orderId, revisionId, "CREATE", null, null, actor, now, null, order);
         return new PrescriptionMutationResult(orderId, revisionId, "DRAFT", null, patientId, encounterId);
     }
 
-    PrescriptionMutationResult finalizeDraft(long orderId, String actor, Instant now) {
-        Object[] row = loadOrderForUpdate(orderId);
+    PrescriptionMutationResult finalizeDraft(String facilityId, long orderId, String actor, Instant now) {
+        Object[] row = loadOrderForUpdate(facilityId, orderId);
         long revisionId = number(row[1]);
         String status = text(row[2]);
         if (!"DRAFT".equals(status)) {
             throw new IllegalStateException("prescription_order_not_draft");
         }
-        String contentHash = sha256(json(summaryFromRevision(revisionId)));
+        String currentSummary = summaryFromRevision(facilityId, orderId, revisionId);
+        String contentHash = sha256(json(currentSummary));
         entityManager.createNativeQuery("""
                         UPDATE opendolphin.prescription_order_revision
                            SET status = 'FINAL', content_hash = ?, finalized_at = ?, finalized_by = ?
@@ -69,12 +70,13 @@ class PrescriptionAuthorityRepository {
                 .setParameter(3, actor)
                 .setParameter(4, revisionId)
                 .executeUpdate();
-        setCurrentRevision(orderId, revisionId, "FINAL", actor, now);
-        insertEvent(orderId, revisionId, "FINALIZE", null, null, actor, now, summaryFromRevision(revisionId), summaryFromRevision(revisionId));
+        setCurrentRevision(facilityId, orderId, revisionId, "FINAL", actor, now);
+        insertEvent(facilityId, orderId, revisionId, "FINALIZE", null, null, actor, now, currentSummary, currentSummary);
         return new PrescriptionMutationResult(orderId, revisionId, "FINAL", contentHash, text(row[3]), text(row[4]));
     }
 
-    PrescriptionMutationResult transition(long orderId,
+    PrescriptionMutationResult transition(String facilityId,
+            long orderId,
             String status,
             String eventType,
             String reasonCode,
@@ -83,7 +85,7 @@ class PrescriptionAuthorityRepository {
             String actor,
             Instant now,
             String contentHash) {
-        Object[] row = loadOrderForUpdate(orderId);
+        Object[] row = loadOrderForUpdate(facilityId, orderId);
         String currentStatus = text(row[2]);
         if ("DRAFT".equals(currentStatus)) {
             throw new IllegalStateException("prescription_order_not_finalized");
@@ -95,12 +97,16 @@ class PrescriptionAuthorityRepository {
         String resolvedContentHash = order != null ? sha256(json(order)) : contentHash;
         int nextRevision = ((Number) entityManager.createNativeQuery("""
                         SELECT COALESCE(MAX(revision_number), 0) + 1
-                          FROM opendolphin.prescription_order_revision
-                         WHERE prescription_order_id = ?
+                          FROM opendolphin.prescription_order_revision pr
+                          JOIN opendolphin.prescription_order po
+                            ON po.prescription_order_id = pr.prescription_order_id
+                         WHERE pr.prescription_order_id = ?
+                           AND po.facility_id = ?
                         """)
                 .setParameter(1, orderId)
+                .setParameter(2, facilityId)
                 .getSingleResult()).intValue();
-        Object before = summaryFromRevision(number(row[1]));
+        Object before = summaryFromRevision(facilityId, orderId, number(row[1]));
         enableAuthorityMutation();
         long revisionId = insertRevision(orderId, nextRevision, status, reasonCode, reasonText, resolvedContentHash,
                 "FINAL".equals(status) || "CHANGED".equals(status) || "REISSUED".equals(status) ? now : null,
@@ -108,57 +114,72 @@ class PrescriptionAuthorityRepository {
         if (order != null) {
             insertItems(revisionId, order, actor);
         }
-        setCurrentRevision(orderId, revisionId, status, actor, now);
-        insertEvent(orderId, revisionId, eventType, reasonCode, reasonText, actor, now, before, order);
+        setCurrentRevision(facilityId, orderId, revisionId, status, actor, now);
+        insertEvent(facilityId, orderId, revisionId, eventType, reasonCode, reasonText, actor, now, before, order);
         return new PrescriptionMutationResult(orderId, revisionId, status, resolvedContentHash, text(row[3]), text(row[4]));
     }
 
-    PrescriptionMutationResult recordResend(long orderId,
+    PrescriptionMutationResult recordResend(String facilityId,
+            long orderId,
             String reasonCode,
             String reasonText,
             String actor,
             Instant now) {
-        Object[] row = loadOrderForUpdate(orderId);
+        Object[] row = loadOrderForUpdate(facilityId, orderId);
         String currentStatus = text(row[2]);
         if ("DRAFT".equals(currentStatus)) {
             throw new IllegalStateException("prescription_order_not_finalized");
         }
         long revisionId = number(row[1]);
-        Object currentSummary = summaryFromRevision(revisionId);
-        insertEvent(orderId, revisionId, "RESEND", reasonCode, reasonText, actor, now, currentSummary, currentSummary);
+        Object currentSummary = summaryFromRevision(facilityId, orderId, revisionId);
+        insertEvent(facilityId, orderId, revisionId, "RESEND", reasonCode, reasonText, actor, now, currentSummary, currentSummary);
         return new PrescriptionMutationResult(orderId, revisionId, currentStatus,
-                contentHashFromRevision(revisionId), text(row[3]), text(row[4]));
+                contentHashFromRevision(facilityId, orderId, revisionId), text(row[3]), text(row[4]));
     }
 
-    private Object summaryFromRevision(long revisionId) {
-        return entityManager.createNativeQuery("""
-                        SELECT after_summary_json
-                          FROM opendolphin.prescription_order_revision
-                         WHERE prescription_order_revision_id = ?
-                        """)
-                .setParameter(1, revisionId)
-                .getSingleResult();
-    }
-
-    private String contentHashFromRevision(long revisionId) {
+    private String summaryFromRevision(String facilityId, long orderId, long revisionId) {
         return text(entityManager.createNativeQuery("""
-                        SELECT content_hash
-                          FROM opendolphin.prescription_order_revision
-                         WHERE prescription_order_revision_id = ?
+                        SELECT pr.after_summary_json::text
+                          FROM opendolphin.prescription_order_revision pr
+                          JOIN opendolphin.prescription_order po
+                            ON po.prescription_order_id = pr.prescription_order_id
+                         WHERE pr.prescription_order_revision_id = ?
+                           AND pr.prescription_order_id = ?
+                           AND po.facility_id = ?
                         """)
                 .setParameter(1, revisionId)
+                .setParameter(2, orderId)
+                .setParameter(3, facilityId)
                 .getSingleResult());
     }
 
-    private Object[] loadOrderForUpdate(long orderId) {
+    private String contentHashFromRevision(String facilityId, long orderId, long revisionId) {
+        return text(entityManager.createNativeQuery("""
+                        SELECT pr.content_hash
+                          FROM opendolphin.prescription_order_revision pr
+                          JOIN opendolphin.prescription_order po
+                            ON po.prescription_order_id = pr.prescription_order_id
+                         WHERE pr.prescription_order_revision_id = ?
+                           AND pr.prescription_order_id = ?
+                           AND po.facility_id = ?
+                        """)
+                .setParameter(1, revisionId)
+                .setParameter(2, orderId)
+                .setParameter(3, facilityId)
+                .getSingleResult());
+    }
+
+    private Object[] loadOrderForUpdate(String facilityId, long orderId) {
         try {
             Object row = entityManager.createNativeQuery("""
                             SELECT prescription_order_id, current_revision_id, status, patient_id, encounter_id
                               FROM opendolphin.prescription_order
                              WHERE prescription_order_id = ?
+                               AND facility_id = ?
                              FOR UPDATE
                             """)
                     .setParameter(1, orderId)
+                    .setParameter(2, facilityId)
                     .getSingleResult();
             return (Object[]) row;
         } catch (NoResultException ex) {
@@ -355,21 +376,24 @@ class PrescriptionAuthorityRepository {
         return null;
     }
 
-    private void setCurrentRevision(long orderId, long revisionId, String status, String actor, Instant now) {
+    private void setCurrentRevision(String facilityId, long orderId, long revisionId, String status, String actor, Instant now) {
         entityManager.createNativeQuery("""
                         UPDATE opendolphin.prescription_order
                            SET current_revision_id = ?, status = ?, updated_by = ?, updated_at = ?
                          WHERE prescription_order_id = ?
+                           AND facility_id = ?
                         """)
                 .setParameter(1, revisionId)
                 .setParameter(2, status)
                 .setParameter(3, actor)
                 .setParameter(4, Timestamp.from(now))
                 .setParameter(5, orderId)
+                .setParameter(6, facilityId)
                 .executeUpdate();
     }
 
-    private void insertEvent(long orderId,
+    private void insertEvent(String facilityId,
+            long orderId,
             long revisionId,
             String eventType,
             String reasonCode,
@@ -381,7 +405,7 @@ class PrescriptionAuthorityRepository {
         Instant occurredAt = now.truncatedTo(ChronoUnit.MICROS);
         String beforeJson = normalizedJson(before);
         String afterJson = normalizedJson(after);
-        String previousHash = previousEventHash(orderId);
+        String previousHash = previousEventHash(facilityId, orderId);
         String eventHash = PrescriptionOrderEventHashChainVerifier.computeEventHash(
                 orderId,
                 revisionId,
@@ -412,16 +436,20 @@ class PrescriptionAuthorityRepository {
                 .executeUpdate();
     }
 
-    private String previousEventHash(long orderId) {
+    private String previousEventHash(String facilityId, long orderId) {
         @SuppressWarnings("unchecked")
         List<String> hashes = entityManager.createNativeQuery("""
                         SELECT event_hash
-                          FROM opendolphin.prescription_order_event
-                         WHERE prescription_order_id = ?
+                          FROM opendolphin.prescription_order_event poe
+                          JOIN opendolphin.prescription_order po
+                            ON po.prescription_order_id = poe.prescription_order_id
+                         WHERE poe.prescription_order_id = ?
+                           AND po.facility_id = ?
                          ORDER BY occurred_at DESC, prescription_order_event_id DESC
                          LIMIT 1
                         """)
                 .setParameter(1, orderId)
+                .setParameter(2, facilityId)
                 .getResultList();
         return hashes.isEmpty() ? PrescriptionOrderEventHashChainVerifier.GENESIS_HASH : hashes.get(0);
     }

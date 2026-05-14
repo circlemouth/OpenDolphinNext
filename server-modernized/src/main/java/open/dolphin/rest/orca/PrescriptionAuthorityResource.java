@@ -89,17 +89,17 @@ public class PrescriptionAuthorityResource extends AbstractOrcaRestResource {
             PrescriptionAuthorityMutationRequest payload) {
         String runId = resolveRunId(request);
         String actor = requireRemoteUser(request);
-        requireFacilityId(request);
+        String facilityId = requireFacilityId(request);
         requireAuditWritePathAvailable(request);
         PrescriptionAuthorityRepository.PrescriptionMutationResult result;
         try {
-            result = prescriptionAuthorityRepository.finalizeDraft(prescriptionId, actor, Instant.now());
+            result = prescriptionAuthorityRepository.finalizeDraft(facilityId, prescriptionId, actor, Instant.now());
         } catch (IllegalStateException ex) {
             throw restError(request, statusForStateError(ex),
                     ex.getMessage(),
                     "Prescription order cannot be finalized in its current state");
         }
-        recordSuccess(request, AUDIT_FINALIZE, null, result.patientId(), runId, result, null);
+        recordSuccess(request, AUDIT_FINALIZE, facilityId, result.patientId(), runId, result, null);
         return response(runId, result);
     }
 
@@ -160,6 +160,7 @@ public class PrescriptionAuthorityResource extends AbstractOrcaRestResource {
         PrescriptionAuthorityRepository.PrescriptionMutationResult result;
         try {
             result = prescriptionAuthorityRepository.recordResend(
+                    facilityId,
                     prescriptionId,
                     trimToNull(payload.getReasonCode()),
                     trimToNull(payload.getReasonText()),
@@ -198,6 +199,7 @@ public class PrescriptionAuthorityResource extends AbstractOrcaRestResource {
         PrescriptionAuthorityRepository.PrescriptionMutationResult result;
         try {
             result = prescriptionAuthorityRepository.transition(
+                    facilityId,
                     prescriptionId,
                     status,
                     eventType,
