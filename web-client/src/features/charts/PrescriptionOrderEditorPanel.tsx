@@ -1478,10 +1478,10 @@ export function PrescriptionOrderEditorPanel({
         </div>
         <div className="charts-side-panel__subheader-actions">
           <button type="button" className="charts-side-panel__ghost charts-side-panel__ghost--add" onClick={addRp} disabled={isPreviewMode}>
-            RP追加
+            ＋RP
           </button>
           <button type="button" className="charts-side-panel__ghost charts-side-panel__ghost--add" onClick={addDrug} disabled={isPreviewMode}>
-            薬剤行追加
+            ＋薬剤行
           </button>
           <button
             type="button"

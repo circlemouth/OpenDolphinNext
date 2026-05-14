@@ -106,12 +106,36 @@ class PrescriptionAuthoritySchemaTest {
                         """.formatted(revisionId)));
                 assertPrescriptionOverwriteDenied(itemRewrite);
 
+                SQLException orderDelete = assertThrows(SQLException.class, () -> statement.executeUpdate("""
+                        DELETE FROM opendolphin.prescription_order
+                         WHERE prescription_order_id = %d
+                        """.formatted(orderId)));
+                assertPrescriptionOverwriteDenied(orderDelete);
+
+                SQLException revisionDelete = assertThrows(SQLException.class, () -> statement.executeUpdate("""
+                        DELETE FROM opendolphin.prescription_order_revision
+                         WHERE prescription_order_revision_id = %d
+                        """.formatted(revisionId)));
+                assertPrescriptionOverwriteDenied(revisionDelete);
+
+                SQLException itemDelete = assertThrows(SQLException.class, () -> statement.executeUpdate("""
+                        DELETE FROM opendolphin.prescription_order_item
+                         WHERE prescription_order_revision_id = %d
+                        """.formatted(revisionId)));
+                assertPrescriptionOverwriteDenied(itemDelete);
+
                 SQLException eventRewrite = assertThrows(SQLException.class, () -> statement.executeUpdate("""
                         UPDATE opendolphin.prescription_order_event
                            SET event_type = 'CHANGE'
                          WHERE prescription_order_id = %d
                         """.formatted(orderId)));
                 assertTrue(eventRewrite.getMessage().contains("prescription_order_event_append_only"));
+
+                SQLException eventDelete = assertThrows(SQLException.class, () -> statement.executeUpdate("""
+                        DELETE FROM opendolphin.prescription_order_event
+                         WHERE prescription_order_id = %d
+                        """.formatted(orderId)));
+                assertTrue(eventDelete.getMessage().contains("prescription_order_event_append_only"));
 
                 statement.execute("SELECT set_config('opendolphin.prescription_authority_mutation', 'event', false)");
                 long changedRevisionId = nextId(statement, """
@@ -206,6 +230,53 @@ class PrescriptionAuthoritySchemaTest {
         }
     }
 
+    @Test
+    void orcaPrescriptionOrdersRemainProjectionOnlyAndRejectDirectMutation() throws Exception {
+        try (EmbeddedPostgres postgres = EmbeddedPostgres.builder().start()) {
+            DataSource dataSource = postgres.getPostgresDatabase();
+            Flyway.configure()
+                    .dataSource(dataSource)
+                    .defaultSchema("opendolphin")
+                    .schemas("opendolphin")
+                    .locations("classpath:db/migration")
+                    .load()
+                    .migrate();
+
+            try (Connection connection = dataSource.getConnection();
+                    Statement statement = connection.createStatement()) {
+                SQLException insertDenied = assertThrows(SQLException.class, () -> statement.executeUpdate("""
+                        INSERT INTO opendolphin.orca_prescription_orders
+                            (facility_id, patient_id, encounter_id, encounter_date, perform_date, payload_json, created_by)
+                        VALUES
+                            ('F001', 'P001', 'ENC-001', DATE '2026-05-15', DATE '2026-05-15', '{}'::jsonb, 'doctor-1')
+                        """));
+                assertProjectionOnlyDenied(insertDenied);
+
+                statement.execute("ALTER TABLE opendolphin.orca_prescription_orders DISABLE TRIGGER USER");
+                statement.executeUpdate("""
+                        INSERT INTO opendolphin.orca_prescription_orders
+                            (facility_id, patient_id, encounter_id, encounter_date, perform_date, payload_json, created_by)
+                        VALUES
+                            ('F001', 'P001', 'ENC-001', DATE '2026-05-15', DATE '2026-05-15', '{}'::jsonb, 'doctor-1')
+                        """);
+                statement.execute("ALTER TABLE opendolphin.orca_prescription_orders ENABLE TRIGGER USER");
+
+                SQLException updateDenied = assertThrows(SQLException.class, () -> statement.executeUpdate("""
+                        UPDATE opendolphin.orca_prescription_orders
+                           SET patient_id = 'P002'
+                         WHERE encounter_id = 'ENC-001'
+                        """));
+                assertProjectionOnlyDenied(updateDenied);
+
+                SQLException deleteDenied = assertThrows(SQLException.class, () -> statement.executeUpdate("""
+                        DELETE FROM opendolphin.orca_prescription_orders
+                         WHERE encounter_id = 'ENC-001'
+                        """));
+                assertProjectionOnlyDenied(deleteDenied);
+            }
+        }
+    }
+
     private long nextId(Statement statement, String sql) throws SQLException {
         try (var resultSet = statement.executeQuery(sql)) {
             assertTrue(resultSet.next());
@@ -216,6 +287,11 @@ class PrescriptionAuthoritySchemaTest {
     private void assertPrescriptionOverwriteDenied(SQLException exception) {
         assertEquals("23514", exception.getSQLState());
         assertTrue(exception.getMessage().contains("prescription_order_finalized_update_denied"));
+    }
+
+    private void assertProjectionOnlyDenied(SQLException exception) {
+        assertEquals("23514", exception.getSQLState());
+        assertTrue(exception.getMessage().contains("orca_prescription_orders_projection_write_denied"));
     }
 
     private void insertHashedEvent(Statement statement,

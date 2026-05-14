@@ -4716,7 +4716,7 @@ export function OrderBundleEditPanel({
                 }}
                 disabled={isBlocked}
               >
-                行追加
+                ＋項目行
               </button>
               <button
                 type="button"

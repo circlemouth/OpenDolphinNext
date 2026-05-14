@@ -18,11 +18,15 @@
 | `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/reissue` | `REISSUE` | 理由と新 structured item revision を必須にする。 |
 | `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/resend` | `RESEND` | ORCA UNKNOWN / 再送判断の audit event。処方 content と status は変更しない。 |
 
+全 route の facility は認証済み remote user / session / server-side tenant context からだけ解決する。`X-Facility-Id` を含む client header は authority に使わない。
+
 ## Hash Chain
 
 `prescription_order_event` は append-only とし、全 event に `previous_event_hash` と `event_hash` を必須投入する。`event_hash` は少なくとも order id、revision id、event type、actor、occurred at、before payload hash、after payload hash、previous hash を含む server-side material から計算する。
 
 初回 event の `previous_event_hash` は 64 桁の `0` とする。client 提供の digest、facility、owner、role、patient、encounter、ORCA identifier は hash chain の権威値にしない。
+
+finalize / change / stop / cancel / reissue / resend の order lookup は facility id と prescriptionId を組にして server-side で解決する。order id 単独 lookup で他施設 order を mutation しない。
 
 ## Verification
 

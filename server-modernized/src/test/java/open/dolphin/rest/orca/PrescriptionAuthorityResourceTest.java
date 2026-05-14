@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.time.Instant;
@@ -90,6 +91,7 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("STOPPED", response.getStatus());
         assertEquals("STOP", repository.eventType);
         assertEquals("STOPPED", repository.status);
+        assertEquals("F001", repository.facilityId);
         assertEquals("P-SERVER", response.getPatientId());
         assertEquals("adverse event", repository.reasonText);
     }
@@ -103,7 +105,23 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
 
         assertEquals("FINAL", response.getStatus());
         assertEquals("RESEND", repository.eventType);
+        assertEquals("F001", repository.facilityId);
         assertEquals("UNKNOWN reconciliation confirmed no duplicate", repository.reasonText);
+    }
+
+    @Test
+    void finalizeUsesAuthenticatedFacilityAndIgnoresSpoofedFacilityHeader() {
+        HttpServletRequest spoofedRequest = request(
+                "/api/local/prescription-orders/authority/101/finalize",
+                "F001:doctor01",
+                "HACKED-FACILITY");
+
+        PrescriptionAuthorityMutationResponse response =
+                resource.finalizeDraft(spoofedRequest, 101L, new PrescriptionAuthorityMutationRequest());
+
+        assertEquals("FINAL", response.getStatus());
+        assertEquals("F001", repository.facilityId);
+        assertEquals(1, repository.finalizeCalls);
     }
 
     @Test
@@ -115,6 +133,20 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
 
         assertEquals(409, ex.getResponse().getStatus());
         assertTrue(String.valueOf(ex.getResponse().getEntity()).contains("prescription_order_not_draft"));
+    }
+
+    @Test
+    void finalizeRejectsMissingFacilityEvenWhenHeaderIsSpoofed() {
+        HttpServletRequest missingFacilityRequest = request(
+                "/api/local/prescription-orders/authority/101/finalize",
+                null,
+                "SPOOFED-FACILITY");
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.finalizeDraft(missingFacilityRequest, 101L, new PrescriptionAuthorityMutationRequest()));
+
+        assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), ex.getResponse().getStatus());
+        assertEquals(0, repository.finalizeCalls);
     }
 
     @Test
@@ -151,6 +183,10 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
     }
 
     private HttpServletRequest request(String uri) {
+        return request(uri, "F001:doctor01", null);
+    }
+
+    private HttpServletRequest request(String uri, String remoteUser, String facilityHeader) {
         Map<String, Object> attributes = new HashMap<>();
         return (HttpServletRequest) Proxy.newProxyInstance(
                 getClass().getClassLoader(),
@@ -158,7 +194,7 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
                 (proxy, method, args) -> {
                     String name = method.getName();
                     if ("getRemoteUser".equals(name)) {
-                        return "F001:doctor01";
+                        return remoteUser;
                     }
                     if ("getRemoteAddr".equals(name)) {
                         return "127.0.0.1";
@@ -176,6 +212,7 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
                     if ("getHeader".equals(name) && args != null && args.length == 1) {
                         return switch (String.valueOf(args[0])) {
                             case "X-Run-Id" -> "20260510T211441Z";
+                            case "X-Facility-Id" -> facilityHeader;
                             case "User-Agent" -> "JUnit";
                             default -> null;
                         };
@@ -203,6 +240,7 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
 
     private static final class FakePrescriptionAuthorityRepository extends PrescriptionAuthorityRepository {
         private int createCalls;
+        private int finalizeCalls;
         private int transitionCalls;
         private String facilityId;
         private String patientId;
@@ -225,7 +263,9 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
         }
 
         @Override
-        PrescriptionMutationResult finalizeDraft(long orderId, String actor, Instant now) {
+        PrescriptionMutationResult finalizeDraft(String facilityId, long orderId, String actor, Instant now) {
+            finalizeCalls += 1;
+            this.facilityId = facilityId;
             if (finalizeFailure != null) {
                 throw finalizeFailure;
             }
@@ -233,9 +273,10 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
         }
 
         @Override
-        PrescriptionMutationResult transition(long orderId, String status, String eventType, String reasonCode,
+        PrescriptionMutationResult transition(String facilityId, long orderId, String status, String eventType, String reasonCode,
                 String reasonText, PrescriptionOrder order, String actor, Instant now, String contentHash) {
             transitionCalls += 1;
+            this.facilityId = facilityId;
             this.status = status;
             this.eventType = eventType;
             this.reasonText = reasonText;
@@ -244,8 +285,9 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
         }
 
         @Override
-        PrescriptionMutationResult recordResend(long orderId, String reasonCode, String reasonText, String actor, Instant now) {
+        PrescriptionMutationResult recordResend(String facilityId, long orderId, String reasonCode, String reasonText, String actor, Instant now) {
             transitionCalls += 1;
+            this.facilityId = facilityId;
             this.status = "FINAL";
             this.eventType = "RESEND";
             this.reasonText = reasonText;

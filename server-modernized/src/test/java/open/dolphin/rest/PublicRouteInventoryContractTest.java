@@ -85,9 +85,7 @@ class PublicRouteInventoryContractTest {
             "POST /api/local/prescription-orders/authority/{*}/finalize",
             "POST /api/local/prescription-orders/authority/{*}/reissue",
             "POST /api/local/prescription-orders/authority/{*}/resend",
-            "POST /api/local/prescription-orders/authority/{*}/stop",
-            "POST /api/local/prescription-orders",
-            "POST /api/local/prescription-orders/do-import");
+            "POST /api/local/prescription-orders/authority/{*}/stop");
 
     private static final Set<String> EXPECTED_ADMIN_INTERNAL_ROUTE_KEYS = Set.of(
             "GET /api/admin/internal/orca/patients/sync/status");
@@ -130,9 +128,22 @@ class PublicRouteInventoryContractTest {
         assertThat(routeKeys)
                 .noneMatch(routeKey -> routeKey.contains(" /api/prescriptions"));
         assertThat(routeKeys)
+                .noneMatch(PublicRouteInventoryContractTest::isDisallowedLocalPrescriptionMutationSurface);
+        assertThat(routeKeys)
                 .noneMatch(PublicRouteInventoryContractTest::isDisallowedLocalDiseaseMutationSurface);
         assertThat(localRoutes)
                 .allMatch(routeKey -> !isOfficialLike(routeKey));
+        assertThat(localRoutes)
+                .filteredOn(routeKey -> routeKey.contains(" /api/local/prescription-orders"))
+                .containsExactlyInAnyOrder(
+                        "GET /api/local/prescription-orders",
+                        "POST /api/local/prescription-orders/authority",
+                        "POST /api/local/prescription-orders/authority/{*}/cancel",
+                        "POST /api/local/prescription-orders/authority/{*}/change",
+                        "POST /api/local/prescription-orders/authority/{*}/finalize",
+                        "POST /api/local/prescription-orders/authority/{*}/reissue",
+                        "POST /api/local/prescription-orders/authority/{*}/resend",
+                        "POST /api/local/prescription-orders/authority/{*}/stop");
         assertThat(routeKeys).contains(
                 "GET /api/orca/official/patientgetv2",
                 "POST /api/orca/official/patientmodv2/outpatient/create",
@@ -243,6 +254,17 @@ class PublicRouteInventoryContractTest {
                 || normalized.startsWith("put ")
                 || normalized.startsWith("patch ")
                 || normalized.startsWith("delete ");
+    }
+
+    private static boolean isDisallowedLocalPrescriptionMutationSurface(String routeKey) {
+        String normalized = routeKey.toLowerCase(Locale.ROOT);
+        if (!normalized.contains(" /api/local/prescription-orders")) {
+            return false;
+        }
+        if (normalized.equals("get /api/local/prescription-orders")) {
+            return false;
+        }
+        return !normalized.startsWith("post /api/local/prescription-orders/authority");
     }
 
     private static boolean isTextPlain(String mediaType) {

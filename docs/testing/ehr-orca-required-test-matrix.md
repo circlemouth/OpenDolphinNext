@@ -82,6 +82,7 @@ GUI 改修前 closeout の追加 misuse case:
 - 処方取消
 - 処方再発行
 - 確定済み処方指示の直接上書き禁止
+- `orca_prescription_orders` source-of-truth write 禁止
 - ORCA送信成功
 - ORCA送信失敗
 - ORCA送信失敗時に反映済み扱いしないこと

@@ -91,7 +91,12 @@ class WebXmlEndpointExposureTest {
                         "POST /api/karte/document",
                         "PUT /api/karte/document",
                         "DELETE /api/karte/document/{*}",
-                        "PUT /api/karte/document/{*}")
+                        "PUT /api/karte/document/{*}",
+                        "POST /api/local/prescription-orders",
+                        "POST /api/local/prescription-orders/do-import")
+                .contains(
+                        "GET /api/local/prescription-orders",
+                        "POST /api/local/prescription-orders/authority")
                 .allMatch(routeKey -> !routeKey.contains(" /api/orca/")
                         || routeKey.contains(" /api/orca/official/")
                         || routeKey.contains(" /api/orca/master/"));

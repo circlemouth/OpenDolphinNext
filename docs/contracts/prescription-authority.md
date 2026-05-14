@@ -12,6 +12,7 @@ OpenDolphinNext の処方指示は、診療録や ORCA 診療行為送信候補�
 - `prescription_order_event` は create / finalize / change / stop / cancel / reissue / resend の append-only event として扱う。
 - `orca_medical_candidate` は処方正本から作った ORCA 診療行為送信候補を保持する。candidate は明示的に非正本であり、ORCA 送信前確認・未解決項目レビュー用の prepare 結果に限定する。
 - `prescription_orca_transmission` は ORCA 送信準備・送信・照合の状態を保持する。raw ORCA body、資格情報、患者詳細、保険詳細は保存しない。
+- `orca_prescription_orders` を残す場合は ORCA由来 cache / projection / read model だけに限定する。処方 authority write の保存先ではない。現行 app runtime では direct INSERT / UPDATE / DELETE を禁止し、旧 local payload table を authority bypass 用 fallback にしてはならない。
 
 ## Status Contract
 
@@ -32,12 +33,15 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - `POST /api/local/prescription-orders/authority` は server-side facility と patient existence を検証し、診療録リビジョンに紐付く `DRAFT` 処方を `prescription_order` / `prescription_order_revision` / `prescription_order_item` / `prescription_order_event` に保存する。旧 `/api/prescriptions` alias は公開しない。
 - `POST /api/local/prescription-orders/authority/{prescriptionId}/finalize` は保存済み current revision の server-side summary から `content_hash` を計算し、`FINALIZE` event を追加する。client 提供 digest は権威値にしない。
 - `POST /api/local/prescription-orders/authority/{prescriptionId}/change|stop|cancel|reissue|resend` は理由必須とし、`CHANGE` / `STOP` / `CANCEL` / `REISSUE` / `RESEND` event を append-only で追加する。`change` / `reissue` は新しい構造化 item を持つ revision を要求し、`resend` は current revision を維持した再送判断 event だけを追加する。
+- authority route の facility は認証済み remote user / server-side tenant context だけから解決する。`X-Facility-Id` を含む client header は処方 mutation authority、order lookup、event hash chain の facility 判定に使わない。
 - 構造化 item は first-class DTO の `standardName` / `dosageForm` / `days` / `prescriptionLocation` / `medicationRoute` を保存する。client hint が欠落している場合でも、server は `medicalClass` / `medicalClassNumber` から院内外・内服/頓服/外用・日数を再解決し、未知または不正な値は fail-open せず null / unresolved に落とす。
 - `created_by` は認証済み actor から保存し、client payload の owner / role / facility 相当値は採用しない。
 - `FINAL` / `CHANGED` / `STOPPED` / `CANCELLED` / `REISSUED` の処方 order / revision / item は直接 UPDATE / DELETE できない。
 - 確定後の変更、中止、取消、再発行は新 revision と `prescription_order_event` により表現する。
 - `prescription_order_event` は append-only で、UPDATE / DELETE は DB trigger が拒否する。
+- `orca_prescription_orders` は projection-only table とし、app direct INSERT / UPDATE / DELETE は DB guard が拒否する。旧 local save / do-import payload は `prescription_order_event` hash chain を迂回して保存してはならない。
 - `prescription_order_event.previous_event_hash` と `prescription_order_event.event_hash` は必須で、`order id`、`revision id`、`event type`、`actor`、`occurred_at`、`before_summary_json` hash、`after_summary_json` hash、`previous_event_hash` から server が計算する。初回 event の `previous_event_hash` は 64 桁の `0` とし、client 提供 digest は採用しない。
+- finalize / change / stop / cancel / reissue / resend の repository mutation は facility id と order id の組で対象 order を解決し、order id 単独 lookup で他施設 row を参照しない。
 - hash chain 検証は `PrescriptionOrderEventHashChainVerifier` が担い、過去 event の `before_summary_json` / `after_summary_json` / actor / timestamp / previous hash / event hash の改ざんを検出する。
 - client 由来の facility / owner / role / voucher / sequential / insurance combination / storage key / digest / URL は処方正本の権威情報にしない。API 実装では認証 context、server-side encounter projection、DB 状態から再解決する。
 
@@ -77,6 +81,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - client が DRAFT / STOPPED / CANCELLED の処方を chart revision 経由で candidate 化し、未確定または中止済み指示を送信前確認へ進める。
 - candidate handoff の行識別子が表示順だけになり、送信前確認・送信後差分照合で RP/薬剤行を取り違える。
 - chart export / reporting integration が処方履歴を再読込する時に raw summary JSON、患者詳細、保険詳細、ORCA raw body、client-provided voucher / sequential を持ち込み、診療録 export の allowlist 境界を破る。
+- legacy local write 経路が `orca_prescription_orders` に payload を保存し、`prescription_order` / `prescription_order_event` の正本境界と hash chain を迂回する。
 
 ## Verification
 

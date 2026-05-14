@@ -25,6 +25,14 @@ import {
   type PrescriptionOrder,
 } from '../prescriptionOrderApi';
 
+const requestEnvelopeAt = (index: number) =>
+  JSON.parse(String((vi.mocked(httpFetch).mock.calls[index]?.[1] as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+
+const authorityOrderBodyAt = (index: number) => {
+  const envelope = requestEnvelopeAt(index);
+  return (envelope.order ?? {}) as Record<string, any>;
+};
+
 describe('prescriptionOrderApi first-class contract', () => {
   beforeEach(() => {
     vi.mocked(httpFetch).mockReset();
@@ -127,9 +135,18 @@ describe('prescriptionOrderApi first-class contract', () => {
 
     await savePrescriptionOrder({ patientId: '000001', order });
 
-    const request = vi.mocked(httpFetch).mock.calls[0]?.[1];
-    const body = JSON.parse(String((request as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+    const envelope = requestEnvelopeAt(0);
+    const body = authorityOrderBodyAt(0);
 
+    expect(vi.mocked(httpFetch)).toHaveBeenNthCalledWith(
+      1,
+      '/api/local/prescription-orders/authority',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    );
+    expect(envelope.patientId).toBe('000001');
+    expect(envelope.encounterId).toBe('F001:E100');
     expect(body.encounterId).toBe('F001:E100');
     expect(body.rps.map((rp: Record<string, any>) => rp.rpNumber)).toEqual(classMatrix.map((entry) => entry.rpId));
     expect(body.rps.map((rp: Record<string, any>) => rp.medicalClass)).toEqual(
@@ -568,9 +585,11 @@ describe('prescriptionOrderApi first-class contract', () => {
     };
     await savePrescriptionOrder({ patientId: '000001', order: fetchedOrder });
 
-    const secondRequest = vi.mocked(httpFetch).mock.calls[1]?.[1];
-    const secondBody = JSON.parse(String((secondRequest as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+    const secondEnvelope = requestEnvelopeAt(1);
+    const secondBody = authorityOrderBodyAt(1);
 
+    expect(secondEnvelope.patientId).toBe('000001');
+    expect(secondEnvelope.encounterId).toBe('F001:E300');
     expect(secondBody.encounterId).toBe('F001:E300');
     expect(secondBody.rps[0]).toEqual(
       expect.objectContaining({
@@ -706,14 +725,29 @@ describe('prescriptionOrderApi first-class contract', () => {
       expect.objectContaining({ ok: true }),
     );
 
-    const request = vi.mocked(httpFetch).mock.calls[0]?.[1] as RequestInit | undefined;
-    const body = JSON.parse(String(request?.body ?? '{}')) as Record<string, any>;
+    const body = authorityOrderBodyAt(0);
     expect(body.rps[0]).toEqual(
       expect.objectContaining({
         usageName: '食後すぐ',
       }),
     );
     expect(body.rps[0]?.usageCode).toBeUndefined();
+  });
+
+  it('save は薬剤ゼロの処方を authority draft として送信しない', async () => {
+    const order: PrescriptionOrder = {
+      patientId: '000001',
+      encounterDate: '2026-03-09',
+      performDate: '2026-03-09',
+      doctorComment: '',
+      deletedDocumentIds: [10],
+      rps: [],
+    };
+
+    await expect(savePrescriptionOrder({ patientId: '000001', order })).rejects.toThrow(
+      '処方オーダーの保存には少なくとも1件の薬剤が必要です。',
+    );
+    expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
   });
 
   it('send bundle は usage/admin/adminCode/adminMemo を ORCA send path へ出さない', () => {
@@ -970,8 +1004,7 @@ describe('prescriptionOrderApi first-class contract', () => {
       expect.objectContaining({ ok: true }),
     );
 
-    const request = vi.mocked(httpFetch).mock.calls[0]?.[1] as RequestInit | undefined;
-    const body = JSON.parse(String(request?.body ?? '{}')) as Record<string, any>;
+    const body = authorityOrderBodyAt(0);
     expect(body.rps[0].claimComments).toEqual([
       expect.objectContaining({ code: '830000001', note: '補足メモ' }),
       expect.objectContaining({ code: '842000001', note: '1.5' }),

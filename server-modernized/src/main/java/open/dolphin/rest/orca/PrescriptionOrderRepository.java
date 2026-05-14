@@ -15,6 +15,8 @@ import java.util.Optional;
 @ApplicationScoped
 class PrescriptionOrderRepository {
 
+    static final String PROJECTION_WRITE_DENIED = "orca_prescription_orders_projection_write_denied";
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -26,20 +28,7 @@ class PrescriptionOrderRepository {
             String payloadJson,
             Instant createdAt,
             String createdBy) {
-        Object id = entityManager.createNativeQuery(
-                        "insert into orca_prescription_orders "
-                                + "(facility_id, patient_id, encounter_id, encounter_date, perform_date, payload_json, created_at, created_by) "
-                                + "values (?, ?, ?, ?, ?, cast(? as jsonb), ?, ?) returning id")
-                .setParameter(1, facilityId)
-                .setParameter(2, patientId)
-                .setParameter(3, encounterId)
-                .setParameter(4, encounterDate != null ? Date.valueOf(encounterDate) : null)
-                .setParameter(5, performDate != null ? Date.valueOf(performDate) : null)
-                .setParameter(6, payloadJson)
-                .setParameter(7, Timestamp.from(createdAt))
-                .setParameter(8, createdBy)
-                .getSingleResult();
-        return ((Number) id).longValue();
+        throw new IllegalStateException(PROJECTION_WRITE_DENIED);
     }
 
     Optional<StoredPrescriptionOrder> findLatest(String facilityId,

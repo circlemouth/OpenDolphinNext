@@ -52,7 +52,9 @@ public final class OpenDolphinRestApplication extends Application {
                 open.dolphin.rest.orca.LocalEncounterBillingWorkflowResource.class,
                 open.dolphin.rest.orca.LocalOrcaMedicalCandidateResource.class,
                 open.dolphin.rest.orca.LocalOrderBundleResource.class,
+                // LocalPrescriptionOrderResource is read-only cache/projection only.
                 open.dolphin.rest.orca.LocalPrescriptionOrderResource.class,
+                // All production prescription mutations must stay under /api/local/prescription-orders/authority.
                 open.dolphin.rest.orca.PrescriptionAuthorityResource.class,
                 // Official routes live under /api/orca/official/* and master-backed reads live under /api/orca/master/*.
                 open.dolphin.rest.orca.OrcaLiveDiseaseMasterResource.class,

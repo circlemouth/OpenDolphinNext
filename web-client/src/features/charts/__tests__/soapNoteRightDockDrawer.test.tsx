@@ -54,6 +54,51 @@ describe('SoapNotePanel right dock drawer', () => {
     expect(body.contains(rightDockArea)).toBe(false);
   });
 
+  it('右オーダーペインはSOAP本文グリッド外に常時表示される', () => {
+    const { container } = renderWithQueryClient(
+      <SoapNotePanel
+        history={[]}
+        meta={{
+          runId: 'RUN-RIGHT-ORDER-PANE',
+          patientId: 'P-001',
+          appointmentId: 'APT-001',
+          receptionId: 'RCP-001',
+          visitDate: '2026-02-26',
+        }}
+        author={{ role: 'doctor', displayName: 'Dr. Dock', userId: 'doctor01' }}
+      />,
+    );
+
+    const body = requireElement(container.querySelector('.soap-note__body'));
+    const orderPane = requireElement(container.querySelector('#charts-order-pane'));
+    expect(body.contains(orderPane)).toBe(false);
+    expect(orderPane).toHaveTextContent('処方');
+    expect(orderPane).toHaveTextContent('注射');
+    expect(orderPane).toHaveTextContent('処置');
+    expect(orderPane).toHaveTextContent('検査');
+    expect(orderPane).toHaveTextContent('算定');
+  });
+
+  it('空カテゴリ追加で右オーダーペイン内に編集フォームを開く', async () => {
+    renderWithQueryClient(
+      <SoapNotePanel
+        history={[]}
+        meta={{
+          runId: 'RUN-RIGHT-ORDER-ADD',
+          patientId: 'P-001',
+          appointmentId: 'APT-001',
+          receptionId: 'RCP-001',
+          visitDate: '2026-02-26',
+        }}
+        author={{ role: 'doctor', displayName: 'Dr. Dock', userId: 'doctor01' }}
+      />,
+    );
+
+    expect(await screen.findByText('処方入力')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '＋RP' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '＋薬剤行' })).toBeInTheDocument();
+  });
+
   it('右ドック押下でドロワーが開き対象カテゴリを表示する', async () => {
     const user = userEvent.setup();
     const bundles: OrderBundle[] = [

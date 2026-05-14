@@ -1333,13 +1333,13 @@ describe('order send smoke', () => {
     vi.mocked(httpFetch).mockImplementation(async (input, init) => {
       const url = String(input);
       requestUrls.push(url);
-      if (url === '/api/local/prescription-orders' && init?.method === 'POST') {
+      if (url === '/api/local/prescription-orders/authority' && init?.method === 'POST') {
         return new Response(
           JSON.stringify({
             runId: 'RUN-RX-SAVE',
-            createdDocumentIds: [701],
-            updatedDocumentIds: [],
-            deletedDocumentIds: [],
+            prescriptionId: 701,
+            revisionId: 801,
+            status: 'DRAFT',
           }),
           {
             status: 200,
@@ -1387,7 +1387,10 @@ describe('order send smoke', () => {
     const firstSave = await savePrescriptionOrder({ patientId: '000001', order });
     expect(firstSave.ok).toBe(true);
     const firstSaveRequest = vi.mocked(httpFetch).mock.calls[0]?.[1];
-    const firstSaveBody = JSON.parse(String((firstSaveRequest as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+    const firstSaveEnvelope = JSON.parse(String((firstSaveRequest as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+    const firstSaveBody = (firstSaveEnvelope.order ?? {}) as Record<string, any>;
+    expect(firstSaveEnvelope.patientId).toBe('000001');
+    expect(firstSaveEnvelope.encounterId).toBe('F001:E900');
     expect(firstSaveBody.encounterId).toBe('F001:E900');
     expect(firstSaveBody.prescriptionSettings).toEqual([{ code: 'setting-1', name: '院内設定', value: 'enabled' }]);
     expect(firstSaveBody.remarks).toEqual([{ code: 'remark-1', text: '院内備考' }]);
@@ -1515,7 +1518,7 @@ describe('order send smoke', () => {
     const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
     expect(sendResult.ok).toBe(true);
     expect(requestUrls.filter((url) => url.startsWith('/api/local/prescription-orders?'))).toHaveLength(2);
-    expect(requestUrls.filter((url) => url === '/api/local/prescription-orders')).toHaveLength(2);
+    expect(requestUrls.filter((url) => url === '/api/local/prescription-orders/authority')).toHaveLength(2);
   });
 
   it('postOrcaMedicalModV2Xml treats same-day duplicate as ORCA business rejection', async () => {

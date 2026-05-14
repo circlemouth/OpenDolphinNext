@@ -91,7 +91,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0334", appliedVersion(connection));
+                assertEquals("0335", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -138,6 +138,7 @@ class FreshSchemaBaselineTest {
                 assertTrue(tableExists(connection, "opendolphin", "prescription_order_item"));
                 assertTrue(tableExists(connection, "opendolphin", "prescription_order_event"));
                 assertTrue(tableExists(connection, "opendolphin", "prescription_orca_transmission"));
+                assertTrue(tableExists(connection, "opendolphin", "orca_prescription_orders"));
                 assertTrue(tableExists(connection, "opendolphin", "orca_operation"));
                 assertTrue(tableExists(connection, "opendolphin", "orca_transmission"));
                 assertTrue(tableExists(connection, "opendolphin", "orca_response_summary"));
@@ -295,6 +296,8 @@ class FreshSchemaBaselineTest {
                 assertTrue(indexExists(connection, "opendolphin", "idx_prescription_order_item_revision"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_prescription_order_event_order"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_prescription_orca_transmission_order"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_orca_prescription_orders_patient_latest"));
+                assertTrue(triggerExists(connection, "opendolphin", "trg_orca_prescription_orders_projection_guard"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_operation_status"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_operation_audit_trace"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_orca_operation_unknown_review"));
@@ -573,6 +576,21 @@ class FreshSchemaBaselineTest {
                 "select 1 from pg_indexes where schemaname = ? and indexname = ?")) {
             statement.setString(1, schema);
             statement.setString(2, indexName);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private static boolean triggerExists(Connection connection, String schema, String triggerName) throws Exception {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                select 1
+                  from information_schema.triggers
+                 where event_object_schema = ?
+                   and trigger_name = ?
+                """)) {
+            statement.setString(1, schema);
+            statement.setString(2, triggerName);
             try (ResultSet rs = statement.executeQuery()) {
                 return rs.next();
             }

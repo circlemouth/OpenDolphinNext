@@ -522,6 +522,7 @@ export function SoapNotePanel({
   const lastDocumentDockOpenRequestIdRef = useRef<string | null>(null);
   const lastDocumentHistoryCopyRequestIdRef = useRef<string | null>(null);
   const pendingExternalHistoryCopyRequestIdRef = useRef<string | null>(null);
+  const initialInlineOrderEditorOpenedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -635,6 +636,96 @@ export function SoapNotePanel({
     },
     [buildDrawerRequestId],
   );
+
+  const orderCategoryAddBlockReason = useMemo(() => {
+    if (readOnly) return readOnlyReason ?? '閲覧専用のため編集できません。';
+    if (!meta.patientId) return '患者IDが未選択のためオーダーを追加できません。';
+    if (orderEditorMeta.missingMaster) return 'マスター未同期のため編集できません。';
+    if (orderEditorMeta.fallbackUsed) return 'フォールバックデータのため編集できません。';
+    return null;
+  }, [meta.patientId, orderEditorMeta.fallbackUsed, orderEditorMeta.missingMaster, readOnly, readOnlyReason]);
+
+  const emptyCategoryAddState = useMemo(
+    () =>
+      ORDER_GROUP_REGISTRY.reduce<Partial<Record<OrderGroupKey, { disabled?: boolean; reason?: string }>>>((acc, group) => {
+        if (orderCategoryAddBlockReason) {
+          acc[group.key] = { disabled: true, reason: orderCategoryAddBlockReason };
+        }
+        return acc;
+      }, {}),
+    [orderCategoryAddBlockReason],
+  );
+
+  const handleOrderSummaryCategoryAdd = useCallback(
+    (payload: { group: OrderGroupKey; entity: OrderEntity }) => {
+      if (orderCategoryAddBlockReason) {
+        setOrderSummaryNotice({ tone: 'error', message: `オーダー追加を停止: ${orderCategoryAddBlockReason}` });
+        return;
+      }
+      setOrderSummaryNotice(null);
+      setActiveTool(payload.group);
+      setDrawerOpen(false);
+      setDrawerPeek(false);
+      setDrawerMinimized(false);
+      setActiveOrderEntity(payload.entity);
+      setActiveOrderRequest({ requestId: buildDrawerRequestId(), kind: 'new' });
+      setActiveOrderSource('right-panel');
+      setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
+      setActiveCenterPanel('order');
+    },
+    [buildDrawerRequestId, orderCategoryAddBlockReason],
+  );
+
+  const handleOrderSummaryCategorySelect = useCallback(
+    (payload: { group: OrderGroupKey; entity: OrderEntity; hasRows: boolean }) => {
+      setOrderSummaryNotice(null);
+      setActiveTool(payload.group);
+      setDrawerOpen(false);
+      setDrawerPeek(false);
+      setDrawerMinimized(false);
+      if (!payload.hasRows) {
+        handleOrderSummaryCategoryAdd({ group: payload.group, entity: payload.entity });
+        return;
+      }
+      setActiveOrderEntity(null);
+      setActiveOrderRequest(null);
+      setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
+      setActiveCenterPanel(null);
+    },
+    [handleOrderSummaryCategoryAdd],
+  );
+
+  useEffect(() => {
+    if (initialInlineOrderEditorOpenedRef.current) return;
+    if (activeCenterPanel !== null) return;
+    if (resolvedOrderBundlesLoading || resolvedOrderBundlesError) return;
+    if (orderCategoryAddBlockReason) return;
+    const firstNonEmptyGroup = ORDER_GROUP_REGISTRY.find((group) => (orderBundlesByGroup.get(group.key)?.length ?? 0) > 0);
+    if (firstNonEmptyGroup) {
+      initialInlineOrderEditorOpenedRef.current = true;
+      setActiveTool(firstNonEmptyGroup.key);
+      return;
+    }
+    const prescriptionGroup = resolveGroupSpec('prescription');
+    if (!prescriptionGroup) return;
+    initialInlineOrderEditorOpenedRef.current = true;
+    setActiveTool('prescription');
+    setDrawerOpen(false);
+    setDrawerPeek(false);
+    setDrawerMinimized(false);
+    setActiveOrderEntity(prescriptionGroup.defaultEntity);
+    setActiveOrderRequest({ requestId: buildDrawerRequestId(), kind: 'new' });
+    setActiveOrderSource('right-panel');
+    setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
+    setActiveCenterPanel('order');
+  }, [
+    activeCenterPanel,
+    buildDrawerRequestId,
+    orderBundlesByGroup,
+    orderCategoryAddBlockReason,
+    resolvedOrderBundlesError,
+    resolvedOrderBundlesLoading,
+  ]);
 
   const handleDrawerOrderRequest = useCallback(
     (entity: OrderEntity, request: OrderBundleEditPanelRequest) => {
@@ -795,10 +886,6 @@ export function SoapNotePanel({
     orderBundlesByGroup,
     totalOrderBundleCount,
   ]);
-
-  const handleOpenDocumentPanel = useCallback(() => {
-    setActiveCenterPanel('document');
-  }, []);
 
   const handleCloseCenterPanel = useCallback(() => {
     setActiveCenterPanel(null);
@@ -2010,8 +2097,9 @@ export function SoapNotePanel({
         />
       </div>
       <RightUtilityDrawer {...rightUtilityDrawerProps} />
-      <div className="soap-note__body">
-        <div className="soap-note__editor">
+      <div className="soap-note__workspace">
+        <div className="soap-note__body">
+          <div className="soap-note__editor">
           {historyView ? (
             <div className="soap-note__history-mode" aria-label="訂正履歴">
               <p className="soap-note__history-hint">
@@ -2146,6 +2234,7 @@ export function SoapNotePanel({
               </details>
             </>
           )}
+          </div>
         </div>
         <OrderSummaryPane
           orderBundles={effectiveOrderBundles}
@@ -2153,6 +2242,8 @@ export function SoapNotePanel({
           orderBundlesError={resolvedOrderBundlesError}
           prescriptionBundles={prescriptionBundles}
           onBundleSelect={handleOrderSummaryBundleSelect}
+          onCategoryAdd={handleOrderSummaryCategoryAdd}
+          onCategorySelect={handleOrderSummaryCategorySelect}
           onBundleDeleteRequest={
             readOnly
               ? undefined
@@ -2162,16 +2253,21 @@ export function SoapNotePanel({
                 }
           }
           notice={orderSummaryNotice}
-          onDocumentSelect={handleOpenDocumentPanel}
           activeOrderPanel={centerOrderPanel}
           activeOrderTitle={activeOrderEntity ? `${resolveOrderEntityLabel(activeOrderEntity)}入力` : undefined}
+          activeCategory={activeOrderEntity ? resolveOrderGroupKeyByEntity(activeOrderEntity) : activeTool}
+          selectedCategory={activeOrderEntity ? resolveOrderGroupKeyByEntity(activeOrderEntity) : activeTool}
+          emptyCategoryAddState={emptyCategoryAddState}
+          rightPaneMode={activeCenterPanel === 'order' || activeCenterPanel === 'document' ? 'edit' : 'summary'}
+          inlineEditorMode={activeCenterPanel === 'order' ? 'edit' : 'summary'}
           onActiveOrderClose={handleCloseCenterPanel}
           documentPanel={centerDocumentPanel}
           documentPanelVisible={activeCenterPanel === 'document'}
           onDocumentClose={handleCloseCenterPanel}
           orcaPanel={orcaPanel}
         />
-        <FocusTrapDialog
+      </div>
+      <FocusTrapDialog
           open={Boolean(orderSummaryDeleteTarget)}
           role="alertdialog"
           title="オーダーを削除しますか？"
@@ -2215,7 +2311,6 @@ export function SoapNotePanel({
             </div>
           </section>
         </FocusTrapDialog>
-      </div>
     </section>
   );
 }
