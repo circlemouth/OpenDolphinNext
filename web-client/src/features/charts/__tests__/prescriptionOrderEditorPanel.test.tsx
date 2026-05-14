@@ -95,22 +95,22 @@ describe('PrescriptionOrderEditorPanel', () => {
     expect(screen.getByRole('button', { name: /アムロ候補/ })).toBeInTheDocument();
   });
 
-  it('+RP / +薬剤 / 全クリアでRP集合を操作できる', async () => {
+  it('RP追加 / 薬剤行追加 / 入力を全クリアでRP集合を操作できる', async () => {
     const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockResolvedValue({ ok: true, items: [], totalCount: 0 });
 
     renderPanel();
 
-    const rpPane = screen.getByLabelText('RP一覧');
+    const rpPane = screen.getByLabelText('候補・セット・RP一覧');
     expect(within(rpPane).getByText('1件')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '+RP' }));
+    await user.click(screen.getByRole('button', { name: 'RP追加' }));
     expect(within(rpPane).getByText('2件')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: '+薬剤' }));
+    await user.click(screen.getByRole('button', { name: '薬剤行追加' }));
     expect(screen.getAllByPlaceholderText('薬剤名')).toHaveLength(2);
 
-    await user.click(screen.getByRole('button', { name: '全クリア' }));
+    await user.click(screen.getByRole('button', { name: '入力を全クリア' }));
     expect(within(rpPane).getByText('1件')).toBeInTheDocument();
   });
 
@@ -122,12 +122,12 @@ describe('PrescriptionOrderEditorPanel', () => {
     renderPanel();
 
     expect(screen.getAllByText('1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。').length).toBeGreaterThan(0);
-    await user.click(screen.getByRole('button', { name: '+薬剤' }));
+    await user.click(screen.getByRole('button', { name: '薬剤行追加' }));
     expect(screen.getAllByPlaceholderText('薬剤名')).toHaveLength(2);
 
-    await user.click(screen.getAllByRole('button', { name: '別RPに分ける' })[1]);
+    await user.click(screen.getAllByRole('button', { name: 'この薬剤を別RPへ' })[1]);
 
-    const rpPane = screen.getByLabelText('RP一覧');
+    const rpPane = screen.getByLabelText('候補・セット・RP一覧');
     expect(within(rpPane).getByText('2件')).toBeInTheDocument();
     expect(screen.getByText('薬剤を別RPへ分けました。新しいRPで用法を設定してください。')).toBeInTheDocument();
   });
@@ -174,7 +174,7 @@ describe('PrescriptionOrderEditorPanel', () => {
 
     renderPanel();
 
-    await user.click(screen.getByRole('button', { name: '+RP' }));
+    await user.click(screen.getByRole('button', { name: 'RP追加' }));
     await user.click(screen.getByRole('button', { name: /RP2:/ }));
     await user.click(screen.getByRole('button', { name: '外用' }));
 

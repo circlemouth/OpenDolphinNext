@@ -225,7 +225,15 @@ vi.mock('../ChartsPatientSummaryBar', () => ({
 }));
 
 vi.mock('../SoapNotePanel', () => ({
-  SoapNotePanel: ({ onDraftDirtyChange, onSyncStateChange, onOrderDockStateChange, saveRequest, onSaveRequestResult }: any) => {
+  SoapNotePanel: ({
+    onDraftDirtyChange,
+    onSyncStateChange,
+    onOrderDockStateChange,
+    saveRequest,
+    onSaveRequestResult,
+    utilityRailItems = [],
+    onUtilityRailActionSelect,
+  }: any) => {
     React.useEffect(() => {
       onDraftDirtyChange?.({
         dirty: true,
@@ -309,6 +317,24 @@ vi.mock('../SoapNotePanel', () => ({
             }),
         },
         '右欄編集終了',
+      ),
+      React.createElement(
+        'aside',
+        { 'aria-label': '右ドック' },
+        utilityRailItems.map((item: any) =>
+          React.createElement(
+            'button',
+            {
+              key: item.id,
+              type: 'button',
+              'data-utility-action': item.id,
+              disabled: item.disabled,
+              onClick: (event: React.MouseEvent<HTMLButtonElement>) =>
+                onUtilityRailActionSelect?.(item.id, event.currentTarget),
+            },
+            item.label,
+          ),
+        ),
       ),
     );
   },

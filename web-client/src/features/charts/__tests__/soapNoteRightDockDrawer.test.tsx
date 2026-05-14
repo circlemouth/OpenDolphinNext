@@ -34,6 +34,26 @@ const setViewportWidth = (width: number) => {
 };
 
 describe('SoapNotePanel right dock drawer', () => {
+  it('右ドックはSOAP本文グリッド外に配置される', () => {
+    const { container } = renderWithQueryClient(
+      <SoapNotePanel
+        history={[]}
+        meta={{
+          runId: 'RUN-RIGHT-DOCK-RAIL',
+          patientId: 'P-001',
+          appointmentId: 'APT-001',
+          receptionId: 'RCP-001',
+          visitDate: '2026-02-26',
+        }}
+        author={{ role: 'doctor', displayName: 'Dr. Dock', userId: 'doctor01' }}
+      />,
+    );
+
+    const body = requireElement(container.querySelector('.soap-note__body'));
+    const rightDockArea = requireElement(container.querySelector('.soap-note__right-dock-area'));
+    expect(body.contains(rightDockArea)).toBe(false);
+  });
+
   it('右ドック押下でドロワーが開き対象カテゴリを表示する', async () => {
     const user = userEvent.setup();
     const bundles: OrderBundle[] = [

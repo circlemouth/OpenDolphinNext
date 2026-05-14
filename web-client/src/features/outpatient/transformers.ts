@@ -144,6 +144,30 @@ const pickPatient = (value: any) => {
 
 const hasText = (value: unknown): boolean => typeof value === 'string' && value.trim().length > 0;
 
+const firstText = (...values: unknown[]): string | undefined => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return undefined;
+};
+
+const pickInsuranceDisplayName = (value: any): string | undefined =>
+  firstText(
+    value?.insuranceName,
+    value?.insurance_name,
+    value?.healthInsuranceName,
+    value?.health_insurance_name,
+    value?.insuranceCombinationName,
+    value?.insurance_combination_name,
+    value?.insurance?.name,
+    value?.insurance?.insuranceName,
+    value?.insurance?.insuranceCombinationName,
+    value?.healthInsurance?.name,
+    value?.patient?.insuranceName,
+    value?.patient?.healthInsuranceName,
+    value?.patient?.insurance?.name,
+  );
+
 const isSelectorOptionOnlyRow = (value: any): boolean => {
   if (!value || typeof value !== 'object') return false;
   const patient = pickPatient(value);
@@ -326,6 +350,7 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
       appointmentTime: reservationTime,
       reservationTime,
       status: deriveStatus({ visitInformation: slot.visitInformation, appointmentDate: json?.appointmentDate, appointmentTime: slot.appointmentTime }),
+      insurance: pickInsuranceDisplayName(slot),
       note: slot.medicalInformation,
       source: 'slots',
     });
@@ -364,6 +389,7 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
         appointmentDate: reservation.appointmentDate,
         appointmentTime: reservation.appointmentTime,
       }),
+      insurance: pickInsuranceDisplayName(reservation),
       note: reservation.appointmentNote,
       source: 'reservations',
     });
@@ -407,7 +433,7 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
         appointmentTime: visit.updateTime,
         scheduledFallback: false,
       }),
-      insurance: visit.insuranceCombinationNumber,
+      insurance: pickInsuranceDisplayName(visit),
       source: 'visits',
     });
   });

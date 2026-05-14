@@ -157,7 +157,13 @@ export function ChartsPatientSummaryBar({
   const normalizedDepartment = normalizeValue(department) ?? '未設定';
   const normalizedPhysician = normalizeValue(physician) ?? '未設定';
   const normalizedInsurance = normalizeValue(patientDisplay.insurance);
-  const normalizedInsuranceCombination = normalizeValue(insuranceCombinationNumber) ?? normalizedInsurance ?? '未設定';
+  const normalizedInsuranceCombinationNumber = normalizeValue(insuranceCombinationNumber);
+  const normalizedInsuranceLabel =
+    normalizedInsurance && normalizedInsurance !== normalizedInsuranceCombinationNumber
+      ? normalizedInsurance
+      : normalizedInsuranceCombinationNumber
+        ? '保険名称未取得'
+        : '未設定';
   const sexTone = resolvePatientSexTone(patientDisplay.sex);
   const ageGroup = resolvePatientAgeGroup(patientDisplay.age);
   const sourceAlert = missingMaster
@@ -186,12 +192,6 @@ export function ChartsPatientSummaryBar({
         birthDateEra={birthEra}
         sex={sex}
         age={age}
-        acceptanceDate={normalizedVisitDate}
-        department={normalizedDepartment}
-        physician={normalizedPhysician}
-        insuranceCombination={normalizedInsuranceCombination}
-        orcaSourceLabel={missingMaster ? 'ORCA正本未確認' : 'ORCA official/canonical'}
-        orcaCacheStatus={missingMaster || fallbackUsed ? 'stale' : cacheHit ? 'cache-hit' : 'fresh'}
         photo={<ChartsPatientProfileIcon sexTone={sexTone} ageGroup={ageGroup} />}
         note={undefined}
         selected
@@ -247,8 +247,8 @@ export function ChartsPatientSummaryBar({
                 <span className="charts-patient-summary__encounter-value">{normalizedEncounterStatus}</span>
               </span>
               <span className="charts-patient-summary__encounter-item">
-                <span className="charts-patient-summary__encounter-label">保険組合せ</span>
-                <span className="charts-patient-summary__encounter-value">{normalizedInsuranceCombination}</span>
+                <span className="charts-patient-summary__encounter-label">保険</span>
+                <span className="charts-patient-summary__encounter-value">{normalizedInsuranceLabel}</span>
               </span>
               <span className="charts-patient-summary__encounter-item charts-patient-summary__encounter-item--wide">
                 <span className="charts-patient-summary__encounter-label">診療科 / 担当医</span>

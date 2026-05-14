@@ -4038,14 +4038,15 @@ export function OrderBundleEditPanel({
           </ul>
         </div>
       ) : null}
-      <div className="charts-side-panel__workspace" data-variant={variant}>
+      <div className="charts-side-panel__workspace" data-variant={variant} data-order-editor-layout="manual-first">
         {showRecommendationSidebar ? (
-          <aside className="charts-side-panel__workspace-left" aria-label="頻用オーダー">
-            <div className="charts-side-panel__subsection">
-              <div className="charts-side-panel__subheader">
+          <aside className="charts-side-panel__workspace-left charts-order-editor__secondary" aria-label="候補・セット・登録済みオーダー">
+            <details className="charts-side-panel__subsection charts-order-editor__secondary-section">
+              <summary className="charts-side-panel__subheader charts-order-editor__secondary-summary">
                 <strong>頻用オーダー（患者優先）</strong>
                 <span className="charts-side-panel__search-count">{recommendationCandidates.length}件</span>
-              </div>
+                <span className="charts-side-panel__fold-badge">候補を開く</span>
+              </summary>
               {recommendationCandidates.length === 0 ? (
                 <p className="charts-side-panel__empty">
                   まだ学習データがありません。保存済みオーダーから候補ボタンを自動生成します。
@@ -4068,15 +4069,13 @@ export function OrderBundleEditPanel({
                 </div>
               )}
               <p className="charts-side-panel__help">患者個別候補を優先し、不足分のみ施設候補で補完します。</p>
-            </div>
+            </details>
           </aside>
         ) : null}
 
-        <div
-          className={`charts-side-panel__workspace-right${showRecommendationSidebar ? '' : ' charts-side-panel__workspace-right--full'}`}
-        >
+        <div className="charts-side-panel__workspace-right charts-side-panel__workspace-right--full">
           <form
-            className="charts-side-panel__form"
+            className="charts-side-panel__form charts-order-editor__manual-primary"
             onSubmit={(event) => {
               event.preventDefault();
               submitAction('save');
@@ -4096,7 +4095,7 @@ export function OrderBundleEditPanel({
               event.preventDefault();
             }}
           >
-            <div className="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--bundle">
+            <div className="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--bundle charts-order-editor__manual-card">
               <label htmlFor={`${entityId}-bundle-name`}>{bundleLabel}</label>
               <input
                 id={`${entityId}-bundle-name`}
@@ -4107,13 +4106,15 @@ export function OrderBundleEditPanel({
               />
             </div>
         {supportsEtensuDetailSearch && (
-          <div className="charts-side-panel__subsection charts-side-panel__meta-section">
-            <div className="charts-side-panel__subheader">
+          <details
+            className="charts-side-panel__subsection charts-side-panel__meta-section charts-order-editor__secondary-section"
+            open={detailSearchOpen}
+            onToggle={(event) => setDetailSearchOpen(event.currentTarget.open)}
+          >
+            <summary className="charts-side-panel__subheader charts-order-editor__secondary-summary">
               <strong>点数検索（詳細）</strong>
-              <button type="button" className="charts-side-panel__ghost" onClick={() => setDetailSearchOpen((prev) => !prev)}>
-                {detailSearchOpen ? '閉じる' : '開く'}
-              </button>
-            </div>
+              <span className="charts-side-panel__fold-badge">候補を開く</span>
+            </summary>
             {pointsRangeSummary ? <p className="charts-side-panel__help">{pointsRangeSummary}</p> : null}
             {detailSearchOpen ? (
               <div className="charts-side-panel__field-row">
@@ -4144,14 +4145,15 @@ export function OrderBundleEditPanel({
                 {pointsRangeError}
               </p>
             ) : null}
-          </div>
+          </details>
         )}
         {!isMedOrder && showOrcaSetChooser ? (
-          <div className="charts-side-panel__subsection charts-side-panel__meta-section">
-            <div className="charts-side-panel__subheader">
+          <details className="charts-side-panel__subsection charts-side-panel__meta-section charts-order-editor__secondary-section">
+            <summary className="charts-side-panel__subheader charts-order-editor__secondary-summary">
               <strong>ORCA診療セット</strong>
               <span className="charts-side-panel__search-count">{orcaSetItems.length}件</span>
-            </div>
+              <span className="charts-side-panel__fold-badge">候補を開く</span>
+            </summary>
             <div className="charts-side-panel__field">
               <label htmlFor={`${entityId}-orca-set-keyword`}>keyword</label>
               <input
@@ -4171,7 +4173,7 @@ export function OrderBundleEditPanel({
               {orcaSetLoading ? '検索中…' : 'セット検索'}
             </button>
             <p className="charts-side-panel__help">
-              {sendContractNote || 'setCode は展開専用です。保存・ORCA送信 payload には保持しません。'}
+              {sendContractNote || 'ORCA診療セットは下書きフォームへ反映するだけです。処方確定・ORCA送信・会計済み確定は行いません。'}
             </p>
             {form.sourceSetCode ? (
               <p className="charts-side-panel__help">反映元 setCode: {form.sourceSetCode}（local-only）</p>
@@ -4200,7 +4202,7 @@ export function OrderBundleEditPanel({
                 ))}
               </div>
             ) : null}
-          </div>
+          </details>
         ) : null}
         {isMedOrder && (
           <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--rx-class">
@@ -4294,7 +4296,7 @@ export function OrderBundleEditPanel({
             </p>
           </div>
         )}
-        <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--usage">
+        <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--usage charts-order-editor__manual-card">
           <div className="charts-side-panel__field" data-invalid={usageError ? 'true' : undefined}>
             <label htmlFor={`${entityId}-admin`}>{orderUiProfile.instructionLabel}</label>
             {supportsUsageSearch ? (
@@ -4573,7 +4575,7 @@ export function OrderBundleEditPanel({
         )}
 
         {showBodyPartSection && (
-          <div className="charts-side-panel__subsection charts-side-panel__subsection--search charts-side-panel__meta-section charts-side-panel__meta-section--bodypart">
+          <div className="charts-side-panel__subsection charts-side-panel__subsection--search charts-side-panel__meta-section charts-side-panel__meta-section--bodypart charts-order-editor__manual-card">
             <div className="charts-side-panel__subheader">
               <strong>{supportsBodyPartSearch ? (isRadiologyOrder ? '部位' : '部位（リハビリ）') : 'bodyPart'}</strong>
               {isRadiologyOrder && (
@@ -4698,7 +4700,7 @@ export function OrderBundleEditPanel({
           </div>
         )}
 
-        <div className="charts-side-panel__subsection charts-side-panel__meta-section charts-side-panel__meta-section--items">
+        <div className="charts-side-panel__subsection charts-side-panel__meta-section charts-side-panel__meta-section--items charts-order-editor__manual-card">
           <div className="charts-side-panel__two-table-layout">
             <div className="charts-side-panel__two-table-fixed" data-testid="order-bundle-confirmed-table">
               <div className="charts-side-panel__subheader">
@@ -4714,7 +4716,7 @@ export function OrderBundleEditPanel({
                 }}
                 disabled={isBlocked}
               >
-                追加
+                行追加
               </button>
               <button
                 type="button"
@@ -4722,7 +4724,7 @@ export function OrderBundleEditPanel({
                 onClick={removeSelectedItemRow}
                 disabled={isBlocked || !selectedItemRowId}
               >
-                選択行削除
+                行削除
               </button>
               <button
                 type="button"
@@ -4730,7 +4732,7 @@ export function OrderBundleEditPanel({
                 onClick={clearItemRows}
                 disabled={isBlocked}
               >
-                全クリア
+                入力を全クリア
               </button>
             </div>
           </div>
@@ -5531,7 +5533,7 @@ export function OrderBundleEditPanel({
       </div>
       </div>
 
-      <footer className="charts-side-panel__dock-footer" aria-label="保存操作">
+      <footer className="charts-side-panel__dock-footer charts-order-editor__sticky-footer" aria-label="保存操作">
         <p className="charts-side-panel__message">
           Ctrl+Enter: 保存 / 保存して閉じる: 保存後に一覧へ戻る / 保存して続ける: 入力を保持 / 保存して追加: 新規入力へ
         </p>

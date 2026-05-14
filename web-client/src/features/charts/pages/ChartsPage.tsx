@@ -21,6 +21,7 @@ import { PatientSummaryPanel } from '../PatientSummaryPanel';
 import { StampLibraryPanel } from '../StampLibraryPanel';
 import { normalizeAuditEventLog, normalizeAuditEventPayload, recordChartsAuditEvent } from '../audit';
 import { SoapNotePanel, type SoapOrderDockState } from '../SoapNotePanel';
+import type { RightUtilityDockUtilityItem } from '../RightUtilityDock';
 import { resolveOrderDockCategoryLabel, resolveOrderGroupKeyByEntity } from '../orderCategoryRegistry';
 import { DoCopyDialog, type DoCopyDialogState } from '../DoCopyDialog';
 import type { SoapDraft, SoapEntry, SoapSectionKey } from '../soapNote';
@@ -293,7 +294,7 @@ const SOAP_HISTORY_MAX_ENCOUNTERS = 20;
 const SOAP_HISTORY_MAX_BYTES = 200_000;
 const UTILITY_PATIENT_UNSELECTED_MESSAGE = '患者が未選択のため利用できません';
 const UTILITY_PANEL_LAYOUT_STORAGE_BASE = 'opendolphin:web-client:charts:utility-panel-layout';
-const UTILITY_PANEL_LAYOUT_STORAGE_VERSION = 'v1';
+const UTILITY_PANEL_LAYOUT_STORAGE_VERSION = 'v2';
 
 const generateBillingIdempotencyKey = (encounterKey: string) => {
   const safeEncounterKey = encounterKey.replace(/[^A-Za-z0-9:_./-]/g, '_');
@@ -318,7 +319,7 @@ type UtilityPanelLayout = {
 };
 
 type UtilityPanelLayoutStorage = {
-  version: 1;
+  version: 2;
   updatedAt: string;
   layout: UtilityPanelLayout;
 };
@@ -356,13 +357,11 @@ const clampUtilityPanelLayout = (layout: UtilityPanelLayout, viewportWidth: numb
 };
 
 const buildDefaultUtilityPanelLayout = (viewportWidth: number, viewportHeight: number): UtilityPanelLayout => {
-  const preferredWidth = Math.min(1120, Math.max(760, viewportWidth * 0.64));
-  const preferredHeight = Math.min(760, Math.max(UTILITY_PANEL_MIN_HEIGHT, viewportHeight * 0.66));
-  const preferredLeft = Math.max(UTILITY_PANEL_DEFAULT_OFFSET_X, (viewportWidth - preferredWidth) / 2);
-  const preferredTop = Math.max(
-    UTILITY_PANEL_DEFAULT_OFFSET_Y,
-    viewportHeight - preferredHeight - UTILITY_PANEL_DEFAULT_OFFSET_Y,
-  );
+  const preferredWidth = Math.min(640, Math.max(UTILITY_PANEL_MIN_WIDTH, viewportWidth * 0.5));
+  const preferredHeight = Math.min(760, Math.max(UTILITY_PANEL_MIN_HEIGHT, viewportHeight * 0.7));
+  const rightRailReserve = 104;
+  const preferredLeft = Math.max(UTILITY_PANEL_DEFAULT_OFFSET_X, viewportWidth - preferredWidth - rightRailReserve);
+  const preferredTop = Math.max(UTILITY_PANEL_DEFAULT_OFFSET_Y, Math.min(96, viewportHeight * 0.12));
   return clampUtilityPanelLayout(
     {
       width: preferredWidth,
@@ -387,7 +386,7 @@ const readUtilityPanelLayoutStorage = (scope?: StorageScope | null): UtilityPane
     const raw = scopedKey ? localStorage.getItem(scopedKey) ?? localStorage.getItem(fallbackKey) : localStorage.getItem(fallbackKey);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<UtilityPanelLayoutStorage> | null;
-    if (!parsed || parsed.version !== 1 || !parsed.layout) return null;
+  if (!parsed || parsed.version !== 2 || !parsed.layout) return null;
     return clampUtilityPanelLayout(parsed.layout, window.innerWidth, window.innerHeight);
   } catch {
     return null;
@@ -397,7 +396,7 @@ const readUtilityPanelLayoutStorage = (scope?: StorageScope | null): UtilityPane
 const writeUtilityPanelLayoutStorage = (layout: UtilityPanelLayout, scope?: StorageScope | null) => {
   if (typeof localStorage === 'undefined') return;
   const payload: UtilityPanelLayoutStorage = {
-    version: 1,
+    version: 2,
     updatedAt: new Date().toISOString(),
     layout,
   };
@@ -477,9 +476,6 @@ const resolveOrderDockTabMeta = (state: SoapOrderDockState): string | null => {
   const categoryLabel = resolveOrderDockCategoryLabel(state.targetCategory);
   return categoryLabel ? `${categoryLabel}${count}件` : `全${count}件`;
 };
-
-const hasOrderDockRequiredIssue = (state: SoapOrderDockState) =>
-  Boolean(state.hasEditing && state.editingLabel?.includes('必須不足'));
 
 type EncounterExitAction = 'pause' | 'finish';
 type EncounterExitChoice = 'save' | 'discard' | 'cancel';
@@ -1052,9 +1048,14 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       suppressUrlContextSyncRef.current = true;
       setEncounterContext({});
       setContextAlert({ tone: 'info', message: '患者が未選択です。受付から患者を選択してください。' });
-      navigate({ pathname: chartsBasePath, search: '' }, { replace: true });
+      appNav.openReception({
+        carryover: appNav.carryover,
+        returnTo: '',
+        visitDate: encounterContext.visitDate,
+        navigate: { replace: true },
+      });
     },
-    [activePatientTabKey, chartsBasePath, navigate, patientTabs],
+    [activePatientTabKey, appNav.carryover, appNav.openReception, encounterContext.visitDate, patientTabs],
   );
 
   const activePatientTab = useMemo(
@@ -3947,6 +3948,59 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   }, [showBottomUtilityDock, utilityShortcutItems]);
   const utilityEditActions = useMemo(() => new Set(utilityItems.filter((item) => item.requiresEdit).map((item) => item.id)), [utilityItems]);
   const patientSelected = Boolean(encounterContext.patientId);
+  const utilityRailItems = useMemo<RightUtilityDockUtilityItem[]>(
+    () =>
+      utilityItems.map((item) => {
+        const isDisabled = item.requiresEdit && (!patientSelected || sidePanelMeta.readOnly);
+        const dirty =
+          item.id === 'order-set'
+            ? orderDockState.hasEditing
+            : item.id === 'document'
+              ? documentUtilityState.dirty
+              : item.id === 'imaging'
+                ? imageUtilityState.queueCount > 0 || imageUtilityState.uploadingCount > 0
+                : false;
+        const meta =
+          item.id === 'order-set'
+            ? resolveOrderDockTabMeta(orderDockState)
+            : item.id === 'document'
+              ? documentImageAttachments.length > 0
+                ? `添付${documentImageAttachments.length}`
+                : null
+              : item.id === 'imaging'
+                ? imageUtilityState.uploadingCount > 0
+                  ? `送信${imageUtilityState.uploadingCount}`
+                  : imageUtilityState.queueCount > 0
+                    ? `待機${imageUtilityState.queueCount}`
+                    : null
+                : null;
+        const disabledReason = !patientSelected
+          ? UTILITY_PATIENT_UNSELECTED_MESSAGE
+          : sidePanelMeta.readOnlyReason ?? '読み取り専用のため編集はできません。';
+        return {
+          id: item.id,
+          label: item.label,
+          shortLabel: item.shortLabel,
+          shortcut: item.shortcut,
+          disabled: isDisabled,
+          title: isDisabled ? disabledReason : item.shortcut,
+          dirty,
+          meta,
+          kind: resolveUtilityVisualKind(item.id),
+        };
+      }),
+    [
+      documentImageAttachments.length,
+      documentUtilityState.dirty,
+      imageUtilityState.queueCount,
+      imageUtilityState.uploadingCount,
+      orderDockState,
+      patientSelected,
+      sidePanelMeta.readOnly,
+      sidePanelMeta.readOnlyReason,
+      utilityItems,
+    ],
+  );
   const persistUtilityPanelLayout = useCallback(
     (layout: UtilityPanelLayout) => {
       writeUtilityPanelLayoutStorage(layout, storageScope);
@@ -5269,6 +5323,11 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                       }
                       bottomOrderHubIntegrationEnabled={isBottomOrderHubIntegrationEnabled}
                       onOrderDockStateChange={handleOrderDockStateChange}
+                      utilityRailItems={utilityRailItems}
+                      activeUtilityAction={utilityPanelAction}
+                      onUtilityRailActionSelect={handleUtilityButtonClick}
+                      onShortcutDialogOpen={() => setIsShortcutsDialogOpen(true)}
+                      shortcutsOpen={isShortcutsDialogOpen}
 			                      onDraftSnapshot={setSoapDraftSnapshot}
 			                      replaceDraftRequest={replaceSoapDraftRequest}
                         saveRequest={soapSaveRequest}
@@ -5378,99 +5437,16 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
 	                tabIndex={-1}
 	                data-focus-anchor="true"
 	                aria-label="ユーティリティ"
-	                data-panel-open={utilityPanelAction ? 'true' : 'false'}
-	              >
+                data-panel-open={utilityPanelAction ? 'true' : 'false'}
+              >
                 <div className="charts-docked-panel">
-                  <div className="charts-docked-panel__footer">
-                    <div className="charts-docked-panel__tabs" role="tablist" aria-label="ユーティリティ">
-                      {utilityItems.map((item, index) => {
-                        const isActive = utilityPanelAction === item.id;
-                        const utilityKind = resolveUtilityVisualKind(item.id);
-                        const isDisabled = item.requiresEdit && (!patientSelected || sidePanelMeta.readOnly);
-                        const tabDirty =
-                          item.id === 'order-set'
-                            ? orderDockState.hasEditing
-                            : item.id === 'document'
-                            ? documentUtilityState.dirty
-                            : item.id === 'imaging'
-                              ? imageUtilityState.queueCount > 0 || imageUtilityState.uploadingCount > 0
-                              : false;
-                        const tabMeta =
-                          item.id === 'order-set'
-                            ? resolveOrderDockTabMeta(orderDockState)
-                            : item.id === 'document'
-                              ? documentImageAttachments.length > 0
-                              ? `📎${documentImageAttachments.length}`
-                              : null
-                            : item.id === 'imaging'
-                              ? imageUtilityState.uploadingCount > 0
-                                ? `送信${imageUtilityState.uploadingCount}`
-                                : imageUtilityState.queueCount > 0
-                                  ? `待機${imageUtilityState.queueCount}`
-                              : null
-                              : null;
-                        const orderDockRequiredIssue = item.id === 'order-set' ? hasOrderDockRequiredIssue(orderDockState) : false;
-                        const disabledReason = !patientSelected
-                          ? UTILITY_PATIENT_UNSELECTED_MESSAGE
-                          : sidePanelMeta.readOnlyReason ?? '読み取り専用のため編集はできません。';
-                        return (
-                          <button
-                            key={item.id}
-                            id={`charts-docked-tab-${item.id}`}
-                            type="button"
-                            role="tab"
-                            className="charts-docked-panel__tab"
-                            data-utility-action={item.id}
-                            data-utility-kind={utilityKind}
-                            data-active={isActive ? 'true' : 'false'}
-                            data-utility-order={index === 0 ? 'first' : undefined}
-                            data-order-dock-editing={item.id === 'order-set' ? (orderDockState.hasEditing ? 'true' : 'false') : undefined}
-                            data-order-dock-target-category={item.id === 'order-set' ? (orderDockState.targetCategory ?? '') : undefined}
-                            data-order-dock-rp-required={item.id === 'order-set' ? (orderDockRequiredIssue ? 'true' : 'false') : undefined}
-                            aria-controls="charts-docked-panel"
-                            aria-selected={isActive}
-                            aria-expanded={isActive}
-                            aria-label={tabMeta ? `${item.label}（${tabMeta}）` : item.label}
-                            disabled={isDisabled}
-                            title={isDisabled ? disabledReason : item.shortcut}
-                            onClick={(event) => handleUtilityButtonClick(item.id, event.currentTarget)}
-                          >
-                            <span className="charts-docked-panel__tab-icon" aria-hidden="true">
-                              {item.shortLabel}
-                            </span>
-                            <span className="charts-docked-panel__tab-text">
-                              <span className="charts-docked-panel__tab-label">
-                                {item.label}
-                                {tabDirty ? <span className="charts-docked-panel__tab-dirty" aria-hidden="true">●</span> : null}
-                                {tabMeta ? <span className="charts-docked-panel__tab-meta">{tabMeta}</span> : null}
-                              </span>
-                              <span className="charts-docked-panel__tab-shortcut">{item.shortcut}</span>
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className="charts-docked-panel__mini" role="group" aria-label="補助メニュー">
-                      <button
-                        type="button"
-                        className="charts-docked-panel__mini-button"
-                        onClick={() => setIsShortcutsDialogOpen(true)}
-                        aria-haspopup="dialog"
-                        aria-expanded={isShortcutsDialogOpen}
-                        title="ショートカット一覧"
-                      >
-                        ?
-                        <span className="charts-docked-panel__mini-label">ショートカット</span>
-                      </button>
-                    </div>
-                  </div>
 	                  <div
 	                    id="charts-docked-panel"
 	                    className="charts-docked-panel__drawer"
 	                    role="tabpanel"
 	                    aria-live={infoLive}
 	                    aria-hidden={!utilityPanelAction}
-                    aria-labelledby={utilityPanelAction ? `charts-docked-tab-${utilityPanelAction}` : undefined}
+                    aria-labelledby="charts-docked-panel-title"
                     data-open={utilityPanelAction ? 'true' : 'false'}
                     data-utility-kind={activeUtilityKind}
                     data-docked-panel-content="true"

@@ -46,7 +46,7 @@ import {
 import { OrderSummaryPane } from './OrderSummaryPane';
 import { PrescriptionOrderEditorPanel } from './PrescriptionOrderEditorPanel';
 import { RightUtilityDrawer, type RightUtilityTool } from './RightUtilityDrawer';
-import { RightUtilityDock } from './RightUtilityDock';
+import { RightUtilityDock, type RightUtilityDockUtilityAction, type RightUtilityDockUtilityItem } from './RightUtilityDock';
 import { resolveLatestBundle } from './orderDetailDisplayViewModel';
 import {
   ORDER_GROUP_REGISTRY,
@@ -148,6 +148,11 @@ type SoapNotePanelProps = {
   }) => void;
   onClearHistory?: () => void;
   onAuditLogged?: () => void;
+  utilityRailItems?: RightUtilityDockUtilityItem[];
+  activeUtilityAction?: RightUtilityDockUtilityAction | null;
+  onUtilityRailActionSelect?: (action: RightUtilityDockUtilityAction, trigger: HTMLButtonElement) => void;
+  onShortcutDialogOpen?: () => void;
+  shortcutsOpen?: boolean;
 };
 
 const resolveAuthorLabel = (author: SoapNoteAuthor) => {
@@ -328,6 +333,11 @@ export function SoapNotePanel({
   onSyncStateChange,
   onClearHistory,
   onAuditLogged,
+  utilityRailItems,
+  activeUtilityAction,
+  onUtilityRailActionSelect,
+  onShortcutDialogOpen,
+  shortcutsOpen,
 }: SoapNotePanelProps) {
   const isRevisionHistoryEnabled = import.meta.env.VITE_CHARTS_REVISION_HISTORY !== '0';
   const queryClient = useQueryClient();
@@ -1988,6 +1998,18 @@ export function SoapNotePanel({
         <p className="soap-note__guard">読み取り専用: {readOnlyReason ?? '編集はロック中です。'}</p>
       ) : null}
       {feedback ? <p className="soap-note__feedback" role="status">{feedback}</p> : null}
+      <div className="soap-note__right-dock-area">
+        <RightUtilityDock
+          activeTool={activeTool}
+          onSelectTool={handleDockToolSelect}
+          utilityRailItems={utilityRailItems}
+          activeUtilityAction={activeUtilityAction}
+          onUtilityRailActionSelect={onUtilityRailActionSelect}
+          onShortcutDialogOpen={onShortcutDialogOpen}
+          shortcutsOpen={shortcutsOpen}
+        />
+      </div>
+      <RightUtilityDrawer {...rightUtilityDrawerProps} />
       <div className="soap-note__body">
         <div className="soap-note__editor">
           {historyView ? (
@@ -2149,10 +2171,6 @@ export function SoapNotePanel({
           onDocumentClose={handleCloseCenterPanel}
           orcaPanel={orcaPanel}
         />
-        <div className="soap-note__right-dock-area">
-          <RightUtilityDock activeTool={activeTool} onSelectTool={handleDockToolSelect} />
-        </div>
-        <RightUtilityDrawer {...rightUtilityDrawerProps} />
         <FocusTrapDialog
           open={Boolean(orderSummaryDeleteTarget)}
           role="alertdialog"

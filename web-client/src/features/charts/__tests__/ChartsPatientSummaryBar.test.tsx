@@ -43,10 +43,12 @@ describe('ChartsPatientSummaryBar', () => {
     expect(summary).toHaveTextContent('2026-04-17');
     expect(summary).toHaveTextContent('診療中');
     expect(summary).toHaveTextContent('内科 / 医師A');
-    expect(summary).toHaveTextContent('保険組合せ');
-    expect(summary).toHaveTextContent('0001');
-    expect(summary).toHaveTextContent('ORCA取得');
-    expect(summary).toHaveTextContent('ORCA official/canonical / fresh');
+    expect(summary).toHaveTextContent('保険');
+    expect(summary).toHaveTextContent('保険名称未取得');
+    expect(summary).not.toHaveTextContent('受付日');
+    expect(summary).not.toHaveTextContent('保険組合せ');
+    expect(summary).not.toHaveTextContent('ORCA取得');
+    expect(summary).not.toHaveTextContent('ORCA official/canonical / fresh');
     expect(summary).toHaveTextContent('男');
     expect(summary).toHaveTextContent('45歳6ヶ月');
     expect(summary).toHaveTextContent('1980-05-20');
@@ -61,6 +63,24 @@ describe('ChartsPatientSummaryBar', () => {
     const profileIcon = container.querySelector('.charts-patient-summary__profile-icon');
     expect(profileIcon).toHaveAttribute('data-sex-tone', 'male');
     expect(profileIcon).toHaveAttribute('data-age-group', 'adult');
+  });
+
+  it('保険名称があるときは保険組合せ番号ではなく名称を表示する', () => {
+    const { container } = render(
+      <ChartsPatientSummaryBar
+        {...baseProps}
+        patientDisplay={{
+          ...baseProps.patientDisplay,
+          insurance: '協会けんぽ',
+          note: undefined,
+        }}
+      />,
+    );
+
+    const summary = container.querySelector('.charts-patient-summary');
+    expect(summary).toHaveTextContent('保険');
+    expect(summary).toHaveTextContent('協会けんぽ');
+    expect(screen.queryByText('0001')).toBeNull();
   });
 
   it('note があるときだけ患者メモを表示する', () => {

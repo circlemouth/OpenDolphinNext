@@ -898,9 +898,15 @@ describe('ChartsActionBar', () => {
 
     const patientInlineGroup = screen.getByRole('group', { name: '患者情報帯の補助操作' });
     expect(within(patientInlineGroup).queryByRole('button', { name: '受付へ戻る' })).not.toBeInTheDocument();
-    expect(within(patientInlineGroup).getByRole('button', { name: '下書き保存' })).toBeInTheDocument();
-    expect(within(patientInlineGroup).getByRole('button', { name: '診察終了して会計へ送信' })).toBeInTheDocument();
+    const draftButton = within(patientInlineGroup).getByRole('button', { name: '下書き保存' });
+    const finishButton = within(patientInlineGroup).getByRole('button', { name: '診察終了して会計へ送信' });
+    expect(draftButton).toBeInTheDocument();
+    expect(finishButton).toBeInTheDocument();
+    expect(Boolean(finishButton.compareDocumentPosition(draftButton) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
     expect(within(patientInlineGroup).getByRole('button', { name: '印刷/エクスポート' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'ORCA送信・会計連携状態' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: '診療行為送信候補の確認' })).not.toBeInTheDocument();
+    expect(screen.queryByText('送信前候補確認')).not.toBeInTheDocument();
     expect(screen.queryByText('その他')).not.toBeInTheDocument();
     expect(screen.queryByText('補助操作', { selector: 'summary' })).toBeNull();
   });

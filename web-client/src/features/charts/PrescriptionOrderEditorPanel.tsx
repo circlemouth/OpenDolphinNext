@@ -1478,10 +1478,10 @@ export function PrescriptionOrderEditorPanel({
         </div>
         <div className="charts-side-panel__subheader-actions">
           <button type="button" className="charts-side-panel__ghost charts-side-panel__ghost--add" onClick={addRp} disabled={isPreviewMode}>
-            +RP
+            RP追加
           </button>
           <button type="button" className="charts-side-panel__ghost charts-side-panel__ghost--add" onClick={addDrug} disabled={isPreviewMode}>
-            +薬剤
+            薬剤行追加
           </button>
           <button
             type="button"
@@ -1492,10 +1492,10 @@ export function PrescriptionOrderEditorPanel({
             }}
             disabled={!selectedRp || isPreviewMode}
           >
-            薬剤削除
+            選択薬剤を削除
           </button>
           <button type="button" className="charts-side-panel__ghost charts-side-panel__ghost--danger" onClick={clearAll} disabled={isPreviewMode}>
-            全クリア
+            入力を全クリア
           </button>
         </div>
       </header>
@@ -1539,9 +1539,9 @@ export function PrescriptionOrderEditorPanel({
           disabled={isPreviewMode}
           style={{ margin: 0, padding: 0, border: 0, minInlineSize: 0 }}
         >
-        <div className="charts-side-panel__workspace" data-variant={variant}>
-          <aside className="charts-side-panel__workspace-left" aria-label="RP一覧">
-            <div className="charts-side-panel__subsection">
+        <div className="charts-side-panel__workspace" data-variant={variant} data-order-editor-layout="manual-first">
+          <aside className="charts-side-panel__workspace-left charts-order-editor__secondary" aria-label="候補・セット・RP一覧">
+            <div className="charts-side-panel__subsection charts-order-editor__secondary-section">
               <div className="charts-side-panel__subheader">
                 <strong>RP一覧</strong>
                 <span className="charts-side-panel__search-count">{order.rps.length}件</span>
@@ -1581,13 +1581,14 @@ export function PrescriptionOrderEditorPanel({
               </div>
             </div>
 
-            <div className="charts-side-panel__subsection charts-side-panel__subsection--search">
-              <div className="charts-side-panel__subheader">
+            <details className="charts-side-panel__subsection charts-side-panel__subsection--search charts-order-editor__secondary-section">
+              <summary className="charts-side-panel__subheader charts-order-editor__secondary-summary">
                 <strong>薬剤検索</strong>
                 <span className="charts-side-panel__search-count">
                   {drugSearchQuery.isFetching ? '検索中...' : `${filteredCandidates.length}件`}
                 </span>
-              </div>
+                <span className="charts-side-panel__fold-badge">候補を開く</span>
+              </summary>
               <div className="charts-side-panel__field-row">
                 <div className="charts-side-panel__field">
                   <label htmlFor={domId('search-method')}>検索方法</label>
@@ -1666,19 +1667,20 @@ export function PrescriptionOrderEditorPanel({
                       <span>{item.unit ?? '-'}</span>
                       <span>{resolveCandidateGenericPrice(item)}</span>
                       <span>{item.category ?? '-'}</span>
-                      <span>右へ反映</span>
+                      <span>反映</span>
                     </button>
                   ))}
                 </div>
               ) : null}
-            </div>
+            </details>
 
             {showInputSetChooser ? (
-              <div className="charts-side-panel__subsection charts-side-panel__subsection--search">
-              <div className="charts-side-panel__subheader">
+              <details className="charts-side-panel__subsection charts-side-panel__subsection--search charts-order-editor__secondary-section">
+              <summary className="charts-side-panel__subheader charts-order-editor__secondary-summary">
                 <strong>ORCA入力セット</strong>
                 <span className="charts-side-panel__search-count">{inputSetItems.length}件</span>
-              </div>
+                <span className="charts-side-panel__fold-badge">候補を開く</span>
+              </summary>
               <div className="charts-side-panel__field">
                 <label htmlFor={domId('inputset-keyword')}>keyword</label>
                 <input
@@ -1696,7 +1698,7 @@ export function PrescriptionOrderEditorPanel({
               >
                 {inputSetLoading ? '検索中…' : '入力セット検索'}
               </button>
-              <p className="charts-side-panel__help">setCode は展開専用です。保存・ORCA送信 payload には保持しません。</p>
+              <p className="charts-side-panel__help">ORCA入力セットは下書きフォームへ反映するだけです。処方確定・ORCA送信・会計済み確定は行いません。</p>
               {inputSetItems.length > 0 ? (
                 <div className="charts-side-panel__search-table">
                   <div className="charts-side-panel__search-header">
@@ -1715,25 +1717,25 @@ export function PrescriptionOrderEditorPanel({
                       <span>{item.setCode ?? '-'}</span>
                       <span>{item.name ?? '-'}</span>
                       <span>{item.itemCount ?? '-'}</span>
-                      <span>RPへ反映</span>
+                      <span>反映</span>
                     </button>
                   ))}
                 </div>
               ) : null}
-              </div>
+              </details>
             ) : null}
           </aside>
 
-          <div className="charts-side-panel__workspace-right">
+          <div className="charts-side-panel__workspace-right charts-side-panel__workspace-right--full">
             {selectedRp ? (
               <form
-                className="charts-side-panel__form"
+                className="charts-side-panel__form charts-order-editor__manual-primary"
                 onSubmit={(event) => {
                   event.preventDefault();
                   submit('save');
                 }}
               >
-                <div className="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--bundle">
+                <div className="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--bundle charts-order-editor__manual-card">
                   <label htmlFor={domId('rp-name')}>RP名</label>
                   <input
                     id={domId('rp-name')}
@@ -1748,7 +1750,7 @@ export function PrescriptionOrderEditorPanel({
                   />
                 </div>
 
-                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--rx-class">
+                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--rx-class charts-order-editor__manual-card">
                   <div className="charts-side-panel__field">
                     <label>院内/院外</label>
                     <div className="charts-side-panel__switch-group" role="group" aria-label="院内院外選択">
@@ -1793,7 +1795,7 @@ export function PrescriptionOrderEditorPanel({
                   </div>
                 </div>
 
-                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--usage">
+                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--usage charts-order-editor__manual-card">
                   <div className="charts-side-panel__notice charts-side-panel__notice--info">
                     {RP_SHARED_USAGE_RULE}
                   </div>
@@ -2044,13 +2046,13 @@ export function PrescriptionOrderEditorPanel({
                   </div>
                 </div>
 
-                <div className="charts-side-panel__subsection charts-side-panel__meta-section charts-side-panel__meta-section--items">
+                <div className="charts-side-panel__subsection charts-side-panel__meta-section charts-side-panel__meta-section--items charts-order-editor__manual-card">
                   <div className="charts-side-panel__subheader">
                     <strong>薬剤行</strong>
                     <span className="charts-side-panel__search-count">{selectedRp.drugs.length}件</span>
                   </div>
                   <p className="charts-side-panel__help">
-                    薬剤行はこのRPの用法・日数・開始日を共有します。異なる用法にする薬剤は「別RPに分ける」で分離してください。
+                    薬剤行はこのRPの用法・日数・開始日を共有します。異なる用法にする薬剤は「この薬剤を別RPへ」で分離してください。
                   </p>
                   {selectedDrug ? (
                     <p className="charts-side-panel__help">最低薬価: {selectedDrugGenericPrice ?? '-'}</p>
@@ -2146,7 +2148,7 @@ export function PrescriptionOrderEditorPanel({
                             className="charts-side-panel__action"
                             onClick={() => splitDrugToNewRp(drugIndex)}
                           >
-                            別RPに分ける
+                            この薬剤を別RPへ
                           </button>
                         ) : null}
                         <input
@@ -2305,7 +2307,7 @@ export function PrescriptionOrderEditorPanel({
         </fieldset>
       </div>
 
-      <footer className="charts-side-panel__dock-footer" aria-label="保存操作">
+      <footer className="charts-side-panel__dock-footer charts-order-editor__sticky-footer" aria-label="保存操作">
         <p className="charts-side-panel__message">
           Shift+Enter: 請求用コメント確定 / 保存して閉じる: 保存後にドロワーを閉じます
         </p>

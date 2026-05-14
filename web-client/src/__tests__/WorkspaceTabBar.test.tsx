@@ -173,6 +173,37 @@ describe('WorkspaceTabBar navigation', () => {
     });
   });
 
+  it('charts 画面で最後の患者タブの✗を押すと受付画面へ戻る', async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient();
+
+    localStorage.clear();
+    sessionStorage.clear();
+    setAuthSession();
+    setPatientTabsStorage();
+
+    window.history.pushState({}, '', '/f/0001/charts?runId=RUN-CLOSE&sort=acceptance&date=2026-03-01');
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AppRouter />
+      </QueryClientProvider>,
+    );
+
+    const closeButton = await screen.findByRole('button', { name: '山田 太郎を閉じる' });
+    await user.click(closeButton);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/f/0001/reception');
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get('sort')).toBe('acceptance');
+    expect(params.get('date')).toBe('2026-03-01');
+    expect(params.get('patientId')).toBeNull();
+    expect(params.get('returnTo')).toBeNull();
+  }, 10_000);
+
   it('reload 相当の再 mount では patient tab を storage 復元しない', async () => {
     const queryClient = new QueryClient();
 

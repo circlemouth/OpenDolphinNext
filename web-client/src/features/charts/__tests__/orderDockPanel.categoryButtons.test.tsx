@@ -60,17 +60,36 @@ describe('RightUtilityDock clinical icons', () => {
   it('right dock buttons keep accessible names while rendering generated clinical icons', async () => {
     const user = userEvent.setup();
     const onSelectTool = vi.fn();
+    const onUtilityRailActionSelect = vi.fn();
 
-    render(<RightUtilityDock activeTool="prescription" onSelectTool={onSelectTool} />);
+    render(
+      <RightUtilityDock
+        activeTool="prescription"
+        onSelectTool={onSelectTool}
+        utilityRailItems={[
+          { id: 'order-set', label: 'セット/スタンプ', shortLabel: '★', shortcut: 'Ctrl+Shift+1', kind: 'stamp' },
+          { id: 'document', label: '文書', shortLabel: '文', shortcut: 'Ctrl+Shift+2', kind: 'document' },
+        ]}
+        onUtilityRailActionSelect={onUtilityRailActionSelect}
+      />,
+    );
+
+    const dock = screen.getByRole('complementary', { name: '右ドック' });
 
     for (const label of ['処方', '注射', '処置', '検査', '算定']) {
-      const button = screen.getByRole('button', { name: `${label}候補を開く` });
+      const button = within(dock).getByRole('button', { name: `${label}候補を開く` });
       expect(within(button).getByText(label)).toBeInTheDocument();
       expect(button.querySelector('.clinical-icon')).not.toBeNull();
     }
 
-    await user.click(screen.getByRole('button', { name: '注射候補を開く' }));
+    expect(within(dock).getByRole('button', { name: 'セット/スタンプ' })).toHaveAttribute('data-utility-action', 'order-set');
+    expect(within(dock).getByRole('button', { name: '文書' })).toHaveAttribute('data-utility-action', 'document');
+
+    await user.click(within(dock).getByRole('button', { name: '注射候補を開く' }));
     expect(onSelectTool).toHaveBeenCalledWith('injection');
+
+    await user.click(within(dock).getByRole('button', { name: 'セット/スタンプ' }));
+    expect(onUtilityRailActionSelect).toHaveBeenCalledWith('order-set', expect.any(HTMLButtonElement));
   });
 });
 

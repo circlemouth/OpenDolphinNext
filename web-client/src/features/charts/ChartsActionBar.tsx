@@ -2600,7 +2600,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         </div>
       </header>
 
-      {headerMetaCollapsed && fallbackUsed ? (
+      {!embedded && headerMetaCollapsed && fallbackUsed ? (
         <div
           className="charts-actions__guard-summary"
           role="alert"
@@ -2613,49 +2613,51 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         </div>
       ) : null}
 
-      <div id="charts-actionbar-details" hidden={compactHeader && isHeaderCollapsed}>
-        {guardSummaries.length > 0 ? (
-          <div className="charts-actions__guard-summary" role="status" aria-live="polite">
-            <strong>ガード理由（短文）</strong>
-            <ul>
-              {guardSummaries.map((item) => (
-                <li key={item.key}>
-                  {item.action}: {item.summary}
-                  {item.nextAction ? ` / 次: ${item.nextAction}` : ''}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-        <OrcaResultPanel
-          state={orcaResultState.state}
-          statusLabel={orcaResultState.label}
-          message={orcaResultState.message}
-          patientLabel={`${sendDialogSummary.patientName}（${sendDialogSummary.patientIdLabel}）`}
-          encounterLabel={`${sendDialogSummary.visitLabel} / ${sendDialogSummary.receptionLabel}`}
-          nextAction={orcaResultState.nextAction}
-          evidence={
-            <ul>
-              <li>ORCA送信、診療録確定、処方確定、会計済みを同一状態にしません。</li>
-              <li>UNKNOWN、警告、不一致、失敗は成功扱いせず、受付側の照合導線へ戻します。</li>
-              {queueEntry?.retryCount ? <li>再送回数: {queueEntry.retryCount}</li> : null}
-            </ul>
-          }
-        />
-        <OrcaMedicalCandidatePanel
-          chartRevisionId={chartRevisionId}
-          patientName={selectedEntry?.name}
-          patientId={resolvedPatientId}
-          visitDate={resolvedVisitDate}
-          receptionId={resolvedReceptionId}
-          appointmentId={resolvedAppointmentId}
-          department={selectedEntry?.department ?? resolvedOrcaEncounterContext.departmentCode}
-          physician={selectedEntry?.physician ?? resolvedOrcaEncounterContext.physicianCode}
-          insuranceCombinationNumber={resolvedOrcaEncounterContext.insuranceCombinationNumber}
-          disabled={readOnly || uiLocked}
-          disabledReason={readOnly ? readOnlyReason : resolvedLockReason ?? undefined}
-        />
-      </div>
+      {!embedded ? (
+        <div id="charts-actionbar-details" hidden={compactHeader && isHeaderCollapsed}>
+          {guardSummaries.length > 0 ? (
+            <div className="charts-actions__guard-summary" role="status" aria-live="polite">
+              <strong>ガード理由（短文）</strong>
+              <ul>
+                {guardSummaries.map((item) => (
+                  <li key={item.key}>
+                    {item.action}: {item.summary}
+                    {item.nextAction ? ` / 次: ${item.nextAction}` : ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <OrcaResultPanel
+            state={orcaResultState.state}
+            statusLabel={orcaResultState.label}
+            message={orcaResultState.message}
+            patientLabel={`${sendDialogSummary.patientName}（${sendDialogSummary.patientIdLabel}）`}
+            encounterLabel={`${sendDialogSummary.visitLabel} / ${sendDialogSummary.receptionLabel}`}
+            nextAction={orcaResultState.nextAction}
+            evidence={
+              <ul>
+                <li>ORCA送信、診療録確定、処方確定、会計済みを同一状態にしません。</li>
+                <li>UNKNOWN、警告、不一致、失敗は成功扱いせず、受付側の照合導線へ戻します。</li>
+                {queueEntry?.retryCount ? <li>再送回数: {queueEntry.retryCount}</li> : null}
+              </ul>
+            }
+          />
+          <OrcaMedicalCandidatePanel
+            chartRevisionId={chartRevisionId}
+            patientName={selectedEntry?.name}
+            patientId={resolvedPatientId}
+            visitDate={resolvedVisitDate}
+            receptionId={resolvedReceptionId}
+            appointmentId={resolvedAppointmentId}
+            department={selectedEntry?.department ?? resolvedOrcaEncounterContext.departmentCode}
+            physician={selectedEntry?.physician ?? resolvedOrcaEncounterContext.physicianCode}
+            insuranceCombinationNumber={resolvedOrcaEncounterContext.insuranceCombinationNumber}
+            disabled={readOnly || uiLocked}
+            disabledReason={readOnly ? readOnlyReason : resolvedLockReason ?? undefined}
+          />
+        </div>
+      ) : null}
 
       <CriticalOperationConfirmDialog
         open={confirmAction === 'send'}
@@ -3009,10 +3011,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
 
       {embedded ? (
         <div className="charts-actions__patient-inline" role="group" aria-label="患者情報帯の補助操作">
-          <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--left">
-            {draftSaveButton}
-          </div>
-          <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--center">
+          <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--left charts-actions__patient-action-slot--stack">
             <button
               type="button"
               id={embeddedEncounterAction === 'start' ? 'charts-action-start' : 'charts-action-finish'}
@@ -3034,6 +3033,10 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               <ClinicalIcon icon="billing-send" />
               <span>{embeddedEncounterAction === 'start' ? '診察開始' : '診察終了して会計へ送信'}</span>
             </button>
+            {draftSaveButton}
+          </div>
+          <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--center" aria-hidden="true">
+            <span className="charts-actions__patient-inline-spacer" />
           </div>
           <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--right">
             {printActionButton}
