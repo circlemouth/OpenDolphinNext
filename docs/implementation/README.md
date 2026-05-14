@@ -3,6 +3,7 @@
 `docs/implementation/` は current implementation workstream の入口だけを置く領域です。ここには index を残し、current contract、live runbook、dated packet、evidence dump を混在させません。
 
 ## Current Workstreams
+- [P0-D prescription authority unification](p0d-prescription-authority-unification/README.md)
 - [OpenDolphinNext remaining tasks completion 2026-05-13](opendolphin-next-remaining-tasks-20260513T113016Z/README.md)
 - [OpenDolphinNext remaining tasks Round 1 worker prompts 2026-05-13](opendolphin-next-remaining-tasks-20260513T113016Z/WORKER_PROMPTS_ROUND1.md)
 - [OpenDolphinNext remaining tasks Round 2 worker prompts 2026-05-13](opendolphin-next-remaining-tasks-20260513T113016Z/WORKER_PROMPTS_ROUND2.md)

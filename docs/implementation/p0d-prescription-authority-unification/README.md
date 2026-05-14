@@ -71,3 +71,66 @@ P0-D「処方 authority route の taxonomy 内移動と hash chain」を完了�
 - `PrescriptionAuthorityResource.finalizeDraft`, `transition`, and `recordResend` currently pass only `prescriptionId` to the repository mutation methods after resolving facility in the resource.
 - `PublicRouteInventoryContractTest` currently expects the legacy local write routes.
 - `web-client/src/features/charts/prescriptionOrderApi.ts` still calls the legacy local write endpoint for save, while finalize already calls authority create/finalize.
+
+## Final Status Index
+
+- [route-inventory-after.md](route-inventory-after.md)
+- [final-validation-checklist.md](final-validation-checklist.md)
+- [deliverable-zip-policy.md](deliverable-zip-policy.md)
+- [subagent-e-tests-docs-deliverable-report.md](subagent-e-tests-docs-deliverable-report.md)
+
+## Coverage Inventory Summary
+
+### Confirmed existing coverage
+
+- route taxonomy / exposure baseline:
+  - `PublicRouteInventoryContractTest`
+  - `WebXmlEndpointExposureTest`
+  - `web-client/scripts/__tests__/orcaRouteTaxonomyGuard.test.ts`
+- facility spoofing baseline:
+  - `PatientModV2OutpatientResourceIdempotencyTest`
+- finalized direct write guard / event append-only / tamper detection:
+  - `PrescriptionAuthoritySchemaTest`
+  - `LocalPrescriptionOrderResourceTest`
+- authority resource fail-closed / server-side patient+encounter normalization:
+  - `PrescriptionAuthorityResourceTest`
+- web-client authority finalize path:
+  - `web-client/src/features/charts/__tests__/prescriptionOrderApi.test.ts`
+
+### Integration gaps still visible in this worktree
+
+- route inventory test still expects legacy mutation routes to exist:
+  - `POST /api/local/prescription-orders`
+  - `POST /api/local/prescription-orders/do-import`
+- web-client save path still targets `POST /api/local/prescription-orders`.
+- `PrescriptionAuthorityRepository.loadOrderForUpdate` still loads by `prescription_order_id` only, so cross-facility rejection is not yet proven by focused prescription tests.
+- no explicit focused test currently proves:
+  - old local write route absence,
+  - `do-import` absence,
+  - `orca_prescription_orders` source write prohibition,
+  - web-client old local write endpoint non-use,
+  - unauthorized prescription operation rejection.
+
+Subagent E does not mask these gaps with docs. They remain final-gate blockers until A/B/C/D land and the inventory in [final-validation-checklist.md](final-validation-checklist.md) turns green.
+
+## Deliverable Guidance
+
+- final route inventory target: [route-inventory-after.md](route-inventory-after.md)
+- final validation matrix and owner/gap status: [final-validation-checklist.md](final-validation-checklist.md)
+- deliverable ZIP include/exclude and scan policy: [deliverable-zip-policy.md](deliverable-zip-policy.md)
+
+## Validation Snapshot
+
+- doc/config/finalized-guard checks: pass
+- server focused Maven suite:
+  - `PublicRouteInventoryContractTest`
+  - `WebXmlEndpointExposureTest`
+  - `PatientModV2OutpatientResourceIdempotencyTest`
+  - `PrescriptionAuthorityResourceTest`
+  - `PrescriptionAuthoritySchemaTest`
+  - result: 19 tests passed
+- web focused command:
+  - pretest `verify:web-guard`: pass
+  - targeted Vitest run: blocked by missing `vitest` binary in this worktree environment
+
+Detailed command results and residual risks are recorded in [subagent-e-tests-docs-deliverable-report.md](subagent-e-tests-docs-deliverable-report.md).
