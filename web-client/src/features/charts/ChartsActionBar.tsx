@@ -52,6 +52,7 @@ import {
 import { retryOrcaQueue } from '../outpatient/orcaQueueApi';
 import { ClinicalIcon } from '../shared/ClinicalIcon';
 import { OrcaMedicalCandidatePanel } from './OrcaMedicalCandidatePanel';
+import { OrcaResultPanel, type OrcaResultPanelState } from './ui/OrcaResultPanel';
 
 type ChartAction = 'start' | 'pause' | 'finish' | 'send' | 'draft' | 'cancel' | 'print';
 
@@ -887,6 +888,86 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     resolvedLockReason,
     sendPrecheckReasons.length,
   ]);
+  const orcaResultState = useMemo<{
+    state: OrcaResultPanelState;
+    label: string;
+    message: string;
+    nextAction: string;
+  }>(() => {
+    if (readOnly) {
+      return {
+        state: 'locked',
+        label: '通常編集ロック',
+        message: 'このタブは閲覧専用です。会計送信済み、署名確定、または他タブ編集と混同せず、編集操作は停止します。',
+        nextAction: '最新再読込またはロック引き継ぎを確認',
+      };
+    }
+    if (approvalLocked) {
+      return {
+        state: 'locked',
+        label: '署名確定',
+        message: '署名確定済みです。診療録確定とORCA送信結果を混同せず、編集は履歴追記として扱います。',
+        nextAction: '訂正/追記/解除の要否を確認',
+      };
+    }
+    if (!queueEntry?.phase) {
+      return {
+        state: finishPrecheckReasons.length > 0 || sendPrecheckReasons.length > 0 ? 'warning' : 'idle',
+        label: finishPrecheckReasons.length > 0 || sendPrecheckReasons.length > 0 ? '送信前ガード' : '未送信',
+        message:
+          finishPrecheckReasons.length > 0 || sendPrecheckReasons.length > 0
+            ? '送信前条件が不足しています。ガード理由を解消するまでORCA送信や会計送信へ進めません。'
+            : 'ORCA送信結果はまだありません。診療録確定、処方確定、会計済みのいずれも意味しません。',
+        nextAction: finishPrecheckReasons.length > 0 || sendPrecheckReasons.length > 0 ? 'ガード理由を確認' : '診療内容を確認してから送信',
+      };
+    }
+    if (queueEntry.phase === 'failed') {
+      return {
+        state: 'error',
+        label: '送信失敗',
+        message: queueEntry.errorMessage ?? 'ORCA送信は完了確認できませんでした。会計完了とはせず、照合が必要です。',
+        nextAction: '受付のORCA連携一覧で照合し、再送可否を判断',
+      };
+    }
+    if (queueEntry.phase === 'retry') {
+      return {
+        state: 'warning',
+        label: '再送待ち',
+        message: '再送が必要な状態です。二重送信防止のため、同一内容をそのまま再実行しません。',
+        nextAction: '再送履歴とORCA側状態を確認',
+      };
+    }
+    if (queueEntry.phase === 'hold') {
+      return {
+        state: 'unknown',
+        label: '要確認',
+        message: queueEntry.holdReason ?? 'ORCA送信状態が判定不能または保留です。成功として扱いません。',
+        nextAction: 'ORCA側状態を照合',
+      };
+    }
+    if (queueEntry.phase === 'sent') {
+      return {
+        state: 'success',
+        label: '送信済み',
+        message: 'ORCA送信は記録済みです。ただし診療録確定、処方確定、会計済み確定とは別状態です。',
+        nextAction: '受付/会計側の状態を確認',
+      };
+    }
+    if (queueEntry.phase === 'ack') {
+      return {
+        state: 'success',
+        label: '会計側確認あり',
+        message: '会計側の確認シグナルがあります。Charts上では会計済み確定として上書きせず、通常編集ロックや取消理由を別に確認します。',
+        nextAction: '会計画面と取消/訂正理由を確認',
+      };
+    }
+    return {
+      state: 'idle',
+      label: '送信待ち',
+      message: '送信キュー待ちです。成功、失敗、会計済みのいずれにも丸めません。',
+      nextAction: '送信状態を更新',
+    };
+  }, [approvalLocked, finishPrecheckReasons.length, queueEntry, readOnly, sendPrecheckReasons.length]);
 
   const sendDialogSummary = useMemo(() => {
     const patientName = sendConfirmSummary?.patientName?.trim() || selectedEntry?.name?.trim() || '—';
@@ -1604,7 +1685,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               message:
                 outcome === 'error'
                   ? 'ORCA送信は完了確認できませんでした。診療録確定・会計済みには進めていません。'
-                  : 'ORCA送信に警告があります。警告内容を確認するまで会計済み扱いにはしません。',
+                  : 'ORCA送信に警告があります。警告内容を確認するまで会計完了とはしません。',
               nextAction: '患者・受付・診療日を確認し、ORCA 応答と送信履歴を照合してから再送可否を判断してください。',
             });
             setToast({
@@ -1612,7 +1693,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               message: outcome === 'error' ? 'ORCA送信に失敗' : 'ORCA送信に警告',
               detail:
                 outcome === 'error'
-                  ? `会計済み扱いにせず、送信履歴と ORCA 側状態を照合してください。${CHARTS_SUPPORT_GUIDE}`
+                  ? `会計完了とはせず、送信履歴と ORCA 側状態を照合してください。${CHARTS_SUPPORT_GUIDE}`
                   : 'ORCA 応答を確認し、二重送信リスクを評価してから再送してください。',
             });
           }
@@ -2372,6 +2453,36 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       タブを閉じる
     </button>
   ) : null;
+  const embeddedEncounterAction: Exclude<ChartAction, 'send' | 'draft' | 'cancel' | 'print' | 'pause'> =
+    primaryAction === 'start' ? 'start' : 'finish';
+  const embeddedEncounterBlocked =
+    embeddedEncounterAction === 'start' ? otherBlocked || !resolvedPatientId : otherBlocked;
+  const embeddedEncounterGuarded =
+    embeddedEncounterAction === 'start' ? !resolvedPatientId : finishPrecheckReasons.length > 0;
+  const embeddedEncounterReason =
+    embeddedEncounterAction === 'start'
+      ? otherBlocked
+        ? (isLocked ? 'locked' : undefined)
+        : !resolvedPatientId
+          ? 'patient_not_selected'
+          : undefined
+      : otherBlocked
+        ? (isLocked ? 'locked' : undefined)
+        : finishPrecheckReasons.length > 0
+          ? finishPrecheckReasons.map((reason) => reason.key).join(',')
+          : undefined;
+  const embeddedEncounterTitle =
+    embeddedEncounterAction === 'start'
+      ? !resolvedPatientId
+        ? '患者未選択のため開始できません。'
+        : otherBlocked
+          ? statusLine
+          : undefined
+      : finishPrecheckReasons.length > 0
+        ? `会計送信不可: ${finishPrecheckReasons.map((reason) => reason.summary).join(' / ')}`
+        : otherBlocked
+          ? statusLine
+          : undefined;
 
   return (
     <section
@@ -2513,6 +2624,21 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             </ul>
           </div>
         ) : null}
+        <OrcaResultPanel
+          state={orcaResultState.state}
+          statusLabel={orcaResultState.label}
+          message={orcaResultState.message}
+          patientLabel={`${sendDialogSummary.patientName}（${sendDialogSummary.patientIdLabel}）`}
+          encounterLabel={`${sendDialogSummary.visitLabel} / ${sendDialogSummary.receptionLabel}`}
+          nextAction={orcaResultState.nextAction}
+          evidence={
+            <ul>
+              <li>ORCA送信、診療録確定、処方確定、会計済みを同一状態にしません。</li>
+              <li>UNKNOWN、警告、不一致、失敗は成功扱いせず、受付側の照合導線へ戻します。</li>
+              {queueEntry?.retryCount ? <li>再送回数: {queueEntry.retryCount}</li> : null}
+            </ul>
+          }
+        />
         <OrcaMedicalCandidatePanel
           chartRevisionId={chartRevisionId}
           patientName={selectedEntry?.name}
@@ -2554,6 +2680,11 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           { label: 'SOAP', value: sendDialogSummary.soapState },
           { label: '画像添付', value: sendDialogSummary.imageCount },
         ]}
+        checklistItems={[
+          { label: '患者・受付・診療日を確認しました', checked: true, tone: 'success' },
+          { label: 'ORCA送信が正常応答でも診療録確定・処方確定・会計完了とは別です', checked: true, tone: 'warning' },
+          { label: '警告・不一致・UNKNOWNが返った場合は成功扱いにしません', checked: true, tone: 'warning' },
+        ]}
         confirmLabel="ORCAへ送信する"
         onCancel={() => {
           finalizeApproval('send', 'cancelled');
@@ -2593,6 +2724,11 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           { label: 'SOAP', value: sendDialogSummary.soapState },
           { label: '画像添付', value: sendDialogSummary.imageCount },
           { label: '会計状態', value: '会計済み確定ではありません' },
+        ]}
+        checklistItems={[
+          { label: '未保存入力と送信前ガードを確認しました', checked: finishPrecheckReasons.length === 0, tone: finishPrecheckReasons.length === 0 ? 'success' : 'warning' },
+          { label: 'この操作は会計送信フロー開始であり、会計済み確定ではありません', checked: true, tone: 'warning' },
+          { label: 'UNKNOWN・警告・不一致・失敗時は患者タブを閉じず要確認にします', checked: true, tone: 'warning' },
         ]}
         confirmLabel="診察終了して会計へ送信"
         onCancel={() => {
@@ -2634,6 +2770,10 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           { label: 'SOAP', value: sendDialogSummary.soapState },
           { label: '画像添付', value: sendDialogSummary.imageCount },
           { label: '正本状態', value: '診療録取消の確定ではありません' },
+        ]}
+        checklistItems={[
+          { label: '患者識別と取消対象を確認しました', checked: true, tone: 'success' },
+          { label: '確定済み診療録の直接上書きではありません', checked: true, tone: 'warning' },
         ]}
         confirmLabel="診療録取消を実行する"
         tone="danger"
@@ -2868,6 +3008,29 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         <div className="charts-actions__patient-inline" role="group" aria-label="患者情報帯の補助操作">
           <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--left">
             {draftSaveButton}
+          </div>
+          <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--center">
+            <button
+              type="button"
+              id={embeddedEncounterAction === 'start' ? 'charts-action-start' : 'charts-action-finish'}
+              className={`charts-actions__button charts-actions__button--encounter-${embeddedEncounterAction} charts-actions__button--patient-finish${
+                primaryAction === embeddedEncounterAction ? ' charts-actions__button--primary-route' : ''
+              }`}
+              disabled={embeddedEncounterBlocked}
+              data-disabled-reason={embeddedEncounterReason}
+              aria-disabled={embeddedEncounterGuarded}
+              aria-describedby={
+                embeddedEncounterAction === 'finish' && !isRunning && finishPrecheckReasons.length > 0
+                  ? 'charts-actions-finish-guard'
+                  : undefined
+              }
+              title={embeddedEncounterTitle}
+              onClick={() => void handleAction(embeddedEncounterAction)}
+              aria-keyshortcuts={embeddedEncounterAction === 'start' ? 'Alt+N' : 'Alt+E'}
+            >
+              <ClinicalIcon icon="billing-send" />
+              <span>{embeddedEncounterAction === 'start' ? '診察開始' : '診察終了して会計へ送信'}</span>
+            </button>
           </div>
           <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--right">
             {printActionButton}

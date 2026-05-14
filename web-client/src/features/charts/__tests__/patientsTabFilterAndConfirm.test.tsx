@@ -122,7 +122,13 @@ describe('PatientsTab filtering and confirm', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /患者B/ }));
 
-    expect(screen.getByRole('alertdialog', { name: '患者切替の確認' })).toBeInTheDocument();
+    const dialog = screen.getByRole('alertdialog', { name: '患者切替の確認' });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByRole('region', { name: '患者切替の未保存影響' })).toHaveTextContent(
+      '未保存下書きがある場合はこの確認へ進まず',
+    );
+    expect(within(dialog).getByText('現在の患者')).toBeInTheDocument();
+    expect(within(dialog).getByText('切替先')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '切り替える' }));
 

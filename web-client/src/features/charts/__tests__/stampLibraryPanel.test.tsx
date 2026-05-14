@@ -121,7 +121,9 @@ describe('StampLibraryPanel (STAMP-001 MVP)', () => {
     await waitFor(() => expect(vi.mocked(fetchStampDetail)).toHaveBeenCalledWith('STAMP-1'));
 
     await screen.findByText('memo: 注意事項');
-    await screen.findByText(/アムロジピン/);
+    expect(await screen.findAllByText(/アムロジピン/)).toHaveLength(2);
+    expect(screen.getByRole('region', { name: 'セット/スタンプ適用前の差分プレビュー' })).toBeInTheDocument();
+    expect(screen.getByText(/スタンプ選択だけでは処方確定、ORCA送信、会計送信は行いません/)).toBeInTheDocument();
   });
 
   it('検索で絞り込める', async () => {

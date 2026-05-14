@@ -161,6 +161,24 @@ const resolveChooserTitle = (tool: RightUtilityTool, selectedEntity: OrderEntity
   return `${resolveRightUtilityToolLabel(tool)}候補 / ${resolveOrderEntityLabel(selectedEntity)}`;
 };
 
+const resolveSourceRoleLabel = (sourceKey: string) => {
+  switch (sourceKey) {
+    case 'existing':
+      return '既存API由来';
+    case 'patient':
+      return '患者候補';
+    case 'facility':
+      return '施設頻用';
+    case 'orca-input-set':
+    case 'orca-set':
+      return 'ORCA診療セット候補';
+    case 'search':
+      return '検索追加';
+    default:
+      return '入力開始';
+  }
+};
+
 export { resolveLatestBundle, sortBundlesByLatestRule };
 
 export function RightUtilityDrawer({
@@ -567,13 +585,31 @@ export function RightUtilityDrawer({
                   </section>
                 ) : null}
 
+                {encounterGuard.status === 'ok' ? (
+                  <section className="soap-note__right-drawer-source-overview" aria-label="候補ソースの概要">
+                    <div className="soap-note__right-drawer-order-preview-header">
+                      <strong>候補ソース</strong>
+                    </div>
+                    <ul className="soap-note__right-drawer-order-preview-item-list">
+                      <li>既存オーダー: 保存済み候補を編集またはコピーします。</li>
+                      <li>患者候補: この患者の過去使用から候補化します。</li>
+                      <li>施設頻用: 施設全体の頻用から候補化します。</li>
+                      <li>ORCA診療セット: 入力セットをRPまたはカテゴリ別候補として展開します。ORCA送信ではありません。</li>
+                      <li>検索して追加: 候補が無い場合に新規入力へ進みます。</li>
+                    </ul>
+                  </section>
+                ) : null}
+
                 {encounterGuard.status === 'ok' ? resolveOrderChooserSources(activeTool).map((source) => {
                   if (!selectedEntity || !groupSpec) return null;
                   if (source.key === 'existing') {
                     return (
                       <section key={source.key} className="soap-note__right-drawer-order-preview" aria-label={source.label}>
                         <div className="soap-note__right-drawer-order-preview-header">
-                          <strong>{source.label}</strong>
+                          <div>
+                            <p className="soap-note__summary-meta">{resolveSourceRoleLabel(source.key)}</p>
+                            <strong>{source.label}</strong>
+                          </div>
                           <button type="button" className="order-dock__bundle-action" onClick={handleCreateNew}>
                             {resolveOrderChooserCtaLabel('create')}
                           </button>
@@ -658,7 +694,10 @@ export function RightUtilityDrawer({
                     return (
                       <section key={source.key} className="soap-note__right-drawer-order-preview" aria-label={source.label}>
                         <div className="soap-note__right-drawer-order-preview-header">
-                          <strong>{source.label}</strong>
+                          <div>
+                            <p className="soap-note__summary-meta">{resolveSourceRoleLabel(source.key)}</p>
+                            <strong>{source.label}</strong>
+                          </div>
                         </div>
                         {source.note ? <p className="order-dock__empty">{source.note}</p> : null}
                         {recommendationQuery.isFetching ? renderEmptyState('候補を取得しています...') : null}
@@ -706,26 +745,38 @@ export function RightUtilityDrawer({
                     return (
                       <section key={source.key} className="soap-note__right-drawer-order-preview" aria-label={source.label}>
                         <div className="soap-note__right-drawer-order-preview-header">
-                          <strong>{source.label}</strong>
+                          <div>
+                            <p className="soap-note__summary-meta">{resolveSourceRoleLabel(source.key)}</p>
+                            <strong>{source.label}</strong>
+                          </div>
                         </div>
                         {source.note ? <p className="order-dock__empty">{source.note}</p> : null}
                         <div className="charts-side-panel__field">
-                          <label htmlFor="right-drawer-orca-set-keyword">keyword</label>
+                          <label htmlFor="right-drawer-orca-set-keyword">ORCA候補キーワード</label>
                           <input
                             id="right-drawer-orca-set-keyword"
                             value={inputSetKeyword}
                             onChange={(event) => setInputSetKeyword(event.target.value)}
-                            placeholder={source.key === 'orca-input-set' ? '入力セット名またはコード' : '診療セット名またはコード'}
                           />
+                          <p className="charts-side-panel__help">
+                            {source.key === 'orca-input-set' ? '入力セット名またはコードで検索します。' : '診療セット名またはコードで検索します。'}
+                          </p>
                         </div>
                         <button
                           type="button"
                           className="order-dock__bundle-action"
                           onClick={() => setSubmittedInputSetKeyword(inputSetKeyword.trim())}
+                          aria-describedby={!inputSetKeyword.trim() ? 'right-drawer-orca-set-search-reason' : undefined}
                           disabled={!inputSetKeyword.trim() || isSearching}
                         >
                           {isSearching ? '検索中…' : '検索'}
                         </button>
+                        {!inputSetKeyword.trim() ? (
+                          <p id="right-drawer-orca-set-search-reason" className="order-dock__empty">
+                            ORCA候補検索はキーワード入力後に実行できます。
+                          </p>
+                        ) : null}
+                        <p className="order-dock__empty">候補を反映しても、この操作だけでは処方確定・ORCA送信・会計済みにはなりません。</p>
                         {submittedInputSetKeyword.trim() && inputSetQuery.data && !inputSetQuery.data.ok
                           ? renderEmptyState('ORCA候補を取得できませんでした。通信状態またはORCA接続設定を確認してください。')
                           : null}
@@ -768,7 +819,10 @@ export function RightUtilityDrawer({
                   return (
                     <section key={source.key} className="soap-note__right-drawer-order-preview" aria-label={source.label}>
                       <div className="soap-note__right-drawer-order-preview-header">
-                        <strong>{source.label}</strong>
+                        <div>
+                          <p className="soap-note__summary-meta">{resolveSourceRoleLabel(source.key)}</p>
+                          <strong>{source.label}</strong>
+                        </div>
                       </div>
                       <p className="order-dock__empty">新規入力からこのカテゴリの編集面を開きます。</p>
                       <button type="button" className="order-dock__bundle-action" onClick={handleCreateNew} disabled={!selectedEntity}>

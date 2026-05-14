@@ -26,6 +26,7 @@ import { DoCopyDialog, type DoCopyDialogState } from '../DoCopyDialog';
 import type { SoapDraft, SoapEntry, SoapSectionKey } from '../soapNote';
 import { SOAP_SECTION_LABELS, SOAP_SECTIONS } from '../soapNote';
 import { chartsStyles } from '../styles';
+import { ChartSafetyBanner, type ChartSafetyBannerItem } from '../ui/ChartSafetyBanner';
 import { FocusTrapDialog } from '../../../components/modals/FocusTrapDialog';
 import { ImageDockedPanel } from '../../images/components';
 import { type KarteImageListItem } from '../../images/api';
@@ -631,7 +632,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const isChartsUiOptB = import.meta.env.VITE_CHARTS_UI_OPT_B === '1';
   const isPatientImagesMvpEnabled = import.meta.env.VITE_PATIENT_IMAGES_MVP === '1';
   const isBottomOrderHubIntegrationEnabled = import.meta.env.VITE_CHARTS_BOTTOM_ORDER_HUB_INTEGRATION === '1';
-  const showBottomUtilityDock = false;
+  const showBottomUtilityDock = true;
   const stampboxMvpPhaseRaw = Number(import.meta.env.VITE_STAMPBOX_MVP ?? 0);
   const stampboxMvpPhase: 0 | 1 | 2 =
     Number.isFinite(stampboxMvpPhaseRaw) && stampboxMvpPhaseRaw >= 2
@@ -3295,6 +3296,77 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   );
   const switchLocked = lockState.locked || tabLock.isReadOnly;
   const switchLockedReason = lockState.reason ?? (tabLock.isReadOnly ? tabLock.readOnlyReason : undefined);
+  const chartSafetyItems = useMemo<ChartSafetyBannerItem[]>(() => {
+    const items: ChartSafetyBannerItem[] = [];
+    if (resolvedMissingMaster || resolvedFallbackUsed) {
+      items.push({
+        id: 'orca-source',
+        label: resolvedMissingMaster ? 'ORCA正本未確認' : '暫定参照',
+        tone: 'warning',
+        detail: resolvedMissingMaster
+          ? 'ORCA由来の患者・受付・保険情報を正本として再確認するまで、送信や会計完了とはしません。'
+          : 'フォールバック/キャッシュ表示中です。ORCA送信前に受付で再取得してください。',
+        nextAction: '受付で対象来院を再取得',
+      });
+    }
+    if (draftState.dirty) {
+      items.push({
+        id: 'dirty',
+        label: '未保存',
+        tone: 'warning',
+        detail: `未保存の入力があります${draftState.dirtySources?.length ? `（${draftState.dirtySources.join(' / ')}）` : ''}。患者切替と会計送信はガードされます。`,
+        nextAction: '下書き保存または破棄を選択',
+      });
+    }
+    if (tabLock.isReadOnly) {
+      items.push({
+        id: 'tab-lock',
+        label: '編集ロック',
+        tone: 'danger',
+        detail: tabLock.readOnlyReason ?? '別タブまたは別端末の編集を検知したため閲覧専用です。',
+        nextAction: '最新再読込またはロック引き継ぎを確認',
+      });
+    }
+    if (approvalLocked) {
+      items.push({
+        id: 'approval',
+        label: '署名確定',
+        tone: 'warning',
+        detail: approvalReason ?? '署名確定済みです。編集は履歴追記として扱い、直接上書きしません。',
+        nextAction: '訂正/追記の要否を確認',
+      });
+    }
+    if (selectedOrcaSendStatus?.key === 'failure' || selectedOrcaSendStatus?.key === 'unknown' || selectedOrcaSendStatus?.isStalled) {
+      items.push({
+        id: 'orca-send-status',
+        label: selectedOrcaSendStatus.key === 'unknown' ? 'ORCA UNKNOWN' : selectedOrcaSendStatus.key === 'failure' ? 'ORCA失敗' : 'ORCA停滞',
+        tone: selectedOrcaSendStatus.key === 'failure' ? 'danger' : 'warning',
+        detail: selectedOrcaSendStatus.error ?? 'ORCA送信状態の確認が必要です。成功・会計済みとして扱いません。',
+        nextAction: '受付のORCA連携一覧で照合',
+      });
+    }
+    if (items.length === 0) {
+      items.push({
+        id: 'baseline',
+        label: '患者安全',
+        tone: 'success',
+        detail: '患者識別、来院文脈、ORCA source/cache、編集状態をこの画面で確認できます。',
+      });
+    }
+    return items;
+  }, [
+    approvalLocked,
+    approvalReason,
+    draftState.dirty,
+    draftState.dirtySources,
+    resolvedFallbackUsed,
+    resolvedMissingMaster,
+    selectedOrcaSendStatus?.error,
+    selectedOrcaSendStatus?.isStalled,
+    selectedOrcaSendStatus?.key,
+    tabLock.isReadOnly,
+    tabLock.readOnlyReason,
+  ]);
   useEffect(() => {
     if (patientEntries.length === 0) return;
     if (draftState.dirty || lockState.locked || tabLock.isReadOnly) return;
@@ -5051,6 +5123,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                         />
                       }
                     />
+                    <ChartSafetyBanner items={chartSafetyItems} />
                   </div>
                 </div>
                 <div className="charts-workbench__sticky-side" aria-hidden="true" />

@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 type DialogRole = 'dialog' | 'alertdialog';
+type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
 const dialogStack: string[] = [];
 
@@ -32,6 +33,10 @@ export interface FocusTrapDialogProps {
   title: string;
   description?: string;
   role?: DialogRole;
+  size?: DialogSize;
+  className?: string;
+  panelClassName?: string;
+  footer?: ReactNode;
   onClose: () => void;
   children: ReactNode;
   initialFocus?: 'first' | 'none';
@@ -47,6 +52,10 @@ export function FocusTrapDialog({
   title,
   description,
   role = 'dialog',
+  size = 'md',
+  className,
+  panelClassName,
+  footer,
   onClose,
   children,
   initialFocus = 'first',
@@ -137,7 +146,7 @@ export function FocusTrapDialog({
 
   return createPortal(
     <div
-      className="focus-trap-dialog__backdrop"
+      className={`focus-trap-dialog__backdrop${className ? ` ${className}` : ''}`}
       data-test-id={testId}
       onMouseDown={() => {
         if (!isTopMost(stackId)) return;
@@ -146,9 +155,10 @@ export function FocusTrapDialog({
       }}
     >
       <div
-        className="focus-trap-dialog__panel"
+        className={`focus-trap-dialog__panel${panelClassName ? ` ${panelClassName}` : ''}`}
         ref={panelRef}
         role={role}
+        data-size={size}
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
@@ -171,6 +181,7 @@ export function FocusTrapDialog({
           </p>
         ) : null}
         <div className="focus-trap-dialog__content">{children}</div>
+        {footer ? <footer className="focus-trap-dialog__footer">{footer}</footer> : null}
       </div>
     </div>,
     document.body,

@@ -3,13 +3,16 @@ import { useCallback, useState } from 'react';
 type ImageDropzoneProps = {
   onFiles: (files: File[]) => void;
   disabled?: boolean;
+  disabledReason?: string;
+  attachmentTargetLabel?: string;
   maxSizeLabel?: string;
 };
 
 const toFileArray = (list: FileList | null) => (list ? Array.from(list) : []);
 
-export function ImageDropzone({ onFiles, disabled, maxSizeLabel }: ImageDropzoneProps) {
+export function ImageDropzone({ onFiles, disabled, disabledReason, attachmentTargetLabel, maxSizeLabel }: ImageDropzoneProps) {
   const [dragging, setDragging] = useState(false);
+  const noteId = 'image-dropzone-note';
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
@@ -50,6 +53,14 @@ export function ImageDropzone({ onFiles, disabled, maxSizeLabel }: ImageDropzone
       <div className="charts-image-dropzone__body">
         <p className="charts-image-dropzone__title">画像をドラッグ&ドロップ</p>
         <p className="charts-image-dropzone__hint">またはボタンから画像を選択してください。</p>
+        <p id={noteId} className="charts-image-dropzone__meta">
+          添付先: {attachmentTargetLabel ?? '患者画像一覧と選択中カルテ'} / 保存先はサーバーが解決します。
+        </p>
+        {disabled && disabledReason ? (
+          <p className="charts-image-dropzone__meta" role="status">
+            {disabledReason}
+          </p>
+        ) : null}
         <label className="charts-image-dropzone__button">
           ファイルを選択
           <input
@@ -58,6 +69,7 @@ export function ImageDropzone({ onFiles, disabled, maxSizeLabel }: ImageDropzone
             accept="image/*"
             multiple
             disabled={disabled}
+            aria-describedby={noteId}
             onChange={(event) => handleFiles(event.target.files)}
             onClick={(event) => {
               const input = event.currentTarget;

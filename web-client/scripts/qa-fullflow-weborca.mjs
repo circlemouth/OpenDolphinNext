@@ -67,6 +67,13 @@ const safeClose = async (closer) => {
     // Playwright transport may already be gone after the scenario finishes.
   }
 };
+const withTimeout = async (promise, ms, fallback) =>
+  await Promise.race([
+    promise,
+    new Promise((resolve) => {
+      setTimeout(() => resolve(fallback), ms);
+    }),
+  ]);
 
 const facilityId = resolveQaFacilityId();
 const sessionRole = process.env.QA_ROLE ?? 'admin';
@@ -446,8 +453,8 @@ const summarizeAcceptMutationResponse = async (response) => {
 };
 
 const readReceptionEntryDiagnostics = async (page, targetPatientId) =>
-  page
-    .evaluate((patientId) => {
+  await withTimeout(
+    page.evaluate((patientId) => {
       const rows = Array.from(document.querySelectorAll('[data-test-id="reception-entry-row"], [data-test-id="reception-entry-card"]'))
         .filter((node) => node instanceof HTMLElement)
         .map((node) => ({
@@ -474,14 +481,115 @@ const readReceptionEntryDiagnostics = async (page, targetPatientId) =>
         rawSensitiveFieldsExcluded: true,
       };
     }, targetPatientId)
-    .catch(() => ({
+      .catch(() => ({
+        totalRenderedRows: 0,
+        matchingRows: 0,
+        activeRows: 0,
+        keyedActiveRows: 0,
+        statuses: [],
+        rawSensitiveFieldsExcluded: true,
+      })),
+    3000,
+    {
       totalRenderedRows: 0,
       matchingRows: 0,
       activeRows: 0,
       keyedActiveRows: 0,
       statuses: [],
+      timedOut: true,
       rawSensitiveFieldsExcluded: true,
-    }));
+    },
+  );
+
+const findReceptionChartsHandoffButton = async (page, targetPatientId, { timeout = 20000 } = {}) => {
+  const deadline = Date.now() + timeout;
+  let lastDiagnostics = await readReceptionEntryDiagnostics(page, targetPatientId);
+  const statusTabs = ['受付中', '診療中', '会計待ち', '再計待', '会計済み', '予約'];
+  let statusTabIndex = 0;
+  while (Date.now() < deadline) {
+    const tabLabel = statusTabs[statusTabIndex % statusTabs.length];
+    statusTabIndex += 1;
+    const tab = page.getByRole('tab', { name: new RegExp(tabLabel) }).first();
+    if (await tab.isVisible().catch(() => false)) {
+      await tab.click().catch(() => {});
+      await page.waitForTimeout(250).catch(() => {});
+    }
+    const entries = page.locator('[data-test-id="reception-entry-row"], [data-test-id="reception-entry-card"]');
+    const count = await entries.count().catch(() => 0);
+    for (let index = 0; index < count; index += 1) {
+      const entry = entries.nth(index);
+      const attrs = await entry
+        .evaluate((node) => {
+          if (!(node instanceof HTMLElement)) return null;
+          return {
+            patientId: node.dataset.patientId ?? '',
+            status: node.dataset.receptionStatus ?? '',
+            scheduleKeyPresent: Boolean(node.dataset.scheduleKey),
+            encounterKeyPresent: Boolean(node.dataset.encounterKey),
+            receptionIdPresent: Boolean(node.dataset.receptionId),
+            appointmentIdPresent: Boolean(node.dataset.appointmentId),
+          };
+        })
+        .catch(() => null);
+      if (!attrs || attrs.patientId !== targetPatientId || attrs.status === '予約') continue;
+      if (!attrs.scheduleKeyPresent && !attrs.encounterKeyPresent) continue;
+      const button = entry.getByRole('button', { name: /カルテを開く/ }).first();
+      if ((await button.count().catch(() => 0)) === 0) continue;
+      const visible = await button.isVisible().catch(() => false);
+      const disabled = await button.isDisabled().catch(() => true);
+      if (!visible || disabled) continue;
+      return { button, attrs };
+    }
+    lastDiagnostics = await readReceptionEntryDiagnostics(page, targetPatientId);
+    await page.waitForTimeout(500);
+  }
+  const error = new Error('reception row charts handoff did not become available');
+  error.diagnostics = lastDiagnostics;
+  throw error;
+};
+
+const closeAcceptWorkflowModalIfOpen = async (page) => {
+  const workflowModal = page.locator('[data-test-id="reception-accept-workflow-modal"]');
+  if (!(await workflowModal.isVisible().catch(() => false))) return false;
+  await workflowModal.getByRole('button', { name: '閉じる' }).click();
+  await workflowModal.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => null);
+  return true;
+};
+
+const openChartsFromReceptionRow = async (page, targetPatientId, source, acceptMutationSummary, receptionEntryDiagnostics) => {
+  await closeAcceptWorkflowModalIfOpen(page);
+  const retryButton = page.getByRole('button', { name: '再取得' }).first();
+  if (await retryButton.isVisible().catch(() => false)) {
+    await retryButton.click({ force: true }).catch((error) => {
+      logStep(`row handoff retry click error=${String(error)}`);
+    });
+    await page.waitForTimeout(1500);
+  }
+  const rowHandoff = await findReceptionChartsHandoffButton(page, targetPatientId);
+  const latestDiagnostics = await readReceptionEntryDiagnostics(page, targetPatientId);
+  lastHandoffState = {
+    status: 'ready',
+    source,
+    acceptMutation: acceptMutationSummary,
+    receptionEntryDiagnostics: latestDiagnostics ?? receptionEntryDiagnostics,
+    scheduleKeyPresent: rowHandoff.attrs.scheduleKeyPresent,
+    encounterKeyPresent: rowHandoff.attrs.encounterKeyPresent,
+  };
+  logStep(
+    `row charts handoff ready source=${source} scheduleKeyPresent=${String(rowHandoff.attrs.scheduleKeyPresent)} encounterKeyPresent=${String(
+      rowHandoff.attrs.encounterKeyPresent,
+    )}`,
+  );
+  await rowHandoff.button.click();
+  await page.waitForURL('**/charts**');
+  return {
+    status: 'ready',
+    source,
+    scheduleKey: rowHandoff.attrs.scheduleKeyPresent ? 'present-redacted' : null,
+    encounterKey: rowHandoff.attrs.encounterKeyPresent ? 'present-redacted' : null,
+    title: null,
+  };
+};
 
 const collectResponse = async (response) => {
   const url = response.url();
@@ -765,8 +873,8 @@ const persistedHandoffState = () => {
   return {
     status: lastHandoffState?.status ?? 'unknown',
     source: lastHandoffState?.source,
-    scheduleKeyPresent: Boolean(lastHandoffState?.scheduleKey),
-    encounterKeyPresent: Boolean(lastHandoffState?.encounterKey),
+    scheduleKeyPresent: Boolean(lastHandoffState?.scheduleKey ?? lastHandoffState?.scheduleKeyPresent),
+    encounterKeyPresent: Boolean(lastHandoffState?.encounterKey ?? lastHandoffState?.encounterKeyPresent),
     titlePresent: Boolean(lastHandoffState?.title),
     selectedVisitRowPresent: Boolean(lastHandoffState?.selectedVisitRowPresent),
     leakedQueryKeys: lastHandoffState?.leakedQueryKeys,
@@ -1015,14 +1123,18 @@ const run = async () => {
       return !button.disabled && Boolean(button.dataset.scheduleKey || button.dataset.encounterKey);
     }, { timeout: 5000 })
     .catch(() => null);
-  const existingChartsHandoff = await patientSearchOpenChartsButton
-    .evaluate((button) => ({
-      disabled: button.disabled,
-      scheduleKey: button.getAttribute('data-schedule-key'),
-      encounterKey: button.getAttribute('data-encounter-key'),
-      title: button.getAttribute('title'),
-    }))
-    .catch(() => null);
+  const existingChartsHandoff = await withTimeout(
+    patientSearchOpenChartsButton
+      .evaluate((button) => ({
+        disabled: button.disabled,
+        scheduleKey: button.getAttribute('data-schedule-key'),
+        encounterKey: button.getAttribute('data-encounter-key'),
+        title: button.getAttribute('title'),
+      }))
+      .catch(() => null),
+    3000,
+    null,
+  );
   logStep(`existing acceptance charts handoff candidate=${JSON.stringify(existingChartsHandoff)}`);
   if (
     existingChartsHandoff &&
@@ -1053,7 +1165,19 @@ const run = async () => {
     await page.waitForURL('**/charts**');
   }
 
-  if (handoffMode !== 'existing-acceptance') {
+  if (handoffMode !== 'existing-acceptance' && receptionEntryDiagnostics.keyedActiveRows > 0) {
+    handoffMode = 'existing-acceptance-row';
+    allowExistingAcceptanceHandoffGate = true;
+    chartsHandoff = await openChartsFromReceptionRow(
+      page,
+      patientId,
+      'reception-row-existing-acceptance',
+      acceptMutationSummary,
+      receptionEntryDiagnostics,
+    );
+  }
+
+  if (handoffMode !== 'existing-acceptance' && handoffMode !== 'existing-acceptance-row') {
     await acceptForm.waitFor({ timeout: 20000 });
     logStep('accept detail ready');
     departmentSelection = await selectOptionWithGate(
@@ -1138,13 +1262,46 @@ const run = async () => {
       throw new Error(lastSummary.blockerReason);
     }
 
+    const acceptRegisterButton = workflowModal.locator('[data-test-id="reception-accept-register"]');
+    const acceptRegisterState = await acceptRegisterButton
+      .evaluate((button) => ({
+        disabled: button instanceof HTMLButtonElement ? button.disabled : false,
+        title: button instanceof HTMLElement ? button.getAttribute('title') ?? '' : '',
+        text: button instanceof HTMLElement ? button.textContent ?? '' : '',
+      }))
+      .catch(() => ({ disabled: false, title: '', text: '' }));
+    if (acceptRegisterState.disabled) {
+      const duplicateAccepted = /すでに受付済み|受付済み/.test(`${acceptRegisterState.title} ${acceptRegisterState.text}`);
+      if (duplicateAccepted) {
+        handoffMode = 'existing-acceptance-row';
+        allowExistingAcceptanceHandoffGate = true;
+        receptionEntryDiagnostics = await readReceptionEntryDiagnostics(page, patientId);
+        chartsHandoff = await openChartsFromReceptionRow(
+          page,
+          patientId,
+          'reception-row-duplicate-acceptance',
+          {
+            observed: false,
+            httpStatusClass: 'not_run',
+            businessSuccessClassification: 'duplicate_acceptance_ui_guard',
+          },
+          receptionEntryDiagnostics,
+        );
+      } else {
+        throw new Error(`accept register disabled before mutation: ${acceptRegisterState.title || acceptRegisterState.text || 'unknown'}`);
+      }
+    }
+
+    if (handoffMode === 'existing-acceptance-row') {
+      logStep('skipped accept mutation because existing accepted row opened Charts');
+    } else {
     beforeShot = await writeScreenshot(page, '01-reception-before-accept');
 
     const acceptResponsePromise = page
       .waitForResponse((response) => response.url().includes('/api/orca/official/visits/mutation'), { timeout: 20000 })
       .catch(() => null);
 
-    await workflowModal.locator('[data-test-id="reception-accept-register"]').click();
+    await acceptRegisterButton.click();
     logStep('clicked reception send');
     const acceptResponse = await acceptResponsePromise;
     logStep('accept response observed');
@@ -1182,54 +1339,80 @@ const run = async () => {
     receptionEntryDiagnostics = await readReceptionEntryDiagnostics(page, patientId);
     logStep(`reception active diagnostics=${JSON.stringify(receptionEntryDiagnostics)}`);
 
-    try {
-    await patientSearchOpenChartsButton.waitFor({ timeout: 10000 });
-    await page.waitForFunction(() => {
-      const button = document.querySelector('[data-test-id="reception-patient-search-open-charts"]');
-      if (!(button instanceof HTMLButtonElement)) return false;
-      const hasCanonicalKey = Boolean(button.dataset.scheduleKey || button.dataset.encounterKey);
-      return !button.disabled && hasCanonicalKey;
-    }, { timeout: 20000 });
-    chartsHandoff = await patientSearchOpenChartsButton.evaluate((button) => ({
-      status: button.disabled ? 'disabled' : 'ready',
-      scheduleKey: button.getAttribute('data-schedule-key'),
-      encounterKey: button.getAttribute('data-encounter-key'),
-      title: button.getAttribute('title'),
-    }));
-    lastHandoffState = {
-      status: 'ready',
-      source: 'patient-search-open-charts',
-      acceptMutation: acceptMutationSummary,
-      receptionEntryDiagnostics,
-      ...chartsHandoff,
-    };
-    logStep(
-      `charts handoff status=${chartsHandoff.status} scheduleKey=${chartsHandoff.scheduleKey ?? '—'} encounterKey=${
-        chartsHandoff.encounterKey ?? '—'
-      }`,
-    );
-    await patientSearchOpenChartsButton.click();
-    await page.waitForURL('**/charts**');
-  } catch (error) {
-    const buttonState = await patientSearchOpenChartsButton
-      .evaluate((button) => ({
-        disabled: button.disabled,
-        scheduleKey: button.getAttribute('data-schedule-key'),
-        encounterKey: button.getAttribute('data-encounter-key'),
-        title: button.getAttribute('title'),
-      }))
-      .catch(() => null);
-    lastHandoffState = {
-      status: 'error',
-      source: 'patient-search-open-charts',
-      error: String(error),
-      buttonState,
-      acceptMutation: acceptMutationSummary,
-      receptionEntryDiagnostics,
-    };
-    logStep(`charts handoff error=${String(error)} state=${JSON.stringify(buttonState)}`);
-    throw new Error(`canonical charts handoff did not become available after accept: ${String(error)}`);
-  }
+      const rowHandoffAfterAccept = await openChartsFromReceptionRow(
+        page,
+        patientId,
+        'reception-row-after-accept',
+        acceptMutationSummary,
+        receptionEntryDiagnostics,
+      ).catch((error) => {
+        logStep(`row charts handoff after accept not ready=${String(error)} diagnostics=${JSON.stringify(error.diagnostics ?? null)}`);
+        return null;
+      });
+      if (rowHandoffAfterAccept) {
+        chartsHandoff = rowHandoffAfterAccept;
+      } else {
+      try {
+        await patientSearchOpenChartsButton.waitFor({ timeout: 10000 });
+        await page.waitForFunction(() => {
+          const button = document.querySelector('[data-test-id="reception-patient-search-open-charts"]');
+          if (!(button instanceof HTMLButtonElement)) return false;
+          const hasCanonicalKey = Boolean(button.dataset.scheduleKey || button.dataset.encounterKey);
+          return !button.disabled && hasCanonicalKey;
+        }, { timeout: 20000 });
+        chartsHandoff = await patientSearchOpenChartsButton.evaluate((button) => ({
+          status: button.disabled ? 'disabled' : 'ready',
+          scheduleKey: button.getAttribute('data-schedule-key'),
+          encounterKey: button.getAttribute('data-encounter-key'),
+          title: button.getAttribute('title'),
+        }));
+        lastHandoffState = {
+          status: 'ready',
+          source: 'patient-search-open-charts',
+          acceptMutation: acceptMutationSummary,
+          receptionEntryDiagnostics,
+          ...chartsHandoff,
+        };
+        logStep(
+          `charts handoff status=${chartsHandoff.status} scheduleKey=${chartsHandoff.scheduleKey ?? '—'} encounterKey=${
+            chartsHandoff.encounterKey ?? '—'
+          }`,
+        );
+        await patientSearchOpenChartsButton.click();
+        await page.waitForURL('**/charts**');
+      } catch (error) {
+        const buttonState = await patientSearchOpenChartsButton
+          .evaluate((button) => ({
+            disabled: button.disabled,
+            scheduleKey: button.getAttribute('data-schedule-key'),
+            encounterKey: button.getAttribute('data-encounter-key'),
+            title: button.getAttribute('title'),
+          }))
+          .catch(() => null);
+        lastHandoffState = {
+          status: 'error',
+          source: 'patient-search-open-charts',
+          error: String(error),
+          buttonState,
+          acceptMutation: acceptMutationSummary,
+          receptionEntryDiagnostics,
+        };
+        logStep(`charts handoff error=${String(error)} state=${JSON.stringify(buttonState)}`);
+        try {
+          chartsHandoff = await openChartsFromReceptionRow(
+            page,
+            patientId,
+            'reception-row-after-accept',
+            acceptMutationSummary,
+            receptionEntryDiagnostics,
+          );
+        } catch (rowError) {
+          logStep(`row charts handoff error=${String(rowError)} diagnostics=${JSON.stringify(rowError.diagnostics ?? null)}`);
+          throw new Error(`canonical charts handoff did not become available after accept: ${String(error)}`);
+        }
+      }
+      }
+    }
   }
   logStep('navigated to charts');
   await page.locator('.charts-page').waitFor({ timeout: 20000 });
@@ -1663,7 +1846,7 @@ const run = async () => {
     logStep(`order result=${orderResult.status}`);
     await page.waitForTimeout(1500);
     await writeScreenshot(page, '05-order-edit');
-    await page.keyboard.press('Escape');
+    await withTimeout(page.keyboard.press('Escape').catch(() => null), 3000, null);
   } catch (error) {
     orderResult = { status: 'error', detail: String(error) };
     logStep(`order error=${String(error)}`);

@@ -103,6 +103,16 @@ export function ImageDockedPanel({
 
   const listItems = imageListQuery.data?.list ?? [];
   const imagesFeatureDisabled = imageListQuery.data?.errorCode === 'feature_disabled';
+  const selectedSoapTargetLabel =
+    soapTargetOptions?.find((option) => option.value === soapTargetSection)?.label ?? soapTargetOptions?.[0]?.label;
+  const attachmentTargetLabel = patientId
+    ? `患者ID ${patientId}${appointmentId ? ` / 受付・予約 ${appointmentId}` : ''}`
+    : '患者未選択';
+  const uploadDisabledReason = !patientId
+    ? '患者が未選択のため、画像取込は開始できません。'
+    : imagesFeatureDisabled
+      ? FEATURE_DISABLED_MESSAGE
+      : undefined;
 
   const maxSizeLabel = useMemo(() => {
     return `最大 ${formatBytes(IMAGE_ATTACHMENT_MAX_SIZE_BYTES)}`;
@@ -402,10 +412,22 @@ export function ImageDockedPanel({
           </p>
         </div>
         <div className="charts-image-panel__meta" aria-live={infoLive}>
+          <span>添付先: {attachmentTargetLabel}</span>
+          <span>SOAP挿入先: {selectedSoapTargetLabel ?? '未選択'}</span>
           <span>対応拡張子: {IMAGE_ATTACHMENT_ALLOWED_EXTENSIONS.join(', ')}</span>
           <span>最大サイズ: {formatBytes(IMAGE_ATTACHMENT_MAX_SIZE_BYTES)}</span>
         </div>
       </header>
+      <section className="charts-image-panel__notice" aria-label="画像取込の安全確認">
+        <strong>M15 画像取込</strong>
+        <p>
+          ファイル、カメラ、スキャン取込を同じ患者画像一覧へ集約します。保存 URI、object key、digest、所有者、施設は
+          サーバー側の保存結果だけを正とし、この画面では参照 ID とファイル概要だけを扱います。
+        </p>
+        <p>
+          文書添付候補: {selectedAttachmentIds.length} 件 / SOAP挿入先: {selectedSoapTargetLabel ?? '未選択'}
+        </p>
+      </section>
       {soapTargetOptions && soapTargetOptions.length > 0 ? (
         <div className="charts-image-panel__target">
           <label>
@@ -447,7 +469,13 @@ export function ImageDockedPanel({
       ) : null}
 
       <div className="charts-image-panel__upload">
-        <ImageDropzone onFiles={enqueueFiles} disabled={!patientId || imagesFeatureDisabled} maxSizeLabel={maxSizeLabel} />
+        <ImageDropzone
+          onFiles={enqueueFiles}
+          disabled={!patientId || imagesFeatureDisabled}
+          disabledReason={uploadDisabledReason}
+          attachmentTargetLabel={attachmentTargetLabel}
+          maxSizeLabel={maxSizeLabel}
+        />
         <div className="charts-image-panel__queue" data-test-id="image-upload-queue">
           <h4>アップロード状況</h4>
           {uploadItems.length === 0 ? (
@@ -504,6 +532,8 @@ export function ImageDockedPanel({
         <ImageCameraCapture
           onCapture={(file) => enqueueFiles([file])}
           disabled={!patientId || imagesFeatureDisabled}
+          disabledReason={uploadDisabledReason}
+          attachmentTargetLabel={attachmentTargetLabel}
           onCameraError={(reason, message) => {
             setStatusMessage({ tone: 'error', message });
             recordTelemetry({
@@ -523,6 +553,15 @@ export function ImageDockedPanel({
             });
           }}
         />
+        <section className="charts-image-camera" aria-label="スキャン取込">
+          <div className="charts-image-camera__header">
+            <h3>スキャン取込</h3>
+            <p>スキャナ保存フォルダから出力された画像ファイルを、上のファイル選択へ追加して登録します。</p>
+          </div>
+          <p className="charts-image-camera__fallback" role="status">
+            TWAIN/OSスキャンの直接制御は未接続です。出力ファイルを確認してから患者ID {patientId ?? '未選択'} へ登録してください。
+          </p>
+        </section>
       </div>
 
       <div className="charts-image-panel__gallery">

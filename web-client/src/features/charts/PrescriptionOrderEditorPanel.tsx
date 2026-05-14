@@ -66,6 +66,12 @@ type ValidationIssue = {
 };
 
 type GenericPriceCacheState = OrcaGenericPriceResult | { loading: true };
+type PrescriptionSafetyItem = {
+  key: string;
+  tone: 'warning' | 'contra' | 'confirmed';
+  label: string;
+  detail: string;
+};
 
 export type PrescriptionOrderEditorPanelProps = {
   patientId?: string;
@@ -146,6 +152,9 @@ const CLAIM_COMMENT_TEMPLATES: Array<{ code?: string; name: string }> = [
 ];
 
 const DRUG_COMMENT_TEMPLATES = ['食後服用を指導', '眠気に注意', '残薬確認済み'];
+const RP_SHARED_USAGE_RULE =
+  '1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。';
+const RP_SHARED_USAGE_SHORT = '1 RP = 共通用法。異なる用法は別RP';
 
 const createClaimComment = (name: string, code?: string, note?: string): PrescriptionClaimComment => ({
   id: `claim-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
@@ -274,6 +283,60 @@ const isOrcaDrugCode = (value?: string | null) => /^\d{9}$/.test((value ?? '').t
 
 const genericPriceCacheKey = (code: string, effective: string) => `${code}:${effective}`;
 
+const buildPrescriptionSafetyItems = (
+  order: PrescriptionOrder,
+  validationIssues: ValidationIssue[],
+  interactionPairs: Array<{ code1: string; code2: string; interactionName?: string; message?: string }>,
+): PrescriptionSafetyItem[] => {
+  const items: PrescriptionSafetyItem[] = [];
+  const codeMap = new Map<string, string[]>();
+  order.rps.forEach((rp, rpIndex) => {
+    rp.drugs.forEach((drug, drugIndex) => {
+      const code = drug.code?.trim();
+      if (!code) return;
+      const labels = codeMap.get(code) ?? [];
+      labels.push(`RP${rpIndex + 1} 薬剤${drugIndex + 1}`);
+      codeMap.set(code, labels);
+    });
+  });
+  codeMap.forEach((labels, code) => {
+    if (labels.length < 2) return;
+    items.push({
+      key: `duplicate-${code}`,
+      tone: 'warning',
+      label: '警告',
+      detail: `重複投与候補: ${code} が ${labels.join(' / ')} にあります。`,
+    });
+  });
+  interactionPairs.forEach((pair, index) => {
+    items.push({
+      key: `interaction-${pair.code1}-${pair.code2}-${index}`,
+      tone: 'warning',
+      label: '警告',
+      detail: `${pair.code1} / ${pair.code2} / ${pair.interactionName ?? pair.message ?? 'master 静的相互作用あり'}`,
+    });
+  });
+  validationIssues
+    .filter((issue) => issue.key.startsWith('drug_rule_') || issue.key.includes('structured_claim'))
+    .forEach((issue) => {
+      items.push({
+        key: `contra-${issue.key}`,
+        tone: 'contra',
+        label: '禁忌',
+        detail: `保存不可: ${issue.message}`,
+      });
+    });
+  if (items.length === 0) {
+    items.push({
+      key: 'confirmed-no-warning',
+      tone: 'confirmed',
+      label: '確認済み',
+      detail: 'この画面で検出できる重複投与候補、静的相互作用候補、保存不可ルールはありません。',
+    });
+  }
+  return items;
+};
+
 const toRpFromInputSetDetail = (
   detail: NonNullable<OrcaOrderInputSetDetailResult['bundle']>,
   started: string,
@@ -374,6 +437,7 @@ export function PrescriptionOrderEditorPanel({
   const [inputSetLoading, setInputSetLoading] = useState(false);
   const [inputSetItems, setInputSetItems] = useState<OrcaOrderInputSetSummary[]>([]);
   const [interactionConfirmOpen, setInteractionConfirmOpen] = useState(false);
+  const [interactionReviewReason, setInteractionReviewReason] = useState('');
   const [finalizeConfirmOpen, setFinalizeConfirmOpen] = useState(false);
   const [interactionPairs, setInteractionPairs] = useState<Array<{
     code1: string;
@@ -973,6 +1037,7 @@ export function PrescriptionOrderEditorPanel({
 
   const closeInteractionConfirm = useCallback(() => {
     setInteractionConfirmOpen(false);
+    setInteractionReviewReason('');
     setPendingSaveAction(null);
   }, []);
 
@@ -1056,6 +1121,43 @@ export function PrescriptionOrderEditorPanel({
     }
 
     return issues;
+  };
+
+  const safetyItems = useMemo(
+    () => buildPrescriptionSafetyItems(order, validationIssues, interactionPairs),
+    [interactionPairs, order, validationIssues],
+  );
+  const formatSafetySummaryDetail = (detail: string) => detail.replace(/ \/ ([^/]+)$/, ': $1');
+
+  const splitDrugToNewRp = (drugIndex: number) => {
+    if (isPreviewMode) return;
+    const sourceRp = order.rps[selectedRpIndex];
+    const targetDrug = sourceRp?.drugs[drugIndex];
+    if (!sourceRp || !targetDrug || sourceRp.drugs.length <= 1) return;
+    const nextRp: PrescriptionRp = {
+      ...buildEmptyPrescriptionRp(sourceRp.started || today, resolveClassCode(sourceRp.category, sourceRp.location)),
+      name: targetDrug.name ? `${targetDrug.name} 別RP` : `${sourceRp.name || '処方'} 別RP`,
+      location: sourceRp.location,
+      category: sourceRp.category,
+      usage: '',
+      usageCode: undefined,
+      daysOrTimes: sourceRp.daysOrTimes,
+      drugs: [{ ...targetDrug, rowId: `drug-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}` }],
+    };
+    setOrder((prev) => {
+      const currentRp = prev.rps[selectedRpIndex];
+      if (!currentRp || currentRp.drugs.length <= 1) return prev;
+      const nextRps = [...prev.rps];
+      nextRps[selectedRpIndex] = {
+        ...currentRp,
+        drugs: currentRp.drugs.filter((_, index) => index !== drugIndex),
+      };
+      nextRps.splice(selectedRpIndex + 1, 0, nextRp);
+      return { ...prev, rps: nextRps };
+    });
+    setSelectedRpIndex(selectedRpIndex + 1);
+    setSelectedDrugIndex(0);
+    setNotice({ tone: 'info', message: '薬剤を別RPへ分けました。新しいRPで用法を設定してください。' });
   };
 
   const mutation = useMutation({
@@ -1258,49 +1360,78 @@ export function PrescriptionOrderEditorPanel({
     <section className="charts-side-panel__section" data-order-entity="medOrder" data-test-id="medOrder-prescription-editor-v2">
       <FocusTrapDialog
         open={interactionConfirmOpen}
-        title="ORCA master 参照の静的相互作用チェック"
-        description="保存前に ORCA master 由来の静的な相互作用候補が検出されました。official patient-aware contraindicationcheckv2 とは別の確認です。"
+        title="処方安全チェック"
+        description="保存前に重複投与、静的相互作用、保存不可ルールを確認します。official patient-aware contraindicationcheckv2 とは別の確認です。"
         role="alertdialog"
         onClose={closeInteractionConfirm}
         testId="prescription-interaction-confirm"
       >
         <div className="charts-side-panel__confirm">
+          <p className="charts-side-panel__message">ORCA master 参照の静的相互作用チェック</p>
+          <ul className="charts-side-panel__confirm-list" aria-label="処方安全チェック結果">
+            {safetyItems.map((item) => (
+              <li key={item.key} data-safety-tone={item.tone}>
+                <strong>{item.label}</strong>: {item.detail}
+              </li>
+            ))}
+          </ul>
+          <div className="charts-side-panel__field">
+            <label htmlFor={domId('interaction-review-reason')}>確認理由</label>
+            <textarea
+              id={domId('interaction-review-reason')}
+              value={interactionReviewReason}
+              onChange={(event) => setInteractionReviewReason(event.target.value)}
+              rows={3}
+            />
+            <p className="charts-side-panel__help">
+              警告を確認済みとして保存する場合に入力してください。禁忌または保存不可は編集に戻って修正してください。
+            </p>
+          </div>
           {interactionPairs.length > 0 ? (
-            <ul className="charts-side-panel__confirm-list">
-              {interactionPairs.map((pair, index) => (
-                <li key={`${pair.code1}-${pair.code2}-${index}`}>
-                  {pair.code1} / {pair.code2} / {pair.interactionName ?? pair.message ?? 'master 静的相互作用あり'}
-                </li>
-              ))}
+            <ul className="charts-side-panel__notice-list" aria-label="安全チェック区分">
+              <li>警告: 重複投与または master 静的相互作用の候補です。</li>
+              <li>禁忌: patient-aware contraindicationcheckv2 由来または保存不可ルールで検出した場合は保存を止めます。</li>
+              <li>確認済み: 理由を記録して保存を続行する状態です。</li>
             </ul>
-          ) : (
-            <p className="charts-side-panel__message">ORCA master 静的相互作用候補の詳細は取得できませんでした。</p>
-          )}
+          ) : null}
+          <p className="charts-side-panel__block-reason" role="status">
+            {!interactionReviewReason.trim()
+              ? '確認済みとして保存するには、確認理由を入力してください。'
+              : '確認理由が入力済みです。保存を続行できます。'}
+          </p>
           <div
             className="charts-side-panel__actions charts-side-panel__actions--dialog"
             role="group"
-            aria-label="ORCA master 参照の静的相互作用チェックの確認"
+            aria-label="処方安全チェックの確認"
           >
             <button type="button" className="charts-side-panel__action" onClick={closeInteractionConfirm}>
-              編集に戻る
+              処方を修正
+            </button>
+            <button type="button" className="charts-side-panel__action" onClick={closeInteractionConfirm}>
+              中止
             </button>
             <button
               type="button"
               className="charts-side-panel__action charts-side-panel__action--save"
+              {...{ 'aria-disabled': !interactionReviewReason.trim() || mutation.isPending }}
+              data-disabled-reason={!interactionReviewReason.trim() || mutation.isPending ? 'interaction_review_reason_required' : undefined}
               onClick={() => {
-                if (!pendingSaveAction || mutation.isPending) {
-                  closeInteractionConfirm();
+                if (!pendingSaveAction || mutation.isPending || !interactionReviewReason.trim()) {
                   return;
                 }
                 const action = pendingSaveAction;
                 setInteractionConfirmOpen(false);
+                setInteractionReviewReason('');
                 setPendingSaveAction(null);
                 mutation.mutate({ action, order });
               }}
             >
-              今回だけ無視して保存
+              確認済みとして保存
             </button>
           </div>
+          {interactionPairs.length === 0 ? (
+            <p className="charts-side-panel__message">ORCA master 静的相互作用候補の詳細は取得できませんでした。</p>
+          ) : null}
         </div>
       </FocusTrapDialog>
       <CriticalOperationConfirmDialog
@@ -1343,6 +1474,7 @@ export function PrescriptionOrderEditorPanel({
       <header className="charts-side-panel__section-header">
         <div className="charts-side-panel__section-header-main">
           <strong>処方（RP集合）</strong>
+          <span className="charts-side-panel__search-count">{RP_SHARED_USAGE_SHORT}</span>
         </div>
         <div className="charts-side-panel__subheader-actions">
           <button type="button" className="charts-side-panel__ghost charts-side-panel__ghost--add" onClick={addRp} disabled={isPreviewMode}>
@@ -1388,6 +1520,20 @@ export function PrescriptionOrderEditorPanel({
             </ul>
           </div>
         ) : null}
+        <div className="charts-side-panel__notice charts-side-panel__notice--info" data-test-id="prescription-rp-shared-usage-rule">
+          <strong>{RP_SHARED_USAGE_SHORT}</strong>
+          <p className="charts-side-panel__notice-detail">{RP_SHARED_USAGE_RULE}</p>
+        </div>
+        <div className="charts-side-panel__notice charts-side-panel__notice--info" aria-label="処方安全チェックサマリ">
+          <strong>安全チェック</strong>
+          <ul className="charts-side-panel__notice-list">
+            {safetyItems.slice(0, 4).map((item) => (
+              <li key={`summary-${item.key}`} data-safety-tone={item.tone}>
+                {item.label}: {formatSafetySummaryDetail(item.detail)}
+              </li>
+            ))}
+          </ul>
+        </div>
 
         <fieldset
           disabled={isPreviewMode}
@@ -1426,6 +1572,9 @@ export function PrescriptionOrderEditorPanel({
                           削除
                         </button>
                       ) : null}
+                      <p className="charts-side-panel__help">
+                        共通用法: {rp.usage || '未設定'} / {rp.category === 'tonyo' ? '回数' : '日数'}: {rp.daysOrTimes || '未設定'} / 薬剤{rp.drugs.length}件
+                      </p>
                     </div>
                   );
                 })}
@@ -1645,6 +1794,9 @@ export function PrescriptionOrderEditorPanel({
                 </div>
 
                 <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--usage">
+                  <div className="charts-side-panel__notice charts-side-panel__notice--info">
+                    {RP_SHARED_USAGE_RULE}
+                  </div>
                   <div className="charts-side-panel__field">
                     <label htmlFor={domId('usage')}>用法マスタ</label>
                     <select
@@ -1897,6 +2049,9 @@ export function PrescriptionOrderEditorPanel({
                     <strong>薬剤行</strong>
                     <span className="charts-side-panel__search-count">{selectedRp.drugs.length}件</span>
                   </div>
+                  <p className="charts-side-panel__help">
+                    薬剤行はこのRPの用法・日数・開始日を共有します。異なる用法にする薬剤は「別RPに分ける」で分離してください。
+                  </p>
                   {selectedDrug ? (
                     <p className="charts-side-panel__help">最低薬価: {selectedDrugGenericPrice ?? '-'}</p>
                   ) : null}
@@ -1985,6 +2140,15 @@ export function PrescriptionOrderEditorPanel({
                         >
                           {drug.patientRequest ? '患者希望' : '患者希望以外'}
                         </button>
+                        {selectedRp.drugs.length > 1 ? (
+                          <button
+                            type="button"
+                            className="charts-side-panel__action"
+                            onClick={() => splitDrugToNewRp(drugIndex)}
+                          >
+                            別RPに分ける
+                          </button>
+                        ) : null}
                         <input
                           id={domId(`drug-comment-${drugIndex}`)}
                           value={drug.drugComment}

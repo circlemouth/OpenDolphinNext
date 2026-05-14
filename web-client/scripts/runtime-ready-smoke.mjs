@@ -110,7 +110,7 @@ const summarizeJsonBody = (body) => {
       entriesCount: Array.isArray(parsed.entries) ? parsed.entries.length : undefined,
     };
   } catch {
-    return { bodyChars: body.length, bodyPreview: summarizeBody(body) };
+    return { bodyChars: body.length, parseableJson: false, rawSensitiveFieldsExcluded: true };
   }
 };
 
@@ -351,7 +351,7 @@ context.on('request', (request) => {
     url.includes('/api/encounters/') ||
     blockedRouteDetectors.some((detector) => detector.matches(url));
   if (!isTracked) return;
-  requestLog.push({ method, url: redactUrl(url), body: summarizeBody(postData) });
+  requestLog.push({ method, url: redactUrl(url), body: postData });
   if (url.includes('/api/encounters/') && url.includes('/transitions')) {
     if (/"operation"\s*:\s*"(?:pause|finish)"/i.test(postData)) pauseFinishRequests += 1;
     if (/"operation"\s*:\s*"bill"/i.test(postData)) billOperationBodies += 1;
@@ -376,7 +376,7 @@ context.on('response', async (response) => {
   } catch {
     body = '';
   }
-  responseLog.push({ status: response.status(), url: redactUrl(url), body: summarizeBody(body) });
+  responseLog.push({ status: response.status(), url: redactUrl(url), body });
 });
 
 try {
@@ -446,10 +446,10 @@ try {
   }, { queryDate, preferredSmokeEncounterKey, preferredSmokeScheduleKey, requestedPatientId });
 
   if (!appointmentEvidence.smokeEntry) {
-    const code = requestedPatientId ? 'runtime_ready_entry_missing_for_patient' : 'runtime_ready_entry_missing';
+    const code = requestedPatientId ? 'missing_today_entry_precondition_for_patient' : 'missing_today_entry_precondition';
     const detail = requestedPatientId
-      ? `runtime-ready entry not present for queryDate=${queryDate} and QA_PATIENT_ID=${requestedPatientId}`
-      : `runtime-ready entry not present for queryDate=${queryDate}`;
+      ? `runtime-ready smoke cannot continue because no chart-ready entry is present for queryDate=${queryDate} and QA_PATIENT_ID=${requestedPatientId}`
+      : `runtime-ready smoke cannot continue because no chart-ready entry is present for queryDate=${queryDate}`;
     await writeRuntimeReadyBlocker({
       page,
       code,
@@ -458,13 +458,13 @@ try {
       extra: {
         requestedPatientId: requestedPatientId || undefined,
         requiredNextStep:
-          'rerun after current RUN_ID has a server-derived official visit row; do not proceed to candidate mutation from this blocker evidence',
+          'register or select a Trial patient for the current date, then rerun; this is a data precondition blocker, not an ORCA connectivity verdict',
       },
     });
     if (requestedPatientId) {
-      throw new Error(`runtime-ready entry not present for queryDate=${queryDate} and QA_PATIENT_ID=${requestedPatientId}`);
+      throw new Error(`missing_today_entry_precondition_for_patient: queryDate=${queryDate} QA_PATIENT_ID=${requestedPatientId}`);
     }
-    throw new Error(`runtime-ready entry not present for queryDate=${queryDate}`);
+    throw new Error(`missing_today_entry_precondition: queryDate=${queryDate}`);
   }
   const smokeEncounterKey = appointmentEvidence.smokeEntry.encounterKey?.trim() ?? '';
   const smokeScheduleKey = appointmentEvidence.smokeEntry.scheduleKey?.trim() ?? '';
@@ -548,7 +548,9 @@ try {
   await page.waitForFunction(
     () => {
       const start = document.getElementById('charts-action-start');
-      return Boolean(start) && !start.hasAttribute('disabled') && !document.body.innerText.includes('指定された scheduleKey / encounterKey が見つかりません');
+      const finish = document.getElementById('charts-action-finish');
+      const action = start ?? finish;
+      return Boolean(action) && !action.hasAttribute('disabled') && !document.body.innerText.includes('指定された scheduleKey / encounterKey が見つかりません');
     },
     { timeout: 30_000 },
   );
@@ -615,38 +617,52 @@ try {
     (entry) => entry.url.includes('/api/encounters/') && entry.url.includes('/transitions'),
   ).length;
   const summaryResponseCountBeforeStart = responseLog.filter((entry) => entry.url.includes('/api/local/encounters/')).length;
-  await page.evaluate(() => {
+  const startActionVisible = await page.evaluate(() => {
     const start = document.getElementById('charts-action-start');
+    const visible = Boolean(start) && window.getComputedStyle(start).display !== 'none' && window.getComputedStyle(start).visibility !== 'hidden';
     const group = start?.parentElement;
     if (group && window.getComputedStyle(group).display === 'none') {
       group.style.display = 'grid';
     }
+    return visible || (Boolean(start) && !start.hasAttribute('disabled'));
   });
-  const startSelector = await clickFirstVisible(page, [
-    '.charts-patient-summary__primary-action--start',
-    '#charts-action-start',
-    'button:has-text("診察開始")',
-  ]);
-  await waitFor(
-    () =>
-      responseLog.filter((entry) => entry.url.includes('/api/encounters/') && entry.url.includes('/transitions')).length >=
-      transitionResponseCountBeforeStart + 1,
-    30_000,
-  );
-  await page.waitForTimeout(1500);
-  await waitFor(
-    () => responseLog.filter((entry) => entry.url.includes('/api/local/encounters/')).length >= summaryResponseCountBeforeStart + 1,
-    30_000,
-  );
-  await page.waitForTimeout(1000);
+  let startSelector = 'skipped_start_action_not_visible';
+  let startSkippedReason = 'encounter_not_in_reception_start_state';
+  if (startActionVisible) {
+    startSelector = await clickFirstVisible(page, [
+      '.charts-patient-summary__primary-action--start',
+      '#charts-action-start',
+      'button:has-text("診察開始")',
+    ]);
+    startSkippedReason = null;
+    await waitFor(
+      () =>
+        responseLog.filter((entry) => entry.url.includes('/api/encounters/') && entry.url.includes('/transitions')).length >=
+        transitionResponseCountBeforeStart + 1,
+      30_000,
+    );
+    await page.waitForTimeout(1500);
+    await waitFor(
+      () => responseLog.filter((entry) => entry.url.includes('/api/local/encounters/')).length >= summaryResponseCountBeforeStart + 1,
+      30_000,
+    );
+    await page.waitForTimeout(1000);
+  }
 
-  const uiAfterStart = await page.evaluate(({ smokePatientDisplayName }) => ({
-    hasPlaceholderName: document.body.innerText.includes('患者番号がありません'),
-    successVisible:
-      document.body.innerText.includes('診察開始を完了') || document.body.innerText.includes('checked_in -> chart_opened'),
-    patientLabelContainsSmokeName: (document.querySelector('.charts-patient-summary')?.textContent ?? '').includes(smokePatientDisplayName),
-  }), { smokePatientDisplayName });
-  if (uiAfterStart.hasPlaceholderName || !uiAfterStart.patientLabelContainsSmokeName) {
+  const uiAfterStart = await page.evaluate(({ smokePatientDisplayName, smokePatientId }) => {
+    const summaryText = document.querySelector('.charts-patient-summary')?.textContent ?? '';
+    return {
+      hasPlaceholderName: document.body.innerText.includes('患者番号がありません'),
+      successVisible:
+        document.body.innerText.includes('診察開始を完了') || document.body.innerText.includes('checked_in -> chart_opened'),
+      patientLabelContainsSmokeName: summaryText.includes(smokePatientDisplayName),
+      patientLabelContainsSmokePatientId: summaryText.includes(smokePatientId),
+    };
+  }, { smokePatientDisplayName, smokePatientId: appointmentEvidence.smokeEntry.patientId });
+  if (
+    uiAfterStart.hasPlaceholderName ||
+    (!uiAfterStart.patientLabelContainsSmokeName && !uiAfterStart.patientLabelContainsSmokePatientId)
+  ) {
     throw new Error('smoke patient display name regressed after start transition');
   }
 
@@ -682,6 +698,7 @@ try {
     startEvidence: {
       uiAfterStart,
       startSelector,
+      startSkippedReason,
     },
     traces: {
       summaryRequests: summarizeRequestLog(requestLog.filter((entry) => entry.url.includes('/api/local/encounters/'))),

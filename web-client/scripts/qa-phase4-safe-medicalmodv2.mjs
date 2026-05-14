@@ -52,6 +52,7 @@ const buildMarkdown = (summary) =>
   `- Verdict: ${summary.verdict}\n` +
   `- Live Trial action: ${summary.liveTrialAction}\n` +
   `- Response classification: ${summary.response?.responseClassification ?? 'not_run'}\n` +
+  `- Rejection cause: ${summary.response?.rejectionCause ?? 'none'}\n` +
   `- Business accepted: ${summary.response?.businessAccepted === true ? 'yes' : 'no'}\n` +
   `- Credentials captured: no\n` +
   `- Raw artifacts captured: no\n` +

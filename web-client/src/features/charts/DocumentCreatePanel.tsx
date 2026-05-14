@@ -1935,6 +1935,15 @@ export function DocumentCreatePanel({
   const previewIssuedAt = activeForm.issuedAt || today;
   const previewTemplateLabel = activeTemplate?.label ?? 'テンプレート未選択';
   const previewPatientLabel = patientId || '未選択';
+  const documentContextRows = [
+    { label: '患者ID', value: previewPatientLabel },
+    { label: '受付/予約', value: [meta.receptionId, meta.appointmentId].filter(Boolean).join(' / ') || '未指定' },
+    { label: '診療日', value: meta.visitDate ?? '未指定' },
+    { label: '添付先', value: attachmentsForDocument.length > 0 ? `文書ドラフトへ画像参照 ${attachmentsForDocument.length} 件` : '画像添付なし' },
+    { label: '保存先', value: '紹介状モジュール履歴 + サーバー解決済み添付参照' },
+    { label: '出力先', value: '文書プレビュー / ブラウザ印刷 / PDF出力' },
+  ];
+  const activeMissingFields = resolveMissingFields(activeType, forms);
 
   if (!patientId) {
     return <p className="charts-side-panel__empty">患者IDが未選択のため文書作成を開始できません。</p>;
@@ -1984,6 +1993,19 @@ export function DocumentCreatePanel({
           中断して閉じる
         </button>
       </header>
+      <section className="charts-tab-guard" aria-label="文書作成の患者・添付・出力先">
+        <dl className="charts-actions__send-confirm-list">
+          {documentContextRows.map((row) => (
+            <div key={row.label}>
+              <dt>{row.label}</dt>
+              <dd>{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="charts-side-panel__message">
+          M05 文書導線: 診療情報提供書、診断書、返信書の作成、画像参照の添付、保存後のプレビュー/印刷/PDFを同じ患者文脈で扱います。
+        </p>
+      </section>
       {notice && (
         <div
           className={`charts-side-panel__notice charts-side-panel__notice--${notice.tone}`}
@@ -2020,6 +2042,11 @@ export function DocumentCreatePanel({
                 <span>
                   {attachment.title ?? attachment.fileName ?? `attachment-${attachment.id}`} (ID:{attachment.id})
                 </span>
+                <small>
+                  {attachment.contentType ?? 'content-type不明'} /{' '}
+                  {typeof attachment.contentSize === 'number' ? `${attachment.contentSize} bytes` : 'size不明'} / 添付先:
+                  {previewTemplateLabel}
+                </small>
                 {onImageAttachmentsChange ? (
                   <button
                     type="button"
@@ -2088,6 +2115,9 @@ export function DocumentCreatePanel({
           </select>
           <p className="charts-side-panel__help">
             {activeTemplate?.description ?? '選択したテンプレの説明がここに表示されます。'}
+          </p>
+          <p className="charts-side-panel__help">
+            未入力: {activeMissingFields.length > 0 ? activeMissingFields.join('、') : 'なし'} / 出力先: {previewTemplateLabel}
           </p>
           <div className="charts-side-panel__template-actions">
             <button type="button" onClick={applyTemplate} disabled={isBlocked || !forms[activeType].templateId}>

@@ -89,8 +89,8 @@ export function OrcaMedicalCandidatePanel({
     <section className="orca-medical-candidate" aria-label="診療行為送信候補の確認">
       <header className="orca-medical-candidate__header">
         <div>
-          <p className="orca-medical-candidate__kicker">処方から診療行為候補</p>
-          <h3>送信前確認</h3>
+          <p className="orca-medical-candidate__kicker">ORCA診療行為候補 / 院内確認用</p>
+          <h3>送信前候補確認</h3>
         </div>
         <span
           className={`orca-medical-candidate__status orca-medical-candidate__status--${
@@ -127,7 +127,7 @@ export function OrcaMedicalCandidatePanel({
         </div>
       </dl>
       <p className="orca-medical-candidate__note">
-        候補は処方正本から作成する院内確認用です。ORCA正本ではなく、この操作ではORCA送信しません。
+        候補は処方正本から作成する院内確認用です。ORCA正本ではなく、この操作では処方確定・ORCA送信・会計済み確定のいずれも行いません。
       </p>
       <div className="orca-medical-candidate__actions">
         <button
@@ -163,6 +163,14 @@ export function OrcaMedicalCandidatePanel({
             <div>
               <dt>薬剤行</dt>
               <dd>{totalMedications}件</dd>
+            </div>
+            <div>
+              <dt>候補ソース</dt>
+              <dd>処方正本 snapshot 由来</dd>
+            </div>
+            <div>
+              <dt>ORCA送信</dt>
+              <dd>未送信</dd>
             </div>
           </dl>
           {candidate.medicalInformation.length > 0 ? (

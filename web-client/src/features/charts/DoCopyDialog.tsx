@@ -44,6 +44,12 @@ export function DoCopyDialog({ state, onApply, onUndo, onClose }: DoCopyDialogPr
   const selectedSet = useMemo(() => new Set(selectedSections), [selectedSections]);
   const hasAnySource = sections.some((item) => item.source.body.trim().length > 0);
   const sourceLabel = state?.sourceLabel?.trim();
+  const selectedLabels = sections
+    .filter((item) => selectedSet.has(item.section))
+    .map((item) => SOAP_SECTION_LABELS[item.section]);
+  const firstSourceAt = sections.map((item) => item.source.authoredAt?.trim()).find(Boolean);
+  const firstSourceRole = sections.map((item) => item.source.authorRole?.trim()).find(Boolean);
+  const sectionsWithCurrentDraft = sections.filter((item) => item.target.body.trim().length > 0).length;
   const applyBlockedReasonId = 'charts-do-copy-apply-block-reason';
   const applyBlockedReason = !hasAnySource
     ? '転記できる記載がありません。'
@@ -61,6 +67,40 @@ export function DoCopyDialog({ state, onApply, onUndo, onClose }: DoCopyDialogPr
       testId="charts-do-copy-dialog"
     >
       <div className="charts-do-copy">
+        <section className="charts-side-panel__notice charts-side-panel__notice--warning" aria-label="Do転記の患者・日時・未保存影響">
+          <strong>Do転記の患者・日時・未保存影響</strong>
+          <dl className="charts-diagnosis__confirm">
+            <div>
+              <dt>転記元</dt>
+              <dd>{sourceLabel || '過去SOAP'}</dd>
+            </div>
+            <div>
+              <dt>転記元日時</dt>
+              <dd>{firstSourceAt || '—'}</dd>
+            </div>
+            <div>
+              <dt>転記元作成者</dt>
+              <dd>{firstSourceRole || '—'}</dd>
+            </div>
+            <div>
+              <dt>転記先</dt>
+              <dd>現在の患者のSOAPドラフト</dd>
+            </div>
+            <div>
+              <dt>選択セクション</dt>
+              <dd>{selectedLabels.length > 0 ? selectedLabels.join(' / ') : '未選択'}</dd>
+            </div>
+            <div>
+              <dt>未保存影響</dt>
+              <dd>
+                {sectionsWithCurrentDraft > 0
+                  ? `現在ドラフトに記載がある ${sectionsWithCurrentDraft} セクションへDo転記します。適用後は下書きとして扱い、保存前ならUndoできます。`
+                  : '現在ドラフトが空のセクションへDo転記します。適用後は下書きとして扱い、保存前ならUndoできます。'}
+              </dd>
+            </div>
+          </dl>
+        </section>
+
         {hasAnySource ? (
           <div className="charts-do-copy__section-selector" role="group" aria-label="Do対象セクション">
             {sections.map((item) => {

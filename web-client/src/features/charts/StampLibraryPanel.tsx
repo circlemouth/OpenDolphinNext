@@ -174,6 +174,11 @@ const groupByKey = <T,>(items: T[], keyOf: (item: T) => string) => {
 
 const toStampKey = (item: StampListItem) => (item.source === 'local' ? `local::${item.id}` : `server::${item.stampId}`);
 
+const summarizeBundleItems = (items?: OrderBundleItem[]) => {
+  const normalized = (items ?? []).filter((item) => Boolean(item.name || item.code || item.quantity || item.unit || item.memo));
+  return normalized.length > 0 ? normalized : [buildEmptyItem()];
+};
+
 export function StampLibraryPanel({ phase }: StampLibraryPanelProps) {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const session = useOptionalSession();
@@ -310,6 +315,39 @@ export function StampLibraryPanel({ phase }: StampLibraryPanelProps) {
 
   const groupedServer = useMemo(() => groupByKey(filteredServerItems, (item) => item.treeName), [filteredServerItems]);
   const groupedLocal = useMemo(() => groupByKey(filteredLocalItems, (item) => item.category), [filteredLocalItems]);
+  const selectedPreviewBundle = useMemo<LocalStampEntry['bundle'] | null>(() => {
+    if (!selected) return null;
+    if (selected.source === 'local') return selected.stamp.bundle;
+    const detail = stampDetailQuery.data;
+    if (!detail?.ok || !detail.stamp) return null;
+    return toLocalBundleFromStamp(detail.stamp, today);
+  }, [selected, stampDetailQuery.data, today]);
+  const selectedApplySummary = useMemo(() => {
+    const bundle = selectedPreviewBundle;
+    if (!selected || !bundle) return null;
+    const currentItems = summarizeBundleItems(editor.bundle.items);
+    const nextItems = summarizeBundleItems(bundle.items);
+    return {
+      source: selected.source === 'local' ? 'ローカル' : 'サーバー',
+      target: selected.source === 'local' ? selected.target : selected.entity,
+      selectedName: selected.name,
+      currentName: editor.name.trim() || editor.bundle.bundleName.trim() || '編集中セット未設定',
+      nextName: bundle.bundleName.trim() || selected.name || '名称未設定',
+      currentCount: currentItems.length,
+      nextCount: nextItems.length,
+      addedCount: Math.max(nextItems.length - currentItems.length, 0),
+      changedAdmin: (editor.bundle.admin ?? '') !== (bundle.admin ?? ''),
+      changedStartDate: (editor.bundle.startDate ?? '') !== (bundle.startDate ?? ''),
+      nextItems,
+    };
+  }, [editor.bundle, editor.name, selected, selectedPreviewBundle]);
+  const copyDisabledReason =
+    phase < 2
+      ? 'Phase2 で有効です（VITE_STAMPBOX_MVP=2）。'
+      : !selected
+        ? 'コピー対象のスタンプを選択してください。'
+        : undefined;
+  const loadDisabledReason = !selected ? '編集フォームへ読み込むスタンプを選択してください。' : undefined;
 
   const updateBundle = (patch: Partial<LocalStampEntry['bundle']>) => {
     setEditor((prev) => ({ ...prev, bundle: { ...prev.bundle, ...patch } }));
@@ -547,12 +585,12 @@ export function StampLibraryPanel({ phase }: StampLibraryPanelProps) {
     setEditorNotice({ tone: 'success', message: 'ローカルスタンプを削除しました。' });
   };
 
-  const renderPreviewItems = (items?: Array<{ name?: string; number?: string; unit?: string; memo?: string }>) => {
+  const renderPreviewItems = (items?: Array<{ name?: string; number?: string; quantity?: string; unit?: string; memo?: string }>) => {
     if (!items || items.length === 0) return <p className="charts-side-panel__message">項目なし</p>;
     return (
       <ol style={{ margin: 0, paddingLeft: '1.2rem', display: 'grid', gap: '0.25rem' }}>
         {items.map((item, idx) => {
-          const parts = [item.number, item.unit].filter(Boolean).join('');
+          const parts = [item.number ?? item.quantity, item.unit].filter(Boolean).join('');
           const left = [item.name, parts ? `(${parts})` : ''].filter(Boolean).join(' ');
           return (
             <li key={`${item.name ?? 'item'}-${idx}`}>
@@ -653,6 +691,8 @@ export function StampLibraryPanel({ phase }: StampLibraryPanelProps) {
             編集フォームへ読み込む
           </button>
         </div>
+        {copyDisabledReason ? <p className="charts-side-panel__message">{copyDisabledReason}</p> : null}
+        {loadDisabledReason ? <p className="charts-side-panel__message">{loadDisabledReason}</p> : null}
         {copyNotice ? (
           <p className="charts-side-panel__message" role="status">
             {copyNotice}
@@ -800,6 +840,43 @@ export function StampLibraryPanel({ phase }: StampLibraryPanelProps) {
               <p className="charts-side-panel__message">memo: （なし）</p>
             )}
             {renderPreviewItems(stampDetailQuery.data.stamp.claimItem)}
+          </>
+        )}
+      </section>
+
+      <section aria-label="セット/スタンプ適用前の差分プレビュー">
+        <h3 style={{ margin: 0, fontSize: '1rem' }}>適用前差分プレビュー</h3>
+        {!selectedApplySummary ? (
+          <p className="charts-side-panel__message">スタンプを選択すると、現在の編集フォームと適用後候補を比較します。</p>
+        ) : (
+          <>
+            <dl className="charts-actions__send-confirm-list">
+              <div>
+                <dt>対象</dt>
+                <dd>{selectedApplySummary.selectedName}（{selectedApplySummary.source} / {selectedApplySummary.target}）</dd>
+              </div>
+              <div>
+                <dt>現在</dt>
+                <dd>{selectedApplySummary.currentName} / {selectedApplySummary.currentCount} 項目</dd>
+              </div>
+              <div>
+                <dt>適用後候補</dt>
+                <dd>{selectedApplySummary.nextName} / {selectedApplySummary.nextCount} 項目</dd>
+              </div>
+              <div>
+                <dt>差分</dt>
+                <dd>
+                  追加 {selectedApplySummary.addedCount} 件 / 指示 {selectedApplySummary.changedAdmin ? '変更あり' : '変更なし'} / 開始日{' '}
+                  {selectedApplySummary.changedStartDate ? '変更あり' : '変更なし'}
+                </dd>
+              </div>
+            </dl>
+            <ul className="charts-side-panel__message">
+              <li>患者と診療日への反映は、貼り付け先のオーダー編集側で再確認します。</li>
+              <li>スタンプ選択だけでは処方確定、ORCA送信、会計送信は行いません。</li>
+              <li>適用前に用法、数量、単位、開始日を確認してください。</li>
+            </ul>
+            <div aria-label="適用後候補項目">{renderPreviewItems(selectedApplySummary.nextItems)}</div>
           </>
         )}
       </section>

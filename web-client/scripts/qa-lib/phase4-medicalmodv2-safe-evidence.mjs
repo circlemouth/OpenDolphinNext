@@ -887,11 +887,45 @@ export const classifyPhase4BusinessResult = ({ httpStatus, responseJson }) => {
   };
   const completionEvidencePresent = Object.values(completionEvidence).some(Boolean);
 
-  if (!httpStatus) return { responseClassification: 'notObserved', businessAccepted: false, completionEvidence };
-  if (!httpOk) return { responseClassification: 'transportRejected', businessAccepted: false, completionEvidence };
-  if (!apiOk) return { responseClassification: 'businessRejected', businessAccepted: false, completionEvidence };
-  if (!completionEvidencePresent) return { responseClassification: 'notVerified', businessAccepted: false, completionEvidence };
-  return { responseClassification: 'businessAccepted', businessAccepted: true, completionEvidence };
+  if (!httpStatus) {
+    return {
+      responseClassification: 'notObserved',
+      rejectionCause: 'not_observed',
+      businessAccepted: false,
+      completionEvidence,
+    };
+  }
+  if (!httpOk) {
+    const status = Number(httpStatus) || 0;
+    return {
+      responseClassification: 'transportRejected',
+      rejectionCause: status >= 500 ? 'http_5xx_upstream_or_environment' : 'http_4xx_request_or_trial_precondition',
+      businessAccepted: false,
+      completionEvidence,
+    };
+  }
+  if (!apiOk) {
+    return {
+      responseClassification: 'businessRejected',
+      rejectionCause: classifyPhase4ApiResultReason(apiResult),
+      businessAccepted: false,
+      completionEvidence,
+    };
+  }
+  if (!completionEvidencePresent) {
+    return {
+      responseClassification: 'notVerified',
+      rejectionCause: 'completion_evidence_missing',
+      businessAccepted: false,
+      completionEvidence,
+    };
+  }
+  return {
+    responseClassification: 'businessAccepted',
+    rejectionCause: 'none',
+    businessAccepted: true,
+    completionEvidence,
+  };
 };
 
 export const sanitizePhase4Response = ({ httpStatus, responseJson }) => {
@@ -906,6 +940,7 @@ export const sanitizePhase4Response = ({ httpStatus, responseJson }) => {
     apiResultMessageCategory: classifyMessageCategory(responseJson?.apiResultMessage ?? responseJson?.Api_Result_Message),
     warningCount: warnings.length,
     responseClassification: business.responseClassification,
+    rejectionCause: business.rejectionCause,
     businessAccepted: business.businessAccepted,
     completionEvidence: business.completionEvidence,
     rawResponseBodyStored: false,

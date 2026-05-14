@@ -321,6 +321,32 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     });
   });
 
+  it('病名詳細で未コード化警告とORCA送信予定をdetails外に初期表示する', async () => {
+    const user = userEvent.setup();
+
+    renderPanel();
+
+    await user.click(await screen.findByRole('button', { name: '詳細入力で追加' }));
+    const dialog = await screen.findByRole('dialog', { name: 'ORCA病名の追加' });
+    const preflight = within(dialog).getByRole('region', { name: '病名詳細の送信前確認' });
+
+    expect(preflight).toHaveTextContent('ORCA送信予定');
+    expect(preflight).toHaveTextContent('患者番号');
+    expect(preflight).toHaveTextContent('P-TEST-001');
+    expect(preflight).toHaveTextContent('受付日');
+    expect(preflight).toHaveTextContent('2026-05-08');
+    expect(preflight).toHaveTextContent('診療科');
+    expect(preflight).toHaveTextContent('01');
+
+    fireEvent.change(within(dialog).getByLabelText('病名 *'), { target: { value: 'UncodedDisease' } });
+
+    expect(preflight).toHaveTextContent('UncodedDisease');
+    expect(preflight).toHaveTextContent('構成コード');
+    expect(preflight).toHaveTextContent('未コード化');
+    expect(preflight).toHaveTextContent('未コード化警告: ORCA病名マスター候補または7桁傷病名コードが未確定です。');
+    expect(preflight).toHaveTextContent('Disease_Insurance_Class=送信しない');
+  });
+
   it('レセプト表示期間の範囲外コードは official mutation 前に具体エラーを表示する', async () => {
     const user = userEvent.setup();
 

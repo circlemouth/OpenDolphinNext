@@ -1997,6 +1997,12 @@ export function PatientsTab({
         testId="charts-patient-switch-confirm-dialog"
       >
         <div className="patients-tab__switch-dialog" role="group" aria-label="患者切替の確認">
+          <section className="patients-tab__draft-reason" aria-label="患者切替の未保存影響">
+            <strong>未保存影響</strong>
+            <p>
+              未保存下書きがある場合はこの確認へ進まず、保存して切替/破棄して切替/キャンセルの選択を先に求めます。この切替では患者識別と受付を再確認してから現在の表示を切り替えます。
+            </p>
+          </section>
           <div className="patients-tab__switch-summary">
             <div className="patients-tab__switch-block">
               <span className="patients-tab__draft-label">現在の患者</span>
@@ -2075,6 +2081,12 @@ export function PatientsTab({
               <strong>{draftSwitchNextLabel}</strong>
             </div>
           </div>
+          <section className="patients-tab__draft-reason" aria-label="未保存影響">
+            <strong>未保存影響</strong>
+            <p>
+              保存して切替は現在患者の下書き保存後に切替します。破棄して切替は現在患者の未保存内容を破棄して切替します。キャンセルは現在患者に留まります。
+            </p>
+          </section>
           {draftReasonLines.length > 0 ? (
             <ul className="patients-tab__draft-reasons" aria-label="未保存下書きの内容">
               {draftReasonLines.map((line) => (

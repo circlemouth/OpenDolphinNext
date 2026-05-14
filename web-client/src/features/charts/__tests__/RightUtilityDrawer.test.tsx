@@ -35,10 +35,13 @@ describe('RightUtilityDrawer', () => {
     expect(document.querySelector('.soap-note__right-drawer')?.getAttribute('data-tool')).toBe('prescription');
     expect(document.querySelector('.soap-note__right-drawer-header strong')).toHaveTextContent('処方候補');
     expect(screen.getByText('既存オーダー')).toBeInTheDocument();
-    expect(screen.getByText('患者候補')).toBeInTheDocument();
-    expect(screen.getByText('施設頻用')).toBeInTheDocument();
+    expect(screen.getAllByText('患者候補').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('施設頻用').length).toBeGreaterThan(0);
     expect(screen.getByText('ORCA入力セット')).toBeInTheDocument();
     expect(screen.getByText('検索して追加')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '候補ソースの概要' })).toHaveTextContent('既存オーダー');
+    expect(screen.getByLabelText('ORCA候補キーワード')).toBeInTheDocument();
+    expect(screen.getByText('候補を反映しても、この操作だけでは処方確定・ORCA送信・会計済みにはなりません。')).toBeInTheDocument();
     expect(screen.queryByText('文書')).not.toBeInTheDocument();
     expect(screen.queryByText('ORCA')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('処方入力')).not.toBeInTheDocument();

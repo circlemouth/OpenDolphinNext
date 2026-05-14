@@ -151,6 +151,23 @@ body {
   padding: 1.25rem;
 }
 
+.focus-trap-dialog__panel[data-size='sm'] {
+  width: min(520px, 100%);
+}
+
+.focus-trap-dialog__panel[data-size='lg'] {
+  width: min(920px, 100%);
+}
+
+.focus-trap-dialog__panel[data-size='xl'] {
+  width: min(1120px, 100%);
+}
+
+.focus-trap-dialog__panel[data-size='full'] {
+  width: min(1320px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+}
+
 .focus-trap-dialog__header {
   display: flex;
   align-items: flex-start;
@@ -197,6 +214,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.focus-trap-dialog__footer {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
 }
 
 .critical-operation-confirm {
@@ -261,6 +284,63 @@ body {
   color: var(--ui-text, #0f172a);
   font-weight: 800;
   overflow-wrap: anywhere;
+}
+
+.critical-operation-confirm__checklist {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.critical-operation-confirm__checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.88);
+  color: #334155;
+  font-weight: 700;
+}
+
+.critical-operation-confirm__checklist li[data-tone='warning'] {
+  border-color: rgba(217, 119, 6, 0.34);
+  background: rgba(255, 251, 235, 0.94);
+  color: #78350f;
+}
+
+.critical-operation-confirm__checklist li[data-tone='danger'] {
+  border-color: rgba(185, 28, 28, 0.34);
+  background: rgba(254, 242, 242, 0.96);
+  color: #7f1d1d;
+}
+
+.critical-operation-confirm__checklist li[data-tone='success'] {
+  border-color: rgba(22, 101, 52, 0.26);
+  background: rgba(240, 253, 244, 0.92);
+  color: #14532d;
+}
+
+.critical-operation-confirm__checkmark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid currentColor;
+  flex: 0 0 auto;
+}
+
+.critical-operation-confirm__extra {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(248, 250, 252, 0.88);
 }
 
 .critical-operation-confirm__actions {

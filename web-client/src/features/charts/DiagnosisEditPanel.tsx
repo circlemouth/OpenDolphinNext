@@ -1136,6 +1136,12 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
 
   const pendingForm = pendingAction && 'form' in pendingAction ? pendingAction.form : null;
   const pendingEntry = pendingAction && 'entry' in pendingAction ? pendingAction.entry : pendingAction && 'sourceEntry' in pendingAction ? pendingAction.sourceEntry : null;
+  const editorFormComponents = normalizeFormComponents(form);
+  const editorHasUncodedWarning = form.name.trim().length > 0 && editorFormComponents.length === 0;
+  const editorDiseaseName = form.name.trim() || '未入力';
+  const editorOperationLabel = editingEntry ? 'ORCA病名を更新' : 'ORCAへ病名登録';
+  const editorOrcaCodePlan =
+    `Disease_Insurance_Class=${formatOrcaCode(resolveDiseaseInsuranceClassCode(form))} / Disease_Category=${formatOrcaCode(resolveDiseaseCategoryCode(form))} / Disease_Class=${formatOrcaCode(resolveDiseaseClassCode(form))} / Main_Disease_Class=${formatOrcaCode(resolveMainDiseaseClassCode(form))} / Disease_SuspectedFlag=${formatOrcaCode(resolveSuspectedFlagCode(form))} / Disease_Receipt_Print=${formatOrcaCode(resolveDiseaseReceiptPrintCode(form))} / Disease_Receipt_Print_Period=${formatOrcaCode(resolveDiseaseReceiptPrintPeriodCode(form))} / Insurance_Disease=${formatOrcaCode(resolveInsuranceDiseaseCode(form))} / Discharge_Certificate=${formatOrcaCode(resolveDischargeCertificateCode(form))} / Sub_Disease_Class=${formatOrcaCode(resolveSubDiseaseClassCode(form))}`;
 
   return (
     <section className="charts-side-panel__section" data-test-id="diagnosis-edit-panel">
@@ -1483,6 +1489,47 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
           }}
         >
           {notice ? <div className={`charts-side-panel__notice charts-side-panel__notice--${notice.tone}`}>{notice.message}</div> : null}
+          <section className="charts-side-panel__notice charts-side-panel__notice--warning" aria-label="病名詳細の送信前確認">
+            <strong>病名詳細の送信前確認</strong>
+            <p>
+              未コード化警告とORCA送信予定は確認ダイアログへ進む前に確認してください。未コード化のまま送る場合は明示チェックが必要です。
+            </p>
+            <dl className="charts-diagnosis__confirm">
+              <div>
+                <dt>患者番号</dt>
+                <dd>{patientId ?? '—'}</dd>
+              </div>
+              <div>
+                <dt>受付日</dt>
+                <dd>{meta.visitDate ?? '—'}</dd>
+              </div>
+              <div>
+                <dt>診療科</dt>
+                <dd>{meta.departmentCode ?? '—'}</dd>
+              </div>
+              <div>
+                <dt>操作</dt>
+                <dd>{editorOperationLabel}</dd>
+              </div>
+              <div>
+                <dt>病名</dt>
+                <dd>{editorDiseaseName}</dd>
+              </div>
+              <div>
+                <dt>構成コード</dt>
+                <dd>{editorFormComponents.map((component) => component.code).join(' + ') || '未コード化'}</dd>
+              </div>
+              <div>
+                <dt>ORCA送信予定</dt>
+                <dd>{editorOrcaCodePlan}</dd>
+              </div>
+            </dl>
+            {editorHasUncodedWarning ? (
+              <p className="charts-side-panel__help" role="alert">
+                未コード化警告: ORCA病名マスター候補または7桁傷病名コードが未確定です。未コード化として送る場合は、理由を確認して「未コード化病名として警告を確認した」を選択してください。
+              </p>
+            ) : null}
+          </section>
           <div className="charts-diagnosis__name-row" role="group" aria-label="病名（接頭/病名/接尾）">
             <div className="charts-side-panel__field charts-diagnosis__name-part">
               <label htmlFor="diagnosis-prefix">接頭</label>

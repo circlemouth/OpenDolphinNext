@@ -230,6 +230,7 @@ const ORDER_HUB_MODE_LABEL: Record<OrderHubMode, string> = {
   'bottom-integrated': '下欄統合試験',
   'rollback-legacy': 'ロールバック',
 };
+const RP_SHARED_USAGE_RULE = '1 RP = 共通用法。異なる用法は別RP';
 
 const parseOrderHubMode = (value?: string | null): OrderHubMode | null => {
   if (!value) return null;
@@ -1199,6 +1200,7 @@ export function OrderDockPanel(props: {
         <header className="order-dock__group-header">
           <div className="order-dock__group-title">
             <strong>{groupLabel}</strong>
+            {group.key === 'prescription' ? <span className="order-dock__group-mode">{RP_SHARED_USAGE_RULE}</span> : null}
             {isEditingGroup ? (
               <span className="order-dock__group-mode order-dock__group-mode--editing" role="status" aria-live="polite">
                 編集中
@@ -1689,6 +1691,9 @@ export function OrderDockPanel(props: {
         <strong>オーダー入力</strong>
         <span className="order-dock__meta">診療日:{orderVisitDate || '—'}</span>
       </header>
+      <div className="order-dock__notice order-dock__notice--info" aria-label="オーダー候補ソース">
+        候補ソース: 既存オーダー / 患者候補 / 施設頻用 / ORCA診療セット / 検索して追加。ORCA候補は確定処方・ORCA送信・会計済みではありません。
+      </div>
       <div
         id="order-dock-edit-context-status"
         className="order-dock__context"

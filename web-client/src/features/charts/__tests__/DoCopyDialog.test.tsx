@@ -29,6 +29,15 @@ describe('DoCopyDialog overwrite behavior', () => {
     };
 
     render(<DoCopyDialog state={state} onApply={onApply} onUndo={onUndo} onClose={onClose} />);
+
+    const impact = screen.getByRole('region', { name: 'Do転記の患者・日時・未保存影響' });
+    expect(impact).toHaveTextContent('転記元日時');
+    expect(impact).toHaveTextContent('2026-02-26T09:00:00Z');
+    expect(impact).toHaveTextContent('転記先');
+    expect(impact).toHaveTextContent('現在の患者のSOAPドラフト');
+    expect(impact).toHaveTextContent('未保存影響');
+    expect(impact).toHaveTextContent('現在ドラフトに記載がある 2 セクションへDo転記します。');
+
     await user.click(screen.getByRole('button', { name: '適用' }));
 
     expect(onApply).toHaveBeenCalledWith(['subjective']);

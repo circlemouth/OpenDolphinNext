@@ -63,6 +63,38 @@ export function ReportPrintDialog({
   reportNeedsPerformMonth,
   resolvedReportType,
 }: ReportPrintDialogProps) {
+  const selectedDestination = PRINT_DESTINATIONS.find((entry) => entry.value === printDestination);
+  const outputSourceLabel = printDestination === 'outpatient' ? '院内カルテ表示' : 'ORCA帳票API';
+  const outputSettingRows = [
+    { label: '帳票種別', value: selectedDestination?.label ?? printDestination },
+    { label: '出力元', value: outputSourceLabel },
+    { label: '出力先', value: printDestination === 'outpatient' ? 'ブラウザ印刷/エクスポート' : '別ウィンドウの帳票プレビュー' },
+    {
+      label: '収納情報',
+      value:
+        reportIncomeStatus === 'loading'
+          ? '取得中'
+          : reportIncomeStatus === 'error'
+            ? '取得失敗'
+            : reportIncomeLatest?.performDate
+              ? `${reportIncomeLatest.performDate} / 伝票 ${reportIncomeLatest.invoiceNumber ?? '未取得'}`
+              : '未取得',
+    },
+  ];
+  const requiredSettings = [
+    reportNeedsInvoice ? '伝票番号' : null,
+    reportNeedsOutsideClass ? '院外処方区分' : null,
+    reportNeedsDepartment ? '診療科コード' : null,
+    reportNeedsInsurance ? '保険組合せ番号' : null,
+    reportNeedsPerformMonth ? '対象月' : null,
+  ].filter((value): value is string => Boolean(value));
+  const confirmDisabledReason =
+    printDestination !== 'outpatient' && !reportReady
+      ? reportFieldErrors[0] ?? '必須の出力設定を入力してください。'
+      : isRunning
+        ? '出力処理中です。完了を待ってください。'
+        : undefined;
+
   return (
     <FocusTrapDialog
       open={open}
@@ -88,7 +120,28 @@ export function ReportPrintDialog({
               </option>
             ))}
           </select>
+          <p className="charts-actions__print-note">
+            M17 帳票導線: 帳票種別、プレビュー元、出力先、必須設定を確認してから開きます。
+          </p>
         </div>
+
+        <section className="charts-tab-guard" aria-label="帳票プレビューと出力設定">
+          <dl className="charts-actions__send-confirm-list">
+            {outputSettingRows.map((row) => (
+              <div key={row.label}>
+                <dt>{row.label}</dt>
+                <dd>{row.value}</dd>
+              </div>
+            ))}
+            <div>
+              <dt>必須設定</dt>
+              <dd>{requiredSettings.length > 0 ? requiredSettings.join('、') : '追加設定なし'}</dd>
+            </div>
+          </dl>
+          <p className="charts-actions__print-note">
+            ORCA帳票はプレビュー取得であり、診療録確定、ORCA送信、会計済み確定ではありません。内部URLや資格情報は表示しません。
+          </p>
+        </section>
 
         {printDestination !== 'outpatient' && (
           <>
@@ -112,8 +165,11 @@ export function ReportPrintDialog({
                   onChange={(event) => {
                     onReportFieldChange('invoiceNumber', event.target.value);
                   }}
-                  placeholder="例: 0002375"
+                  aria-describedby="charts-print-invoice-help"
                 />
+                <p id="charts-print-invoice-help" className="charts-actions__print-note">
+                  収納情報から選択するか、ORCAで確認した伝票番号を入力してください。
+                </p>
                 {reportInvoiceOptions.length > 0 && (
                   <datalist id="charts-print-invoice-options">
                     {reportInvoiceOptions.map((option) => (
@@ -151,8 +207,11 @@ export function ReportPrintDialog({
                   onChange={(event) => {
                     onReportFieldChange('departmentCode', event.target.value);
                   }}
-                  placeholder="例: 01"
+                  aria-describedby="charts-print-department-help"
                 />
+                <p id="charts-print-department-help" className="charts-actions__print-note">
+                  canonical encounter context の診療科コードを確認してください。
+                </p>
               </div>
             )}
 
@@ -166,8 +225,11 @@ export function ReportPrintDialog({
                   onChange={(event) => {
                     onReportFieldChange('insuranceCombinationNumber', event.target.value);
                   }}
-                  placeholder="例: 0001"
+                  aria-describedby="charts-print-insurance-help"
                 />
+                <p id="charts-print-insurance-help" className="charts-actions__print-note">
+                  保険組合せ番号は ORCA 由来の候補または受付時の canonical 値を確認してください。
+                </p>
                 {reportInsuranceOptions.length > 0 && (
                   <datalist id="charts-print-insurance-options">
                     {reportInsuranceOptions.map((option) => (
@@ -208,7 +270,7 @@ export function ReportPrintDialog({
           </button>
           <button
             type="button"
-            disabled={printDestination !== 'outpatient' && (!reportReady || isRunning)}
+            disabled={isRunning || (printDestination !== 'outpatient' && !reportReady)}
             onClick={() => {
               if (printDestination === 'outpatient') {
                 onConfirmOutpatient();
@@ -220,6 +282,11 @@ export function ReportPrintDialog({
             開く
           </button>
         </div>
+        {confirmDisabledReason ? (
+          <p className="charts-actions__print-note charts-actions__print-note--error" role="status">
+            {confirmDisabledReason}
+          </p>
+        ) : null}
       </div>
     </FocusTrapDialog>
   );

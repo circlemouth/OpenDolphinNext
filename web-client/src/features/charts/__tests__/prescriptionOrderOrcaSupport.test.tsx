@@ -246,11 +246,15 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     expect(await screen.findByText('ORCA master 参照の静的相互作用チェック')).toBeInTheDocument();
     expect(screen.getByText(/620000001 \/ 620000002 \/ 併用注意/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: '編集に戻る' }));
+    await user.click(screen.getByRole('button', { name: '処方を修正' }));
     expect(vi.mocked(savePrescriptionOrder)).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: '保存' }));
-    await user.click(await screen.findByRole('button', { name: '今回だけ無視して保存' }));
+    const confirmSave = await screen.findByRole('button', { name: '確認済みとして保存' });
+    expect(confirmSave).toHaveAttribute('aria-disabled', 'true');
+    await user.type(screen.getByLabelText('確認理由'), '相互作用の臨床的影響を確認済み');
+    expect(confirmSave).toHaveAttribute('aria-disabled', 'false');
+    await user.click(confirmSave);
 
     await waitFor(() => {
       expect(vi.mocked(savePrescriptionOrder)).toHaveBeenCalledTimes(1);

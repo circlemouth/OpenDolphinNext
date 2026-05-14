@@ -71,8 +71,11 @@ describe('OrcaMedicalCandidatePanel', () => {
       signal: expect.any(AbortSignal),
     }));
     expect(screen.getByText('NEEDS_REVIEW / 要確認')).toBeInTheDocument();
+    expect(screen.getByText('候補は処方正本から作成する院内確認用です。ORCA正本ではなく、この操作では処方確定・ORCA送信・会計済み確定のいずれも行いません。')).toBeInTheDocument();
     expect(screen.getByText('10')).toBeInTheDocument();
     expect(screen.getByText('aaaaaaaaaaaa')).toBeInTheDocument();
+    expect(screen.getByText('処方正本 snapshot 由来')).toBeInTheDocument();
+    expect(screen.getByText('未送信')).toBeInTheDocument();
     expect(screen.getAllByText('1件')).toHaveLength(2);
     expect(screen.getByRole('list', { name: '診療行為候補行' })).toHaveTextContent('RP1');
     expect(screen.getByText('診療区分: 211 / 内服')).toBeInTheDocument();

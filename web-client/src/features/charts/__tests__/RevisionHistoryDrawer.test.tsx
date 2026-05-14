@@ -21,6 +21,13 @@ const serverRevision = {
   authorName: '医師A',
   operation: 'revise' as const,
   summary: 'SOAP本文の訂正',
+  changedSections: ['所見', '計画'],
+  charDeltaBySection: { 所見: 12, 計画: -3 },
+  meta: {
+    signatureStatus: 'SIGNED',
+    correctionReason: '検査結果追記に伴う訂正',
+    auditLogId: 'AUDIT-REV-12',
+  },
 };
 
 describe('RevisionHistoryDrawer', () => {
@@ -80,5 +87,33 @@ describe('RevisionHistoryDrawer', () => {
         baseRevisionIdOverride: undefined,
       }),
     );
+  });
+
+  it('版履歴、訂正理由、署名、監査情報をタイムラインとして初期表示する', async () => {
+    render(
+      <RevisionHistoryDrawer
+        open
+        onClose={vi.fn()}
+        meta={{
+          patientId: 'P-REV-1',
+          visitDate: '2026-05-11',
+          receptionId: 'R-100',
+          appointmentId: 'A-200',
+        }}
+        soapHistory={[]}
+      />,
+    );
+
+    expect(await screen.findByText('版履歴・署名・監査サマリ')).toBeInTheDocument();
+    expect(screen.getByText(/総版数: 1 \/ 訂正履歴: 1 \/ 署名情報: 1 \/ 監査ID: 1/)).toBeInTheDocument();
+    expect(screen.getByText('FINAL以降の訂正・復元はappend-onlyの履歴追加として扱います。ORCA連携結果、処方確定、会計反映状態とは別の状態です。')).toBeInTheDocument();
+
+    const item = screen.getByText('rev: 12').closest('li');
+    expect(item).not.toBeNull();
+    expect(within(item as HTMLElement).getByText('timeline: 訂正 / 署名: SIGNED')).toBeInTheDocument();
+    expect(within(item as HTMLElement).getByText('訂正理由: 検査結果追記に伴う訂正')).toBeInTheDocument();
+    expect(within(item as HTMLElement).getByText('changed: 所見, 計画')).toBeInTheDocument();
+    expect(within(item as HTMLElement).getByText('delta: 所見+12 / 計画-3')).toBeInTheDocument();
+    expect(within(item as HTMLElement).getByText('監査: AUDIT-REV-12 / raw本文・署名鍵・資格情報は表示しません')).toBeInTheDocument();
   });
 });

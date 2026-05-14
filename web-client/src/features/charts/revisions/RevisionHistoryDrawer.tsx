@@ -41,6 +41,39 @@ const resolveCriticalOperationLabel = (operation?: 'revise' | 'restore') =>
 const resolveCriticalConfirmLabel = (operation?: 'revise' | 'restore') =>
   operation === 'restore' ? '現在版として採用する' : '改訂版を追加する';
 
+const resolveOperationLabel = (operation?: RevisionHistoryEntry['operation']) => {
+  switch (operation) {
+    case 'create':
+      return '初版作成';
+    case 'revise':
+      return '訂正';
+    case 'restore':
+      return '復元';
+    case 'unknown':
+    default:
+      return '種別未確認';
+  }
+};
+
+const readMetaString = (entry: RevisionHistoryEntry, key: string) => {
+  const value = entry.meta?.[key];
+  if (typeof value === 'string' && value.trim().length > 0) return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return '';
+};
+
+const resolveSignatureStatus = (entry: RevisionHistoryEntry) => {
+  const value = readMetaString(entry, 'signatureStatus') || readMetaString(entry, 'approvalStatus');
+  if (!value) return entry.operation === 'create' || entry.operation === 'revise' ? '署名状態未確認' : '署名対象外または未確認';
+  return value;
+};
+
+const resolveCorrectionReason = (entry: RevisionHistoryEntry) =>
+  readMetaString(entry, 'correctionReason') || readMetaString(entry, 'amendmentReason') || readMetaString(entry, 'reason');
+
+const resolveAuditId = (entry: RevisionHistoryEntry) =>
+  readMetaString(entry, 'auditLogId') || readMetaString(entry, 'auditEventId') || readMetaString(entry, 'eventHash');
+
 export function RevisionHistoryDrawer({ open, onClose, meta, soapHistory }: RevisionHistoryDrawerProps) {
   const isRevisionEditEnabled = import.meta.env.VITE_CHARTS_REVISION_EDIT !== '0';
   const isRevisionConflictTestEnabled = import.meta.env.VITE_CHARTS_REVISION_CONFLICT === '1';
@@ -101,6 +134,17 @@ export function RevisionHistoryDrawer({ open, onClose, meta, soapHistory }: Revi
     if (remote.ok) return `server: ${remote.revisions.length}件`;
     return `server unavailable: ${remote.error ?? 'unknown error'}`;
   }, [remote]);
+
+  const historyStats = useMemo(() => {
+    const revisions = effective.revisions;
+    const signed = revisions.filter((entry) => {
+      const signature = resolveSignatureStatus(entry);
+      return signature !== '署名状態未確認' && signature !== '署名対象外または未確認';
+    }).length;
+    const corrections = revisions.filter((entry) => entry.operation === 'revise' || resolveCorrectionReason(entry)).length;
+    const auditLinked = revisions.filter((entry) => resolveAuditId(entry)).length;
+    return { signed, corrections, auditLinked };
+  }, [effective.revisions]);
 
   const parseRevisionId = (value: string): number | null => {
     const trimmed = value.trim();
@@ -198,6 +242,16 @@ export function RevisionHistoryDrawer({ open, onClose, meta, soapHistory }: Revi
         {remoteHint ? <span>{remoteHint}</span> : null}
       </div>
 
+      <section className="revision-drawer__status revision-drawer__status--info" aria-label="版履歴サマリ">
+        <strong>版履歴・署名・監査サマリ</strong>
+        <div className="revision-drawer__item-meta">
+          総版数: {effective.revisions.length} / 訂正履歴: {historyStats.corrections} / 署名情報: {historyStats.signed} / 監査ID: {historyStats.auditLinked}
+        </div>
+        <div className="revision-drawer__item-meta">
+          FINAL以降の訂正・復元はappend-onlyの履歴追加として扱います。ORCA連携結果、処方確定、会計反映状態とは別の状態です。
+        </div>
+      </section>
+
       <CriticalOperationConfirmDialog
         open={Boolean(confirmAction)}
         title={`${resolveCriticalOperationLabel(confirmAction?.operation)}の確認`}
@@ -264,7 +318,13 @@ export function RevisionHistoryDrawer({ open, onClose, meta, soapHistory }: Revi
                   parent: {entry.parentRevisionId ?? '—'}
                 </span>
               </div>
+              <div className="revision-drawer__item-meta">
+                timeline: {resolveOperationLabel(entry.operation)} / 署名: {resolveSignatureStatus(entry)}
+              </div>
               <div className="revision-drawer__item-meta">{formatMetaLine(entry)}</div>
+              {resolveCorrectionReason(entry) ? (
+                <div className="revision-drawer__item-summary">訂正理由: {resolveCorrectionReason(entry)}</div>
+              ) : null}
               {entry.summary ? <div className="revision-drawer__item-summary">{entry.summary}</div> : null}
               {entry.changedSections && entry.changedSections.length > 0 ? (
                 <div className="revision-drawer__item-changes">
@@ -272,6 +332,9 @@ export function RevisionHistoryDrawer({ open, onClose, meta, soapHistory }: Revi
                 </div>
               ) : null}
               {formatDelta(entry) ? <div className="revision-drawer__item-delta">delta: {formatDelta(entry)}</div> : null}
+              <div className="revision-drawer__item-meta">
+                監査: {resolveAuditId(entry) || '監査ID未表示'} / raw本文・署名鍵・資格情報は表示しません
+              </div>
               <div className="revision-drawer__actions" aria-label="版操作">
                 {isRevisionEditEnabled ? (
                   <>

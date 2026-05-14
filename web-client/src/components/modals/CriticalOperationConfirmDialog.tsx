@@ -3,6 +3,11 @@ import type { ReactNode } from 'react';
 import { FocusTrapDialog } from './FocusTrapDialog';
 
 export type CriticalOperationTone = 'warning' | 'danger';
+export type CriticalOperationChecklistItem = {
+  label: string;
+  checked?: boolean;
+  tone?: 'neutral' | 'warning' | 'danger' | 'success';
+};
 
 export type CriticalOperationField = {
   label: string;
@@ -18,6 +23,10 @@ export interface CriticalOperationConfirmDialogProps {
   patientFields: CriticalOperationField[];
   summaryTitle: string;
   summaryFields: CriticalOperationField[];
+  checklistTitle?: string;
+  checklistItems?: CriticalOperationChecklistItem[];
+  extraContent?: ReactNode;
+  size?: 'md' | 'lg' | 'xl' | 'full';
   cancelLabel?: string;
   confirmLabel: string;
   cancelDisabled?: boolean;
@@ -43,6 +52,10 @@ export function CriticalOperationConfirmDialog({
   patientFields,
   summaryTitle,
   summaryFields,
+  checklistTitle = '実行前チェック',
+  checklistItems,
+  extraContent,
+  size = 'lg',
   cancelLabel = 'キャンセル',
   confirmLabel,
   cancelDisabled = false,
@@ -60,6 +73,7 @@ export function CriticalOperationConfirmDialog({
       description={description}
       onClose={onCancel}
       closeOnBackdrop={false}
+      size={size}
       testId={testId}
     >
       <section className="critical-operation-confirm" aria-label={`${operationLabel}の重大操作確認`} data-tone={tone}>
@@ -91,6 +105,22 @@ export function CriticalOperationConfirmDialog({
             ))}
           </dl>
         </section>
+        {checklistItems && checklistItems.length > 0 ? (
+          <section className="critical-operation-confirm__section" aria-label={checklistTitle}>
+            <h3>{checklistTitle}</h3>
+            <ul className="critical-operation-confirm__checklist">
+              {checklistItems.map((item) => (
+                <li key={item.label} data-tone={item.tone ?? (item.checked ? 'success' : 'warning')}>
+                  <span className="critical-operation-confirm__checkmark" aria-hidden="true">
+                    {item.checked ? '✓' : '!'}
+                  </span>
+                  <span>{item.label}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        {extraContent ? <div className="critical-operation-confirm__extra">{extraContent}</div> : null}
         <div className="critical-operation-confirm__actions" role="group" aria-label={`${operationLabel}操作`}>
           <button
             type="button"

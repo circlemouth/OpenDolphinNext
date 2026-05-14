@@ -584,6 +584,188 @@ export const chartsStyles = css`
     }
   }
 
+  .chart-safety-banner {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--charts-space-xs);
+    margin-top: var(--charts-space-sm);
+  }
+
+  .chart-safety-banner__item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--charts-space-xs);
+    align-items: start;
+    padding: var(--charts-space-xs) var(--charts-space-sm);
+    border-radius: var(--charts-radius-md);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(248, 250, 252, 0.92);
+  }
+
+  .chart-safety-banner__item[data-tone='warning'] {
+    border-color: rgba(217, 119, 6, 0.36);
+    background: rgba(255, 251, 235, 0.95);
+  }
+
+  .chart-safety-banner__item[data-tone='danger'] {
+    border-color: rgba(185, 28, 28, 0.34);
+    background: rgba(254, 242, 242, 0.95);
+  }
+
+  .chart-safety-banner__item[data-tone='success'] {
+    border-color: rgba(22, 101, 52, 0.28);
+    background: rgba(240, 253, 244, 0.9);
+  }
+
+  .chart-safety-banner__body p {
+    margin: 0;
+    line-height: 1.45;
+    color: #334155;
+    font-weight: 700;
+  }
+
+  .chart-safety-banner__next {
+    margin-top: 0.25rem !important;
+    color: #64748b !important;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .clinical-panel-shell,
+  .clinical-drawer-shell,
+  .diff-preview-layout,
+  .orca-result-panel {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: var(--charts-radius-md);
+    background: #ffffff;
+  }
+
+  .clinical-panel-shell__header,
+  .clinical-drawer-shell__header,
+  .diff-preview-layout__header,
+  .orca-result-panel__header {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--charts-space-sm);
+    padding: var(--charts-space-sm);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  }
+
+  .clinical-panel-shell__header h2,
+  .clinical-drawer-shell__header h2,
+  .diff-preview-layout__header h3,
+  .orca-result-panel__header h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1rem;
+  }
+
+  .clinical-panel-shell__eyebrow,
+  .clinical-drawer-shell__eyebrow,
+  .orca-result-panel__eyebrow {
+    margin: 0 0 0.18rem;
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .clinical-panel-shell__content,
+  .clinical-drawer-shell__grid,
+  .diff-preview-layout__grid {
+    padding: var(--charts-space-sm);
+  }
+
+  .clinical-drawer-shell__search,
+  .clinical-drawer-shell__footer {
+    padding: var(--charts-space-sm);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  }
+
+  .clinical-drawer-shell__grid,
+  .diff-preview-layout__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--charts-space-sm);
+  }
+
+  .diff-preview-layout__pane {
+    min-width: 0;
+    padding: var(--charts-space-sm);
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: var(--charts-radius-md);
+    background: rgba(248, 250, 252, 0.9);
+  }
+
+  .diff-preview-layout__pane--after {
+    background: rgba(239, 246, 255, 0.9);
+  }
+
+  .diff-preview-layout__pane h4 {
+    margin: 0 0 var(--charts-space-xs);
+    color: #334155;
+  }
+
+  .orca-result-panel {
+    margin: var(--charts-space-sm) 0;
+    padding-bottom: var(--charts-space-sm);
+  }
+
+  .orca-result-panel[data-state='unknown'],
+  .orca-result-panel[data-state='warning'] {
+    border-color: rgba(217, 119, 6, 0.4);
+    background: rgba(255, 251, 235, 0.9);
+  }
+
+  .orca-result-panel[data-state='error'] {
+    border-color: rgba(185, 28, 28, 0.38);
+    background: rgba(254, 242, 242, 0.92);
+  }
+
+  .orca-result-panel[data-state='success'] {
+    border-color: rgba(22, 101, 52, 0.28);
+    background: rgba(240, 253, 244, 0.86);
+  }
+
+  .orca-result-panel__message,
+  .orca-result-panel__next,
+  .orca-result-panel__evidence {
+    margin: var(--charts-space-sm) var(--charts-space-sm) 0;
+    color: #334155;
+    line-height: 1.5;
+  }
+
+  .orca-result-panel__facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--charts-space-xs);
+    margin: var(--charts-space-sm) var(--charts-space-sm) 0;
+  }
+
+  .orca-result-panel__facts div {
+    padding: var(--charts-space-xs);
+    border-radius: var(--charts-radius-sm);
+    background: rgba(255, 255, 255, 0.74);
+  }
+
+  .orca-result-panel__facts dt {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+
+  .orca-result-panel__facts dd {
+    margin: 0.15rem 0 0;
+    color: #0f172a;
+    font-weight: 800;
+  }
+
+  .orca-result-panel__evidence ul {
+    margin: 0;
+    padding-left: 1.15rem;
+  }
+
   @media (max-width: 920px) {
     .hokenja-ref__context-grid,
     .hokenja-ref__search-row {
@@ -1248,6 +1430,13 @@ export const chartsStyles = css`
     justify-content: flex-start;
   }
 
+  .charts-actions__patient-action-slot--center {
+    justify-content: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-inline: 0.4rem;
+  }
+
   .charts-actions__patient-action-slot--right {
     justify-content: flex-end;
   }
@@ -1269,6 +1458,18 @@ export const chartsStyles = css`
     padding: 0;
     border-radius: 999px;
     background: rgba(236, 254, 255, 0.98);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .charts-actions__button--patient-finish {
+    max-width: min(20rem, 100%);
+    min-height: 2.15rem;
+    padding: 0.38rem 0.78rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    line-height: 1.2;
+    white-space: normal;
+    text-align: center;
     box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
   }
 
@@ -6802,7 +7003,8 @@ export const chartsStyles = css`
     flex: 0 0 60%;
   }
 
-  .soap-note__right-drawer-order-preview {
+  .soap-note__right-drawer-order-preview,
+  .soap-note__right-drawer-source-overview {
     min-width: 0;
     min-height: 0;
     display: flex;

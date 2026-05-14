@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 type ImageCameraCaptureProps = {
   onCapture: (file: File) => void;
   disabled?: boolean;
+  disabledReason?: string;
+  attachmentTargetLabel?: string;
   onCameraError?: (reason: string, message: string) => void;
 };
 
@@ -45,7 +47,7 @@ const resolveCameraError = (error: unknown) => {
   };
 };
 
-export function ImageCameraCapture({ onCapture, disabled, onCameraError }: ImageCameraCaptureProps) {
+export function ImageCameraCapture({ onCapture, disabled, disabledReason, attachmentTargetLabel, onCameraError }: ImageCameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [availability, setAvailability] = useState<CameraAvailability>(defaultAvailability);
@@ -175,12 +177,20 @@ export function ImageCameraCapture({ onCapture, disabled, onCameraError }: Image
   }, [disabled, onCapture]);
 
   const canStart = availability.secureContext && availability.supported && availability.hasDevice !== false;
+  const cameraBlockedReason =
+    disabled && disabledReason
+      ? disabledReason
+      : !availability.secureContext || !availability.supported
+        ? availability.message
+        : availability.hasDevice === false
+          ? availability.message
+          : undefined;
 
   return (
     <section className="charts-image-camera" data-test-id="image-camera-panel">
       <div className="charts-image-camera__header">
         <h3>カメラ撮影</h3>
-        <p>診察中の記録用にカメラから撮影できます。</p>
+        <p>添付先: {attachmentTargetLabel ?? '患者画像一覧と選択中カルテ'}。撮影後はアップロード待ちキューに追加します。</p>
       </div>
       {availability.message ? (
         <div className="charts-image-camera__fallback" data-test-id="image-camera-fallback">
@@ -191,6 +201,11 @@ export function ImageCameraCapture({ onCapture, disabled, onCameraError }: Image
         <div className="charts-image-camera__error" role="alert" aria-live="assertive">
           {error}
         </div>
+      ) : null}
+      {cameraBlockedReason ? (
+        <p className="charts-image-camera__fallback" role="status">
+          {cameraBlockedReason}
+        </p>
       ) : null}
       <div className="charts-image-camera__body">
         <div className="charts-image-camera__preview">

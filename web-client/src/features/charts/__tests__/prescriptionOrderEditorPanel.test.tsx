@@ -114,6 +114,24 @@ describe('PrescriptionOrderEditorPanel', () => {
     expect(within(rpPane).getByText('1件')).toBeInTheDocument();
   });
 
+  it('RP共通用法ルールを常時表示し、複数薬剤から別RPへ分離できる', async () => {
+    const user = userEvent.setup();
+    const searchMock = vi.mocked(fetchOrderMasterSearch);
+    searchMock.mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+
+    renderPanel();
+
+    expect(screen.getAllByText('1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: '+薬剤' }));
+    expect(screen.getAllByPlaceholderText('薬剤名')).toHaveLength(2);
+
+    await user.click(screen.getAllByRole('button', { name: '別RPに分ける' })[1]);
+
+    const rpPane = screen.getByLabelText('RP一覧');
+    expect(within(rpPane).getByText('2件')).toBeInTheDocument();
+    expect(screen.getByText('薬剤を別RPへ分けました。新しいRPで用法を設定してください。')).toBeInTheDocument();
+  });
+
   it('請求用コメントは Shift+Enter で確定し、個別削除できる', async () => {
     const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);

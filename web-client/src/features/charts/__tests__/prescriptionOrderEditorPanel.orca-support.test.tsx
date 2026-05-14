@@ -537,14 +537,22 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     await waitFor(() => {
       expect(checkOrcaMasterStaticOrderInteractions).toHaveBeenCalledWith({ codes: ['620000001', '620000003'] });
     });
-    expect(await screen.findByText('ORCA master 参照の静的相互作用チェック')).toBeInTheDocument();
+    expect(await screen.findByText('処方安全チェック')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: '処方安全チェック結果' })).toHaveTextContent('警告');
+    expect(screen.getByLabelText('確認理由')).toBeInTheDocument();
     expect(savePrescriptionOrder).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: '編集に戻る' }));
+    await user.click(screen.getByRole('button', { name: '処方を修正' }));
     expect(savePrescriptionOrder).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: '保存' }));
-    await user.click(await screen.findByRole('button', { name: '今回だけ無視して保存' }));
+    const confirmSave = await screen.findByRole('button', { name: '確認済みとして保存' });
+    expect(confirmSave).toHaveAttribute('aria-disabled', 'true');
+    await user.click(confirmSave);
+    expect(savePrescriptionOrder).not.toHaveBeenCalled();
+    await user.type(screen.getByLabelText('確認理由'), '患者状態と処方意図を確認済み');
+    expect(confirmSave).toHaveAttribute('aria-disabled', 'false');
+    await user.click(confirmSave);
 
     await waitFor(() => {
       expect(savePrescriptionOrder).toHaveBeenCalledTimes(1);

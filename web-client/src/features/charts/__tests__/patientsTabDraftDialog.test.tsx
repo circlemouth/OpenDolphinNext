@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
@@ -108,8 +108,14 @@ describe('PatientsTab draft dialog', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /患者B/ }));
 
-    expect(screen.getByRole('alertdialog', { name: '未保存下書きがあります' })).toBeInTheDocument();
+    const dialog = screen.getByRole('alertdialog', { name: '未保存下書きがあります' });
+    expect(dialog).toBeInTheDocument();
     expect(screen.getByText('SOAPドラフトが未保存')).toBeInTheDocument();
+    expect(within(dialog).getByRole('region', { name: '未保存影響' })).toHaveTextContent(
+      '保存して切替は現在患者の下書き保存後に切替します。',
+    );
+    expect(within(dialog).getByText('患者A（患者ID:P-1）')).toBeInTheDocument();
+    expect(within(dialog).getByText('患者B（患者ID:P-2 / 受付ID:R-2）')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '保存して切替' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '破棄して切替' })).toBeInTheDocument();
   });

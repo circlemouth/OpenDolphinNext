@@ -323,7 +323,7 @@ const buildQueryClient = () =>
   });
 
 describe('ChartsPage order dock coexistence recovery', () => {
-  it('右欄編集中でも下方ユーティリティを表示せず、未保存離脱ガード後に復帰できる', async () => {
+  it('右欄編集中でも下部ユーティリティを維持し、未保存離脱ガード後に復帰できる', async () => {
     const user = userEvent.setup();
     const patientTabKey = 'P-001::2026-02-16';
     const storageKey = 'opendolphin:web-client:charts:patient-tabs:v1:facility:doctor';
@@ -362,9 +362,9 @@ describe('ChartsPage order dock coexistence recovery', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: '右欄編集開始' })).toBeInTheDocument(),
     );
-    expect(document.querySelector('[data-utility-action="order-set"]')).toBeNull();
-    expect(document.querySelector('[data-utility-action="document"]')).toBeNull();
-    expect(document.querySelector('#charts-utility-pane')).toBeNull();
+    expect(document.querySelector('[data-utility-action="order-set"]')).not.toBeNull();
+    expect(document.querySelector('[data-utility-action="document"]')).not.toBeNull();
+    expect(document.querySelector('#charts-utility-pane')).not.toBeNull();
     await user.click(screen.getByRole('button', { name: '右欄編集開始' }));
     expect(document.querySelector('[data-test-id="charts-order-dock-coexist-guard-dialog"]')).toBeNull();
 
@@ -379,8 +379,8 @@ describe('ChartsPage order dock coexistence recovery', () => {
     await waitFor(() =>
       expect(document.querySelector('[data-test-id="charts-encounter-exit-guard-dialog"]')).toBeNull(),
     );
-    expect(document.querySelector('[data-utility-action="order-set"]')).toBeNull();
-    expect(document.querySelector('[data-utility-action="document"]')).toBeNull();
+    expect(document.querySelector('[data-utility-action="order-set"]')).not.toBeNull();
+    expect(document.querySelector('[data-utility-action="document"]')).not.toBeNull();
     expect(document.querySelector('[data-test-id="charts-order-dock-coexist-guard-dialog"]')).toBeNull();
   });
 });
