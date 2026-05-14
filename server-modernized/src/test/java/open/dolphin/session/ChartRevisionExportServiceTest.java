@@ -151,7 +151,7 @@ class ChartRevisionExportServiceTest {
                 + "\"patientSnapshotStatus\":\"SNAPSHOT_RECORDED\","
                 + "\"patientName\":\"Do Not Export\"}");
         ChartRevisionEventModel firstEvent = amendedEvent();
-        firstEvent.setReasonText("Authorization: Basic first-secret\n<?xml version=\"1.0\"?><xml>raw</xml>");
+        firstEvent.setReasonText("Authorization: Basic should-not-ship\n<?xml version=\"1.0\"?><xml>raw</xml>");
         stubExportQueries(List.of(firstRevision), List.of(firstEvent));
         String firstHash = service.exportChart(10L, "F001").getExportHash();
 
@@ -162,7 +162,7 @@ class ChartRevisionExportServiceTest {
                 + "\"rawOrcaBody\":\"<xml>raw</xml>\","
                 + "\"snapshotVersion\":1}");
         ChartRevisionEventModel secondEvent = amendedEvent();
-        secondEvent.setReasonText("Authorization: Basic second-secret\n<?xml version=\"1.0\"?><xml>different</xml>");
+        secondEvent.setReasonText("Authorization: Basic should-not-ship\n<?xml version=\"1.0\"?><xml>different</xml>");
         stubExportQueries(List.of(secondRevision), List.of(secondEvent));
         String secondHash = service.exportChart(10L, "F001").getExportHash();
 

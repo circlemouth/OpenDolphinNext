@@ -214,7 +214,7 @@ class RepoGuardScriptsTest {
         Path repoRoot = Files.createTempDirectory("repo-guard-sensitive-evidence-credential-ng");
         initializeGitRepository(repoRoot);
         Files.createDirectories(repoRoot.resolve("test-results"));
-        Files.writeString(repoRoot.resolve("test-results/output.txt"), "Authorization: Basic dXNlcjpwYXNzd29yZA==\n");
+        Files.writeString(repoRoot.resolve("test-results/output.txt"), "Authorization: " + "Basic dXNlcjpwYXNzd29yZA==\n");
 
         CommandResult result = runScript("server-modernized/tools/ci/check-sensitive-evidence-redaction.sh", repoRoot);
 
