@@ -3,11 +3,8 @@ package open.dolphin.rest.orca;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
@@ -124,9 +121,10 @@ public class LocalPrescriptionOrderResource extends AbstractOrcaRestResource {
         return response;
     }
 
-    @POST
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Transactional
+    /**
+     * Legacy helper retained for focused unit coverage only. Production mutation surface lives under
+     * /api/local/prescription-orders/authority.
+     */
     public PrescriptionOrderSaveResponse saveOrder(
             @Context HttpServletRequest request,
             PrescriptionOrder payload) {
@@ -197,10 +195,10 @@ public class LocalPrescriptionOrderResource extends AbstractOrcaRestResource {
         return response;
     }
 
-    @POST
-    @Path("/do-import")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Transactional
+    /**
+     * Legacy helper retained for focused unit coverage only. Production mutation surface lives under
+     * /api/local/prescription-orders/authority.
+     */
     public PrescriptionOrderDoImportResponse doImport(
             @Context HttpServletRequest request,
             PrescriptionOrderDoImportRequest payload) {
