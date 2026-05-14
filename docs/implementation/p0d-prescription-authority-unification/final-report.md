@@ -94,6 +94,13 @@ Final grep checks:
 - Web runtime source has no direct `fetch` / `httpFetch` call to old `POST /api/local/prescription-orders`, `do-import`, or `/api/prescriptions`.
 - Authority repository mutation methods call `loadOrderForUpdate(facilityId, orderId)` and pass facility into event/hash queries.
 
+## Deliverable
+
+- ZIP: `deliverables/OpenDolphinNext-p0d-prescription-authority-unification-20260514.zip`
+- Size: 80 MB
+- SHA-256: `06b112d35c1155a455b83a9022d4e533f0a38f494f76a5f1e5b5b2fad2f8c7a4`
+- Exclusion scan: no `node_modules`, `target`, `dist`, `build`, cache directory, IDE directory, `.DS_Store`, `__MACOSX`, or `Thumbs.db` entry detected.
+
 ## Residual Risk
 
 - `GET /api/local/prescription-orders` still reads the legacy projection table. It is read-only and not a mutation source.
