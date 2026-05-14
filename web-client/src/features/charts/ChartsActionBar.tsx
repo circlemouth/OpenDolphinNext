@@ -334,6 +334,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [approvalUnlockDialogStep, setApprovalUnlockDialogStep] = useState<'confirm' | 'final' | null>(null);
   const [forceTakeoverDialogStep, setForceTakeoverDialogStep] = useState<'confirm' | 'final' | null>(null);
+  const [encounterActionOverride, setEncounterActionOverride] = useState<Extract<ChartAction, 'start' | 'finish'> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const outpatientResultRef = useRef(false);
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
@@ -686,13 +687,14 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const sendDisabled = isRunning || sendPrecheckReasons.length > 0;
   const primaryAction = useMemo<ChartAction | 'sending'>(() => {
     if (isRunning && runningAction === 'send') return 'sending';
+    if (encounterActionOverride) return encounterActionOverride;
     const status = (selectedEntry?.status ?? '').trim();
     if (/受付|予約/.test(status)) return 'start';
     if (/診療中|診察中/.test(status)) return 'finish';
     if (/終了|会計|送信待ち|送信済/.test(status)) return showLegacyOrcaSend ? 'send' : 'finish';
     if (!status) return 'finish';
     return showLegacyOrcaSend ? 'send' : 'finish';
-  }, [isRunning, runningAction, selectedEntry?.status, showLegacyOrcaSend]);
+  }, [encounterActionOverride, isRunning, runningAction, selectedEntry?.status, showLegacyOrcaSend]);
 
   const printPrecheckReasons: GuardReason[] = useMemo(() => {
     const reasons: GuardReason[] = [];
@@ -1841,6 +1843,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         const durationMs = Math.round(performance.now() - startedAt);
         const after = getObservabilityMeta();
         const nextRunId = startMeta?.runId ?? after.runId ?? runId;
+        setEncounterActionOverride('finish');
         setBanner(null);
         setToast({
           tone: 'success',

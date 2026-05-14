@@ -2280,10 +2280,29 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     [appointmentPages],
   );
 
-  const selectedEntry = useMemo(() => {
+  const baseSelectedEntry = useMemo(() => {
     if (!hasEncounterHandoffKey) return undefined;
     return resolveReceptionEntryForEncounter(patientEntries, encounterContext);
   }, [encounterContext, hasEncounterHandoffKey, patientEntries]);
+  const [localEncounterStatusOverride, setLocalEncounterStatusOverride] = useState<ReceptionEntry['status'] | null>(null);
+  const selectedEntry = useMemo(() => {
+    if (!baseSelectedEntry || !localEncounterStatusOverride || baseSelectedEntry.status === localEncounterStatusOverride) {
+      return baseSelectedEntry;
+    }
+    return {
+      ...baseSelectedEntry,
+      status: localEncounterStatusOverride,
+    };
+  }, [baseSelectedEntry, localEncounterStatusOverride]);
+  const previousSelectedEntryPatientIdRef = useRef(baseSelectedEntry?.patientId);
+  useEffect(() => {
+    const previousPatientId = previousSelectedEntryPatientIdRef.current;
+    const nextPatientId = baseSelectedEntry?.patientId;
+    previousSelectedEntryPatientIdRef.current = nextPatientId;
+    if (previousPatientId && nextPatientId && previousPatientId !== nextPatientId) {
+      setLocalEncounterStatusOverride(null);
+    }
+  }, [baseSelectedEntry?.patientId]);
 
   const selectedEntryPatientId = selectedEntry
     ? (() => {
@@ -3598,7 +3617,9 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       patientId,
       karteId,
     });
-    if (patientId && actionVisitDate) {
+    const applyStartedStatusOverride = () => {
+      if (!patientId || !actionVisitDate) return;
+      setLocalEncounterStatusOverride('診療中');
       upsertReceptionStatusOverride({
         date: actionVisitDate,
         patientId,
@@ -3614,8 +3635,10 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
             }
           : undefined,
       });
-    }
+    };
+    applyStartedStatusOverride();
     await handleRefreshSummary();
+    applyStartedStatusOverride();
     return {
       requestId: transition.requestId,
       traceId: transition.traceId,
@@ -3637,6 +3660,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
 
   const handleAfterPause = useCallback(async () => {
     if (patientId && actionVisitDate) {
+      setLocalEncounterStatusOverride('診療中');
       upsertReceptionStatusOverride({
         date: actionVisitDate,
         patientId,
@@ -3691,6 +3715,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       throw createCloseAndSendReviewError(billingResult);
     }
     if (patientId && actionVisitDate) {
+      setLocalEncounterStatusOverride('会計待ち');
       upsertReceptionStatusOverride({
         date: actionVisitDate,
         patientId,

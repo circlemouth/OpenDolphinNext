@@ -120,8 +120,8 @@ describe('ChartsPatientSummaryBar', () => {
 
     const alert = screen.getByTestId('charts-patient-summary-source-alert');
     expect(alert).toHaveAttribute('role', 'alert');
-    expect(alert).toHaveTextContent('ORCA正本確認が必要');
-    expect(alert).toHaveTextContent('ORCA参照不足と暫定参照です。ORCA送信・会計送信前に受付で再取得してください。');
+    expect(alert).toHaveTextContent('ORCA正本確認要');
+    expect(alert).toHaveTextContent('ORCA参照不足 / 暫定参照。ORCA送信・会計送信前に受付で再取得してください。');
     expect(alert.closest('details')).toBeNull();
 
     const summary = container.querySelector('.charts-patient-summary');

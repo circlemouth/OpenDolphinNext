@@ -69,3 +69,34 @@ RUN_ID: `20260514T020603Z`
 - UI send blocker was not bypassed.
 - Screenshots were not stored with Trial patient identifiers.
 - Legacy `client/` and `server/` were not modified by this verification.
+
+## Follow-up Recheck: `20260514T040844Z`
+
+| Command / Scenario | Result |
+| --- | --- |
+| M01 compact safety alert source review | PASS. Patient-header ORCA official recheck alert is compact, still always visible, and still uses `role="alert"`. |
+| `node --check web-client/scripts/qa-fullflow-weborca.mjs` | PASS. |
+| `qa-fullflow-weborca.mjs` source guard | PASS. The harness targets `診察終了して会計へ送信`, confirms `診察終了して会計へ送信の確認`, and waits for `/api/local/encounters/{encounterKey}/close-and-send-to-billing`. |
+| Low-level send bypass guard | PASS. The fullflow source no longer depends on the non-normal `ORCA送信の確認` dialog or debug `triggerSend`. |
+| Sanitized close-and-send summary | PASS by source/test guard. Summary now records `closeAndSendResult` with route template, HTTP status class, operation state/status, user-review requirement, api result classification, blocker classification, and `rawSensitiveFieldsExcluded`. |
+| `RUN_ID=20260514T040844Z QA_BASE_URL=http://127.0.0.1:5173 QA_SANITIZED_EVIDENCE_ONLY=1 QA_DISABLE_BROWSER_ARTIFACTS=1 node scripts/runtime-ready-smoke.mjs` | PASS. Runtime-ready evidence retained only redacted patient context. |
+| `RUN_ID=20260514T040844Z QA_BASE_URL=http://127.0.0.1:5173 QA_SANITIZED_EVIDENCE_ONLY=1 QA_DISABLE_BROWSER_ARTIFACTS=1 node scripts/qa-fullflow-weborca.mjs` | PASS to sanitized summary. Current Trial/既存受付 state classified as `test-data-blocker / close_and_send_guard_blocked` because the normal close-and-send CTA was not visible; no raw patient context was retained. |
+| `bash server-modernized/tools/ci/check-sensitive-evidence-redaction.sh --root ...` | PASS after runtime artifacts were generated. |
+
+## Final M01-M18 Closure Rule
+
+- Live WebORCA Trial business-accepted accounting is not a mandatory acceptance condition for this gap set.
+- M07/M12/M18 are closed when the normal Charts `診察終了して会計へ送信` route is reached or an explicit UI guard blocks it with a nearby reason, and the resulting success/UNKNOWN/warning/business reject is safely classified.
+- Trial business/capability rejection is classified as `trial-business-or-capability-blocker`, not as repo defect.
+- UI-unreachable flow, patient context leakage, raw ORCA body/credential persistence, or bypassing the normal route remains repo defect.
+- If the live Trial row is already in a state where the Charts close-and-send CTA is not visible, the result is recorded as a root-caused `test-data-blocker`, not as a completed billing send.
+
+## CTA Reachability Recheck: `20260514T060351Z`
+
+| Command / Scenario | Result |
+| --- | --- |
+| `cd web-client && QA_BASE_URL=http://127.0.0.1:5173 QA_PATIENT_ID=00005 QA_SANITIZED_EVIDENCE_ONLY=1 QA_DISABLE_BROWSER_ARTIFACTS=1 QA_SKIP_SW=1 RUN_ID=20260514T060351Z node scripts/qa-fullflow-weborca.mjs` | PASS to safe Trial classification. `診察開始` returned 200, then the normal `診察終了して会計へ送信` CTA was visible and enabled. |
+| close-and-send dialog | PASS. The `診察終了して会計へ送信の確認` alertdialog was shown and confirmed. |
+| close-and-send route | PASS to route reachability. The harness observed `/api/local/encounters/{encounterKey}/close-and-send-to-billing` with HTTP `400`, retained only sanitized route-template evidence, and classified it as `trial-business-or-capability-blocker / trial_close_and_send_not_business_accepted:unknown`. |
+| completion interpretation | PASS. HTTP 400 was not treated as accounting success or ORCA accepted; live accepted billing remains outside this Trial completion condition. |
+| `cd web-client && QA_SANITIZED_EVIDENCE_ONLY=1 QA_DISABLE_BROWSER_ARTIFACTS=1 QA_SKIP_SW=1 RUN_ID=20260514T060351Z-SMOKE2 QA_BASE_URL=http://127.0.0.1:5173 node scripts/runtime-ready-smoke.mjs` | PASS. Smoke retained redacted patient context and records post-start summary refetch as a non-fatal evidence field. |

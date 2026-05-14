@@ -53,3 +53,21 @@ RUN_ID: `20260514T020603Z`
   - `診療中` or later context: `診察終了して会計へ送信`
   - guarded close/send states still show nearby reason via `charts-actions-finish-guard`.
 - Fullflow still did not complete accounting send. It reached Charts and saved a treatment order, then stalled/failed during later prescription/send handling in the QA harness. This remains a harness/runtime stability blocker, not an ORCA business accepted result.
+
+## Follow-up Closure Pass: `20260514T040844Z`
+
+- Charts patient summary now keeps the ORCA official recheck warning in the patient-header safety area as a compact alert, so the first view can preserve patient identity, visit context, primary CTA, and SOAP context while still failing closed for ORCA official uncertainty.
+- The fullflow harness now uses the normal Charts action `診察終了して会計へ送信`, confirms `診察終了して会計へ送信の確認`, and waits for `/api/local/encounters/{encounterKey}/close-and-send-to-billing`.
+- The harness no longer treats the low-level `ORCA 送信` control or debug fallback as a successful fullflow path.
+- Close-and-send outcomes are recorded as sanitized `closeAndSendResult` data. Success, UNKNOWN, warning, business reject, and Trial capability limitation are separated; non-success outcomes are not shown or documented as accounting success.
+- Live Trial screenshots, HAR, trace, video, raw network JSON, raw ORCA XML/JSON, and credentials remain excluded from retained evidence.
+- Runtime-ready smoke passed with redacted evidence under `20260514T040844Z`.
+- The final live fullflow reached Reception row handoff and Charts, saved the controlled treatment order, then classified close-and-send as `test-data-blocker / close_and_send_guard_blocked` because the normal `診察終了して会計へ送信` CTA was not visible in the existing Trial row state. This is a rooted blocker rather than a silent harness hang or false accounting success.
+
+## CTA Reachability Fix Pass: `20260514T060351Z`
+
+- Charts now reapplies the local encounter status override after appointment/claim refresh during `診察開始`, so a Trial row that starts from `受付中` transitions the embedded header CTA from `診察開始` to `診察終了して会計へ送信` without relying on Reception-side duplicate accept state.
+- The fullflow harness records the normal CTA state after start. The retained button diagnostics show `#charts-action-finish`, label `診察終了して会計へ送信`, `disabled=false`, `ariaDisabled=false`, and `visible=true`.
+- The harness clicked the normal finish CTA, confirmed the `診察終了して会計へ送信の確認` alertdialog, and observed `/api/local/encounters/{encounterKey}/close-and-send-to-billing`.
+- The observed result was HTTP `400`, so it was classified as `trial-business-or-capability-blocker / trial_close_and_send_not_business_accepted:unknown`. This is not an accounting success and is not a repo defect under the Trial exception.
+- Retained evidence uses sanitized route templates and redacted patient context only. No live Trial screenshot, HAR, trace, video, raw ORCA body, credential, or raw encounter URL is retained.

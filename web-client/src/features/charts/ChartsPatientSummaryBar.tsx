@@ -162,10 +162,10 @@ export function ChartsPatientSummaryBar({
   const ageGroup = resolvePatientAgeGroup(patientDisplay.age);
   const sourceAlert = missingMaster
     ? fallbackUsed
-      ? 'ORCA参照不足と暫定参照です。ORCA送信・会計送信前に受付で再取得してください。'
-      : 'ORCA参照不足です。ORCA送信・会計送信前に受付で再取得してください。'
+      ? 'ORCA参照不足 / 暫定参照。ORCA送信・会計送信前に受付で再取得してください。'
+      : 'ORCA参照不足。ORCA送信・会計送信前に受付で再取得してください。'
     : fallbackUsed
-      ? '暫定参照です。ORCA送信・会計送信前に最新データを再取得してください。'
+      ? '暫定参照。ORCA送信・会計送信前に最新データを再取得してください。'
       : undefined;
 
   return (
@@ -233,7 +233,7 @@ export function ChartsPatientSummaryBar({
                 data-testid="charts-patient-summary-source-alert"
                 data-test-id="charts-patient-summary-source-alert"
               >
-                <strong>ORCA正本確認が必要</strong>
+                <strong>ORCA正本確認要</strong>
                 <span>{sourceAlert}</span>
               </div>
             ) : null}

@@ -583,6 +583,37 @@ describe('ChartsActionBar', () => {
     expect(screen.queryByText(/checked_in -> chart_opened/)).not.toBeInTheDocument();
   });
 
+  it('埋め込みCTAは診察開始成功後に診察終了・会計送信へ切り替わる', async () => {
+    const user = userEvent.setup();
+    const onAfterStart = vi.fn().mockResolvedValue({
+      requestId: 'req-start-embedded',
+      traceId: 'trace-start-embedded',
+      encounterKey: 'F001:E200',
+      idempotencyKey: 'idem-start-embedded',
+      detail: 'checked_in -> chart_opened',
+    });
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          embedded
+          compactHeader
+          patientId="P-102"
+          visitDate="2026-01-03"
+          selectedEntry={{ patientId: 'P-102', status: '受付中', visitDate: '2026-01-03' } as any}
+          onAfterStart={onAfterStart}
+        />
+      </MemoryRouter>,
+    );
+
+    const patientInlineGroup = screen.getByRole('group', { name: '患者情報帯の補助操作' });
+    await user.click(within(patientInlineGroup).getByRole('button', { name: '診察開始' }));
+
+    await waitFor(() => expect(onAfterStart).toHaveBeenCalledTimes(1));
+    expect(within(patientInlineGroup).getByRole('button', { name: '診察終了して会計へ送信' })).toBeInTheDocument();
+  });
+
   it('診察開始の afterStart が失敗した場合は success toast を出さず raw detail も表示しない', async () => {
     const user = userEvent.setup();
     const onAfterStart = vi.fn().mockRejectedValue(new Error('encounterKey がないため診察開始を実行できません。'));

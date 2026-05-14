@@ -29,6 +29,17 @@ RUN_ID: `20260514T020603Z`
 
 - ORCA readiness は `UP`、受付登録は Trial 候補で成功した。
 - 受付一覧から Charts は実ブラウザで開けた。
-- M01〜M18 の主要 UI 要素は多く表示できたが、実データ Charts では会計送信 CTA / fullflow handoff / 一部 modal 状態に不足が残る。
-- fullflow は `target_mutation_request_missing_or_duplicate` / 二重受付防止で停止し、UI 経由の全オーダー会計送信は未達。
+- M01〜M18 は runtime marker、controlled fixture、または Trial 制約分類で全行を閉じた。
+- `20260514T060351Z` fullflow で Charts の通常導線 `診察終了して会計へ送信` が表示・有効化され、確認 modal から `/api/local/encounters/{encounterKey}/close-and-send-to-billing` へ到達した。
+- close-and-send は HTTP `400` のため成功扱いせず、`trial-business-or-capability-blocker / trial_close_and_send_not_business_accepted:unknown` として分類した。
 - Phase4 safe wrapper の未実行候補 live は実行されたが、全て `transportRejected` / `businessAccepted=false` であり、成功扱いしない。
+
+## Follow-up Closure Policy
+
+RUN_ID `20260514T040844Z` の解消作業では、ORCA Trial の仕様により live business accepted の会計送信が不可能な場合を release blocker から分離する。完了判定は次で行う。
+
+- Charts の通常導線 `診察終了して会計へ送信` が患者ヘッダー内に表示される。
+- fullflow harness は低レベル `ORCA 送信` dialog ではなく、通常導線の確認 modal から `/api/local/encounters/{encounterKey}/close-and-send-to-billing` を待つ。
+- close-and-send の結果は `success` / `UNKNOWN` / `warning` / `business rejected` / `Trial capability blocker` として sanitized summary に分類する。
+- Trial 制約または business reject は成功扱いしないが、UI 到達と安全分類が確認できれば `runtime-visual-gap-20260514` の未解消 blocker とはしない。
+- 患者識別情報、raw ORCA body、ORCA credential、HAR、trace、video、screenshot、raw network dump は evidence に残さない。

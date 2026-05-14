@@ -56,8 +56,59 @@ if (recordHar) {
   fs.mkdirSync(harDir, { recursive: true });
 }
 
+const fullflowSensitiveKeys = new Set([
+  'appointmentId',
+  'candidateId',
+  'encounterKey',
+  'name',
+  'patientId',
+  'receptionId',
+  'scheduleKey',
+  'selectedPatientId',
+  'targetPatientId',
+  'text',
+  'value',
+]);
+
+function collectFullflowSensitiveTokens(extra = []) {
+  return [process.env.QA_PATIENT_ID, ...extra]
+    .filter((value) => typeof value === 'string' && value.trim().length >= 2)
+    .map((value) => value.trim());
+}
+
+function sanitizeFullflowString(value, sensitiveTokens = collectFullflowSensitiveTokens()) {
+  return sensitiveTokens
+    .reduce(
+      (current, token) => current.split(token).join('<<redacted-patient-context>>'),
+      value
+        .replace(/\/api\/local\/encounters\/[^/\s"')]+/g, '/api/local/encounters/{encounterKey}')
+        .replace(/\/api\/local\/order\/bundles\?[^\\\s"')]+/g, '/api/local/order/bundles?<<redacted-query>>'),
+    );
+}
+
+function sanitizeFullflowEvidence(value, sensitiveTokens = collectFullflowSensitiveTokens()) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizeFullflowEvidence(entry, sensitiveTokens));
+  }
+  if (!value || typeof value !== 'object') {
+    if (typeof value !== 'string') return value;
+    return sanitizeFullflowString(value, sensitiveTokens);
+  }
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entryValue]) => {
+      if (fullflowSensitiveKeys.has(key)) {
+        if (key === 'text') {
+          return [key, entryValue ? '<<redacted-row-text>>' : entryValue];
+        }
+        return [key, entryValue ? `<<redacted-${key}>>` : entryValue];
+      }
+      return [key, sanitizeFullflowEvidence(entryValue, sensitiveTokens)];
+    }),
+  );
+}
+
 const logStep = (label) => {
-  const entry = `[${new Date().toISOString()}] ${label}\n`;
+  const entry = `[${new Date().toISOString()}] ${sanitizeFullflowEvidence(label)}\n`;
   fs.appendFileSync(stepLogPath, entry);
 };
 const safeClose = async (closer) => {
@@ -74,6 +125,28 @@ const withTimeout = async (promise, ms, fallback) =>
       setTimeout(() => resolve(fallback), ms);
     }),
   ]);
+
+const closeAndSendButtonLocator = (page) =>
+  page
+    .locator('#charts-action-finish', { hasText: '診察終了して会計へ送信' })
+    .or(page.getByRole('button', { name: /診察終了して会計へ送信/ }))
+    .first();
+
+const summarizeChartsActionButtons = async (page) =>
+  page
+    .locator('.charts-actions button')
+    .evaluateAll((buttons) =>
+      buttons.map((button) => ({
+        id: button.id || undefined,
+        label: (button.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 80),
+        className: typeof button.className === 'string' ? button.className : undefined,
+        disabled: button.hasAttribute('disabled'),
+        ariaDisabled: button.getAttribute('aria-disabled') ?? undefined,
+        dataDisabledReason: button.getAttribute('data-disabled-reason') ?? undefined,
+        visible: Boolean(button.offsetParent || button.getClientRects().length > 0),
+      })),
+    )
+    .catch(() => []);
 
 const facilityId = resolveQaFacilityId();
 const sessionRole = process.env.QA_ROLE ?? 'admin';
@@ -269,6 +342,11 @@ const isMedicalModV2Url = (url) => {
   return /\/api21\/medicalmodv2(?:$|#)/.test(url);
 };
 
+const isCloseAndSendUrl = (url) =>
+  typeof url === 'string' &&
+  url.includes('/api/local/encounters/') &&
+  url.includes('/close-and-send-to-billing');
+
 const parseJsonObject = (value) => {
   if (!value || typeof value !== 'string') return {};
   try {
@@ -281,12 +359,43 @@ const parseJsonObject = (value) => {
 
 const isAllZeroApiResult = (value) => Boolean(value && /^[0]+$/.test(String(value)));
 
+const classifyHttpStatus = (status) =>
+  typeof status !== 'number'
+    ? 'not_observed'
+    : status >= 500
+      ? '5xx'
+      : status >= 400
+        ? '4xx'
+        : status >= 300
+          ? '3xx'
+          : '2xx';
+
+const classifyCloseAndSendResult = ({ response, body, disabled, leakedQueryKeys }) => {
+  if (leakedQueryKeys.length > 0) return 'repo-defect';
+  if (disabled) return 'test-data-blocker';
+  if (!response) return 'repo-defect';
+  const status = response.status();
+  if (status >= 500) return 'environment-blocker';
+  const operationStatus = String(body.operationStatus ?? body.state ?? '').toUpperCase();
+  const needsReview = body.needsUserReview === true || body.confirmationRequired === true;
+  if (
+    needsReview ||
+    ['UNKNOWN', 'NETWORK_FAILED', 'ORCA_WARNING', 'ORCA_UNMATCHED', 'NEEDS_REVIEW', 'ORCA_FAILED', 'CORRECTION_REQUIRED'].includes(operationStatus)
+  ) {
+    return 'trial-business-or-capability-blocker';
+  }
+  if (status >= 200 && status < 300 && body.ok === true) return 'none';
+  if (status >= 200 && status < 500) return 'trial-business-or-capability-blocker';
+  return 'repo-defect';
+};
+
 const isTarget = (url) =>
   url.includes(MEDICAL_INFORMATION_PROBE_PATH) ||
   url.includes('/api/orca/official/visits/mutation') ||
   url.includes('/api/orca/queue') ||
   url.includes('/orca/queue') ||
   isMedicalModV2Url(url) ||
+  isCloseAndSendUrl(url) ||
   url.includes('/orca21/medicalmodv2/outpatient') ||
   url.includes('/api/orca/official/appointments/list') ||
   url.includes('/api/orca/official/visits/list') ||
@@ -829,6 +938,7 @@ const buildBlockerSummary = (summary) => ({
   acceptMutation: summary.acceptResult?.acceptMutation,
   receptionEntryDiagnostics: summary.receptionEntryDiagnostics,
   chartsHandoff: summary.chartsHandoff,
+  startResult: summary.startResult,
   visitRowReadiness: summary.visitRowReadiness,
   sendResult: {
     status: summary.sendResult?.status,
@@ -840,6 +950,7 @@ const buildBlockerSummary = (summary) => ({
     requestXmlPath: summary.sendResult?.requestXmlPath,
     validation: summary.sendResult?.validation,
   },
+  closeAndSendResult: summary.closeAndSendResult,
   orderResult: summary.orderResult,
   prescriptionResult: summary.prescriptionResult,
   billingResult: summary.billingResult,
@@ -924,19 +1035,20 @@ const classifyMedicalInformationGateFailure = (gate) => {
 
 const persistArtifacts = (summary) => {
   lastSummary = summary;
+  const sanitizedSummary = sanitizeFullflowEvidence(summary);
   if (!sanitizedEvidenceOnly) {
-    fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2));
-    fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2));
+    fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(sanitizeFullflowEvidence(networkRecords), null, 2));
+    fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(sanitizeFullflowEvidence(requestRecords), null, 2));
   }
-  fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2));
-  fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2));
+  fs.writeFileSync(consoleJsonPath, JSON.stringify(sanitizeFullflowEvidence(consoleMessages), null, 2));
+  fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(sanitizeFullflowEvidence(pageErrors), null, 2));
   if (lastMedicalmodv2RequestXml && !sanitizedEvidenceOnly) {
     fs.writeFileSync(medicalmodv2XmlPath, lastMedicalmodv2RequestXml, 'utf8');
   }
-  fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2));
-  fs.writeFileSync(blockerSummaryJsonPath, JSON.stringify(buildBlockerSummary(summary), null, 2));
-  fs.writeFileSync(handoffStateJsonPath, JSON.stringify(persistedHandoffState(), null, 2));
-  fs.writeFileSync(selectedVisitRowJsonPath, JSON.stringify(sanitizeSelectedVisitRow(lastSelectedVisitRow), null, 2));
+  fs.writeFileSync(summaryJsonPath, JSON.stringify(sanitizedSummary, null, 2));
+  fs.writeFileSync(blockerSummaryJsonPath, JSON.stringify(buildBlockerSummary(sanitizedSummary), null, 2));
+  fs.writeFileSync(handoffStateJsonPath, JSON.stringify(sanitizeFullflowEvidence(persistedHandoffState()), null, 2));
+  fs.writeFileSync(selectedVisitRowJsonPath, JSON.stringify(sanitizeFullflowEvidence(sanitizeSelectedVisitRow(lastSelectedVisitRow)), null, 2));
 };
 
 const buildSummaryMarkdown = (summary) =>
@@ -954,10 +1066,11 @@ const buildSummaryMarkdown = (summary) =>
   `- Accept Mutation: ${summary.acceptResult?.acceptMutation?.businessSuccessClassification ?? 'unknown'}\n` +
   `- Reception Active Entries: ${summary.receptionEntryDiagnostics?.activeRows ?? 'unknown'} / keyed ${summary.receptionEntryDiagnostics?.keyedActiveRows ?? 'unknown'}\n` +
   `- Charts Handoff: ${summary.chartsHandoff?.status ?? 'unknown'}\n` +
+  `- Start Result: ${summary.startResult?.status ?? 'unknown'}\n` +
   `- Visit Row Readiness: ${summary.visitRowReadiness ?? 'unknown'}\n` +
   `- Order Result: ${summary.orderResult?.status ?? 'unknown'}\n` +
   `- Prescription Result: ${summary.prescriptionResult?.status ?? 'unknown'}\n` +
-  `- ORCA Send: ${summary.sendResult?.status ?? 'unknown'}\n` +
+  `- Close And Send: ${summary.closeAndSendResult?.status ?? summary.sendResult?.status ?? 'unknown'}\n` +
   `- Blocker: ${summary.blockerClassification}\n` +
   (summary.blockerReason ? `- Blocker Reason: ${summary.blockerReason}\n` : '') +
   (summary.fatalError ? `- Fatal Error: ${summary.fatalError}\n` : '') +
@@ -970,7 +1083,7 @@ const buildSummaryMarkdown = (summary) =>
   `- Console: console.json\n` +
   `- Page errors: page-errors.json\n` +
   `${sanitizedEvidenceOnly ? '' : '- Network: network/network.json\n- Requests: network/requests.json\n'}` +
-  `${sanitizedEvidenceOnly ? '' : '- Request XML: request-xml/medicalmodv2.xml\n'}` +
+  `${!sanitizedEvidenceOnly && summary.sendResult?.requestXmlPath ? `- Request XML: ${summary.sendResult.requestXmlPath}\n` : ''}` +
   `${browserArtifactsDisabled ? '' : '- Screenshots: screenshots/\n'}` +
   `${recordHar ? '- HAR: har/network.har\n' : ''}` +
   `\n## Rerun\n\n` +
@@ -1445,6 +1558,54 @@ const run = async () => {
   const chartsTraceId = await chartsMeta.getAttribute('data-trace-id', { timeout: 5000 }).catch(() => null);
 
   const chartsShot = await writeScreenshot(page, '04-charts-open');
+
+  let startResult = { status: 'not-visible', detail: '診察開始 CTA was not visible; assuming encounter is already past start state' };
+  const startButton = page.getByRole('button', { name: '診察開始' }).first();
+  const startVisible = await withTimeout(startButton.isVisible().catch(() => false), 3000, false);
+  if (startVisible) {
+    const startDisabled = await withTimeout(startButton.isDisabled().catch(() => false), 3000, false);
+    const startDisabledReason = await withTimeout(startButton.getAttribute('data-disabled-reason').catch(() => null), 3000, null);
+    if (startDisabled) {
+      startResult = {
+        status: 'guarded',
+        detail: startDisabledReason ?? '診察開始 CTA is disabled',
+      };
+      logStep(`start guarded reason=${startResult.detail}`);
+    } else {
+      const transitionResponsePromise = page
+        .waitForResponse((response) => response.url().includes('/api/encounters/') && response.url().includes('/transitions'), {
+          timeout: 30000,
+        })
+        .catch(() => null);
+      await startButton.click({ force: true }).catch((error) => {
+        startResult = { status: 'click-error', detail: String(error) };
+        logStep(`start click error=${String(error)}`);
+      });
+      if (startResult.status !== 'click-error') {
+        logStep('clicked start');
+        const transitionResponse = await transitionResponsePromise;
+        const startToast = page.locator('.charts-actions__toast', { hasText: '診察開始を完了' });
+        const startToastVisible = await withTimeout(startToast.waitFor({ timeout: 45000 }).then(() => true).catch(() => false), 45000, false);
+        logStep(`start completion toast=${String(startToastVisible)}`);
+        await page.waitForTimeout(500);
+        const actionButtonsAfterStart = await summarizeChartsActionButtons(page);
+        logStep(`charts action buttons after start=${JSON.stringify(actionButtonsAfterStart)}`);
+        const finishButtonAfterStart = closeAndSendButtonLocator(page);
+        const finishAppeared = await withTimeout(
+          finishButtonAfterStart.isVisible().catch(() => false),
+          10000,
+          false,
+        );
+        startResult = {
+          status: transitionResponse ? String(transitionResponse.status()) : 'transition-not-observed',
+          detail: finishAppeared ? 'finish CTA visible after start' : 'finish CTA not visible after start',
+        };
+        logStep(`start result=${startResult.status} detail=${startResult.detail}`);
+      }
+    }
+  } else {
+    logStep('start CTA not visible; continuing to finish precheck');
+  }
 
   let orderResult = { status: 'skipped', detail: 'not attempted' };
   if (resetLocalAllOrderBundles) {
@@ -1925,15 +2086,51 @@ const run = async () => {
     logStep('prescription fallback not configured');
   }
 
-  const finishButton = page.getByRole('button', { name: /診療終了|診察終了/ });
-  const finishVisible = await finishButton.isVisible({ timeout: 3000 }).catch(() => false);
-  const finishDisabled = finishVisible ? await finishButton.isDisabled().catch(() => false) : true;
-  const finishDisabledReason = finishVisible ? await finishButton.getAttribute('data-disabled-reason').catch(() => null) : 'not_visible';
+  const finishButton = closeAndSendButtonLocator(page);
+  const finishVisible = await withTimeout(finishButton.isVisible().catch(() => false), 3000, false);
+  const finishDisabled = finishVisible ? await withTimeout(finishButton.isDisabled().catch(() => false), 3000, false) : true;
+  const finishDisabledReason = finishVisible
+    ? await withTimeout(finishButton.getAttribute('data-disabled-reason').catch(() => null), 3000, null)
+    : 'not_visible';
+  const finishGuard = page.locator('#charts-actions-finish-guard');
+  const finishGuardText = (await withTimeout(finishGuard.textContent().catch(() => ''), 3000, '')) ?? '';
+  const guardSummaryText =
+    (await withTimeout(page.locator('.charts-actions__guard-summary').textContent().catch(() => ''), 3000, '')) ?? '';
   if (finishVisible && !finishDisabled) {
+    const closeAndSendResponsePromise = page
+      .waitForResponse((response) => isCloseAndSendUrl(response.url()), { timeout: 60000 })
+      .catch(() => null);
+    const closeAndSendRequestPromise = page
+      .waitForEvent('request', {
+        predicate: (request) => isCloseAndSendUrl(request.url()),
+        timeout: 60000,
+      })
+      .catch(() => null);
     await finishButton.click({ force: true }).catch((error) => {
       logStep(`finish click error=${String(error)}`);
     });
     logStep('clicked finish');
+    const dialog = page.getByRole('alertdialog', { name: '診察終了して会計へ送信の確認' });
+    const dialogVisible = await dialog
+      .waitFor({ timeout: 10000 })
+      .then(() => true)
+      .catch(() => false);
+    if (dialogVisible) {
+      await dialog.getByRole('button', { name: '診察終了して会計へ送信' }).click();
+      logStep('confirmed close-and-send');
+    } else {
+      logStep('close-and-send dialog not shown');
+    }
+    var closeAndSendResponse = await closeAndSendResponsePromise;
+    var closeAndSendRequest = await closeAndSendRequestPromise;
+    logStep(`close-and-send response=${closeAndSendResponse ? closeAndSendResponse.status() : 'none'}`);
+    if (closeAndSendRequest) {
+      const reqBody = closeAndSendRequest.postData() ?? '';
+      logStep(`close-and-send request=${closeAndSendRequest.url()} bodyBytes=${reqBody.length}`);
+    } else {
+      logStep('close-and-send request=none');
+    }
+    var closeAndSendDialogVisible = dialogVisible;
   } else {
     logStep(`finish disabled=${finishDisabledReason ?? 'unknown'}`);
   }
@@ -1958,190 +2155,71 @@ const run = async () => {
       logStep(`navigator online reset error=${String(error)}`);
     });
 
-  const sendButton = page.getByRole('button', { name: 'ORCA 送信' });
-  const approvalUnlockButton = page.getByRole('button', { name: '承認ロック解除' });
-  const approvalUnlockVisible = await approvalUnlockButton.isVisible().catch(() => false);
-  if (approvalUnlockVisible) {
-    const approvalUnlockDisabled = await approvalUnlockButton.isDisabled().catch(() => false);
-    if (!approvalUnlockDisabled) {
-      await approvalUnlockButton.click();
-      logStep('approval unlock clicked');
-      await page.waitForTimeout(1200);
-    } else {
-      logStep('approval unlock disabled');
-    }
-  }
-  const sendDisabled = await sendButton.isDisabled().catch(() => false);
-  const sendDisabledReason = await sendButton.getAttribute('data-disabled-reason').catch(() => null);
-  const sendGuard = page.locator('#charts-actions-send-guard');
-  const sendGuardText = (await sendGuard.textContent().catch(() => '')) ?? '';
-  const guardSummaryText = (await page.locator('.charts-actions__guard-summary').textContent().catch(() => '')) ?? '';
+  closeAndSendResponse ??= null;
+  closeAndSendRequest ??= null;
+  closeAndSendDialogVisible ??= false;
+  const finishButtonAttrs = finishVisible
+    ? await withTimeout(
+        finishButton
+          .evaluate((button) => ({
+            className: button.className,
+            ariaDisabled: button.getAttribute('aria-disabled'),
+            ariaDescribedBy: button.getAttribute('aria-describedby'),
+            dataDisabledReason: button.getAttribute('data-disabled-reason'),
+          }))
+          .catch(() => null),
+        3000,
+        null,
+      )
+    : null;
   const visitRowReadiness =
-    sendDisabled && /(Insurance_Combination_Number|Voucher_Number|Sequential_Number)/.test(`${sendGuardText} ${sendDisabledReason ?? ''}`)
+    finishDisabled && /(Insurance_Combination_Number|Voucher_Number|Sequential_Number)/.test(`${finishGuardText} ${finishDisabledReason ?? ''}`)
       ? 'missing_official_visit_identifiers'
-      : sendDisabled
+      : finishDisabled
         ? 'blocked_for_other_reason'
         : 'ready';
-  logStep(`orca send precheck disabled=${String(sendDisabled)} reason=${sendDisabledReason ?? '—'}`);
-  if (sendGuardText.trim()) logStep(`orca send guard=${sendGuardText.replaceAll('\n', ' ').trim()}`);
-  if (guardSummaryText.trim()) logStep(`orca send guardSummary=${guardSummaryText.replaceAll('\n', ' ').trim()}`);
-  let dialogVisible = false;
-  let sendResponsePromise = Promise.resolve(null);
-  let requestCapturePromise = Promise.resolve(null);
-  if (!sendDisabled) {
-    sendResponsePromise = page
-      .waitForResponse(
-        (response) =>
-          isMedicalModV2Url(response.url()) ||
-          response.url().includes('/orca21/medicalmodv2/outpatient'),
-        { timeout: 60000 },
-      )
-      .catch(() => null);
+  logStep(`close-and-send precheck disabled=${String(finishDisabled)} reason=${finishDisabledReason ?? '—'}`);
+  if (finishGuardText.trim()) logStep(`close-and-send guard=${finishGuardText.replaceAll('\n', ' ').trim()}`);
+  if (guardSummaryText.trim()) logStep(`close-and-send guardSummary=${guardSummaryText.replaceAll('\n', ' ').trim()}`);
 
-    requestCapturePromise = page
-      .waitForEvent('request', {
-        predicate: (request) =>
-          isMedicalModV2Url(request.url()) || request.url().includes('/orca21/medicalmodv2/outpatient'),
-        timeout: 60000,
-      })
-      .catch(() => null);
-
-    await sendButton.click({ force: true }).catch((error) => {
-      logStep(`orca send click error=${String(error)}`);
-    });
-    logStep('clicked orca send');
-    const dialog = page.getByRole('alertdialog', { name: 'ORCA送信の確認' });
-    dialogVisible = await dialog
-      .waitFor({ timeout: 10000 })
-      .then(() => true)
-      .catch(() => false);
-    if (dialogVisible) {
-      await dialog.getByRole('button', { name: '送信する' }).click();
-      logStep('confirmed orca send');
-    } else {
-      logStep('orca send dialog not shown');
-      // Fallback: force-run send handler if dialog was not rendered.
-      const fallbackTriggered = await page
-        .evaluate(() => {
-          const hook = window.__chartsActionBarDebug;
-          if (hook && typeof hook.triggerSend === 'function') {
-            hook.triggerSend();
-            return true;
-          }
-          return false;
-        })
-        .catch(() => false);
-      logStep(`orca send fallback=${fallbackTriggered ? 'triggered' : 'unavailable'}`);
-    }
-  } else {
-    logStep(`orca send disabled=${sendDisabledReason ?? 'unknown'}`);
-  }
-
-  const [sendResponse, sendRequest] = await Promise.all([sendResponsePromise, requestCapturePromise]);
-  await page.waitForTimeout(2000);
-  logStep(`orca send response=${sendResponse ? sendResponse.status() : 'none'}`);
-  if (sendRequest) {
-    const reqBody = sendRequest.postData() ?? '';
-    logStep(`orca send request=${sendRequest.url()} bodyBytes=${reqBody.length}`);
-  } else {
-    logStep('orca send request=none');
-  }
-
-  // Fallback: resolve the latest captured record if Playwright waiters missed it.
-  const fallbackMedicalModRecord = [...networkRecords]
+  const fallbackCloseAndSendRecord = [...networkRecords]
     .reverse()
-    .find((r) => typeof r?.url === 'string' && isMedicalModV2Url(r.url));
-  const sendResponseBodyText = sendResponse
-    ? await sendResponse.text().catch(() => '')
-    : (fallbackMedicalModRecord?.response?.body ? String(fallbackMedicalModRecord.response.body) : '');
+    .find((r) => typeof r?.url === 'string' && isCloseAndSendUrl(r.url));
+  const sendResponse = closeAndSendResponse;
+  const sendRequest = closeAndSendRequest;
+  const sendResponseBodyText = closeAndSendResponse
+    ? await closeAndSendResponse.text().catch(() => '')
+    : (fallbackCloseAndSendRecord?.response?.body ? String(fallbackCloseAndSendRecord.response.body) : '');
   const sendResponseBody = parseJsonObject(sendResponseBodyText);
   const sendBusinessOk = Boolean(
-    sendResponse &&
-      sendResponse.status() >= 200 &&
-      sendResponse.status() < 300 &&
+    closeAndSendResponse &&
+      closeAndSendResponse.status() >= 200 &&
+      closeAndSendResponse.status() < 300 &&
       sendResponseBody.ok === true &&
-      (sendResponseBody.apiOk === true || isAllZeroApiResult(sendResponseBody.apiResult)),
+      sendResponseBody.needsUserReview !== true &&
+      sendResponseBody.confirmationRequired !== true,
   );
+  const validation = {
+    ok: Boolean(closeAndSendResponse),
+    payloadKind: 'close-and-send-to-billing',
+    routeTemplate: '/api/local/encounters/{encounterKey}/close-and-send-to-billing',
+    httpStatusClass: classifyHttpStatus(closeAndSendResponse?.status()),
+    rawSensitiveFieldsExcluded: true,
+  };
+  logStep(`close-and-send validation=${JSON.stringify(validation)}`);
 
-  const medicalmodv2RequestBody =
-    (sendRequest && isMedicalModV2Url(sendRequest.url()) ? sendRequest.postData() : null) ??
-    (fallbackMedicalModRecord?.request?.postData ? String(fallbackMedicalModRecord.request.postData) : '');
-  lastMedicalmodv2RequestXml = medicalmodv2RequestBody.trim().startsWith('<') ? medicalmodv2RequestBody : '';
-
-  const validation = (() => {
-    const body = medicalmodv2RequestBody ?? '';
-    if (!body) return { ok: false, reason: 'no_request_body' };
-    const trimmed = body.trim();
-    if (trimmed.startsWith('{')) {
-      let parsed;
-      try {
-        parsed = JSON.parse(trimmed);
-      } catch {
-        return { ok: false, reason: 'invalid_request_json', requestBodyBytes: body.length };
-      }
-      const groups = Array.isArray(parsed?.medicalInformation) ? parsed.medicalInformation : [];
-      const medicationRows = groups.flatMap((group) => (Array.isArray(group?.medications) ? group.medications : []));
-      const codeOk = expectedMedicationCode
-        ? medicationRows.some((medication) => medication?.code === expectedMedicationCode)
-        : undefined;
-      const numOk = expectedMedicationNumber
-        ? medicationRows.some(
-            (medication) => medication?.code === expectedMedicationCode && medication?.number === expectedMedicationNumber,
-          )
-        : undefined;
-      return {
-        ok: groups.length > 0 && medicationRows.length > 0 && (codeOk ?? true) && (numOk ?? true),
-        payloadKind: 'json',
-        expectedMedicationCode: expectedMedicationCode || undefined,
-        expectedMedicationNumber: expectedMedicationNumber || undefined,
-        codeFound: codeOk,
-        numberFound: numOk,
-        medicalInformationGroups: groups.length,
-        medicationRows: medicationRows.length,
-        requestBodyBytes: body.length,
-      };
-    }
-    const xml = body;
-    const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const hasXmlTagValue = (tagName, expectedValue) => {
-      if (!expectedValue) return undefined;
-      const pattern = new RegExp(`<${tagName}[^>]*>\\s*${escapeRegex(expectedValue)}\\s*</${tagName}>`);
-      return pattern.test(xml);
-    };
-    const codeOk = expectedMedicationCode ? hasXmlTagValue('Medication_Code', expectedMedicationCode) : undefined;
-    const numOk = expectedMedicationNumber ? hasXmlTagValue('Medication_Number', expectedMedicationNumber) : undefined;
-    return {
-      ok: Boolean(xml) && (codeOk ?? true) && (numOk ?? true),
-      payloadKind: 'xml',
-      expectedMedicationCode: expectedMedicationCode || undefined,
-      expectedMedicationNumber: expectedMedicationNumber || undefined,
-      codeFound: codeOk,
-      numberFound: numOk,
-      requestXmlBytes: xml.length,
-    };
-  })();
-  logStep(`medicalmodv2 validation=${JSON.stringify(validation)}`);
-
-  const sendToastText = (await finishToast.textContent().catch(() => '')) ?? '';
-  const sendBannerText = (await page.locator('.charts-actions__banner').innerText().catch(() => '')) ?? '';
-  await writeScreenshot(page, '07-charts-orca-send');
-  const sendDialogShot = dialogVisible ? await writeScreenshot(page, '07a-charts-orca-send-dialog') : null;
-  const sendButtonAttrs = await sendButton
-    .evaluate((button) => ({
-      className: button.className,
-      ariaDisabled: button.getAttribute('aria-disabled'),
-      ariaDescribedBy: button.getAttribute('aria-describedby'),
-      dataDisabledReason: button.getAttribute('data-disabled-reason'),
-    }))
-    .catch(() => null);
-  if (sendButtonAttrs) {
-    logStep(`orca send attrs=${JSON.stringify(sendButtonAttrs)}`);
+  const sendToastText = (await withTimeout(finishToast.textContent().catch(() => ''), 3000, '')) ?? '';
+  const sendBannerText =
+    (await withTimeout(page.locator('.charts-actions__banner').innerText().catch(() => ''), 3000, '')) ?? '';
+  const sendDialogShot = closeAndSendDialogVisible ? await writeScreenshot(page, '07a-close-and-send-dialog') : null;
+  if (finishButtonAttrs) {
+    logStep(`close-and-send attrs=${JSON.stringify(finishButtonAttrs)}`);
   }
 
   let billingResult = { status: 'skipped', detail: 'not attempted' };
   try {
-    const billingButton = page.getByRole('button', { name: '会計へ' });
-    if (await billingButton.isVisible().catch(() => false)) {
+    const billingButton = page.getByRole('button', { name: '会計へ' }).first();
+    if (await withTimeout(billingButton.isVisible().catch(() => false), 3000, false)) {
       await billingButton.click();
       await page.waitForURL('**/reception**', { timeout: 10000 });
       await page.waitForTimeout(1500);
@@ -2157,22 +2235,52 @@ const run = async () => {
   await safeClose(() => context.close());
   await safeClose(() => browser.close());
 
+  const closeAndSendResult = {
+    status: sendResponse ? String(sendResponse.status()) : 'no-response',
+    routeTemplate: '/api/local/encounters/{encounterKey}/close-and-send-to-billing',
+    httpStatusClass: classifyHttpStatus(sendResponse?.status()),
+    url: sendResponse ? sendResponse.url() : '',
+    ok: sendResponseBody.ok === true,
+    state: typeof sendResponseBody.state === 'string' ? sendResponseBody.state : undefined,
+    operationStatus: typeof sendResponseBody.operationStatus === 'string' ? sendResponseBody.operationStatus : undefined,
+    needsUserReview: sendResponseBody.needsUserReview === true,
+    confirmationRequired: sendResponseBody.confirmationRequired === true,
+    apiResult: typeof sendResponseBody.apiResult === 'string' ? sendResponseBody.apiResult : undefined,
+    apiResultMessage: typeof sendResponseBody.apiResultMessage === 'string' ? sendResponseBody.apiResultMessage : undefined,
+    disabled: finishDisabled,
+    disabledReason: finishDisabledReason ?? undefined,
+    guard: finishGuardText.trim() || undefined,
+    guardSummary: guardSummaryText.trim() || undefined,
+    dialog: closeAndSendDialogVisible ? 'shown' : 'not-shown',
+    dialogShot: sendDialogShot ?? undefined,
+    buttonAttrs: finishButtonAttrs ?? undefined,
+    requestUrl: sendRequest?.url() ?? undefined,
+    requestBodyBytes: sendRequest?.postData()?.length ?? undefined,
+    rawSensitiveFieldsExcluded: true,
+    validation,
+  };
+  const closeAndSendBlockerClassification = classifyCloseAndSendResult({
+    response: sendResponse,
+    body: sendResponseBody,
+    disabled: finishDisabled,
+    leakedQueryKeys,
+  });
   const blockerReason =
     sendBusinessOk
       ? undefined
-      : sendResponse && sendResponse.status() >= 200 && sendResponse.status() < 300
-        ? `orca_business_rejected:${sendResponseBody.apiResult ?? 'unknown'}`
       : leakedQueryKeys.length > 0
         ? `privacy_contract_violation:${leakedQueryKeys.join(',')}`
         : visitRowReadiness === 'missing_official_visit_identifiers'
           ? 'visit_row_official_identifiers_missing'
-          : networkRecords.some((record) => record.status >= 500)
-            ? 'upstream_or_environment_failure'
-            : pageErrors.length > 0
-              ? 'repo_runtime_error'
-              : sendDisabled
-                ? 'send_guard_blocked'
-                : 'unknown';
+          : pageErrors.length > 0
+            ? 'repo_runtime_error'
+            : finishDisabled
+              ? 'close_and_send_guard_blocked'
+              : sendResponse && sendResponse.status() >= 200 && sendResponse.status() < 500
+                ? `trial_close_and_send_not_business_accepted:${sendResponseBody.operationStatus ?? sendResponseBody.state ?? sendResponseBody.apiResult ?? 'unknown'}`
+                : networkRecords.some((record) => record.status >= 500)
+                  ? 'upstream_or_environment_failure'
+                  : 'close_and_send_response_missing';
 
   const summary = {
     runId,
@@ -2209,6 +2317,7 @@ const run = async () => {
     receptionRowStatus,
     receptionEntryDiagnostics,
     chartsHandoff,
+    startResult,
     visitRowReadiness,
     charts: {
       chartsRunId,
@@ -2218,26 +2327,26 @@ const run = async () => {
     orderResult,
     prescriptionResult,
     finishToastText,
+    closeAndSendResult,
     sendResult: {
-      status: sendResponse ? String(sendResponse.status()) : 'no-response',
-      url: sendResponse ? sendResponse.url() : '',
-      ok: sendResponseBody.ok,
-      apiOk: sendResponseBody.apiOk,
-      apiResult: sendResponseBody.apiResult,
-      apiResultMessage: sendResponseBody.apiResultMessage,
+      status: closeAndSendResult.status,
+      url: closeAndSendResult.url,
+      ok: closeAndSendResult.ok,
+      apiOk: closeAndSendResult.ok,
+      apiResult: closeAndSendResult.apiResult,
+      apiResultMessage: closeAndSendResult.apiResultMessage,
       toast: sendToastText,
       banner: sendBannerText.trim() || undefined,
-      disabled: sendDisabled,
-      disabledReason: sendDisabledReason ?? undefined,
-      guard: sendGuardText.trim() || undefined,
+      disabled: closeAndSendResult.disabled,
+      disabledReason: closeAndSendResult.disabledReason,
+      guard: closeAndSendResult.guard,
       guardSummary: guardSummaryText.trim() || undefined,
-      dialog: dialogVisible ? 'shown' : 'not-shown',
-      dialogShot: sendDialogShot ?? undefined,
-      buttonAttrs: sendButtonAttrs ?? undefined,
-      requestUrl: sendRequest?.url() ?? undefined,
-      requestBodyBytes: sendRequest?.postData()?.length ?? undefined,
-      requestXmlPath:
-        lastMedicalmodv2RequestXml && !sanitizedEvidenceOnly ? 'request-xml/medicalmodv2.xml' : undefined,
+      dialog: closeAndSendResult.dialog,
+      dialogShot: closeAndSendResult.dialogShot,
+      buttonAttrs: closeAndSendResult.buttonAttrs,
+      requestUrl: closeAndSendResult.requestUrl,
+      requestBodyBytes: closeAndSendResult.requestBodyBytes,
+      requestXmlPath: undefined,
       validation,
     },
     billingResult,
@@ -2252,25 +2361,8 @@ const run = async () => {
           charts: chartsShot,
         },
     blockerReason,
-    blockerClassification:
-      sendBusinessOk
-        ? 'none'
-        : sendResponse && sendResponse.status() >= 200 && sendResponse.status() < 300
-          ? 'orca-business-rejected'
-        : leakedQueryKeys.length > 0
-          ? 'repo-defect'
-        : visitRowReadiness === 'missing_official_visit_identifiers'
-          ? 'official-visit-row-blocker'
-        : networkRecords.some((record) => record.status >= 500)
-          ? 'environment-blocker'
-          : pageErrors.length > 0
-            ? 'repo-defect'
-            : sendDisabled
-              ? 'test-data-blocker'
-              : 'repo-defect',
-    evidencePaths: buildEvidencePaths({
-      requestXml: lastMedicalmodv2RequestXml ? 'request-xml/medicalmodv2.xml' : undefined,
-    }),
+    blockerClassification: closeAndSendBlockerClassification,
+    evidencePaths: buildEvidencePaths(),
   };
   if (summary.blockerClassification !== SELECTOR_OPTION_MISSING_BLOCKER && summary.medicalInformationGate.ok === false) {
     summary.blockerClassification = 'repo-defect';
@@ -2278,7 +2370,7 @@ const run = async () => {
   }
 
   persistArtifacts(summary);
-  fs.writeFileSync(summaryMdPath, buildSummaryMarkdown(summary));
+  fs.writeFileSync(summaryMdPath, buildSummaryMarkdown(sanitizeFullflowEvidence(summary)));
 
   console.log(`QA log written: ${summaryMdPath}`);
   console.log(`Screenshots: ${screenshotDir}`);
@@ -2322,6 +2414,7 @@ run().catch(async (error) => {
       },
       receptionEntryDiagnostics: lastHandoffState?.receptionEntryDiagnostics,
       chartsHandoff: { status: 'error' },
+      startResult: { status: 'not-run', detail: 'fatal before start step completed' },
       visitRowReadiness: 'unknown',
       orderResult: { status: 'not-run' },
       sendResult: {
@@ -2347,7 +2440,7 @@ run().catch(async (error) => {
     summary.blockerReason = classifyMedicalInformationGateFailure(summary.medicalInformationGate);
   }
   persistArtifacts(summary);
-  fs.writeFileSync(summaryMdPath, buildSummaryMarkdown(summary));
+  fs.writeFileSync(summaryMdPath, buildSummaryMarkdown(sanitizeFullflowEvidence(summary)));
   await safeClose(() => activeContext?.close?.());
   await safeClose(() => activeBrowser?.close?.());
   console.error(error);

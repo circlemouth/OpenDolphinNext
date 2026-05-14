@@ -93,6 +93,65 @@ const safeUrlPath = (value) => {
   }
 };
 
+const evidenceSensitiveKeys = new Set([
+  'appointmentId',
+  'encounterKey',
+  'name',
+  'patientId',
+  'receptionId',
+  'scheduleKey',
+  'smokeEncounterKey',
+  'smokePatientDisplayName',
+  'smokePatientId',
+  'smokeScheduleKey',
+  'text',
+]);
+
+const collectSensitiveEvidenceTokens = (evidence) => {
+  const entry = evidence?.smokeEntry ?? evidence ?? {};
+  return [
+    entry.encounterKey,
+    entry.scheduleKey,
+    entry.receptionId,
+    entry.appointmentId,
+    entry.patientId,
+    entry.name,
+    requestedPatientId,
+    requestedSmokePatientDisplayName,
+  ]
+    .filter((value) => typeof value === 'string' && value.trim().length >= 2)
+    .map((value) => value.trim());
+};
+
+const sanitizeForEvidence = (value, sensitiveTokens = []) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeForEvidence(item, sensitiveTokens));
+  }
+  if (!value || typeof value !== 'object') {
+    if (typeof value !== 'string') return value;
+    return sensitiveTokens.reduce(
+      (current, token) => current.split(token).join('<<redacted-patient-context>>'),
+      value,
+    );
+  }
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entryValue]) => {
+      if (evidenceSensitiveKeys.has(key)) {
+        if (key === 'text') {
+          return [key, entryValue ? '<<redacted-row-text>>' : entryValue];
+        }
+        return [key, entryValue ? `<<redacted-${key}>>` : entryValue];
+      }
+      return [key, sanitizeForEvidence(entryValue, sensitiveTokens)];
+    }),
+  );
+};
+
+const writeSanitizedJson = (filePath, evidence, sensitiveSource = null) => {
+  const tokens = collectSensitiveEvidenceTokens(sensitiveSource ?? evidence?.appointmentEvidence ?? evidence);
+  fs.writeFileSync(filePath, JSON.stringify(sanitizeForEvidence(evidence, tokens), null, 2), 'utf8');
+};
+
 const summarizeJsonBody = (body) => {
   if (!body) return { bodyChars: 0 };
   try {
@@ -154,12 +213,8 @@ const writeRuntimeReadyBlocker = async ({ page, code, detail, appointmentEvidenc
     liveMutationExecuted: false,
     ...extra,
   };
-  fs.writeFileSync(
-    path.join(artifactRoot, 'runtime-ready-before-row-wait.json'),
-    JSON.stringify(evidence, null, 2),
-    'utf8',
-  );
-  fs.writeFileSync(path.join(artifactRoot, 'runtime-ready-result.json'), JSON.stringify(evidence, null, 2), 'utf8');
+  writeSanitizedJson(path.join(artifactRoot, 'runtime-ready-before-row-wait.json'), evidence, appointmentEvidence);
+  writeSanitizedJson(path.join(artifactRoot, 'runtime-ready-result.json'), evidence, appointmentEvidence);
 };
 
 const summarizeRequestLog = (records) =>
@@ -504,10 +559,10 @@ try {
       responses: summarizeResponseLog(responseLog),
     },
   };
-  fs.writeFileSync(
+  writeSanitizedJson(
     path.join(artifactRoot, 'runtime-ready-before-row-wait.json'),
-    JSON.stringify(beforeRowWaitEvidence, null, 2),
-    'utf8',
+    beforeRowWaitEvidence,
+    appointmentEvidence,
   );
 
   let rowResolution;
@@ -527,19 +582,15 @@ try {
       activeStatusTab: afterTimeoutEvidence.activeStatusTab,
       selectedDate: afterTimeoutEvidence.selectedDate,
     });
-    fs.writeFileSync(
+    writeSanitizedJson(
       path.join(artifactRoot, 'runtime-ready-row-wait-failure.json'),
-      JSON.stringify(
-        {
-          runId,
-          failureClassification,
-          locatorAttempts: error.locatorAttempts ?? [],
-          evidence: afterTimeoutEvidence,
-        },
-        null,
-        2,
-      ),
-      'utf8',
+      {
+        runId,
+        failureClassification,
+        locatorAttempts: error.locatorAttempts ?? [],
+        evidence: afterTimeoutEvidence,
+      },
+      appointmentEvidence,
     );
     throw new Error(`runtime-ready row wait failed: ${failureClassification.code}; ${failureClassification.detail}`);
   }
@@ -628,6 +679,7 @@ try {
   });
   let startSelector = 'skipped_start_action_not_visible';
   let startSkippedReason = 'encounter_not_in_reception_start_state';
+  let summaryRefetchObservedAfterStart = false;
   if (startActionVisible) {
     startSelector = await clickFirstVisible(page, [
       '.charts-patient-summary__primary-action--start',
@@ -642,9 +694,12 @@ try {
       30_000,
     );
     await page.waitForTimeout(1500);
-    await waitFor(
+    summaryRefetchObservedAfterStart = await waitFor(
       () => responseLog.filter((entry) => entry.url.includes('/api/local/encounters/')).length >= summaryResponseCountBeforeStart + 1,
       30_000,
+    ).then(
+      () => true,
+      () => false,
     );
     await page.waitForTimeout(1000);
   }
@@ -699,6 +754,7 @@ try {
       uiAfterStart,
       startSelector,
       startSkippedReason,
+      summaryRefetchObservedAfterStart,
     },
     traces: {
       summaryRequests: summarizeRequestLog(requestLog.filter((entry) => entry.url.includes('/api/local/encounters/'))),
@@ -717,7 +773,7 @@ try {
     },
   };
 
-  fs.writeFileSync(path.join(artifactRoot, 'runtime-ready-result.json'), JSON.stringify(result, null, 2));
+  writeSanitizedJson(path.join(artifactRoot, 'runtime-ready-result.json'), result, appointmentEvidence);
   const blockedRouteSummary = Object.entries(blockedRouteHits).filter(([, count]) => count > 0);
   if (blockedRouteSummary.length > 0) {
     throw new Error(
@@ -726,7 +782,7 @@ try {
         .join(', ')}`,
     );
   }
-  console.log(JSON.stringify({ artifactRoot, result }, null, 2));
+  console.log(JSON.stringify(sanitizeForEvidence({ artifactRoot, result }, collectSensitiveEvidenceTokens(appointmentEvidence)), null, 2));
 } finally {
   await context.close();
   await browser.close();
