@@ -122,6 +122,14 @@ export type PrescriptionAuthorityMutationResult = {
   raw?: unknown;
 };
 
+type CreatePrescriptionAuthorityDraftParams = {
+  patientId: string;
+  encounterId?: string;
+  chartRevisionId?: string;
+  order: PrescriptionOrder;
+  fallbackMessage: string;
+};
+
 export type PrescriptionClaimCommentCodeIssue = {
   rpIndex: number;
   drugIndex: number;
@@ -1378,20 +1386,18 @@ export async function savePrescriptionOrder(params: {
       `RP${claimCommentNumberIssue.rpIndex + 1} ${commentTarget}: ${claimCommentNumberIssue.message}`,
     );
   }
-  const payload = toServerPrescriptionOrder(normalizedOrder);
-  const response = await httpFetch('/api/local/prescription-orders', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  const parsed = await parseOrcaApiResponse(response, {
+  assertPrescriptionAuthorityDraftHasItems(normalizedOrder, '処方オーダーの保存');
+  const parsed = await createPrescriptionAuthorityDraft({
+    patientId: params.patientId,
+    encounterId: normalizedOrder.encounterId,
+    order: normalizedOrder,
     fallbackMessage: '処方オーダーの保存に失敗しました。',
   });
   return {
     ok: parsed.ok,
-    runId: parsed.runId ?? runId,
+    runId: parsed.runId,
     message: parsed.message,
-    raw: parsed.json ?? parsed.text,
+    raw: parsed.raw,
   };
 }
 
@@ -1436,20 +1442,30 @@ export async function finalizePrescriptionAuthority(params: {
     patientId: params.patientId,
     encounterId,
   });
-  const createResponse = await httpFetch('/api/local/prescription-orders/authority', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      patientId: params.patientId,
-      encounterId,
-      chartRevisionId: params.chartRevisionId,
-      order: toServerPrescriptionOrder(normalizedOrder),
-    }),
-  });
-  const createParsed = await parseOrcaApiResponse(createResponse, {
+  const claimCommentCodeIssue = findFirstPrescriptionClaimCommentCodeIssue(normalizedOrder);
+  if (claimCommentCodeIssue) {
+    const commentTarget =
+      claimCommentCodeIssue.drugIndex >= 0 ? `薬剤${claimCommentCodeIssue.drugIndex + 1}` : 'RPコメント';
+    throw new Error(
+      `RP${claimCommentCodeIssue.rpIndex + 1} ${commentTarget}: 請求コメントコード未入力のコメントは保存できません。`,
+    );
+  }
+  const claimCommentNumberIssue = findFirstStructuredPrescriptionClaimCommentIssue(normalizedOrder);
+  if (claimCommentNumberIssue) {
+    const commentTarget =
+      claimCommentNumberIssue.drugIndex >= 0 ? `薬剤${claimCommentNumberIssue.drugIndex + 1}` : 'RPコメント';
+    throw new Error(
+      `RP${claimCommentNumberIssue.rpIndex + 1} ${commentTarget}: ${claimCommentNumberIssue.message}`,
+    );
+  }
+  assertPrescriptionAuthorityDraftHasItems(normalizedOrder, '処方確定');
+  const created = await createPrescriptionAuthorityDraft({
+    patientId: params.patientId,
+    encounterId,
+    chartRevisionId: params.chartRevisionId,
+    order: normalizedOrder,
     fallbackMessage: '処方確定の準備に失敗しました。',
   });
-  const created = parsePrescriptionAuthorityMutationResult(createParsed, runId);
   if (!created.ok || typeof created.prescriptionId !== 'number') {
     return created.ok
       ? {
@@ -1476,6 +1492,42 @@ export async function finalizePrescriptionAuthority(params: {
   });
   return parsePrescriptionAuthorityMutationResult(finalizeParsed, created.runId ?? runId);
 }
+
+const assertPrescriptionAuthorityDraftHasItems = (
+  order: PrescriptionOrder,
+  actionLabel: string,
+) => {
+  const hasDrug = order.rps.some((rp) => rp.drugs.some((drug) => drug.name.trim()));
+  if (hasDrug) {
+    return;
+  }
+  throw new Error(`${actionLabel}には少なくとも1件の薬剤が必要です。`);
+};
+
+const createPrescriptionAuthorityDraft = async ({
+  patientId,
+  encounterId,
+  chartRevisionId,
+  order,
+  fallbackMessage,
+}: CreatePrescriptionAuthorityDraftParams): Promise<PrescriptionAuthorityMutationResult> => {
+  const runId = getObservabilityMeta().runId ?? generateRunId();
+  updateObservabilityMeta({ runId });
+  const response = await httpFetch('/api/local/prescription-orders/authority', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      patientId,
+      encounterId,
+      chartRevisionId,
+      order: toServerPrescriptionOrder(order),
+    }),
+  });
+  const parsed = await parseOrcaApiResponse(response, {
+    fallbackMessage,
+  });
+  return parsePrescriptionAuthorityMutationResult(parsed, runId);
+};
 
 export const fetchPrescriptionOrderBundlesWithPatientImportRecovery = async (params: {
   patientId: string;

@@ -2037,7 +2037,7 @@ const run = async () => {
             encounterId,
           };
           rpCount = Array.isArray(order.rps) ? order.rps.length : rpCount;
-          const response = await fetch('/api/local/prescription-orders', {
+          const response = await fetch('/api/local/prescription-orders/authority', {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
@@ -2045,7 +2045,11 @@ const run = async () => {
               'X-Run-Id': targetRunId,
               'X-CSRF-Token': csrfToken,
             },
-            body: JSON.stringify(order),
+            body: JSON.stringify({
+              patientId: targetPatientId,
+              encounterId,
+              order,
+            }),
           });
           const text = await response.text().catch(() => '');
           results.push({
