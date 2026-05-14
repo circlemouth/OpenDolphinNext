@@ -18,16 +18,30 @@ type OrderSummaryPaneProps = {
   orderBundlesLoading?: boolean;
   orderBundlesError?: string;
   onBundleSelect?: (payload: { group: OrderGroupKey; entity: OrderEntity; bundle: OrderBundle }) => void;
+  onCategoryAdd?: (payload: { group: OrderGroupKey; entity: OrderEntity }) => void;
+  onCategorySelect?: (payload: { group: OrderGroupKey; entity: OrderEntity; hasRows: boolean }) => void;
   onBundleDeleteRequest?: (payload: { group: OrderGroupKey; entity: OrderEntity; bundle: OrderBundle; label: string }) => void;
-  onDocumentSelect?: () => void;
   activeOrderPanel?: ReactNode;
   activeOrderTitle?: string;
+  activeCategory?: OrderGroupKey | null;
+  selectedCategory?: OrderGroupKey | null;
+  emptyCategoryAddState?: Partial<Record<OrderGroupKey, { disabled?: boolean; reason?: string; pending?: boolean }>>;
+  rightPaneMode?: 'summary' | 'edit';
+  inlineEditorMode?: 'summary' | 'edit';
   onActiveOrderClose?: () => void;
   documentPanel?: ReactNode;
   documentPanelVisible?: boolean;
   onDocumentClose?: () => void;
   orcaPanel?: ReactNode;
   notice?: { tone: 'success' | 'error'; message: string } | null;
+};
+
+const ORDER_CATEGORY_ADD_LABELS: Record<OrderGroupKey, string> = {
+  prescription: '処方',
+  injection: '注射',
+  treatment: '処置',
+  test: '検査',
+  charge: '算定',
 };
 
 const renderCardBody = (row: OrderDetailDisplayViewModel) => {
@@ -69,10 +83,16 @@ export function OrderSummaryPane({
   orderBundlesLoading = false,
   orderBundlesError,
   onBundleSelect,
+  onCategoryAdd,
+  onCategorySelect,
   onBundleDeleteRequest,
-  onDocumentSelect,
   activeOrderPanel,
   activeOrderTitle,
+  activeCategory = null,
+  selectedCategory = null,
+  emptyCategoryAddState,
+  rightPaneMode,
+  inlineEditorMode,
   onActiveOrderClose,
   documentPanel,
   documentPanelVisible = false,
@@ -87,21 +107,45 @@ export function OrderSummaryPane({
 
   const contentDisabled = orderBundlesLoading || Boolean(orderBundlesError);
   const hasAnyOrderBundle = groupedBundles.some((group) => group.key !== 'document' && group.rows.length > 0);
-  const visibleCategories = groupedBundles.filter((category) => category.key === 'document' || category.rows.length > 0);
+  const visibleCategories = groupedBundles.filter((category) => category.key !== 'document');
+  const resolvedRightPaneMode = rightPaneMode ?? (activeOrderPanel || documentPanelVisible ? 'edit' : 'summary');
+  const firstNonEmptyCategory = visibleCategories.find((category) => category.rows.length > 0)?.groupKey ?? null;
+  const resolvedSelectedCategory: OrderGroupKey = selectedCategory ?? activeCategory ?? firstNonEmptyCategory ?? 'prescription';
+  const selectedCategoryModel =
+    visibleCategories.find((category) => category.groupKey === resolvedSelectedCategory) ?? visibleCategories[0] ?? null;
+  const selectedGroupKey: OrderGroupKey = selectedCategoryModel?.groupKey ?? resolvedSelectedCategory;
+  const selectedAddState = emptyCategoryAddState?.[selectedGroupKey];
+  const selectedAddReasonId = 'charts-order-add-block-reason';
+  const globalAddBlockReason = visibleCategories
+    .map((category) => (category.groupKey ? emptyCategoryAddState?.[category.groupKey]?.reason : undefined))
+    .find((reason): reason is string => Boolean(reason));
+  const activeEditorSelected = Boolean(activeOrderPanel && activeCategory === selectedGroupKey);
+  const resolvedInlineEditorMode = inlineEditorMode ?? (activeEditorSelected ? 'edit' : 'summary');
+
+  const triggerCategoryAdd = (category: OrderDetailDisplayCategoryViewModel | null) => {
+    const groupKey = category?.groupKey;
+    if (!groupKey || !category?.defaultEntity) return;
+    const addState = emptyCategoryAddState?.[groupKey];
+    if (addState?.disabled) return;
+    onCategoryAdd?.({ group: groupKey, entity: category.defaultEntity });
+  };
 
   return (
     <aside
       id="charts-order-pane"
-      className="soap-note__paper soap-note__center-panel-only"
+      className="soap-note__paper soap-note__order-workspace"
       aria-label="オーダー概要"
       tabIndex={-1}
       data-focus-anchor="true"
       data-loading={orderBundlesLoading ? '1' : '0'}
       data-error={orderBundlesError ? '1' : '0'}
+      data-right-pane-mode={resolvedRightPaneMode}
+      data-inline-editor-mode={resolvedInlineEditorMode}
     >
       <header className="soap-note__paper-header">
         <div>
-          <strong>オーダー概要</strong>
+          <strong>当日オーダー</strong>
+          <p className="soap-note__paper-meta">内容確認と編集をこの列で行います。</p>
         </div>
       </header>
 
@@ -113,90 +157,145 @@ export function OrderSummaryPane({
         </p>
       ) : null}
       {!contentDisabled && !hasAnyOrderBundle ? (
-        <p className="soap-note__paper-empty">当日のオーダーはありません。</p>
+        <p className="soap-note__paper-empty">当日のオーダーはありません。必要な分野から追加してください。</p>
+      ) : null}
+      {!contentDisabled ? (
+        <p className="soap-note__paper-empty soap-note__order-safety-note">
+          追加は下書き入力であり、処方確定・ORCA送信・会計済みではありません。
+        </p>
+      ) : null}
+      {!contentDisabled && globalAddBlockReason ? (
+        <p id={selectedAddReasonId} className="soap-note__paper-empty soap-note__paper-empty--error" role="status">
+          編集はブロックされています: {globalAddBlockReason}
+        </p>
       ) : null}
 
       {!contentDisabled ? (
-        <div className="soap-note__order-groups">
+        <>
+        <nav className="soap-note__order-category-strip" aria-label="オーダー分野">
           {visibleCategories.map((category) => {
+            const groupKey = category.groupKey ?? (category.key as OrderGroupKey);
+            const hasRows = category.rows.length > 0;
+            const active = selectedGroupKey === groupKey;
             return (
-              <section key={`summary-group-${category.key}`} className="soap-note__order-group" data-group={category.key}>
-                <header className="soap-note__order-group-header">
-                  <strong>{category.label}</strong>
-                  <span className="soap-note__order-group-meta">
-                    {category.key === 'document' ? '編集' : `${category.rows.length}件`}
-                  </span>
-                </header>
-
-                {category.key === 'document' ? (
-                  <button
-                    type="button"
-                    className="order-dock__search-result soap-note__summary-card"
-                    onClick={() => onDocumentSelect?.()}
-                    aria-label="文書を編集"
-                    title="文書を編集"
-                  >
-                    <p className="soap-note__summary-meta">入力者不明 医師 日時不明</p>
-                    <div className="soap-note__summary-body">
-                      <p className="soap-note__summary-detail">文書名: 文書情報なし</p>
-                      <p className="soap-note__summary-detail">本文情報なし</p>
-                    </div>
-                  </button>
-                ) : (
-                  <ul className="soap-note__order-list">
-                    {category.rows.map((row) => (
-                      <li key={`summary-bundle-${row.id}`} className="soap-note__order-item">
-                        <button
-                          type="button"
-                          className="order-dock__search-result soap-note__summary-card"
-                          onClick={() => onBundleSelect?.({ group: row.group, entity: row.entity, bundle: row.bundle })}
-                          aria-label={`${row.bundleLabel}を編集`}
-                          title={`${category.label}を編集`}
-                        >
-                          <p className="soap-note__summary-meta">{row.operatorLine}</p>
-                          {renderCardBody(row)}
-                        </button>
-                        {onBundleDeleteRequest ? (
-                          <div className="soap-note__summary-card-actions" role="group" aria-label={`${row.bundleLabel}操作`}>
-                            <button
-                              type="button"
-                              className="order-dock__bundle-action order-dock__bundle-action--danger"
-                              onClick={() =>
-                                onBundleDeleteRequest({
-                                  group: row.group,
-                                  entity: row.entity,
-                                  bundle: row.bundle,
-                                  label: row.bundleLabel,
-                                })
-                              }
-                              aria-label={`${row.bundleLabel}を削除`}
-                            >
-                              削除
-                            </button>
-                          </div>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
+              <button
+                key={`summary-category-${category.key}`}
+                type="button"
+                className="soap-note__order-category-chip"
+                data-active={active ? 'true' : 'false'}
+                data-empty={hasRows ? 'false' : 'true'}
+                aria-pressed={active}
+                onClick={() => {
+                  if (!category.defaultEntity) return;
+                  onCategorySelect?.({ group: groupKey, entity: category.defaultEntity, hasRows });
+                }}
+              >
+                <span>{category.label}</span>
+                <span className="soap-note__order-category-count">{category.rows.length}</span>
+              </button>
             );
           })}
-        </div>
-      ) : null}
+        </nav>
+        {selectedCategoryModel ? (
+          <section
+            className="soap-note__order-group soap-note__order-selected"
+            data-group={selectedCategoryModel.key}
+            data-active="true"
+            data-empty={selectedCategoryModel.rows.length > 0 ? 'false' : 'true'}
+          >
+            <header className="soap-note__order-group-header">
+              <div>
+                <strong>{selectedCategoryModel.label}</strong>
+                <p className="soap-note__order-group-submeta">
+                  {activeEditorSelected
+                    ? '入力欄をこの列で編集中'
+                    : selectedCategoryModel.rows.length > 0
+                      ? `${selectedCategoryModel.rows.length}件の当日オーダー`
+                      : '未入力'}
+                </p>
+              </div>
+              {!activeEditorSelected && selectedCategoryModel.rows.length > 0 ? (
+                <button
+                  type="button"
+                  className="order-dock__bundle-action order-dock__bundle-action--primary"
+                  onClick={() => triggerCategoryAdd(selectedCategoryModel)}
+                  aria-disabled={selectedAddState?.disabled ? 'true' : undefined}
+                  aria-describedby={selectedAddState?.reason ? selectedAddReasonId : undefined}
+                  data-disabled-reason={selectedAddState?.disabled ? 'order_category_add_blocked' : undefined}
+                  title={selectedAddState?.reason ?? `${ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}を追加`}
+                >
+                  ＋{ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}
+                </button>
+              ) : null}
+            </header>
 
-      {activeOrderPanel ? (
-        <section className="soap-note__order-group" data-group="active-order-editor">
-          <header className="soap-note__order-group-header">
-            <strong>{activeOrderTitle ?? 'オーダー編集'}</strong>
-            {onActiveOrderClose ? (
-              <button type="button" className="order-dock__bundle-action" onClick={onActiveOrderClose}>
-                閉じる
-              </button>
-            ) : null}
-          </header>
-          {activeOrderPanel}
-        </section>
+            {activeEditorSelected ? (
+              <section className="soap-note__inline-order-editor" data-group="active-order-editor">
+                <header className="soap-note__order-group-header">
+                  <strong>{activeOrderTitle ?? `${selectedCategoryModel.label}入力`}</strong>
+                  {onActiveOrderClose ? (
+                    <button type="button" className="order-dock__bundle-action" onClick={onActiveOrderClose}>
+                      閉じる
+                    </button>
+                  ) : null}
+                </header>
+                {activeOrderPanel}
+              </section>
+            ) : selectedCategoryModel.rows.length > 0 ? (
+              <ul className="soap-note__order-list">
+                {selectedCategoryModel.rows.map((row) => (
+                  <li key={`summary-bundle-${row.id}`} className="soap-note__order-item">
+                    <button
+                      type="button"
+                      className="order-dock__search-result soap-note__summary-card"
+                      onClick={() => onBundleSelect?.({ group: row.group, entity: row.entity, bundle: row.bundle })}
+                      aria-label={`${row.bundleLabel}を編集`}
+                      title={`${selectedCategoryModel.label}を編集`}
+                    >
+                      <p className="soap-note__summary-meta">{row.operatorLine}</p>
+                      {renderCardBody(row)}
+                    </button>
+                    {onBundleDeleteRequest ? (
+                      <div className="soap-note__summary-card-actions" role="group" aria-label={`${row.bundleLabel}操作`}>
+                        <button
+                          type="button"
+                          className="order-dock__bundle-action order-dock__bundle-action--danger"
+                          onClick={() =>
+                            onBundleDeleteRequest({
+                              group: row.group,
+                              entity: row.entity,
+                              bundle: row.bundle,
+                              label: row.bundleLabel,
+                            })
+                          }
+                          aria-label={`${row.bundleLabel}を削除`}
+                        >
+                          削除
+                        </button>
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="soap-note__order-empty-inline">
+                <p>この分野は未入力です。右ペイン内で直接入力できます。</p>
+                <button
+                  type="button"
+                  className="order-dock__bundle-action order-dock__bundle-action--primary"
+                  onClick={() => triggerCategoryAdd(selectedCategoryModel)}
+                  aria-disabled={selectedAddState?.disabled ? 'true' : undefined}
+                  aria-describedby={selectedAddState?.reason ? selectedAddReasonId : undefined}
+                  data-disabled-reason={selectedAddState?.disabled ? 'order_category_add_blocked' : undefined}
+                  title={selectedAddState?.reason ?? `${ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}を追加`}
+                >
+                  ＋{ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}入力
+                </button>
+              </div>
+            )}
+          </section>
+        ) : null}
+        </>
       ) : null}
 
       {documentPanelVisible && documentPanel ? (

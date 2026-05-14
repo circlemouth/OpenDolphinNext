@@ -106,8 +106,9 @@ GUI 改修ではこの文書の safety contract を下回らず、ORCA送信失�
 - `SoapNotePanel` の利用者向け見出しは `カルテ本文` とし、内部向けの `Primary Workspace` や折りたたみの記載メタ情報は通常表示に置きません。
 - page CTA の owner は `ChartsActionBar` です。通常 UI の primary は `診察終了して会計へ送信` で、`ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。低レベル `ORCA送信` direct bridge は debug / QA / focused test 用に限定し、通常画面の初回会計送信導線には出しません。
 - `PastHubPanel` は左列の historical reference / Do 補助 surface であり、comparison 専用主面ではありません。
-- runtime right rail は `処方 / 注射 / 処置 / 検査 / 算定` の order-facing chooser-only surface です。`document` / `ORCA` / embedded editor は right rail に含めません。
-- オーダー truth editor、`文書を編集` entry は center primary 側に置き、right rail は chooser source と handoff だけを担います。`OrcaSummary` は開発用表示時だけ center primary 側に追加します。
+- Charts の右オーダーペインは当日オーダーの表示・編集主UIです。`処方 / 注射 / 処置 / 検査 / 算定` は件数付きカテゴリチップとして常時到達可能にし、選択中カテゴリだけに要約または embedded editor を表示します。空カテゴリは大きな説明カードを並べず、右ペイン内で直接入力フォームへ入ります。
+- runtime right rail は `処方 / 注射 / 処置 / 検査 / 算定` の chooser / support surface です。`document` / `ORCA` / embedded editor は right rail に含めません。候補、セット、文書、ショートカットは右端レール/ドロワー側に寄せ、右オーダーペインの常時表示領域を奪いません。
+- オーダー truth editor は右オーダーペイン内に置きます。`文書を編集` entry は order editor ではなく support entry として扱い、`OrcaSummary` は開発用表示時だけ center primary 側に追加します。
 - `latest-follow` は `SoapNotePanel` / `PastHubPanel` / `ChartsActionBar` の局所補助として存在し、独立 route はありません。
 - `OrcaSummary` は Charts 内部の開発/運用確認用 panel です。通常 UI では表示せず、`showDebugUi` 有効時のみ `ORCA確認（開発用）` として表示します。
 - 通常 UI の ORCA 送信可否・印刷可否は `ChartsActionBar` の guard reason / action state で扱い、`OrcaSummary` の `Workflow / 院内ローカル診療サマリ`、`Transmission / medical-mod-v2`、`ORCA収納情報` は page CTA owner を奪いません。

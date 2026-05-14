@@ -11,7 +11,7 @@ const requireElement = <T extends Element>(element: T | null): T => {
 };
 
 describe('OrderSummaryPane category display', () => {
-  it('右側サマリは非空カテゴリ+文書を表示し、詳細カードを表示する', () => {
+  it('右側サマリはカテゴリチップを常時表示し、選択カテゴリだけに詳細カードを表示する', () => {
     const prescriptionBundle: OrderBundle = {
       entity: 'medOrder',
       bundleName: '降圧薬RP',
@@ -69,21 +69,17 @@ describe('OrderSummaryPane category display', () => {
 
     const summaryPane = screen.getByLabelText('オーダー概要');
     const groups = summaryPane.querySelectorAll('.soap-note__order-group');
-    expect(groups.length).toBe(6);
+    expect(groups.length).toBe(1);
 
     const prescriptionGroup = requireElement(summaryPane.querySelector('.soap-note__order-group[data-group="prescription"]'));
-    const injectionGroup = requireElement(summaryPane.querySelector('.soap-note__order-group[data-group="injection"]'));
-    const treatmentGroup = requireElement(summaryPane.querySelector('.soap-note__order-group[data-group="treatment"]'));
-    const testGroup = requireElement(summaryPane.querySelector('.soap-note__order-group[data-group="test"]'));
-    const chargeGroup = requireElement(summaryPane.querySelector('.soap-note__order-group[data-group="charge"]'));
-    const documentGroup = requireElement(summaryPane.querySelector('.soap-note__order-group[data-group="document"]'));
 
+    expect(screen.getByRole('button', { name: '処方 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '点滴・注射 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '処置 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '検査 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '算定 1' })).toBeInTheDocument();
     expect(prescriptionGroup).toHaveTextContent('処方');
-    expect(injectionGroup).toHaveTextContent('点滴・注射');
-    expect(treatmentGroup).toHaveTextContent('処置');
-    expect(testGroup).toHaveTextContent('検査');
-    expect(chargeGroup).toHaveTextContent('算定');
-    expect(documentGroup).toHaveTextContent('文書');
+    expect(summaryPane.querySelector('.soap-note__order-group[data-group="document"]')).toBeNull();
 
     expect(summaryPane).not.toHaveTextContent('降圧薬RP');
     expect(summaryPane).not.toHaveTextContent('注射セットA');
@@ -91,11 +87,85 @@ describe('OrderSummaryPane category display', () => {
     expect(prescriptionGroup).toHaveTextContent('RP1');
     expect(prescriptionGroup).toHaveTextContent('【後発変更不可】');
     expect(prescriptionGroup).toHaveTextContent('薬剤量: 1錠');
-    expect(documentGroup).toHaveTextContent('文書名: 文書情報なし');
-    expect(documentGroup).toHaveTextContent('本文情報なし');
     expect(summaryPane.querySelector('.soap-note__order-group-rail')).toBeNull();
     expect(summaryPane.querySelector('.soap-note__right-dock-button')).toBeNull();
     expect(summaryPane.querySelector('.order-dock__subtype-tab')).toBeNull();
+  });
+
+  it('カテゴリチップ選択と選択カテゴリの追加ボタンから新規編集ペイロードを返す', async () => {
+    const user = userEvent.setup();
+    const onCategorySelect = vi.fn();
+    const onCategoryAdd = vi.fn();
+
+    const { rerender } = render(
+      <OrderSummaryPane
+        orderBundles={[]}
+        prescriptionBundles={[]}
+        onCategorySelect={onCategorySelect}
+        onCategoryAdd={onCategoryAdd}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '点滴・注射 0' }));
+    expect(onCategorySelect).toHaveBeenCalledWith({ group: 'injection', entity: 'injectionOrder', hasRows: false });
+
+    await user.click(screen.getByRole('button', { name: '＋処方入力' }));
+    rerender(
+      <OrderSummaryPane
+        orderBundles={[]}
+        prescriptionBundles={[]}
+        selectedCategory="injection"
+        onCategorySelect={onCategorySelect}
+        onCategoryAdd={onCategoryAdd}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: '＋注射入力' }));
+
+    expect(onCategoryAdd).toHaveBeenNthCalledWith(1, { group: 'prescription', entity: 'medOrder' });
+    expect(onCategoryAdd).toHaveBeenNthCalledWith(2, { group: 'injection', entity: 'injectionOrder' });
+  });
+
+  it('空カテゴリ追加がブロック中でもnative disabledにせず近傍理由を示す', async () => {
+    const user = userEvent.setup();
+    const onCategoryAdd = vi.fn();
+
+    render(
+      <OrderSummaryPane
+        orderBundles={[]}
+        prescriptionBundles={[]}
+        onCategoryAdd={onCategoryAdd}
+        emptyCategoryAddState={{ prescription: { disabled: true, reason: 'マスター未同期のため編集できません。' } }}
+      />,
+    );
+
+    const addButton = screen.getByRole('button', { name: '＋処方入力' });
+    expect(addButton).not.toBeDisabled();
+    expect(addButton).toHaveAttribute('aria-disabled', 'true');
+    expect(addButton).toHaveAttribute('aria-describedby', 'charts-order-add-block-reason');
+    expect(screen.getByText('編集はブロックされています: マスター未同期のため編集できません。')).toBeInTheDocument();
+
+    await user.click(addButton);
+    expect(onCategoryAdd).not.toHaveBeenCalled();
+  });
+
+  it('空カテゴリに activeOrderPanel がある場合はその場に直接フォームを表示する', () => {
+    render(
+      <OrderSummaryPane
+        orderBundles={[]}
+        prescriptionBundles={[]}
+        selectedCategory="prescription"
+        activeCategory="prescription"
+        activeOrderTitle="処方入力"
+        activeOrderPanel={<div>コンパクト処方フォーム</div>}
+        inlineEditorMode="edit"
+      />,
+    );
+
+    const summaryPane = screen.getByLabelText('オーダー概要');
+    expect(summaryPane).toHaveAttribute('data-inline-editor-mode', 'edit');
+    expect(screen.getByText('入力欄をこの列で編集中')).toBeInTheDocument();
+    expect(screen.getByText('コンパクト処方フォーム')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '＋処方入力' })).not.toBeInTheDocument();
   });
 
   it('処方は prescriptionBundles を優先してクリック時に編集ペイロードを返す', async () => {
@@ -140,14 +210,10 @@ describe('OrderSummaryPane category display', () => {
     });
   });
 
-  it('文書カードクリックで文書編集導線を呼び出す', async () => {
-    const user = userEvent.setup();
-    const onDocumentSelect = vi.fn();
+  it('文書編集ランチャーは右オーダーペインには表示しない', () => {
+    render(<OrderSummaryPane orderBundles={[]} />);
 
-    render(<OrderSummaryPane orderBundles={[]} onDocumentSelect={onDocumentSelect} />);
-
-    await user.click(screen.getByRole('button', { name: '文書を編集' }));
-    expect(onDocumentSelect).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: '文書を編集' })).not.toBeInTheDocument();
   });
 
   it('処方の bundleNumber ラベルは classCode/timing 規約に従って 日数/回数 を表示する', () => {
