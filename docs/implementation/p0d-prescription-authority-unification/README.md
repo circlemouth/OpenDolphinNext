@@ -97,21 +97,16 @@ P0-D「処方 authority route の taxonomy 内移動と hash chain」を完了�
 - web-client authority finalize path:
   - `web-client/src/features/charts/__tests__/prescriptionOrderApi.test.ts`
 
-### Integration gaps still visible in this worktree
+### Integration status after A/B/C/D/E merge
 
-- route inventory test still expects legacy mutation routes to exist:
+- route inventory no longer exposes legacy mutation routes:
   - `POST /api/local/prescription-orders`
   - `POST /api/local/prescription-orders/do-import`
-- web-client save path still targets `POST /api/local/prescription-orders`.
-- `PrescriptionAuthorityRepository.loadOrderForUpdate` still loads by `prescription_order_id` only, so cross-facility rejection is not yet proven by focused prescription tests.
-- no explicit focused test currently proves:
-  - old local write route absence,
-  - `do-import` absence,
-  - `orca_prescription_orders` source write prohibition,
-  - web-client old local write endpoint non-use,
-  - unauthorized prescription operation rejection.
-
-Subagent E does not mask these gaps with docs. They remain final-gate blockers until A/B/C/D land and the inventory in [final-validation-checklist.md](final-validation-checklist.md) turns green.
+  - any `PUT/PATCH/DELETE /api/local/prescription-orders*`
+- web-client save/finalize paths use `/api/local/prescription-orders/authority` and do not keep the old local write endpoint as fallback.
+- `PrescriptionAuthorityRepository.loadOrderForUpdate` now requires `facility_id + prescription_order_id`; cross-facility misses fail closed as not found.
+- `orca_prescription_orders` is projection-only. Repository `save` rejects writes and DB trigger rejects direct `INSERT/UPDATE/DELETE`.
+- focused tests now cover old route absence, `do-import` absence, source write prohibition, web-client old endpoint non-use, facility spoofing, cross-facility rejection, unauthorized missing-facility rejection, finalized write guard, append-only event guard, and hash tamper detection.
 
 ## Deliverable Guidance
 
@@ -131,6 +126,6 @@ Subagent E does not mask these gaps with docs. They remain final-gate blockers u
   - result: 19 tests passed
 - web focused command:
   - pretest `verify:web-guard`: pass
-  - targeted Vitest run: blocked by missing `vitest` binary in this worktree environment
+  - targeted Vitest run in Subagent D worktree: pass, 32 tests
 
 Detailed command results and residual risks are recorded in [subagent-e-tests-docs-deliverable-report.md](subagent-e-tests-docs-deliverable-report.md).

@@ -1,6 +1,6 @@
 # P0-D Final Validation Checklist
 
-RUN_ID: `20260514T202715Z`
+RUN_ID: `20260514T201736Z`
 
 ## Usage
 
@@ -10,18 +10,18 @@ P0-D 統合後、A/B/C/D/E の変更を 1 つの accepted head に揃えてか�
 
 | Requirement | Required evidence | Current evidence in this worktree | Status |
 | --- | --- | --- | --- |
-| route inventory | `PublicRouteInventoryContractTest`, `WebXmlEndpointExposureTest` | テスト自体は存在 | `PARTIAL` |
-| taxonomy-external route detection | `PublicRouteInventoryContractTest`, `orcaRouteTaxonomyGuard.test.ts` | `/api/prescriptions` negative assertion はある | `PASS` |
-| old local write route absence | `PublicRouteInventoryContractTest` で absence を assert | 現在は legacy route を expected set に含めている | `BLOCKED` |
-| `do-import` absence | `PublicRouteInventoryContractTest` で absence を assert | 現在は legacy route を expected set に含めている | `BLOCKED` |
-| facility header spoofing | `PatientModV2OutpatientResourceIdempotencyTest` | `X-Facility-Id` 偽装を無視して remote user facility を使う検証あり | `PASS` |
-| cross-facility prescription rejection | `PrescriptionAuthorityResourceTest` または repository/resource focused test | 処方 authority 専用の focused rejection test は未確認 | `BLOCKED` |
-| finalized write guard | `PrescriptionAuthoritySchemaTest`, `LocalPrescriptionOrderResourceTest`, `check-finalized-write-guards.sh` | FINAL row/revision/item overwrite denial と append-only denial あり | `PASS` |
-| event hash chain | `PrescriptionAuthoritySchemaTest` | `previous_event_hash` / `event_hash` を使う verifier test あり | `PASS` |
+| route inventory | `PublicRouteInventoryContractTest`, `WebXmlEndpointExposureTest` | expected route inventory から legacy local write/import route を削除し、authority route だけを mutation として許可 | `PASS` |
+| taxonomy-external route detection | `PublicRouteInventoryContractTest`, `orcaRouteTaxonomyGuard.test.ts` | `/api/prescriptions` negative assertion を維持 | `PASS` |
+| old local write route absence | `PublicRouteInventoryContractTest` で absence を assert | `POST /api/local/prescription-orders` と any `PUT/PATCH/DELETE /api/local/prescription-orders*` の absence を assert | `PASS` |
+| `do-import` absence | `PublicRouteInventoryContractTest` で absence を assert | `POST /api/local/prescription-orders/do-import` の absence を assert | `PASS` |
+| facility header spoofing | `PrescriptionAuthorityResourceTest`, `PatientModV2OutpatientResourceIdempotencyTest` | `X-Facility-Id` 偽装を無視し、remote user facility を repository へ渡す検証あり | `PASS` |
+| cross-facility prescription rejection | `PrescriptionAuthorityRepositoryFacilityTest` | `facility_id + prescription_order_id` lookup miss を `prescription_order_not_found` で fail closed | `PASS` |
+| finalized write guard | `PrescriptionAuthoritySchemaTest`, `check-finalized-write-guards.sh` | FINAL row/revision/item overwrite/delete denial と append-only denial あり | `PASS` |
+| event hash chain | `PrescriptionAuthoritySchemaTest`, `PrescriptionAuthorityRepository` | create/finalize/change/stop/cancel/reissue/resend が `insertEvent` 経由で `previous_event_hash` / `event_hash` を投入 | `PASS` |
 | hash tamper detection | `PrescriptionAuthoritySchemaTest` | historical event 改ざんで `event_hash_mismatch` を検出 | `PASS` |
-| `orca_prescription_orders` source write prohibition | repository/schema focused test or repo guard | 専用 focused test / guard を未確認 | `BLOCKED` |
-| web-client old local write endpoint non-use | `prescriptionOrderApi.test.ts` などで authority-only を assert | finalize authority path はあるが save path はまだ legacy route | `BLOCKED` |
-| unauthorized prescription operation | authority resource focused test for unauthenticated/unauthorized failure | 処方 authority 専用 focused test は未確認 | `BLOCKED` |
+| `orca_prescription_orders` source write prohibition | `PrescriptionOrderRepositoryTest`, `PrescriptionAuthoritySchemaTest` | repository `save` と DB trigger が direct write を拒否 | `PASS` |
+| web-client old local write endpoint non-use | `prescriptionOrderApi.test.ts`, `prescriptionOrderLocalRoundtripBoundary.test.ts`, `orderSendSmoke.test.ts` | save/finalize と smoke mocks を authority route に更新し、旧 write endpoint を fallback にしない | `PASS` |
+| unauthorized prescription operation | `PrescriptionAuthorityResourceTest` | remote user/facility 欠落時は header 偽装があっても 401、repository mutation は未実行 | `PASS` |
 
 ## Final Commands
 
@@ -30,10 +30,12 @@ bash server-modernized/tools/ci/check-doc-links.sh
 bash server-modernized/tools/ci/check-config-contract.sh
 bash server-modernized/tools/ci/check-finalized-write-guards.sh --root "$(git rev-parse --show-toplevel)"
 mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=PublicRouteInventoryContractTest,WebXmlEndpointExposureTest,PatientModV2OutpatientResourceIdempotencyTest,PrescriptionAuthorityResourceTest,PrescriptionAuthoritySchemaTest \
+  -Dtest=PublicRouteInventoryContractTest,WebXmlEndpointExposureTest,PatientModV2OutpatientResourceIdempotencyTest,PrescriptionAuthorityResourceTest,PrescriptionAuthorityRepositoryFacilityTest,PrescriptionAuthoritySchemaTest,PrescriptionAuthorityStructuredItemTest,PrescriptionOrderRepositoryTest,FreshSchemaBaselineTest \
   test
 cd web-client && npm test -- --run \
   src/features/charts/__tests__/prescriptionOrderApi.test.ts \
+  src/features/charts/__tests__/prescriptionOrderLocalRoundtripBoundary.test.ts \
+  src/features/charts/__tests__/orderSendSmoke.test.ts \
   scripts/__tests__/orcaRouteTaxonomyGuard.test.ts
 ```
 
