@@ -64,6 +64,20 @@ const resetSoapMockState = () => {
   };
 };
 
+const tabLockMockState = vi.hoisted(() => ({
+  current: {
+    status: 'none',
+    tabSessionId: 'tab-1',
+    storageKey: null as string | null,
+    isReadOnly: false,
+    readOnlyReason: undefined as string | undefined,
+    ownerRunId: undefined as string | undefined,
+    ownerTabSessionId: undefined as string | undefined,
+    expiresAt: undefined as string | undefined,
+    forceTakeover: vi.fn(),
+  },
+}));
+
 vi.mock('@emotion/react', () => ({
   Global: () => null,
   css: () => '',
@@ -74,17 +88,7 @@ vi.mock('../../../AppRouter', () => ({
 }));
 
 vi.mock('../useChartsTabLock', () => ({
-  useChartsTabLock: () => ({
-    status: 'none',
-    tabSessionId: 'tab-1',
-    storageKey: null,
-    isReadOnly: false,
-    readOnlyReason: undefined,
-    ownerRunId: undefined,
-    ownerTabSessionId: undefined,
-    expiresAt: undefined,
-    forceTakeover: vi.fn(),
-  }),
+  useChartsTabLock: () => tabLockMockState.current,
 }));
 
 vi.mock('../../../libs/admin/useAdminBroadcast', () => ({
@@ -387,8 +391,24 @@ vi.mock('../../shared/RunIdBadge', () => ({ RunIdBadge: () => null }));
 vi.mock('../../shared/StatusPill', () => ({ StatusPill: () => null }));
 vi.mock('../../shared/AuditSummaryInline', () => ({ AuditSummaryInline: () => null }));
 vi.mock('../../reception/components/ToneBanner', () => ({
-  ToneBanner: ({ message, tone }: { message: string; tone?: string }) =>
-    React.createElement('div', { role: tone === 'info' ? 'status' : 'alert' }, message),
+  ToneBanner: ({
+    message,
+    tone,
+    destination,
+    nextAction,
+  }: {
+    message: string;
+    tone?: string;
+    destination?: string;
+    nextAction?: string;
+  }) =>
+    React.createElement(
+      'div',
+      { role: tone === 'info' ? 'status' : 'alert' },
+      React.createElement('span', null, message),
+      destination ? React.createElement('span', null, `送信先: ${destination}`) : null,
+      nextAction ? React.createElement('span', null, `次アクション: ${nextAction}`) : null,
+    ),
 }));
 vi.mock('../styles', () => ({ chartsStyles: '' }));
 vi.mock('../../reception/styles', () => ({ receptionStyles: '' }));
@@ -552,6 +572,17 @@ describe('ChartsPage patient tab dirty indicator', () => {
     fetchCounters.prescriptionBundles = 0;
     fetchCounters.diagnosisSummary = 0;
     resetSoapMockState();
+    tabLockMockState.current = {
+      status: 'none',
+      tabSessionId: 'tab-1',
+      storageKey: null,
+      isReadOnly: false,
+      readOnlyReason: undefined,
+      ownerRunId: undefined,
+      ownerTabSessionId: undefined,
+      expiresAt: undefined,
+      forceTakeover: vi.fn(),
+    };
     clearChartsEncounterContext();
     clearChartsPatientTabsStorage();
     sessionStorage.clear();
@@ -577,6 +608,31 @@ describe('ChartsPage patient tab dirty indicator', () => {
 
     await screen.findByRole('button', { name: '診察終了（モック）' });
     expect(document.title).toBe('外来カルテ | 患者ID=P-001 | 施設ID=facility');
+  });
+
+  it('並行編集ロック時は上部の長文 ToneBanner を表示せず安全バナーだけを短く残す', async () => {
+    tabLockMockState.current = {
+      status: 'other-tab',
+      tabSessionId: 'tab-2',
+      storageKey: 'charts-lock:P-001:R-001',
+      isReadOnly: true,
+      readOnlyReason: '別タブが編集中です（runId=RUN-OWNER）',
+      ownerRunId: 'RUN-OWNER',
+      ownerTabSessionId: 'tab-owner',
+      expiresAt: '2026-02-16T10:05:00.000Z',
+      forceTakeover: vi.fn(),
+    };
+    seedPatientTabStorage();
+    seedChartsContext();
+
+    renderChartsPage();
+
+    await screen.findByRole('button', { name: '診察終了（モック）' });
+
+    expect(screen.queryByText(/送信先: Charts/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/次アクション: 別タブを閉じる \/ 最新を再読込 \/ 強制引き継ぎ/)).not.toBeInTheDocument();
+    expect(screen.getByText('別タブが編集中のため閲覧専用です。')).toBeInTheDocument();
+    expect(screen.getByText('次: 編集ロックボタンで対応を確認')).toBeInTheDocument();
   });
 
   it('未保存状態で診察終了すると保存/破棄/キャンセルの3択ダイアログを表示する', async () => {

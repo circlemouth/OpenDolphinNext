@@ -976,6 +976,35 @@ export const chartsStyles = css`
     line-height: 1.65;
   }
 
+  .charts-tab-guard__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--charts-space-xs);
+    margin: 0;
+  }
+
+  .charts-tab-guard__list div {
+    padding: var(--charts-space-xs) var(--charts-space-sm);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--charts-radius-sm);
+    background: #f8fafc;
+    min-width: 0;
+  }
+
+  .charts-tab-guard__list dt {
+    margin: 0 0 0.2rem;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .charts-tab-guard__list dd {
+    margin: 0;
+    color: #0f172a;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+
   .charts-tab-guard__actions {
     display: flex;
     justify-content: flex-end;
@@ -997,13 +1026,13 @@ export const chartsStyles = css`
     background: rgba(248, 250, 252, 0.92);
   }
 
-  .charts-tab-guard__danger {
+  .charts-tab-guard__actions .charts-tab-guard__danger {
     border-color: rgba(220, 38, 38, 0.75);
     background: rgba(220, 38, 38, 0.98);
     color: #ffffff;
   }
 
-  .charts-tab-guard__danger:hover {
+  .charts-tab-guard__actions .charts-tab-guard__danger:hover {
     background: rgba(185, 28, 28, 0.98);
   }
 
@@ -1478,6 +1507,31 @@ export const chartsStyles = css`
     border-radius: 999px;
     background: rgba(236, 254, 255, 0.98);
     box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .charts-actions__button--lock-alert {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.42rem 0.82rem;
+    border-radius: 999px;
+    background: #fff7ed;
+    border-color: rgba(234, 88, 12, 0.58);
+    color: #9a3412;
+    font-size: 0.82rem;
+    font-weight: 900;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .charts-actions__button--lock-alert span[aria-hidden='true'] {
+    display: inline-grid;
+    place-items: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 999px;
+    background: #c2410c;
+    color: #ffffff;
+    font-weight: 900;
+    line-height: 1;
   }
 
   .charts-actions__button--patient-finish {

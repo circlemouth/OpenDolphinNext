@@ -819,6 +819,64 @@ describe('ChartsActionBar', () => {
     expect(screen.getAllByText(/並行編集: 閲覧専用で印刷不可/).length).toBeGreaterThan(0);
   });
 
+  it('embedded の閲覧専用時は大きな並行編集ブロックではなく警告ボタンから詳細操作を開く', async () => {
+    const user = userEvent.setup();
+    const onReloadLatest = vi.fn().mockResolvedValue(undefined);
+    const onForceTakeover = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          embedded
+          patientId="P-410"
+          visitDate="2026-01-06"
+          hasUnsavedDraft
+          selectedEntry={{
+            patientId: 'P-410',
+            name: '並行患者',
+            appointmentId: 'APT-410',
+            receptionId: 'REC-410',
+            visitDate: '2026-01-06',
+          } as any}
+          editLock={{
+            readOnly: true,
+            reason: '別タブが編集中です',
+            ownerRunId: 'RUN-OWNER',
+            expiresAt: '2026-01-06T10:05:00.000Z',
+            lockStatus: 'other-tab',
+          }}
+          onReloadLatest={onReloadLatest}
+          onForceTakeover={onForceTakeover}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('group', { name: '並行編集（閲覧専用）の対応' })).toBeNull();
+    expect(screen.queryByText('診察終了・会計送信不可（1件）')).not.toBeInTheDocument();
+    expect(screen.queryByText('印刷不可（2件）')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '編集ロック' }));
+
+    const dialog = await screen.findByRole('alertdialog', { name: '並行編集を検知' });
+    expect(within(dialog).getAllByText('別タブが編集中です').length).toBeGreaterThan(0);
+    expect(within(dialog).getByText('P-410')).toBeInTheDocument();
+    expect(within(dialog).getByText('REC-410')).toBeInTheDocument();
+    expect(within(dialog).getByText('RUN-OWNER')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: '自分の変更を破棄' })).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: '最新を再読込' }));
+    await waitFor(() => expect(onReloadLatest).toHaveBeenCalledTimes(1));
+
+    await user.click(screen.getByRole('button', { name: '編集ロック' }));
+    await user.click(within(await screen.findByRole('alertdialog', { name: '並行編集を検知' })).getByRole('button', { name: '強制引き継ぎ' }));
+    const takeoverDialog = await screen.findByRole('alertdialog', { name: '編集ロック引き継ぎ' });
+    await user.click(within(takeoverDialog).getByRole('button', { name: '最終確認へ' }));
+    await user.click(within(await screen.findByRole('alertdialog', { name: '編集ロック引き継ぎ: 最終確認' })).getByRole('button', { name: '引き継ぎを実行' }));
+
+    expect(onForceTakeover).toHaveBeenCalledTimes(1);
+  });
+
   it('UIロック中は印刷がガードされる', () => {
     render(
       <MemoryRouter>

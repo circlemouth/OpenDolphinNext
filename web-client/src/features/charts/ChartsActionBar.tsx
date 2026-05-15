@@ -334,6 +334,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [approvalUnlockDialogStep, setApprovalUnlockDialogStep] = useState<'confirm' | 'final' | null>(null);
   const [forceTakeoverDialogStep, setForceTakeoverDialogStep] = useState<'confirm' | 'final' | null>(null);
+  const [editLockDetailsOpen, setEditLockDetailsOpen] = useState(false);
   const [encounterActionOverride, setEncounterActionOverride] = useState<Extract<ChartAction, 'start' | 'finish'> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const outpatientResultRef = useRef(false);
@@ -2383,6 +2384,11 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     await onReloadLatest?.();
   };
 
+  const handleReloadLatestFromDetails = async () => {
+    await handleReloadLatest();
+    setEditLockDetailsOpen(false);
+  };
+
   const handleDiscard = () => {
     onDiscardChanges?.();
     setToast({
@@ -2392,9 +2398,19 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     });
   };
 
+  const handleDiscardFromDetails = () => {
+    handleDiscard();
+    setEditLockDetailsOpen(false);
+  };
+
   const handleForceTakeover = () => {
     if (!onForceTakeover) return;
     setForceTakeoverDialogStep('confirm');
+  };
+
+  const handleForceTakeoverFromDetails = () => {
+    setEditLockDetailsOpen(false);
+    handleForceTakeover();
   };
 
   const showDraftAction = true;
@@ -2424,7 +2440,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       disabled={printDisabled}
       aria-disabled={printDisabled}
       onClick={openPrintDialog}
-      aria-describedby={!isRunning && printPrecheckReasons.length > 0 ? 'charts-actions-print-guard' : undefined}
+      aria-describedby={!embedded && !isRunning && printPrecheckReasons.length > 0 ? 'charts-actions-print-guard' : undefined}
       data-disabled-reason={printDisabled ? printPrecheckReasons.map((reason) => reason.key).join(',') : undefined}
       title={printDisabled ? `印刷不可: ${printPrecheckReasons.map((reason) => reason.summary).join(' / ')}` : undefined}
       aria-keyshortcuts="Alt+I"
@@ -2454,6 +2470,19 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       data-disabled-reason={isRunning ? 'running' : undefined}
     >
       タブを閉じる
+    </button>
+  ) : null;
+  const editLockAlertButton = readOnly && !approvalLocked ? (
+    <button
+      type="button"
+      className="charts-actions__button charts-actions__button--lock-alert"
+      onClick={() => setEditLockDetailsOpen(true)}
+      aria-haspopup="dialog"
+      aria-expanded={editLockDetailsOpen}
+      title={readOnlyReason}
+    >
+      <span aria-hidden="true">!</span>
+      <span>編集ロック</span>
     </button>
   ) : null;
   const embeddedEncounterAction: Exclude<ChartAction, 'send' | 'draft' | 'cancel' | 'print' | 'pause'> =
@@ -2842,6 +2871,56 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       />
 
       <FocusTrapDialog
+        open={readOnly && editLockDetailsOpen}
+        role="alertdialog"
+        title="並行編集を検知"
+        description="別タブが編集中のため、このカルテは閲覧専用です。"
+        onClose={() => setEditLockDetailsOpen(false)}
+        testId="charts-edit-lock-details-dialog"
+      >
+        <section className="charts-tab-guard" aria-label="並行編集の状態と操作">
+          <p className="charts-tab-guard__message">
+            <strong>状態:</strong> 別タブが編集中です
+          </p>
+          <dl className="charts-tab-guard__list">
+            <div>
+              <dt>患者ID</dt>
+              <dd>{resolvedPatientId ?? '—'}</dd>
+            </div>
+            <div>
+              <dt>受付ID</dt>
+              <dd>{resolvedReceptionId ?? '—'}</dd>
+            </div>
+            <div>
+              <dt>相手 runId</dt>
+              <dd>{editLock?.ownerRunId ?? '—'}</dd>
+            </div>
+            <div>
+              <dt>期限</dt>
+              <dd>{editLock?.expiresAt ?? '—'}</dd>
+            </div>
+          </dl>
+          <p className="charts-tab-guard__message">{readOnlyReason}</p>
+          <div className="charts-tab-guard__actions" role="group" aria-label="並行編集の対応">
+            <button type="button" onClick={() => void handleReloadLatestFromDetails()}>
+              最新を再読込
+            </button>
+            {hasUnsavedDraft ? (
+              <button type="button" onClick={handleDiscardFromDetails}>
+                自分の変更を破棄
+              </button>
+            ) : null}
+            <button type="button" className="charts-tab-guard__danger" onClick={handleForceTakeoverFromDetails}>
+              強制引き継ぎ
+            </button>
+            <button type="button" onClick={() => setEditLockDetailsOpen(false)}>
+              閉じる
+            </button>
+          </div>
+        </section>
+      </FocusTrapDialog>
+
+      <FocusTrapDialog
         open={forceTakeoverDialogStep !== null}
         role="alertdialog"
         title={forceTakeoverDialogStep === 'final' ? '編集ロック引き継ぎ: 最終確認' : '編集ロック引き継ぎ'}
@@ -2980,7 +3059,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           </div>
         </div>
       ) : null}
-      {readOnly && !approvalLocked ? (
+      {readOnly && !approvalLocked && !embedded ? (
         <div className="charts-actions__conflict" role="group" aria-label="並行編集（閲覧専用）の対応">
           <div className="charts-actions__conflict-title">
             <strong>並行編集を検知</strong>
@@ -3022,7 +3101,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               data-disabled-reason={embeddedEncounterReason}
               aria-disabled={embeddedEncounterGuarded}
               aria-describedby={
-                embeddedEncounterAction === 'finish' && !isRunning && finishPrecheckReasons.length > 0
+                embeddedEncounterAction === 'finish' && !embedded && !isRunning && finishPrecheckReasons.length > 0
                   ? 'charts-actions-finish-guard'
                   : undefined
               }
@@ -3039,6 +3118,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             <span className="charts-actions__patient-inline-spacer" />
           </div>
           <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--right">
+            {editLockAlertButton}
             {printActionButton}
           </div>
         </div>
@@ -3181,15 +3261,15 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         </details>
       ) : null}
 
-      {!isRunning && sendPrecheckReasons.length > 0 && (
+      {!embedded && !isRunning && sendPrecheckReasons.length > 0 && (
         renderGuardNote('charts-actions-send-guard', '送信不可', sendPrecheckReasons)
       )}
 
-      {!isRunning && finishPrecheckReasons.length > 0 && (
+      {!embedded && !isRunning && finishPrecheckReasons.length > 0 && (
         renderGuardNote('charts-actions-finish-guard', '診察終了・会計送信不可', finishPrecheckReasons)
       )}
 
-      {!isRunning && printPrecheckReasons.length > 0 && (
+      {!embedded && !isRunning && printPrecheckReasons.length > 0 && (
         renderGuardNote('charts-actions-print-guard', '印刷不可', printPrecheckReasons)
       )}
 

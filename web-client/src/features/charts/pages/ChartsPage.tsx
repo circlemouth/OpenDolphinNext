@@ -3343,8 +3343,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         id: 'tab-lock',
         label: '編集ロック',
         tone: 'danger',
-        detail: tabLock.readOnlyReason ?? '別タブまたは別端末の編集を検知したため閲覧専用です。',
-        nextAction: '最新再読込またはロック引き継ぎを確認',
+        detail: '別タブが編集中のため閲覧専用です。',
+        nextAction: '編集ロックボタンで対応を確認',
       });
     }
     if (approvalLocked) {
@@ -4995,14 +4995,9 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         />
       ) : null}
       {editLockAlert ? (
-        <ToneBanner
-          tone={editLockAlert.tone}
-          message={editLockAlert.message}
-          destination="Charts"
-          nextAction="別タブを閉じる / 最新を再読込 / 強制引き継ぎ"
-          runId={resolvedRunId ?? flags.runId}
-          ariaLive={resolveAriaLive(editLockAlert.tone, editLockAlert.ariaLive)}
-        />
+        <div className="sr-only" role="alert" aria-live={resolveAriaLive(editLockAlert.tone, editLockAlert.ariaLive)} aria-atomic="true">
+          {editLockAlert.message}
+        </div>
       ) : null}
       {deliveryImpactBanner ? (
         <ToneBanner
