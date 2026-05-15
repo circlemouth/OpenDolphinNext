@@ -106,9 +106,10 @@ GUI 改修ではこの文書の safety contract を下回らず、ORCA送信失�
 - `SoapNotePanel` の利用者向け見出しは `カルテ本文` とし、内部向けの `Primary Workspace` や折りたたみの記載メタ情報は通常表示に置きません。
 - page CTA の owner は `ChartsActionBar` です。通常 UI の primary は `診察終了して会計へ送信` で、`ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。低レベル `ORCA送信` direct bridge は debug / QA / focused test 用に限定し、通常画面の初回会計送信導線には出しません。
 - `PastHubPanel` は左列の historical reference / Do 補助 surface であり、comparison 専用主面ではありません。
-- Charts の右オーダーペインは当日オーダーの表示・編集主UIです。`処方 / 注射 / 処置 / 検査 / 算定` は件数付きカテゴリチップとして常時到達可能にし、選択中カテゴリだけに要約または embedded editor を表示します。空カテゴリは大きな説明カードを並べず、右ペイン内で直接入力フォームへ入ります。
-- runtime right rail は `処方 / 注射 / 処置 / 検査 / 算定` の chooser / support surface です。`document` / `ORCA` / embedded editor は right rail に含めません。候補、セット、文書、ショートカットは右端レール/ドロワー側に寄せ、右オーダーペインの常時表示領域を奪いません。
-- オーダー truth editor は右オーダーペイン内に置きます。`文書を編集` entry は order editor ではなく support entry として扱い、`OrcaSummary` は開発用表示時だけ center primary 側に追加します。
+- Charts の右オーダーペインは当日オーダーの表示・編集主UIです。`処方 / 注射 / 処置 / 検査 / 算定` は件数付きカテゴリチップとして常時到達可能にし、選択中カテゴリだけに要約または embedded editor を表示します。空カテゴリは大きな説明カードを並べず、右ペイン内で直接入力フォームへ入ります。候補は右オーダーペイン内の `候補を探す` / `候補から反映` から必要時だけ chooser を開き、候補反映は下書き入力への反映であって、処方確定・ORCA送信・会計済みではありません。
+- `セット/スタンプ` と `文書` の入口は右オーダーペインの当日オーダーヘッダーに置きます。`セット/スタンプ` は候補 chooser へ吸収せず既存のセット/スタンプ utility panel を開く補助導線、`文書` はオーダーではない文書作成支援導線として扱い、未保存・添付数・利用不可理由は入口移動後も表示します。
+- runtime right rail は右オーダーペインへ重複する候補カテゴリ、`セット/スタンプ`、`文書`、`ショートカット` を表示しません。画像MVPなど右端に独立して残す必要がある support surface がない場合、right rail 領域自体を表示しません。`document` / `ORCA` / embedded editor は right rail に含めません。read-only、来院文脈不足、master未同期、fallback data では候補取得・候補反映・新規作成を開始せず、近傍理由だけを表示します。
+- オーダー truth editor は右オーダーペイン内に置きます。`文書` entry は order editor ではなく support entry として扱い、`OrcaSummary` は開発用表示時だけ center primary 側に追加します。SOAP 本文の `F / S / O / A / P` 入力カードは横並びにせず縦1列で表示します。
 - `latest-follow` は `SoapNotePanel` / `PastHubPanel` / `ChartsActionBar` の局所補助として存在し、独立 route はありません。
 - `OrcaSummary` は Charts 内部の開発/運用確認用 panel です。通常 UI では表示せず、`showDebugUi` 有効時のみ `ORCA確認（開発用）` として表示します。
 - 通常 UI の ORCA 送信可否・印刷可否は `ChartsActionBar` の guard reason / action state で扱い、`OrcaSummary` の `Workflow / 院内ローカル診療サマリ`、`Transmission / medical-mod-v2`、`ORCA収納情報` は page CTA owner を奪いません。
@@ -150,7 +151,7 @@ GUI 改修ではこの文書の safety contract を下回らず、ORCA送信失�
   - `PastHubPanel` SOAP Do転記入口は転記可能SOAPなし / セクション記載なしで近傍理由を表示すること
   - `PatientSummaryPanel` save は read-only / 保存中 / 変更なしで `charts-patient-summary-save-block-reason` による近傍理由を表示すること
   - `SoapNotePanel` save は read-only / 履歴表示 / 保存中で `soap-note-save-block-reason` による近傍理由を表示すること
-  - right rail は chooser-only を維持し、`document` / `ORCA` tool や embedded editor を再混入させない
+  - right rail は右オーダーペインの重複導線を持たず、候補カテゴリ、`セット/スタンプ`、`document`、`ショートカット`、`ORCA` tool、embedded editor を再混入させない
   - canonical encounter context 不足時は `診察終了して会計へ送信` を fail-close
   - canonical encounter context 不足時は report print / incomeinfv2 取得も fail-close
   - ORCA収納情報は official income semantics (`未収金合計`, `請求金額`, `入金額`, `保険適用金額`, `自費金額`, `食事・生活療養負担金`) を表示

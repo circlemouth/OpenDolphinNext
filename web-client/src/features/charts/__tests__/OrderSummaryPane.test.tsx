@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { OrderSummaryPane } from '../OrderSummaryPane';
 
@@ -34,5 +35,49 @@ describe('OrderSummaryPane', () => {
 
     expect(screen.getByText('オーダー情報の取得に失敗しました。時間をおいて再試行してください。')).toBeInTheDocument();
     expect(screen.queryByText(/HTTP 500/)).not.toBeInTheDocument();
+  });
+
+  it('ヘッダーの候補・セット/スタンプ・文書アクションを同じ当日オーダー欄から起動する', async () => {
+    const user = userEvent.setup();
+    const onCandidateOpen = vi.fn();
+    const onUtilityActionSelect = vi.fn();
+
+    render(
+      <OrderSummaryPane
+        orderBundles={[]}
+        prescriptionBundles={[]}
+        onCandidateOpen={onCandidateOpen}
+        utilityActions={[
+          {
+            id: 'order-set',
+            label: 'セット/スタンプ',
+            shortLabel: '★',
+            shortcut: 'Ctrl+Shift+1',
+            dirty: true,
+            meta: '右欄編集中:処方（必須不足）',
+            kind: 'stamp',
+          },
+          { id: 'document', label: '文書', shortLabel: '文', shortcut: 'Ctrl+Shift+2', meta: '添付2', kind: 'document' },
+        ]}
+        activeUtilityAction="document"
+        onUtilityActionSelect={onUtilityActionSelect}
+      />,
+    );
+
+    const pane = screen.getByLabelText('オーダー概要');
+    const headerActions = pane.querySelector('.soap-note__paper-header-actions');
+    expect(headerActions).not.toBeNull();
+    const actions = within(headerActions as HTMLElement);
+
+    await user.click(actions.getByRole('button', { name: '処方候補を探す' }));
+    expect(onCandidateOpen).toHaveBeenCalledWith({ group: 'prescription', entity: 'medOrder', intent: 'search' });
+
+    await user.click(actions.getByRole('button', { name: /セット\/スタンプ/ }));
+    expect(onUtilityActionSelect).toHaveBeenCalledWith('order-set', expect.any(HTMLButtonElement));
+
+    const documentButton = actions.getByRole('button', { name: /文書（添付2）/ });
+    expect(documentButton).toHaveAttribute('data-active', 'true');
+    await user.click(documentButton);
+    expect(onUtilityActionSelect).toHaveBeenCalledWith('document', expect.any(HTMLButtonElement));
   });
 });

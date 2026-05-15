@@ -90,4 +90,33 @@ describe('RightUtilityDrawer', () => {
     expect(screen.queryByText('検索して追加')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '新規作成を開く' })).not.toBeInTheDocument();
   });
+
+  it('read-only では候補取得と候補反映を fail closed にする', () => {
+    renderWithClient(
+      <RightUtilityDrawer
+        open
+        activeTool="injection"
+        meta={{
+          patientId: 'P-001',
+          appointmentId: 'APT-001',
+          receptionId: 'RCP-001',
+          visitDate: '2026-04-17',
+          readOnly: true,
+          readOnlyReason: '署名済みのため編集できません。',
+        }}
+        patientId="P-001"
+        onClose={vi.fn()}
+        onToolSelect={vi.fn()}
+        onOrderRequest={vi.fn()}
+        orderBundles={[]}
+        prescriptionBundles={[]}
+      />,
+    );
+
+    expect(document.querySelector('.soap-note__right-drawer')?.getAttribute('data-chooser-state')).toBe('blocked');
+    expect(screen.getByText('署名済みのため編集できません。')).toBeInTheDocument();
+    expect(screen.queryByText('既存オーダー')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '反映' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '新規作成を開く' })).not.toBeInTheDocument();
+  });
 });

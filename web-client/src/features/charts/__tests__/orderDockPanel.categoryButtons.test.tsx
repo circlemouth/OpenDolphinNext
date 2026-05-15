@@ -91,6 +91,26 @@ describe('RightUtilityDock clinical icons', () => {
     await user.click(within(dock).getByRole('button', { name: 'セット/スタンプ' }));
     expect(onUtilityRailActionSelect).toHaveBeenCalledWith('order-set', expect.any(HTMLButtonElement));
   });
+
+  it('candidate tools can be hidden when the order pane owns the candidate route', () => {
+    render(
+      <RightUtilityDock
+        activeTool="prescription"
+        onSelectTool={vi.fn()}
+        showCandidateTools={false}
+        utilityRailItems={[
+          { id: 'order-set', label: 'セット/スタンプ', shortLabel: '★', shortcut: 'Ctrl+Shift+1', kind: 'stamp' },
+          { id: 'document', label: '文書', shortLabel: '文', shortcut: 'Ctrl+Shift+2', kind: 'document' },
+        ]}
+      />,
+    );
+
+    const dock = screen.getByRole('complementary', { name: '右ドック' });
+    expect(within(dock).queryByLabelText('候補カテゴリ')).not.toBeInTheDocument();
+    expect(within(dock).queryByRole('button', { name: '処方候補を開く' })).not.toBeInTheDocument();
+    expect(within(dock).getByRole('button', { name: 'セット/スタンプ' })).toBeInTheDocument();
+    expect(within(dock).getByRole('button', { name: '文書' })).toBeInTheDocument();
+  });
 });
 
 describe('OrderDockPanel category quick-add', () => {

@@ -5211,10 +5211,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
             <div className="charts-workbench__layout">
               <div className="charts-workbench__body">
                 <div className="charts-workbench__column charts-workbench__column--left" data-column-role="support">
-                  <div className="charts-column-header">
-                    <span className="charts-column-header__label">病名・過去カルテ</span>
-                    <span className="charts-column-header__meta">保険病名 / Past Hub / Do</span>
-                  </div>
                   <div className="charts-card" id="charts-diagnosis" tabIndex={-1} data-focus-anchor="true">
                     <DiagnosisEditPanel
                       patientId={encounterContext.patientId}
@@ -5267,10 +5263,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                   ) : null}
                 </div>
                 <div className="charts-workbench__column charts-workbench__column--center" data-column-role="primary">
-                  <div className="charts-column-header">
-                    <span className="charts-column-header__label">カルテ記載</span>
-                    <span className="charts-column-header__meta">SOAP / 履歴 / オーダー</span>
-                  </div>
                   <div className="charts-card charts-card--soap-primary" id="charts-soap-note" tabIndex={-1} data-focus-anchor="true">
 			                    <SoapNotePanel
 			                      history={soapHistory}

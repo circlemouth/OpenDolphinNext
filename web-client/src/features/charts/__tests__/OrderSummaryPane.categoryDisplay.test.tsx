@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { OrderSummaryPane } from '../OrderSummaryPane';
@@ -123,6 +123,48 @@ describe('OrderSummaryPane category display', () => {
 
     expect(onCategoryAdd).toHaveBeenNthCalledWith(1, { group: 'prescription', entity: 'medOrder' });
     expect(onCategoryAdd).toHaveBeenNthCalledWith(2, { group: 'injection', entity: 'injectionOrder' });
+  });
+
+  it('右ペイン内の候補導線から選択カテゴリの chooser 起動ペイロードを返す', async () => {
+    const user = userEvent.setup();
+    const onCandidateOpen = vi.fn();
+
+    render(
+      <OrderSummaryPane
+        orderBundles={[]}
+        prescriptionBundles={[]}
+        selectedCategory="injection"
+        onCandidateOpen={onCandidateOpen}
+      />,
+    );
+
+    const summaryPane = screen.getByLabelText('オーダー概要');
+    await user.click(within(summaryPane).getAllByRole('button', { name: '注射候補を探す' })[0]);
+
+    expect(onCandidateOpen).toHaveBeenCalledWith({ group: 'injection', entity: 'injectionOrder', intent: 'search' });
+  });
+
+  it('編集中は候補から反映で active entity の chooser 起動ペイロードを返す', async () => {
+    const user = userEvent.setup();
+    const onCandidateOpen = vi.fn();
+
+    render(
+      <OrderSummaryPane
+        orderBundles={[]}
+        prescriptionBundles={[]}
+        selectedCategory="injection"
+        activeCategory="injection"
+        activeOrderEntity="injectionOrder"
+        activeOrderTitle="注射入力"
+        activeOrderPanel={<div>コンパクト注射フォーム</div>}
+        inlineEditorMode="edit"
+        onCandidateOpen={onCandidateOpen}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '注射候補から反映' }));
+
+    expect(onCandidateOpen).toHaveBeenCalledWith({ group: 'injection', entity: 'injectionOrder', intent: 'apply' });
   });
 
   it('空カテゴリ追加がブロック中でもnative disabledにせず近傍理由を示す', async () => {

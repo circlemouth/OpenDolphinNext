@@ -10,6 +10,7 @@ import {
   type OrderDetailDisplayCategoryViewModel,
   type OrderDetailDisplayViewModel,
 } from './orderDetailDisplayViewModel';
+import type { RightUtilityDockUtilityAction, RightUtilityDockUtilityItem } from './RightUtilityDock';
 import { resolveUserSafeFetchFailure } from './userSafeErrorCopy';
 
 type OrderSummaryPaneProps = {
@@ -20,9 +21,11 @@ type OrderSummaryPaneProps = {
   onBundleSelect?: (payload: { group: OrderGroupKey; entity: OrderEntity; bundle: OrderBundle }) => void;
   onCategoryAdd?: (payload: { group: OrderGroupKey; entity: OrderEntity }) => void;
   onCategorySelect?: (payload: { group: OrderGroupKey; entity: OrderEntity; hasRows: boolean }) => void;
+  onCandidateOpen?: (payload: { group: OrderGroupKey; entity: OrderEntity; intent: 'search' | 'apply' }) => void;
   onBundleDeleteRequest?: (payload: { group: OrderGroupKey; entity: OrderEntity; bundle: OrderBundle; label: string }) => void;
   activeOrderPanel?: ReactNode;
   activeOrderTitle?: string;
+  activeOrderEntity?: OrderEntity | null;
   activeCategory?: OrderGroupKey | null;
   selectedCategory?: OrderGroupKey | null;
   emptyCategoryAddState?: Partial<Record<OrderGroupKey, { disabled?: boolean; reason?: string; pending?: boolean }>>;
@@ -32,6 +35,9 @@ type OrderSummaryPaneProps = {
   documentPanel?: ReactNode;
   documentPanelVisible?: boolean;
   onDocumentClose?: () => void;
+  utilityActions?: RightUtilityDockUtilityItem[];
+  activeUtilityAction?: RightUtilityDockUtilityAction | null;
+  onUtilityActionSelect?: (action: RightUtilityDockUtilityAction, trigger: HTMLButtonElement) => void;
   orcaPanel?: ReactNode;
   notice?: { tone: 'success' | 'error'; message: string } | null;
 };
@@ -85,9 +91,11 @@ export function OrderSummaryPane({
   onBundleSelect,
   onCategoryAdd,
   onCategorySelect,
+  onCandidateOpen,
   onBundleDeleteRequest,
   activeOrderPanel,
   activeOrderTitle,
+  activeOrderEntity = null,
   activeCategory = null,
   selectedCategory = null,
   emptyCategoryAddState,
@@ -97,6 +105,9 @@ export function OrderSummaryPane({
   documentPanel,
   documentPanelVisible = false,
   onDocumentClose,
+  utilityActions = [],
+  activeUtilityAction = null,
+  onUtilityActionSelect,
   orcaPanel,
   notice,
 }: OrderSummaryPaneProps) {
@@ -121,6 +132,7 @@ export function OrderSummaryPane({
     .find((reason): reason is string => Boolean(reason));
   const activeEditorSelected = Boolean(activeOrderPanel && activeCategory === selectedGroupKey);
   const resolvedInlineEditorMode = inlineEditorMode ?? (activeEditorSelected ? 'edit' : 'summary');
+  const disabledUtilityNotes = utilityActions.filter((item) => item.disabled && item.title);
 
   const triggerCategoryAdd = (category: OrderDetailDisplayCategoryViewModel | null) => {
     const groupKey = category?.groupKey;
@@ -128,6 +140,13 @@ export function OrderSummaryPane({
     const addState = emptyCategoryAddState?.[groupKey];
     if (addState?.disabled) return;
     onCategoryAdd?.({ group: groupKey, entity: category.defaultEntity });
+  };
+
+  const triggerCandidateOpen = (category: OrderDetailDisplayCategoryViewModel | null, intent: 'search' | 'apply') => {
+    const groupKey = category?.groupKey;
+    const entity = activeEditorSelected && activeOrderEntity ? activeOrderEntity : category?.defaultEntity;
+    if (!groupKey || !entity) return;
+    onCandidateOpen?.({ group: groupKey, entity, intent });
   };
 
   return (
@@ -147,6 +166,47 @@ export function OrderSummaryPane({
           <strong>当日オーダー</strong>
           <p className="soap-note__paper-meta">内容確認と編集をこの列で行います。</p>
         </div>
+        {(!contentDisabled && selectedCategoryModel && onCandidateOpen) || utilityActions.length > 0 ? (
+          <div className="soap-note__paper-header-actions">
+            {!contentDisabled && selectedCategoryModel && onCandidateOpen ? (
+              <button
+                type="button"
+                className="order-dock__bundle-action order-dock__bundle-action--secondary"
+                aria-label={`${ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}候補を探す`}
+                onClick={() => triggerCandidateOpen(selectedCategoryModel, 'search')}
+              >
+                候補を探す
+              </button>
+            ) : null}
+            {utilityActions.map((item) => {
+              const isActive = activeUtilityAction === item.id;
+              const meta = item.meta ? `（${item.meta}）` : '';
+              const controls = item.id === 'document' ? 'charts-order-document-panel' : 'charts-docked-panel';
+              return (
+                <button
+                  key={`order-pane-utility-${item.id}`}
+                  id={`charts-order-pane-action-${item.id}`}
+                  type="button"
+                  className="order-dock__bundle-action order-dock__bundle-action--secondary order-dock__bundle-action--utility"
+                  data-utility-action={item.id}
+                  data-utility-kind={item.kind}
+                  data-active={isActive ? 'true' : 'false'}
+                  aria-pressed={isActive}
+                  aria-controls={controls}
+                  aria-expanded={isActive}
+                  aria-label={`${item.label}${meta}`}
+                  title={item.disabled ? item.title : item.shortcut}
+                  disabled={item.disabled}
+                  onClick={(event) => onUtilityActionSelect?.(item.id, event.currentTarget)}
+                >
+                  <span>{item.label}</span>
+                  {item.dirty ? <span className="order-dock__utility-dirty" aria-hidden="true">●</span> : null}
+                  {item.meta ? <span className="order-dock__utility-meta">{item.meta}</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </header>
 
       {orderBundlesLoading ? <p className="soap-note__paper-empty">オーダー情報を取得しています...</p> : null}
@@ -167,6 +227,11 @@ export function OrderSummaryPane({
       {!contentDisabled && globalAddBlockReason ? (
         <p id={selectedAddReasonId} className="soap-note__paper-empty soap-note__paper-empty--error" role="status">
           編集はブロックされています: {globalAddBlockReason}
+        </p>
+      ) : null}
+      {disabledUtilityNotes.length > 0 ? (
+        <p className="soap-note__paper-empty soap-note__paper-empty--muted">
+          {disabledUtilityNotes.map((item) => `${item.label}: ${item.title}`).join(' / ')}
         </p>
       ) : null}
 
@@ -215,17 +280,29 @@ export function OrderSummaryPane({
                 </p>
               </div>
               {!activeEditorSelected && selectedCategoryModel.rows.length > 0 ? (
-                <button
-                  type="button"
-                  className="order-dock__bundle-action order-dock__bundle-action--primary"
-                  onClick={() => triggerCategoryAdd(selectedCategoryModel)}
-                  aria-disabled={selectedAddState?.disabled ? 'true' : undefined}
-                  aria-describedby={selectedAddState?.reason ? selectedAddReasonId : undefined}
-                  data-disabled-reason={selectedAddState?.disabled ? 'order_category_add_blocked' : undefined}
-                  title={selectedAddState?.reason ?? `${ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}を追加`}
-                >
-                  ＋{ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}
-                </button>
+                <div className="soap-note__order-group-actions">
+                  <button
+                    type="button"
+                    className="order-dock__bundle-action order-dock__bundle-action--primary"
+                    onClick={() => triggerCategoryAdd(selectedCategoryModel)}
+                    aria-disabled={selectedAddState?.disabled ? 'true' : undefined}
+                    aria-describedby={selectedAddState?.reason ? selectedAddReasonId : undefined}
+                    data-disabled-reason={selectedAddState?.disabled ? 'order_category_add_blocked' : undefined}
+                    title={selectedAddState?.reason ?? `${ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}を追加`}
+                  >
+                    ＋{ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}
+                  </button>
+                  {onCandidateOpen ? (
+                    <button
+                      type="button"
+                      className="order-dock__bundle-action order-dock__bundle-action--secondary"
+                      aria-label={`${ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}候補を追加`}
+                      onClick={() => triggerCandidateOpen(selectedCategoryModel, 'search')}
+                    >
+                      候補を追加
+                    </button>
+                  ) : null}
+                </div>
               ) : null}
             </header>
 
@@ -233,11 +310,23 @@ export function OrderSummaryPane({
               <section className="soap-note__inline-order-editor" data-group="active-order-editor">
                 <header className="soap-note__order-group-header">
                   <strong>{activeOrderTitle ?? `${selectedCategoryModel.label}入力`}</strong>
-                  {onActiveOrderClose ? (
-                    <button type="button" className="order-dock__bundle-action" onClick={onActiveOrderClose}>
-                      閉じる
-                    </button>
-                  ) : null}
+                  <div className="soap-note__order-group-actions">
+                    {onCandidateOpen ? (
+                      <button
+                        type="button"
+                        className="order-dock__bundle-action order-dock__bundle-action--secondary"
+                        aria-label={`${ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}候補から反映`}
+                        onClick={() => triggerCandidateOpen(selectedCategoryModel, 'apply')}
+                      >
+                        候補から反映
+                      </button>
+                    ) : null}
+                    {onActiveOrderClose ? (
+                      <button type="button" className="order-dock__bundle-action" onClick={onActiveOrderClose}>
+                        閉じる
+                      </button>
+                    ) : null}
+                  </div>
                 </header>
                 {activeOrderPanel}
               </section>
@@ -280,17 +369,29 @@ export function OrderSummaryPane({
             ) : (
               <div className="soap-note__order-empty-inline">
                 <p>この分野は未入力です。右ペイン内で直接入力できます。</p>
-                <button
-                  type="button"
-                  className="order-dock__bundle-action order-dock__bundle-action--primary"
-                  onClick={() => triggerCategoryAdd(selectedCategoryModel)}
-                  aria-disabled={selectedAddState?.disabled ? 'true' : undefined}
-                  aria-describedby={selectedAddState?.reason ? selectedAddReasonId : undefined}
-                  data-disabled-reason={selectedAddState?.disabled ? 'order_category_add_blocked' : undefined}
-                  title={selectedAddState?.reason ?? `${ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}を追加`}
-                >
-                  ＋{ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}入力
-                </button>
+                <div className="soap-note__order-empty-actions">
+                  <button
+                    type="button"
+                    className="order-dock__bundle-action order-dock__bundle-action--primary"
+                    onClick={() => triggerCategoryAdd(selectedCategoryModel)}
+                    aria-disabled={selectedAddState?.disabled ? 'true' : undefined}
+                    aria-describedby={selectedAddState?.reason ? selectedAddReasonId : undefined}
+                    data-disabled-reason={selectedAddState?.disabled ? 'order_category_add_blocked' : undefined}
+                    title={selectedAddState?.reason ?? `${ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}を追加`}
+                  >
+                    ＋{ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}入力
+                  </button>
+                  {onCandidateOpen ? (
+                    <button
+                      type="button"
+                      className="order-dock__bundle-action order-dock__bundle-action--secondary"
+                      aria-label={`${ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}候補を探す`}
+                      onClick={() => triggerCandidateOpen(selectedCategoryModel, 'search')}
+                    >
+                      候補を探す
+                    </button>
+                  ) : null}
+                </div>
               </div>
             )}
           </section>
@@ -299,7 +400,7 @@ export function OrderSummaryPane({
       ) : null}
 
       {documentPanelVisible && documentPanel ? (
-        <section className="soap-note__order-group" data-group="active-document-editor">
+        <section id="charts-order-document-panel" className="soap-note__order-group" data-group="active-document-editor">
           <header className="soap-note__order-group-header">
             <strong>文書編集</strong>
             {onDocumentClose ? (

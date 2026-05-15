@@ -271,7 +271,9 @@ describe('Charts masterSource cache refresh', () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByText('病名・過去カルテ');
+    await screen.findByLabelText('外来カルテ作業台');
+    expect(screen.queryByText('病名・過去カルテ')).not.toBeInTheDocument();
+    expect(screen.queryByText('カルテ記載')).not.toBeInTheDocument();
     const meta = document.querySelector('[data-test-id="charts-topbar-meta"]') as HTMLElement;
     await waitFor(() => expect(meta).toHaveAttribute('data-source-transition', 'mock'));
     await waitFor(() => expect(meta).toHaveAttribute('data-cache-hit', 'false'));

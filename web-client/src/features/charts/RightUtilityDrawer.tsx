@@ -98,7 +98,7 @@ const MAX_DRAWER_RIGHT_GUTTER = 80;
 const MINIMIZED_HANDLE_WIDTH = 56;
 const RESIZE_HIT_WIDTH = 12;
 
-type EncounterGuardStatus = 'ok' | 'noPatient' | 'noEncounter';
+type EncounterGuardStatus = 'ok' | 'noPatient' | 'noEncounter' | 'readOnly' | 'missingMaster' | 'fallbackUsed';
 
 type EncounterGuard = {
   status: EncounterGuardStatus;
@@ -130,6 +130,24 @@ const resolveEncounterGuard = (patientId: string | undefined, meta: OrderBundleE
     return {
       status: 'noEncounter',
       message: '来院文脈が不足しています。候補表示、ORCA候補検索、新規作成は開始できません。',
+    };
+  }
+  if (meta.readOnly) {
+    return {
+      status: 'readOnly',
+      message: meta.readOnlyReason ?? '読み取り専用のため候補表示、候補反映、新規作成は開始できません。',
+    };
+  }
+  if (meta.missingMaster) {
+    return {
+      status: 'missingMaster',
+      message: 'マスター未同期のため候補表示、ORCA候補検索、新規作成は開始できません。',
+    };
+  }
+  if (meta.fallbackUsed) {
+    return {
+      status: 'fallbackUsed',
+      message: 'フォールバックデータのため候補表示、候補反映、新規作成は開始できません。',
     };
   }
   return { status: 'ok' };

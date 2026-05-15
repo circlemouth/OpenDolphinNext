@@ -8,6 +8,7 @@ import { ClinicalIcon, type ClinicalIconKey } from '../shared/ClinicalIcon';
 type RightUtilityDockProps = {
   activeTool: RightUtilityTool;
   onSelectTool: (tool: RightUtilityTool) => void;
+  showCandidateTools?: boolean;
   utilityRailItems?: RightUtilityDockUtilityItem[];
   activeUtilityAction?: RightUtilityDockUtilityAction | null;
   onUtilityRailActionSelect?: (action: RightUtilityDockUtilityAction, trigger: HTMLButtonElement) => void;
@@ -40,6 +41,7 @@ const rightUtilityIconByTool: Record<RightUtilityTool, ClinicalIconKey> = {
 export function RightUtilityDock({
   activeTool,
   onSelectTool,
+  showCandidateTools = true,
   utilityRailItems = [],
   activeUtilityAction = null,
   onUtilityRailActionSelect,
@@ -49,28 +51,30 @@ export function RightUtilityDock({
   return (
     <aside className="soap-note__right-dock" aria-label="右ドック">
       <div className="soap-note__right-dock-scroll">
-        <div className="soap-note__right-dock-group" aria-label="候補カテゴリ">
-          <p className="soap-note__right-dock-label">候補</p>
-          {RIGHT_UTILITY_TOOLS.map((item) => {
-            const isActive = item.tool === activeTool;
-            return (
-              <button
-                key={`right-dock-${item.tool}`}
-                type="button"
-                className="soap-note__right-dock-button order-dock__subtype-tab"
-                data-tool={item.tool}
-                data-active={isActive ? 'true' : 'false'}
-                aria-pressed={isActive}
-                aria-label={`${resolveRightUtilityToolLabel(item.tool)}候補を開く`}
-                title={`${resolveRightUtilityToolLabel(item.tool)}候補を開く`}
-                onClick={() => onSelectTool(item.tool)}
-              >
-                <ClinicalIcon icon={rightUtilityIconByTool[item.tool]} />
-                <span className="soap-note__right-dock-button-text">{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {showCandidateTools ? (
+          <div className="soap-note__right-dock-group" aria-label="候補カテゴリ">
+            <p className="soap-note__right-dock-label">候補</p>
+            {RIGHT_UTILITY_TOOLS.map((item) => {
+              const isActive = item.tool === activeTool;
+              return (
+                <button
+                  key={`right-dock-${item.tool}`}
+                  type="button"
+                  className="soap-note__right-dock-button order-dock__subtype-tab"
+                  data-tool={item.tool}
+                  data-active={isActive ? 'true' : 'false'}
+                  aria-pressed={isActive}
+                  aria-label={`${resolveRightUtilityToolLabel(item.tool)}候補を開く`}
+                  title={`${resolveRightUtilityToolLabel(item.tool)}候補を開く`}
+                  onClick={() => onSelectTool(item.tool)}
+                >
+                  <ClinicalIcon icon={rightUtilityIconByTool[item.tool]} />
+                  <span className="soap-note__right-dock-button-text">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
         {utilityRailItems.length > 0 || onShortcutDialogOpen ? (
           <div className="soap-note__right-dock-group" aria-label="ユーティリティ">
             <p className="soap-note__right-dock-label">操作</p>

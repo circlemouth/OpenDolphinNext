@@ -627,7 +627,9 @@ export function SoapNotePanel({
   const handleOrderSummaryBundleSelect = useCallback(
     (payload: { group: OrderGroupKey; entity: OrderEntity; bundle: OrderBundle }) => {
       setActiveTool(payload.group);
-      setDrawerOpen(true);
+      setDrawerOpen(false);
+      setDrawerPeek(false);
+      setDrawerMinimized(false);
       setActiveOrderEntity(payload.entity);
       setActiveOrderRequest({ requestId: buildDrawerRequestId(), kind: 'edit', bundle: payload.bundle });
       setActiveOrderSource('right-panel');
@@ -695,6 +697,31 @@ export function SoapNotePanel({
     [handleOrderSummaryCategoryAdd],
   );
 
+  const handleOrderSummaryCandidateOpen = useCallback(
+    (payload: { group: OrderGroupKey; entity: OrderEntity; intent: 'search' | 'apply' }) => {
+      const sameInlineEditor = activeCenterPanel === 'order' && activeOrderEntity === payload.entity;
+      setOrderSummaryNotice(null);
+      setActiveTool(payload.group);
+      setDrawerOpen(true);
+      setDrawerPeek(false);
+      setDrawerMinimized(false);
+      setActiveOrderEntity(payload.entity);
+      setActiveOrderRequest(null);
+      setActiveOrderSource('right-panel');
+      if (!sameInlineEditor) {
+        setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
+      }
+      if (payload.intent === 'apply') {
+        setActiveCenterPanel('order');
+        return;
+      }
+      if (!sameInlineEditor) {
+        setActiveCenterPanel(null);
+      }
+    },
+    [activeCenterPanel, activeOrderEntity],
+  );
+
   useEffect(() => {
     if (initialInlineOrderEditorOpenedRef.current) return;
     if (activeCenterPanel !== null) return;
@@ -744,6 +771,14 @@ export function SoapNotePanel({
       setActiveOrderSource('right-panel');
       setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
       setActiveCenterPanel('order');
+      if (request.kind === 'recommendation' || request.kind === 'orca-set' || request.kind === 'input-set') {
+        setOrderSummaryNotice({
+          tone: 'success',
+          message: '候補を反映しました。保存・確定・ORCA送信はまだ行っていません。',
+        });
+      } else {
+        setOrderSummaryNotice(null);
+      }
     },
     [],
   );
@@ -1812,6 +1847,30 @@ export function SoapNotePanel({
     () => cloneDocumentPanelNode(documentPanel, pendingDocumentHistoryCopyRequest, handleDocumentHistoryCopyConsumed),
     [documentPanel, handleDocumentHistoryCopyConsumed, pendingDocumentHistoryCopyRequest],
   );
+  const orderPaneUtilityItems = useMemo(
+    () => (utilityRailItems ?? []).filter((item) => item.id === 'order-set' || item.id === 'document'),
+    [utilityRailItems],
+  );
+  const rightRailUtilityItems = useMemo(() => (utilityRailItems ?? []).filter((item) => item.id === 'imaging'), [utilityRailItems]);
+  const activeOrderPaneUtilityAction: RightUtilityDockUtilityAction | null =
+    activeCenterPanel === 'document' ? 'document' : activeUtilityAction ?? null;
+  const handleOrderPaneUtilityActionSelect = useCallback(
+    (action: RightUtilityDockUtilityAction, trigger: HTMLButtonElement) => {
+      if (action === 'document') {
+        setOrderSummaryNotice(null);
+        setDrawerOpen(false);
+        setDrawerPeek(false);
+        setDrawerMinimized(false);
+        setActiveOrderEntity(null);
+        setActiveOrderRequest(null);
+        setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
+        setActiveCenterPanel((prev) => (prev === 'document' ? null : 'document'));
+        return;
+      }
+      onUtilityRailActionSelect?.(action, trigger);
+    },
+    [onUtilityRailActionSelect],
+  );
 
   const centerOrderPanel = useMemo(() => {
     if (!activeOrderEntity || activeCenterPanel !== 'order') return null;
@@ -1868,6 +1927,7 @@ export function SoapNotePanel({
       data-right-drawer-open={drawerOpen ? 'true' : 'false'}
       data-right-drawer-mode={effectiveMode}
       data-right-drawer-min={effectiveMinimized ? 'true' : 'false'}
+      data-right-rail-visible={rightRailUtilityItems.length > 0 ? 'true' : 'false'}
       style={soapNoteStyle}
     >
       <header className="soap-note__header">
@@ -1913,6 +1973,18 @@ export function SoapNotePanel({
           >
             表示:{viewModeLabel}
           </button>
+          {onShortcutDialogOpen ? (
+            <button
+              type="button"
+              onClick={onShortcutDialogOpen}
+              className="soap-note__ghost"
+              aria-haspopup="dialog"
+              aria-expanded={shortcutsOpen}
+              title="ショートカット一覧を開きます。"
+            >
+              ショートカット
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={handleTemplateDialogOpen}
@@ -2085,17 +2157,18 @@ export function SoapNotePanel({
         <p className="soap-note__guard">読み取り専用: {readOnlyReason ?? '編集はロック中です。'}</p>
       ) : null}
       {feedback ? <p className="soap-note__feedback" role="status">{feedback}</p> : null}
-      <div className="soap-note__right-dock-area">
-        <RightUtilityDock
-          activeTool={activeTool}
-          onSelectTool={handleDockToolSelect}
-          utilityRailItems={utilityRailItems}
-          activeUtilityAction={activeUtilityAction}
-          onUtilityRailActionSelect={onUtilityRailActionSelect}
-          onShortcutDialogOpen={onShortcutDialogOpen}
-          shortcutsOpen={shortcutsOpen}
-        />
-      </div>
+      {rightRailUtilityItems.length > 0 ? (
+        <div className="soap-note__right-dock-area">
+          <RightUtilityDock
+            activeTool={activeTool}
+            onSelectTool={handleDockToolSelect}
+            showCandidateTools={false}
+            utilityRailItems={rightRailUtilityItems}
+            activeUtilityAction={activeUtilityAction}
+            onUtilityRailActionSelect={onUtilityRailActionSelect}
+          />
+        </div>
+      ) : null}
       <RightUtilityDrawer {...rightUtilityDrawerProps} />
       <div className="soap-note__workspace">
         <div className="soap-note__body">
@@ -2244,6 +2317,7 @@ export function SoapNotePanel({
           onBundleSelect={handleOrderSummaryBundleSelect}
           onCategoryAdd={handleOrderSummaryCategoryAdd}
           onCategorySelect={handleOrderSummaryCategorySelect}
+          onCandidateOpen={handleOrderSummaryCandidateOpen}
           onBundleDeleteRequest={
             readOnly
               ? undefined
@@ -2255,6 +2329,7 @@ export function SoapNotePanel({
           notice={orderSummaryNotice}
           activeOrderPanel={centerOrderPanel}
           activeOrderTitle={activeOrderEntity ? `${resolveOrderEntityLabel(activeOrderEntity)}入力` : undefined}
+          activeOrderEntity={activeOrderEntity}
           activeCategory={activeOrderEntity ? resolveOrderGroupKeyByEntity(activeOrderEntity) : activeTool}
           selectedCategory={activeOrderEntity ? resolveOrderGroupKeyByEntity(activeOrderEntity) : activeTool}
           emptyCategoryAddState={emptyCategoryAddState}
@@ -2264,6 +2339,9 @@ export function SoapNotePanel({
           documentPanel={centerDocumentPanel}
           documentPanelVisible={activeCenterPanel === 'document'}
           onDocumentClose={handleCloseCenterPanel}
+          utilityActions={orderPaneUtilityItems}
+          activeUtilityAction={activeOrderPaneUtilityAction}
+          onUtilityActionSelect={handleOrderPaneUtilityActionSelect}
           orcaPanel={orcaPanel}
         />
       </div>

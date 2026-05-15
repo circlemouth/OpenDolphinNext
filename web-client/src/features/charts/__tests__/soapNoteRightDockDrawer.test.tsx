@@ -33,6 +33,38 @@ const setViewportWidth = (width: number) => {
   });
 };
 
+const candidateCategoryChipName: Record<'処方' | '注射' | '処置' | '検査' | '算定', RegExp> = {
+  処方: /^処方\s*\d+$/,
+  注射: /^点滴・注射\s*\d+$/,
+  処置: /^処置\s*\d+$/,
+  検査: /^検査\s*\d+$/,
+  算定: /^算定\s*\d+$/,
+};
+
+const queryOrderPaneCandidateButton = (orderPane: HTMLElement, label: '処方' | '注射' | '処置' | '検査' | '算定') =>
+  within(orderPane).queryByRole('button', { name: `${label}候補を探す` }) ??
+  within(orderPane).queryByRole('button', { name: `${label}候補を追加` });
+
+const openOrderPaneCandidate = async (
+  user: ReturnType<typeof userEvent.setup>,
+  label: '処方' | '注射' | '処置' | '検査' | '算定',
+) => {
+  const orderPane = screen.getByLabelText('オーダー概要') as HTMLElement;
+  const directButton = queryOrderPaneCandidateButton(orderPane, label);
+  if (directButton) {
+    await user.click(directButton);
+    return;
+  }
+
+  await user.click(within(orderPane).getByRole('button', { name: candidateCategoryChipName[label] }));
+  await waitFor(() => {
+    expect(queryOrderPaneCandidateButton(orderPane, label)).not.toBeNull();
+  });
+  const candidateButton = queryOrderPaneCandidateButton(orderPane, label);
+  if (!candidateButton) throw new Error(`${label}候補導線が見つかりません。`);
+  await user.click(candidateButton);
+};
+
 describe('SoapNotePanel right dock drawer', () => {
   it('右ドックはSOAP本文グリッド外に配置される', () => {
     const { container } = renderWithQueryClient(
@@ -46,12 +78,15 @@ describe('SoapNotePanel right dock drawer', () => {
           visitDate: '2026-02-26',
         }}
         author={{ role: 'doctor', displayName: 'Dr. Dock', userId: 'doctor01' }}
+        utilityRailItems={[{ id: 'imaging', label: '画像', shortLabel: '画', shortcut: 'Ctrl+Shift+3', kind: 'imaging' }]}
       />,
     );
 
     const body = requireElement(container.querySelector('.soap-note__body'));
     const rightDockArea = requireElement(container.querySelector('.soap-note__right-dock-area'));
     expect(body.contains(rightDockArea)).toBe(false);
+    expect(within(rightDockArea as HTMLElement).queryByLabelText('候補カテゴリ')).not.toBeInTheDocument();
+    expect(within(rightDockArea as HTMLElement).queryByRole('button', { name: '処方候補を開く' })).not.toBeInTheDocument();
   });
 
   it('右オーダーペインはSOAP本文グリッド外に常時表示される', () => {
@@ -99,7 +134,7 @@ describe('SoapNotePanel right dock drawer', () => {
     expect(screen.getByRole('button', { name: '＋薬剤行' })).toBeInTheDocument();
   });
 
-  it('右ドック押下でドロワーが開き対象カテゴリを表示する', async () => {
+  it('右オーダーペインの候補導線でドロワーが開き対象カテゴリを表示する', async () => {
     const user = userEvent.setup();
     const bundles: OrderBundle[] = [
       {
@@ -133,7 +168,7 @@ describe('SoapNotePanel right dock drawer', () => {
     expect(drawer.getAttribute('data-open')).toBe('false');
     expect(drawer.querySelector('.soap-note__right-drawer-panel[data-active="true"]')).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: '注射候補を開く' }));
+    await openOrderPaneCandidate(user, '注射');
 
     await waitFor(() => {
       expect(drawer.getAttribute('data-open')).toBe('true');
@@ -181,7 +216,7 @@ describe('SoapNotePanel right dock drawer', () => {
 
       const soapNoteRoot = requireElement(container.querySelector('.soap-note'));
       const drawer = requireElement<HTMLElement>(document.body.querySelector('.soap-note__right-drawer'));
-      await user.click(screen.getByRole('button', { name: '注射候補を開く' }));
+      await openOrderPaneCandidate(user, '注射');
       await waitFor(() => {
         expect(drawer.getAttribute('data-open')).toBe('true');
       });
@@ -247,7 +282,7 @@ describe('SoapNotePanel right dock drawer', () => {
 
       const soapNoteRoot = requireElement(container.querySelector('.soap-note'));
       const drawer = requireElement<HTMLElement>(document.body.querySelector('.soap-note__right-drawer'));
-      await user.click(screen.getByRole('button', { name: '処方候補を開く' }));
+      await openOrderPaneCandidate(user, '処方');
       await waitFor(() => {
         expect(drawer.getAttribute('data-open')).toBe('true');
       });
@@ -265,7 +300,7 @@ describe('SoapNotePanel right dock drawer', () => {
 
       const centerPanel = container.querySelector('.soap-note__center-panel-only');
       const rightDockArea = container.querySelector('.soap-note__right-dock-area');
-      expect(rightDockArea).not.toBeNull();
+      expect(rightDockArea).toBeNull();
       const rootDockActive =
         (soapNoteRoot.getAttribute('data-right-drawer-open') === '1' ||
           soapNoteRoot.getAttribute('data-right-drawer-open') === 'true') &&
@@ -343,7 +378,7 @@ describe('SoapNotePanel right dock drawer', () => {
     const drawer = requireElement(document.body.querySelector('.soap-note__right-drawer'));
     const drawerHeaderLabel = requireElement(drawer.querySelector('.soap-note__right-drawer-header strong'));
 
-    await user.click(screen.getByRole('button', { name: '処方候補を開く' }));
+    await openOrderPaneCandidate(user, '処方');
     await waitFor(() => {
       expect(drawer.getAttribute('data-open')).toBe('true');
     });
@@ -395,7 +430,7 @@ describe('SoapNotePanel right dock drawer', () => {
     );
 
     const drawer = requireElement(document.body.querySelector('.soap-note__right-drawer'));
-    await user.click(screen.getByRole('button', { name: '処方候補を開く' }));
+    await openOrderPaneCandidate(user, '処方');
     await waitFor(() => {
       expect(drawer.getAttribute('data-open')).toBe('true');
     });
@@ -411,7 +446,7 @@ describe('SoapNotePanel right dock drawer', () => {
     if (injectionToolControl) {
       await user.click(injectionToolControl);
     } else {
-      await user.click(screen.getByRole('button', { name: '注射候補を開く' }));
+      await openOrderPaneCandidate(user, '注射');
     }
     await waitFor(() => {
       expect(drawer.getAttribute('data-tool')).toBe('injection');
@@ -426,14 +461,14 @@ describe('SoapNotePanel right dock drawer', () => {
     if (prescriptionToolControl) {
       await user.click(prescriptionToolControl);
     } else {
-      await user.click(screen.getByRole('button', { name: '処方候補を開く' }));
+      await openOrderPaneCandidate(user, '処方');
     }
     await waitFor(() => {
       expect(drawer.getAttribute('data-tool')).toBe('prescription');
     });
   });
 
-  it('中列サマリの処方行クリックで右ドロワーを開き処方編集へ遷移する', async () => {
+  it('右オーダーペインの処方行クリックで候補ドロワーを開かず右側編集へ遷移する', async () => {
     const user = userEvent.setup();
     const bundles: OrderBundle[] = [
       {
@@ -469,11 +504,41 @@ describe('SoapNotePanel right dock drawer', () => {
     await user.click(screen.getByRole('button', { name: '糖尿病薬RPを編集' }));
 
     await waitFor(() => {
+      expect(screen.getByText('処方入力')).toBeInTheDocument();
+    });
+    expect(drawer.getAttribute('data-open')).toBe('false');
+    expect(drawerHeaderLabel).toHaveTextContent('処方候補');
+  });
+
+  it('右オーダーペインの候補を探すで選択カテゴリの候補ドロワーを開く', async () => {
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <SoapNotePanel
+        history={[]}
+        meta={{
+          runId: 'RUN-RIGHT-ORDER-CANDIDATE',
+          patientId: 'P-002',
+          appointmentId: 'APT-002',
+          receptionId: 'RCP-002',
+          visitDate: '2026-02-26',
+        }}
+        author={{ role: 'doctor', displayName: 'Dr. Dock', userId: 'doctor02' }}
+        orderBundles={[]}
+      />,
+    );
+
+    const drawer = requireElement(document.body.querySelector('.soap-note__right-drawer'));
+    const orderPane = screen.getByLabelText('オーダー概要');
+
+    await user.click(within(orderPane).getAllByRole('button', { name: '処方候補を探す' })[0]);
+
+    await waitFor(() => {
       expect(drawer.getAttribute('data-open')).toBe('true');
     });
     expect(drawer.getAttribute('data-tool')).toBe('prescription');
-    expect(drawerHeaderLabel).toHaveTextContent('処方候補');
-    expect(drawer).toHaveTextContent('糖尿病薬RP');
+    expect(drawer).toHaveTextContent('処方候補');
+    expect(screen.getByText('処方入力')).toBeInTheDocument();
   });
 
   it('処方ドロワー一覧は軽量カードで詳細行（RP/後発可否/薬剤量/成分量/用法/日数）を表示する', async () => {
@@ -518,7 +583,7 @@ describe('SoapNotePanel right dock drawer', () => {
 
     const drawer = requireElement(document.body.querySelector('.soap-note__right-drawer'));
 
-    await user.click(screen.getByRole('button', { name: '処方候補を開く' }));
+    await openOrderPaneCandidate(user, '処方');
     await waitFor(() => {
       expect(drawer.getAttribute('data-open')).toBe('true');
     });
@@ -577,7 +642,7 @@ describe('SoapNotePanel right dock drawer', () => {
     );
 
     const drawer = requireElement(document.body.querySelector('.soap-note__right-drawer'));
-    await user.click(screen.getByRole('button', { name: '注射候補を開く' }));
+    await openOrderPaneCandidate(user, '注射');
     await waitFor(() => {
       expect(drawer.getAttribute('data-open')).toBe('true');
     });
@@ -627,7 +692,7 @@ describe('SoapNotePanel right dock drawer', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: '処置候補を開く' }));
+    await openOrderPaneCandidate(user, '処置');
     const tabList = await screen.findByRole('tablist', { name: '処置サブカテゴリ' });
     const treatmentTab = within(tabList).getByRole('tab', { name: '処置' });
     const otherTab = within(tabList).getByRole('tab', { name: 'その他' });
@@ -689,7 +754,7 @@ describe('SoapNotePanel right dock drawer', () => {
     );
 
     const drawer = requireElement<HTMLElement>(document.body.querySelector('.soap-note__right-drawer'));
-    await user.click(screen.getByRole('button', { name: '処方候補を開く' }));
+    await openOrderPaneCandidate(user, '処方');
     await waitFor(() => {
       expect(drawer.getAttribute('data-open')).toBe('true');
     });
@@ -711,7 +776,7 @@ describe('SoapNotePanel right dock drawer', () => {
     expect(drawer.style.getPropertyValue('--soap-right-drawer-width')).toBe(initialWidth);
   });
 
-  it('右ドック表示中に新規入力を開始すると中央編集面へ handoff し候補ドックを閉じる', async () => {
+  it('候補ドロワー表示中に新規入力を開始すると中央編集面へ handoff し候補ドロワーを閉じる', async () => {
     const user = userEvent.setup();
     const previousInnerWidth = window.innerWidth;
     setViewportWidth(1920);
@@ -732,7 +797,7 @@ describe('SoapNotePanel right dock drawer', () => {
       );
 
       const drawer = requireElement<HTMLElement>(document.body.querySelector('.soap-note__right-drawer'));
-      await user.click(screen.getByRole('button', { name: '注射候補を開く' }));
+      await openOrderPaneCandidate(user, '注射');
       await waitFor(() => {
         expect(drawer.getAttribute('data-open')).toBe('true');
       });
@@ -768,7 +833,7 @@ describe('SoapNotePanel right dock drawer', () => {
 
     const soapRoot = requireElement<HTMLElement>(container.querySelector('.soap-note'));
     const drawer = requireElement<HTMLElement>(document.body.querySelector('.soap-note__right-drawer'));
-    await user.click(screen.getByRole('button', { name: '処方候補を開く' }));
+    await openOrderPaneCandidate(user, '処方');
     await waitFor(() => {
       expect(drawer.getAttribute('data-open')).toBe('true');
     });
@@ -836,7 +901,7 @@ describe('SoapNotePanel right dock drawer', () => {
     );
 
     const drawer = requireElement(document.body.querySelector('.soap-note__right-drawer'));
-    await user.click(screen.getByRole('button', { name: '注射候補を開く' }));
+    await openOrderPaneCandidate(user, '注射');
     await waitFor(() => {
       expect(drawer.getAttribute('data-open')).toBe('true');
     });
