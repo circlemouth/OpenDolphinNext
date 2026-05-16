@@ -238,19 +238,19 @@ export function ChartsPatientSummaryBar({
               </div>
             ) : null}
             <section className="charts-patient-summary__encounter-band" aria-label="来院文脈">
-              <span className="charts-patient-summary__encounter-item">
+              <span className="charts-patient-summary__encounter-item" data-kind="visit-date">
                 <span className="charts-patient-summary__encounter-label">診療日</span>
                 <span className="charts-patient-summary__encounter-value">{normalizedVisitDate}</span>
               </span>
-              <span className="charts-patient-summary__encounter-item">
+              <span className="charts-patient-summary__encounter-item" data-kind="status">
                 <span className="charts-patient-summary__encounter-label">状態</span>
                 <span className="charts-patient-summary__encounter-value">{normalizedEncounterStatus}</span>
               </span>
-              <span className="charts-patient-summary__encounter-item">
+              <span className="charts-patient-summary__encounter-item" data-kind="insurance">
                 <span className="charts-patient-summary__encounter-label">保険</span>
                 <span className="charts-patient-summary__encounter-value">{normalizedInsuranceLabel}</span>
               </span>
-              <span className="charts-patient-summary__encounter-item charts-patient-summary__encounter-item--wide">
+              <span className="charts-patient-summary__encounter-item charts-patient-summary__encounter-item--wide" data-kind="department">
                 <span className="charts-patient-summary__encounter-label">診療科 / 担当医</span>
                 <span className="charts-patient-summary__encounter-value">
                   {normalizedDepartment} / {normalizedPhysician}

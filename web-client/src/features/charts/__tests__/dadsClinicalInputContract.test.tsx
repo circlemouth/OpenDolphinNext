@@ -244,7 +244,7 @@ describe('DADS clinical input contract - disease', () => {
     expect(within(diabetesScope).getByText('主')).toBeVisible();
     expect(within(diabetesScope).getByText('2026-04-01')).toBeVisible();
     expect(within(diabetesScope).getByText('継続中')).toBeVisible();
-    expect(within(diabetesScope).getByText('8839101')).toBeVisible();
+    expect(within(diabetesScope).queryByText('8839101')).not.toBeInTheDocument();
     expect(screen.queryByText('院内未送信')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByText('ORCAへ病名登録', { selector: 'summary span' }));

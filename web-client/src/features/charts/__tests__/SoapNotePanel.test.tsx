@@ -162,7 +162,7 @@ describe('SoapNotePanel UI regression', () => {
     expect(screen.getByLabelText('右ドック')).toBeInTheDocument();
   });
 
-  it('印刷/エクスポート action は履歴ボタンの左側に表示する', () => {
+  it('履歴表示は保存状態の横に置き、印刷/エクスポート action は操作列に表示する', () => {
     renderWithQueryClient(
       <SoapNotePanel
         history={[]}
@@ -180,11 +180,16 @@ describe('SoapNotePanel UI regression', () => {
     );
 
     const soapActions = document.querySelector('.soap-note__actions');
+    const titleRow = document.querySelector('.soap-note__title-row');
     expect(soapActions).not.toBeNull();
+    expect(titleRow).not.toBeNull();
     const printButton = within(soapActions as HTMLElement).getByRole('button', { name: '印刷/エクスポート' });
-    const historyButton = within(soapActions as HTMLElement).getByRole('button', { name: '履歴' });
+    const savedBadge = within(titleRow as HTMLElement).getByText('保存済');
+    const historyButton = within(titleRow as HTMLElement).getByRole('button', { name: '履歴表示' });
 
-    expect(Boolean(printButton.compareDocumentPosition(historyButton) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(printButton).toBeInTheDocument();
+    expect(historyButton).toHaveAttribute('aria-pressed', 'false');
+    expect(Boolean(savedBadge.compareDocumentPosition(historyButton) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
   });
 
   it('履歴表示は画面構成説明を通常表示せず、必要な状態だけ表示する', async () => {
@@ -205,10 +210,13 @@ describe('SoapNotePanel UI regression', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: '履歴' }));
+    expect(screen.queryByText('記載履歴なし')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '履歴表示' }));
 
     expect(screen.getByLabelText('訂正履歴')).toBeInTheDocument();
     expect(screen.getByText('履歴がありません。')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '入力に戻る' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByText('訂正履歴を差分表示します（この端末の SOAP 履歴）。編集は「編集へ戻る」で切り替えます。')).toBeNull();
   });
 

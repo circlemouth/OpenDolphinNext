@@ -95,6 +95,27 @@ afterEach(() => {
 });
 
 describe('OrderBundleEditPanel submit blocked reasons', () => {
+  it('RP必須項目不足は常時警告として出さず、保存時に確定入力を止める', async () => {
+    const user = userEvent.setup();
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...baseProps}
+        meta={{
+          ...baseProps.meta,
+          missingMaster: false,
+        }}
+      />,
+    );
+
+    expect(screen.queryByText(/RP必須項目不足/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('medOrder-rp-required-warning')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
+
+    expect(screen.getByText(/RP必須項目不足/)).toBeInTheDocument();
+    expect(mutateOrderBundles).not.toHaveBeenCalled();
+  });
+
   it('編集ガード中の embedded submit は native disabled だけにせず押下時に理由を表示する', async () => {
     const user = userEvent.setup();
     renderWithClient(<OrderBundleEditPanel {...baseProps} />);

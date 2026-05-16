@@ -125,7 +125,7 @@ export const chartsStyles = css`
   }
 
   .charts-page[data-charts-compact-header='1'] .charts-card--summary {
-    padding: var(--charts-space-2xs) var(--charts-space-sm);
+    padding: 0;
   }
 
   .charts-page[data-charts-compact-header='1'] .charts-patient-summary__embedded-actions {
@@ -1049,15 +1049,18 @@ export const chartsStyles = css`
   }
 
   .charts-card--summary {
-    padding: var(--charts-space-sm);
-    border-color: rgba(148, 163, 184, 0.38);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+    padding: 0;
+    border-color: rgba(148, 163, 184, 0.42);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
   }
 
   .charts-card--identity {
-    border-color: rgba(100, 116, 139, 0.42);
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    border-color: rgba(148, 163, 184, 0.48);
+    box-shadow:
+      0 16px 34px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.88);
   }
 
   .charts-card--soap-primary {
@@ -1118,53 +1121,59 @@ export const chartsStyles = css`
     display: flex;
     flex-direction: column;
     gap: 0;
-    min-height: 5.15rem;
+    min-height: 6.1rem;
     position: relative;
-    --charts-patient-action-left: clamp(9.5rem, 15vw, 13rem);
-    --charts-patient-action-right: 3.2rem;
+    background:
+      linear-gradient(90deg, rgba(239, 246, 255, 0.58), rgba(255, 255, 255, 0) 18%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+    --charts-patient-action-left: clamp(10.5rem, 15vw, 13.2rem);
+    --charts-patient-action-right: 3.7rem;
   }
 
   .charts-patient-summary:has(.charts-actions__button--lock-alert) {
-    --charts-patient-action-right: clamp(9.6rem, 16vw, 11.5rem);
+    --charts-patient-action-right: 3.9rem;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__surface {
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    gap: 0.7rem;
+    gap: 0.95rem;
     border-color: transparent;
     background: transparent;
     box-shadow: none;
-    padding: 0;
-    min-height: 5.15rem;
+    padding: 0.7rem 0.95rem;
+    min-height: 6.1rem;
   }
 
   .charts-patient-summary:has(.charts-patient-summary__inline-actionbar) .charts-patient-summary__identity-bar .patient-identity-bar__surface {
-    padding-left: calc(var(--charts-patient-action-left) + 0.85rem);
-    padding-right: calc(var(--charts-patient-action-right) + 0.85rem);
+    padding-left: calc(var(--charts-patient-action-left) + 1.15rem);
+    padding-right: calc(var(--charts-patient-action-right) + 1rem);
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__body {
     display: grid;
-    grid-template-columns: minmax(230px, 0.38fr) minmax(0, 1fr);
+    grid-template-columns: minmax(260px, 0.44fr) minmax(0, 1fr);
     grid-template-areas:
       "header supporting"
       "chips supporting";
     align-items: center;
-    column-gap: clamp(0.75rem, 2vw, 1.6rem);
-    row-gap: 0.3rem;
+    column-gap: clamp(1rem, 2.3vw, 2rem);
+    row-gap: 0.34rem;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__avatar {
     align-self: center;
-    width: 2.65rem;
-    height: 2.65rem;
+    width: 3.2rem;
+    height: 3.2rem;
     border-radius: 50%;
-    border: 1px solid rgba(37, 99, 235, 0.24);
-    background: linear-gradient(145deg, rgba(239, 246, 255, 0.98), rgba(224, 242, 254, 0.9));
+    border: 1px solid rgba(225, 29, 72, 0.2);
+    background:
+      radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.13), rgba(255, 241, 242, 0.98) 56%, #ffffff 58%),
+      linear-gradient(145deg, rgba(255, 241, 242, 0.98), rgba(239, 246, 255, 0.88));
     box-shadow:
       inset 0 0 0 1px rgba(255, 255, 255, 0.82),
-      0 10px 18px rgba(15, 23, 42, 0.08);
+      0 0 0 5px rgba(255, 241, 242, 0.9),
+      0 12px 22px rgba(15, 23, 42, 0.1);
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__header {
@@ -1173,29 +1182,40 @@ export const chartsStyles = css`
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__title-row {
-    gap: 0.55rem;
+    gap: 0.7rem;
     align-items: center;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__title {
-    font-size: 0.98rem;
-    font-weight: 800;
+    font-size: 1.58rem;
+    font-weight: 900;
+    line-height: 1.05;
+    color: #0f172a;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__name {
-    font-size: 0.98rem;
-    font-weight: 700;
+    font-size: 1rem;
+    font-weight: 800;
     color: #0f172a;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__id {
-    border-color: rgba(37, 99, 235, 0.18);
-    background: rgba(239, 246, 255, 0.62);
-    color: #1e3a8a;
+    min-height: 2rem;
+    border-color: rgba(37, 99, 235, 0.26);
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.96), rgba(219, 234, 254, 0.76));
+    color: #1d4ed8;
+    padding: 0.32rem 0.78rem;
+    border-radius: var(--charts-radius-sm);
+    font-size: 0.88rem;
+    font-weight: 900;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__kana {
-    font-size: 0.8rem;
+    margin-bottom: 0.12rem;
+    color: #334155;
+    font-size: 0.82rem;
+    font-weight: 900;
   }
 
   .charts-patient-summary__identity-bar .patient-identity-bar__meta {
@@ -1211,25 +1231,26 @@ export const chartsStyles = css`
   .charts-patient-summary__identity-bar .patient-identity-bar__supporting {
     grid-area: supporting;
     padding-top: 0;
-    padding-left: clamp(0.75rem, 1.8vw, 1.25rem);
+    padding-left: clamp(1rem, 2vw, 1.55rem);
     border-top: 0;
-    border-left: 1px solid rgba(226, 232, 240, 0.95);
+    border-left: 1px solid rgba(203, 213, 225, 0.86);
   }
 
   .charts-patient-summary__supporting {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 0.55rem;
+    gap: 0.7rem;
     min-width: 0;
   }
 
   .charts-patient-summary__encounter-band {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.3rem;
+    gap: 0.55rem;
     flex: 1 1 auto;
     min-width: 0;
+    align-items: center;
   }
 
   .charts-patient-summary__source-alert {
@@ -1259,13 +1280,23 @@ export const chartsStyles = css`
 
   .charts-patient-summary__encounter-item {
     display: inline-flex;
-    align-items: baseline;
-    gap: 0.35rem;
-    min-height: 1.55rem;
-    padding: 0.18rem 0.48rem;
-    border: 1px solid rgba(37, 99, 235, 0.16);
-    border-radius: 999px;
-    background: rgba(248, 250, 252, 0.9);
+    align-items: stretch;
+    min-height: 2.1rem;
+    border: 1px solid rgba(148, 163, 184, 0.34);
+    border-radius: var(--charts-radius-sm);
+    background: rgba(255, 255, 255, 0.92);
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+  }
+
+  .charts-patient-summary__encounter-item[data-kind='status'] {
+    border-color: rgba(20, 184, 166, 0.38);
+    background: rgba(240, 253, 250, 0.96);
+  }
+
+  .charts-patient-summary__encounter-item[data-kind='department'] {
+    flex-basis: 100%;
+    width: fit-content;
   }
 
   .charts-patient-summary__encounter-item--wide {
@@ -1273,18 +1304,31 @@ export const chartsStyles = css`
   }
 
   .charts-patient-summary__encounter-label {
-    font-size: 0.68rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.28rem 0.55rem;
+    background: rgba(239, 246, 255, 0.88);
+    border-right: 1px solid rgba(148, 163, 184, 0.2);
+    font-size: 0.74rem;
     letter-spacing: 0;
-    text-transform: uppercase;
     color: #1d4ed8;
     white-space: nowrap;
+    font-weight: 900;
+  }
+
+  .charts-patient-summary__encounter-item[data-kind='status'] .charts-patient-summary__encounter-label {
+    background: rgba(204, 251, 241, 0.72);
+    color: #0f766e;
   }
 
   .charts-patient-summary__encounter-value {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.28rem 0.7rem;
     color: #0f172a;
-    font-size: 0.82rem;
-    font-weight: 700;
-    line-height: 1.45;
+    font-size: 0.92rem;
+    font-weight: 900;
+    line-height: 1.25;
     word-break: break-word;
   }
 
@@ -1295,8 +1339,8 @@ export const chartsStyles = css`
     align-items: baseline;
     gap: 0.3rem;
     color: #334155;
-    font-size: 0.76rem;
-    font-weight: 700;
+    font-size: 0.84rem;
+    font-weight: 900;
     white-space: nowrap;
   }
 
@@ -1307,9 +1351,9 @@ export const chartsStyles = css`
   }
 
   .charts-patient-summary__profile-icon {
-    flex-basis: 2.1rem;
-    width: 2.1rem;
-    height: 2.1rem;
+    flex-basis: 2.55rem;
+    width: 2.55rem;
+    height: 2.55rem;
   }
 
   .charts-patient-summary__fact-grid {
@@ -1488,12 +1532,14 @@ export const chartsStyles = css`
     flex-direction: column;
     align-items: stretch;
     justify-content: center;
-    gap: 0.3rem;
+    gap: 0.5rem;
     height: 100%;
-    padding: 0.45rem 0.6rem 0.45rem 0.4rem;
-    border-right: 1px solid rgba(203, 213, 225, 0.88);
+    padding: 0.78rem 0.75rem;
+    border-right: 1px solid rgba(203, 213, 225, 0.78);
     border-radius: var(--charts-radius-sm) 0 0 var(--charts-radius-sm);
-    background: rgba(248, 250, 252, 0.78);
+    background:
+      linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(241, 245, 249, 0.76)),
+      linear-gradient(90deg, rgba(219, 234, 254, 0.52), rgba(255, 255, 255, 0));
   }
 
   .charts-actions__patient-action-slot--center {
@@ -1509,50 +1555,59 @@ export const chartsStyles = css`
   }
 
   .charts-actions__patient-action-slot--right {
-    justify-content: flex-end;
-    gap: 0.35rem;
+    justify-content: stretch;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0;
     height: 100%;
-    padding: 0.45rem 0.35rem;
-    border-left: 1px solid rgba(203, 213, 225, 0.88);
+    padding: 0;
+    border-left: 1px solid rgba(203, 213, 225, 0.82);
     border-radius: 0 var(--charts-radius-sm) var(--charts-radius-sm) 0;
-    background: rgba(248, 250, 252, 0.72);
+    background: rgba(248, 250, 252, 0.82);
+    overflow: hidden;
   }
 
   .charts-actions__button--patient-draft {
-    min-height: 2rem;
+    min-height: 2.35rem;
     width: 100%;
-    padding: 0.34rem 0.52rem;
+    padding: 0.42rem 0.58rem;
     border-radius: var(--charts-radius-sm);
-    font-size: 0.78rem;
-    background: rgba(248, 250, 252, 0.96);
+    font-size: 0.86rem;
+    background: rgba(255, 255, 255, 0.96);
     border-color: rgba(100, 116, 139, 0.32);
-    box-shadow: none;
+    color: #334155;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
   }
 
   .charts-actions__button--patient-print {
-    width: 2.15rem;
-    min-width: 2.15rem;
-    height: 2.15rem;
+    width: 100%;
+    min-width: 0;
+    height: 2.35rem;
     padding: 0;
-    border-radius: 999px;
-    background: rgba(236, 254, 255, 0.98);
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    border-width: 0;
+    border-top: 1px solid rgba(203, 213, 225, 0.82);
+    border-radius: 0;
+    background: rgba(239, 246, 255, 0.9);
+    box-shadow: none;
   }
 
   .charts-actions__button--lock-alert {
-    min-height: 44px;
-    min-width: 7.35rem;
-    padding: 0.42rem 0.82rem;
-    border-radius: 999px;
+    flex: 1 1 auto;
+    min-height: 4.1rem;
+    min-width: 0;
+    width: 100%;
+    padding: 0.45rem 0.2rem;
+    border-width: 0;
+    border-radius: 0;
     background: #fff7ed;
-    border-color: rgba(234, 88, 12, 0.58);
     color: #9a3412;
     font-size: 0.82rem;
     font-weight: 900;
-    line-height: 1;
-    white-space: nowrap;
-    flex: 0 0 auto;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    line-height: 1.1;
+    white-space: normal;
+    flex-direction: column;
+    gap: 0.22rem;
+    box-shadow: none;
   }
 
   .charts-actions__button--lock-alert span[aria-hidden='true'] {
@@ -1567,17 +1622,23 @@ export const chartsStyles = css`
     line-height: 1;
   }
 
+  .charts-actions__button--lock-alert span:not([aria-hidden='true']) {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    letter-spacing: 0;
+  }
+
   .charts-actions__button--patient-finish {
     width: 100%;
     max-width: 100%;
-    min-height: 2.15rem;
-    padding: 0.38rem 0.54rem;
+    min-height: 2.55rem;
+    padding: 0.48rem 0.6rem;
     border-radius: var(--charts-radius-sm);
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     line-height: 1.2;
     white-space: normal;
     text-align: center;
-    box-shadow: none;
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.12);
   }
 
   .charts-actions__button--patient-print span {
@@ -1599,6 +1660,36 @@ export const chartsStyles = css`
   .charts-patient-summary__inline-actionbar .charts-actions__skeleton,
   .charts-patient-summary__inline-actionbar .charts-actions__toast {
     margin-top: 0.2rem;
+  }
+
+  @media (max-width: 1040px) {
+    .charts-patient-summary__identity-bar .patient-identity-bar__title {
+      font-size: 1.42rem;
+    }
+
+    .charts-patient-summary__identity-bar .patient-identity-bar__body {
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "header"
+        "chips"
+        "supporting";
+      align-content: center;
+    }
+
+    .charts-patient-summary__identity-bar .patient-identity-bar__supporting {
+      padding-top: 0.55rem;
+      padding-left: 0;
+      border-top: 1px solid rgba(203, 213, 225, 0.78);
+      border-left: 0;
+    }
+
+    .charts-patient-summary__encounter-band {
+      gap: 0.42rem;
+    }
+
+    .charts-patient-summary__encounter-item[data-kind='department'] {
+      flex-basis: auto;
+    }
   }
 
   @media (max-width: 720px) {
@@ -1624,21 +1715,6 @@ export const chartsStyles = css`
       padding: 0;
       border: 0;
       background: transparent;
-    }
-
-    .charts-patient-summary__identity-bar .patient-identity-bar__body {
-      grid-template-columns: 1fr;
-      grid-template-areas:
-        "header"
-        "chips"
-        "supporting";
-    }
-
-    .charts-patient-summary__identity-bar .patient-identity-bar__supporting {
-      padding-top: 0.45rem;
-      padding-left: 0;
-      border-top: 1px solid rgba(226, 232, 240, 0.95);
-      border-left: 0;
     }
 
     .charts-patient-summary__supporting {
@@ -4885,7 +4961,6 @@ export const chartsStyles = css`
     min-width: 0;
   }
 
-  .charts-diagnosis__source-badge,
   .charts-diagnosis__count-badge {
     display: inline-flex;
     align-items: center;
@@ -5423,6 +5498,10 @@ export const chartsStyles = css`
     align-items: end;
   }
 
+  .charts-diagnosis__quick-grid--single {
+    grid-template-columns: minmax(130px, 0.45fr);
+  }
+
   .charts-diagnosis__quick-namebox {
     position: relative;
     display: grid;
@@ -5508,24 +5587,6 @@ export const chartsStyles = css`
     .charts-diagnosis__quick-grid {
       grid-template-columns: 1fr;
     }
-  }
-
-  .charts-diagnosis__dialog-add {
-    justify-self: start;
-    border-radius: 999px;
-    border: 1px solid var(--ui-border);
-    background: #ffffff;
-    color: #475569;
-    padding: 0.25rem 0.55rem;
-    font-size: 0.72rem;
-    font-weight: 800;
-    cursor: pointer;
-  }
-
-  .charts-diagnosis__dialog-add:disabled {
-    background: #e2e8f0;
-    color: #94a3b8;
-    cursor: not-allowed;
   }
 
   .charts-diagnosis__confirm {
@@ -7025,6 +7086,11 @@ export const chartsStyles = css`
     gap: var(--charts-space-xs);
   }
 
+  .soap-note__sync-status {
+    display: inline-flex;
+    align-items: center;
+  }
+
   .soap-note__sync-badge {
     display: inline-flex;
     align-items: center;
@@ -7061,6 +7127,26 @@ export const chartsStyles = css`
     font-size: 0.76rem;
     color: #64748b;
     font-variant-numeric: tabular-nums;
+  }
+
+  .soap-note__history-toggle {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    border-radius: var(--ui-radius-md);
+    border: 1px solid rgba(14, 116, 144, 0.34);
+    background: rgba(240, 253, 250, 0.86);
+    color: #0f766e;
+    padding: 0.32rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .soap-note__history-toggle[aria-pressed='true'] {
+    border-color: rgba(29, 78, 216, 0.38);
+    background: rgba(239, 246, 255, 0.92);
+    color: #1d4ed8;
   }
 
   .soap-note__actions {

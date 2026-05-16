@@ -1722,9 +1722,6 @@ export function SoapNotePanel({
   };
 
   const authoredLast = authoredMeta.last;
-  const authoredSummary = authoredLast
-    ? `最終更新: ${formatSoapAuthoredAt(authoredLast.authoredAt)} / ${resolveEntryActor(authoredLast)}`
-    : '記載履歴なし';
 
   useEffect(() => {
     if (!historyView) return;
@@ -1943,37 +1940,44 @@ export function SoapNotePanel({
         <div className="soap-note__header-main">
           <div className="soap-note__title-row">
             <h2>カルテ本文</h2>
-            <div className="soap-note__sync" role="status" aria-live={resolveAriaLive(syncState.error ? 'error' : 'info')}>
-              <span
-                className={`soap-note__sync-badge${
-                  syncState.serverSynced ? ' soap-note__sync-badge--synced' : syncState.localSaved ? ' soap-note__sync-badge--local' : ''
-                }${syncState.error ? ' soap-note__sync-badge--error' : ''}`}
-                title={syncState.savedAt ? `最終保存: ${formatSoapAuthoredAt(syncState.savedAt)}` : undefined}
-              >
-                {syncState.isSaving
-                  ? '保存中'
-                  : syncState.error
-                    ? '保存エラー'
-                    : syncState.serverSynced
-                      ? '保存済'
-                      : syncState.localSaved
-                        ? 'ローカル下書き保存済 / カルテ未反映'
-                        : '未保存'}
+            <div className="soap-note__sync">
+              <span className="soap-note__sync-status" role="status" aria-live={resolveAriaLive(syncState.error ? 'error' : 'info')}>
+                <span
+                  className={`soap-note__sync-badge${
+                    syncState.serverSynced ? ' soap-note__sync-badge--synced' : syncState.localSaved ? ' soap-note__sync-badge--local' : ''
+                  }${syncState.error ? ' soap-note__sync-badge--error' : ''}`}
+                  title={syncState.savedAt ? `最終保存: ${formatSoapAuthoredAt(syncState.savedAt)}` : undefined}
+                >
+                  {syncState.isSaving
+                    ? '保存中'
+                    : syncState.error
+                      ? '保存エラー'
+                      : syncState.serverSynced
+                        ? '保存済'
+                        : syncState.localSaved
+                          ? 'ローカル下書き保存済 / カルテ未反映'
+                          : '未保存'}
+                </span>
               </span>
+              <button
+                type="button"
+                onClick={() => setHistoryView((prev) => !prev)}
+                className="soap-note__history-toggle"
+                aria-pressed={historyView}
+                title={historyView ? 'SOAP入力へ戻ります。' : '訂正履歴を表示します（取り消し線で差分を可視化）。'}
+              >
+                {historyView ? '入力に戻る' : '履歴表示'}
+              </button>
             </div>
           </div>
-          <p className="soap-note__subtitle soap-note__subtitle--meta">{authoredSummary}</p>
+          {authoredLast ? (
+            <p className="soap-note__subtitle soap-note__subtitle--meta">
+              最終更新: {formatSoapAuthoredAt(authoredLast.authoredAt)} / {resolveEntryActor(authoredLast)}
+            </p>
+          ) : null}
         </div>
         <div className="soap-note__actions">
           {printExportAction}
-          <button
-            type="button"
-            onClick={() => setHistoryView((prev) => !prev)}
-            className="soap-note__ghost"
-            title={historyView ? 'SOAP入力へ戻ります。' : '訂正履歴を表示します（取り消し線で差分を可視化）。'}
-          >
-            {historyView ? '履歴終了' : '履歴'}
-          </button>
           <button
             type="button"
             onClick={cycleViewMode}
@@ -2253,16 +2257,16 @@ export function SoapNotePanel({
                           </span>
                           <label htmlFor={textareaId}>{SOAP_SECTION_LABELS[section]}</label>
                         </div>
-                        <div className="soap-note__section-meta">
-                          {templateLabel ? <span className="soap-note__section-chip">テンプレ: {templateLabel}</span> : null}
-                          {latest ? (
-                            <span>
-                              最終更新: {formatSoapAuthoredAt(latest.authoredAt)} ／ {resolveEntryActor(latest)}
-                            </span>
-                          ) : (
-                            <span>記載履歴なし</span>
-                          )}
-                        </div>
+                        {templateLabel || latest ? (
+                          <div className="soap-note__section-meta">
+                            {templateLabel ? <span className="soap-note__section-chip">テンプレ: {templateLabel}</span> : null}
+                            {latest ? (
+                              <span>
+                                最終更新: {formatSoapAuthoredAt(latest.authoredAt)} ／ {resolveEntryActor(latest)}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                       <textarea
                         id={textareaId}

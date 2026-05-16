@@ -65,8 +65,6 @@ import {
 import {
   buildRpRequiredEditorMessage,
   resolveRpRequiredIssue,
-  resolveRpRequiredFieldLabel,
-  RP_REQUIRED_ERROR_LABEL,
   type RpRequiredField,
 } from './orderRpRequirements';
 import {
@@ -3575,8 +3573,20 @@ export function OrderBundleEditPanel({
         Boolean(item.name?.trim() || item.code?.trim() || item.quantity?.trim() || item.unit?.trim() || item.memo?.trim());
       const resolveTargetId = (key: string) => {
         switch (key) {
-          case 'rp_required':
-            return `${entityId}-rp-required-warning`;
+          case 'rp_required': {
+            const rpIssue = resolveRpRequiredIssue({
+              entity,
+              bundleName: bundleForm.bundleName,
+              classCode: isMedOrder
+                ? resolvePrescriptionClassCode(bundleForm.prescriptionTiming, bundleForm.prescriptionLocation)
+                : bundleForm.classCode?.trim(),
+              bundleNumber: bundleForm.bundleNumber,
+              items: bundleForm.items,
+            });
+            if (rpIssue?.missing.includes('Medication_info')) return `${entityId}-item-name-0`;
+            if (rpIssue?.missing.includes('Medical_Class_Number')) return `${entityId}-bundle-number`;
+            return `${entityId}-item-name-0`;
+          }
           case 'missing_usage':
           case 'invalid_injection_class_code':
             return `${entityId}-admin`;
@@ -3636,7 +3646,7 @@ export function OrderBundleEditPanel({
         el.focus();
       });
     },
-    [entityId],
+    [entity, entityId, isMedOrder],
   );
 
   const submitAction = (action: OrderBundleSubmitAction) => {
@@ -4087,26 +4097,6 @@ export function OrderBundleEditPanel({
           )}
         </div>
       )}
-      {rpRequiredIssueForForm ? (
-        <div
-          id={`${entityId}-rp-required-warning`}
-          className="charts-side-panel__notice charts-side-panel__notice--warning"
-          role="status"
-          tabIndex={-1}
-          aria-live={resolveAriaLive('warning')}
-          data-test-id={`${entityId}-rp-required-warning`}
-        >
-          <div>
-            <strong>{RP_REQUIRED_ERROR_LABEL}</strong>
-          </div>
-          <p className="charts-side-panel__notice-detail">{buildRpRequiredEditorMessage(rpRequiredIssueForForm)}</p>
-          <ul className="charts-side-panel__notice-list" aria-label="不足しているRP必須項目">
-            {rpRequiredIssueForForm.missing.map((field) => (
-              <li key={`${entityId}-${field}`}>{resolveRpRequiredFieldLabel(field)}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
       <div className="charts-side-panel__workspace" data-variant={variant} data-order-editor-layout="manual-first">
         {showRecommendationSidebar ? (
           <aside className="charts-side-panel__workspace-left charts-order-editor__secondary" aria-label="候補・セット・登録済みオーダー">

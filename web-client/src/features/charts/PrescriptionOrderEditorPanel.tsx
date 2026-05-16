@@ -17,9 +17,7 @@ import {
 } from './orcaCommentCarrierRules';
 import {
   buildRpRequiredEditorMessage,
-  resolveRpRequiredFieldLabel,
   resolveRpRequiredIssue,
-  RP_REQUIRED_ERROR_LABEL,
   type RpRequiredField,
 } from './orderRpRequirements';
 import {
@@ -1543,17 +1541,6 @@ export function PrescriptionOrderEditorPanel({
         {notice ? (
           <div className={`charts-side-panel__notice charts-side-panel__notice--${notice.tone}`} aria-live={resolveAriaLive(notice.tone)}>
             {notice.message}
-          </div>
-        ) : null}
-        {rpRequired.issue ? (
-          <div className="charts-side-panel__notice charts-side-panel__notice--warning" data-test-id="medorder-rp-required-warning">
-            <strong>{RP_REQUIRED_ERROR_LABEL}</strong>
-            <p className="charts-side-panel__notice-detail">{buildRpRequiredEditorMessage(rpRequired.issue)}</p>
-            <ul className="charts-side-panel__notice-list" aria-label="不足しているRP必須項目">
-              {rpRequired.missing.map((field) => (
-                <li key={field}>{resolveRpRequiredFieldLabel(field)}</li>
-              ))}
-            </ul>
           </div>
         ) : null}
         {safetyItems.length > 0 && !interactionConfirmOpen ? (
