@@ -6,6 +6,7 @@
 - [auth-check.md](auth-check.md)
 - [auth-transition.md](auth-transition.md)
 - [security-spec.md](security-spec.md)
+- [csrf-login-refresh.md](csrf-login-refresh.md)
 
 ## App / UI Contract
 - [ui-current-contract.md](ui-current-contract.md)

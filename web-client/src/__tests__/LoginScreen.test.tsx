@@ -140,6 +140,43 @@ describe('LoginScreen', () => {
     expect(requestBody.userId).toBe('doctor01');
   });
 
+  it('refreshes a placeholder CSRF meta token before submitting credentials', async () => {
+    document.head.innerHTML = '<meta name="csrf-token" content="__CSRF_TOKEN__" />';
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('<!doctype html><meta name="csrf-token" content="fresh-csrf-token" />', {
+        status: 200,
+        headers: { 'Content-Type': 'text/html' },
+      }),
+    );
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      jsonResponse({
+        facilityId: 'F001',
+        userId: 'doctor01',
+        displayName: 'Doctor One',
+        roles: ['doctor'],
+        runId: 'server-run-1',
+      }),
+    );
+    const onLoginSuccess = vi.fn();
+    const user = userEvent.setup();
+
+    render(<LoginScreen onLoginSuccess={onLoginSuccess} />);
+
+    await fillCredentialsAndSubmit(user);
+
+    await waitFor(() => expect(onLoginSuccess).toHaveBeenCalledTimes(1));
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/login'),
+      expect.objectContaining({
+        method: 'GET',
+        headers: { Accept: 'text/html' },
+        credentials: 'include',
+        cache: 'no-store',
+      }),
+    );
+    expect(document.querySelector("meta[name='csrf-token']")?.getAttribute('content')).toBe('fresh-csrf-token');
+  });
+
   it.each([
     [
       '401 credentials denied',

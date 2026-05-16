@@ -6,6 +6,7 @@ import { httpFetch } from './libs/http/httpClient';
 import { generateRunId, updateObservabilityMeta } from './libs/observability/observability';
 import { consumeSessionExpiredNotice } from './libs/session/sessionExpiry';
 import { logAuditEvent } from './libs/audit/auditLogger';
+import { readCsrfToken, refreshCsrfTokenFromCurrentDocument } from './libs/security/csrf';
 import {
   AUTH_COPY,
   resolveLoginFailure,
@@ -704,6 +705,10 @@ export const LoginScreen = ({
 const executeSessionPost = async (endpoint: string, body: Record<string, unknown>): Promise<Response> => {
   assertLoginTargetIsAllowed();
   const timeoutMs = resolveLoginTimeoutMs();
+
+  if (!readCsrfToken()) {
+    await refreshCsrfTokenFromCurrentDocument();
+  }
 
   const sendRequest = async (signal?: AbortSignal) =>
     httpFetch(endpoint, {
