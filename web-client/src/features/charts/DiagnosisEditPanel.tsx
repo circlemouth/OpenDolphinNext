@@ -117,6 +117,7 @@ type PendingAction =
 
 const QUICK_CANDIDATE_MIN_KEYWORD = 2;
 const QUICK_CANDIDATE_MAX_ITEMS = 20;
+const ORCA_DISEASE_MIRROR_REFETCH_INTERVAL_MS = 90_000;
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const POST_MUTATION_MIRROR_UNAVAILABLE_MESSAGE =
   'ORCA病名の送信は受け付けられましたが、ORCA病名の再取得が完了していません。ORCA正本を再取得して確認してください。';
@@ -617,6 +618,12 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
       return fetchDiseases({ patientId, to: meta.visitDate, baseMonth: diagnosisBaseMonth });
     },
     enabled: !!patientId,
+    staleTime: 30_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
+    refetchInterval: isEditorOpen || pendingAction ? false : ORCA_DISEASE_MIRROR_REFETCH_INTERVAL_MS,
+    refetchIntervalInBackground: false,
   });
 
   const list = useMemo(() => diagnosisQuery.data?.diseases ?? [], [diagnosisQuery.data?.diseases]);
@@ -1169,6 +1176,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
   const editorHasUncodedWarning = form.name.trim().length > 0 && editorFormComponents.length === 0;
   const editorDiseaseName = form.name.trim() || '未入力';
   const editorOperationLabel = editingEntry ? 'ORCA病名を更新' : 'ORCAへ病名登録';
+  const organizeNativeDisabled = isDiseaseMirrorPending || isAnyMutationPending;
   const editorOrcaCodePlan =
     `Disease_Insurance_Class=${formatOrcaCode(resolveDiseaseInsuranceClassCode(form))} / Disease_Category=${formatOrcaCode(resolveDiseaseCategoryCode(form))} / Disease_Class=${formatOrcaCode(resolveDiseaseClassCode(form))} / Main_Disease_Class=${formatOrcaCode(resolveMainDiseaseClassCode(form))} / Disease_SuspectedFlag=${formatOrcaCode(resolveSuspectedFlagCode(form))} / Disease_Receipt_Print=${formatOrcaCode(resolveDiseaseReceiptPrintCode(form))} / Disease_Receipt_Print_Period=${formatOrcaCode(resolveDiseaseReceiptPrintPeriodCode(form))} / Insurance_Disease=${formatOrcaCode(resolveInsuranceDiseaseCode(form))} / Discharge_Certificate=${formatOrcaCode(resolveDischargeCertificateCode(form))} / Sub_Disease_Class=${formatOrcaCode(resolveSubDiseaseClassCode(form))}`;
   const mirrorStatusLabel = diagnosisQuery.isFetching ? '取得中' : isMirrorConnected ? `${mirrorList.length}件` : '未確認';
@@ -1187,14 +1195,19 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
           <button
             type="button"
             className="charts-side-panel__ghost charts-diagnosis__organize-button"
-            onClick={() =>
+            onClick={() => {
+              if (showMutationBlockedNotice()) return;
               setPendingAction({
                 operation: 'organizeDeletedDiseases',
                 title: '削除病名を整理',
                 confirmLabel: '削除病名を整理',
-              })
-            }
-            disabled={isOrcaMutationBlocked || isAnyMutationPending}
+              });
+            }}
+            disabled={organizeNativeDisabled}
+            aria-disabled={isOrcaMutationBlocked}
+            aria-describedby={mutationBlockReasons.length > 0 ? 'diagnosis-mutation-block-reason' : undefined}
+            data-disabled-reason={mutationBlockReasons.length > 0 ? 'orca_disease_mutation_blocked' : undefined}
+            title={mutationBlockReasons.length > 0 ? mutationBlockReasonText : undefined}
           >
             削除病名を整理
           </button>
@@ -1206,7 +1219,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
           ORCA登録病名を確認中です。確認完了まで病名操作は待機します。
         </div>
       ) : mutationBlockReasons.length > 0 ? (
-        <div className="charts-side-panel__notice charts-side-panel__notice--info">
+        <div id="diagnosis-mutation-block-reason" className="charts-side-panel__notice charts-side-panel__notice--info">
           <div>ORCA病名操作はブロックされています: {mutationBlockReasons.join(' / ')}</div>
           {unblockHints.length > 0 ? (
             <ul className="charts-diagnosis__unblock">

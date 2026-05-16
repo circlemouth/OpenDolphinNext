@@ -150,11 +150,15 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
 
     renderPanel();
 
+    await user.click(screen.getByText('薬剤検索'));
     await user.type(screen.getByLabelText('キーワード'), 'アム');
     await user.click(screen.getByRole('button', { name: '検索（2文字以下は明示実行）' }));
 
-    const candidateRow = await screen.findByRole('button', { name: /620000001.*12\.34.*右へ反映/ });
+    const candidateRow = await screen.findByRole('button', { name: /620000001/ });
     expect(candidateRow).toBeInTheDocument();
+    await waitFor(() => {
+      expect(candidateRow).toHaveTextContent('12.34');
+    });
 
     await user.click(candidateRow);
     await waitFor(() => {
@@ -199,9 +203,10 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     const rpPane = screen.getByLabelText('RP一覧');
     expect(within(rpPane).getByText('1件')).toBeInTheDocument();
 
+    await user.click(screen.getByText('ORCA入力セット'));
     await user.type(screen.getByLabelText('keyword'), '降圧');
     await user.click(screen.getByRole('button', { name: '入力セット検索' }));
-    await user.click(await screen.findByRole('button', { name: /P01001.*RPへ反映/ }));
+    await user.click(await screen.findByRole('button', { name: /P01001.*反映/ }));
 
     await waitFor(() => {
       expect(within(rpPane).getByText('2件')).toBeInTheDocument();
@@ -244,7 +249,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
 
     await user.click(screen.getByRole('button', { name: '保存' }));
     expect(await screen.findByText('ORCA master 参照の静的相互作用チェック')).toBeInTheDocument();
-    expect(screen.getByText(/620000001 \/ 620000002 \/ 併用注意/)).toBeInTheDocument();
+    expect(screen.getAllByText(/相互作用候補: 併用注意（620000001 \/ 620000002）/).length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: '処方を修正' }));
     expect(vi.mocked(savePrescriptionOrder)).not.toHaveBeenCalled();

@@ -63,6 +63,11 @@ import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import { logAuditEvent } from '../../libs/audit/auditLogger';
 import { resolveUserSafeSaveFailure } from './userSafeErrorCopy';
 
+const isParallelEditLockReason = (reason?: string | null): boolean => {
+  if (!reason) return false;
+  return reason.includes('別タブ') || reason.includes('並行編集');
+};
+
 export type SoapNoteMeta = {
   runId?: string;
   cacheHit?: boolean;
@@ -153,6 +158,7 @@ type SoapNotePanelProps = {
   onUtilityRailActionSelect?: (action: RightUtilityDockUtilityAction, trigger: HTMLButtonElement) => void;
   onShortcutDialogOpen?: () => void;
   shortcutsOpen?: boolean;
+  printExportAction?: ReactNode;
 };
 
 const resolveAuthorLabel = (author: SoapNoteAuthor) => {
@@ -338,6 +344,7 @@ export function SoapNotePanel({
   onUtilityRailActionSelect,
   onShortcutDialogOpen,
   shortcutsOpen,
+  printExportAction,
 }: SoapNotePanelProps) {
   const isRevisionHistoryEnabled = import.meta.env.VITE_CHARTS_REVISION_HISTORY !== '0';
   const queryClient = useQueryClient();
@@ -1689,6 +1696,8 @@ export function SoapNotePanel({
       : syncState.isSaving
         ? '保存中です。'
         : '';
+  const suppressReadOnlyReason = readOnly && isParallelEditLockReason(readOnlyReason);
+  const showSaveBlockedReason = Boolean(saveBlockedReason) && !suppressReadOnlyReason;
   const handleTemplateDialogOpen = useCallback(() => {
     setTemplateSelection('');
     if (!SOAP_SECTIONS.includes(templateTargetSection)) {
@@ -1956,6 +1965,7 @@ export function SoapNotePanel({
           <p className="soap-note__subtitle soap-note__subtitle--meta">{authoredSummary}</p>
         </div>
         <div className="soap-note__actions">
+          {printExportAction}
           <button
             type="button"
             onClick={() => setHistoryView((prev) => !prev)}
@@ -2005,12 +2015,12 @@ export function SoapNotePanel({
             onClick={handleSave}
             disabled={readOnly || historyView || syncState.isSaving}
             className="soap-note__primary"
-            aria-describedby={saveBlockedReason ? saveBlockedReasonId : undefined}
+            aria-describedby={showSaveBlockedReason ? saveBlockedReasonId : undefined}
             title={saveBlockedReason || undefined}
           >
             {syncState.isSaving ? '保存中...' : history.length === 0 ? '保存' : '更新'}
           </button>
-          {saveBlockedReason ? (
+          {showSaveBlockedReason ? (
             <p id={saveBlockedReasonId} className="soap-note__guard">
               保存はブロックされています: {saveBlockedReason}
             </p>
@@ -2153,7 +2163,7 @@ export function SoapNotePanel({
           </div>
         </section>
       </FocusTrapDialog>
-      {readOnly ? (
+      {readOnly && !suppressReadOnlyReason ? (
         <p className="soap-note__guard">読み取り専用: {readOnlyReason ?? '編集はロック中です。'}</p>
       ) : null}
       {feedback ? <p className="soap-note__feedback" role="status">{feedback}</p> : null}
@@ -2175,9 +2185,6 @@ export function SoapNotePanel({
           <div className="soap-note__editor">
           {historyView ? (
             <div className="soap-note__history-mode" aria-label="訂正履歴">
-              <p className="soap-note__history-hint">
-                訂正履歴を差分表示します（この端末の SOAP 履歴）。編集は「編集へ戻る」で切り替えます。
-              </p>
               {historyTimeline.length === 0 ? (
                 <p className="soap-note__history-empty" role="status">
                   履歴がありません。

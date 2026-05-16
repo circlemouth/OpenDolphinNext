@@ -57,6 +57,7 @@ import {
 } from '../diseaseApi';
 import { useAdminBroadcast } from '../../../libs/admin/useAdminBroadcast';
 import { AdminBroadcastBanner } from '../../shared/AdminBroadcastBanner';
+import { ClinicalIcon } from '../../shared/ClinicalIcon';
 import { RunIdBadge } from '../../shared/RunIdBadge';
 import { StatusPill } from '../../shared/StatusPill';
 import { AuditSummaryInline } from '../../shared/AuditSummaryInline';
@@ -785,6 +786,36 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     savedAt: undefined,
   });
   const chartsActionBarRef = useRef<ChartsActionBarHandle | null>(null);
+  const [printActionState, setPrintActionState] = useState<{ disabled: boolean; title?: string; disabledReason?: string }>({
+    disabled: false,
+  });
+  const handlePrintActionStateChange = useCallback((next: { disabled: boolean; title?: string; disabledReason?: string }) => {
+    setPrintActionState((prev) =>
+      prev.disabled === next.disabled && prev.title === next.title && prev.disabledReason === next.disabledReason ? prev : next,
+    );
+  }, []);
+  const handlePrintExportFromSoap = useCallback(() => {
+    void chartsActionBarRef.current?.print();
+  }, []);
+  const soapPrintExportAction = useMemo(
+    () => (
+      <button
+        type="button"
+        id="charts-action-print"
+        className="soap-note__ghost soap-note__print-export-action"
+        disabled={printActionState.disabled}
+        aria-disabled={printActionState.disabled || undefined}
+        data-disabled-reason={printActionState.disabledReason}
+        title={printActionState.title}
+        aria-keyshortcuts="Alt+I"
+        onClick={handlePrintExportFromSoap}
+      >
+        <ClinicalIcon icon="print-export-clinical" />
+        <span>印刷/エクスポート</span>
+      </button>
+    ),
+    [handlePrintExportFromSoap, printActionState.disabled, printActionState.disabledReason, printActionState.title],
+  );
   const [encounterExitGuard, setEncounterExitGuard] = useState<EncounterExitGuardState | null>(null);
   const encounterExitResolverRef = useRef<((choice: EncounterExitChoice) => void) | null>(null);
   const [soapSaveRequest, setSoapSaveRequest] = useState<SoapSaveRequestState | null>(null);
@@ -3338,15 +3369,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         nextAction: '下書き保存または破棄を選択',
       });
     }
-    if (tabLock.isReadOnly) {
-      items.push({
-        id: 'tab-lock',
-        label: '編集ロック',
-        tone: 'danger',
-        detail: '別タブが編集中のため閲覧専用です。',
-        nextAction: '編集ロックボタンで対応を確認',
-      });
-    }
     if (approvalLocked) {
       items.push({
         id: 'approval',
@@ -3376,8 +3398,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     selectedOrcaSendStatus?.error,
     selectedOrcaSendStatus?.isStalled,
     selectedOrcaSendStatus?.key,
-    tabLock.isReadOnly,
-    tabLock.readOnlyReason,
   ]);
   useEffect(() => {
     if (patientEntries.length === 0) return;
@@ -3449,20 +3469,43 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       if (hasMedicalSummaryEncounterKey) {
         refreshes.push(medicalSummaryQuery.refetch());
       }
+      if (hasEncounterHandoffKey && patientId && actionVisitDate) {
+        refreshes.push(diagnosisSummaryQuery.refetch());
+      }
+      if (patientId) {
+        refreshes.push(queryClient.refetchQueries({ queryKey: ['charts-diagnosis', patientId], type: 'active' }));
+      }
       await Promise.all(refreshes);
     } finally {
       setIsManualRefreshing(false);
     }
-  }, [appointmentQuery, claimQuery, hasMedicalSummaryEncounterKey, medicalSummaryQuery]);
+  }, [
+    actionVisitDate,
+    appointmentQuery,
+    claimQuery,
+    diagnosisSummaryQuery,
+    hasEncounterHandoffKey,
+    hasMedicalSummaryEncounterKey,
+    medicalSummaryQuery,
+    patientId,
+    queryClient,
+  ]);
 
   const handleRefreshWithoutSummary = useCallback(async () => {
     setIsManualRefreshing(true);
     try {
-      await Promise.all([claimQuery.refetch(), appointmentQuery.refetch()]);
+      const refreshes: Promise<unknown>[] = [claimQuery.refetch(), appointmentQuery.refetch()];
+      if (hasEncounterHandoffKey && patientId && actionVisitDate) {
+        refreshes.push(diagnosisSummaryQuery.refetch());
+      }
+      if (patientId) {
+        refreshes.push(queryClient.refetchQueries({ queryKey: ['charts-diagnosis', patientId], type: 'active' }));
+      }
+      await Promise.all(refreshes);
     } finally {
       setIsManualRefreshing(false);
     }
-  }, [appointmentQuery, claimQuery]);
+  }, [actionVisitDate, appointmentQuery, claimQuery, diagnosisSummaryQuery, hasEncounterHandoffKey, patientId, queryClient]);
 
   const requestEncounterExitChoice = useCallback(
     (action: EncounterExitAction) =>
@@ -5186,6 +5229,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                           sendConfirmSummary={sendConfirmSummary}
                           onDraftSaved={() => setDraftState((prev) => ({ ...prev, dirty: false, dirtySources: [] }))}
                           onLockChange={handleLockChange}
+                          showPrintAction={false}
+                          onPrintActionStateChange={handlePrintActionStateChange}
                         />
                       }
                     />
@@ -5307,6 +5352,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                       onUtilityRailActionSelect={handleUtilityButtonClick}
                       onShortcutDialogOpen={() => setIsShortcutsDialogOpen(true)}
                       shortcutsOpen={isShortcutsDialogOpen}
+                      printExportAction={soapPrintExportAction}
 			                      onDraftSnapshot={setSoapDraftSnapshot}
 			                      replaceDraftRequest={replaceSoapDraftRequest}
                         saveRequest={soapSaveRequest}

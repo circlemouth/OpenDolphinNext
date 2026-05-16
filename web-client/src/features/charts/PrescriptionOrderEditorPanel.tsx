@@ -69,7 +69,7 @@ type ValidationIssue = {
 type GenericPriceCacheState = OrcaGenericPriceResult | { loading: true };
 type PrescriptionSafetyItem = {
   key: string;
-  tone: 'warning' | 'contra' | 'confirmed';
+  tone: 'warning' | 'contra';
   label: string;
   detail: string;
 };
@@ -155,7 +155,6 @@ const CLAIM_COMMENT_TEMPLATES: Array<{ code?: string; name: string }> = [
 const DRUG_COMMENT_TEMPLATES = ['食後服用を指導', '眠気に注意', '残薬確認済み'];
 const RP_SHARED_USAGE_RULE =
   '1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。';
-const RP_SHARED_USAGE_SHORT = '1 RP = 共通用法。異なる用法は別RP';
 
 const createClaimComment = (name: string, code?: string, note?: string): PrescriptionClaimComment => ({
   id: `claim-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
@@ -314,7 +313,7 @@ const buildPrescriptionSafetyItems = (
       key: `interaction-${pair.code1}-${pair.code2}-${index}`,
       tone: 'warning',
       label: '警告',
-      detail: `${pair.code1} / ${pair.code2} / ${pair.interactionName ?? pair.message ?? 'master 静的相互作用あり'}`,
+      detail: `相互作用候補: ${pair.interactionName ?? pair.message ?? 'master 静的相互作用あり'}（${pair.code1} / ${pair.code2}）`,
     });
   });
   validationIssues
@@ -327,14 +326,6 @@ const buildPrescriptionSafetyItems = (
         detail: `保存不可: ${issue.message}`,
       });
     });
-  if (items.length === 0) {
-    items.push({
-      key: 'confirmed-no-warning',
-      tone: 'confirmed',
-      label: '確認済み',
-      detail: 'この画面で検出できる重複投与候補、静的相互作用候補、保存不可ルールはありません。',
-    });
-  }
   return items;
 };
 
@@ -1162,7 +1153,7 @@ export function PrescriptionOrderEditorPanel({
     () => buildPrescriptionSafetyItems(order, validationIssues, interactionPairs),
     [interactionPairs, order, validationIssues],
   );
-  const formatSafetySummaryDetail = (detail: string) => detail.replace(/ \/ ([^/]+)$/, ': $1');
+  const formatSafetySummaryDetail = (detail: string) => detail;
 
   const splitDrugToNewRp = (drugIndex: number) => {
     if (isPreviewMode) return;
@@ -1392,7 +1383,12 @@ export function PrescriptionOrderEditorPanel({
   }
 
   return (
-    <section className="charts-side-panel__section" data-order-entity="medOrder" data-test-id="medOrder-prescription-editor-v2">
+    <section
+      className="charts-side-panel__section"
+      data-order-entity="medOrder"
+      data-order-layout="compact-kirin"
+      data-test-id="medOrder-prescription-editor-v2"
+    >
       <FocusTrapDialog
         open={interactionConfirmOpen}
         title="処方安全チェック"
@@ -1508,14 +1504,19 @@ export function PrescriptionOrderEditorPanel({
       />
       <header className="charts-side-panel__section-header">
         <div className="charts-side-panel__section-header-main">
-          <strong>処方（RP集合）</strong>
-          <span className="charts-side-panel__search-count">{RP_SHARED_USAGE_SHORT}</span>
+          <strong title={RP_SHARED_USAGE_RULE}>処方（RP集合）</strong>
         </div>
         <div className="charts-side-panel__subheader-actions">
           <button type="button" className="charts-side-panel__ghost charts-side-panel__ghost--add" onClick={addRp} disabled={isPreviewMode}>
             ＋RP
           </button>
-          <button type="button" className="charts-side-panel__ghost charts-side-panel__ghost--add" onClick={addDrug} disabled={isPreviewMode}>
+          <button
+            type="button"
+            className="charts-side-panel__ghost charts-side-panel__ghost--add"
+            onClick={addDrug}
+            disabled={isPreviewMode}
+            title={RP_SHARED_USAGE_RULE}
+          >
             ＋薬剤行
           </button>
           <button
@@ -1555,20 +1556,18 @@ export function PrescriptionOrderEditorPanel({
             </ul>
           </div>
         ) : null}
-        <div className="charts-side-panel__notice charts-side-panel__notice--info" data-test-id="prescription-rp-shared-usage-rule">
-          <strong>{RP_SHARED_USAGE_SHORT}</strong>
-          <p className="charts-side-panel__notice-detail">{RP_SHARED_USAGE_RULE}</p>
-        </div>
-        <div className="charts-side-panel__notice charts-side-panel__notice--info" aria-label="処方安全チェックサマリ">
-          <strong>安全チェック</strong>
-          <ul className="charts-side-panel__notice-list">
-            {safetyItems.slice(0, 4).map((item) => (
-              <li key={`summary-${item.key}`} data-safety-tone={item.tone}>
-                {item.label}: {formatSafetySummaryDetail(item.detail)}
-              </li>
-            ))}
-          </ul>
-        </div>
+        {safetyItems.length > 0 && !interactionConfirmOpen ? (
+          <div className="charts-side-panel__notice charts-side-panel__notice--warning" aria-label="処方安全チェック結果">
+            <strong>処方安全チェック</strong>
+            <ul className="charts-side-panel__notice-list">
+              {safetyItems.slice(0, 4).map((item) => (
+                <li key={`summary-${item.key}`} data-safety-tone={item.tone}>
+                  {item.label}: {formatSafetySummaryDetail(item.detail)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <section
           className="charts-order-editor__kirin-grid charts-order-editor__kirin-grid--prescription charts-order-editor__manual-card"
           aria-label="処方オーダー内容"
@@ -1576,7 +1575,6 @@ export function PrescriptionOrderEditorPanel({
         >
           <div className="charts-order-editor__kirin-grid-header">
             <strong>オーダー内容</strong>
-            <span>RP行はこの表で確認し、下の選択中RPで即編集します</span>
           </div>
           <div className="charts-order-editor__kirin-table charts-order-editor__kirin-table--prescription" role="table" aria-label="処方オーダー内容グリッド">
             <div className="charts-order-editor__kirin-table-row charts-order-editor__kirin-table-row--header" role="row">
@@ -1616,7 +1614,7 @@ export function PrescriptionOrderEditorPanel({
         >
         <div className="charts-side-panel__workspace" data-variant={variant} data-order-editor-layout="manual-first">
           <aside className="charts-side-panel__workspace-left charts-order-editor__secondary" aria-label="候補・セット・RP一覧">
-            <div className="charts-side-panel__subsection charts-order-editor__secondary-section">
+            <div className="charts-side-panel__subsection charts-order-editor__secondary-section" aria-label="RP一覧">
               <div className="charts-side-panel__subheader">
                 <strong>RP一覧</strong>
                 <span className="charts-side-panel__search-count">{order.rps.length}件</span>
@@ -1810,7 +1808,7 @@ export function PrescriptionOrderEditorPanel({
                   submit('save');
                 }}
               >
-                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--rx-class charts-order-editor__manual-card">
+                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--rx-class charts-order-editor__manual-card charts-order-editor__rx-compact-band">
                   <div className="charts-side-panel__field">
                     <label>院内/院外</label>
                     <div className="charts-side-panel__switch-group" role="group" aria-label="院内院外選択">
@@ -1855,10 +1853,7 @@ export function PrescriptionOrderEditorPanel({
                   </div>
                 </div>
 
-                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--usage charts-order-editor__manual-card">
-                  <div className="charts-side-panel__notice charts-side-panel__notice--info">
-                    {RP_SHARED_USAGE_RULE}
-                  </div>
+                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--usage charts-order-editor__manual-card charts-order-editor__rx-compact-band">
                   <div className="charts-side-panel__field">
                     <label htmlFor={domId('usage')}>用法マスタ</label>
                     <select
@@ -1911,7 +1906,7 @@ export function PrescriptionOrderEditorPanel({
                   </div>
                 </div>
 
-                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--memo">
+                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--memo charts-order-editor__rx-compact-footer">
                   <div className="charts-side-panel__field">
                     <label htmlFor={domId('bulk-days')}>日数一括変更（内服/頓服のみ）</label>
                     <div className="charts-side-panel__item-actions">
@@ -2051,7 +2046,7 @@ export function PrescriptionOrderEditorPanel({
                   </p>
                 </div>
 
-                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--start">
+                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--start charts-order-editor__rx-compact-footer">
                   <div className="charts-side-panel__field">
                     <label htmlFor={domId('refill-count')}>処方箋設定（リフィル回数）</label>
                     <select
@@ -2111,9 +2106,6 @@ export function PrescriptionOrderEditorPanel({
                     <strong>薬剤行</strong>
                     <span className="charts-side-panel__search-count">{selectedRp.drugs.length}件</span>
                   </div>
-                  <p className="charts-side-panel__help">
-                    薬剤行はこのRPの用法・日数・開始日を共有します。異なる用法にする薬剤は「この薬剤を別RPへ」で分離してください。
-                  </p>
                   {selectedDrug ? (
                     <p className="charts-side-panel__help">最低薬価: {selectedDrugGenericPrice ?? '-'}</p>
                   ) : null}
@@ -2124,7 +2116,7 @@ export function PrescriptionOrderEditorPanel({
                     return (
                       <div
                         key={drug.rowId}
-                        className="charts-side-panel__item-row"
+                        className="charts-side-panel__item-row charts-side-panel__item-row--rx-drug"
                         data-invalid={rowIssueGeneric || rowIssueClaim ? 'true' : undefined}
                         onClick={() => {
                           setSelectedDrugIndex(drugIndex);
@@ -2163,56 +2155,60 @@ export function PrescriptionOrderEditorPanel({
                           }
                           placeholder="単位"
                         />
-                        <button
-                          type="button"
-                          className="charts-side-panel__switch-button"
-                          data-active={drug.genericChangeAllowed ? 'true' : 'false'}
-                          onClick={() =>
-                            updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                              ...current,
-                              genericChangeAllowed: !current.genericChangeAllowed,
-                            }))
-                          }
-                        >
-                          {drug.genericChangeAllowed ? '後発変更 可' : '後発変更 不可'}
-                        </button>
-                        <button
-                          type="button"
-                          className="charts-side-panel__switch-button"
-                          data-active={drug.isGeneralNamePrescription ? 'true' : 'false'}
-                          onClick={() =>
-                            updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                              ...current,
-                              isGeneralNamePrescription: !current.isGeneralNamePrescription,
-                            }))
-                          }
-                        >
-                          {drug.isGeneralNamePrescription ? '一般名指定' : '銘柄指定'}
-                        </button>
-                        <button
-                          type="button"
-                          className="charts-side-panel__switch-button"
-                          data-active={drug.patientRequest ? 'true' : 'false'}
-                          onClick={() =>
-                            updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                              ...current,
-                              patientRequest: !current.patientRequest,
-                            }))
-                          }
-                        >
-                          {drug.patientRequest ? '患者希望' : '患者希望以外'}
-                        </button>
-                        {selectedRp.drugs.length > 1 ? (
+                        <div className="charts-order-editor__rx-drug-switches" role="group" aria-label={`薬剤${drugIndex + 1}属性`}>
                           <button
                             type="button"
-                            className="charts-side-panel__action"
-                            onClick={() => splitDrugToNewRp(drugIndex)}
+                            className="charts-side-panel__switch-button"
+                            data-active={drug.genericChangeAllowed ? 'true' : 'false'}
+                            onClick={() =>
+                              updateDrug(selectedRpIndex, drugIndex, (current) => ({
+                                ...current,
+                                genericChangeAllowed: !current.genericChangeAllowed,
+                              }))
+                            }
                           >
-                            この薬剤を別RPへ
+                            {drug.genericChangeAllowed ? '後発変更 可' : '後発変更 不可'}
                           </button>
-                        ) : null}
+                          <button
+                            type="button"
+                            className="charts-side-panel__switch-button"
+                            data-active={drug.isGeneralNamePrescription ? 'true' : 'false'}
+                            onClick={() =>
+                              updateDrug(selectedRpIndex, drugIndex, (current) => ({
+                                ...current,
+                                isGeneralNamePrescription: !current.isGeneralNamePrescription,
+                              }))
+                            }
+                          >
+                            {drug.isGeneralNamePrescription ? '一般名指定' : '銘柄指定'}
+                          </button>
+                          <button
+                            type="button"
+                            className="charts-side-panel__switch-button"
+                            data-active={drug.patientRequest ? 'true' : 'false'}
+                            onClick={() =>
+                              updateDrug(selectedRpIndex, drugIndex, (current) => ({
+                                ...current,
+                                patientRequest: !current.patientRequest,
+                              }))
+                            }
+                          >
+                            {drug.patientRequest ? '患者希望' : '患者希望以外'}
+                          </button>
+                          {selectedRp.drugs.length > 1 ? (
+                            <button
+                              type="button"
+                              className="charts-side-panel__action"
+                              onClick={() => splitDrugToNewRp(drugIndex)}
+                              title={RP_SHARED_USAGE_RULE}
+                            >
+                              この薬剤を別RPへ
+                            </button>
+                          ) : null}
+                        </div>
                         <input
                           id={domId(`drug-comment-${drugIndex}`)}
+                          className="charts-order-editor__rx-drug-comment"
                           value={drug.drugComment}
                           onChange={(event) =>
                             updateDrug(selectedRpIndex, drugIndex, (current) => ({

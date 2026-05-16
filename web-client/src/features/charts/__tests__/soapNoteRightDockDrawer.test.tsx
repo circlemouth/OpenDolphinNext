@@ -806,6 +806,7 @@ describe('SoapNotePanel right dock drawer', () => {
 
       await waitFor(() => {
         expect(screen.getByLabelText('点滴・注射オーダー内容')).toBeInTheDocument();
+        expect(screen.queryByText('薬剤・器材は下の行で即編集します')).toBeNull();
         expect(screen.queryByLabelText('注射名')).not.toBeInTheDocument();
         expect(drawer.getAttribute('data-open')).toBe('false');
         expect(drawer.getAttribute('data-minimized')).toBe('false');

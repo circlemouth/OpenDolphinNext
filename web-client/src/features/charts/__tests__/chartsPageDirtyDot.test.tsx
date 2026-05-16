@@ -610,7 +610,7 @@ describe('ChartsPage patient tab dirty indicator', () => {
     expect(document.title).toBe('外来カルテ | 患者ID=P-001 | 施設ID=facility');
   });
 
-  it('並行編集ロック時は上部の長文 ToneBanner を表示せず安全バナーだけを短く残す', async () => {
+  it('並行編集ロック時は重複する安全バナーを出さず編集ロックボタンへ集約する', async () => {
     tabLockMockState.current = {
       status: 'other-tab',
       tabSessionId: 'tab-2',
@@ -631,8 +631,9 @@ describe('ChartsPage patient tab dirty indicator', () => {
 
     expect(screen.queryByText(/送信先: Charts/)).not.toBeInTheDocument();
     expect(screen.queryByText(/次アクション: 別タブを閉じる \/ 最新を再読込 \/ 強制引き継ぎ/)).not.toBeInTheDocument();
-    expect(screen.getByText('別タブが編集中のため閲覧専用です。')).toBeInTheDocument();
-    expect(screen.getByText('次: 編集ロックボタンで対応を確認')).toBeInTheDocument();
+    expect(screen.queryByText('別タブが編集中のため閲覧専用です。')).not.toBeInTheDocument();
+    expect(screen.queryByText('次: 編集ロックボタンで対応を確認')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('別タブが編集中です（runId=RUN-OWNER）');
   });
 
   it('未保存状態で診察終了すると保存/破棄/キャンセルの3択ダイアログを表示する', async () => {
@@ -682,12 +683,14 @@ describe('ChartsPage patient tab dirty indicator', () => {
     const initialSummaryCalls = fetchCounters.summary;
     const initialClaimCalls = fetchCounters.claim;
     const initialAppointmentCalls = fetchCounters.appointment;
+    const initialDiagnosisCalls = fetchCounters.diagnosisSummary;
 
     await user.click(screen.getByRole('button', { name: '診察開始（モック）' }));
 
     await waitFor(() => expect(fetchCounters.summary).toBeGreaterThan(initialSummaryCalls));
     expect(fetchCounters.claim).toBeGreaterThan(initialClaimCalls);
     expect(fetchCounters.appointment).toBeGreaterThan(initialAppointmentCalls);
+    expect(fetchCounters.diagnosisSummary).toBeGreaterThan(initialDiagnosisCalls);
     expect(vi.mocked(fetchChartsMedicalSummary)).toHaveBeenCalled();
   });
 
@@ -701,12 +704,32 @@ describe('ChartsPage patient tab dirty indicator', () => {
     await screen.findByRole('button', { name: '診察中断（モック）' });
     await user.keyboard('{Shift>}{Enter}{/Shift}');
     const initialSummaryCalls = fetchCounters.summary;
+    const initialDiagnosisCalls = fetchCounters.diagnosisSummary;
 
     await user.click(screen.getByRole('button', { name: '診察中断（モック）' }));
     await waitFor(() => expect(fetchCounters.summary).toBe(initialSummaryCalls));
+    await waitFor(() => expect(fetchCounters.diagnosisSummary).toBeGreaterThan(initialDiagnosisCalls));
 
     await user.click(screen.getByRole('button', { name: '診察終了（モック）' }));
     await waitFor(() => expect(fetchCounters.summary).toBe(initialSummaryCalls));
+  });
+
+  it('診察終了時は ORCA 病名 mirror を再取得してから会計待ちへ進む', async () => {
+    seedPatientTabStorage();
+    seedChartsContext();
+    soapMockState.dirty = false;
+    soapMockState.dirtySources = [];
+    soapMockState.serverSynced = true;
+
+    renderChartsPage();
+
+    const user = userEvent.setup();
+    await screen.findByRole('button', { name: '診察終了（モック）' });
+    const initialDiagnosisCalls = fetchCounters.diagnosisSummary;
+
+    await user.click(screen.getByRole('button', { name: '診察終了（モック）' }));
+
+    await waitFor(() => expect(fetchCounters.diagnosisSummary).toBeGreaterThan(initialDiagnosisCalls));
   });
 
   it('診察終了の ORCA 会計送信が結果不明なら会計待ちへ進めず要確認を表示する', async () => {

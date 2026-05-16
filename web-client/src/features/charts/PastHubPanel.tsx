@@ -238,7 +238,6 @@ export function PastHubPanel({
       <header className="charts-past-hub__header">
         <div>
           <strong>Past Hub</strong>
-          <p className="charts-past-hub__desc">日付ごとに折りたたみ、左に過去カルテ、右にオーダー情報をまとめます（初期表示は全て閉じる）。</p>
         </div>
       </header>
 

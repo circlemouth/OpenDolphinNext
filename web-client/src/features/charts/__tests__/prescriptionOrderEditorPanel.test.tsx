@@ -65,12 +65,18 @@ describe('PrescriptionOrderEditorPanel', () => {
     renderPanel();
 
     const grid = screen.getByTestId('prescription-order-kirin-grid');
+    expect(document.querySelector('[data-order-entity="medOrder"][data-order-layout="compact-kirin"]')).not.toBeNull();
     expect(within(grid).getByText('オーダー内容')).toBeInTheDocument();
+    expect(within(grid).queryByText('RP行はこの表で確認し、下の選択中RPで即編集します')).toBeNull();
     expect(within(grid).getByText('薬剤名称')).toBeInTheDocument();
     expect(within(grid).getByText(/アムロジピン/)).toBeInTheDocument();
     expect(within(grid).getByText('後発変更可否')).toBeInTheDocument();
     expect(grid.querySelectorAll('[data-unresolved="true"]').length).toBeGreaterThan(0);
     expect(screen.queryByLabelText('RP名')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('処方安全チェックサマリ')).toBeNull();
+    expect(screen.queryByText('この画面で検出できる重複投与候補、静的相互作用候補、保存不可ルールはありません。')).toBeNull();
+    expect(document.querySelector('.charts-side-panel__item-row--rx-drug')).not.toBeNull();
+    expect(document.querySelector('.charts-order-editor__rx-compact-band')).not.toBeNull();
   });
 
   it('3文字以上は自動検索、2文字以下は手動検索ボタンで候補表示する', async () => {
@@ -129,18 +135,22 @@ describe('PrescriptionOrderEditorPanel', () => {
     expect(within(rpPane).getByText('1件')).toBeInTheDocument();
   });
 
-  it('RP共通用法ルールを常時表示し、複数薬剤から別RPへ分離できる', async () => {
+  it('RP共通用法ルールを通常表示せず、複数薬剤から別RPへ分離できる', async () => {
     const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockResolvedValue({ ok: true, items: [], totalCount: 0 });
 
     renderPanel();
 
-    expect(screen.getAllByText('1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。').length).toBeGreaterThan(0);
-    await user.click(screen.getByRole('button', { name: '＋薬剤行' }));
+    expect(screen.queryByText('1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。')).toBeNull();
+    const addDrugButton = screen.getByRole('button', { name: '＋薬剤行' });
+    expect(addDrugButton).toHaveAttribute('title', '1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。');
+    await user.click(addDrugButton);
     expect(screen.getAllByPlaceholderText('薬剤名')).toHaveLength(2);
 
-    await user.click(screen.getAllByRole('button', { name: 'この薬剤を別RPへ' })[1]);
+    const splitDrugButtons = screen.getAllByRole('button', { name: 'この薬剤を別RPへ' });
+    expect(splitDrugButtons[1]).toHaveAttribute('title', '1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。');
+    await user.click(splitDrugButtons[1]);
 
     const rpPane = screen.getByLabelText('候補・セット・RP一覧');
     expect(within(rpPane).getByText('2件')).toBeInTheDocument();

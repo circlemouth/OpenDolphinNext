@@ -85,6 +85,7 @@ describe('PastHubPanel', () => {
     dayDetails.forEach((detail) => {
       expect(detail.open).toBe(false);
     });
+    expect(screen.queryByText('日付ごとに折りたたみ、左に過去カルテ、右にオーダー情報をまとめます（初期表示は全て閉じる）。')).toBeNull();
   });
 
   it('オーダー取得失敗時は canonical copy を表示し raw detail を出さない', async () => {

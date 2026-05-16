@@ -411,6 +411,7 @@ const PRESCRIPTION_TIMING_OPTIONS: Array<{ value: PrescriptionTiming; label: str
   { value: 'tonyo', label: '頓用' },
   { value: 'gaiyo', label: '外用' },
 ];
+const BASE_CHARGE_SEGMENT_OPTIONS = ['初診', '再診', '同日再診', 'その他'] as const;
 const USAGE_SELECT_FETCH_SIZE = 300;
 const MAX_USAGE_SELECT_OPTIONS = 300;
 const PREDICTIVE_FETCH_PAGE_SIZE = 2000;
@@ -1662,6 +1663,14 @@ export function OrderBundleEditPanel({
   const isMedOrder = canonicalEntity === 'medOrder';
   const isInjectionOrder = canonicalEntity === 'injectionOrder';
   const isCompactOrderLayout = isMedOrder || isInjectionOrder;
+  const isChargeOrder = isChargeEntity(canonicalEntity);
+  const isBaseChargeOrder = canonicalEntity === 'baseChargeOrder';
+  const isTestOrder =
+    canonicalEntity === 'testOrder' ||
+    canonicalEntity === 'physiologyOrder' ||
+    canonicalEntity === 'bacteriaOrder' ||
+    canonicalEntity === 'radiologyOrder' ||
+    canonicalEntity === 'laboTest';
   const isRadiologyOrder = canonicalEntity === 'radiologyOrder';
   const isRehabOrder = canonicalEntity === 'treatmentOrder';
   const isGaiyoPrescription = isMedOrder && form.prescriptionTiming === 'gaiyo';
@@ -1765,6 +1774,13 @@ export function OrderBundleEditPanel({
   }, []);
   const injectionSpeedMode = parsedInjectionAdminMemo.meta.speedMode ?? 'unspecified';
   const injectionDripSpeed = parsedInjectionAdminMemo.meta.dripSpeedMlPerHour ?? '';
+  const mainItemSectionLabel = isMedOrder
+    ? orderUiProfile.mainItemLabel
+    : isInjectionOrder
+      ? orderUiProfile.mainItemLabel
+      : isTestOrder
+        ? '検査 / 入力値'
+        : 'オーダー登録内容';
   const physiologyContractGuidanceBlock = physiologySendContractGuidance ? (
     <div
       className="charts-side-panel__notice charts-side-panel__notice--warning"
@@ -1844,6 +1860,21 @@ export function OrderBundleEditPanel({
   const isBlocked = blockReasons.length > 0;
   const editBlockedReasonId = `${entityId}-edit-block-reason`;
   const saveBlockedReason = blockReasons.join(' / ');
+  const applyBaseChargeSegment = useCallback(
+    (label: (typeof BASE_CHARGE_SEGMENT_OPTIONS)[number]) => {
+      if (isBlocked) return;
+      clearValidationByKeys(Array.from(CHARGE_CONSISTENCY_ISSUE_KEYS));
+      setForm((prev) => {
+        const first = ensureRowId(prev.items[0] ?? buildEmptyItem());
+        return {
+          ...prev,
+          bundleName: prev.bundleName.trim() ? prev.bundleName : label,
+          items: [{ ...first, name: label }, ...prev.items.slice(1)],
+        };
+      });
+    },
+    [clearValidationByKeys, isBlocked],
+  );
   const session = useOptionalSession();
   const storageScope = useMemo(
     () => ({ facilityId: session?.facilityId, userId: session?.userId }),
@@ -3866,6 +3897,7 @@ export function OrderBundleEditPanel({
     <section
       className="charts-side-panel__section"
       data-order-entity={entity}
+      data-order-layout="compact-kirin"
       data-test-id={`${entityId}-edit-panel`}
       data-rp-required={rpRequiredIssueForForm ? 'true' : 'false'}
       data-rp-required-missing={rpRequiredIssueForForm ? rpRequiredIssueForForm.missing.join(',') : ''}
@@ -4467,7 +4499,6 @@ export function OrderBundleEditPanel({
           >
             <div className="charts-order-editor__kirin-grid-header">
               <strong>オーダー内容</strong>
-              <span>薬剤・器材は下の行で即編集します</span>
             </div>
             <div className="charts-order-editor__kirin-table" role="table" aria-label="点滴・注射入力列">
               <div className="charts-order-editor__kirin-table-row charts-order-editor__kirin-table-row--header" role="row">
@@ -4791,11 +4822,32 @@ export function OrderBundleEditPanel({
           </div>
         )}
 
+        {isBaseChargeOrder ? (
+          <div className="charts-side-panel__field charts-side-panel__meta-section charts-order-editor__base-charge-segment charts-order-editor__manual-card">
+            <label>基本料区分</label>
+            <div className="charts-side-panel__switch-group charts-side-panel__switch-group--compact" role="group" aria-label="基本料区分">
+              {BASE_CHARGE_SEGMENT_OPTIONS.map((option) => (
+                <button
+                  key={`${entityId}-base-charge-${option}`}
+                  type="button"
+                  className="charts-side-panel__switch-button charts-side-panel__switch-button--compact"
+                  data-active={form.items[0]?.name?.trim() === option ? 'true' : 'false'}
+                  aria-pressed={form.items[0]?.name?.trim() === option}
+                  onClick={() => applyBaseChargeSegment(option)}
+                  disabled={isBlocked}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         <div className="charts-side-panel__subsection charts-side-panel__meta-section charts-side-panel__meta-section--items charts-order-editor__manual-card">
           <div className="charts-side-panel__two-table-layout">
             <div className="charts-side-panel__two-table-fixed" data-testid="order-bundle-confirmed-table">
               <div className="charts-side-panel__subheader">
-                <strong>{orderUiProfile.mainItemLabel}</strong>
+                <strong>{mainItemSectionLabel}</strong>
                 <div className="charts-side-panel__subheader-actions">
               <button
                 type="button"
@@ -4927,7 +4979,13 @@ export function OrderBundleEditPanel({
             return (
               <div key={rowId ?? `${entityId}-item-${index}`}>
                 <div
-                  className={`charts-side-panel__item-row${
+                  className={`charts-side-panel__item-row charts-side-panel__item-row--compact-order${
+                    isInjectionOrder ? ' charts-side-panel__item-row--injection-main' : ''
+                  }${
+                    isChargeOrder ? ' charts-side-panel__item-row--charge-main' : ''
+                  }${
+                    isTestOrder ? ' charts-side-panel__item-row--test-main' : ''
+                  }${
                     isInactiveRow ? ' charts-side-panel__item-row--inactive' : ''
                   }${
                     orcaWarningTargets.items.has(index) ? ' charts-side-panel__item-row--orca-warning' : ''
@@ -5056,7 +5114,9 @@ export function OrderBundleEditPanel({
                 </div>
                 {supportsItemCommentRow ? (
                   <div
-                    className={`charts-side-panel__item-row charts-side-panel__item-row--comment${
+                    className={`charts-side-panel__item-row charts-side-panel__item-row--comment charts-side-panel__item-row--order-comment${
+                      isInjectionOrder ? ' charts-side-panel__item-row--injection-comment' : ''
+                    }${
                       isInactiveRow ? ' charts-side-panel__item-row--inactive' : ''
                     }${selectedItemRowId === rowId ? ' charts-side-panel__item-row--selected' : ''}`}
                     onClick={() => setSelectedItemRowId(rowId ?? null)}
@@ -5153,7 +5213,7 @@ export function OrderBundleEditPanel({
                 return (
                   <div key={rowId ?? `${entityId}-material-${index}`}>
                     <div
-                      className={`charts-side-panel__item-row charts-side-panel__item-row--comment${
+                      className={`charts-side-panel__item-row charts-side-panel__item-row--comment charts-side-panel__item-row--material-main${
                         selectedItemRowId === rowId ? ' charts-side-panel__item-row--selected' : ''
                       }${materialRowError ? ' charts-side-panel__item-row--invalid' : ''}`}
                       data-invalid={materialRowError ? 'true' : undefined}

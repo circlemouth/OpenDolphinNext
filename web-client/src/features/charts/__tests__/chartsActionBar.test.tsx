@@ -1,9 +1,10 @@
+import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
-import { ChartsActionBar } from '../ChartsActionBar';
+import { ChartsActionBar, type ChartsActionBarHandle } from '../ChartsActionBar';
 import { postOrcaMedicalModV2Xml } from '../orcaClaimApi';
 import { recordChartsAuditEvent } from '../audit';
 
@@ -855,6 +856,13 @@ describe('ChartsActionBar', () => {
     expect(screen.queryByRole('group', { name: '並行編集（閲覧専用）の対応' })).toBeNull();
     expect(screen.queryByText('診察終了・会計送信不可（1件）')).not.toBeInTheDocument();
     expect(screen.queryByText('印刷不可（2件）')).not.toBeInTheDocument();
+    const patientInlineGroup = screen.getByRole('group', { name: '患者情報帯の補助操作' });
+    const lockedEncounterButton = within(patientInlineGroup).getByRole('button', { name: '診察終了して会計へ送信' });
+    const lockedDraftButton = within(patientInlineGroup).getByRole('button', { name: '下書き保存' });
+    expect(lockedEncounterButton).not.toBeDisabled();
+    expect(lockedEncounterButton).toHaveAttribute('aria-disabled', 'true');
+    expect(lockedDraftButton).not.toBeDisabled();
+    expect(lockedDraftButton).toHaveAttribute('aria-disabled', 'true');
 
     await user.click(screen.getByRole('button', { name: '編集ロック' }));
 
@@ -967,5 +975,53 @@ describe('ChartsActionBar', () => {
     expect(screen.queryByText('送信前候補確認')).not.toBeInTheDocument();
     expect(screen.queryByText('その他')).not.toBeInTheDocument();
     expect(screen.queryByText('補助操作', { selector: 'summary' })).toBeNull();
+  });
+
+  it('埋め込み時の印刷 action は外部配置用に非表示化し ref から同じ dialog を開ける', async () => {
+    const ref = createRef<ChartsActionBarHandle>();
+    const onPrintActionStateChange = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          ref={ref}
+          embedded
+          compactHeader
+          showPrintAction={false}
+          patientId="P-610"
+          visitDate="2026-01-10"
+          orcaEncounterContext={{
+            patientId: 'P-610',
+            visitDate: '2026-01-10',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          }}
+          selectedEntry={{
+            patientId: 'P-610',
+            appointmentId: 'APT-610',
+            visitDate: '2026-01-10',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          } as any}
+          onPrintActionStateChange={onPrintActionStateChange}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: '印刷/エクスポート' })).not.toBeInTheDocument();
+    await waitFor(() => expect(onPrintActionStateChange).toHaveBeenLastCalledWith(expect.objectContaining({ disabled: false })));
+
+    await act(async () => {
+      await ref.current?.print();
+    });
+
+    expect(screen.getByRole('dialog', { name: '印刷/帳票出力の確認' })).toBeInTheDocument();
   });
 });

@@ -230,8 +230,6 @@ const ORDER_HUB_MODE_LABEL: Record<OrderHubMode, string> = {
   'bottom-integrated': '下欄統合試験',
   'rollback-legacy': 'ロールバック',
 };
-const RP_SHARED_USAGE_RULE = '1 RP = 共通用法。異なる用法は別RP';
-
 const parseOrderHubMode = (value?: string | null): OrderHubMode | null => {
   if (!value) return null;
   switch (value.trim()) {
@@ -1019,6 +1017,7 @@ export function OrderDockPanel(props: {
         activeEditorContext.hasRpRequiredIssue ? ' / 必須不足' : ''
       }`
     : 'なし';
+  const targetCategoryLabel = targetCategory ? ORDER_WORKBENCH_CATEGORY_LABEL[targetCategory] : '全カテゴリ';
   const prescriptionDrugs = useMemo(() => latestPrescription?.rpList ?? [], [latestPrescription]);
   const prescriptionIssuedDate = latestPrescription?.issuedDate?.trim() ?? '';
   const prescriptionMemo = latestPrescription?.memo?.trim() ?? '';
@@ -1117,6 +1116,66 @@ export function OrderDockPanel(props: {
     );
   };
 
+  const renderQuickSearch = () => {
+    if (isQuickAddMode) return null;
+    return (
+      <div className="order-dock__search order-dock__search--workbench" aria-label="検索して追加">
+        <div className="order-dock__search-row">
+          <label htmlFor="order-dock-search-input">検索して追加</label>
+          <input
+            id="order-dock-search-input"
+            type="search"
+            value={quickSearch}
+            onChange={(event) => setQuickSearch(event.target.value)}
+            placeholder="オーダー名・薬剤名・コード"
+            disabled={!patientId || !canEdit}
+            aria-label="オーダー検索"
+            aria-describedby={!canEdit && editDisabledReason ? 'order-dock-search-block-reason' : undefined}
+          />
+          <select
+            value={quickSearchGroup}
+            onChange={(event) => setQuickSearchGroup(event.target.value as OrderGroupKey | 'all')}
+            disabled={!patientId || !canEdit}
+            aria-label="カテゴリ選択"
+            aria-describedby={!canEdit && editDisabledReason ? 'order-dock-search-block-reason' : undefined}
+          >
+            <option value="all">全カテゴリ</option>
+            <option value="prescription">処方</option>
+            <option value="injection">注射</option>
+            <option value="treatment">処置</option>
+            <option value="test">検査</option>
+            <option value="charge">算定</option>
+          </select>
+        </div>
+        {!canEdit && editDisabledReason ? (
+          <p id="order-dock-search-block-reason" className="order-dock__search-empty">
+            検索して追加はブロックされています: {editDisabledReason}
+          </p>
+        ) : null}
+        {quickSearchCandidates.length > 0 ? (
+          <ul className="order-dock__search-results" role="listbox" aria-label="検索候補">
+            {quickSearchCandidates.map((candidate) => (
+              <li key={candidate.id}>
+                <button
+                  type="button"
+                  className="order-dock__search-result"
+                  onClick={() => handleQuickSearchApply(candidate)}
+                  disabled={!canEdit}
+                  title={!canEdit ? editDisabledReason : candidate.detail}
+                >
+                  <strong>{candidate.label}</strong>
+                  <span>{candidate.detail ?? '候補'}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : quickSearch.trim().length > 0 ? (
+          <p className="order-dock__search-empty">候補が見つかりません。カテゴリを変えて検索してください。</p>
+        ) : null}
+      </div>
+    );
+  };
+
   const renderGroup = (group: (typeof groupBundles)[number]) => {
     const groupLabel = group.key === 'prescription' ? '処方RP' : group.key === 'injection' ? '注射RP' : group.label;
     const defaultEntity =
@@ -1208,7 +1267,6 @@ export function OrderDockPanel(props: {
         <header className="order-dock__group-header">
           <div className="order-dock__group-title">
             <strong>{groupLabel}</strong>
-            {group.key === 'prescription' ? <span className="order-dock__group-mode">{RP_SHARED_USAGE_RULE}</span> : null}
             {isEditingGroup ? (
               <span className="order-dock__group-mode order-dock__group-mode--editing" role="status" aria-live="polite">
                 編集中
@@ -1699,8 +1757,8 @@ export function OrderDockPanel(props: {
         <strong>オーダー入力</strong>
         <span className="order-dock__meta">診療日:{orderVisitDate || '—'}</span>
       </header>
-      <div className="order-dock__notice order-dock__notice--info" aria-label="オーダー候補ソース">
-        候補ソース: 既存オーダー / 患者候補 / 施設頻用 / ORCA診療セット / 検索して追加。ORCA候補は確定処方・ORCA送信・会計済みではありません。
+      <div className="order-dock__notice order-dock__notice--info" aria-label="オーダー候補の安全境界">
+        ORCA候補は確定処方・ORCA送信・会計済みではありません。
       </div>
       <section className="order-dock__workbench" aria-label="オーダーワークベンチ" data-testid="order-dock-workbench">
         <div className="order-dock__workbench-rail" role="navigation" aria-label="オーダー種別">
@@ -1727,13 +1785,24 @@ export function OrderDockPanel(props: {
           ))}
         </div>
         <div className="order-dock__workbench-stage" aria-label="候補からオーダー内容へ">
-          <div className="order-dock__workbench-pane">
-            <strong>候補/セット選択</strong>
-            <span>検索、頻用、ORCA入力セット、セット/スタンプを下書き候補として扱います。</span>
+          <div className="order-dock__workbench-pane order-dock__workbench-pane--candidate">
+            <div className="order-dock__workbench-pane-header">
+              <strong>候補/セット選択</strong>
+              <span className="order-dock__workbench-chip">下書き候補</span>
+            </div>
+            {!orderBundlesLoading && !orderBundlesError ? renderQuickAdds() : null}
+            {renderQuickSearch()}
           </div>
-          <div className="order-dock__workbench-pane">
-            <strong>オーダー内容</strong>
-            <span>候補反映後は行単位で編集します。保存・確定・ORCA送信とは分離します。</span>
+          <div className="order-dock__workbench-pane order-dock__workbench-pane--content">
+            <div className="order-dock__workbench-pane-header">
+              <strong>オーダー内容</strong>
+              <span className="order-dock__workbench-chip">{targetCategoryLabel}</span>
+            </div>
+            <div className="order-dock__workbench-content-line" aria-label="オーダー内容状態">
+              <span>{summaryCount}件</span>
+              <span>編集中: {activeEntity ? resolveOrderEntityLabel(activeEntity) : 'なし'}</span>
+              {activeEditorContext.hasRpRequiredIssue ? <strong>必須不足</strong> : null}
+            </div>
           </div>
         </div>
       </section>
@@ -1753,64 +1822,6 @@ export function OrderDockPanel(props: {
         <span className="order-dock__context-mode">モード: {ORDER_HUB_MODE_LABEL[orderHubMode]}</span>
         <span className="order-dock__context-current">編集中: {activeContextLabel}</span>
       </div>
-      {!orderBundlesLoading && !orderBundlesError ? renderQuickAdds() : null}
-      {!isQuickAddMode ? (
-        <div className="order-dock__search" aria-label="検索して追加">
-          <div className="order-dock__search-row">
-            <label htmlFor="order-dock-search-input">検索して追加</label>
-            <input
-              id="order-dock-search-input"
-              type="search"
-              value={quickSearch}
-              onChange={(event) => setQuickSearch(event.target.value)}
-              placeholder="オーダー名・薬剤名・コード"
-              disabled={!patientId || !canEdit}
-              aria-label="オーダー検索"
-              aria-describedby={!canEdit && editDisabledReason ? 'order-dock-search-block-reason' : undefined}
-            />
-            <select
-              value={quickSearchGroup}
-              onChange={(event) => setQuickSearchGroup(event.target.value as OrderGroupKey | 'all')}
-              disabled={!patientId || !canEdit}
-              aria-label="カテゴリ選択"
-              aria-describedby={!canEdit && editDisabledReason ? 'order-dock-search-block-reason' : undefined}
-            >
-              <option value="all">全カテゴリ</option>
-              <option value="prescription">処方</option>
-              <option value="injection">注射</option>
-              <option value="treatment">処置</option>
-              <option value="test">検査</option>
-              <option value="charge">算定</option>
-            </select>
-          </div>
-          {!canEdit && editDisabledReason ? (
-            <p id="order-dock-search-block-reason" className="order-dock__search-empty">
-              検索して追加はブロックされています: {editDisabledReason}
-            </p>
-          ) : null}
-          {quickSearchCandidates.length > 0 ? (
-            <ul className="order-dock__search-results" role="listbox" aria-label="検索候補">
-              {quickSearchCandidates.map((candidate) => (
-                <li key={candidate.id}>
-                  <button
-                    type="button"
-                    className="order-dock__search-result"
-                    onClick={() => handleQuickSearchApply(candidate)}
-                    disabled={!canEdit}
-                    title={!canEdit ? editDisabledReason : candidate.detail}
-                  >
-                    <strong>{candidate.label}</strong>
-                    <span>{candidate.detail ?? '候補'}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : quickSearch.trim().length > 0 ? (
-            <p className="order-dock__search-empty">候補が見つかりません。カテゴリを変えて検索してください。</p>
-          ) : null}
-        </div>
-      ) : null}
-
       {!canEdit && editDisabledReason ? (
         <div id="order-dock-edit-block-reason" className="order-dock__notice order-dock__notice--info">
           オーダー追加はブロックされています: {editDisabledReason}

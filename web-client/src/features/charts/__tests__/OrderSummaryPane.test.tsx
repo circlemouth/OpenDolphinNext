@@ -26,8 +26,11 @@ describe('OrderSummaryPane', () => {
     expect(pane.querySelector('.soap-note__order-group-rail')).toBeNull();
     expect(pane.querySelector('.soap-note__right-dock-button')).toBeNull();
     expect(screen.queryByText('該当オーダーなし')).toBeNull();
+    expect(screen.queryByText('当日のオーダーはありません。必要な分野から追加してください。')).toBeNull();
+    expect(screen.queryByText('内容確認と編集をこの列で行います。')).toBeNull();
+    expect(screen.queryByText('この分野は未入力です。右ペイン内で直接入力できます。')).toBeNull();
     expect(screen.queryByText('追加しても処方確定・ORCA送信・会計済みにはなりません。')).not.toBeInTheDocument();
-    expect(screen.getByText('追加は下書き入力であり、処方確定・ORCA送信・会計済みではありません。')).toBeInTheDocument();
+    expect(screen.queryByText('追加は下書き入力であり、処方確定・ORCA送信・会計済みではありません。')).toBeNull();
   });
 
   it('取得失敗時は raw detail ではなく canonical copy を表示する', () => {

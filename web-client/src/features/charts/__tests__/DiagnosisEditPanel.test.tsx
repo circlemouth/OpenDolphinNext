@@ -160,6 +160,21 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     expect(mutateOrcaDisease).not.toHaveBeenCalled();
   });
 
+  it('削除病名整理は閲覧専用時に native disabled へ依存せず、押下時も送信せず理由を表示する', async () => {
+    const user = userEvent.setup();
+
+    renderPanel({ readOnly: true, readOnlyReason: '別タブが編集中です' });
+
+    const organizeButton = screen.getByRole('button', { name: '削除病名を整理' });
+    await waitFor(() => expect(organizeButton).not.toBeDisabled());
+    expect(organizeButton).toHaveAttribute('aria-disabled', 'true');
+    expect(organizeButton).toHaveAttribute('aria-describedby', 'diagnosis-mutation-block-reason');
+    await user.click(organizeButton);
+
+    expect(screen.getByText('ORCA病名操作を停止: 別タブが編集中です')).toBeInTheDocument();
+    expect(mutateOrcaDisease).not.toHaveBeenCalled();
+  });
+
   it('病名コードは通常表示せず、コードがない行だけ警告を表示する', async () => {
     vi.mocked(fetchDiseases).mockResolvedValueOnce({
       ok: true,

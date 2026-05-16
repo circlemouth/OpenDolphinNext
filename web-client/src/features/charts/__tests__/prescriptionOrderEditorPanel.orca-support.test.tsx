@@ -151,11 +151,12 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
 
     renderPanel();
 
-    expect(screen.getByText('setCode は展開専用です。保存・ORCA送信 payload には保持しません。')).toBeInTheDocument();
-
+    expect(screen.queryByText('setCode は展開専用です。保存・ORCA送信 payload には保持しません。')).not.toBeInTheDocument();
+    await user.click(screen.getByText('ORCA入力セット'));
+    expect(screen.getByText('ORCA入力セットは下書きフォームへ反映するだけです。処方確定・ORCA送信・会計済み確定は行いません。')).toBeInTheDocument();
     await user.type(screen.getByPlaceholderText('入力セット名またはコード'), '降圧');
     await user.click(screen.getByRole('button', { name: '入力セット検索' }));
-    await user.click(await screen.findByRole('button', { name: /P01001.*降圧セット.*RPへ反映/ }));
+    await user.click(await screen.findByRole('button', { name: /P01001.*降圧セット.*反映/ }));
 
     const rpPane = screen.getByLabelText('RP一覧');
     expect(within(rpPane).getByText('2件')).toBeInTheDocument();
@@ -194,9 +195,10 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
 
     renderPanel();
 
+    await user.click(screen.getByText('ORCA入力セット'));
     await user.type(screen.getByPlaceholderText('入力セット名またはコード'), '頓服');
     await user.click(screen.getByRole('button', { name: '入力セット検索' }));
-    await user.click(await screen.findByRole('button', { name: /P02221.*頓服セット.*RPへ反映/ }));
+    await user.click(await screen.findByRole('button', { name: /P02221.*頓服セット.*反映/ }));
     await user.click(await screen.findByRole('button', { name: /RP2: 頓服セット/ }));
     await user.click(screen.getByRole('button', { name: '保存' }));
 
@@ -537,7 +539,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     await waitFor(() => {
       expect(checkOrcaMasterStaticOrderInteractions).toHaveBeenCalledWith({ codes: ['620000001', '620000003'] });
     });
-    expect(await screen.findByText('処方安全チェック')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '処方安全チェック' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: '処方安全チェック結果' })).toHaveTextContent('警告');
     expect(screen.getByLabelText('確認理由')).toBeInTheDocument();
     expect(savePrescriptionOrder).not.toHaveBeenCalled();

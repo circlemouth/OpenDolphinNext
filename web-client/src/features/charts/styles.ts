@@ -1,13 +1,25 @@
 import { css } from '@emotion/react';
 
 export const chartsStyles = css`
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
   .charts-page {
     min-height: 100vh;
-    padding: 1.35rem 0;
+    padding: 0 0 1.35rem;
     background: var(--ui-surface-muted);
     display: flex;
     flex-direction: column;
-    gap: var(--charts-space-xl);
+    gap: var(--charts-space-md);
     --charts-space-2xs: 4px;
     --charts-space-xs: 6px;
     --charts-space-sm: 10px;
@@ -339,7 +351,7 @@ export const chartsStyles = css`
 
   .charts-workbench__sticky {
     position: sticky;
-    top: 0.9rem;
+    top: 0;
     z-index: 4;
     display: flex;
     flex-direction: column;
@@ -1112,6 +1124,10 @@ export const chartsStyles = css`
     --charts-patient-action-right: 3.2rem;
   }
 
+  .charts-patient-summary:has(.charts-actions__button--lock-alert) {
+    --charts-patient-action-right: clamp(9.6rem, 16vw, 11.5rem);
+  }
+
   .charts-patient-summary__identity-bar .patient-identity-bar__surface {
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
@@ -1493,7 +1509,8 @@ export const chartsStyles = css`
   }
 
   .charts-actions__patient-action-slot--right {
-    justify-content: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
     height: 100%;
     padding: 0.45rem 0.35rem;
     border-left: 1px solid rgba(203, 213, 225, 0.88);
@@ -1524,7 +1541,7 @@ export const chartsStyles = css`
 
   .charts-actions__button--lock-alert {
     min-height: 44px;
-    min-width: 44px;
+    min-width: 7.35rem;
     padding: 0.42rem 0.82rem;
     border-radius: 999px;
     background: #fff7ed;
@@ -1532,6 +1549,9 @@ export const chartsStyles = css`
     color: #9a3412;
     font-size: 0.82rem;
     font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+    flex: 0 0 auto;
     box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
   }
 
@@ -2208,6 +2228,10 @@ export const chartsStyles = css`
     width: 100%;
     outline: none;
     pointer-events: none;
+  }
+
+  .charts-page > .charts-focus-anchor:first-child {
+    position: absolute;
   }
 
   [data-focus-anchor='true']:focus {
@@ -3530,6 +3554,114 @@ export const chartsStyles = css`
     padding: var(--charts-space-sm);
   }
 
+  .charts-side-panel__section[data-order-layout='compact-kirin'] {
+    --charts-order-dense-gap: 0.34rem;
+    font-size: 0.8125rem;
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__section-header {
+    align-items: center;
+    padding: 0.46rem 0.56rem;
+    border-radius: var(--charts-radius-sm);
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__section-header strong {
+    font-size: 0.88rem;
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__dock-body,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-order-editor__manual-primary,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__workspace-right,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__workspace-left {
+    gap: var(--charts-order-dense-gap);
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__form {
+    gap: var(--charts-order-dense-gap);
+    padding: 0.48rem;
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-order-editor__manual-card,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-order-editor__secondary-section {
+    padding: 0.48rem;
+    border-radius: var(--charts-radius-sm);
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__field-row {
+    gap: var(--charts-order-dense-gap);
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__field {
+    gap: 2px;
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__subheader {
+    flex-wrap: wrap;
+    gap: 0.28rem;
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__subheader-actions {
+    flex: 1 1 12rem;
+    min-width: 0;
+    max-width: 100%;
+    justify-content: flex-end;
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__subheader-actions > button {
+    flex: 1 1 5.8rem;
+    min-width: 0;
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__field label {
+    font-size: 0.72rem;
+    line-height: 1.2;
+    font-weight: 800;
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__form input,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__form textarea,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__form select {
+    min-height: 30px;
+    padding: 0.24rem 0.42rem;
+    font-size: 0.78rem;
+    line-height: 1.25;
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__form textarea {
+    min-height: 52px;
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__ghost,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__row-delete,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__action,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__chip-button,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__switch-button {
+    min-height: 30px;
+    padding: 0.24rem 0.48rem;
+    font-size: 0.74rem;
+    line-height: 1.2;
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__help,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__message,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__field-error {
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  .charts-order-editor__rx-compact-band {
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  }
+
+  .charts-order-editor__rx-compact-footer {
+    grid-template-columns: minmax(150px, 0.9fr) minmax(220px, 1.4fr) minmax(180px, 1fr);
+    align-items: start;
+  }
+
+  .charts-order-editor__base-charge-segment {
+    gap: 0.26rem;
+  }
+
   .charts-order-editor__kirin-grid {
     display: grid;
     gap: var(--charts-space-xs);
@@ -3586,9 +3718,9 @@ export const chartsStyles = css`
 
   .charts-order-editor__kirin-table-row > span {
     min-width: 0;
-    padding: 0.38rem 0.5rem;
-    font-size: 0.76rem;
-    line-height: 1.35;
+    padding: 0.26rem 0.38rem;
+    font-size: 0.72rem;
+    line-height: 1.25;
     border-right: 1px solid rgba(148, 163, 184, 0.24);
     overflow-wrap: anywhere;
   }
@@ -3605,6 +3737,8 @@ export const chartsStyles = css`
 
   .charts-order-editor__kirin-injection-controls {
     align-items: end;
+    grid-template-columns: minmax(7rem, 0.7fr) minmax(8rem, 0.9fr);
+    max-width: 24rem;
   }
 
   .charts-order-editor__unit-input {
@@ -4410,6 +4544,76 @@ export const chartsStyles = css`
     grid-template-columns: 0.7fr 1.6fr 0.6fr 0.6fr auto;
   }
 
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__item-row {
+    gap: 0.28rem;
+    padding: 0.14rem;
+  }
+
+  .charts-side-panel__item-row--compact-order {
+    grid-template-columns: 28px minmax(10rem, 1.7fr) minmax(4.4rem, 0.54fr) minmax(3.8rem, 0.48fr) 28px;
+    min-width: 28rem;
+  }
+
+  .charts-side-panel__item-row--injection-main {
+    grid-template-columns: 28px minmax(11rem, 1.8fr) minmax(4.7rem, 0.55fr) minmax(4rem, 0.48fr) 28px;
+  }
+
+  .charts-side-panel__item-row--charge-main,
+  .charts-side-panel__item-row--test-main {
+    grid-template-columns: 28px minmax(12rem, 1.9fr) minmax(4.8rem, 0.58fr) minmax(4.2rem, 0.48fr) 28px;
+  }
+
+  .charts-side-panel__item-row--rx-drug {
+    grid-template-columns:
+      minmax(8.4rem, 1fr)
+      minmax(3.8rem, 0.32fr)
+      minmax(3.4rem, 0.28fr);
+    min-width: 0;
+    align-items: start;
+    overflow-x: visible;
+  }
+
+  .charts-side-panel__item-row--rx-drug > .charts-order-editor__rx-drug-switches,
+  .charts-side-panel__item-row--rx-drug > .charts-order-editor__rx-drug-comment,
+  .charts-side-panel__item-row--rx-drug > .charts-side-panel__template-actions,
+  .charts-side-panel__item-row--rx-drug > .charts-side-panel__item-actions,
+  .charts-side-panel__item-row--rx-drug > .charts-side-panel__help,
+  .charts-side-panel__item-row--rx-drug > .charts-side-panel__message {
+    grid-column: 1 / -1;
+  }
+
+  .charts-order-editor__rx-drug-switches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.24rem;
+  }
+
+  .charts-order-editor__rx-drug-switches > .charts-side-panel__switch-button,
+  .charts-order-editor__rx-drug-switches > .charts-side-panel__action {
+    flex: 1 1 7rem;
+    min-width: 6.6rem;
+    white-space: normal;
+  }
+
+  .charts-side-panel__item-row--rx-drug > .charts-side-panel__template-actions,
+  .charts-side-panel__item-row--rx-drug > .charts-side-panel__item-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.24rem;
+  }
+
+  .charts-side-panel__item-row--order-comment {
+    grid-template-columns: minmax(9rem, 0.9fr) minmax(14rem, 1.8fr) minmax(4.8rem, 0.5fr) minmax(4rem, 0.44fr) auto;
+  }
+
+  .charts-side-panel__item-row--injection-comment {
+    grid-template-columns: minmax(8rem, 1fr) minmax(12rem, 1.45fr);
+  }
+
+  .charts-side-panel__item-row--material-main {
+    grid-template-columns: minmax(11rem, 1.6fr) minmax(4.8rem, 0.58fr) minmax(4.2rem, 0.48fr) 28px;
+  }
+
   .charts-side-panel__item-row input,
   .charts-side-panel__item-row select {
     min-width: 0;
@@ -4488,6 +4692,12 @@ export const chartsStyles = css`
     height: 32px;
     cursor: pointer;
     font-weight: 700;
+  }
+
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__drag-handle,
+  .charts-side-panel__section[data-order-layout='compact-kirin'] .charts-side-panel__icon {
+    width: 28px;
+    height: 28px;
   }
 
   .charts-side-panel__icon:hover:not(:disabled) {
@@ -4654,6 +4864,8 @@ export const chartsStyles = css`
 
   .charts-diagnosis-panel .charts-side-panel__section-header {
     align-items: center;
+    flex-wrap: wrap;
+    gap: var(--charts-space-xs);
     border-color: rgba(148, 163, 184, 0.34);
     background: #ffffff;
     box-shadow: none;
@@ -4699,11 +4911,26 @@ export const chartsStyles = css`
     display: flex;
     gap: var(--charts-space-xs);
     align-items: center;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    margin-left: auto;
   }
 
   .charts-diagnosis__organize-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
     border-radius: var(--charts-radius-sm);
+    line-height: 1.2;
     white-space: nowrap;
+  }
+
+  .charts-diagnosis__organize-button[aria-disabled='true']:not(:disabled) {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: #fff7ed;
+    color: #9a3412;
+    cursor: pointer;
   }
 
   .charts-diagnosis__unblock {
@@ -4937,15 +5164,13 @@ export const chartsStyles = css`
 
   .charts-workbench__column--left .charts-diagnosis__row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "name actions"
-      "attrs actions"
-      "code actions"
-      "date outcome";
+    grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+    grid-template-areas: "name date attrs actions outcome";
     column-gap: var(--charts-space-xs);
-    row-gap: 2px;
-    padding: 0.48rem 0.55rem;
+    row-gap: 0;
+    align-items: center;
+    min-height: 2.85rem;
+    padding: 0.34rem 0.45rem;
     border-bottom: 1px solid var(--ui-border-subtle);
   }
 
@@ -4966,6 +5191,17 @@ export const chartsStyles = css`
     grid-area: name;
     width: auto;
     min-width: 0;
+    overflow: hidden;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__cell--name .charts-diagnosis__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .charts-workbench__column--left .charts-diagnosis__cell--name .charts-diagnosis__subvalue {
+    display: none;
   }
 
   .charts-workbench__column--left .charts-diagnosis__cell--attrs {
@@ -4977,12 +5213,11 @@ export const chartsStyles = css`
     grid-area: date;
     width: auto;
     color: #64748b;
+    white-space: nowrap;
   }
 
   .charts-workbench__column--left .charts-diagnosis__cell--code {
-    grid-area: code;
-    width: auto;
-    color: #64748b;
+    display: none;
   }
 
   .charts-workbench__column--left .charts-diagnosis__cell--outcome {
@@ -5949,6 +6184,14 @@ export const chartsStyles = css`
     border-radius: var(--ui-radius-sm);
   }
 
+  .charts-actions--embedded .charts-actions__button[aria-disabled='true'][data-disabled-reason='locked']:not(:disabled) {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: #fff7ed;
+    color: #9a3412;
+    box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.68);
+    cursor: pointer;
+  }
+
   .charts-actions--embedded .charts-actions__button--send,
   .charts-actions--embedded .charts-actions__button--primary {
     box-shadow: none;
@@ -6846,6 +7089,18 @@ export const chartsStyles = css`
   .soap-note__ghost {
     background: rgba(248, 250, 252, 0.92);
     color: #334155;
+  }
+
+  .soap-note__print-export-action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--charts-space-xs);
+  }
+
+  .soap-note__print-export-action .clinical-icon {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
   }
 
   .soap-note__primary:disabled,
@@ -7936,8 +8191,9 @@ export const chartsStyles = css`
   .order-dock {
     display: flex;
     flex-direction: column;
-    gap: var(--charts-space-xs);
+    gap: 0.34rem;
     min-width: 0;
+    font-size: 0.8125rem;
   }
 
   .order-dock__header {
@@ -7995,10 +8251,14 @@ export const chartsStyles = css`
     gap: var(--charts-space-2xs);
   }
 
+  .order-dock__search--workbench {
+    min-width: 0;
+  }
+
   .order-dock__search-row {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: var(--charts-space-xs);
+    gap: 0.3rem;
     align-items: center;
   }
 
@@ -8013,7 +8273,8 @@ export const chartsStyles = css`
   .order-dock__search-row select {
     border-radius: 999px;
     border: 1px solid var(--ui-border-strong);
-    padding: 0.25rem 0.65rem;
+    min-height: 30px;
+    padding: 0.22rem 0.5rem;
     font-size: 0.78rem;
     background: #ffffff;
     color: #0f172a;
@@ -8033,7 +8294,7 @@ export const chartsStyles = css`
     border: 1px solid var(--ui-border);
     border-radius: var(--charts-radius-sm);
     background: #ffffff;
-    padding: var(--charts-space-xs) var(--charts-space-sm);
+    padding: 0.28rem 0.46rem;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -8150,8 +8411,8 @@ export const chartsStyles = css`
 
   .order-dock__notice {
     border-radius: var(--charts-radius-sm);
-    padding: var(--charts-space-xs) var(--charts-space-sm);
-    font-size: 0.85rem;
+    padding: 0.3rem 0.48rem;
+    font-size: 0.78rem;
     border: 1px solid var(--ui-border-subtle);
     background: #ffffff;
   }
@@ -8176,12 +8437,12 @@ export const chartsStyles = css`
 
   .order-dock__workbench {
     display: grid;
-    grid-template-columns: minmax(7rem, 0.85fr) minmax(0, 1.4fr);
-    gap: var(--charts-space-xs);
+    grid-template-columns: minmax(6.6rem, 0.72fr) minmax(0, 1.8fr);
+    gap: 0.34rem;
     border: 1px solid rgba(148, 163, 184, 0.32);
     border-radius: var(--charts-radius-md);
     background: #ffffff;
-    padding: var(--charts-space-xs);
+    padding: 0.34rem;
   }
 
   .order-dock__workbench-rail {
@@ -8195,12 +8456,12 @@ export const chartsStyles = css`
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.4rem;
-    min-height: 36px;
+    min-height: 30px;
     border: 1px solid rgba(148, 163, 184, 0.38);
     border-radius: var(--charts-radius-sm);
     background: #f8fafc;
     color: #0f172a;
-    padding: 0.36rem 0.5rem;
+    padding: 0.26rem 0.42rem;
     cursor: pointer;
   }
 
@@ -8228,16 +8489,27 @@ export const chartsStyles = css`
 
   .order-dock__workbench-stage {
     display: grid;
-    gap: var(--charts-space-2xs);
+    grid-template-columns: minmax(0, 1.55fr) minmax(11rem, 0.8fr);
+    gap: 0.34rem;
+    align-items: stretch;
   }
 
   .order-dock__workbench-pane {
     display: grid;
-    gap: 2px;
+    align-content: start;
+    gap: 0.3rem;
     border: 1px solid rgba(148, 163, 184, 0.24);
     border-radius: var(--charts-radius-sm);
     background: #ffffff;
-    padding: 0.42rem 0.55rem;
+    padding: 0.38rem 0.45rem;
+  }
+
+  .order-dock__workbench-pane-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    min-width: 0;
   }
 
   .order-dock__workbench-pane strong {
@@ -8248,7 +8520,40 @@ export const chartsStyles = css`
   .order-dock__workbench-pane span {
     font-size: 0.72rem;
     color: #475569;
-    line-height: 1.35;
+    line-height: 1.25;
+  }
+
+  .order-dock__workbench-chip {
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.42);
+    background: rgba(248, 250, 252, 0.95);
+    padding: 0.1rem 0.36rem;
+    color: #334155;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .order-dock__workbench-content-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .order-dock__workbench-content-line span,
+  .order-dock__workbench-content-line strong {
+    border-radius: 999px;
+    border: 1px solid rgba(203, 213, 225, 0.85);
+    background: rgba(248, 250, 252, 0.92);
+    padding: 0.12rem 0.42rem;
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  .order-dock__workbench-content-line strong {
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(254, 242, 242, 0.95);
+    color: #b91c1c;
   }
 
   @media (max-width: 1080px) {
@@ -8258,6 +8563,10 @@ export const chartsStyles = css`
 
     .order-dock__workbench-rail {
       grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+    }
+
+    .order-dock__workbench-stage {
+      grid-template-columns: 1fr;
     }
   }
 
@@ -8284,8 +8593,8 @@ export const chartsStyles = css`
     padding: var(--charts-space-2xs) var(--charts-space-sm);
     font-size: 0.78rem;
     white-space: nowrap;
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 32px;
+    min-height: 30px;
   }
 
   .order-dock__mini-secondary {
@@ -8298,8 +8607,8 @@ export const chartsStyles = css`
     padding: var(--charts-space-2xs) var(--charts-space-sm);
     font-size: 0.78rem;
     white-space: nowrap;
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 32px;
+    min-height: 30px;
   }
 
   .order-dock__mini-add:focus-visible,
@@ -8334,7 +8643,7 @@ export const chartsStyles = css`
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
     gap: var(--charts-space-xs);
-    padding: var(--charts-space-xs);
+    padding: 0.34rem;
     min-width: 0;
   }
 
@@ -8373,8 +8682,8 @@ export const chartsStyles = css`
     font-weight: 800;
     padding: 0.24rem 0.7rem;
     white-space: nowrap;
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 32px;
+    min-height: 30px;
   }
 
   .order-dock__group-toggle--expanded {
@@ -8385,8 +8694,8 @@ export const chartsStyles = css`
 
   .order-dock__group-body {
     display: grid;
-    gap: var(--charts-space-sm);
-    padding: 0 var(--charts-space-xs) var(--charts-space-xs);
+    gap: 0.34rem;
+    padding: 0 0.34rem 0.34rem;
   }
 
   .order-dock__group-action {
@@ -8399,8 +8708,8 @@ export const chartsStyles = css`
     padding: var(--charts-space-2xs) var(--charts-space-sm);
     font-size: 0.8rem;
     white-space: nowrap;
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 32px;
+    min-height: 30px;
   }
 
   .order-dock__group-action--add {
@@ -8453,8 +8762,8 @@ export const chartsStyles = css`
   }
 
   .order-dock__subtype-tabs .order-dock__subtype-tab {
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 32px;
+    min-height: 30px;
   }
 
   .order-dock__subtype-tab[data-active='true'] {
@@ -8475,7 +8784,7 @@ export const chartsStyles = css`
     border-radius: var(--charts-radius-sm);
     border: 1px solid var(--ui-border-subtle);
     background: linear-gradient(180deg, rgba(248, 250, 252, 0.88) 0%, rgba(255, 255, 255, 0.96) 100%);
-    padding: var(--charts-space-xs);
+    padding: 0.34rem;
   }
 
   .order-dock__bundle-list {
@@ -8486,10 +8795,10 @@ export const chartsStyles = css`
   }
 
   .order-dock__bundle {
-    border-radius: 14px;
+    border-radius: var(--charts-radius-sm);
     border: 1px solid var(--ui-border-subtle);
     background: rgba(248, 250, 252, 0.85);
-    padding: var(--charts-space-xs) var(--charts-space-sm);
+    padding: 0.32rem 0.44rem;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--charts-space-sm);
@@ -8629,8 +8938,8 @@ export const chartsStyles = css`
     font-size: 0.78rem;
     padding: 0.3rem 0.66rem;
     white-space: nowrap;
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 32px;
+    min-height: 30px;
   }
 
   .order-dock__bundle-action:hover:not(:disabled) {
@@ -9043,15 +9352,6 @@ export const chartsStyles = css`
     background: #f8fafc;
     border-radius: var(--charts-radius-sm);
     padding: 0.4rem 0.55rem;
-  }
-
-  .soap-note__order-safety-note {
-    border: 1px solid rgba(34, 197, 94, 0.22);
-    background: #f0fdf4;
-    color: #166534;
-    border-radius: var(--charts-radius-sm);
-    padding: 0.4rem 0.55rem;
-    line-height: 1.35;
   }
 
   .soap-note__order-category-strip {

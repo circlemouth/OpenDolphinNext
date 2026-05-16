@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -23,6 +23,10 @@ const renderWithQueryClient = (ui: ReactNode) => {
 };
 
 const DocumentPanelStub = () => <section aria-label="文書作成メニュー">文書作成メニュー</section>;
+
+afterEach(() => {
+  sessionStorage.clear();
+});
 
 describe('SoapNotePanel UI regression', () => {
   it('保存状態・テンプレ表示・Free履歴・右ドック表示が仕様どおり', () => {
@@ -158,6 +162,56 @@ describe('SoapNotePanel UI regression', () => {
     expect(screen.getByLabelText('右ドック')).toBeInTheDocument();
   });
 
+  it('印刷/エクスポート action は履歴ボタンの左側に表示する', () => {
+    renderWithQueryClient(
+      <SoapNotePanel
+        history={[]}
+        meta={{
+          runId: 'RUN-SOAP-PRINT-ACTION',
+          patientId: 'P-001',
+          appointmentId: 'APT-001',
+          receptionId: 'RCP-001',
+          visitDate: '2026-03-01',
+        }}
+        author={{ role: 'doctor', displayName: 'Dr. Test', userId: 'doctor01' }}
+        orderBundles={[]}
+        printExportAction={<button type="button">印刷/エクスポート</button>}
+      />,
+    );
+
+    const soapActions = document.querySelector('.soap-note__actions');
+    expect(soapActions).not.toBeNull();
+    const printButton = within(soapActions as HTMLElement).getByRole('button', { name: '印刷/エクスポート' });
+    const historyButton = within(soapActions as HTMLElement).getByRole('button', { name: '履歴' });
+
+    expect(Boolean(printButton.compareDocumentPosition(historyButton) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+  });
+
+  it('履歴表示は画面構成説明を通常表示せず、必要な状態だけ表示する', async () => {
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <SoapNotePanel
+        history={[]}
+        meta={{
+          runId: 'RUN-SOAP-HISTORY-COPY',
+          patientId: 'P-001',
+          appointmentId: 'APT-001',
+          receptionId: 'RCP-001',
+          visitDate: '2026-03-01',
+        }}
+        author={{ role: 'doctor', displayName: 'Dr. Test', userId: 'doctor01' }}
+        orderBundles={[]}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '履歴' }));
+
+    expect(screen.getByLabelText('訂正履歴')).toBeInTheDocument();
+    expect(screen.getByText('履歴がありません。')).toBeInTheDocument();
+    expect(screen.queryByText('訂正履歴を差分表示します（この端末の SOAP 履歴）。編集は「編集へ戻る」で切り替えます。')).toBeNull();
+  });
+
   it('SOAP保存失敗はSOAPのみ未保存として安全文言で表示する', async () => {
     const user = userEvent.setup();
     vi.mocked(postChartSubjectiveEntry).mockResolvedValue({
@@ -218,5 +272,34 @@ describe('SoapNotePanel UI regression', () => {
     expect(reason).toHaveAttribute('id', 'soap-note-save-block-reason');
     expect(saveButton).toHaveAttribute('aria-describedby', 'soap-note-save-block-reason');
     expect(saveButton).toHaveAttribute('title', '確定済み診療録のため保存できません。');
+  });
+
+  it('並行編集ロック時の保存不可理由は編集ロックボタン側へ集約し近傍に重複表示しない', () => {
+    renderWithQueryClient(
+      <SoapNotePanel
+        history={[]}
+        meta={{
+          runId: 'RUN-SOAP-TAB-LOCKED',
+          patientId: 'P-001',
+          appointmentId: 'APT-001',
+          receptionId: 'RCP-001',
+          visitDate: '2026-03-01',
+        }}
+        author={{ role: 'doctor', displayName: 'Dr. Test', userId: 'doctor01' }}
+        orderBundles={[]}
+        readOnly
+        readOnlyReason="別タブが編集中です（runId=RUN-OWNER）"
+      />,
+    );
+
+    const soapActions = document.querySelector('.soap-note__actions');
+    expect(soapActions).not.toBeNull();
+    const saveButton = within(soapActions as HTMLElement).getByRole('button', { name: '保存' });
+
+    expect(saveButton).toBeDisabled();
+    expect(saveButton).not.toHaveAttribute('aria-describedby');
+    expect(saveButton).toHaveAttribute('title', '別タブが編集中です（runId=RUN-OWNER）');
+    expect(screen.queryByText('保存はブロックされています: 別タブが編集中です（runId=RUN-OWNER）')).not.toBeInTheDocument();
+    expect(screen.queryByText('読み取り専用: 別タブが編集中です（runId=RUN-OWNER）')).not.toBeInTheDocument();
   });
 });

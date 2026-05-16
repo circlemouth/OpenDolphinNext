@@ -261,12 +261,15 @@ export interface ChartsActionBarProps {
   sendConfirmSummary?: SendConfirmSummary;
   showLegacyOrcaSend?: boolean;
   chartRevisionId?: string;
+  showPrintAction?: boolean;
+  onPrintActionStateChange?: (state: { disabled: boolean; title?: string; disabledReason?: string }) => void;
 }
 
 export type ChartsActionBarHandle = {
   start: () => Promise<void>;
   pause: () => Promise<void>;
   finish: () => Promise<void>;
+  print: () => Promise<void>;
 };
 
 export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBarProps>(function ChartsActionBar({
@@ -314,6 +317,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   sendConfirmSummary,
   showLegacyOrcaSend = false,
   chartRevisionId,
+  showPrintAction = true,
+  onPrintActionStateChange,
 }: ChartsActionBarProps, ref) {
   const session = useOptionalSession();
   const canRetryOrcaQueue = isSystemAdminRole(session?.role);
@@ -791,7 +796,16 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   ]);
 
   const printDisabled = printPrecheckReasons.length > 0;
+  const printActionState = useMemo(
+    () => ({
+      disabled: printDisabled,
+      disabledReason: printDisabled ? printPrecheckReasons.map((reason) => reason.key).join(',') : undefined,
+      title: printDisabled ? `印刷不可: ${printPrecheckReasons.map((reason) => reason.summary).join(' / ')}` : undefined,
+    }),
+    [printDisabled, printPrecheckReasons],
+  );
   const otherBlocked = isLocked;
+  const nativeActionBlocked = isRunning || uiLocked;
   const guardSummaries = useMemo(() => {
     const entries: { key: string; action: string; summary: string; nextAction?: string }[] = [];
     if (finishPrecheckReasons.length > 0) {
@@ -832,6 +846,9 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   useEffect(() => {
     onLockChange?.(parentActionLocked, parentActionLockReason);
   }, [onLockChange, parentActionLocked, parentActionLockReason]);
+  useEffect(() => {
+    onPrintActionStateChange?.(printActionState);
+  }, [onPrintActionStateChange, printActionState]);
 
   const statusLine = useMemo(() => {
     if (isRunning && runningAction) {
@@ -2050,12 +2067,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     }
   };
 
-  useImperativeHandle(ref, () => ({
-    start: () => handleAction('start'),
-    pause: () => handleAction('pause'),
-    finish: () => handleAction('finish'),
-  }));
-
   const handlePrintExport = () => {
     if (printPrecheckReasons.length > 0) {
       const head = printPrecheckReasons[0];
@@ -2182,6 +2193,19 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     approvalSessionRef.current = { action: 'print', closed: false };
     logApproval('print', 'open');
   };
+
+  useImperativeHandle(ref, () => ({
+    start: () => handleAction('start'),
+    pause: () => handleAction('pause'),
+    finish: () => handleAction('finish'),
+    print: async () => {
+      if (printPrecheckReasons.length > 0) {
+        handlePrintExport();
+        return;
+      }
+      openPrintDialog();
+    },
+  }));
 
   const handleReportPrint = async () => {
     if (printPrecheckReasons.length > 0) {
@@ -2414,6 +2438,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   };
 
   const showDraftAction = true;
+  const draftNativeDisabled = embedded ? nativeActionBlocked : otherBlocked;
   const draftSaveButton = !showDraftAction
     ? null
     : (
@@ -2423,8 +2448,10 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           className={`charts-actions__button charts-actions__button--draft${
             compactHeader && isHeaderCollapsed ? ' charts-actions__button--compact' : ''
           }${embedded ? ' charts-actions__button--patient-draft' : ''}`}
-          disabled={otherBlocked}
+          disabled={draftNativeDisabled}
+          aria-disabled={embedded && otherBlocked ? true : undefined}
           data-disabled-reason={otherBlocked ? (isLocked ? 'locked' : undefined) : undefined}
+          title={otherBlocked ? statusLine : undefined}
           onClick={() => handleAction('draft')}
           aria-keyshortcuts="Shift+Enter"
         >
@@ -2441,8 +2468,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       aria-disabled={printDisabled}
       onClick={openPrintDialog}
       aria-describedby={!embedded && !isRunning && printPrecheckReasons.length > 0 ? 'charts-actions-print-guard' : undefined}
-      data-disabled-reason={printDisabled ? printPrecheckReasons.map((reason) => reason.key).join(',') : undefined}
-      title={printDisabled ? `印刷不可: ${printPrecheckReasons.map((reason) => reason.summary).join(' / ')}` : undefined}
+      data-disabled-reason={printActionState.disabledReason}
+      title={printActionState.title}
       aria-keyshortcuts="Alt+I"
     >
       <ClinicalIcon icon="print-export-clinical" />
@@ -2487,10 +2514,10 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   ) : null;
   const embeddedEncounterAction: Exclude<ChartAction, 'send' | 'draft' | 'cancel' | 'print' | 'pause'> =
     primaryAction === 'start' ? 'start' : 'finish';
-  const embeddedEncounterBlocked =
-    embeddedEncounterAction === 'start' ? otherBlocked || !resolvedPatientId : otherBlocked;
+  const embeddedEncounterNativeBlocked =
+    embeddedEncounterAction === 'start' ? nativeActionBlocked || !resolvedPatientId : nativeActionBlocked;
   const embeddedEncounterGuarded =
-    embeddedEncounterAction === 'start' ? !resolvedPatientId : finishPrecheckReasons.length > 0;
+    embeddedEncounterAction === 'start' ? otherBlocked || !resolvedPatientId : otherBlocked || finishPrecheckReasons.length > 0;
   const embeddedEncounterReason =
     embeddedEncounterAction === 'start'
       ? otherBlocked
@@ -3097,7 +3124,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               className={`charts-actions__button charts-actions__button--encounter-${embeddedEncounterAction} charts-actions__button--patient-finish${
                 primaryAction === embeddedEncounterAction ? ' charts-actions__button--primary-route' : ''
               }`}
-              disabled={embeddedEncounterBlocked}
+              disabled={embeddedEncounterNativeBlocked}
               data-disabled-reason={embeddedEncounterReason}
               aria-disabled={embeddedEncounterGuarded}
               aria-describedby={
@@ -3119,7 +3146,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           </div>
           <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--right">
             {editLockAlertButton}
-            {printActionButton}
+            {showPrintAction ? printActionButton : null}
           </div>
         </div>
       ) : null}
@@ -3221,7 +3248,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         <div className="charts-actions__group" data-group="support" role="group" aria-label="補助操作">
           {returnToReceptionButton}
           {draftSaveButton}
-          {printActionButton}
+          {showPrintAction ? printActionButton : null}
         </div>
       </div>
       ) : null}

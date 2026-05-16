@@ -190,6 +190,30 @@ describe('OrderSummaryPane category display', () => {
     expect(onCategoryAdd).not.toHaveBeenCalled();
   });
 
+  it('並行編集ロック時の空カテゴリ追加ブロック理由は近傍に重複表示しない', async () => {
+    const user = userEvent.setup();
+    const onCategoryAdd = vi.fn();
+
+    render(
+      <OrderSummaryPane
+        orderBundles={[]}
+        prescriptionBundles={[]}
+        onCategoryAdd={onCategoryAdd}
+        emptyCategoryAddState={{ prescription: { disabled: true, reason: '別タブが編集中です（runId=RUN-OWNER）' } }}
+      />,
+    );
+
+    const addButton = screen.getByRole('button', { name: '＋処方入力' });
+    expect(addButton).not.toBeDisabled();
+    expect(addButton).toHaveAttribute('aria-disabled', 'true');
+    expect(addButton).not.toHaveAttribute('aria-describedby');
+    expect(addButton).toHaveAttribute('title', '別タブが編集中です（runId=RUN-OWNER）');
+    expect(screen.queryByText('編集はブロックされています: 別タブが編集中です（runId=RUN-OWNER）')).not.toBeInTheDocument();
+
+    await user.click(addButton);
+    expect(onCategoryAdd).not.toHaveBeenCalled();
+  });
+
   it('空カテゴリに activeOrderPanel がある場合はその場に直接フォームを表示する', () => {
     render(
       <OrderSummaryPane
@@ -205,7 +229,7 @@ describe('OrderSummaryPane category display', () => {
 
     const summaryPane = screen.getByLabelText('オーダー概要');
     expect(summaryPane).toHaveAttribute('data-inline-editor-mode', 'edit');
-    expect(screen.getByText('入力欄をこの列で編集中')).toBeInTheDocument();
+    expect(screen.queryByText('入力欄をこの列で編集中')).not.toBeInTheDocument();
     expect(screen.getByText('コンパクト処方フォーム')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '＋処方入力' })).not.toBeInTheDocument();
   });

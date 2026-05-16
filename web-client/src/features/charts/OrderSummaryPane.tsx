@@ -50,6 +50,11 @@ const ORDER_CATEGORY_ADD_LABELS: Record<OrderGroupKey, string> = {
   charge: '算定',
 };
 
+const isParallelEditLockReason = (reason?: string | null): boolean => {
+  if (!reason) return false;
+  return reason.includes('別タブ') || reason.includes('並行編集');
+};
+
 const renderCardBody = (row: OrderDetailDisplayViewModel) => {
   return (
     <div className="soap-note__summary-body">
@@ -117,7 +122,6 @@ export function OrderSummaryPane({
   );
 
   const contentDisabled = orderBundlesLoading || Boolean(orderBundlesError);
-  const hasAnyOrderBundle = groupedBundles.some((group) => group.key !== 'document' && group.rows.length > 0);
   const visibleCategories = groupedBundles.filter((category) => category.key !== 'document');
   const resolvedRightPaneMode = rightPaneMode ?? (activeOrderPanel || documentPanelVisible ? 'edit' : 'summary');
   const firstNonEmptyCategory = visibleCategories.find((category) => category.rows.length > 0)?.groupKey ?? null;
@@ -130,6 +134,9 @@ export function OrderSummaryPane({
   const globalAddBlockReason = visibleCategories
     .map((category) => (category.groupKey ? emptyCategoryAddState?.[category.groupKey]?.reason : undefined))
     .find((reason): reason is string => Boolean(reason));
+  const visibleGlobalAddBlockReason = isParallelEditLockReason(globalAddBlockReason) ? undefined : globalAddBlockReason;
+  const selectedAddReasonDescribedBy =
+    selectedAddState?.reason && !isParallelEditLockReason(selectedAddState.reason) ? selectedAddReasonId : undefined;
   const activeEditorSelected = Boolean(activeOrderPanel && activeCategory === selectedGroupKey);
   const resolvedInlineEditorMode = inlineEditorMode ?? (activeEditorSelected ? 'edit' : 'summary');
   const disabledUtilityNotes = utilityActions.filter((item) => item.disabled && item.title);
@@ -164,7 +171,6 @@ export function OrderSummaryPane({
       <header className="soap-note__paper-header">
         <div>
           <strong>当日オーダー</strong>
-          <p className="soap-note__paper-meta">内容確認と編集をこの列で行います。</p>
         </div>
         {(!contentDisabled && selectedCategoryModel && onCandidateOpen) || utilityActions.length > 0 ? (
           <div className="soap-note__paper-header-actions">
@@ -216,17 +222,9 @@ export function OrderSummaryPane({
           {notice.message}
         </p>
       ) : null}
-      {!contentDisabled && !hasAnyOrderBundle ? (
-        <p className="soap-note__paper-empty">当日のオーダーはありません。必要な分野から追加してください。</p>
-      ) : null}
-      {!contentDisabled ? (
-        <p className="soap-note__paper-empty soap-note__order-safety-note">
-          追加は下書き入力であり、処方確定・ORCA送信・会計済みではありません。
-        </p>
-      ) : null}
-      {!contentDisabled && globalAddBlockReason ? (
+      {!contentDisabled && visibleGlobalAddBlockReason ? (
         <p id={selectedAddReasonId} className="soap-note__paper-empty soap-note__paper-empty--error" role="status">
-          編集はブロックされています: {globalAddBlockReason}
+          編集はブロックされています: {visibleGlobalAddBlockReason}
         </p>
       ) : null}
       {disabledUtilityNotes.length > 0 ? (
@@ -273,7 +271,7 @@ export function OrderSummaryPane({
                 <strong>{selectedCategoryModel.label}</strong>
                 <p className="soap-note__order-group-submeta">
                   {activeEditorSelected
-                    ? '入力欄をこの列で編集中'
+                    ? '編集中'
                     : selectedCategoryModel.rows.length > 0
                       ? `${selectedCategoryModel.rows.length}件の当日オーダー`
                       : '未入力'}
@@ -286,7 +284,7 @@ export function OrderSummaryPane({
                     className="order-dock__bundle-action order-dock__bundle-action--primary"
                     onClick={() => triggerCategoryAdd(selectedCategoryModel)}
                     aria-disabled={selectedAddState?.disabled ? 'true' : undefined}
-                    aria-describedby={selectedAddState?.reason ? selectedAddReasonId : undefined}
+                    aria-describedby={selectedAddReasonDescribedBy}
                     data-disabled-reason={selectedAddState?.disabled ? 'order_category_add_blocked' : undefined}
                     title={selectedAddState?.reason ?? `${ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}を追加`}
                   >
@@ -368,14 +366,13 @@ export function OrderSummaryPane({
               </ul>
             ) : (
               <div className="soap-note__order-empty-inline">
-                <p>この分野は未入力です。右ペイン内で直接入力できます。</p>
                 <div className="soap-note__order-empty-actions">
                   <button
                     type="button"
                     className="order-dock__bundle-action order-dock__bundle-action--primary"
                     onClick={() => triggerCategoryAdd(selectedCategoryModel)}
                     aria-disabled={selectedAddState?.disabled ? 'true' : undefined}
-                    aria-describedby={selectedAddState?.reason ? selectedAddReasonId : undefined}
+                    aria-describedby={selectedAddReasonDescribedBy}
                     data-disabled-reason={selectedAddState?.disabled ? 'order_category_add_blocked' : undefined}
                     title={selectedAddState?.reason ?? `${ORDER_CATEGORY_ADD_LABELS[selectedGroupKey]}を追加`}
                   >

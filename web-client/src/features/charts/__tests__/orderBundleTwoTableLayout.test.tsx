@@ -51,6 +51,27 @@ const baseProps = {
     dataSourceTransition: 'server' as const,
   },
 };
+const injectionProps = {
+  ...baseProps,
+  entity: 'injectionOrder',
+  title: '注射編集',
+  bundleLabel: '注射名',
+  itemQuantityLabel: '数量',
+};
+const testProps = {
+  ...baseProps,
+  entity: 'testOrder',
+  title: '検査編集',
+  bundleLabel: '検査名',
+  itemQuantityLabel: '回数',
+};
+const chargeProps = {
+  ...baseProps,
+  entity: 'baseChargeOrder',
+  title: '基本料編集',
+  bundleLabel: '算定',
+  itemQuantityLabel: '回数',
+};
 
 afterEach(() => {
   cleanup();
@@ -116,5 +137,37 @@ describe('OrderBundleEditPanel predictive options', () => {
 
     await user.click(screen.getByRole('button', { name: '頓用' }));
     expect(summary).toHaveTextContent('回数: 1');
+  });
+
+  it('点滴・注射はキリン型の密な列と local-only 速度欄を同一編集面に出す', () => {
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+
+    renderWithClient(<OrderBundleEditPanel {...injectionProps} />);
+
+    const grid = screen.getByTestId('order-bundle-injection-kirin-grid');
+    expect(within(grid).getByText('薬剤・器材')).toBeInTheDocument();
+    expect(within(grid).getByText('投与指示')).toBeInTheDocument();
+    expect(within(grid).getAllByText('速度指定').length).toBeGreaterThan(0);
+    expect(screen.getByText(/速度指定と点滴速度は院内ローカル保持です/)).toBeInTheDocument();
+    expect(document.querySelector('[data-order-layout="compact-kirin"][data-order-entity="injectionOrder"]')).not.toBeNull();
+    expect(document.querySelector('.charts-side-panel__item-row--injection-main')).not.toBeNull();
+  });
+
+  it('検査と算定は密なオーダー登録内容テーブルに寄せ、基本料区分セグメントを使える', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+
+    renderWithClient(<OrderBundleEditPanel {...testProps} />);
+    expect(screen.getByText('検査 / 入力値')).toBeInTheDocument();
+    expect(document.querySelector('.charts-side-panel__item-row--test-main')).not.toBeNull();
+
+    cleanup();
+
+    renderWithClient(<OrderBundleEditPanel {...chargeProps} />);
+    expect(screen.getByText('オーダー登録内容')).toBeInTheDocument();
+    const baseChargeGroup = screen.getByRole('group', { name: '基本料区分' });
+    await user.click(within(baseChargeGroup).getByRole('button', { name: '再診' }));
+    expect(screen.getByDisplayValue('再診')).toBeInTheDocument();
+    expect(document.querySelector('.charts-side-panel__item-row--charge-main')).not.toBeNull();
   });
 });
