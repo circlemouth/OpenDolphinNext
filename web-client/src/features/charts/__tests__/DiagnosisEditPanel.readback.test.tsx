@@ -130,14 +130,13 @@ describe('DiagnosisEditPanel readback contract', () => {
     expect(within(dialog).getByLabelText('主病名')).toBeChecked();
     expect(within(dialog).getByLabelText('疑い')).toBeChecked();
 
-    await user.click(within(dialog).getByText('詳細（コード/開始/転帰）'));
+    await user.click(within(dialog).getByText('詳細（開始/転帰/保険病名）'));
     expect(within(dialog).getByLabelText(/開始日/)).toHaveValue('2026-04-10');
     expect(within(dialog).getByLabelText(/転帰日/)).toHaveValue('2026-04-20');
     expect(within(dialog).getByLabelText(/転帰 ※任意/)).toHaveValue('治癒');
 
-    await user.clear(within(dialog).getByLabelText(/転帰 ※任意/));
-    await user.type(within(dialog).getByLabelText(/転帰 ※任意/), '継続中');
-    await user.click(within(dialog).getByRole('button', { name: 'ORCA病名を更新' }));
+    await user.selectOptions(within(dialog).getByLabelText(/転帰 ※任意/), '');
+    await user.click(within(dialog).getByRole('button', { name: '送信内容を確認' }));
     const confirmDialog = await screen.findByRole('alertdialog', { name: 'ORCA病名を更新の確認' });
     await user.click(within(confirmDialog).getByRole('button', { name: 'ORCA病名を更新' }));
 
@@ -194,11 +193,11 @@ describe('DiagnosisEditPanel readback contract', () => {
     await waitFor(() => {
       expect(searchDiseaseMasterCandidates).toHaveBeenCalledWith(expect.objectContaining({ keyword: '高血' }));
     });
-    const candidateList = await screen.findByRole('listbox', { name: '病名マスター候補' });
+    const candidateList = await screen.findByRole('listbox', { name: '病名 *候補' });
     await user.click(within(candidateList).getByRole('option', { name: /高血圧症/ }));
 
     expect(screen.getByLabelText('病名 *')).toHaveValue('高血圧症');
-    expect(screen.getByText('コードに紐づく病名です。')).toBeInTheDocument();
+    expect(screen.getByText(/コードに紐づく病名です。/)).toBeInTheDocument();
     expect(mutateOrcaDisease).not.toHaveBeenCalled();
 
     const authoring = screen.getByLabelText('ORCAへ病名登録');

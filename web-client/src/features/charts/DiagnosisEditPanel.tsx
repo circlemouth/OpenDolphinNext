@@ -239,13 +239,6 @@ const normalizeFormComponents = (state: DiagnosisFormState): DiseaseComponent[] 
   return component ? [component] : [];
 };
 
-const formatComponentCodeList = (entry: DiseaseEntry) => {
-  if (entry.components && entry.components.length > 0) {
-    return entry.components.map((component) => component.code).join(' + ');
-  }
-  return entry.diagnosisCode?.trim() || '-';
-};
-
 const isValidDateOnly = (value: string) => {
   const match = DATE_ONLY_PATTERN.exec(value);
   if (!match) return false;
@@ -1407,7 +1400,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
                 type="date"
                 value={quickAdd.startDate}
                 onChange={(event) => {
-                  setQuickCandidateSelection('');
+                  setCandidateSelection('');
                   setQuickAdd((prev) => ({ ...prev, startDate: event.target.value }));
                 }}
                 disabled={isOrcaMutationBlocked || isAnyMutationPending}
