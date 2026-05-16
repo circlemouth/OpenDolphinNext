@@ -207,7 +207,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        'setCode は展開専用です。otherOrder は explicit local-only 契約で保存し、ORCA 送信しません。bodyPart は保持せず、オーダー名・指示・自由メモは院内補足として保存します。',
+        'setCode は展開専用です。otherOrder は explicit local-only 契約で保存し、ORCA 送信しません。bodyPart は保持せず、自動名称・指示・自由メモは院内補足として保存します。',
       ),
     ).toBeInTheDocument();
   });
@@ -228,13 +228,13 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '注射では admin/adminCode/adminMemo は local-only persisted / outbound strip です。ORCA送信では classCode・回数・coded row・generic flag・rowRole だけを使い、bodyPart は reject します。',
+        '注射では admin/adminCode/adminMemo（速度指定・点滴速度を含む）は local-only persisted / outbound strip です。ORCA送信では classCode・回数・coded row・generic flag・rowRole だけを使い、bodyPart は reject します。',
       ),
     ).toBeInTheDocument();
     expect(screen.getByLabelText('最近使った投与指示')).toBeInTheDocument();
     expect(
       screen.getByText(
-        '投与指示は院内ローカル保存です。最近使った投与指示を含めて、admin/adminCode/adminMemo は ORCA送信では保持しません。',
+        '投与指示は院内ローカル保存です。最近使った投与指示、速度指定、点滴速度を含めて、admin/adminCode/adminMemo は ORCA送信では保持しません。',
       ),
     ).toBeInTheDocument();
   });
@@ -438,7 +438,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、オーダー名・処置指示・自由メモは院内ローカル情報として保持します。',
+        '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、自動名称・処置指示・自由メモは院内ローカル情報として保持します。',
       ),
     ).toBeInTheDocument();
   });
@@ -464,14 +464,14 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     renderPanel();
 
-    await user.click(screen.getByRole('button', { name: '開く' }));
+    await user.click(screen.getByText('点数検索（詳細）'));
     await user.type(screen.getByLabelText('点数From'), '20');
     await user.type(screen.getByLabelText('点数To'), '40');
 
     expect(screen.getByText('点数: 20〜40')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: '閉じる' }));
-    await user.click(screen.getByRole('button', { name: '開く' }));
+    await user.click(screen.getByText('点数検索（詳細）'));
+    await user.click(screen.getByText('点数検索（詳細）'));
 
     expect(screen.getByLabelText('点数From')).toHaveValue('20');
     expect(screen.getByLabelText('点数To')).toHaveValue('40');
@@ -516,7 +516,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、オーダー名・処置指示・自由メモは院内ローカル情報として保持します。',
+        '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、自動名称・処置指示・自由メモは院内ローカル情報として保持します。',
       ),
     ).toBeInTheDocument();
 
@@ -525,7 +525,8 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(await screen.findByRole('button', { name: /P02001.*処置セット.*反映/ }));
 
     expect(screen.queryByText('診療セットを反映しますか？')).toBeNull();
-    expect(screen.getByLabelText('オーダー名')).toHaveValue('創傷処置セット');
+    expect(screen.queryByLabelText('オーダー名')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('創傷処置（１００ｃｍ２未満）')).toBeInTheDocument();
     expect(screen.queryByLabelText('部位', { selector: 'input' })).toBeNull();
     expect(screen.getByLabelText('院内補足')).toHaveValue('運用前確認');
     expect(screen.getByDisplayValue('処置材料A')).toBeInTheDocument();
@@ -561,19 +562,19 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     renderPanel();
 
-    await user.type(screen.getByLabelText('オーダー名'), '既存内容');
+    await user.type(screen.getByPlaceholderText('処置項目名'), '既存内容');
     await user.type(screen.getByPlaceholderText('診療セット名またはコード'), '処置');
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
     await user.click(await screen.findByRole('button', { name: /P02001.*処置セット.*反映/ }));
 
     expect(await screen.findByText('診療セットを反映しますか？')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'キャンセル' }));
-    expect(screen.getByLabelText('オーダー名')).toHaveValue('既存内容');
+    expect(screen.getByDisplayValue('既存内容')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /P02001.*処置セット.*反映/ }));
     await user.click(await screen.findByRole('button', { name: '反映する' }));
 
-    expect(screen.getByLabelText('オーダー名')).toHaveValue('創傷処置セット');
+    expect(screen.getByDisplayValue('創傷処置（１００ｃｍ２未満）')).toBeInTheDocument();
   });
 
   it('entity 不一致の診療セットは warning で中断する', async () => {
@@ -604,7 +605,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(await screen.findByRole('button', { name: /P02001.*処置セット.*反映/ }));
 
     expect(await screen.findByText('entity が一致しないため診療セットを反映できません。')).toBeInTheDocument();
-    expect(screen.getByLabelText('オーダー名')).toHaveValue('');
+    expect(screen.queryByDisplayValue('画像セット')).toBeNull();
   });
 
   it('generalOrder boundary alias でも treatmentOrder の診療セット詳細を反映できる', async () => {
@@ -634,7 +635,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
     await user.click(await screen.findByRole('button', { name: /P02001.*処置セット.*反映/ }));
 
-    expect(screen.getByLabelText('オーダー名')).toHaveValue('創傷処置セット');
+    expect(screen.getByDisplayValue('創傷処置（１００ｃｍ２未満）')).toBeInTheDocument();
     expect(screen.queryByText('entity が一致しないため診療セットを反映できません。')).toBeNull();
   });
 
@@ -708,7 +709,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
     await user.click(await screen.findByRole('button', { name: /R70001.*胸部CTセット.*反映/ }));
 
-    expect(screen.getByLabelText('画像診断オーダー名')).toHaveValue('胸部CTセット');
+    expect(screen.queryByLabelText('画像診断オーダー名')).not.toBeInTheDocument();
     expect(screen.getByLabelText('部位', { selector: 'input' })).toHaveValue('胸部');
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
@@ -759,7 +760,8 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
     await user.click(await screen.findByRole('button', { name: /O80001.*文書料セット.*反映/ }));
 
-    expect(screen.getByLabelText('オーダー名')).toHaveValue('文書料セット');
+    expect(screen.queryByLabelText('オーダー名')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('診断書料')).toBeInTheDocument();
     expect(screen.getByText('反映元 setCode: O80001（local-only）')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
@@ -805,7 +807,8 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
     await user.click(await screen.findByRole('button', { name: /T60001.*血液検査セット.*反映/ }));
 
-    expect(screen.getByLabelText('検査名')).toHaveValue('血液検査セット');
+    expect(screen.queryByLabelText('検査名')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('血液一般')).toBeInTheDocument();
     expect(screen.getByLabelText('検査指示（院内）')).toHaveValue('院内指示');
     expect(screen.getByLabelText('院内補足')).toHaveValue('至急');
     expect(screen.getByLabelText('検査メモ（院内）')).toHaveValue('bundle common memo');
@@ -862,7 +865,8 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
     await user.click(await screen.findByRole('button', { name: /B60001.*細菌培養セット.*反映/ }));
 
-    expect(screen.getByLabelText('検査名')).toHaveValue('細菌培養セット');
+    expect(screen.queryByLabelText('検査名')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('培養検査')).toBeInTheDocument();
     expect(screen.getByLabelText('細菌検査 subtype')).toHaveValue('culture');
     expect(screen.getByLabelText('院内補足')).toHaveValue('48h incubate');
 
@@ -926,7 +930,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.tab();
     await waitFor(() => expect(screen.getByDisplayValue('注射薬A')).toBeInTheDocument());
 
-    await user.click(screen.getByRole('button', { name: '追加' }));
+    await user.click(screen.getByRole('button', { name: '＋項目行' }));
 
     const mainInputsAfterAppend = screen.getAllByPlaceholderText('注射薬剤または手技名');
     const secondMainInput = mainInputsAfterAppend[mainInputsAfterAppend.length - 1];
@@ -1002,7 +1006,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.tab();
     await waitFor(() => expect(screen.getByDisplayValue('創傷処置（１００ｃｍ２未満）')).toBeInTheDocument());
 
-    await user.click(screen.getByRole('button', { name: '追加' }));
+    await user.click(screen.getByRole('button', { name: '＋項目行' }));
     const appendedInputs = screen.getAllByPlaceholderText('処置項目名');
     const secondMainInput = appendedInputs[appendedInputs.length - 1];
     await user.type(secondMainInput, '処置材料B');

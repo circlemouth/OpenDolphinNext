@@ -6,6 +6,7 @@ import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
 import { resolveAriaLive } from '../../libs/observability/observability';
 import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
+import { ClinicalIcon, type ClinicalIconKey } from '../shared/ClinicalIcon';
 import type { DataSourceTransition } from './authService';
 import {
   DISEASE_CANDIDATE_CONFIRM_NOTE,
@@ -534,6 +535,34 @@ function DiseaseTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function DiagnosisIconActionButton({
+  label,
+  icon,
+  tone = 'default',
+  onClick,
+  isDisabled,
+}: {
+  label: string;
+  icon: ClinicalIconKey;
+  tone?: 'default' | 'danger' | 'send';
+  onClick: () => void;
+  isDisabled?: boolean;
+}) {
+  const toneClass = tone === 'default' ? '' : ` charts-diagnosis__action-button--${tone}`;
+  return (
+    <button
+      type="button"
+      className={`charts-diagnosis__action-button${toneClass}`}
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      disabled={isDisabled}
+    >
+      <ClinicalIcon icon={icon} className="charts-diagnosis__action-icon" />
+    </button>
   );
 }
 
@@ -1142,18 +1171,22 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
   const editorOperationLabel = editingEntry ? 'ORCA病名を更新' : 'ORCAへ病名登録';
   const editorOrcaCodePlan =
     `Disease_Insurance_Class=${formatOrcaCode(resolveDiseaseInsuranceClassCode(form))} / Disease_Category=${formatOrcaCode(resolveDiseaseCategoryCode(form))} / Disease_Class=${formatOrcaCode(resolveDiseaseClassCode(form))} / Main_Disease_Class=${formatOrcaCode(resolveMainDiseaseClassCode(form))} / Disease_SuspectedFlag=${formatOrcaCode(resolveSuspectedFlagCode(form))} / Disease_Receipt_Print=${formatOrcaCode(resolveDiseaseReceiptPrintCode(form))} / Disease_Receipt_Print_Period=${formatOrcaCode(resolveDiseaseReceiptPrintPeriodCode(form))} / Insurance_Disease=${formatOrcaCode(resolveInsuranceDiseaseCode(form))} / Discharge_Certificate=${formatOrcaCode(resolveDischargeCertificateCode(form))} / Sub_Disease_Class=${formatOrcaCode(resolveSubDiseaseClassCode(form))}`;
+  const mirrorStatusLabel = diagnosisQuery.isFetching ? '取得中' : isMirrorConnected ? `${mirrorList.length}件` : '未確認';
 
   return (
-    <section className="charts-side-panel__section" data-test-id="diagnosis-edit-panel">
+    <section className="charts-side-panel__section charts-diagnosis-panel" data-testid="diagnosis-edit-panel" data-test-id="diagnosis-edit-panel">
       <header className="charts-side-panel__section-header">
-        <div>
-          <strong>ORCA登録病名</strong>
-          <p className="charts-diagnosis__lead">ORCA再取得結果を正本として表示</p>
+        <div className="charts-diagnosis__title-block">
+          <div className="charts-diagnosis__title-row">
+            <strong>ORCA登録病名</strong>
+            <span className="charts-diagnosis__source-badge">ORCA再取得結果を正本として表示</span>
+            <span className="charts-diagnosis__count-badge">{mirrorStatusLabel}</span>
+          </div>
         </div>
         <div className="charts-diagnosis__header-actions" role="group" aria-label="病名操作">
           <button
             type="button"
-            className="charts-side-panel__ghost"
+            className="charts-side-panel__ghost charts-diagnosis__organize-button"
             onClick={() =>
               setPendingAction({
                 operation: 'organizeDeletedDiseases',
@@ -1373,8 +1406,8 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
 
       <section className="charts-diagnosis__quick-add" aria-label="ORCA登録病名">
         <div className="charts-side-panel__subheader">
-          <strong>ORCA登録病名</strong>
-          <span className="charts-side-panel__help">{diagnosisQuery.isFetching ? '取得中' : isMirrorConnected ? `${mirrorList.length}件` : '未確認'}</span>
+          <strong>活動中の病名</strong>
+          <span className="charts-side-panel__help">{mirrorStatusLabel}</span>
         </div>
         {diagnosisQuery.isError ? <p className="charts-side-panel__empty">病名の取得に失敗しました。</p> : null}
         {mirrorList.length === 0 && !diagnosisQuery.isFetching && !diagnosisQuery.isError && diagnosisQuery.data ? (
@@ -1387,12 +1420,16 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
               ariaLabel="ORCA登録病名（活動中）"
               actions={(entry) => (
                 <>
-                  <button type="button" onClick={() => openEdit(entry)} disabled={isOrcaMutationBlocked || isAnyMutationPending}>
-                    編集
-                  </button>
-                  <button
-                    type="button"
-                    className="charts-side-panel__ghost--danger"
+                  <DiagnosisIconActionButton
+                    label="編集"
+                    icon="draft-clinical"
+                    onClick={() => openEdit(entry)}
+                    isDisabled={isOrcaMutationBlocked || isAnyMutationPending}
+                  />
+                  <DiagnosisIconActionButton
+                    label="削除"
+                    icon="accept-cancel"
+                    tone="danger"
                     onClick={() =>
                       setPendingAction({
                         operation: 'delete',
@@ -1401,10 +1438,8 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
                         entry,
                       })
                     }
-                    disabled={isOrcaMutationBlocked || isAnyMutationPending}
-                  >
-                    削除
-                  </button>
+                    isDisabled={isOrcaMutationBlocked || isAnyMutationPending}
+                  />
                 </>
               )}
             />
@@ -1416,12 +1451,16 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
                   ariaLabel="ORCA登録病名（転帰あり）"
                   actions={(entry) => (
                     <>
-                      <button type="button" onClick={() => openEdit(entry)} disabled={isOrcaMutationBlocked || isAnyMutationPending}>
-                        編集
-                      </button>
-                      <button
-                        type="button"
-                        className="charts-side-panel__ghost--danger"
+                      <DiagnosisIconActionButton
+                        label="編集"
+                        icon="draft-clinical"
+                        onClick={() => openEdit(entry)}
+                        isDisabled={isOrcaMutationBlocked || isAnyMutationPending}
+                      />
+                      <DiagnosisIconActionButton
+                        label="削除"
+                        icon="accept-cancel"
+                        tone="danger"
                         onClick={() =>
                           setPendingAction({
                             operation: 'delete',
@@ -1430,10 +1469,8 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
                             entry,
                           })
                         }
-                        disabled={isOrcaMutationBlocked || isAnyMutationPending}
-                      >
-                        削除
-                      </button>
+                        isDisabled={isOrcaMutationBlocked || isAnyMutationPending}
+                      />
                     </>
                   )}
                 />
@@ -1456,13 +1493,13 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
             entries={pendingLocalList}
             ariaLabel="ORCA未登録の送信候補"
             actions={(entry) => (
-              <button
-                type="button"
+              <DiagnosisIconActionButton
+                label="ORCAへ登録"
+                icon="orca-send"
+                tone="send"
                 onClick={() => requestFormMutation('create', toFormState(entry, today), entry)}
-                disabled={isOrcaMutationBlocked || isAnyMutationPending}
-              >
-                ORCAへ登録
-              </button>
+                isDisabled={isOrcaMutationBlocked || isAnyMutationPending}
+              />
             )}
           />
         </section>

@@ -3365,14 +3365,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         nextAction: '受付のORCA連携一覧で照合',
       });
     }
-    if (items.length === 0) {
-      items.push({
-        id: 'baseline',
-        label: '患者安全',
-        tone: 'success',
-        detail: '患者識別、来院文脈、ORCA source/cache、編集状態をこの画面で確認できます。',
-      });
-    }
     return items;
   }, [
     approvalLocked,

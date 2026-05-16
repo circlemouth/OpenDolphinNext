@@ -305,6 +305,14 @@ const parsePrescriptionClassCode = (classCode?: string | null): { location: Pres
 const resolvePrescriptionClassCode = (category: PrescriptionCategory, location: PrescriptionLocation) =>
   PRESCRIPTION_CLASS_CODES[category][location];
 
+export const resolvePrescriptionRpAutoName = (rp: Pick<PrescriptionRp, 'name' | 'drugs'>): string => {
+  const currentName = rp.name.trim();
+  if (currentName) return currentName;
+  const firstDrugName = rp.drugs.find((drug) => drug.name.trim())?.name.trim();
+  if (firstDrugName) return firstDrugName;
+  return '処方RP';
+};
+
 function normalizePrescriptionOrder(order: PrescriptionOrder): PrescriptionOrder {
   return {
     ...order,
@@ -1656,25 +1664,32 @@ const cloneDrug = (drug: PrescriptionDrug): PrescriptionDrug => ({
   patientRequest: drug.patientRequest,
 });
 
-const cloneRp = (rp: PrescriptionRp): PrescriptionRp => ({
-  ...rp,
-  rpId: rp.rpId || createStableId('rp'),
-  documentId: rp.documentId,
-  moduleId: rp.moduleId,
-  name: rp.name.trim(),
-  location: rp.location,
-  category: rp.category,
-  usage: rp.usage.trim(),
-  usageCode: rp.usageCode?.trim() || undefined,
-  daysOrTimes: rp.daysOrTimes.trim() || '1',
-  remark: rp.remark.trim(),
-  refillCount: rp.refillCount === 1 || rp.refillCount === 2 || rp.refillCount === 3 ? rp.refillCount : undefined,
-  refillPattern: rp.refillPattern ?? 'none',
-  doctorComment: rp.doctorComment.trim(),
-  started: rp.started?.trim() || undefined,
-  claimComments: normalizeClaimComments(rp.claimComments ?? []).map(cloneClaimComment),
-  drugs: rp.drugs.map(cloneDrug),
-});
+const cloneRp = (rp: PrescriptionRp): PrescriptionRp => {
+  const drugs = rp.drugs.map(cloneDrug);
+  const normalized: PrescriptionRp = {
+    ...rp,
+    rpId: rp.rpId || createStableId('rp'),
+    documentId: rp.documentId,
+    moduleId: rp.moduleId,
+    name: rp.name.trim(),
+    location: rp.location,
+    category: rp.category,
+    usage: rp.usage.trim(),
+    usageCode: rp.usageCode?.trim() || undefined,
+    daysOrTimes: rp.daysOrTimes.trim() || '1',
+    remark: rp.remark.trim(),
+    refillCount: rp.refillCount === 1 || rp.refillCount === 2 || rp.refillCount === 3 ? rp.refillCount : undefined,
+    refillPattern: rp.refillPattern ?? 'none',
+    doctorComment: rp.doctorComment.trim(),
+    started: rp.started?.trim() || undefined,
+    claimComments: normalizeClaimComments(rp.claimComments ?? []).map(cloneClaimComment),
+    drugs,
+  };
+  return {
+    ...normalized,
+    name: resolvePrescriptionRpAutoName(normalized),
+  };
+};
 
 export const importPrescriptionDoInput = (
   baseOrder: PrescriptionOrder,

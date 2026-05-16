@@ -18,9 +18,15 @@
 - トークンやコンポーネントの追加は「この repo 固有で必要な理由」がある時だけ行う。
 - local-only / official / debug-only の区別は wording と情報設計で行い、見た目の装飾でごまかさない。
 - Accessibility / contrast / keyboard operability は DADS と current contract の両方に反しないことをレビュー条件にする。
+- 業務画面の通常表示では、説明文を「安全・判断・復旧に必要な情報」へ限定する。DADS の support text / help text は、全画面に常時説明文を置く根拠にしない。
+- 空状態、画面構成、正常時の安心表示、操作方法の説明、教育的な原則説明は、原則として visible copy から外す。必要なら tooltip / help / details / screen-reader-only へ退避し、通常の視線を診療判断、未入力、警告、送信可否、患者識別へ戻す。
+- 例外として、患者取り違え防止、重大操作確認、ORCA UNKNOWN / warning / unmatch、必須不足、禁忌・相互作用、送信ブロック理由、単位・上限・日数など誤入力に直結する条件は初期表示または近傍表示を維持する。
 
 ## Review Checklist
 - DADS 本文を別文書へ焼き直していないか
 - DADS 準備中項目に独自ルールを追加していないか
 - project-local adaptation だけを書いているか
 - current fact は `ui-current-contract.md` に寄せているか
+- 業務上の行動に結び付かない説明文が、カードやバナーとして常時表示されていないか
+- 正常時の「問題なし」説明が、警告や必須不足と同じ強さで視線を奪っていないか
+- 説明文を削る代わりに、医療安全上の警告・患者識別・重大操作確認まで消していないか

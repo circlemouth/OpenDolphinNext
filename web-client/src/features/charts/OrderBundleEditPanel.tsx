@@ -32,6 +32,11 @@ import {
   type OrcaOrderInputSetSummary,
 } from './orcaOrderInputSetApi';
 import { fetchOrcaMedicationGet } from './orcaMedicationGetApi';
+import {
+  formatInjectionAdminMemo,
+  parseInjectionAdminMemo,
+  type InjectionLocalMeta,
+} from './injectionLocalMeta';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 import {
   fetchOrderRecommendations,
@@ -1207,6 +1212,28 @@ export const resolveMedOrderBundleName = ({
   return resolvePrescriptionLabel(prescriptionTiming, prescriptionLocation);
 };
 
+export const resolveOrderBundleAutoName = (entity: string, form: BundleFormState) => {
+  const existingName = form.bundleName.trim();
+  if (existingName) return existingName;
+
+  if (resolveCanonicalOrderEntity(entity) === 'medOrder') {
+    return resolveMedOrderBundleName({
+      bundleName: form.bundleName,
+      items: form.items,
+      prescriptionTiming: form.prescriptionTiming,
+      prescriptionLocation: form.prescriptionLocation,
+    });
+  }
+
+  const firstItemName = collectBundleItems(form).find((item) => item.name.trim())?.name.trim();
+  if (firstItemName) return firstItemName;
+
+  const bodyPartName = form.bodyPart?.name?.trim();
+  if (bodyPartName) return bodyPartName;
+
+  return form.className?.trim() || '';
+};
+
 export const validateBundleForm = ({
   form,
   entity,
@@ -1612,7 +1639,6 @@ export function OrderBundleEditPanel({
       }
       const el =
         (document.getElementById(`${entityId}-item-name-0`) as HTMLInputElement | null) ??
-        (document.getElementById(`${entityId}-bundle-name`) as HTMLInputElement | null) ??
         (document.getElementById(`${entityId}-admin`) as HTMLInputElement | null);
       if (!el) return;
       safeScrollIntoView(el, { block: 'nearest' });
@@ -1710,6 +1736,35 @@ export function OrderBundleEditPanel({
   const adminMemoLocalOnlyHelp =
     resolveOrcaAdminMemoLocalOnlyHelp(entity) ?? '院内ローカル情報として保存します。ORCA 送信対象にはしません。';
   const itemMemoLocalOnlyHelp = resolveOrcaItemMemoLocalOnlyHelp(entity);
+  const parsedInjectionAdminMemo = useMemo(
+    () => parseInjectionAdminMemo(form.adminMemo),
+    [form.adminMemo],
+  );
+  const injectionAdminMemoText = isInjectionOrder ? parsedInjectionAdminMemo.memoText : form.adminMemo;
+  const updateAdminMemoText = useCallback(
+    (nextMemoText: string) => {
+      setForm((prev) => {
+        if (!isInjectionOrder) return { ...prev, adminMemo: nextMemoText };
+        const parsed = parseInjectionAdminMemo(prev.adminMemo);
+        return {
+          ...prev,
+          adminMemo: formatInjectionAdminMemo(parsed.meta, nextMemoText),
+        };
+      });
+    },
+    [isInjectionOrder],
+  );
+  const updateInjectionLocalMeta = useCallback((patch: InjectionLocalMeta) => {
+    setForm((prev) => {
+      const parsed = parseInjectionAdminMemo(prev.adminMemo);
+      return {
+        ...prev,
+        adminMemo: formatInjectionAdminMemo({ ...parsed.meta, ...patch }, parsed.memoText),
+      };
+    });
+  }, []);
+  const injectionSpeedMode = parsedInjectionAdminMemo.meta.speedMode ?? 'unspecified';
+  const injectionDripSpeed = parsedInjectionAdminMemo.meta.dripSpeedMlPerHour ?? '';
   const physiologyContractGuidanceBlock = physiologySendContractGuidance ? (
     <div
       className="charts-side-panel__notice charts-side-panel__notice--warning"
@@ -2795,27 +2850,9 @@ export function OrderBundleEditPanel({
   };
 
   const applyBundleNameCorrection = (bundleForm: BundleFormState) => {
-    if (bundleForm.bundleName.trim()) return bundleForm;
-
-    if (entity === 'medOrder') {
-      const corrected = resolveMedOrderBundleName({
-        bundleName: bundleForm.bundleName,
-        items: bundleForm.items,
-        prescriptionTiming: bundleForm.prescriptionTiming,
-        prescriptionLocation: bundleForm.prescriptionLocation,
-      });
-      if (!corrected.trim() || corrected === bundleForm.bundleName) return bundleForm;
-      return { ...bundleForm, bundleName: corrected };
-    }
-
-    // MVP: For base editor entities, auto-fill bundle name from the first item.
-    // This reduces friction vs legacy EditorSet where "bundle label" was often implicit.
-    if (import.meta.env.VITE_ORDER_EDIT_MVP === '1') {
-      const candidate = bundleForm.items.find((item) => item.name.trim())?.name.trim() ?? '';
-      if (candidate) return { ...bundleForm, bundleName: candidate };
-    }
-
-    return bundleForm;
+    const corrected = resolveOrderBundleAutoName(entity, bundleForm);
+    if (!corrected.trim() || corrected === bundleForm.bundleName) return bundleForm;
+    return { ...bundleForm, bundleName: corrected };
   };
 
   const copyFromHistory = (bundle: OrderBundle) => {
@@ -3526,7 +3563,7 @@ export function OrderBundleEditPanel({
           case 'invalid_charge_class_code':
           case 'missing_charge_class_name':
           case 'invalid_charge_class_name':
-            return `${entityId}-bundle-name`;
+            return `${entityId}-item-name-0`;
           case 'mixed_coded_uncoded':
           case 'uncoded_row':
           case 'missing_item_code': {
@@ -4095,16 +4132,6 @@ export function OrderBundleEditPanel({
               event.preventDefault();
             }}
           >
-            <div className="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--bundle charts-order-editor__manual-card">
-              <label htmlFor={`${entityId}-bundle-name`}>{bundleLabel}</label>
-              <input
-                id={`${entityId}-bundle-name`}
-                value={form.bundleName}
-                onChange={(event) => setForm((prev) => ({ ...prev, bundleName: event.target.value }))}
-                placeholder={orderUiProfile.bundleNamePlaceholder}
-                disabled={isBlocked}
-              />
-            </div>
         {supportsEtensuDetailSearch && (
           <details
             className="charts-side-panel__subsection charts-side-panel__meta-section charts-order-editor__secondary-section"
@@ -4432,6 +4459,70 @@ export function OrderBundleEditPanel({
             ) : null}
           </div>
         </div>
+        {isInjectionOrder ? (
+          <section
+            className="charts-order-editor__kirin-grid charts-order-editor__kirin-grid--injection charts-order-editor__manual-card"
+            aria-label="点滴・注射オーダー内容"
+            data-testid="order-bundle-injection-kirin-grid"
+          >
+            <div className="charts-order-editor__kirin-grid-header">
+              <strong>オーダー内容</strong>
+              <span>薬剤・器材は下の行で即編集します</span>
+            </div>
+            <div className="charts-order-editor__kirin-table" role="table" aria-label="点滴・注射入力列">
+              <div className="charts-order-editor__kirin-table-row charts-order-editor__kirin-table-row--header" role="row">
+                {['薬剤・器材', '薬剤量・数量', '成分量', 'その他', 'コメント', '投与指示', '速度指定', '点滴速度'].map((column) => (
+                  <span key={`injection-column-${column}`} role="columnheader">
+                    {column}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="charts-side-panel__field-row charts-order-editor__kirin-injection-controls">
+              <div className="charts-side-panel__field">
+                <label htmlFor={`${entityId}-speed-mode`}>速度指定</label>
+                <select
+                  id={`${entityId}-speed-mode`}
+                  value={injectionSpeedMode}
+                  onChange={(event) =>
+                    updateInjectionLocalMeta(
+                      event.target.value === 'specified'
+                        ? { speedMode: 'specified' }
+                        : { speedMode: 'unspecified', dripSpeedMlPerHour: undefined },
+                    )
+                  }
+                  disabled={isBlocked}
+                >
+                  <option value="unspecified">指定なし</option>
+                  <option value="specified">速度指定</option>
+                </select>
+              </div>
+              <div className="charts-side-panel__field">
+                <label htmlFor={`${entityId}-drip-speed`}>点滴速度</label>
+                <div className="charts-order-editor__unit-input">
+                  <input
+                    id={`${entityId}-drip-speed`}
+                    value={injectionDripSpeed}
+                    onChange={(event) =>
+                      updateInjectionLocalMeta({
+                        speedMode: event.target.value.trim() ? 'specified' : injectionSpeedMode,
+                        dripSpeedMlPerHour: event.target.value,
+                      })
+                    }
+                    inputMode="decimal"
+                    pattern="[0-9.]*"
+                    placeholder="例: 80"
+                    disabled={isBlocked}
+                  />
+                  <span>mL/h</span>
+                </div>
+              </div>
+            </div>
+            <p className="charts-side-panel__help">
+              速度指定と点滴速度は院内ローカル保持です。ORCA 送信 payload / XML には含めません。
+            </p>
+          </section>
+        ) : null}
         {isCompactOrderLayout ? (
           <details className="charts-side-panel__fold charts-side-panel__meta-section charts-side-panel__meta-section--start">
             <summary className="charts-side-panel__fold-summary">
@@ -4480,8 +4571,8 @@ export function OrderBundleEditPanel({
                     <label htmlFor={`${entityId}-admin-memo`}>院内補足</label>
                     <textarea
                       id={`${entityId}-admin-memo`}
-                      value={form.adminMemo}
-                      onChange={(event) => setForm((prev) => ({ ...prev, adminMemo: event.target.value }))}
+                      value={injectionAdminMemoText}
+                      onChange={(event) => updateAdminMemoText(event.target.value)}
                       placeholder="院内運用向けの補足を入力"
                       disabled={isBlocked}
                     />
@@ -4525,8 +4616,8 @@ export function OrderBundleEditPanel({
                 <label htmlFor={`${entityId}-admin-memo`}>院内補足</label>
                 <textarea
                   id={`${entityId}-admin-memo`}
-                  value={form.adminMemo}
-                  onChange={(event) => setForm((prev) => ({ ...prev, adminMemo: event.target.value }))}
+                  value={injectionAdminMemoText}
+                  onChange={(event) => updateAdminMemoText(event.target.value)}
                   placeholder="院内運用向けの補足を入力"
                   disabled={isBlocked}
                 />

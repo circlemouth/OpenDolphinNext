@@ -80,7 +80,7 @@ describe('OrderBundleEditPanel predictive options', () => {
     const user = userEvent.setup();
     renderWithClient(<OrderBundleEditPanel {...baseProps} />);
 
-    expect(screen.getByLabelText('RP名')).toBeInTheDocument();
+    expect(screen.queryByLabelText('RP名')).not.toBeInTheDocument();
 
     const confirmed = screen.getByTestId('order-bundle-confirmed-table');
     expect(confirmed.closest('.charts-side-panel__meta-section--items')).not.toBeNull();

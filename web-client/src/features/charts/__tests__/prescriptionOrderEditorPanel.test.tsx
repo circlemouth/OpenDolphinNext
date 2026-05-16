@@ -58,6 +58,21 @@ afterEach(() => {
 });
 
 describe('PrescriptionOrderEditorPanel', () => {
+  it('RPグリッドでオーダー内容を前面表示し、未解決の成分量/その他を未設定として扱う', () => {
+    const searchMock = vi.mocked(fetchOrderMasterSearch);
+    searchMock.mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+
+    renderPanel();
+
+    const grid = screen.getByTestId('prescription-order-kirin-grid');
+    expect(within(grid).getByText('オーダー内容')).toBeInTheDocument();
+    expect(within(grid).getByText('薬剤名称')).toBeInTheDocument();
+    expect(within(grid).getByText(/アムロジピン/)).toBeInTheDocument();
+    expect(within(grid).getByText('後発変更可否')).toBeInTheDocument();
+    expect(grid.querySelectorAll('[data-unresolved="true"]').length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText('RP名')).not.toBeInTheDocument();
+  });
+
   it('3文字以上は自動検索、2文字以下は手動検索ボタンで候補表示する', async () => {
     const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);

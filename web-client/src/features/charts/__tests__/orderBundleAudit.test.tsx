@@ -74,9 +74,8 @@ describe('OrderBundleEditPanel audit', () => {
       </QueryClientProvider>,
     );
 
-    await waitFor(() => {
-      expect(screen.getByLabelText('RP名')).toHaveValue('監査テストRP');
-    });
+    await screen.findByDisplayValue('アムロジピン');
+    expect(screen.queryByLabelText('RP名')).not.toBeInTheDocument();
     const auditSpy = vi.spyOn(auditLogger, 'logAuditEvent');
     await user.click(screen.getByRole('button', { name: /保存して追加/ }));
 

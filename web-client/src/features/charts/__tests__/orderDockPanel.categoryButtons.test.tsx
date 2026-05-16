@@ -136,6 +136,12 @@ describe('OrderDockPanel category quick-add', () => {
     expect(screen.getByText('+処置')).toBeInTheDocument();
     expect(screen.getByText('+検査')).toBeInTheDocument();
     expect(screen.getByText('+算定')).toBeInTheDocument();
+    const workbench = screen.getByLabelText('オーダーワークベンチ');
+    expect(within(workbench).getByRole('navigation', { name: 'オーダー種別' })).toBeInTheDocument();
+    expect(within(workbench).getByRole('button', { name: /処方/ })).toBeInTheDocument();
+    expect(within(workbench).getByRole('button', { name: /点滴・注射/ })).toBeInTheDocument();
+    expect(within(workbench).getByText('候補/セット選択')).toBeInTheDocument();
+    expect(within(workbench).getByText('オーダー内容')).toBeInTheDocument();
     expect(document.querySelector('[data-test-id="order-dock-quick-add-prescription"]')).not.toBeNull();
     expect(document.querySelector('[data-test-id="order-dock-quick-add-injection"]')).not.toBeNull();
     expect(document.querySelector('[data-test-id="order-dock-quick-add-treatment"]')).not.toBeNull();

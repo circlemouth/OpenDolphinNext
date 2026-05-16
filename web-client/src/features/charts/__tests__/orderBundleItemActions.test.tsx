@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 
 import { OrderBundleEditPanel } from '../OrderBundleEditPanel';
+import { formatInjectionAdminMemo, parseInjectionAdminMemo } from '../injectionLocalMeta';
 import { mutateOrderBundles } from '../orderBundleApi';
 import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
@@ -256,6 +257,70 @@ describe('OrderBundleEditPanel item actions', () => {
       rowRole: 'main',
     });
     expect(savedItem?.memo).toBe('レセ本文');
+  });
+
+  it('injectionOrder の速度指定と点滴速度は adminMemo の local-only meta として保存し、UIではprefixを見せない', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...injectionProps}
+        request={{
+          requestId: 'REQ-INJECTION-SPEED',
+          kind: 'edit',
+          bundle: {
+            entity: 'injectionOrder',
+            bundleName: '点滴セット',
+            bundleNumber: '1',
+            classCode: '310',
+            classCodeSystem: 'Claim007',
+            className: '注射',
+            admin: '静脈点滴',
+            adminCode: '4101',
+            adminMemo: formatInjectionAdminMemo(
+              { speedMode: 'specified', dripSpeedMlPerHour: '80' },
+              '実施前にルート確認',
+            ),
+            items: [
+              {
+                code: '620000001',
+                name: 'ソルラクト輸液 250mL',
+                quantity: '1',
+                unit: '袋',
+                memo: '',
+                rowRole: 'main',
+              },
+            ],
+          },
+        }}
+      />,
+    );
+
+    const injectionGrid = await screen.findByTestId('order-bundle-injection-kirin-grid');
+    expect(within(injectionGrid).getByText('薬剤・器材')).toBeInTheDocument();
+    expect(within(injectionGrid).getAllByText('点滴速度').length).toBeGreaterThan(0);
+
+    const speedMode = screen.getByLabelText('速度指定') as HTMLSelectElement;
+    const dripSpeed = screen.getByLabelText('点滴速度') as HTMLInputElement;
+    const adminMemo = screen.getByLabelText('院内補足') as HTMLTextAreaElement;
+    expect(speedMode.value).toBe('specified');
+    expect(dripSpeed.value).toBe('80');
+    expect(adminMemo.value).toBe('実施前にルート確認');
+    expect(adminMemo.value).not.toContain('__injection_local_meta__');
+
+    await user.clear(dripSpeed);
+    await user.type(dripSpeed, '120');
+    await user.clear(adminMemo);
+    await user.type(adminMemo, '疼痛時は速度を再確認');
+    await user.click(screen.getByRole('button', { name: '保存して続ける' }));
+
+    const mutateMock = vi.mocked(mutateOrderBundles);
+    await waitFor(() => expect(mutateMock).toHaveBeenCalled());
+
+    const operation = mutateMock.mock.calls.at(-1)?.[0]?.operations?.[0];
+    const parsed = parseInjectionAdminMemo(operation?.adminMemo ?? '');
+    expect(parsed.meta).toEqual({ speedMode: 'specified', dripSpeedMlPerHour: '120' });
+    expect(parsed.memoText).toBe('疼痛時は速度を再確認');
   });
 
   it.each([
@@ -517,7 +582,7 @@ describe('OrderBundleEditPanel item actions', () => {
       .find((node) => node.tagName.toLowerCase() === 'strong');
     const itemSection = itemSectionLabel?.closest('.charts-side-panel__subsection') as HTMLElement | null;
     if (!itemSection) throw new Error('処方薬剤セクションが見つかりません');
-    await user.click(within(itemSection).getByRole('button', { name: '追加' }));
+    await user.click(within(itemSection).getByRole('button', { name: '＋項目行' }));
 
     await fillDrugRow(user, 0, 'アムロジピン');
     await fillDrugRow(user, 1, 'テルミサルタン');
@@ -654,6 +719,7 @@ describe('OrderBundleEditPanel item actions', () => {
 
     const payload = mutateMock.mock.calls[0]?.[0];
     const operation = payload?.operations?.[0];
+    expect(operation?.bundleName).toBe('創傷処置');
     expect(operation?.classCode).toBe('400');
     expect(operation?.classCodeSystem).toBe('Claim007');
     expect(operation?.className).toBe('処置');
@@ -935,10 +1001,10 @@ describe('OrderBundleEditPanel item actions', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: '追加' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '＋項目行' })).toBeDisabled();
     const nameInput = screen.getByPlaceholderText('薬剤名') as HTMLInputElement;
     expect(nameInput).toBeDisabled();
-    expect(screen.getByRole('button', { name: '選択行削除' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '行削除' })).toBeDisabled();
     expect(screen.queryByLabelText('行 1 を削除')).not.toBeInTheDocument();
   });
 
@@ -979,7 +1045,7 @@ describe('OrderBundleEditPanel item actions', () => {
     const itemSection = itemSectionLabel?.closest('.charts-side-panel__subsection') as HTMLElement | null;
     if (!itemSection) throw new Error('処方薬剤セクションが見つかりません');
 
-    await user.click(within(itemSection).getByRole('button', { name: '追加' }));
+    await user.click(within(itemSection).getByRole('button', { name: '＋項目行' }));
     expect(screen.getAllByPlaceholderText('薬剤名')).toHaveLength(2);
 
     const firstNameInput = screen.getAllByPlaceholderText('薬剤名')[0] as HTMLInputElement;
@@ -1002,7 +1068,7 @@ describe('OrderBundleEditPanel item actions', () => {
     await user.click(screen.getByRole('button', { name: 'コメント追加' }));
     expect(container.querySelector<HTMLInputElement>('input[id$="-comment-code-0"]')?.value).toBe('0082');
 
-    await user.click(screen.getByRole('button', { name: '全クリア' }));
+    await user.click(screen.getByRole('button', { name: '入力を全クリア' }));
     const dialog = await screen.findByRole('alertdialog', { name: '入力を全クリアしますか？' });
     await user.click(within(dialog).getByRole('button', { name: 'クリアする' }));
 

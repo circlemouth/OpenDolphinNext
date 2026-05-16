@@ -118,7 +118,18 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     expect(within(mirrorList).queryByText('送信候補病名')).not.toBeInTheDocument();
     expect(within(mirrorList).getByText('8839001')).toBeInTheDocument();
     expect(within(mirrorList).queryByText('副')).not.toBeInTheDocument();
-    expect(screen.getByText('ORCA再取得結果を正本として表示')).toBeInTheDocument();
+    const mirrorRow = within(mirrorList).getByText('ORCA登録済み病名').closest('tr');
+    expect(mirrorRow).not.toBeNull();
+    const editButton = within(mirrorRow as HTMLElement).getByRole('button', { name: '編集' });
+    const deleteButton = within(mirrorRow as HTMLElement).getByRole('button', { name: '削除' });
+    expect(editButton.querySelector('img.clinical-icon')).not.toBeNull();
+    expect(deleteButton.querySelector('img.clinical-icon')).not.toBeNull();
+    expect(editButton).not.toHaveTextContent('編集');
+    expect(deleteButton).not.toHaveTextContent('削除');
+    const panel = screen.getByTestId('diagnosis-edit-panel');
+    expect(within(panel).getByText('ORCA再取得結果を正本として表示')).toHaveClass('charts-diagnosis__source-badge');
+    expect(within(panel).getByText('1件', { selector: '.charts-diagnosis__count-badge' })).toBeVisible();
+    expect(within(panel).getByText('活動中の病名')).toBeVisible();
     const candidateSection = screen.getByRole('region', { name: 'ORCA未登録の送信候補' });
     expect(within(candidateSection).getByText('送信候補')).toBeInTheDocument();
     expect(within(candidateSection).getByText('1件 / ORCA登録済みではありません')).toBeInTheDocument();
@@ -126,6 +137,11 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
     expect(within(candidateSection).getByText('ORCA未登録の送信候補')).toBeInTheDocument();
     expect(within(candidateSection).getByText('候補')).toBeInTheDocument();
     expect(within(candidateSection).getByText(/local候補はORCA未登録です/)).toBeInTheDocument();
+    const candidateRow = within(candidateSection).getByText('送信候補病名').closest('tr');
+    expect(candidateRow).not.toBeNull();
+    const registerButton = within(candidateRow as HTMLElement).getByRole('button', { name: 'ORCAへ登録' });
+    expect(registerButton.querySelector('img.clinical-icon')).not.toBeNull();
+    expect(registerButton).not.toHaveTextContent('ORCAへ登録');
     expect(screen.queryByText('保険病名の確認が必要です')).not.toBeInTheDocument();
   });
 

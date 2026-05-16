@@ -93,17 +93,17 @@ export const ORCA_POLICY_MESSAGES = {
   otherBlocked: 'ORCA送信を停止: otherOrder は local-only です。ORCA outbound には対応していません。',
   medUsageLocalOnly: '処方の usage は local-only persisted / outbound strip です。ORCA送信では保持しません。',
   injectionAdminLocalOnly:
-    '投与指示は院内ローカル保存です。最近使った投与指示を含めて、admin/adminCode/adminMemo は ORCA送信では保持しません。',
+    '投与指示は院内ローカル保存です。最近使った投与指示、速度指定、点滴速度を含めて、admin/adminCode/adminMemo は ORCA送信では保持しません。',
   selectionCommentBlocked: '選択式コメントの itemNumber / branch は official medicalmodv2 request に carrier がないため ORCA送信できません。',
 } as const;
 
 const SEND_CONTRACT_NOTES: Partial<Record<CanonicalOrcaOrderEntity, string>> = {
   injectionOrder:
-    '注射では admin/adminCode/adminMemo は local-only persisted / outbound strip です。ORCA送信では classCode・回数・coded row・generic flag・rowRole だけを使い、bodyPart は reject します。',
+    '注射では admin/adminCode/adminMemo（速度指定・点滴速度を含む）は local-only persisted / outbound strip です。ORCA送信では classCode・回数・coded row・generic flag・rowRole だけを使い、bodyPart は reject します。',
   treatmentOrder:
-    '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、オーダー名・処置指示・自由メモは院内ローカル情報として保持します。',
+    '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、自動名称・処置指示・自由メモは院内ローカル情報として保持します。',
   otherOrder:
-    'setCode は展開専用です。otherOrder は explicit local-only 契約で保存し、ORCA 送信しません。bodyPart は保持せず、オーダー名・指示・自由メモは院内補足として保存します。',
+    'setCode は展開専用です。otherOrder は explicit local-only 契約で保存し、ORCA 送信しません。bodyPart は保持せず、自動名称・指示・自由メモは院内補足として保存します。',
   baseChargeOrder:
     'setCode は展開専用です。数量は ORCA 送信しますが、単位・算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。',
   instractionChargeOrder:
@@ -134,6 +134,8 @@ const MEMO_LOCAL_ONLY_HELP: Partial<Record<CanonicalOrcaOrderEntity, string>> = 
 };
 
 const ADMIN_MEMO_LOCAL_ONLY_HELP: Partial<Record<CanonicalOrcaOrderEntity, string>> = {
+  injectionOrder:
+    '院内補足、速度指定、点滴速度は adminMemo の local-only 情報として保存し、ORCA 送信 payload / XML には含めません。',
   radiologyOrder: '院内補足は画像診断の院内ローカル情報です。ORCA送信では保持しません。',
 };
 

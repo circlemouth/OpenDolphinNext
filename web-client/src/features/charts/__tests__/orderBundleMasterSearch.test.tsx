@@ -344,7 +344,7 @@ describe('OrderBundleEditPanel master search UI', () => {
 
     expect(
       screen.getByText(
-        '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、オーダー名・処置指示・自由メモは院内ローカル情報として保持します。',
+        '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、自動名称・処置指示・自由メモは院内ローカル情報として保持します。',
       ),
     ).toBeInTheDocument();
   });

@@ -805,7 +805,8 @@ describe('SoapNotePanel right dock drawer', () => {
       await user.click(within(drawer).getAllByRole('button', { name: '新規作成を開く' })[0]);
 
       await waitFor(() => {
-        expect(screen.getByLabelText('注射名')).toBeInTheDocument();
+        expect(screen.getByLabelText('点滴・注射オーダー内容')).toBeInTheDocument();
+        expect(screen.queryByLabelText('注射名')).not.toBeInTheDocument();
         expect(drawer.getAttribute('data-open')).toBe('false');
         expect(drawer.getAttribute('data-minimized')).toBe('false');
       });
@@ -912,8 +913,9 @@ describe('SoapNotePanel right dock drawer', () => {
     await user.click(within(targetCard).getByRole('button', { name: '前日を編集面で開く' }));
 
     await waitFor(() => {
-      const bundleNameInput = screen.getByLabelText('注射名') as HTMLInputElement;
-      expect(bundleNameInput.value).toBe('前日');
+      expect(screen.getByLabelText('点滴・注射オーダー内容')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('生食')).toBeInTheDocument();
+      expect(screen.queryByLabelText('注射名')).not.toBeInTheDocument();
     });
     expect(drawer.getAttribute('data-open')).toBe('true');
   });

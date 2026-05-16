@@ -632,6 +632,59 @@ describe('prescriptionOrderApi first-class contract', () => {
     expect(secondBody.remarks).toEqual([{ code: 'remark-1', text: '院内備考' }]);
   });
 
+  it('RP名未入力でも先頭薬剤名を bundleName として自動補完する', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ runId: 'RUN-SAVE-AUTO-RP-NAME' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const order: PrescriptionOrder = {
+      patientId: '000001',
+      encounterDate: '2026-03-09',
+      performDate: '2026-03-09',
+      doctorComment: '',
+      deletedDocumentIds: [],
+      rps: [
+        {
+          rpId: 'rp-auto-name',
+          name: '',
+          location: 'out',
+          category: 'regular',
+          usage: '1日1回',
+          daysOrTimes: '7',
+          remark: '',
+          refillPattern: 'none',
+          doctorComment: '',
+          started: '2026-03-09',
+          drugs: [
+            {
+              rowId: 'drug-auto-name',
+              code: '620000001',
+              name: 'アムロジピン',
+              quantity: '1',
+              unit: '錠',
+              genericChangeAllowed: true,
+              isGeneralNamePrescription: false,
+              drugComment: '',
+              claimComments: [],
+              patientRequest: true,
+            },
+          ],
+        },
+      ],
+    };
+
+    const operations = buildPrescriptionMutationOperations(order);
+    expect(operations[0]?.bundleName).toBe('アムロジピン');
+
+    await savePrescriptionOrder({ patientId: '000001', order });
+
+    const body = authorityOrderBodyAt(0);
+    expect(body.rps[0].bundleName).toBe('アムロジピン');
+  });
+
   it('save は code なし請求コメントを送信前に fail-closed で拒否する', async () => {
     const order: PrescriptionOrder = {
       patientId: '000001',

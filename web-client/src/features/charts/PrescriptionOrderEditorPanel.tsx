@@ -28,6 +28,7 @@ import {
   fetchPrescriptionOrder,
   finalizePrescriptionAuthority,
   importPrescriptionDoInput,
+  resolvePrescriptionRpAutoName,
   savePrescriptionOrder,
   toPrescriptionOrder,
   type PrescriptionCategory,
@@ -612,6 +613,40 @@ export function PrescriptionOrderEditorPanel({
 
   const selectedRp = order.rps[selectedRpIndex] ?? null;
   const selectedDrug = selectedRp?.drugs[selectedDrugIndex] ?? null;
+  const prescriptionGridRows = useMemo(
+    () =>
+      order.rps.flatMap((rp, rpIndex) => {
+        const rows = rp.drugs.length > 0 ? rp.drugs : [null];
+        return rows.map((drug, drugIndex) => {
+          const quantity = drug
+            ? [drug.quantity.trim(), drug.unit.trim()].filter(Boolean).join(' ') || '未設定'
+            : '未設定';
+          const otherParts = drug
+            ? [
+                drug.patientRequest ? '患者希望' : null,
+                drug.isGeneralNamePrescription ? '一般名指定' : null,
+                drug.claimComments.length > 0 ? `請求コメント${drug.claimComments.length}件` : null,
+              ].filter(Boolean)
+            : [];
+          return {
+            key: `${rp.rpId}-${drug?.rowId ?? `empty-${drugIndex}`}`,
+            rpLabel: `RP${rpIndex + 1}`,
+            drugName: drug?.name.trim() || '未入力',
+            quantity,
+            ingredientAmount: '未設定',
+            ingredientUnresolved: true,
+            other: otherParts.length > 0 ? otherParts.join(' / ') : '未設定',
+            otherUnresolved: otherParts.length === 0,
+            genericChange: drug?.genericChangeAllowed === false ? '変更不可' : '変更可能',
+            drugComment: drug?.drugComment.trim() || '未入力',
+            usage: rp.usage.trim() || '未設定',
+            daysOrTimes: rp.daysOrTimes.trim() || '未設定',
+            searchMethod: SEARCH_SCOPE_LABEL[searchScope],
+          };
+        });
+      }),
+    [order.rps, searchScope],
+  );
   const showInputSetChooser = variant === 'utility';
 
   const rpRequired = useMemo(() => mergeRpRequired(order), [order]);
@@ -1534,6 +1569,46 @@ export function PrescriptionOrderEditorPanel({
             ))}
           </ul>
         </div>
+        <section
+          className="charts-order-editor__kirin-grid charts-order-editor__kirin-grid--prescription charts-order-editor__manual-card"
+          aria-label="処方オーダー内容"
+          data-testid="prescription-order-kirin-grid"
+        >
+          <div className="charts-order-editor__kirin-grid-header">
+            <strong>オーダー内容</strong>
+            <span>RP行はこの表で確認し、下の選択中RPで即編集します</span>
+          </div>
+          <div className="charts-order-editor__kirin-table charts-order-editor__kirin-table--prescription" role="table" aria-label="処方オーダー内容グリッド">
+            <div className="charts-order-editor__kirin-table-row charts-order-editor__kirin-table-row--header" role="row">
+              {['RP', '薬剤名称', '薬剤量', '成分量', 'その他', '後発変更可否', '薬剤コメント', '用法', '日数・回数', '検索方法'].map((column) => (
+                <span key={`rx-grid-column-${column}`} role="columnheader">
+                  {column}
+                </span>
+              ))}
+            </div>
+            {prescriptionGridRows.map((row) => (
+              <div key={row.key} className="charts-order-editor__kirin-table-row" role="row">
+                <span role="cell">{row.rpLabel}</span>
+                <span role="cell">{row.drugName}</span>
+                <span role="cell">{row.quantity}</span>
+                <span role="cell" data-unresolved={row.ingredientUnresolved ? 'true' : undefined}>
+                  {row.ingredientAmount}
+                </span>
+                <span role="cell" data-unresolved={row.otherUnresolved ? 'true' : undefined}>
+                  {row.other}
+                </span>
+                <span role="cell">{row.genericChange}</span>
+                <span role="cell">{row.drugComment}</span>
+                <span role="cell">{row.usage}</span>
+                <span role="cell">{row.daysOrTimes}</span>
+                <span role="cell">{row.searchMethod}</span>
+              </div>
+            ))}
+          </div>
+          <p className="charts-side-panel__help">
+            成分量とその他は現行データから解決できない場合に未設定として表示します。未設定値を処方確定・ORCA送信済みとして扱いません。
+          </p>
+        </section>
 
         <fieldset
           disabled={isPreviewMode}
@@ -1548,7 +1623,7 @@ export function PrescriptionOrderEditorPanel({
               </div>
               <div className="charts-side-panel__template-actions" role="list" aria-label="RP選択">
                 {order.rps.map((rp, index) => {
-                  const label = rp.name.trim() || `${CATEGORY_LABEL[rp.category]} (${LOCATION_LABEL[rp.location]})`;
+                  const label = resolvePrescriptionRpAutoName(rp);
                   return (
                     <div key={rp.rpId} role="listitem">
                       <button
@@ -1735,21 +1810,6 @@ export function PrescriptionOrderEditorPanel({
                   submit('save');
                 }}
               >
-                <div className="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--bundle charts-order-editor__manual-card">
-                  <label htmlFor={domId('rp-name')}>RP名</label>
-                  <input
-                    id={domId('rp-name')}
-                    value={selectedRp.name}
-                    onChange={(event) =>
-                      updateRp(selectedRpIndex, (rp) => ({
-                        ...rp,
-                        name: event.target.value,
-                      }))
-                    }
-                    placeholder="例: 降圧薬RP"
-                  />
-                </div>
-
                 <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--rx-class charts-order-editor__manual-card">
                   <div className="charts-side-panel__field">
                     <label>院内/院外</label>

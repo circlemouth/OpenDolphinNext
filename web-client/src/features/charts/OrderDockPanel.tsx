@@ -305,6 +305,14 @@ const quickAddCategories = [
   { key: 'charge', label: '+算定', entity: null },
 ] as const;
 
+const ORDER_WORKBENCH_CATEGORY_LABEL: Record<OrderGroupKey, string> = {
+  prescription: '処方',
+  injection: '点滴・注射',
+  treatment: '処置',
+  test: '検査',
+  charge: '算定',
+};
+
 const treatmentSubtypeTabs = [
   { key: 'treatmentOrder' as const, label: '処置' },
   { key: 'surgeryOrder' as const, label: '手術' },
@@ -1694,6 +1702,41 @@ export function OrderDockPanel(props: {
       <div className="order-dock__notice order-dock__notice--info" aria-label="オーダー候補ソース">
         候補ソース: 既存オーダー / 患者候補 / 施設頻用 / ORCA診療セット / 検索して追加。ORCA候補は確定処方・ORCA送信・会計済みではありません。
       </div>
+      <section className="order-dock__workbench" aria-label="オーダーワークベンチ" data-testid="order-dock-workbench">
+        <div className="order-dock__workbench-rail" role="navigation" aria-label="オーダー種別">
+          {groupBundles.map((group) => (
+            <button
+              key={`workbench-category-${group.key}`}
+              type="button"
+              className="order-dock__workbench-category"
+              data-active={
+                quickSearchGroup === group.key ||
+                (activeEntity != null && resolveOrderGroupKeyByEntity(activeEntity) === group.key)
+                  ? 'true'
+                  : 'false'
+              }
+              aria-current={quickSearchGroup === group.key ? 'true' : undefined}
+              onClick={() => {
+                setQuickSearchGroup(group.key);
+                setExpandedGroups((prev) => ({ ...prev, [group.key]: true }));
+              }}
+            >
+              <span>{ORDER_WORKBENCH_CATEGORY_LABEL[group.key]}</span>
+              <strong>{group.bundles.length}</strong>
+            </button>
+          ))}
+        </div>
+        <div className="order-dock__workbench-stage" aria-label="候補からオーダー内容へ">
+          <div className="order-dock__workbench-pane">
+            <strong>候補/セット選択</strong>
+            <span>検索、頻用、ORCA入力セット、セット/スタンプを下書き候補として扱います。</span>
+          </div>
+          <div className="order-dock__workbench-pane">
+            <strong>オーダー内容</strong>
+            <span>候補反映後は行単位で編集します。保存・確定・ORCA送信とは分離します。</span>
+          </div>
+        </div>
+      </section>
       <div
         id="order-dock-edit-context-status"
         className="order-dock__context"
