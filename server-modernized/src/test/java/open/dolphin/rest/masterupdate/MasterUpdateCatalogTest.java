@@ -15,10 +15,12 @@ class MasterUpdateCatalogTest {
 
         assertThat(definition.getSourceUrl())
                 .isEqualTo("classpath:open/orca/master/local-orca-master-cache-fixture.csv");
-        assertThat(definition.getFormat()).isEqualTo("CSV");
+        assertThat(definition.getFormat()).isEqualTo("CSV/ZIP/GZIP");
         assertThat(definition.isAutoEnabled()).isTrue();
         assertThat(definition.isManualUploadAllowed()).isTrue();
         assertThat(definition.getDefaultIntervalMinutes()).isEqualTo(24 * 60);
-        assertThat(definition.getUsageNotes()).contains("ORCA 正本ではない");
+        assertThat(definition.getUsageNotes())
+                .contains("公式 ORCA source")
+                .contains("ORCA 正本ではない");
     }
 }

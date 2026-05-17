@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -48,14 +49,19 @@ final class MasterUpdateArtifacts {
     }
 
     UpdateArtifact fetchDatasetArtifact(MasterUpdateStore store, String datasetCode) {
+        return fetchDatasetArtifact(store, datasetCode, null);
+    }
+
+    UpdateArtifact fetchDatasetArtifact(MasterUpdateStore store, String datasetCode, String sourceUrlOverride) {
         if (isOrcaMasterLastUpdateDataset(datasetCode)) {
             return fetchOrcaMasterArtifact();
         }
         MasterUpdateStore.DatasetState state = MasterUpdateStateSupport.requireDataset(store.getSnapshot(), datasetCode);
-        if (state.sourceUrl != null && state.sourceUrl.trim().startsWith("classpath:")) {
-            return fetchClasspathArtifact(state.sourceUrl);
+        String sourceUrl = firstNonBlank(sourceUrlOverride, state.sourceUrl);
+        if (sourceUrl != null && sourceUrl.trim().startsWith("classpath:")) {
+            return fetchClasspathArtifact(sourceUrl);
         }
-        return fetchExternalArtifact(state.sourceUrl);
+        return fetchExternalArtifact(sourceUrl);
     }
 
     private static boolean isOrcaMasterLastUpdateDataset(String datasetCode) {
@@ -178,12 +184,15 @@ final class MasterUpdateArtifacts {
         if (sourceUrl == null || sourceUrl.isBlank()) {
             throw new MasterUpdateService.MasterUpdateException(400, "source_url_missing", "取得元URLが未設定です。");
         }
-
         URI sourceUri;
         try {
             sourceUri = URI.create(sourceUrl.trim());
         } catch (IllegalArgumentException ex) {
             throw new MasterUpdateService.MasterUpdateException(400, "source_url_invalid", "取得元URLが不正です。");
+        }
+        validateExternalSourceUri(sourceUri);
+        if (httpClient == null) {
+            throw new MasterUpdateService.MasterUpdateException(503, "external_fetch_unavailable", "外部データ取得が利用できません。");
         }
 
         HttpRequest request = HttpRequest.newBuilder(sourceUri)
@@ -241,6 +250,80 @@ final class MasterUpdateArtifacts {
         }
     }
 
+    private void validateExternalSourceUri(URI sourceUri) {
+        String scheme = sourceUri.getScheme();
+        String host = sourceUri.getHost();
+        if (!"https".equalsIgnoreCase(scheme) || host == null || host.isBlank()) {
+            throw new MasterUpdateService.MasterUpdateException(400, "source_url_not_allowed",
+                    "取得元URLは許可された HTTPS URL に限定されます。");
+        }
+        if (sourceUri.getUserInfo() != null
+                || sourceUri.getRawQuery() != null
+                || sourceUri.getRawFragment() != null) {
+            throw new MasterUpdateService.MasterUpdateException(400, "source_url_credentials_forbidden",
+                    "取得元URLに認証情報、query、fragment を含めることはできません。");
+        }
+        String normalizedHost = host.toLowerCase(Locale.ROOT);
+        if (isLocalOrPrivateHost(normalizedHost) || !hostAllowed(normalizedHost, configuredSourceAllowedHosts())) {
+            throw new MasterUpdateService.MasterUpdateException(400, "source_host_not_allowed",
+                    "取得元URLの host は許可リストに含まれていません。");
+        }
+    }
+
+    private List<String> configuredSourceAllowedHosts() {
+        if (configurationResolver == null) {
+            return List.of();
+        }
+        return configurationResolver.masterUpdateScheduler().sourceAllowedHosts();
+    }
+
+    private static boolean hostAllowed(String host, List<String> allowedHosts) {
+        if (host == null || allowedHosts == null || allowedHosts.isEmpty()) {
+            return false;
+        }
+        for (String allowed : allowedHosts) {
+            String pattern = allowed != null ? allowed.trim().toLowerCase(Locale.ROOT) : "";
+            if (pattern.isEmpty()) {
+                continue;
+            }
+            if (pattern.startsWith("*.")) {
+                String suffix = pattern.substring(1);
+                if (host.endsWith(suffix) && host.length() > suffix.length()) {
+                    return true;
+                }
+            } else if (host.equals(pattern)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isLocalOrPrivateHost(String host) {
+        if (host == null || host.isBlank()) {
+            return true;
+        }
+        if ("localhost".equals(host)
+                || host.endsWith(".localhost")
+                || "metadata.google.internal".equals(host)) {
+            return true;
+        }
+        if (host.startsWith("127.")
+                || host.startsWith("10.")
+                || host.startsWith("192.168.")
+                || host.startsWith("169.254.")
+                || host.matches("172\\.(1[6-9]|2[0-9]|3[0-1])\\..*")) {
+            return true;
+        }
+        String strippedIpv6 = host.startsWith("[") && host.endsWith("]")
+                ? host.substring(1, host.length() - 1)
+                : host;
+        boolean ipv6Like = strippedIpv6.contains(":");
+        return "::1".equals(strippedIpv6)
+                || "0:0:0:0:0:0:0:1".equals(strippedIpv6)
+                || strippedIpv6.startsWith("fe80:")
+                || (ipv6Like && (strippedIpv6.startsWith("fc") || strippedIpv6.startsWith("fd")));
+    }
+
     private String writeArtifact(String datasetCode,
                                  String extension,
                                  byte[] payload,
@@ -262,7 +345,7 @@ final class MasterUpdateArtifacts {
             return path.toString();
         } catch (IOException ex) {
             deleteTempFileQuietly(tempFile);
-            throw new MasterUpdateService.MasterUpdateException(500, "artifact_write_failed", "取得ファイル保存に失敗しました: " + ex.getMessage());
+            throw new MasterUpdateService.MasterUpdateException(500, "artifact_write_failed", "取得ファイル保存に失敗しました。");
         }
     }
 
@@ -517,6 +600,10 @@ final class MasterUpdateArtifacts {
         } catch (IOException ignore) {
             // best effort cleanup
         }
+    }
+
+    private static String firstNonBlank(String first, String fallback) {
+        return first != null && !first.isBlank() ? first.trim() : fallback;
     }
 
     static final class UpdateArtifact {

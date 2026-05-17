@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import open.orca.rest.LocalOrcaMasterCacheImportService;
 
 final class MasterUpdateStateSupport {
 
@@ -87,6 +88,11 @@ final class MasterUpdateStateSupport {
             state.lastFailureAt = null;
             state.lastFailureReason = null;
             state.lockJobId = null;
+            if (LocalOrcaMasterCacheImportService.DATASET_CODE.equals(datasetCode)
+                    && artifact.sourceUrl != null
+                    && !artifact.sourceUrl.isBlank()) {
+                state.sourceUrl = artifact.sourceUrl;
+            }
             if ("AUTO".equalsIgnoreCase(triggerType) || "AUTO_POLL".equalsIgnoreCase(triggerType)) {
                 state.lastAutoRunAt = now;
                 state.lastPolledAt = now;

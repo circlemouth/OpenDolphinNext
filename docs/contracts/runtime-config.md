@@ -121,6 +121,8 @@
 
 ### 5. Metrics / Scheduler / SMTP
 - `master-update.scheduler.enabled` / `MASTER_UPDATE_SCHEDULER_ENABLED` は `true|false`。未設定時は `false`。`true` にすると `MasterUpdateScheduler` が due dataset を 1 分周期で判定し、`local_orca_master_cache` を含む auto-enabled dataset を既定間隔で更新する。production では local master cache の source を公式配布ファイルまたは公式 API 由来 artifact に設定してから有効化する。classpath fixture は dev/trial 試運転用であり ORCA 正本ではない。
+- `master-update.local-orca-master-cache.source-url` / `MASTER_UPDATE_LOCAL_ORCA_MASTER_CACHE_SOURCE_URL` は `local_orca_master_cache` の本番 canonical artifact 取得元。HTTPS URL のみ、userinfo / query / fragment なし、credential-bearing URL 禁止。本番 artifact は `manifest.json` 付き versioned ZIP とし、公式 ORCA source 由来 builder または施設内 tool-only ORCA DB コンテナ ETL で生成する。未設定時は dataset catalog の source を使うため、production では scheduler 有効化前に必ず設定する。
+- `master-update.source.allowed-hosts` / `MASTER_UPDATE_SOURCE_ALLOWED_HOSTS` は master-update 外部 artifact 取得を許可する host の CSV。exact host と `*.example.jp` 形式を許可する。外部取得はこの allowlist にない host、localhost、loopback、link-local、RFC1918 private address、metadata host を拒否する。
 - `chart-event.history.purge.enabled` / `CHART_EVENT_HISTORY_PURGE_ENABLED` は `true|false`。未設定時は `false`。
 - `chart-event.history.purge.interval-minutes` / `CHART_EVENT_HISTORY_PURGE_INTERVAL_MINUTES` は 1 以上。purge を有効化した環境のみ指定する。
 - `orca.patient-sync.enabled` / `ORCA_PATIENT_SYNC_ENABLED` は `true|false`。未設定時は `false`。

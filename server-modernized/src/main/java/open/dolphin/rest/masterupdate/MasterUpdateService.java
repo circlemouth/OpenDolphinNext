@@ -5,6 +5,7 @@ import jakarta.inject.Inject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.http.HttpClient;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -86,8 +87,13 @@ public class MasterUpdateService {
         MasterUpdateStateSupport.markRunStarted(store, normalizedCode, jobId, runId, now);
 
         try {
-            MasterUpdateArtifacts.UpdateArtifact artifact = artifacts().fetchDatasetArtifact(store, normalizedCode);
-            String artifactPath = artifacts().writeArtifact(normalizedCode, artifact, runId, normalizedTrigger);
+            MasterUpdateArtifacts artifacts = artifacts();
+            MasterUpdateArtifacts.UpdateArtifact artifact = artifacts.fetchDatasetArtifact(
+                    store,
+                    normalizedCode,
+                    localMasterCacheSourceUrlOverride(normalizedCode)
+            );
+            String artifactPath = artifacts.writeArtifact(normalizedCode, artifact, runId, normalizedTrigger);
             LocalOrcaMasterCacheImportService.ImportResult importResult = importLocalMasterCacheIfSupported(
                     normalizedCode,
                     Path.of(artifactPath),
@@ -127,15 +133,74 @@ public class MasterUpdateService {
             MasterUpdateStateSupport.failDatasetRun(store, normalizedCode, runId, now, ex.getMessage());
             throw ex;
         } catch (Exception ex) {
-            LOGGER.warn("Dataset update failed. dataset={} runId={} err={}", normalizedCode, runId, ex.getMessage(), ex);
-            MasterUpdateStateSupport.failDatasetRun(store, normalizedCode, runId, now, ex.getMessage());
-            throw new MasterUpdateException(500, "dataset_update_failed", "更新処理に失敗しました: " + ex.getMessage());
+            LOGGER.warn("Dataset update failed. dataset={} runId={} errorType={}",
+                    normalizedCode, runId, ex.getClass().getSimpleName());
+            MasterUpdateStateSupport.failDatasetRun(store, normalizedCode, runId, now, "更新処理に失敗しました。");
+            throw new MasterUpdateException(500, "dataset_update_failed", "更新処理に失敗しました。");
         }
     }
 
     public Map<String, Object> uploadDataset(String datasetCode,
                                              String fileName,
                                              byte[] payload,
+                                             String requestedBy,
+                                             String runId) {
+        return uploadDataset(datasetCode, fileName, payload, null, requestedBy, runId);
+    }
+
+    public Map<String, Object> previewDatasetUpload(String datasetCode,
+                                                    String fileName,
+                                                    byte[] payload,
+                                                    String requestedBy,
+                                                    String runId) {
+        String normalizedCode = MasterUpdateStateSupport.normalizeDatasetCode(datasetCode);
+        if (payload == null || payload.length == 0) {
+            throw new MasterUpdateException(400, "empty_upload", "アップロードファイルが空です。");
+        }
+        MasterUpdateStore.DatasetState dataset =
+                MasterUpdateStateSupport.requireDataset(store.getSnapshot(), normalizedCode);
+        if (!dataset.manualUploadAllowed) {
+            throw new MasterUpdateException(400, "upload_not_allowed", "このデータセットは手動アップロードに対応していません。");
+        }
+        if (localMasterCacheImportService == null || !localMasterCacheImportService.supportsDataset(normalizedCode)) {
+            throw new MasterUpdateException(400, "upload_preview_not_supported", "このデータセットは事前検証に対応していません。");
+        }
+
+        String extension = MasterUpdateArtifacts.resolveExtension(fileName, null);
+        String hash = sha256(payload);
+        Path tempFile = null;
+        try {
+            tempFile = Files.createTempFile("master-update-preview-", "." + extension);
+            Files.write(tempFile, payload);
+            LocalOrcaMasterCacheImportService.PreviewResult preview =
+                    localMasterCacheImportService.previewArtifact(normalizedCode, tempFile, hash, runId);
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("runId", runId);
+            body.put("ok", true);
+            body.put("message", "アップロード予定 artifact を検証しました。");
+            body.put("requestedBy", requestedBy);
+            body.put("datasetCode", normalizedCode);
+            body.put("preview", preview.toMap());
+            return body;
+        } catch (MasterUpdateException ex) {
+            throw ex;
+        } catch (IOException ex) {
+            throw new MasterUpdateException(500, "upload_preview_failed", "アップロード予定 artifact の検証に失敗しました。");
+        } finally {
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (IOException ignore) {
+                    // best effort cleanup
+                }
+            }
+        }
+    }
+
+    public Map<String, Object> uploadDataset(String datasetCode,
+                                             String fileName,
+                                             byte[] payload,
+                                             String previewHash,
                                              String requestedBy,
                                              String runId) {
         String normalizedCode = MasterUpdateStateSupport.normalizeDatasetCode(datasetCode);
@@ -151,6 +216,10 @@ public class MasterUpdateService {
 
         String extension = MasterUpdateArtifacts.resolveExtension(fileName, null);
         String hash = sha256(payload);
+        if (previewHash != null && !previewHash.isBlank() && !hash.equalsIgnoreCase(previewHash.trim())) {
+            throw new MasterUpdateException(409, "upload_preview_hash_mismatch",
+                    "事前検証した artifact とアップロード内容が一致しません。");
+        }
         String artifactPath = artifacts().writeArtifact(normalizedCode, extension, payload, runId, "UPLOAD");
         LocalOrcaMasterCacheImportService.ImportResult importResult = importLocalMasterCacheIfSupported(
                 normalizedCode,
@@ -305,6 +374,13 @@ public class MasterUpdateService {
 
     private MasterUpdateArtifacts artifacts() {
         return new MasterUpdateArtifacts(restOrcaTransport, configurationResolver, httpClient);
+    }
+
+    private String localMasterCacheSourceUrlOverride(String datasetCode) {
+        if (!LocalOrcaMasterCacheImportService.DATASET_CODE.equals(datasetCode) || configurationResolver == null) {
+            return null;
+        }
+        return configurationResolver.masterUpdateScheduler().localOrcaMasterCacheSourceUrl();
     }
 
     private LocalOrcaMasterCacheImportService.ImportResult importLocalMasterCacheIfSupported(String datasetCode,

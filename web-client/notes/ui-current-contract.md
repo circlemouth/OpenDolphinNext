@@ -303,6 +303,7 @@ GUI 改修ではこの文書の safety contract を下回らず、ORCA送信失�
 - `connection` は接続テストの実行面、`operations` は状態参照面です。
 - `config` section は charts delivery toggle だけを表示し、diagnostic / correction / runtime-owned setting を混ぜません。
 - `AdminDeliveryStatusCard` は配信メタデータ card として `deliveryId / version / etag / deliveredAt` を表示します。
+- `MasterUpdatesPanel` は `local_orca_master_cache` の artifact upload で事前検証を必須にし、manifest / masterVersion / sourceKind / uploadedSha256 / master type 別件数を表示してから確定アップロードします。確定 upload は preview hash を送信し、DB URL、credential、raw ORCA body、患者情報、内部 SQL、stack trace を表示しません。
 - `connection` section は施設別 ORCA 接続設定 only、`testedScope` は capability note、runtime-owned setting は docs note を正本とします。
 - UG-14 未解決項目や optional module visibility owner 不明項目は UI に toggle を出さず、feature-off / fail-close で扱います。
 

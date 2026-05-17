@@ -111,6 +111,9 @@ public class ServerConfigurationResolver {
     public static final String KEY_ORCA_PUSH_RECOVERY_OVERLAP_MINUTES = "orca.push.recovery.overlap-minutes";
     public static final String KEY_ORCA_PUSH_DEDUP_RETENTION_DAYS = "orca.push.dedup.retention-days";
     public static final String KEY_MASTER_UPDATE_SCHEDULER_ENABLED = "master-update.scheduler.enabled";
+    public static final String KEY_MASTER_UPDATE_LOCAL_ORCA_MASTER_CACHE_SOURCE_URL =
+            "master-update.local-orca-master-cache.source-url";
+    public static final String KEY_MASTER_UPDATE_SOURCE_ALLOWED_HOSTS = "master-update.source.allowed-hosts";
     public static final String KEY_METRICS_REGISTRY_JNDI = "metrics.registry.jndi";
     public static final String KEY_BIND_ADDRESS = "jboss.bind.address";
     public static final String KEY_SECURITY_TRUSTED_PROXIES = "security.trusted-proxies";
@@ -336,7 +339,9 @@ public class ServerConfigurationResolver {
 
     public ServerRuntimeConfiguration.MasterUpdateSchedulerSettings masterUpdateScheduler() {
         return new ServerRuntimeConfiguration.MasterUpdateSchedulerSettings(
-                optionalBoolean(KEY_MASTER_UPDATE_SCHEDULER_ENABLED).orElse(false)
+                optionalBoolean(KEY_MASTER_UPDATE_SCHEDULER_ENABLED).orElse(false),
+                optional(KEY_MASTER_UPDATE_LOCAL_ORCA_MASTER_CACHE_SOURCE_URL).orElse(null),
+                parseList(optional(KEY_MASTER_UPDATE_SOURCE_ALLOWED_HOSTS).orElse(null))
         );
     }
 

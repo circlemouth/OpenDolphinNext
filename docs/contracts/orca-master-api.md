@@ -33,8 +33,15 @@ list response と各 entry の `meta` は、少なくとも次を返す。API �
 ## import / update contract
 - master update dataset `local_orca_master_cache` は OpenDolphin server 側の import job で `opendolphin.local_orca_master_*` を更新する。通常の master search runtime はこの local cache を読むだけで、ORCA DB (`ORCADS` / `ORCA_DB_*`) へ接続しない。
 - dev/trial の初期試運転 source は `classpath:open/orca/master/local-orca-master-cache-fixture.csv`。これは import 経路確認用 fixture であり、本番 master の根拠ではない。
+- 本番 source は公式 ORCA マスタ配布ファイル、公式 API 由来 export、または施設内の外部 ETL が ORCA DB コンテナから生成した OpenDolphin canonical artifact に限定する。Trial / WebORCA API の自由語検索を全件 source とみなさない。クラウド OpenDolphin runtime / scheduler は ORCA DB へ直接接続しない。
+- WebORCA Trial はリリース前の本番相当 official ORCA 接続先として使用できる。許可範囲は official API の read-only 代表照会、ORCA 側拒否・警告・UNKNOWN 境界の確認、canonical artifact import 後の API/UI/scheduler 動作確認に限定する。Trial の自由語検索、候補検索、画面検索、個別 lookup の網羅試行を全件 master source または production artifact source にしてはならない。
+- 本番 OpenDolphin canonical artifact は versioned ZIP とし、`manifest.json` と `local-orca-master-cache.csv` を含める。CSV は UTF-8 BOM なし、schema は `opendolphin.local-orca-master-cache.v1`。dev/trial fixture と manual fallback だけ CSV / GZIP を許可する。
+- canonical artifact は `drug`, `etensu`, `generic-price`, `generic-class`, `comment`, `bodypart`, `youhou`, `material`, `kensa-sort`, `hokenja`, `address`, `order-inputsets`, `order-interactions`, `disease-candidate` をすべて含める。必須 header 欠落、必須 master type 欠落、空 artifact、JSON 不正、入力セット不整合、部分 import 失敗、manifest/hash/件数不一致は fail closed とする。
+- production artifact builder は公式配布ファイル、公式 API 由来 export、または tool-only の ORCA DB コンテナ ETL が生成した正規化済み source から versioned ZIP を生成する。ORCA DB コンテナは施設内 ETL / dev / staging のみで使い、本番 runtime / scheduler / importer の直接接続先にしない。
+- `POST /api/admin/master-updates/datasets/local_orca_master_cache/upload/preview` は multipart ZIP を検証し、DB 更新なしで `uploadedSha256`、manifest metadata、`masterVersion`、`masterTypeCounts`、`warnings`、`importable` を返す。確定 upload は任意 header `X-Master-Artifact-Preview-Hash` を受け、payload hash が一致しない場合は 409 `upload_preview_hash_mismatch` とする。
+- runtime の外部 artifact 取得は HTTPS、credential/query/fragment なし、`MASTER_UPDATE_SOURCE_ALLOWED_HOSTS` の許可 host のみに限定する。`MASTER_UPDATE_LOCAL_ORCA_MASTER_CACHE_SOURCE_URL` は sanitized source metadata としてだけ残し、credential-bearing URL を受け入れない。
 - 手動 upload または scheduler 実行で import が失敗した場合、dataset update は failed とし、既存 cache を 0 件成功扱いにしない。API 応答には内部 SQL、DB URL、credential-bearing URL、raw ORCA body、患者情報を含めない。
-- `MASTER_UPDATE_SCHEDULER_ENABLED=true` の環境では `MasterUpdateScheduler` が auto-enabled dataset を定期実行する。本番では classpath fixture ではなく公式 ORCA マスタ配布ファイル、または公式 API 由来 artifact を source として運用する。
+- `MASTER_UPDATE_SCHEDULER_ENABLED=true` の環境では `MasterUpdateScheduler` が auto-enabled dataset を定期実行する。本番では `MASTER_UPDATE_LOCAL_ORCA_MASTER_CACHE_SOURCE_URL` と `MASTER_UPDATE_SOURCE_ALLOWED_HOSTS` を設定し、classpath fixture ではなく公式 ORCA source 由来 artifact を運用する。
 
 ## `/api/orca/master/generic-price` 契約
 ### 受け付ける query parameter

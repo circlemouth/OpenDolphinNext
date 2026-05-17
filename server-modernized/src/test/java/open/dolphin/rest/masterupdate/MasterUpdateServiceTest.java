@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
@@ -25,11 +26,15 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
+import open.orca.master.LocalOrcaMasterCacheArtifactBuilder;
+import open.orca.master.LocalOrcaMasterCacheArtifactSpec;
 import open.orca.rest.LocalOrcaMasterCacheImportService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class MasterUpdateServiceTest {
+
+    private static final String LOCAL_MASTER_FIXTURE = "open/orca/master/local-orca-master-cache-fixture.csv";
 
     @TempDir
     Path tempDir;
@@ -126,12 +131,83 @@ class MasterUpdateServiceTest {
                 org.mockito.ArgumentMatchers.contains("local_orca_master_dataset"));
     }
 
+    @Test
+    void previewDatasetUploadValidatesLocalMasterCacheZipWithoutImporting() throws Exception {
+        Path artifact = buildLocalMasterArtifact();
+        byte[] payload = Files.readAllBytes(artifact);
+
+        MasterUpdateStore store = new MasterUpdateStore();
+        store.init();
+
+        MasterUpdateService service = new MasterUpdateService();
+        setField(service, "store", store);
+        setField(service, "localMasterCacheImportService", new LocalOrcaMasterCacheImportService());
+
+        Map<String, Object> body = service.previewDatasetUpload(
+                "local_orca_master_cache",
+                "opendolphin-local-orca-master-cache.zip",
+                payload,
+                "test",
+                "RUN-PREVIEW");
+
+        assertThat(body.get("ok")).isEqualTo(Boolean.TRUE);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> preview = (Map<String, Object>) body.get("preview");
+        assertThat(preview.get("importable")).isEqualTo(Boolean.TRUE);
+        assertThat(preview.get("uploadedSha256")).isEqualTo(sha256Hex(payload));
+        assertThat(preview.get("masterVersion")).isEqualTo("orca-db-container-20260517");
+        @SuppressWarnings("unchecked")
+        Map<String, Long> counts = (Map<String, Long>) preview.get("masterTypeCounts");
+        assertThat(counts).containsEntry("drug", 1L).containsEntry("order-inputsets", 4L);
+    }
+
+    @Test
+    void uploadDatasetRejectsPreviewHashMismatchBeforeImport() throws Exception {
+        Path artifact = buildLocalMasterArtifact();
+        byte[] payload = Files.readAllBytes(artifact);
+
+        MasterUpdateStore store = new MasterUpdateStore();
+        store.init();
+
+        MasterUpdateService service = new MasterUpdateService();
+        setField(service, "store", store);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.uploadDataset(
+                        "local_orca_master_cache",
+                        "opendolphin-local-orca-master-cache.zip",
+                        payload,
+                        "0".repeat(64),
+                        "test",
+                        "RUN-UPLOAD"))
+                .isInstanceOf(MasterUpdateService.MasterUpdateException.class)
+                .satisfies(ex -> assertThat(((MasterUpdateService.MasterUpdateException) ex).getCode())
+                        .isEqualTo("upload_preview_hash_mismatch"));
+    }
+
     private static byte[] readAllBytes(Path path) throws Exception {
         return Files.readAllBytes(path);
     }
 
     private static String sha256Hex(byte[] payload) throws Exception {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(payload));
+    }
+
+    private Path buildLocalMasterArtifact() throws Exception {
+        Path sourceDirectory = tempDir.resolve("artifact-source");
+        Files.createDirectories(sourceDirectory);
+        try (InputStream input = Thread.currentThread().getContextClassLoader().getResourceAsStream(LOCAL_MASTER_FIXTURE)) {
+            assertThat(input).isNotNull();
+            Files.copy(input, sourceDirectory.resolve(LocalOrcaMasterCacheArtifactSpec.CANONICAL_CSV_PATH));
+        }
+        Path output = tempDir.resolve("opendolphin-local-orca-master-cache.zip");
+        new LocalOrcaMasterCacheArtifactBuilder().build(new LocalOrcaMasterCacheArtifactBuilder.BuildRequest(
+                sourceDirectory,
+                output,
+                "orca-db-container-artifact",
+                "orca-db-container:jma-receipt-docker-db-1",
+                "orca-db-container-20260517",
+                "2026-05-17T11:22:13Z"));
+        return output;
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

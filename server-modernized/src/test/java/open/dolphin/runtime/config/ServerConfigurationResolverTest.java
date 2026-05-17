@@ -339,6 +339,10 @@ class ServerConfigurationResolverTest {
                 ServerConfigurationResolver.KEY_ORCA_PUSH_RECOVERY_OVERLAP_MINUTES, "5",
                 ServerConfigurationResolver.KEY_ORCA_PUSH_DEDUP_RETENTION_DAYS, "14",
                 ServerConfigurationResolver.KEY_MASTER_UPDATE_SCHEDULER_ENABLED, "true",
+                ServerConfigurationResolver.KEY_MASTER_UPDATE_LOCAL_ORCA_MASTER_CACHE_SOURCE_URL,
+                "https://masters.example.test/opendolphin-local-orca-master-cache.zip",
+                ServerConfigurationResolver.KEY_MASTER_UPDATE_SOURCE_ALLOWED_HOSTS,
+                "masters.example.test,*.trusted.example.test",
                 ServerConfigurationResolver.KEY_METRICS_REGISTRY_JNDI, "java:global/test/metrics",
                 ServerConfigurationResolver.KEY_SMTP_HOST, "smtp.example.test",
                 ServerConfigurationResolver.KEY_SMTP_PORT, "2525",
@@ -368,6 +372,9 @@ class ServerConfigurationResolverTest {
         assertEquals(5, resolver.orcaPush().recoveryOverlapMinutes());
         assertEquals(14, resolver.orcaPush().dedupRetentionDays());
         assertEquals(true, resolver.masterUpdateScheduler().enabled());
+        assertEquals("https://masters.example.test/opendolphin-local-orca-master-cache.zip",
+                resolver.masterUpdateScheduler().localOrcaMasterCacheSourceUrl());
+        assertEquals(2, resolver.masterUpdateScheduler().sourceAllowedHosts().size());
         assertEquals("java:global/test/metrics", resolver.metrics().registryJndi());
         assertEquals("smtp.example.test", resolver.smtp().host());
         assertEquals("2525", resolver.smtp().port());

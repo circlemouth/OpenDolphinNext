@@ -1,28 +1,40 @@
 package open.orca.rest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import open.dolphin.rest.masterupdate.MasterUpdateService;
+import open.orca.master.LocalOrcaMasterCacheArtifactSpec;
 
 /**
  * Import boundary for the OpenDolphin local ORCA-equivalent master cache.
@@ -39,6 +51,16 @@ public class LocalOrcaMasterCacheImportService {
     private static final String DEFAULT_VALID_FROM = "00000000";
     private static final String DEFAULT_VALID_TO = "99991231";
     private static final String DEFAULT_MASTER_VERSION = "local-cache-import";
+    private static final long MAX_EXTRACTED_BUNDLE_BYTES = 120L * 1024L * 1024L;
+    private static final int MAX_BUNDLE_ENTRIES = 128;
+    private static final ObjectMapper JSON = new ObjectMapper();
+
+    private static final Set<String> REQUIRED_MASTER_TYPES = LocalOrcaMasterCacheArtifactSpec.REQUIRED_MASTER_TYPES;
+
+    private static final Set<String> REQUIRED_CANONICAL_HEADERS =
+            LocalOrcaMasterCacheArtifactSpec.CANONICAL_HEADERS.stream()
+                    .map(LocalOrcaMasterCacheImportService::normalize)
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
 
     @PersistenceContext(unitName = "opendolphinPU")
     private EntityManager entityManager;
@@ -52,6 +74,45 @@ public class LocalOrcaMasterCacheImportService {
 
     public boolean supportsDataset(String datasetCode) {
         return DATASET_CODE.equals(normalize(datasetCode));
+    }
+
+    public PreviewResult previewArtifact(String datasetCode,
+                                         Path artifactPath,
+                                         String uploadedSha256,
+                                         String runId) {
+        if (!supportsDataset(datasetCode)) {
+            throw new MasterUpdateService.MasterUpdateException(404, "local_master_cache_dataset_unsupported",
+                    "local master cache import 対象外のデータセットです。");
+        }
+        if (artifactPath == null || !Files.exists(artifactPath)) {
+            throw new MasterUpdateService.MasterUpdateException(400, "local_master_cache_artifact_missing",
+                    "local master cache import の入力ファイルが見つかりません。");
+        }
+        String extension = extensionOf(artifactPath);
+        if (!("zip".equals(extension) || "csv".equals(extension) || "txt".equals(extension) || "gz".equals(extension))) {
+            throw new MasterUpdateService.MasterUpdateException(415, "local_master_cache_format_unsupported",
+                    "local master cache import は CSV / ZIP / GZIP 形式のみ対応しています。");
+        }
+        ParsedImport parsed = parseArtifact(artifactPath, extension);
+        if (parsed.importedRows() == 0) {
+            throw new MasterUpdateService.MasterUpdateException(422, "local_master_cache_empty",
+                    "local master cache import に反映可能な行がありません。");
+        }
+        parsed.requireAllMasterTypes();
+        List<String> warnings = new ArrayList<>();
+        if (!"zip".equals(extension)) {
+            warnings.add("production では manifest 付き ZIP を使用してください。");
+        }
+        return new PreviewResult(
+                true,
+                uploadedSha256,
+                parsed.importedRows(),
+                parsed.affectedMasterTypes(),
+                parsed.masterTypeCounts(),
+                parsed.manifestSummary(),
+                warnings,
+                runId
+        );
     }
 
     @Transactional
@@ -69,16 +130,17 @@ public class LocalOrcaMasterCacheImportService {
                     "local master cache import の入力ファイルが見つかりません。");
         }
         String extension = extensionOf(artifactPath);
-        if (!("csv".equals(extension) || "txt".equals(extension))) {
+        if (!("csv".equals(extension) || "txt".equals(extension) || "zip".equals(extension) || "gz".equals(extension))) {
             throw new MasterUpdateService.MasterUpdateException(415, "local_master_cache_format_unsupported",
-                    "local master cache import は CSV 形式のみ対応しています。");
+                    "local master cache import は CSV / ZIP / GZIP 形式のみ対応しています。");
         }
 
-        ParsedImport parsed = parseCsv(artifactPath);
+        ParsedImport parsed = parseArtifact(artifactPath, extension);
         if (parsed.importedRows() == 0) {
             throw new MasterUpdateService.MasterUpdateException(422, "local_master_cache_empty",
                     "local master cache import に反映可能な行がありません。");
         }
+        parsed.requireAllMasterTypes();
 
         Instant importedAt = Instant.now();
         String sourceKind = resolveSourceKind(sourceUrl, triggerType);
@@ -280,27 +342,16 @@ public class LocalOrcaMasterCacheImportService {
         entityManager().createNativeQuery(sql).executeUpdate();
     }
 
-    private ParsedImport parseCsv(Path artifactPath) {
+    private ParsedImport parseArtifact(Path artifactPath, String extension) {
+        if ("zip".equals(extension)) {
+            return parseZip(artifactPath);
+        }
+        if ("gz".equals(extension)) {
+            return parseGzipCsv(artifactPath);
+        }
+        ParsedImport parsed = new ParsedImport();
         try (BufferedReader reader = Files.newBufferedReader(artifactPath, StandardCharsets.UTF_8)) {
-            String headerLine = reader.readLine();
-            if (headerLine == null || headerLine.isBlank()) {
-                throw new MasterUpdateService.MasterUpdateException(422, "local_master_cache_empty",
-                        "local master cache import に反映可能な行がありません。");
-            }
-            List<String> headers = parseCsvLine(headerLine);
-            Map<String, Integer> headerIndex = headerIndex(headers);
-            ParsedImport parsed = new ParsedImport();
-            String line;
-            int lineNumber = 1;
-            while ((line = reader.readLine()) != null) {
-                lineNumber++;
-                if (line.isBlank() || line.stripLeading().startsWith("#")) {
-                    continue;
-                }
-                List<String> values = parseCsvLine(line);
-                CsvRow row = new CsvRow(headerIndex, values, lineNumber);
-                parseRow(parsed, row);
-            }
+            parseCsv(reader, parsed);
             parsed.validate();
             return parsed;
         } catch (MasterUpdateService.MasterUpdateException ex) {
@@ -311,6 +362,176 @@ public class LocalOrcaMasterCacheImportService {
         } catch (RuntimeException ex) {
             throw new MasterUpdateService.MasterUpdateException(422, "local_master_cache_invalid_csv",
                     "local master cache import の CSV 形式が不正です。");
+        }
+    }
+
+    private ParsedImport parseGzipCsv(Path artifactPath) {
+        ParsedImport parsed = new ParsedImport();
+        try (GZIPInputStream gzip = new GZIPInputStream(Files.newInputStream(artifactPath));
+             BufferedReader reader = new BufferedReader(new InputStreamReader(gzip, StandardCharsets.UTF_8))) {
+            parseCsv(reader, parsed);
+            parsed.validate();
+            return parsed;
+        } catch (MasterUpdateService.MasterUpdateException ex) {
+            throw ex;
+        } catch (IOException ex) {
+            throw new MasterUpdateService.MasterUpdateException(500, "local_master_cache_read_failed",
+                    "local master cache import の入力ファイルを読めませんでした。");
+        } catch (RuntimeException ex) {
+            throw new MasterUpdateService.MasterUpdateException(422, "local_master_cache_invalid_csv",
+                    "local master cache import の CSV 形式が不正です。");
+        }
+    }
+
+    private ParsedImport parseZip(Path artifactPath) {
+        ParsedImport parsed = new ParsedImport();
+        int entryCount = 0;
+        long extractedBytes = 0L;
+        byte[] manifestPayload = null;
+        Map<String, ZipCsvMetadata> csvMetadata = new LinkedHashMap<>();
+        try (ZipInputStream zip = new ZipInputStream(Files.newInputStream(artifactPath), StandardCharsets.UTF_8)) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                if (entry.isDirectory()) {
+                    continue;
+                }
+                entryCount++;
+                if (entryCount > MAX_BUNDLE_ENTRIES) {
+                    throw invalidCsv();
+                }
+                String name = entry.getName() != null ? entry.getName() : "";
+                String lowered = name.toLowerCase(Locale.ROOT);
+                if (LocalOrcaMasterCacheArtifactSpec.MANIFEST_PATH.equals(name)) {
+                    manifestPayload = readZipEntry(zip, MAX_EXTRACTED_BUNDLE_BYTES - extractedBytes);
+                    extractedBytes += manifestPayload.length;
+                    continue;
+                }
+                if (!(lowered.endsWith(".csv") || lowered.endsWith(".txt"))) {
+                    extractedBytes += drainZipEntry(zip, MAX_EXTRACTED_BUNDLE_BYTES - extractedBytes);
+                    continue;
+                }
+                byte[] payload = readZipEntry(zip, MAX_EXTRACTED_BUNDLE_BYTES - extractedBytes);
+                extractedBytes += payload.length;
+                csvMetadata.put(name, new ZipCsvMetadata(sha256(payload), payload.length));
+                try (Reader stringReader = new InputStreamReader(new ByteArrayInputStream(payload), StandardCharsets.UTF_8);
+                     BufferedReader reader = new BufferedReader(stringReader)) {
+                    parseCsv(reader, parsed);
+                }
+            }
+            parsed.validate();
+            parsed.manifestSummary(validateManifest(manifestPayload, csvMetadata, parsed));
+            return parsed;
+        } catch (MasterUpdateService.MasterUpdateException ex) {
+            throw ex;
+        } catch (IOException ex) {
+            throw new MasterUpdateService.MasterUpdateException(500, "local_master_cache_read_failed",
+                    "local master cache import の入力ファイルを読めませんでした。");
+        } catch (RuntimeException ex) {
+            throw new MasterUpdateService.MasterUpdateException(422, "local_master_cache_invalid_csv",
+                    "local master cache import の CSV 形式が不正です。");
+        }
+    }
+
+    private static ManifestSummary validateManifest(byte[] manifestPayload,
+                                                    Map<String, ZipCsvMetadata> csvMetadata,
+                                                    ParsedImport parsed) {
+        if (manifestPayload == null || manifestPayload.length == 0) {
+            throw manifestInvalid();
+        }
+        try {
+            JsonNode root = JSON.readTree(manifestPayload);
+            if (!root.isObject()) {
+                throw manifestInvalid();
+            }
+            if (!LocalOrcaMasterCacheArtifactSpec.SCHEMA_VERSION.equals(text(root, "schemaVersion"))) {
+                throw manifestInvalid();
+            }
+            if (!LocalOrcaMasterCacheArtifactSpec.CANONICAL_CSV_PATH.equals(text(root, "artifactFile"))) {
+                throw manifestInvalid();
+            }
+            JsonNode requiredTypes = root.get("requiredMasterTypes");
+            if (requiredTypes == null || !requiredTypes.isArray()) {
+                throw manifestInvalid();
+            }
+            Set<String> declaredTypes = new LinkedHashSet<>();
+            requiredTypes.forEach(node -> declaredTypes.add(normalize(node.asText())));
+            if (!declaredTypes.containsAll(REQUIRED_MASTER_TYPES)) {
+                throw manifestInvalid();
+            }
+            validateManifestCounts(root.get("masterTypeCounts"), parsed);
+            validateManifestFiles(root.get("files"), csvMetadata);
+            return new ManifestSummary(
+                    text(root, "sourceKind"),
+                    text(root, "sourceId"),
+                    text(root, "masterVersion"),
+                    text(root, "generatedAt"),
+                    text(root, "artifactSha256")
+            );
+        } catch (MasterUpdateService.MasterUpdateException ex) {
+            throw ex;
+        } catch (IOException | RuntimeException ex) {
+            throw manifestInvalid();
+        }
+    }
+
+    private static void validateManifestCounts(JsonNode countsNode, ParsedImport parsed) {
+        if (countsNode == null || !countsNode.isObject()) {
+            throw manifestInvalid();
+        }
+        for (String masterType : REQUIRED_MASTER_TYPES) {
+            JsonNode countNode = countsNode.get(masterType);
+            if (countNode == null || !countNode.canConvertToLong()
+                    || countNode.asLong() != parsed.masterTypeRowCount(masterType)) {
+                throw manifestInvalid();
+            }
+        }
+    }
+
+    private static void validateManifestFiles(JsonNode filesNode, Map<String, ZipCsvMetadata> csvMetadata) {
+        if (filesNode == null || !filesNode.isArray() || filesNode.isEmpty()) {
+            throw manifestInvalid();
+        }
+        boolean canonicalCsvDeclared = false;
+        for (JsonNode fileNode : filesNode) {
+            String path = text(fileNode, "path");
+            String declaredHash = text(fileNode, "sha256");
+            JsonNode bytesNode = fileNode.get("bytes");
+            ZipCsvMetadata actual = csvMetadata.get(path);
+            if (actual == null || declaredHash == null || !declaredHash.equals(actual.sha256())
+                    || bytesNode == null || !bytesNode.canConvertToLong()
+                    || bytesNode.asLong() != actual.bytes()) {
+                throw manifestInvalid();
+            }
+            if (LocalOrcaMasterCacheArtifactSpec.CANONICAL_CSV_PATH.equals(path)) {
+                canonicalCsvDeclared = true;
+            }
+        }
+        if (!canonicalCsvDeclared) {
+            throw manifestInvalid();
+        }
+    }
+
+    private void parseCsv(BufferedReader reader, ParsedImport parsed) throws IOException {
+        if (parsed == null) {
+            throw invalidCsv();
+        }
+        String headerLine = reader.readLine();
+        if (headerLine == null || headerLine.isBlank()) {
+            throw new MasterUpdateService.MasterUpdateException(422, "local_master_cache_empty",
+                    "local master cache import に反映可能な行がありません。");
+        }
+        List<String> headers = parseCsvLine(headerLine);
+        Map<String, Integer> headerIndex = headerIndex(headers);
+        String line;
+        int lineNumber = 1;
+        while ((line = reader.readLine()) != null) {
+            lineNumber++;
+            if (line.isBlank() || line.stripLeading().startsWith("#")) {
+                continue;
+            }
+            List<String> values = parseCsvLine(line);
+            CsvRow row = new CsvRow(headerIndex, values, lineNumber);
+            parseRow(parsed, row);
         }
     }
 
@@ -417,6 +638,9 @@ public class LocalOrcaMasterCacheImportService {
         if (!index.containsKey("recordtype")) {
             throw invalidCsv();
         }
+        if (!index.keySet().containsAll(REQUIRED_CANONICAL_HEADERS)) {
+            throw invalidCsv();
+        }
         return index;
     }
 
@@ -468,7 +692,68 @@ public class LocalOrcaMasterCacheImportService {
         if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
             throw invalidCsv();
         }
+        try {
+            JSON.readTree(trimmed);
+        } catch (IOException ex) {
+            throw invalidCsv();
+        }
         return trimmed;
+    }
+
+    private static byte[] readZipEntry(ZipInputStream zip, long remainingBudget) throws IOException {
+        if (remainingBudget <= 0L) {
+            throw invalidCsv();
+        }
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        long size = 0L;
+        int read;
+        while ((read = zip.read(buffer)) != -1) {
+            size += read;
+            if (size > remainingBudget) {
+                throw invalidCsv();
+            }
+            output.write(buffer, 0, read);
+        }
+        return output.toByteArray();
+    }
+
+    private static long drainZipEntry(ZipInputStream zip, long remainingBudget) throws IOException {
+        if (remainingBudget <= 0L) {
+            throw invalidCsv();
+        }
+        byte[] buffer = new byte[8192];
+        long size = 0L;
+        int read;
+        while ((read = zip.read(buffer)) != -1) {
+            size += read;
+            if (size > remainingBudget) {
+                throw invalidCsv();
+            }
+            // drain entry
+        }
+        return size;
+    }
+
+    private static String sha256(byte[] payload) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(payload));
+        } catch (Exception ex) {
+            throw manifestInvalid();
+        }
+    }
+
+    private static String text(JsonNode node, String fieldName) {
+        if (node == null || fieldName == null) {
+            return null;
+        }
+        JsonNode field = node.get(fieldName);
+        if (field == null || !field.isTextual()) {
+            return null;
+        }
+        String value = field.asText();
+        return value != null ? value.trim() : null;
     }
 
     private static String extensionOf(Path path) {
@@ -583,6 +868,11 @@ public class LocalOrcaMasterCacheImportService {
                 "local master cache import の CSV 形式が不正です。");
     }
 
+    private static MasterUpdateService.MasterUpdateException manifestInvalid() {
+        return new MasterUpdateService.MasterUpdateException(422, "local_master_cache_manifest_invalid",
+                "local master cache import の manifest が不正です。");
+    }
+
     private EntityManager entityManager() {
         if (entityManager == null) {
             throw new MasterUpdateService.MasterUpdateException(503, "local_master_cache_backend_unavailable",
@@ -626,6 +916,55 @@ public class LocalOrcaMasterCacheImportService {
         }
     }
 
+    public static final class PreviewResult {
+        private final boolean importable;
+        private final String uploadedSha256;
+        private final long importedRows;
+        private final List<String> affectedMasterTypes;
+        private final Map<String, Long> masterTypeCounts;
+        private final ManifestSummary manifest;
+        private final List<String> warnings;
+        private final String runId;
+
+        PreviewResult(boolean importable,
+                      String uploadedSha256,
+                      long importedRows,
+                      Set<String> affectedMasterTypes,
+                      Map<String, Long> masterTypeCounts,
+                      ManifestSummary manifest,
+                      List<String> warnings,
+                      String runId) {
+            this.importable = importable;
+            this.uploadedSha256 = uploadedSha256;
+            this.importedRows = importedRows;
+            this.affectedMasterTypes = List.copyOf(affectedMasterTypes);
+            this.masterTypeCounts = Map.copyOf(masterTypeCounts);
+            this.manifest = manifest;
+            this.warnings = warnings == null ? List.of() : List.copyOf(warnings);
+            this.runId = runId;
+        }
+
+        public Map<String, Object> toMap() {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("runId", runId);
+            body.put("importable", importable);
+            body.put("uploadedSha256", uploadedSha256);
+            body.put("importedRows", importedRows);
+            body.put("affectedMasterTypes", affectedMasterTypes);
+            body.put("masterTypeCounts", masterTypeCounts);
+            if (manifest != null) {
+                body.put("manifest", manifest.toMap());
+                body.put("sourceKind", manifest.sourceKind());
+                body.put("sourceId", manifest.sourceId());
+                body.put("masterVersion", manifest.masterVersion());
+                body.put("generatedAt", manifest.generatedAt());
+                body.put("artifactSha256", manifest.artifactSha256());
+            }
+            body.put("warnings", warnings);
+            return body;
+        }
+    }
+
     private static final class ParsedImport {
         private final List<EntryRecord> entries = new ArrayList<>();
         private final List<InputSetRecord> inputSets = new ArrayList<>();
@@ -634,29 +973,35 @@ public class LocalOrcaMasterCacheImportService {
         private final Set<String> affectedMasterTypes = new LinkedHashSet<>();
         private final Set<String> entryMasterTypes = new LinkedHashSet<>();
         private final Map<String, MasterTypeMetadata> metadata = new LinkedHashMap<>();
+        private final Map<String, Long> masterTypeRowCounts = new LinkedHashMap<>();
+        private ManifestSummary manifestSummary;
 
         void addEntry(EntryRecord entry) {
             entries.add(entry);
             entryMasterTypes.add(entry.masterType());
             affectedMasterTypes.add(entry.masterType());
+            increment(entry.masterType());
             register(entry.masterType(), entry.masterVersion(), entry.validFrom(), entry.validTo());
         }
 
         void addInputSet(InputSetRecord inputSet) {
             inputSets.add(inputSet);
             affectedMasterTypes.add("order-inputsets");
+            increment("order-inputsets");
             register("order-inputsets", inputSet.masterVersion(), inputSet.validFrom(), inputSet.validTo());
         }
 
         void addInputSetItem(InputSetItemRecord item) {
             inputSetItems.add(item);
             affectedMasterTypes.add("order-inputsets");
+            increment("order-inputsets");
             register("order-inputsets", DEFAULT_MASTER_VERSION, item.validFrom(), item.validTo());
         }
 
         void addInteraction(InteractionRecord interaction) {
             interactions.add(interaction);
             affectedMasterTypes.add("order-interactions");
+            increment("order-interactions");
             register("order-interactions", interaction.masterVersion(), interaction.validFrom(), interaction.validTo());
         }
 
@@ -674,8 +1019,31 @@ public class LocalOrcaMasterCacheImportService {
             }
         }
 
+        void requireAllMasterTypes() {
+            if (!affectedMasterTypes.containsAll(REQUIRED_MASTER_TYPES)) {
+                throw new MasterUpdateService.MasterUpdateException(422, "local_master_cache_incomplete",
+                        "local master cache import の必須 master type が不足しています。");
+            }
+        }
+
         long importedRows() {
             return entries.size() + inputSets.size() + inputSetItems.size() + interactions.size();
+        }
+
+        long masterTypeRowCount(String masterType) {
+            return masterTypeRowCounts.getOrDefault(masterType, 0L);
+        }
+
+        Map<String, Long> masterTypeCounts() {
+            return Collections.unmodifiableMap(masterTypeRowCounts);
+        }
+
+        ManifestSummary manifestSummary() {
+            return manifestSummary;
+        }
+
+        void manifestSummary(ManifestSummary manifestSummary) {
+            this.manifestSummary = manifestSummary;
         }
 
         List<EntryRecord> entries() {
@@ -724,6 +1092,10 @@ public class LocalOrcaMasterCacheImportService {
             metadata.put(masterType, next);
         }
 
+        private void increment(String masterType) {
+            masterTypeRowCounts.merge(masterType, 1L, Long::sum);
+        }
+
         private static String minDate(String current, String value) {
             if (current == null || current.isBlank()) {
                 return value;
@@ -758,6 +1130,25 @@ public class LocalOrcaMasterCacheImportService {
     }
 
     private record MasterTypeMetadata(String masterVersion, String effectiveFrom, String effectiveTo) {
+    }
+
+    private record ZipCsvMetadata(String sha256, long bytes) {
+    }
+
+    private record ManifestSummary(String sourceKind,
+                                   String sourceId,
+                                   String masterVersion,
+                                   String generatedAt,
+                                   String artifactSha256) {
+        Map<String, Object> toMap() {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("sourceKind", sourceKind);
+            body.put("sourceId", sourceId);
+            body.put("masterVersion", masterVersion);
+            body.put("generatedAt", generatedAt);
+            body.put("artifactSha256", artifactSha256);
+            return body;
+        }
     }
 
     private record EntryRecord(String masterType, String code, String name, String kana, String category, String unit,

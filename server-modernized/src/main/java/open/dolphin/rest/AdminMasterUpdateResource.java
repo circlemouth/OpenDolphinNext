@@ -149,12 +149,14 @@ public class AdminMasterUpdateResource extends AbstractResource {
         String actor = requireAdminActor(request, runId);
         adminStepUpGuard.require(request, "admin:mutation");
         UploadedFile uploaded = extractUploadFile(request, input, "file", MAX_UPLOAD_BYTES);
+        String previewHash = request != null ? request.getHeader("X-Master-Artifact-Preview-Hash") : null;
 
         try {
             Map<String, Object> body = masterUpdateService.uploadDataset(
                     datasetCode,
                     uploaded.fileName,
                     uploaded.payload,
+                    previewHash,
                     actor,
                     runId
             );
@@ -164,6 +166,38 @@ public class AdminMasterUpdateResource extends AbstractResource {
             return Response.ok(body).header("x-run-id", runId).build();
         } catch (MasterUpdateService.MasterUpdateException ex) {
             recordAudit(request, "MASTER_UPDATE_UPLOAD", actor, runId,
+                    Map.of("datasetCode", datasetCode, "fileName", uploaded.fileName, "status", "failed"),
+                    AuditEventEnvelope.Outcome.FAILURE, ex.getCode(), ex.getMessage());
+            throw restError(request, Response.Status.fromStatusCode(ex.getStatusCode()), ex.getCode(), ex.getMessage());
+        }
+    }
+
+    @POST
+    @Path("/datasets/{datasetCode}/upload/preview")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response previewUploadDataset(@Context HttpServletRequest request,
+                                         @PathParam("datasetCode") String datasetCode,
+                                         MultipartFormDataInput input) {
+        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
+        String actor = requireAdminActor(request, runId);
+        adminStepUpGuard.require(request, "admin:mutation");
+        UploadedFile uploaded = extractUploadFile(request, input, "file", MAX_UPLOAD_BYTES);
+
+        try {
+            Map<String, Object> body = masterUpdateService.previewDatasetUpload(
+                    datasetCode,
+                    uploaded.fileName,
+                    uploaded.payload,
+                    actor,
+                    runId
+            );
+            recordAudit(request, "MASTER_UPDATE_UPLOAD_PREVIEW", actor, runId,
+                    Map.of("datasetCode", datasetCode, "fileName", uploaded.fileName, "status", "success"),
+                    AuditEventEnvelope.Outcome.SUCCESS, null, null);
+            return Response.ok(body).header("x-run-id", runId).build();
+        } catch (MasterUpdateService.MasterUpdateException ex) {
+            recordAudit(request, "MASTER_UPDATE_UPLOAD_PREVIEW", actor, runId,
                     Map.of("datasetCode", datasetCode, "fileName", uploaded.fileName, "status", "failed"),
                     AuditEventEnvelope.Outcome.FAILURE, ex.getCode(), ex.getMessage());
             throw restError(request, Response.Status.fromStatusCode(ex.getStatusCode()), ex.getCode(), ex.getMessage());

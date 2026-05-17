@@ -141,7 +141,14 @@ public final class ServerRuntimeConfiguration {
     ) {
     }
 
-    public record MasterUpdateSchedulerSettings(boolean enabled) {
+    public record MasterUpdateSchedulerSettings(
+            boolean enabled,
+            String localOrcaMasterCacheSourceUrl,
+            List<String> sourceAllowedHosts
+    ) {
+        public MasterUpdateSchedulerSettings {
+            sourceAllowedHosts = sourceAllowedHosts == null ? List.of() : List.copyOf(sourceAllowedHosts);
+        }
     }
 
     public record MetricsSettings(String registryJndi) {

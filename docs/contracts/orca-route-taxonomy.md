@@ -41,6 +41,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/orca/queue` と `/api/orca/pusheventgetv2` は current public taxonomy に含めない。server public surface に登録せず、browser runtime が到達したら failure とみなす。
 - official transport を呼ばない local wrapper / local read model / local persistence を `/api/orca/*` に置かない。
 - master-backed read は `/api/orca/master/*` へ寄せ、official bridge と混在させない。production / normal dev runtime の master search は `ORCADS`、`ORCA_DB_*`、ORCA PostgreSQL 直結、`jma-receipt-docker-db-1` を使わない。
+- local master cache の本番更新は `/api/admin/master-updates/*` の管理者 step-up route と scheduler だけで行う。公式 source 由来 canonical artifact の生成と DB コンテナ parity 検証は runtime 外の運用作業であり、新しい `/api/orca/*` route として公開しない。
 - audit action も taxonomy に合わせ、official は `ORCA_OFFICIAL_*`、master は `ORCA_MASTER_*`、local は `LOCAL_*` を使う。
 - audit details には route taxonomy に一致する `scope=official|master|local|admin-internal` を入れ、action だけに依存せず追跡できるようにする。
 - official patient 系 audit action は `ORCA_OFFICIAL_CREATE_PATIENT` / `ORCA_OFFICIAL_UPDATE_PATIENT` / `ORCA_OFFICIAL_GET_PATIENT` / `ORCA_OFFICIAL_SYNC_PATIENTS` に固定し、旧 patient-first naming や `ORCA_PATIENT_GET` を残さない。
@@ -168,6 +169,10 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/admin/master-updates/datasets/{datasetCode}/rollback`
 - `/api/admin/master-updates/datasets/{datasetCode}/upload`
 - `/api/admin/master-updates/schedule`
+
+`local_orca_master_cache` の admin-management route は OpenDolphin local master cache / projection の更新口であり、ORCA official route でも ORCA DB 直結 route でもない。本番 source は公式 ORCA 配布ファイル、公式 API 由来 canonical artifact、または施設内 tool-only ETL が ORCA DB コンテナから生成した canonical artifact に限定し、runtime の外部取得は `MASTER_UPDATE_LOCAL_ORCA_MASTER_CACHE_SOURCE_URL` と `MASTER_UPDATE_SOURCE_ALLOWED_HOSTS` で明示許可した HTTPS host だけに固定する。取得失敗・import 失敗は dataset failed とし、未取得を 0 件や「安全確認済み」に変換しない。
+
+WebORCA Trial は本番相当の official ORCA 接続先として release validation に使ってよい。ただし、Trial を使う場合も public route taxonomy は変えない。master update は `/api/admin/master-updates/*`、master read は `/api/orca/master/*`、official ORCA transport は `/api/orca/official/*` に分離する。Trial の自由語検索や候補検索を全件 master source とみなす route、Trial 由来候補を ORCA 正本確認済みに見せる route、新しい `/api/orca/*` の runtime source route は追加しない。
 
 ### Intentional Fail-Close Exceptions
 

@@ -13,6 +13,7 @@ const {
   mockRollbackMasterUpdateDataset,
   mockSaveMasterUpdateSchedule,
   mockUploadMasterUpdateDataset,
+  mockPreviewMasterUpdateDatasetUpload,
 } = vi.hoisted(() => ({
   mockFetchMasterUpdateDatasetDetail: vi.fn(),
   mockFetchMasterUpdateDatasets: vi.fn(),
@@ -21,6 +22,7 @@ const {
   mockRollbackMasterUpdateDataset: vi.fn(),
   mockSaveMasterUpdateSchedule: vi.fn(),
   mockUploadMasterUpdateDataset: vi.fn(),
+  mockPreviewMasterUpdateDatasetUpload: vi.fn(),
 }));
 
 vi.mock('../../../libs/auth/roles', () => ({
@@ -39,6 +41,7 @@ vi.mock('../masterUpdateApi', () => ({
   runMasterUpdateDataset: mockRunMasterUpdateDataset,
   saveMasterUpdateSchedule: mockSaveMasterUpdateSchedule,
   uploadMasterUpdateDataset: mockUploadMasterUpdateDataset,
+  previewMasterUpdateDatasetUpload: mockPreviewMasterUpdateDatasetUpload,
 }));
 
 const dataset = {
@@ -94,7 +97,7 @@ const renderPanel = () => {
       mutations: { retry: false },
     },
   });
-  render(
+  return render(
     <QueryClientProvider client={queryClient}>
       <MasterUpdatesPanel runId="RUN-MASTER" role="system_admin" />
     </QueryClientProvider>,
@@ -127,6 +130,19 @@ beforeEach(() => {
     },
   });
   mockUploadMasterUpdateDataset.mockResolvedValue({ ok: true, dataset, message: 'done' });
+  mockPreviewMasterUpdateDatasetUpload.mockResolvedValue({
+    ok: true,
+    preview: {
+      importable: true,
+      uploadedSha256: 'a'.repeat(64),
+      importedRows: 17,
+      masterVersion: 'orca-db-container-20260517',
+      sourceKind: 'orca-db-container-artifact',
+      sourceId: 'orca-db-container:jma-receipt-docker-db-1',
+      masterTypeCounts: { drug: 1, 'order-inputsets': 4 },
+      warnings: [],
+    },
+  });
 });
 
 describe('MasterUpdatesPanel', () => {
@@ -141,7 +157,7 @@ describe('MasterUpdatesPanel', () => {
     expect(screen.getByText('official 最終更新情報')).toBeInTheDocument();
     expect(screen.getByText('local artifact 履歴 / rollback')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'official取得を実行' }).length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: 'local artifact をアップロード' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '確定アップロード' })).toBeInTheDocument();
     expect(screen.getByText('official fetch')).toBeInTheDocument();
   });
 
@@ -153,6 +169,42 @@ describe('MasterUpdatesPanel', () => {
 
     await waitFor(() => {
       expect(mockRunMasterUpdateDataset).toHaveBeenCalledWith('orca_master_core', false);
+    });
+  });
+
+  it('local master cache は preview 後の hash で確定アップロードする', async () => {
+    const user = userEvent.setup();
+    const localDataset = {
+      ...dataset,
+      code: 'local_orca_master_cache',
+      name: 'OpenDolphin local ORCA master cache',
+      manualUploadAllowed: true,
+      localArtifacts: {
+        manualUploadAllowed: true,
+        versions: [],
+      },
+      versions: [],
+    };
+    mockFetchMasterUpdateDatasets.mockResolvedValue({ datasets: [localDataset] });
+    mockFetchMasterUpdateDatasetDetail.mockResolvedValue({ dataset: localDataset });
+    const { container } = renderPanel();
+
+    const file = new File(['zip'], 'opendolphin-local-orca-master-cache.zip', { type: 'application/zip' });
+    await screen.findAllByText('OpenDolphin local ORCA master cache');
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input).toBeTruthy();
+    await user.upload(input, file);
+    await user.click(screen.getByRole('button', { name: 'artifact を検証' }));
+
+    expect(await screen.findByText('masterVersion: orca-db-container-20260517')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '確定アップロード' }));
+
+    await waitFor(() => {
+      expect(mockUploadMasterUpdateDataset).toHaveBeenCalledWith(
+        'local_orca_master_cache',
+        file,
+        'a'.repeat(64),
+      );
     });
   });
 });

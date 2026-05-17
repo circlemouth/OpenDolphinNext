@@ -39,8 +39,8 @@ public final class MasterUpdateCatalog {
                         "OpenDolphin local ORCA master cache",
                         "classpath:open/orca/master/local-orca-master-cache-fixture.csv",
                         "毎日 1回（scheduler 有効時）",
-                        "CSV",
-                        "候補検索用 local master cache/projection。fixture source は非本番試運転用で、ORCA 正本ではない",
+                        "CSV/ZIP/GZIP",
+                        "候補検索用 local master cache/projection。本番 source は公式 ORCA source 由来 canonical artifact。fixture は非本番試運転用で、ORCA 正本ではない",
                         true,
                         true,
                         24 * 60

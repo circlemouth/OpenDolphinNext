@@ -7,12 +7,14 @@ import {
   fetchMasterUpdateDatasetDetail,
   fetchMasterUpdateDatasets,
   fetchMasterUpdateSchedule,
+  previewMasterUpdateDatasetUpload,
   rollbackMasterUpdateDataset,
   runMasterUpdateDataset,
   saveMasterUpdateSchedule,
   uploadMasterUpdateDataset,
   type MasterUpdateDataset,
   type MasterUpdateSchedule,
+  type MasterUpdateUploadPreview,
 } from './masterUpdateApi';
 
 type MasterUpdatesPanelProps = {
@@ -62,6 +64,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
   const { enqueue } = useAppToast();
   const [selectedDatasetCode, setSelectedDatasetCode] = useState<string>('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<MasterUpdateUploadPreview | null>(null);
   const [scheduleForm, setScheduleForm] = useState<MasterUpdateSchedule>(() => normalizeSchedule());
 
   const datasetsQuery = useQuery({
@@ -93,6 +96,11 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
       setSelectedDatasetCode(datasetsQuery.data.datasets[0].code);
     }
   }, [datasetsQuery.data?.datasets, selectedDatasetCode]);
+
+  useEffect(() => {
+    setUploadFile(null);
+    setUploadPreview(null);
+  }, [selectedDataset?.code]);
 
   useEffect(() => {
     if (scheduleQuery.data?.schedule) {
@@ -136,8 +144,30 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
     },
   });
 
+  const previewMutation = useMutation({
+    mutationFn: async (params: { code: string; file: File }) => previewMasterUpdateDatasetUpload(params.code, params.file),
+    onSuccess: async (result) => {
+      setUploadPreview(result.preview ?? null);
+      enqueue({
+        tone: result.preview?.importable ? 'success' : 'warning',
+        message: result.message ?? 'artifact を検証しました。',
+        detail: result.preview?.masterVersion ? `masterVersion: ${result.preview.masterVersion}` : undefined,
+      });
+      await refreshQueries();
+    },
+    onError: (error) => {
+      setUploadPreview(null);
+      enqueue({
+        tone: 'error',
+        message: 'artifact 検証に失敗しました。',
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    },
+  });
+
   const uploadMutation = useMutation({
-    mutationFn: async (params: { code: string; file: File }) => uploadMasterUpdateDataset(params.code, params.file),
+    mutationFn: async (params: { code: string; file: File; previewHash?: string }) =>
+      uploadMasterUpdateDataset(params.code, params.file, params.previewHash),
     onSuccess: async (result, variables) => {
       enqueue({
         tone: 'success',
@@ -145,6 +175,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
         detail: `対象: ${variables.code} / ファイル: ${variables.file.name}`,
       });
       setUploadFile(null);
+      setUploadPreview(null);
       await refreshQueries();
     },
     onError: (error) => {
@@ -183,6 +214,8 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
   };
 
   const detailDataset: MasterUpdateDataset | null = detailQuery.data?.dataset ?? selectedDataset;
+  const isLocalMasterCacheDataset = detailDataset?.code === 'local_orca_master_cache';
+  const previewReady = Boolean(uploadPreview?.importable && uploadPreview.uploadedSha256);
 
   return (
     <>
@@ -233,7 +266,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                       disabled={!isSystemAdmin || dataset.running || runMutation.isPending}
                       onClick={() => runMutation.mutate({ code: dataset.code, force: false })}
                     >
-                      official取得を実行
+                      {dataset.code === 'local_orca_master_cache' ? '自動取得を実行' : 'official取得を実行'}
                     </button>
                   </td>
                 </tr>
@@ -297,8 +330,30 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                 disabled={!isSystemAdmin || detailDataset.running || runMutation.isPending}
                 onClick={() => runMutation.mutate({ code: detailDataset.code, force: true })}
               >
-                official取得を実行
+                {isLocalMasterCacheDataset ? '自動取得を実行' : 'official取得を実行'}
               </button>
+              {isLocalMasterCacheDataset ? (
+                <button
+                  type="button"
+                  className="admin-button admin-button--secondary"
+                  disabled={
+                    !isSystemAdmin
+                    || !uploadFile
+                    || previewMutation.isPending
+                    || uploadMutation.isPending
+                    || detailDataset.running
+                  }
+                  onClick={() => {
+                    if (!uploadFile) {
+                      enqueue({ tone: 'warning', message: '検証する artifact を選択してください。' });
+                      return;
+                    }
+                    previewMutation.mutate({ code: detailDataset.code, file: uploadFile });
+                  }}
+                >
+                  artifact を検証
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="admin-button admin-button--secondary"
@@ -306,29 +361,83 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                   !(detailDataset.localArtifacts?.manualUploadAllowed ?? detailDataset.manualUploadAllowed)
                   || !isSystemAdmin
                   || uploadMutation.isPending
+                  || previewMutation.isPending
                   || detailDataset.running
+                  || (isLocalMasterCacheDataset && !previewReady)
                 }
                 onClick={() => {
                   if (!uploadFile) {
                     enqueue({ tone: 'warning', message: 'アップロードするファイルを選択してください。' });
                     return;
                   }
-                  uploadMutation.mutate({ code: detailDataset.code, file: uploadFile });
+                  uploadMutation.mutate({
+                    code: detailDataset.code,
+                    file: uploadFile,
+                    previewHash: isLocalMasterCacheDataset ? uploadPreview?.uploadedSha256 : undefined,
+                  });
                 }}
               >
-                local artifact をアップロード
+                確定アップロード
               </button>
               <input
                 type="file"
-                onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)}
+                accept={isLocalMasterCacheDataset ? '.zip,application/zip' : undefined}
+                onChange={(event) => {
+                  setUploadFile(event.target.files?.[0] ?? null);
+                  setUploadPreview(null);
+                }}
                 disabled={
                   !(detailDataset.localArtifacts?.manualUploadAllowed ?? detailDataset.manualUploadAllowed)
                   || !isSystemAdmin
                   || uploadMutation.isPending
+                  || previewMutation.isPending
                   || detailDataset.running
                 }
               />
             </div>
+
+            {isLocalMasterCacheDataset ? (
+              <div className="admin-master__minor" aria-label="local master artifact preview">
+                <h3>local master artifact 検証</h3>
+                {uploadPreview ? (
+                  <>
+                    <ul className="placeholder-page__list">
+                      <li>判定: {uploadPreview.importable ? '取り込み可能' : '取り込み不可'}</li>
+                      <li>masterVersion: {uploadPreview.masterVersion ?? '―'}</li>
+                      <li>sourceKind: {uploadPreview.sourceKind ?? '―'}</li>
+                      <li>sourceId: {uploadPreview.sourceId ?? '―'}</li>
+                      <li>uploadedSha256: {uploadPreview.uploadedSha256 ?? '―'}</li>
+                      <li>行数: {uploadPreview.importedRows ?? '―'}</li>
+                    </ul>
+                    <div className="admin-scroll">
+                      <table className="admin-table">
+                        <thead>
+                          <tr>
+                            <th>master type</th>
+                            <th>件数</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(uploadPreview.masterTypeCounts ?? {}).map(([type, count]) => (
+                            <tr key={type}>
+                              <td>{type}</td>
+                              <td>{count}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {uploadPreview.warnings?.length ? (
+                      <p className="admin-error">{uploadPreview.warnings.join(' / ')}</p>
+                    ) : (
+                      <p className="admin-quiet">警告はありません。</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="admin-quiet">artifact を選択して検証すると、manifest と master type 別件数を表示します。</p>
+                )}
+              </div>
+            ) : null}
 
             <div className="admin-scroll" aria-label="local artifact history">
               <table className="admin-table">

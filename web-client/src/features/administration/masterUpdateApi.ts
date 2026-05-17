@@ -114,6 +114,29 @@ export type MasterUpdateActionResponse = {
   artifactPath?: string;
 };
 
+export type MasterUpdateUploadPreview = {
+  runId?: string;
+  importable?: boolean;
+  uploadedSha256?: string;
+  importedRows?: number;
+  affectedMasterTypes?: string[];
+  masterTypeCounts?: Record<string, number>;
+  sourceKind?: string;
+  sourceId?: string;
+  masterVersion?: string;
+  generatedAt?: string;
+  artifactSha256?: string;
+  warnings?: string[];
+};
+
+export type MasterUpdateUploadPreviewResponse = {
+  runId?: string;
+  ok: boolean;
+  message?: string;
+  datasetCode?: string;
+  preview?: MasterUpdateUploadPreview;
+};
+
 export type MasterUpdateScheduleResponse = {
   runId?: string;
   generatedAt?: string;
@@ -188,15 +211,35 @@ export async function rollbackMasterUpdateDataset(
 export async function uploadMasterUpdateDataset(
   datasetCode: string,
   file: File,
+  previewHash?: string,
 ): Promise<MasterUpdateActionResponse> {
   const formData = new FormData();
   formData.append('file', file);
+  const headers: Record<string, string> = {};
+  if (previewHash) {
+    headers['X-Master-Artifact-Preview-Hash'] = previewHash;
+  }
   const response = await httpFetch(`${BASE}/datasets/${encodeURIComponent(datasetCode)}/upload`, {
+    method: 'POST',
+    notifySessionExpired: false,
+    headers,
+    body: formData,
+  });
+  return requireOk<MasterUpdateActionResponse>(response);
+}
+
+export async function previewMasterUpdateDatasetUpload(
+  datasetCode: string,
+  file: File,
+): Promise<MasterUpdateUploadPreviewResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await httpFetch(`${BASE}/datasets/${encodeURIComponent(datasetCode)}/upload/preview`, {
     method: 'POST',
     notifySessionExpired: false,
     body: formData,
   });
-  return requireOk<MasterUpdateActionResponse>(response);
+  return requireOk<MasterUpdateUploadPreviewResponse>(response);
 }
 
 export async function fetchMasterUpdateSchedule(): Promise<MasterUpdateScheduleResponse> {
