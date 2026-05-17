@@ -74,6 +74,7 @@ artifacts/orca-remediation/closeout/*/qa/diagnostic-fullflow/
 artifacts/webclient/runtime-gate-ready/
 artifacts/webclient/orca-e2e/
 artifacts/webclient/e2e/
+artifacts/local-master-cache/
 test-results/
 playwright-report/
 # RUN_ID-scoped local reviewer ZIP output under implementation packets.

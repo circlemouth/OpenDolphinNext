@@ -102,11 +102,11 @@ run_copy() {
   local query="$2"
   local copy_sql="COPY (${query}) TO STDOUT WITH CSV HEADER"
   if [[ -n "$ORCA_DB_CONTAINER_NAME" && -z "$ORCA_DB_HOST" ]]; then
-    docker exec -i -e PGPASSWORD="$ORCA_DB_PASSWORD" "$ORCA_DB_CONTAINER_NAME" \
+    docker exec -i -e PGPASSWORD="$ORCA_DB_PASSWORD" -e PGOPTIONS="-c search_path=master,public" "$ORCA_DB_CONTAINER_NAME" \
       psql -X -q -v ON_ERROR_STOP=1 -U "$ORCA_DB_USER" -d "$ORCA_DB_NAME" \
       -c "$copy_sql" > "$target"
   else
-    PGPASSWORD="$ORCA_DB_PASSWORD" psql -X -q -v ON_ERROR_STOP=1 \
+    PGPASSWORD="$ORCA_DB_PASSWORD" PGOPTIONS="-c search_path=master,public" psql -X -q -v ON_ERROR_STOP=1 \
       -h "$ORCA_DB_HOST" -p "$ORCA_DB_PORT" -U "$ORCA_DB_USER" -d "$ORCA_DB_NAME" \
       -c "$copy_sql" > "$target"
   fi
@@ -121,23 +121,25 @@ run_copy() {
 empty_cols="'' AS \"setCode\", '' AS entity, '' AS kind, '' AS \"classCode\", '' AS \"className\", '' AS \"itemCount\", '' AS seq, '' AS quantity, '' AS memo, '' AS \"rowRole\", '' AS \"rowSubtype\", '' AS code2, '' AS \"interactionCode\", '' AS \"interactionName\", '' AS message"
 
 run_copy "$MASTERS_DIR/drug.csv" "
-SELECT 'entry' AS \"recordType\", 'drug' AS \"masterType\", srycd::text AS code, name::text AS name,
+SELECT 'entry' AS \"recordType\", 'drug' AS \"masterType\", srycd::text AS code,
+       COALESCE(NULLIF(name::text, ''), NULLIF(kananame::text, ''), srycd::text) AS name,
        kananame::text AS kana, srysyukbn::text AS category, taniname::text AS unit, ten::text AS price,
        COALESCE(NULLIF(yukostymd::text, ''), '00000000') AS \"validFrom\",
        COALESCE(NULLIF(yukoedymd::text, ''), '99991231') AS \"validTo\",
        $MV_LITERAL AS \"masterVersion\", $NOTE_LITERAL AS note,
-       concat_ws(' ', srycd::text, name::text, kananame::text) AS \"searchText\",
+       concat_ws(' ', srycd::text, COALESCE(NULLIF(name::text, ''), NULLIF(kananame::text, ''), srycd::text), kananame::text) AS \"searchText\",
        '{}' AS \"payloadJson\", $empty_cols
 FROM TBL_TENSU_MASTER
 WHERE srycd::text LIKE '6%'"
 
 run_copy "$MASTERS_DIR/etensu.csv" "
-SELECT 'entry' AS \"recordType\", 'etensu' AS \"masterType\", srycd::text AS code, name::text AS name,
+SELECT 'entry' AS \"recordType\", 'etensu' AS \"masterType\", srycd::text AS code,
+       COALESCE(NULLIF(name::text, ''), NULLIF(kananame::text, ''), srycd::text) AS name,
        kananame::text AS kana, srysyukbn::text AS category, taniname::text AS unit, ten::text AS price,
        COALESCE(NULLIF(yukostymd::text, ''), '00000000') AS \"validFrom\",
        COALESCE(NULLIF(yukoedymd::text, ''), '99991231') AS \"validTo\",
        $MV_LITERAL AS \"masterVersion\", $NOTE_LITERAL AS note,
-       concat_ws(' ', srycd::text, name::text, kananame::text, srysyukbn::text) AS \"searchText\",
+       concat_ws(' ', srycd::text, COALESCE(NULLIF(name::text, ''), NULLIF(kananame::text, ''), srycd::text), kananame::text, srysyukbn::text) AS \"searchText\",
        jsonb_build_object('noticeDate', COALESCE(NULLIF(upymd::text, ''), NULL))::text AS \"payloadJson\", $empty_cols
 FROM TBL_TENSU_MASTER
 WHERE srycd::text NOT LIKE '6%'
@@ -146,76 +148,83 @@ WHERE srycd::text NOT LIKE '6%'
   AND srycd::text !~ '^(008[1-6]|8[1-6]|098|099|98|99)'"
 
 run_copy "$MASTERS_DIR/comment.csv" "
-SELECT 'entry' AS \"recordType\", 'comment' AS \"masterType\", srycd::text AS code, name::text AS name,
+SELECT 'entry' AS \"recordType\", 'comment' AS \"masterType\", srycd::text AS code,
+       COALESCE(NULLIF(name::text, ''), NULLIF(kananame::text, ''), srycd::text) AS name,
        kananame::text AS kana, 'comment' AS category, '' AS unit, '' AS price,
        COALESCE(NULLIF(yukostymd::text, ''), '00000000') AS \"validFrom\",
        COALESCE(NULLIF(yukoedymd::text, ''), '99991231') AS \"validTo\",
        $MV_LITERAL AS \"masterVersion\", $NOTE_LITERAL AS note,
-       concat_ws(' ', srycd::text, name::text, kananame::text) AS \"searchText\",
+       concat_ws(' ', srycd::text, COALESCE(NULLIF(name::text, ''), NULLIF(kananame::text, ''), srycd::text), kananame::text) AS \"searchText\",
        '{}' AS \"payloadJson\", $empty_cols
 FROM TBL_TENSU_MASTER
 WHERE srycd::text ~ '^(008[1-6]|8[1-6]|098|099|98|99)'"
 
 run_copy "$MASTERS_DIR/bodypart.csv" "
-SELECT 'entry' AS \"recordType\", 'bodypart' AS \"masterType\", srycd::text AS code, name::text AS name,
+SELECT 'entry' AS \"recordType\", 'bodypart' AS \"masterType\", srycd::text AS code,
+       COALESCE(NULLIF(name::text, ''), NULLIF(kananame::text, ''), srycd::text) AS name,
        kananame::text AS kana, 'bodypart' AS category, '' AS unit, '' AS price,
        COALESCE(NULLIF(yukostymd::text, ''), '00000000') AS \"validFrom\",
        COALESCE(NULLIF(yukoedymd::text, ''), '99991231') AS \"validTo\",
        $MV_LITERAL AS \"masterVersion\", $NOTE_LITERAL AS note,
-       concat_ws(' ', srycd::text, name::text, kananame::text) AS \"searchText\",
+       concat_ws(' ', srycd::text, COALESCE(NULLIF(name::text, ''), NULLIF(kananame::text, ''), srycd::text), kananame::text) AS \"searchText\",
        '{}' AS \"payloadJson\", $empty_cols
 FROM TBL_TENSU_MASTER
-WHERE srycd::text LIKE '002%'"
+WHERE srycd::text LIKE '82018%'
+  AND name::text LIKE '撮影部位%'"
 
 run_copy "$MASTERS_DIR/generic-price.csv" "
-SELECT 'entry' AS \"recordType\", 'generic-price' AS \"masterType\", srycd::text AS code,
-       COALESCE(name::text, srycd::text) AS name, '' AS kana, '' AS category, unit::text AS unit, price::text AS price,
-       COALESCE(NULLIF(start_date::text, ''), NULLIF(yukostymd::text, ''), '00000000') AS \"validFrom\",
-       COALESCE(NULLIF(end_date::text, ''), NULLIF(yukoedymd::text, ''), '99991231') AS \"validTo\",
+SELECT 'entry' AS \"recordType\", 'generic-price' AS \"masterType\", yakkakjncd::text AS code,
+       yakkakjncd::text AS name, '' AS kana, COALESCE(gecode::text, '') AS category, '' AS unit, price::text AS price,
+       COALESCE(NULLIF(yukostymd::text, ''), '00000000') AS \"validFrom\",
+       COALESCE(NULLIF(yukoedymd::text, ''), '99991231') AS \"validTo\",
        $MV_LITERAL AS \"masterVersion\", $NOTE_LITERAL AS note,
-       concat_ws(' ', srycd::text, name::text) AS \"searchText\",
+       concat_ws(' ', yakkakjncd::text, gecode::text) AS \"searchText\",
        '{}' AS \"payloadJson\", $empty_cols
 FROM TBL_GENERIC_PRICE"
 
 run_copy "$MASTERS_DIR/generic-class.csv" "
-SELECT 'entry' AS \"recordType\", 'generic-class' AS \"masterType\", class_code::text AS code, class_name::text AS name,
-       kana_name::text AS kana, category_code::text AS category, '' AS unit, '' AS price,
-       COALESCE(NULLIF(start_date::text, ''), '00000000') AS \"validFrom\",
-       COALESCE(NULLIF(end_date::text, ''), '99991231') AS \"validTo\",
+SELECT 'entry' AS \"recordType\", 'generic-class' AS \"masterType\", yakkakjncd::text AS code, yakkakjncd::text AS name,
+       '' AS kana, kouhatu::text AS category, '' AS unit, '' AS price,
+       COALESCE(NULLIF(yukostymd::text, ''), '00000000') AS \"validFrom\",
+       COALESCE(NULLIF(yukoedymd::text, ''), '99991231') AS \"validTo\",
        $MV_LITERAL AS \"masterVersion\", $NOTE_LITERAL AS note,
-       concat_ws(' ', class_code::text, class_name::text, kana_name::text) AS \"searchText\",
-       jsonb_build_object('parentClassCode', parent_class_code::text)::text AS \"payloadJson\", $empty_cols
+       concat_ws(' ', yakkakjncd::text, kouhatu::text) AS \"searchText\",
+       jsonb_build_object('genericFlag', kouhatu::text)::text AS \"payloadJson\", $empty_cols
 FROM TBL_GENERIC_CLASS"
 
 run_copy "$MASTERS_DIR/youhou.csv" "
-SELECT 'entry' AS \"recordType\", 'youhou' AS \"masterType\", youhoucode::text AS code, youhouname::text AS name,
+SELECT 'entry' AS \"recordType\", 'youhou' AS \"masterType\", code::text AS code, name::text AS name,
        kana::text AS kana, 'usage' AS category, '' AS unit, '' AS price,
-       COALESCE(NULLIF(start_date::text, ''), '00000000') AS \"validFrom\",
-       COALESCE(NULLIF(end_date::text, ''), '99991231') AS \"validTo\",
+       COALESCE(NULLIF(yukostymd::text, ''), '00000000') AS \"validFrom\",
+       COALESCE(NULLIF(yukoedymd::text, ''), '99991231') AS \"validTo\",
        $MV_LITERAL AS \"masterVersion\", $NOTE_LITERAL AS note,
-       concat_ws(' ', youhoucode::text, youhouname::text, kana::text) AS \"searchText\",
-       '{}' AS \"payloadJson\", $empty_cols
+       concat_ws(' ', code::text, name::text, kana::text, basic_name::text, detail_name::text, timing_name::text) AS \"searchText\",
+       jsonb_build_object('basicCode', basic_c::text, 'detailCode', detail_c::text, 'timingCode', timing_c::text)::text AS \"payloadJson\", $empty_cols
 FROM TBL_YOUHOU"
 
 run_copy "$MASTERS_DIR/material.csv" "
-SELECT 'entry' AS \"recordType\", 'material' AS \"masterType\", material_code::text AS code, material_name::text AS name,
-       kana_name::text AS kana, material_category::text AS category, unit::text AS unit, price::text AS price,
-       COALESCE(NULLIF(start_date::text, ''), '00000000') AS \"validFrom\",
-       COALESCE(NULLIF(end_date::text, ''), '99991231') AS \"validTo\",
+SELECT 'entry' AS \"recordType\", 'material' AS \"masterType\", srycd::text AS code,
+       COALESCE(NULLIF(name::text, ''), NULLIF(kananame::text, ''), srycd::text) AS name,
+       kananame::text AS kana, srysyukbn::text AS category, taniname::text AS unit, ten::text AS price,
+       COALESCE(NULLIF(yukostymd::text, ''), '00000000') AS \"validFrom\",
+       COALESCE(NULLIF(yukoedymd::text, ''), '99991231') AS \"validTo\",
        $MV_LITERAL AS \"masterVersion\", $NOTE_LITERAL AS note,
-       concat_ws(' ', material_code::text, material_name::text, kana_name::text) AS \"searchText\",
-       jsonb_build_object('maker', maker::text)::text AS \"payloadJson\", $empty_cols
-FROM TBL_MATERIAL_H_M"
+       concat_ws(' ', srycd::text, COALESCE(NULLIF(name::text, ''), NULLIF(kananame::text, ''), srycd::text), kananame::text) AS \"searchText\",
+       '{}' AS \"payloadJson\", $empty_cols
+FROM TBL_TENSU_MASTER
+WHERE srycd::text LIKE '7%'"
 
 run_copy "$MASTERS_DIR/kensa-sort.csv" "
-SELECT 'entry' AS \"recordType\", 'kensa-sort' AS \"masterType\", kensa_code::text AS code, kensa_name::text AS name,
-       kana_name::text AS kana, classification::text AS category, '' AS unit, '' AS price,
-       COALESCE(NULLIF(start_date::text, ''), '00000000') AS \"validFrom\",
-       COALESCE(NULLIF(end_date::text, ''), '99991231') AS \"validTo\",
+SELECT 'entry' AS \"recordType\", 'kensa-sort' AS \"masterType\", k.srycd::text AS code,
+       COALESCE(NULLIF(t.name::text, ''), NULLIF(t.kananame::text, ''), k.srycd::text) AS name,
+       COALESCE(t.kananame::text, '') AS kana, k.knsbunrui::text AS category, '' AS unit, '' AS price,
+       COALESCE(NULLIF(t.yukostymd::text, ''), '00000000') AS \"validFrom\",
+       COALESCE(NULLIF(t.yukoedymd::text, ''), '99991231') AS \"validTo\",
        $MV_LITERAL AS \"masterVersion\", $NOTE_LITERAL AS note,
-       concat_ws(' ', kensa_code::text, kensa_name::text, kana_name::text, kensa_sort::text) AS \"searchText\",
-       jsonb_build_object('kensaSort', kensa_sort::text)::text AS \"payloadJson\", $empty_cols
-FROM TBL_KENSASORT"
+       concat_ws(' ', k.srycd::text, t.name::text, t.kananame::text, k.knsbunrui::text, k.dspseq::text) AS \"searchText\",
+       jsonb_build_object('kensaClass', k.knsbunrui::text, 'displaySeq', k.dspseq::text)::text AS \"payloadJson\", $empty_cols
+FROM TBL_KENSASORT k
+LEFT JOIN TBL_TENSU_MASTER t ON t.srycd = k.srycd"
 
 run_copy "$MASTERS_DIR/hokenja.csv" "
 SELECT 'entry' AS \"recordType\", 'hokenja' AS \"masterType\", hknjanum::text AS code, hknjaname::text AS name,
@@ -228,13 +237,13 @@ FROM TBL_HKNJAINF_MASTER"
 
 run_copy "$MASTERS_DIR/address.csv" "
 SELECT 'entry' AS \"recordType\", 'address' AS \"masterType\", post::text AS code,
-       concat_ws('', editadrs_name::text, cityname::text, townname::text) AS name,
-       editadrs_kana::text AS kana, pref_code::text AS category, '' AS unit, '' AS price,
+       COALESCE(NULLIF(editadrs_name::text, ''), concat_ws('', prefname::text, cityname::text, townname::text)) AS name,
+       editadrs_kana::text AS kana, substring(lpubcd::text from 1 for 2) AS category, '' AS unit, '' AS price,
        '00000000' AS \"validFrom\", '99991231' AS \"validTo\",
        $MV_LITERAL AS \"masterVersion\", $NOTE_LITERAL AS note,
        concat_ws(' ', post::text, editadrs_name::text, cityname::text, townname::text, editadrs_kana::text) AS \"searchText\",
-       jsonb_build_object('zip', post::text, 'prefCode', pref_code::text, 'cityCode', city_code::text, 'city', cityname::text, 'town', townname::text, 'addressLine', editadrs_name::text, 'kanaAddress', editadrs_kana::text, 'roman', roman::text)::text AS \"payloadJson\", $empty_cols
-FROM TBL_ADRS"
+       jsonb_build_object('zip', post::text, 'localPublicCode', lpubcd::text, 'prefecture', prefname::text, 'city', cityname::text, 'town', townname::text, 'addressLine', editadrs_name::text, 'kanaAddress', editadrs_kana::text)::text AS \"payloadJson\", $empty_cols
+FROM TBL_ADRS_MASTER"
 
 copy_supplemental() {
   local name="$1"
@@ -265,7 +274,8 @@ SOURCE_ID="orca-db-container:${SOURCE_ID_HOST}"
 
 (
   cd "$ROOT_DIR"
-  mvn -f pom.server-modernized.xml -pl server-modernized -DskipTests compile \
+  mvn -f pom.server-modernized.xml -pl server-modernized -am -DskipTests compile
+  mvn -f pom.server-modernized.xml -pl server-modernized -DskipTests \
     org.codehaus.mojo:exec-maven-plugin:3.5.0:java \
     -Dexec.mainClass=open.orca.master.LocalOrcaMasterCacheArtifactBuilder \
     -Dexec.args="--source-dir $SOURCE_DIR --output $OUTPUT --source-kind orca-db-container-artifact --source-id $SOURCE_ID --master-version $MASTER_VERSION"

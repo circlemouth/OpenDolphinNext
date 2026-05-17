@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS opendolphin.local_orca_master_dataset (
     read_only BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT local_orca_master_dataset_read_only_ck CHECK (read_only = TRUE),
     CONSTRAINT local_orca_master_dataset_source_kind_ck CHECK (
-        source_kind IN ('official-file', 'official-api', 'manual-upload', 'fixture-dev', 'local-cache')
+        source_kind IN ('official-file', 'official-api', 'manual-upload', 'fixture-dev', 'local-cache',
+                        'orca-db-container-artifact')
     ),
     CONSTRAINT local_orca_master_dataset_status_ck CHECK (
         cache_status IN ('CURRENT', 'STALE', 'NOT_IMPORTED', 'UNAVAILABLE')

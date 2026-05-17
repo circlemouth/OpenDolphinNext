@@ -428,19 +428,19 @@ public final class LocalOrcaMasterCacheArtifactBuilder {
                 throw new ArtifactBuildException("canonical artifact の masterType が不正です。");
             }
             if ("entry".equals(recordType)) {
-                require(row, "code");
-                require(row, "name");
+                require(row, "code", recordType, masterType);
+                require(row, "name", recordType, masterType);
             } else if ("inputset".equals(recordType)) {
-                require(row, "setCode");
-                require(row, "name");
+                require(row, "setCode", recordType, masterType);
+                require(row, "name", recordType, masterType);
             } else if ("inputsetitem".equals(recordType)) {
-                require(row, "setCode");
-                require(row, "seq");
-                require(row, "code");
-                require(row, "name");
+                require(row, "setCode", recordType, masterType);
+                require(row, "seq", recordType, masterType);
+                require(row, "code", recordType, masterType);
+                require(row, "name", recordType, masterType);
             } else if ("interaction".equals(recordType)) {
-                require(row, "code");
-                require(row, "code2");
+                require(row, "code", recordType, masterType);
+                require(row, "code2", recordType, masterType);
             }
             validatePayloadJson(row.get("payloadJson"));
         }
@@ -459,11 +459,22 @@ public final class LocalOrcaMasterCacheArtifactBuilder {
             }
         }
 
-        private static void require(Map<String, String> row, String header) {
+        private static void require(Map<String, String> row, String header, String recordType, String masterType) {
             String value = row.get(header);
             if (value == null || value.isBlank()) {
-                throw new ArtifactBuildException("canonical artifact の必須値が不足しています。");
+                String code = row.getOrDefault("code", "");
+                throw new ArtifactBuildException("canonical artifact の必須値が不足しています。"
+                        + " field=" + header
+                        + " recordType=" + recordType
+                        + " masterType=" + masterType
+                        + " code=" + sanitizeDiagnostic(code));
             }
+        }
+
+        private static String sanitizeDiagnostic(String value) {
+            String text = value != null ? value : "";
+            text = text.replaceAll("[^A-Za-z0-9_.:-]", "_");
+            return text.length() <= 64 ? text : text.substring(0, 64);
         }
 
         private void requireInputSetHeaders() {
