@@ -217,27 +217,11 @@ const extractList = <T,>(json: unknown): { items: T[]; totalCount?: number } => 
 };
 
 type OrderMasterDrugSearchMethod = 'prefix' | 'partial';
-type OrderMasterDrugSearchScope = 'outer' | 'in-hospital' | 'adopted';
 
 const normalizeDrugSearchMethod = (value: string | undefined): OrderMasterDrugSearchMethod | undefined => {
   if (!value) return undefined;
   const normalized = value.trim().toLowerCase();
   if (normalized === 'prefix' || normalized === 'partial') return normalized;
-  return undefined;
-};
-
-const normalizeDrugSearchScope = (value: string | undefined): OrderMasterDrugSearchScope | undefined => {
-  if (!value) return undefined;
-  const normalized = value.trim().toLowerCase();
-  if (normalized === 'outer' || normalized === 'outside' || normalized === 'outside_adopted') {
-    return 'outer';
-  }
-  if (normalized === 'in-hospital' || normalized === 'in_hospital' || normalized === 'facility' || normalized === 'in_hospital_adopted') {
-    return 'in-hospital';
-  }
-  if (normalized === 'adopted' || normalized === 'inside_adopted') {
-    return 'adopted';
-  }
   return undefined;
 };
 
@@ -260,7 +244,6 @@ export async function fetchOrderMasterSearch(params: {
   effective?: string;
   asOf?: string;
   method?: OrderMasterDrugSearchMethod;
-  scope?: string;
   category?: string;
   pointsMin?: number;
   pointsMax?: number;
@@ -279,15 +262,12 @@ export async function fetchOrderMasterSearch(params: {
     query.set('effective', normalizedDate);
     query.set('asOf', normalizedDate);
   }
-  if (params.category) query.set('category', params.category);
-  if (params.type === 'comment' && params.category) {
+  if (params.category && params.type !== 'drug') {
     query.set('category', params.category);
   }
   if (params.type === 'drug') {
     const normalizedMethod = normalizeDrugSearchMethod(params.method);
     if (normalizedMethod) query.set('method', normalizedMethod);
-    const normalizedScope = normalizeDrugSearchScope(params.scope ?? params.category);
-    if (normalizedScope) query.set('scope', normalizedScope);
   }
   if (params.type === 'etensu') {
     if (typeof params.pointsMin === 'number' && Number.isFinite(params.pointsMin)) {

@@ -44,7 +44,7 @@ describe('fetchOrderMasterSearch auth routing', () => {
     expect(init?.notifySessionExpired).toBe(false);
   });
 
-  it('propagates drug method/scope and normalizes effective/asOf format', async () => {
+  it('propagates drug method and normalizes effective/asOf format without unsupported scope', async () => {
     const { httpFetch } = await import('../../libs/http/httpClient');
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ totalCount: 0, items: [] }), {
@@ -57,7 +57,6 @@ describe('fetchOrderMasterSearch auth routing', () => {
       type: 'drug',
       keyword: 'アムロ',
       method: 'prefix',
-      scope: 'outside_adopted',
       effective: '2026-02-19',
     });
 
@@ -65,14 +64,14 @@ describe('fetchOrderMasterSearch auth routing', () => {
     const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
     expect(requestUrl).toContain('/api/orca/master/drug?');
     expect(requestUrl).toContain('method=prefix');
-    expect(requestUrl).toContain('scope=outer');
+    expect(requestUrl).not.toContain('scope=');
     expect(requestUrl).toContain('effective=20260219');
     expect(requestUrl).toContain('asOf=20260219');
     const init = vi.mocked(httpFetch).mock.calls[0]?.[1];
     expect(init?.notifySessionExpired).toBe(false);
   });
 
-  it('uses category as drug scope fallback and normalizes to in-hospital', async () => {
+  it('does not send category as a drug scope fallback', async () => {
     const { httpFetch } = await import('../../libs/http/httpClient');
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ totalCount: 0, items: [] }), {
@@ -90,8 +89,8 @@ describe('fetchOrderMasterSearch auth routing', () => {
     expect(result.ok).toBe(true);
     const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
     expect(requestUrl).toContain('/api/orca/master/drug?');
-    expect(requestUrl).toContain('scope=in-hospital');
-    expect(requestUrl).toContain('category=facility');
+    expect(requestUrl).not.toContain('scope=');
+    expect(requestUrl).not.toContain('category=');
     const init = vi.mocked(httpFetch).mock.calls[0]?.[1];
     expect(init?.notifySessionExpired).toBe(false);
   });
@@ -423,7 +422,7 @@ describe('fetchOrderMasterSearch auth routing', () => {
     });
   });
 
-  it('drug 検索で method と scope をクエリに付与し、scope を ORCA 値へ正規化する', async () => {
+  it('drug 検索で method だけをクエリに付与し、unsupported scope は付与しない', async () => {
     const { httpFetch } = await import('../../libs/http/httpClient');
     vi.mocked(httpFetch).mockImplementation(async () =>
       new Response(JSON.stringify({ totalCount: 0, items: [] }), {
@@ -432,26 +431,17 @@ describe('fetchOrderMasterSearch auth routing', () => {
       }),
     );
 
-    const scopeCases = [
-      { input: 'outside', expected: 'outer' },
-      { input: 'facility', expected: 'in-hospital' },
-      { input: 'adopted', expected: 'adopted' },
-    ] as const;
+    const result = await fetchOrderMasterSearch({
+      type: 'drug',
+      keyword: '薬剤',
+      method: 'partial',
+    });
 
-    for (const [index, scopeCase] of scopeCases.entries()) {
-      const result = await fetchOrderMasterSearch({
-        type: 'drug',
-        keyword: `薬剤-${index}`,
-        method: 'partial',
-        scope: scopeCase.input,
-      } as Parameters<typeof fetchOrderMasterSearch>[0]);
-
-      expect(result.ok).toBe(true);
-      const requestUrl = toRequestUrlString(vi.mocked(httpFetch).mock.calls[index]?.[0]);
-      const query = new URL(requestUrl, 'http://localhost').searchParams;
-      expect(query.get('method')).toBe('partial');
-      expect(query.get('scope')).toBe(scopeCase.expected);
-    }
+    expect(result.ok).toBe(true);
+    const requestUrl = toRequestUrlString(vi.mocked(httpFetch).mock.calls[0]?.[0]);
+    const query = new URL(requestUrl, 'http://localhost').searchParams;
+    expect(query.get('method')).toBe('partial');
+    expect(query.has('scope')).toBe(false);
   });
 
   it('drug 検索の effective/asOf は日時付き入力でも YYYYMMDD へ正規化する', async () => {

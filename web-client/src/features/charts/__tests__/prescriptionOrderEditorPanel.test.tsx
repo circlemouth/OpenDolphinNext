@@ -218,7 +218,7 @@ describe('PrescriptionOrderEditorPanel', () => {
     expect((screen.getByLabelText('日数') as HTMLInputElement).value).toBe('3');
   });
 
-  it('薬剤検索で method/scope を API に渡し、scope は ORCA 値にマッピングする', async () => {
+  it('薬剤検索で method を API に渡し、非対応 scope は送信しない', async () => {
     const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockImplementation(async ({ type, keyword }) => {
@@ -236,36 +236,52 @@ describe('PrescriptionOrderEditorPanel', () => {
     renderPanel();
 
     const methodSelect = screen.getByLabelText('検索方法');
-    const scopeSelect = screen.getByLabelText('検索範囲');
     const keywordInput = screen.getByLabelText('キーワード');
 
     await user.selectOptions(methodSelect, 'partial');
-
-    const runManualSearch = async (scope: 'outside_adopted' | 'in_hospital_adopted' | 'inside_adopted') => {
-      await user.selectOptions(scopeSelect, scope);
-      await user.clear(keywordInput);
-      await user.type(keywordInput, 'アム');
-      await user.click(screen.getByRole('button', { name: '検索（2文字以下は明示実行）' }));
-    };
-
-    await runManualSearch('outside_adopted');
-    await runManualSearch('in_hospital_adopted');
-    await runManualSearch('inside_adopted');
+    expect(screen.queryByLabelText('検索範囲')).toBeNull();
+    await user.clear(keywordInput);
+    await user.type(keywordInput, 'アム');
+    await user.click(screen.getByRole('button', { name: '検索（2文字以下は明示実行）' }));
 
     await waitFor(() => {
-      const hasScopeCall = (scope: string) =>
-        searchMock.mock.calls.some(([params]) => {
-          const record = params as Record<string, unknown> | undefined;
-          return record?.type === 'drug' && record?.method === 'partial' && record?.scope === scope;
-        });
-
-      const hasOuter = hasScopeCall('outer');
-      const hasInHospital = hasScopeCall('in-hospital');
-      const hasAdopted = hasScopeCall('adopted');
-      expect(hasOuter).toBe(true);
-      expect(hasInHospital).toBe(true);
-      expect(hasAdopted).toBe(true);
+      expect(searchMock).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'drug', keyword: 'アム', method: 'partial' }),
+      );
     });
+    const drugCall = searchMock.mock.calls.find(([params]) => (params as Record<string, unknown>).type === 'drug');
+    expect(drugCall?.[0]).not.toHaveProperty('scope');
+  });
+
+  it('薬剤名入力からマスタ検索が走り、候補反映でコードと単位をセットする', async () => {
+    const user = userEvent.setup();
+    const searchMock = vi.mocked(fetchOrderMasterSearch);
+    searchMock.mockImplementation(async ({ type, keyword }) => {
+      if (type === 'youhou') return { ok: true, items: [], totalCount: 0 };
+      if (type === 'drug') {
+        return {
+          ok: true,
+          items: [{ type: 'drug', code: '620000123', name: `${keyword}錠`, unit: '錠' }],
+          totalCount: 1,
+        };
+      }
+      return { ok: true, items: [], totalCount: 0 };
+    });
+
+    renderPanel();
+
+    const nameInput = screen.getByPlaceholderText('薬剤名') as HTMLInputElement;
+    await user.clear(nameInput);
+    await user.type(nameInput, 'ゲンタ');
+
+    await waitFor(() => {
+      expect(searchMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'drug', keyword: 'ゲンタ' }));
+    });
+    const candidate = await screen.findByRole('button', { name: /620000123.*ゲンタ錠.*反映/ });
+    await user.click(candidate);
+
+    expect(nameInput.value).toBe('ゲンタ錠');
+    expect((screen.getByPlaceholderText('単位') as HTMLInputElement).value).toBe('錠');
   });
 
   it('visitDate が日時文字列でも用法マスタ検索の effective は YYYY-MM-DD になる', async () => {

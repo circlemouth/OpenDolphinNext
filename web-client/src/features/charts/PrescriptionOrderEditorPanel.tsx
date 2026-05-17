@@ -47,7 +47,6 @@ import {
 import { checkOrcaMasterStaticOrderInteractions } from './orcaOrderInteractionApi';
 
 export type PrescriptionSearchMethod = 'prefix' | 'partial';
-export type PrescriptionSearchScope = 'outside_adopted' | 'in_hospital_adopted' | 'inside_adopted';
 
 type SaveAction = 'save' | 'expand' | 'expand_continue';
 
@@ -113,18 +112,6 @@ const findRpIndexForBundle = (order: PrescriptionOrder, bundle: OrderBundle, pat
       rp.category === imported.category
     );
   });
-};
-
-const SEARCH_SCOPE_CATEGORY: Record<PrescriptionSearchScope, string> = {
-  outside_adopted: 'outer',
-  in_hospital_adopted: 'in-hospital',
-  inside_adopted: 'adopted',
-};
-
-const SEARCH_SCOPE_LABEL: Record<PrescriptionSearchScope, string> = {
-  outside_adopted: '採用薬外',
-  in_hospital_adopted: '院内採用',
-  inside_adopted: '採用薬内',
 };
 
 const CATEGORY_LABEL: Record<PrescriptionCategory, string> = {
@@ -418,7 +405,7 @@ export function PrescriptionOrderEditorPanel({
   const [rpClaimDraft, setRpClaimDraft] = useState<ClaimDraft>({ code: '', name: '', note: '' });
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchMethod, setSearchMethod] = useState<PrescriptionSearchMethod>('prefix');
-  const [searchScope, setSearchScope] = useState<PrescriptionSearchScope>('outside_adopted');
+  const [searchOrigin, setSearchOrigin] = useState<'panel' | 'drug-name'>('panel');
   const [manualSearchNonce, setManualSearchNonce] = useState(0);
   const [notice, setNotice] = useState<{ tone: 'info' | 'success' | 'warning' | 'error'; message: string } | null>(null);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
@@ -630,11 +617,11 @@ export function PrescriptionOrderEditorPanel({
             drugComment: drug?.drugComment.trim() || '未入力',
             usage: rp.usage.trim() || '未設定',
             daysOrTimes: rp.daysOrTimes.trim() || '未設定',
-            searchMethod: SEARCH_SCOPE_LABEL[searchScope],
+            searchMethod: searchMethod === 'partial' ? '部分一致' : '前方一致',
           };
         });
       }),
-    [order.rps, searchScope],
+    [order.rps, searchMethod],
   );
   const showInputSetChooser = variant === 'utility';
 
@@ -874,7 +861,6 @@ export function PrescriptionOrderEditorPanel({
     queryKey: [
       'charts-prescription-drug-search-v2',
       trimmedSearchKeyword,
-      searchScope,
       searchMethod,
       searchEffectiveDate,
       manualSearchNonce,
@@ -884,7 +870,6 @@ export function PrescriptionOrderEditorPanel({
         type: 'drug',
         keyword: trimmedSearchKeyword,
         method: searchMethod,
-        scope: SEARCH_SCOPE_CATEGORY[searchScope],
         effective: searchEffectiveDate,
         asOf: searchEffectiveDate,
       }),
@@ -990,6 +975,23 @@ export function PrescriptionOrderEditorPanel({
       candidate,
     });
   };
+
+  const handleDrugNameInput = useCallback(
+    (rpIndex: number, drugIndex: number, value: string) => {
+      if (isPreviewMode) return;
+      setSelectedRpIndex(rpIndex);
+      setSelectedDrugIndex(drugIndex);
+      setSearchKeyword(value);
+      setSearchOrigin('drug-name');
+      if (normalizeSearchText(value).length >= 3) setManualSearchNonce(0);
+      updateDrug(rpIndex, drugIndex, (current) => ({
+        ...current,
+        name: value,
+        code: value === current.name ? current.code : undefined,
+      }));
+    },
+    [isPreviewMode, updateDrug],
+  );
 
   const handleInputSetSearch = useCallback(async () => {
     const keyword = inputSetKeyword.trim();
@@ -1661,20 +1663,6 @@ export function PrescriptionOrderEditorPanel({
                     <option value="partial">部分一致</option>
                   </select>
                 </div>
-                <div className="charts-side-panel__field">
-                  <label htmlFor={domId('search-scope')}>検索範囲</label>
-                  <select
-                    id={domId('search-scope')}
-                    value={searchScope}
-                    onChange={(event) => setSearchScope(event.target.value as PrescriptionSearchScope)}
-                  >
-                    {(Object.keys(SEARCH_SCOPE_LABEL) as PrescriptionSearchScope[]).map((scope) => (
-                      <option key={scope} value={scope}>
-                        {SEARCH_SCOPE_LABEL[scope]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
               <div className="charts-side-panel__field">
                 <label htmlFor={domId('search-keyword')}>キーワード</label>
@@ -1682,6 +1670,7 @@ export function PrescriptionOrderEditorPanel({
                   id={domId('search-keyword')}
                   value={searchKeyword}
                   onChange={(event) => {
+                    setSearchOrigin('panel');
                     setSearchKeyword(event.target.value);
                     if (event.target.value.trim().length >= 3) setManualSearchNonce(0);
                   }}
@@ -1705,7 +1694,7 @@ export function PrescriptionOrderEditorPanel({
                   {drugSearchQuery.data.message ?? '薬剤検索に失敗しました。'}
                 </div>
               ) : null}
-              {filteredCandidates.length > 0 ? (
+              {searchOrigin === 'panel' && filteredCandidates.length > 0 ? (
                 <div className="charts-side-panel__search-table">
                   <div className="charts-side-panel__search-header">
                     <span>コード</span>
@@ -2100,6 +2089,8 @@ export function PrescriptionOrderEditorPanel({
                     const enforceRule = !drug.patientRequest;
                     const rowIssueGeneric = issueByKey.get(`drug_rule_generic_${selectedRpIndex}_${drugIndex}`);
                     const rowIssueClaim = issueByKey.get(`drug_rule_claim_${selectedRpIndex}_${drugIndex}`);
+                    const isSelectedDrugRow = selectedDrugIndex === drugIndex;
+                    const drugCandidateListId = domId(`drug-candidates-${drugIndex}`);
                     return (
                       <div
                         key={drug.rowId}
@@ -2111,15 +2102,27 @@ export function PrescriptionOrderEditorPanel({
                       >
                         <input
                           id={domId(`drug-name-${drugIndex}`)}
+                          list={isSelectedDrugRow ? drugCandidateListId : undefined}
                           value={drug.name}
-                          onChange={(event) =>
-                            updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                              ...current,
-                              name: event.target.value,
-                            }))
-                          }
+                          onFocus={() => {
+                            setSelectedDrugIndex(drugIndex);
+                            setSearchKeyword(drug.name);
+                            setSearchOrigin('drug-name');
+                          }}
+                          onChange={(event) => handleDrugNameInput(selectedRpIndex, drugIndex, event.target.value)}
                           placeholder="薬剤名"
                         />
+                        {isSelectedDrugRow ? (
+                          <datalist id={drugCandidateListId}>
+                            {filteredCandidates.map((item) => (
+                              <option
+                                key={`rx-drug-option-${item.code ?? item.name}`}
+                                value={item.name}
+                                label={item.code ? `${item.code} ${item.unit ?? ''}`.trim() : item.unit}
+                              />
+                            ))}
+                          </datalist>
+                        ) : null}
                         <input
                           id={domId(`drug-quantity-${drugIndex}`)}
                           value={drug.quantity}
@@ -2193,6 +2196,31 @@ export function PrescriptionOrderEditorPanel({
                             </button>
                           ) : null}
                         </div>
+                        {searchOrigin === 'drug-name' && isSelectedDrugRow && filteredCandidates.length > 0 ? (
+                          <div className="charts-side-panel__search-table charts-order-editor__rx-inline-candidates" aria-label={`薬剤${drugIndex + 1}マスタ候補`}>
+                            <div className="charts-side-panel__search-header">
+                              <span>コード</span>
+                              <span>名称</span>
+                              <span>単位</span>
+                              <span>最低薬価</span>
+                              <span>反映</span>
+                            </div>
+                            {filteredCandidates.slice(0, 8).map((item) => (
+                              <button
+                                key={`rx-inline-candidate-${item.code ?? item.name}`}
+                                type="button"
+                                className="charts-side-panel__search-row"
+                                onClick={() => applyDrugCandidate(item)}
+                              >
+                                <span>{item.code ?? '-'}</span>
+                                <span>{item.name}</span>
+                                <span>{item.unit ?? '-'}</span>
+                                <span>{resolveCandidateGenericPrice(item)}</span>
+                                <span>反映</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
                         <input
                           id={domId(`drug-comment-${drugIndex}`)}
                           className="charts-order-editor__rx-drug-comment"
