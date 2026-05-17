@@ -12,6 +12,7 @@ import { PatientFormErrorAlert } from '../patients/PatientFormErrorAlert';
 import { diffPatientKeys, PATIENT_FIELD_LABEL, pickPatientSection } from '../patients/patientDiff';
 import { validatePatientMutation, type PatientOperation, type PatientValidationError } from '../patients/patientValidation';
 import { resolveUserSafeFetchFailure, resolveUserSafeOperationFailure } from './userSafeErrorCopy';
+import { useMasterVisibilityCategory } from '../administration/useMasterVisibility';
 
 type EditMeta = {
   runId?: string;
@@ -118,6 +119,7 @@ export function PatientInfoEditDialog({
   const wasOpenRef = useRef(false);
   const [draft, setDraft] = useState<PatientRecord>({});
   const lastAttemptRef = useRef<{ payload: PatientRecord; operation: PatientOperation; changedKeys: (keyof PatientRecord)[] } | null>(null);
+  const patientSupportMasterVisibility = useMasterVisibilityCategory('patientSupport');
 
   const focusField = (field: keyof PatientRecord) => {
     const id = `patient-edit-${String(field)}`;
@@ -291,10 +293,16 @@ export function PatientInfoEditDialog({
 
   const canEdit = editAllowedResolved && masterOk;
   const operation: PatientOperation = 'update';
-  const addressLookupDisabledReason = buildAddressLookupDisabledReason(step, canEdit, orcaAddressPending, draft.zip ?? '');
+  const addressLookupDisabledReason = patientSupportMasterVisibility.visible
+    ? buildAddressLookupDisabledReason(step, canEdit, orcaAddressPending, draft.zip ?? '')
+    : patientSupportMasterVisibility.hiddenMessage;
 
   const handleOrcaAddressLookup = async () => {
     const zip = normalizeZipDigits(draft.zip);
+    if (!patientSupportMasterVisibility.visible) {
+      setNotice({ tone: 'warning', message: patientSupportMasterVisibility.hiddenMessage });
+      return;
+    }
     if (!canEdit || step !== 'edit' || orcaAddressPending || zip.length !== 7) return;
     setOrcaAddressPending(true);
     try {
@@ -592,7 +600,13 @@ export function PatientInfoEditDialog({
                         type="button"
                         className="patients-tab__ghost"
                         onClick={() => void handleOrcaAddressLookup()}
-                        disabled={step !== 'edit' || !canEdit || orcaAddressPending || normalizeZipDigits(draft.zip).length !== 7}
+                        disabled={
+                          step !== 'edit' ||
+                          !canEdit ||
+                          !patientSupportMasterVisibility.visible ||
+                          orcaAddressPending ||
+                          normalizeZipDigits(draft.zip).length !== 7
+                        }
                       >
                         {orcaAddressPending ? '住所補完中…' : '住所補完'}
                       </button>

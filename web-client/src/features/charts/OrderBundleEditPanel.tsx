@@ -78,6 +78,7 @@ import {
   resolveOrderEntityDefaultClassMeta,
   resolveOrderEntityEtensuCategory,
   resolveOrderEntityPhysiologySendContractGuidance,
+  resolveOrderGroupKeyByEntity,
   resolveOrderEntityUsageUiCopy,
   resolveOrderEntityTestSubtypeConfig,
   resolveOrderEntityUiProfile,
@@ -95,6 +96,7 @@ import {
   supportsOrcaBodyPartField,
 } from './orcaMedicalClassCatalog';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
+import { useMasterVisibilityCategory } from '../administration/useMasterVisibility';
 
 export type OrderBundleEditPanelMeta = {
   runId?: string;
@@ -1609,6 +1611,23 @@ export function OrderBundleEditPanel({
   } | null>(null);
   const orderUiProfile = useMemo(() => resolveOrderEntityUiProfile(entity), [entity]);
   const usageUiCopy = useMemo(() => resolveOrderEntityUsageUiCopy(entity), [entity]);
+  const prescriptionMasterVisibility = useMasterVisibilityCategory('prescription');
+  const injectionMasterVisibility = useMasterVisibilityCategory('injection');
+  const procedureMasterVisibility = useMasterVisibilityCategory('procedure');
+  const testMasterVisibility = useMasterVisibilityCategory('test');
+  const orderGroupKey = useMemo(() => resolveOrderGroupKeyByEntity(entity), [entity]);
+  const activeMasterVisibility =
+    orderGroupKey === 'prescription'
+      ? prescriptionMasterVisibility
+      : orderGroupKey === 'injection'
+        ? injectionMasterVisibility
+        : orderGroupKey === 'treatment'
+          ? procedureMasterVisibility
+          : orderGroupKey === 'test'
+            ? testMasterVisibility
+            : null;
+  const masterCandidatesVisible = activeMasterVisibility?.visible ?? true;
+  const hiddenMasterCandidateMessage = activeMasterVisibility?.hiddenMessage ?? '';
 
   const resetEditorForm = useCallback(() => {
     setForm(buildEmptyForm(today));
@@ -1798,7 +1817,7 @@ export function OrderBundleEditPanel({
     </div>
   ) : null;
   const itemMasterTargets = orderUiProfile.masterSearchPresets;
-  const supportsEtensuDetailSearch = itemMasterTargets.some((target) => target.type === 'etensu');
+  const supportsEtensuDetailSearch = masterCandidatesVisible && itemMasterTargets.some((target) => target.type === 'etensu');
   const itemPredictiveTargetLabel = itemMasterTargets.map((target) => target.label).join(' / ');
   const parsedPointsMin = pointsMinInput.trim() ? Number(pointsMinInput) : undefined;
   const parsedPointsMax = pointsMaxInput.trim() ? Number(pointsMaxInput) : undefined;
@@ -2199,17 +2218,17 @@ export function OrderBundleEditPanel({
         message: failedMessages[0] ?? medicationGetResult?.message,
       };
     },
-    enabled: debouncedItemPredictionKeyword.length > 0,
+    enabled: masterCandidatesVisible && debouncedItemPredictionKeyword.length > 0,
     staleTime: 30 * 1000,
     placeholderData: keepPreviousData,
   });
   const itemMasterCandidates = useMemo(
     () =>
-      itemPredictiveQuery.data?.ok
+      masterCandidatesVisible && itemPredictiveQuery.data?.ok
         ? itemPredictiveQuery.data.items
             .filter((item) => matchesMasterItemByPartial(item, debouncedItemPredictionKeyword))
         : [],
-    [debouncedItemPredictionKeyword, itemPredictiveQuery.data],
+    [debouncedItemPredictionKeyword, itemPredictiveQuery.data, masterCandidatesVisible],
   );
   const correctionMeta = itemPredictiveQuery.data?.correctionMeta;
   const itemPredictiveFailedTypeLabel = useMemo(() => {
@@ -2296,7 +2315,7 @@ export function OrderBundleEditPanel({
         size: USAGE_SELECT_FETCH_SIZE,
         allowEmpty: true,
       }),
-    enabled: supportsUsageSearch && !isBlocked,
+    enabled: supportsUsageSearch && masterCandidatesVisible && !isBlocked,
     staleTime: 30 * 1000,
     placeholderData: keepPreviousData,
   });
@@ -2313,7 +2332,7 @@ export function OrderBundleEditPanel({
   const bodyPartSearchQuery = useQuery({
     queryKey: ['charts-order-bodypart-search', debouncedBodyPartKeyword],
     queryFn: () => fetchOrderMasterSearch({ type: 'bodypart', keyword: debouncedBodyPartKeyword }),
-    enabled: supportsBodyPartSearch && debouncedBodyPartKeyword.trim().length > 0,
+    enabled: supportsBodyPartSearch && masterCandidatesVisible && debouncedBodyPartKeyword.trim().length > 0,
     staleTime: 30 * 1000,
     placeholderData: keepPreviousData,
   });
@@ -2323,7 +2342,7 @@ export function OrderBundleEditPanel({
   const commentSearchQuery = useQuery({
     queryKey: ['charts-order-comment-search', debouncedCommentKeyword],
     queryFn: () => fetchOrderMasterSearch({ type: 'comment', keyword: debouncedCommentKeyword }),
-    enabled: supportsCommentCodes && debouncedCommentKeyword.trim().length > 0,
+    enabled: supportsCommentCodes && masterCandidatesVisible && debouncedCommentKeyword.trim().length > 0,
     staleTime: 30 * 1000,
     placeholderData: keepPreviousData,
   });
@@ -2476,6 +2495,7 @@ export function OrderBundleEditPanel({
       const normalizedCode = youhouCode.trim();
       if (!normalizedCode) return;
       if (!supportsUsageSearch) return;
+      if (!masterCandidatesVisible) return;
       try {
         const result = await fetchOrderMasterSearch({
           type: 'youhou',
@@ -2501,7 +2521,7 @@ export function OrderBundleEditPanel({
         // Keep manual input workflow when auto completion fails.
       }
     },
-    [form.startDate, supportsUsageSearch],
+    [form.startDate, masterCandidatesVisible, supportsUsageSearch],
   );
 
   const applyPredictiveItem = (rowId: string | undefined, matched: OrderMasterSearchItem | null) => {
@@ -2635,7 +2655,7 @@ export function OrderBundleEditPanel({
 
   const handleOrcaSetSearch = useCallback(async () => {
     const keyword = orcaSetKeyword.trim();
-    if (!keyword || orcaSetLoading || isMedOrder) return;
+    if (!keyword || orcaSetLoading || isMedOrder || !masterCandidatesVisible) return;
     setOrcaSetLoading(true);
     try {
       const result = await fetchOrcaOrderInputSets({
@@ -2654,7 +2674,7 @@ export function OrderBundleEditPanel({
     } finally {
       setOrcaSetLoading(false);
     }
-  }, [entity, form.startDate, isMedOrder, orcaSetKeyword, orcaSetLoading]);
+  }, [entity, form.startDate, isMedOrder, masterCandidatesVisible, orcaSetKeyword, orcaSetLoading]);
 
   const handleOrcaSetApply = useCallback(
     async (item: OrcaOrderInputSetSummary) => {
@@ -4154,6 +4174,11 @@ export function OrderBundleEditPanel({
               event.preventDefault();
             }}
           >
+        {!masterCandidatesVisible ? (
+          <div className="charts-side-panel__notice charts-side-panel__notice--warning" role="status">
+            {hiddenMasterCandidateMessage}
+          </div>
+        ) : null}
         {supportsEtensuDetailSearch && (
           <details
             className="charts-side-panel__subsection charts-side-panel__meta-section charts-order-editor__secondary-section"
@@ -4196,7 +4221,7 @@ export function OrderBundleEditPanel({
             ) : null}
           </details>
         )}
-        {!isMedOrder && showOrcaSetChooser ? (
+        {!isMedOrder && showOrcaSetChooser && masterCandidatesVisible ? (
           <details className="charts-side-panel__subsection charts-side-panel__meta-section charts-order-editor__secondary-section">
             <summary className="charts-side-panel__subheader charts-order-editor__secondary-summary">
               <strong>ORCA診療セット</strong>
@@ -4348,7 +4373,7 @@ export function OrderBundleEditPanel({
         <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--usage charts-order-editor__manual-card">
           <div className="charts-side-panel__field" data-invalid={usageError ? 'true' : undefined}>
             <label htmlFor={`${entityId}-admin`}>{orderUiProfile.instructionLabel}</label>
-            {supportsUsageSearch ? (
+            {supportsUsageSearch && masterCandidatesVisible ? (
               <select
                 id={`${entityId}-admin`}
                 value={selectedUsageOptionKey}
@@ -4433,7 +4458,10 @@ export function OrderBundleEditPanel({
               </p>
             ) : null}
             {usageLocalOnlyHelp ? <p className="charts-side-panel__help">{usageLocalOnlyHelp}</p> : null}
-            {!supportsUsageSearch && instructionLocalOnlyHelp ? (
+            {supportsUsageSearch && !masterCandidatesVisible ? (
+              <p className="charts-side-panel__help">{hiddenMasterCandidateMessage}</p>
+            ) : null}
+            {(!supportsUsageSearch || !masterCandidatesVisible) && instructionLocalOnlyHelp ? (
               <p className="charts-side-panel__help">{instructionLocalOnlyHelp}</p>
             ) : null}
             {supportsUsageSearch && selectedUsageSummary && (
@@ -4707,7 +4735,7 @@ export function OrderBundleEditPanel({
                   id={`${entityId}-bodypart`}
                   value={form.bodyPart?.name ?? ''}
                   data-orca-warning={orcaWarningTargets.bodyPart ? 'true' : undefined}
-                  aria-readonly={supportsBodyPartSearch ? 'true' : undefined}
+                  aria-readonly={supportsBodyPartSearch && masterCandidatesVisible ? 'true' : undefined}
                   aria-invalid={bodyPartError ? 'true' : undefined}
                   onChange={(event) => {
                     clearValidationByKeys(['unsupported_body_part', 'missing_body_part', 'missing_body_part_code']);
@@ -4725,7 +4753,7 @@ export function OrderBundleEditPanel({
                   }}
                   placeholder={supportsBodyPartSearch ? (isRadiologyOrder ? '例: 胸部' : '例: 膝関節') : '保持しない場合はクリアしてください'}
                   disabled={isBlocked}
-                  readOnly={supportsBodyPartSearch}
+                  readOnly={supportsBodyPartSearch && masterCandidatesVisible}
                 />
                 {bodyPartError ? (
                   <p className="charts-side-panel__field-error" role="alert">
@@ -4740,7 +4768,7 @@ export function OrderBundleEditPanel({
                   value={bodyPartKeyword}
                   onChange={(event) => setBodyPartKeyword(event.target.value)}
                   placeholder={isRadiologyOrder ? '例: 胸' : '例: 膝'}
-                  disabled={isBlocked || !supportsBodyPartSearch}
+                  disabled={isBlocked || !supportsBodyPartSearch || !masterCandidatesVisible}
                 />
               </div>
             </div>
@@ -4749,7 +4777,7 @@ export function OrderBundleEditPanel({
                 type="button"
                 className="charts-side-panel__action charts-side-panel__action--search"
                 onClick={() => bodyPartSearchQuery.refetch()}
-                disabled={isBlocked || !supportsBodyPartSearch || bodyPartSearchQuery.isFetching}
+                disabled={isBlocked || !supportsBodyPartSearch || !masterCandidatesVisible || bodyPartSearchQuery.isFetching}
               >
                 部位検索
               </button>
@@ -4769,12 +4797,17 @@ export function OrderBundleEditPanel({
                   : 'この種別では bodyPart を保存・送信しません。値が残っている場合はクリアしてください。'}
               </p>
             )}
-            {supportsBodyPartSearch && bodyPartSearchQuery.data && !bodyPartSearchQuery.data.ok && (
+            {supportsBodyPartSearch && !masterCandidatesVisible ? (
+              <div className="charts-side-panel__notice charts-side-panel__notice--warning" role="status">
+                {hiddenMasterCandidateMessage}
+              </div>
+            ) : null}
+            {supportsBodyPartSearch && masterCandidatesVisible && bodyPartSearchQuery.data && !bodyPartSearchQuery.data.ok && (
               <div className="charts-side-panel__notice charts-side-panel__notice--error" role="alert" aria-live="assertive">
                 {bodyPartSearchQuery.data.message ?? '部位マスタの検索に失敗しました。'}
               </div>
             )}
-            {supportsBodyPartSearch && bodyPartSearchQuery.data?.ok && (
+            {supportsBodyPartSearch && masterCandidatesVisible && bodyPartSearchQuery.data?.ok && (
               <>
                 <div className="charts-side-panel__search-count">
                   {bodyPartSearchQuery.isFetching ? '検索中...' : `${bodyPartSearchQuery.data.totalCount ?? 0}件`}
@@ -4876,15 +4909,21 @@ export function OrderBundleEditPanel({
           ) : null}
           {itemMemoLocalOnlyHelp ? <p className="charts-side-panel__help">{itemMemoLocalOnlyHelp}</p> : null}
           <p className="charts-side-panel__help">候補対象: {itemPredictiveTargetLabel}</p>
-          <p className="charts-side-panel__help">
-            {selectedItemPredictionKeyword
+          {masterCandidatesVisible ? (
+            <p className="charts-side-panel__help">
+              {selectedItemPredictionKeyword
                 ? itemPredictiveQuery.isFetching
                 ? '入力候補を検索中...'
                 : itemPredictiveCandidates.length > 0
                   ? `入力候補 ${itemPredictiveCandidates.length}件`
                   : '入力候補はありません。'
-              : `項目名の入力確定ごとに、${itemPredictiveTargetLabel}を自動検索します。`}
-          </p>
+                : `項目名の入力確定ごとに、${itemPredictiveTargetLabel}を自動検索します。`}
+            </p>
+          ) : (
+            <div className="charts-side-panel__notice charts-side-panel__notice--warning" role="status">
+              {hiddenMasterCandidateMessage}
+            </div>
+          )}
           {itemPredictiveQuery.data?.failedTypes.length ? (
             <div className="charts-side-panel__notice charts-side-panel__notice--warning">
               一部マスタの候補取得に失敗しました: {itemPredictiveFailedTypeLabel}
@@ -4908,7 +4947,7 @@ export function OrderBundleEditPanel({
               ) : null}
             </div>
           ) : null}
-          {itemPredictiveCandidates.length > 0 && (
+          {masterCandidatesVisible && itemPredictiveCandidates.length > 0 && (
             <datalist id={`${entityId}-item-predictive-list`}>
               {itemPredictiveCandidates.map((candidate, candidateIndex) => (
                 <option
@@ -5039,7 +5078,7 @@ export function OrderBundleEditPanel({
                     value={item.name}
                     aria-invalid={itemsError && index === 0 || Boolean(injectionRowError) ? 'true' : undefined}
                     list={
-                      rowId === selectedItemRowId && itemPredictiveCandidates.length > 0
+                      masterCandidatesVisible && rowId === selectedItemRowId && itemPredictiveCandidates.length > 0
                         ? `${entityId}-item-predictive-list`
                         : undefined
                     }
@@ -5215,7 +5254,7 @@ export function OrderBundleEditPanel({
                         value={item.name}
                         aria-invalid={materialRowError ? 'true' : undefined}
                         list={
-                          rowId === selectedItemRowId && itemPredictiveCandidates.length > 0
+                          masterCandidatesVisible && rowId === selectedItemRowId && itemPredictiveCandidates.length > 0
                             ? `${entityId}-item-predictive-list`
                             : undefined
                         }
@@ -5289,7 +5328,7 @@ export function OrderBundleEditPanel({
           ) : null}
             </div>
 
-            {supportsCommentCodes && selectionCommentCandidates.length > 0 && (
+            {supportsCommentCodes && masterCandidatesVisible && selectionCommentCandidates.length > 0 && (
             <div className="charts-side-panel__correction">
               <div className="charts-side-panel__correction-header">
                 <strong>選択式コメント候補（official medicationgetv2）</strong>
@@ -5370,7 +5409,12 @@ export function OrderBundleEditPanel({
             <p className="charts-side-panel__message">
               コメント内容欄に入力した文字列で部分一致候補を表示します。候補選択でコードと名称を自動入力します。
             </p>
-            {selectableCommentOptions.length > 0 && (
+            {!masterCandidatesVisible ? (
+              <div className="charts-side-panel__notice charts-side-panel__notice--warning" role="status">
+                {hiddenMasterCandidateMessage}
+              </div>
+            ) : null}
+            {masterCandidatesVisible && selectableCommentOptions.length > 0 && (
               <datalist id={`${entityId}-comment-suggestion-list`}>
                 {selectableCommentOptions.map((item) => {
                   const code = item.code?.trim();
@@ -5397,7 +5441,7 @@ export function OrderBundleEditPanel({
                 name={`${entityId}-comment-draft-name`}
                 value={commentDraft.name}
                 placeholder="コメント内容"
-                list={selectableCommentOptions.length > 0 ? `${entityId}-comment-suggestion-list` : undefined}
+                list={masterCandidatesVisible && selectableCommentOptions.length > 0 ? `${entityId}-comment-suggestion-list` : undefined}
                 onChange={(event) =>
                   setCommentDraft((prev) => ({
                     ...prev,
@@ -5458,12 +5502,12 @@ export function OrderBundleEditPanel({
                 コメント追加
               </button>
             </div>
-            {commentSearchQuery.data && !commentSearchQuery.data.ok && (
+            {masterCandidatesVisible && commentSearchQuery.data && !commentSearchQuery.data.ok && (
               <div className="charts-side-panel__notice charts-side-panel__notice--error">
                 {commentSearchQuery.data.message ?? 'コメントマスタの検索に失敗しました。'}
               </div>
             )}
-            {selectableCommentOptions.length > 0 && (
+            {masterCandidatesVisible && selectableCommentOptions.length > 0 && (
               <div className="charts-side-panel__search-table">
                 <div className="charts-side-panel__search-header">
                   <span>コード</span>
@@ -5489,7 +5533,7 @@ export function OrderBundleEditPanel({
                 ))}
               </div>
             )}
-            {(commentKeyword || isItemCodeSearch) && !commentSearchQuery.isFetching && selectableCommentOptions.length === 0 && (
+            {masterCandidatesVisible && (commentKeyword || isItemCodeSearch) && !commentSearchQuery.isFetching && selectableCommentOptions.length === 0 && (
               <p className="charts-side-panel__empty">該当するコメントコードが見つかりません。</p>
             )}
             {form.commentItems.map((item, index) => {

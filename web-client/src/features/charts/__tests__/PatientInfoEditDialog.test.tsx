@@ -6,6 +6,7 @@ import { PatientInfoEditDialog } from '../PatientInfoEditDialog';
 
 const mockFetchOrcaAddress = vi.fn();
 const mockUpdateOfficialPatient = vi.fn();
+const mockUseMasterVisibilityCategory = vi.fn();
 
 vi.mock('@tanstack/react-query', () => ({
   useMutation: (options?: {
@@ -34,10 +35,20 @@ vi.mock('../../patients/api', () => ({
   updateOfficialPatient: (...args: unknown[]) => mockUpdateOfficialPatient(...args),
 }));
 
+vi.mock('../../administration/useMasterVisibility', () => ({
+  useMasterVisibilityCategory: (...args: unknown[]) => mockUseMasterVisibilityCategory(...args),
+}));
+
 describe('PatientInfoEditDialog', () => {
   beforeEach(() => {
     mockFetchOrcaAddress.mockReset();
     mockUpdateOfficialPatient.mockReset();
+    mockUseMasterVisibilityCategory.mockReturnValue({
+      visible: true,
+      hiddenMessage: undefined,
+      isLoading: false,
+      isError: false,
+    });
     mockUpdateOfficialPatient.mockResolvedValue({ ok: true, patient: { patientId: '000001' } });
   });
 
@@ -72,6 +83,36 @@ describe('PatientInfoEditDialog', () => {
 
     expect(mockFetchOrcaAddress).toHaveBeenCalledWith({ zip: '1000001', effective: expect.any(String) });
     expect(screen.getByDisplayValue('東京都千代田区千代田')).toBeInTheDocument();
+  });
+
+  it('患者補助候補が非表示のときは住所候補を取得せず手入力欄を維持する', async () => {
+    mockUseMasterVisibilityCategory.mockReturnValue({
+      visible: false,
+      hiddenMessage: '患者補助候補は管理画面のマスタ表示設定で非表示です。候補表示だけを停止し、手入力と既存値は維持します。',
+      isLoading: false,
+      isError: false,
+    });
+
+    render(
+      <PatientInfoEditDialog
+        open
+        baseline={{
+          patientId: '000001',
+          name: '山田 花子',
+          zip: '100-0001',
+          address: '東京都千代田区',
+        }}
+        fallback={null}
+        editAllowed
+        meta={{ runId: 'RUN-TEST', dataSourceTransition: 'server' }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: '住所補完' })).toBeDisabled();
+    expect(mockFetchOrcaAddress).not.toHaveBeenCalled();
+    expect(screen.getByDisplayValue('東京都千代田区')).toBeInTheDocument();
+    expect(screen.getByText(/患者補助候補は管理画面のマスタ表示設定で非表示です/)).toBeInTheDocument();
   });
 
   it('住所補完失敗時は canonical copy を表示し raw detail を出さない', async () => {

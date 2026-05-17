@@ -7,6 +7,7 @@ import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
 import { resolveAriaLive } from '../../libs/observability/observability';
 import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
 import { ClinicalIcon, type ClinicalIconKey } from '../shared/ClinicalIcon';
+import { useMasterVisibilityCategory } from '../administration/useMasterVisibility';
 import type { DataSourceTransition } from './authService';
 import {
   DISEASE_CANDIDATE_CONFIRM_NOTE,
@@ -555,6 +556,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
   const [mutationReview, setMutationReview] = useState<MutationReviewSummary | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const diseaseMasterVisibility = useMasterVisibilityCategory('disease');
 
   const blockReasons = useMemo(() => {
     const reasons: string[] = [];
@@ -688,18 +690,24 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
         referenceDate: activeCandidateTarget?.startsWith('form') ? form.startDate || today : quickAdd.startDate || today,
         limit: QUICK_CANDIDATE_MAX_ITEMS,
       }),
-    enabled: !isOrcaMutationBlocked && Boolean(activeCandidateTarget) && candidateKeyword.length >= QUICK_CANDIDATE_MIN_KEYWORD,
+    enabled:
+      diseaseMasterVisibility.visible &&
+      !isOrcaMutationBlocked &&
+      Boolean(activeCandidateTarget) &&
+      candidateKeyword.length >= QUICK_CANDIDATE_MIN_KEYWORD,
     staleTime: 30_000,
   });
 
   const quickCandidateOptions = useMemo<QuickCandidateOption[]>(
     () =>
-      (quickCandidateQuery.data ?? []).map((candidate, index) => ({
-        key: `${candidate.name}\u0000${candidate.code ?? ''}\u0000${candidate.icdTen ?? ''}\u0000${index}`,
-        label: formatQuickCandidateLabel(candidate),
-        candidate,
-      })),
-    [quickCandidateQuery.data],
+      diseaseMasterVisibility.visible
+        ? (quickCandidateQuery.data ?? []).map((candidate, index) => ({
+            key: `${candidate.name}\u0000${candidate.code ?? ''}\u0000${candidate.icdTen ?? ''}\u0000${index}`,
+            label: formatQuickCandidateLabel(candidate),
+            candidate,
+          }))
+        : [],
+    [diseaseMasterVisibility.visible, quickCandidateQuery.data],
   );
 
   const quickCandidateMap = useMemo(() => {
@@ -784,13 +792,15 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
       const explicitCode = input.form.code.trim();
       const resolvedCode =
         explicitCode ||
-        (await resolveDiseaseCodeFromOrcaMaster({
-          diagnosisName: combinedName,
-          prefix: input.form.prefix,
-          mainName: input.form.name,
-            suffix: input.form.suffix,
-            referenceDate: input.form.startDate,
-          }));
+        (diseaseMasterVisibility.visible
+          ? await resolveDiseaseCodeFromOrcaMaster({
+              diagnosisName: combinedName,
+              prefix: input.form.prefix,
+              mainName: input.form.name,
+              suffix: input.form.suffix,
+              referenceDate: input.form.startDate,
+            })
+          : '');
       const resolvedComponents = normalizeFormComponents({
         ...input.form,
         code: resolvedCode ?? input.form.code,
@@ -1175,9 +1185,14 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
     disabled?: boolean;
   }) => {
     const isActive = activeCandidateTarget === target;
-    const hasMenu = isActive && quickCandidateOptions.length > 0;
-    const isSearching = isActive && quickCandidateQuery.isFetching;
-    const showNoMatch = isActive && !isSearching && value.trim().length >= QUICK_CANDIDATE_MIN_KEYWORD && quickCandidateOptions.length === 0;
+    const hasMenu = diseaseMasterVisibility.visible && isActive && quickCandidateOptions.length > 0;
+    const isSearching = diseaseMasterVisibility.visible && isActive && quickCandidateQuery.isFetching;
+    const showNoMatch =
+      diseaseMasterVisibility.visible &&
+      isActive &&
+      !isSearching &&
+      value.trim().length >= QUICK_CANDIDATE_MIN_KEYWORD &&
+      quickCandidateOptions.length === 0;
     const listId = `${id}-candidate-list`;
     return (
       <div className="charts-side-panel__field">
@@ -1188,10 +1203,10 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
             value={value}
             onChange={(event) => {
               setCandidateSelection('');
-              setActiveCandidateTarget(target);
+              setActiveCandidateTarget(diseaseMasterVisibility.visible ? target : null);
               onValueChange(event.target.value);
             }}
-            onFocus={() => setActiveCandidateTarget(target)}
+            onFocus={() => setActiveCandidateTarget(diseaseMasterVisibility.visible ? target : null)}
             role="combobox"
             aria-autocomplete="list"
             aria-expanded={hasMenu}
@@ -1365,6 +1380,11 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
           <span className="charts-side-panel__help">{DISEASE_CANDIDATE_CONFIRM_NOTE}</span>
         </summary>
         <div className="charts-diagnosis__quick-body">
+          {!diseaseMasterVisibility.visible ? (
+            <div className="charts-side-panel__notice charts-side-panel__notice--warning" role="status">
+              {diseaseMasterVisibility.hiddenMessage}
+            </div>
+          ) : null}
           <div className="charts-diagnosis__name-row">
             {renderDiseaseCandidateField({
               id: 'diagnosis-quick-prefix',
@@ -1560,6 +1580,11 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
           }}
         >
           {notice ? <div className={`charts-side-panel__notice charts-side-panel__notice--${notice.tone}`}>{notice.message}</div> : null}
+          {!diseaseMasterVisibility.visible ? (
+            <div className="charts-side-panel__notice charts-side-panel__notice--warning" role="status">
+              {diseaseMasterVisibility.hiddenMessage}
+            </div>
+          ) : null}
           <div className="charts-diagnosis__name-row" role="group" aria-label="病名（接頭/病名/接尾）">
             {renderDiseaseCandidateField({
               id: 'diagnosis-prefix',

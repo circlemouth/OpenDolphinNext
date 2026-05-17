@@ -191,7 +191,7 @@ describe('PrescriptionOrderEditorPanel local-only usage contract', () => {
 
     await user.type(screen.getByPlaceholderText('入力セット名またはコード'), '頓服');
     await user.click(screen.getByRole('button', { name: '入力セット検索' }));
-    await user.click(await screen.findByRole('button', { name: /P02221.*頓服セット.*RPへ反映/ }));
+    await user.click(await screen.findByRole('button', { name: /P02221.*頓服セット.*反映/ }));
     await user.click(await screen.findByRole('button', { name: /RP2: 頓服セット/ }));
     await user.click(screen.getByRole('button', { name: '保存' }));
 
