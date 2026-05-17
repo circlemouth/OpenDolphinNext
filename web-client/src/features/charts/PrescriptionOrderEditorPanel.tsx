@@ -1335,7 +1335,7 @@ export function PrescriptionOrderEditorPanel({
         return;
       }
       try {
-        const result = await checkOrcaMasterStaticOrderInteractions({ codes });
+        const result = await checkOrcaMasterStaticOrderInteractions({ codes, effective: searchEffectiveDate });
         if (!result.ok) {
           setNotice({
             tone: 'warning',

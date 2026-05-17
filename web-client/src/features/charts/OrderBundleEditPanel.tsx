@@ -2150,6 +2150,8 @@ export function OrderBundleEditPanel({
             const result = await fetchOrderMasterSearch({
               type,
               keyword: debouncedItemPredictionKeyword,
+              effective: form.startDate?.trim() || undefined,
+              asOf: form.startDate?.trim() || undefined,
               category: type === 'etensu' ? etensuCategory : undefined,
               pointsMin: type === 'etensu' && !pointsRangeError ? parsedPointsMin : undefined,
               pointsMax: type === 'etensu' && !pointsRangeError ? parsedPointsMax : undefined,
@@ -2314,6 +2316,7 @@ export function OrderBundleEditPanel({
         type: 'youhou',
         keyword: '',
         effective: usageEffectiveDate,
+        asOf: usageEffectiveDate,
         page: 1,
         size: USAGE_SELECT_FETCH_SIZE,
         allowEmpty: true,
@@ -2333,8 +2336,13 @@ export function OrderBundleEditPanel({
 
   const debouncedBodyPartKeyword = useDebouncedValue(bodyPartKeyword, 260);
   const bodyPartSearchQuery = useQuery({
-    queryKey: ['charts-order-bodypart-search', debouncedBodyPartKeyword],
-    queryFn: () => fetchOrderMasterSearch({ type: 'bodypart', keyword: debouncedBodyPartKeyword }),
+    queryKey: ['charts-order-bodypart-search', debouncedBodyPartKeyword, usageEffectiveDate ?? ''],
+    queryFn: () => fetchOrderMasterSearch({
+      type: 'bodypart',
+      keyword: debouncedBodyPartKeyword,
+      effective: usageEffectiveDate,
+      asOf: usageEffectiveDate,
+    }),
     enabled: supportsBodyPartSearch && masterCandidatesVisible && debouncedBodyPartKeyword.trim().length > 0,
     staleTime: 30 * 1000,
     placeholderData: keepPreviousData,
@@ -2343,8 +2351,13 @@ export function OrderBundleEditPanel({
   const commentKeyword = commentDraft.name?.trim() ?? '';
   const debouncedCommentKeyword = useDebouncedValue(commentKeyword, 260);
   const commentSearchQuery = useQuery({
-    queryKey: ['charts-order-comment-search', debouncedCommentKeyword],
-    queryFn: () => fetchOrderMasterSearch({ type: 'comment', keyword: debouncedCommentKeyword }),
+    queryKey: ['charts-order-comment-search', debouncedCommentKeyword, usageEffectiveDate ?? ''],
+    queryFn: () => fetchOrderMasterSearch({
+      type: 'comment',
+      keyword: debouncedCommentKeyword,
+      effective: usageEffectiveDate,
+      asOf: usageEffectiveDate,
+    }),
     enabled: supportsCommentCodes && masterCandidatesVisible && debouncedCommentKeyword.trim().length > 0,
     staleTime: 30 * 1000,
     placeholderData: keepPreviousData,
@@ -2504,6 +2517,7 @@ export function OrderBundleEditPanel({
           type: 'youhou',
           keyword: normalizedCode,
           effective: form.startDate?.trim() || undefined,
+          asOf: form.startDate?.trim() || undefined,
         });
         if (!result.ok) return;
         const matched =

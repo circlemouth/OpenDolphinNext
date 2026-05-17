@@ -1429,6 +1429,30 @@ class OrcaMasterResourceTest {
     }
 
     @Test
+    void buildEtag_includesImportedAtForSameMasterVersionReimport() {
+        OrcaMasterService service = new OrcaMasterService(null);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        OrcaMasterService.LoadedFixture<Object> first = new OrcaMasterService.LoadedFixture<>(
+                List.of(),
+                null,
+                "20260401",
+                OrcaMasterService.DataOrigin.LOCAL_CACHE,
+                false,
+                cacheState("drug", "20260401", "2026-04-01T00:00:00Z"));
+        OrcaMasterService.LoadedFixture<Object> second = new OrcaMasterService.LoadedFixture<>(
+                List.of(),
+                null,
+                "20260401",
+                OrcaMasterService.DataOrigin.LOCAL_CACHE,
+                false,
+                cacheState("drug", "20260401", "2026-04-01T00:05:00Z"));
+
+        assertNotEquals(
+                service.buildEtag("/api/orca/master/drug", "drug", first, params),
+                service.buildEtag("/api/orca/master/drug", "drug", second, params));
+    }
+
+    @Test
     void normalizeQuery_sortsKeysAndValuesWithDuplicates() throws Exception {
         OrcaMasterResource resource = new OrcaMasterResource();
         Method method = OrcaMasterResource.class.getDeclaredMethod("normalizeQuery", MultivaluedMap.class);
@@ -1440,6 +1464,22 @@ class OrcaMasterResourceTest {
         params.add("b", "1");
         String normalized = (String) method.invoke(resource, params);
         assertEquals("a=3&b=1,1,2", normalized);
+    }
+
+    private static OrcaMasterCacheState cacheState(String masterType, String version, String importedAt) {
+        return new OrcaMasterCacheState(
+                "OpenDolphinLocalMasterCache",
+                "local-cache",
+                null,
+                null,
+                masterType,
+                version,
+                OrcaMasterService.DEFAULT_VALID_FROM,
+                OrcaMasterService.DEFAULT_VALID_TO,
+                importedAt,
+                false,
+                null,
+                OrcaMasterCacheState.STATUS_CURRENT);
     }
 
     private UriInfo createUriInfo(MultivaluedMap<String, String> params) {

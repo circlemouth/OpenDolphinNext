@@ -177,7 +177,7 @@ public class EtensuDao {
 
         public EtensuSearchResult(List<EtensuRecord> records, Integer totalCount, String version, long dbTimeMs,
                 boolean loadFailed) {
-            this(records, totalCount, version, dbTimeMs, loadFailed, OrcaMasterCacheState.current("etensu", version));
+            this(records, totalCount, version, dbTimeMs, loadFailed, OrcaMasterCacheState.syntheticCurrent("etensu", version));
         }
 
         public EtensuSearchResult(List<EtensuRecord> records, Integer totalCount, String version, long dbTimeMs,

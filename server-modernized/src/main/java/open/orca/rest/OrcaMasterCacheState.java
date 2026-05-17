@@ -61,6 +61,22 @@ public final class OrcaMasterCacheState {
                 STATUS_CURRENT);
     }
 
+    static OrcaMasterCacheState syntheticCurrent(String masterType, String version) {
+        return new OrcaMasterCacheState(
+                "OpenDolphinLocalMasterCache",
+                "local-cache",
+                null,
+                null,
+                masterType,
+                version,
+                OrcaMasterService.DEFAULT_VALID_FROM,
+                OrcaMasterService.DEFAULT_VALID_TO,
+                null,
+                false,
+                null,
+                STATUS_CURRENT);
+    }
+
     public static OrcaMasterCacheState notImported(String masterType) {
         return new OrcaMasterCacheState(
                 "OpenDolphinLocalMasterCache",
@@ -103,6 +119,10 @@ public final class OrcaMasterCacheState {
 
     public String masterVersion() {
         return masterVersion;
+    }
+
+    public String importedAt() {
+        return importedAt;
     }
 
     public OrcaMasterMeta toMeta() {

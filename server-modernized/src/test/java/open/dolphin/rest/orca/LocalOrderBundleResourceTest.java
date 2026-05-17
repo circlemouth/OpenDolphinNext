@@ -1018,9 +1018,12 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void checkInteractionsReturnsPairsAndDedupes() throws Exception {
+        String[] capturedEffective = new String[1];
         OrcaOrderMasterResource interactionResource = new OrcaOrderMasterResource() {
             @Override
-            protected List<OrcaOrderInteractionCheckResponse.Pair> loadInteractionPairs(List<String> codes, List<String> existingCodes) {
+            protected List<OrcaOrderInteractionCheckResponse.Pair> loadInteractionPairs(List<String> codes, List<String> existingCodes,
+                                                                                        String effective) {
+                capturedEffective[0] = effective;
                 OrcaOrderInteractionCheckResponse.Pair pair = new OrcaOrderInteractionCheckResponse.Pair();
                 pair.setCode1("620000001");
                 pair.setCode2("620000003");
@@ -1035,6 +1038,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         OrcaOrderInteractionCheckRequest body = new OrcaOrderInteractionCheckRequest();
         body.setCodes(List.of("620000001", "620000001", "620000002"));
         body.setExistingCodes(List.of("620000003", "620000003", "620000001"));
+        body.setEffective("2026-03-09");
 
         OrcaOrderInteractionCheckResponse response = interactionResource.checkInteractions(servletRequest, body);
 
@@ -1042,6 +1046,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals(1, response.getTotalCount());
         assertEquals("620000001", response.getPairs().get(0).getCode1());
         assertEquals("620000003", response.getPairs().get(0).getCode2());
+        assertEquals("20260309", capturedEffective[0]);
     }
 
     @Test

@@ -156,7 +156,7 @@ public class LocalOrcaMasterCacheImportService {
                     "local master cache import に失敗しました。");
         }
 
-        return new ImportResult(parsed.importedRows(), parsed.affectedMasterTypes(),
+        return new ImportResult(parsed.importedRows(), parsed.affectedMasterTypes(), parsed.masterTypeCounts(),
                 "local master cache rows imported", runId);
     }
 
@@ -884,12 +884,15 @@ public class LocalOrcaMasterCacheImportService {
     public static final class ImportResult {
         private final long importedRows;
         private final List<String> affectedMasterTypes;
+        private final Map<String, Long> masterTypeCounts;
         private final String summary;
         private final String runId;
 
-        ImportResult(long importedRows, Set<String> affectedMasterTypes, String summary, String runId) {
+        ImportResult(long importedRows, Set<String> affectedMasterTypes, Map<String, Long> masterTypeCounts,
+                     String summary, String runId) {
             this.importedRows = importedRows;
             this.affectedMasterTypes = List.copyOf(affectedMasterTypes);
+            this.masterTypeCounts = Map.copyOf(masterTypeCounts);
             this.summary = summary;
             this.runId = runId;
         }
@@ -902,6 +905,10 @@ public class LocalOrcaMasterCacheImportService {
             return affectedMasterTypes;
         }
 
+        public Map<String, Long> masterTypeCounts() {
+            return masterTypeCounts;
+        }
+
         public String summary() {
             return summary;
         }
@@ -911,6 +918,7 @@ public class LocalOrcaMasterCacheImportService {
             body.put("runId", runId);
             body.put("importedRows", importedRows);
             body.put("affectedMasterTypes", affectedMasterTypes);
+            body.put("masterTypeCounts", masterTypeCounts);
             body.put("summary", summary);
             return body;
         }

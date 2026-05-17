@@ -537,7 +537,10 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     await user.click(screen.getByRole('button', { name: '保存' }));
 
     await waitFor(() => {
-      expect(checkOrcaMasterStaticOrderInteractions).toHaveBeenCalledWith({ codes: ['620000001', '620000003'] });
+      expect(checkOrcaMasterStaticOrderInteractions).toHaveBeenCalledWith({
+        codes: ['620000001', '620000003'],
+        effective: '2026-03-09',
+      });
     });
     expect(await screen.findByRole('heading', { name: '処方安全チェック' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: '処方安全チェック結果' })).toHaveTextContent('警告');

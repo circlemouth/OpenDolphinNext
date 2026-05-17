@@ -58,6 +58,32 @@ const resolveOfficialSourceLabel = (dataset?: MasterUpdateDataset) => {
   return 'official source metadata';
 };
 
+const MASTER_CANDIDATE_QUERY_KEYS = new Set([
+  'charts-prescription-drug-search-v2',
+  'charts-prescription-usage-master-v2',
+  'charts-order-item-predictive',
+  'charts-order-selection-comments',
+  'charts-order-usage-search',
+  'charts-order-bodypart-search',
+  'charts-order-comment-search',
+  'charts-diagnosis-master-candidates',
+]);
+
+const shouldInvalidateMasterCandidateQuery = (queryKey: readonly unknown[]) => {
+  const head = queryKey[0];
+  return typeof head === 'string' && MASTER_CANDIDATE_QUERY_KEYS.has(head);
+};
+
+const formatMasterTypeCounts = (counts?: Record<string, number>) => {
+  const entries = Object.entries(counts ?? {});
+  if (entries.length === 0) return '―';
+  return entries
+    .sort(([left], [right]) => left.localeCompare(right))
+    .slice(0, 4)
+    .map(([type, count]) => `${type}:${count}`)
+    .join(' / ');
+};
+
 export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
   const isSystemAdmin = isSystemAdminRole(role);
   const queryClient = useQueryClient();
@@ -112,6 +138,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
     await queryClient.invalidateQueries({ queryKey: ['admin-master-updates-datasets'] });
     await queryClient.invalidateQueries({ queryKey: ['admin-master-updates-dataset-detail'] });
     await queryClient.invalidateQueries({ queryKey: ['admin-master-updates-schedule'] });
+    await queryClient.invalidateQueries({ predicate: (query) => shouldInvalidateMasterCandidateQuery(query.queryKey) });
   };
 
   const runMutation = useMutation({
@@ -318,6 +345,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                 <li>現行版ID: {detailDataset.localArtifacts?.currentVersionId ?? detailDataset.currentVersionId ?? '―'}</li>
                 <li>現行取り込み日時: {formatTimestamp(detailDataset.localArtifacts?.currentCapturedAt ?? detailDataset.currentCapturedAt)}</li>
                 <li>現行件数: {detailDataset.localArtifacts?.currentRecordCount ?? detailDataset.currentRecordCount ?? '―'}</li>
+                <li>現行 master type 別件数: {formatMasterTypeCounts(detailDataset.localArtifacts?.currentMasterTypeCounts)}</li>
                 <li>artifact 保存先: {detailDataset.localArtifacts?.currentArtifactPath ?? '―'}</li>
                 <li>履歴件数: {detailDataset.localArtifacts?.versionCount ?? detailDataset.versionCount ?? 0}</li>
               </ul>
@@ -447,7 +475,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                     <th>取得元</th>
                     <th>取り込み日時</th>
                     <th>件数</th>
-                    <th>差分</th>
+                    <th>master type 別件数</th>
                     <th>状態</th>
                     <th>操作</th>
                   </tr>
@@ -459,9 +487,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                       <td>{version.sourceKind === 'local_upload' ? 'local upload' : 'official fetch'}</td>
                       <td>{formatTimestamp(version.capturedAt)}</td>
                       <td>{version.recordCount ?? '―'}</td>
-                      <td>
-                        +{version.addedCount ?? 0} / -{version.removedCount ?? 0} / ~{version.changedCount ?? 0}
-                      </td>
+                      <td>{formatMasterTypeCounts(version.masterTypeCounts)}</td>
                       <td>{version.current ? 'CURRENT' : version.status ?? 'READY'}</td>
                       <td>
                         <button

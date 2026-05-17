@@ -68,7 +68,8 @@ class OrcaMasterFixtureSupport {
         final OrcaMasterCacheState cacheState;
 
         LoadedFixture(List<T> entries, String snapshotVersion, String version, DataOrigin origin, boolean loadFailed) {
-            this(entries, snapshotVersion, version, origin, loadFailed, OrcaMasterCacheState.current("master", version));
+            this(entries, snapshotVersion, version, origin, loadFailed,
+                    OrcaMasterCacheState.syntheticCurrent("master", version));
         }
 
         LoadedFixture(List<T> entries, String snapshotVersion, String version, DataOrigin origin, boolean loadFailed,

@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -611,6 +612,7 @@ final class MasterUpdateArtifacts {
         Path tempFile;
         String hash;
         long recordCount;
+        Map<String, Long> masterTypeCounts;
         String summary;
         String note;
         String suggestedExtension;

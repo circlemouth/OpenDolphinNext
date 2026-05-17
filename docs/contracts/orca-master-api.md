@@ -39,6 +39,9 @@ list response と各 entry の `meta` は、少なくとも次を返す。API �
 - canonical artifact は `drug`, `etensu`, `generic-price`, `generic-class`, `comment`, `bodypart`, `youhou`, `material`, `kensa-sort`, `hokenja`, `address`, `order-inputsets`, `order-interactions`, `disease-candidate` をすべて含める。必須 header 欠落、必須 master type 欠落、空 artifact、JSON 不正、入力セット不整合、部分 import 失敗、manifest/hash/件数不一致は fail closed とする。
 - production artifact builder は公式配布ファイル、公式 API 由来 export、または tool-only の ORCA DB コンテナ ETL が生成した正規化済み source から versioned ZIP を生成する。ORCA DB コンテナは施設内 ETL / dev / staging のみで使い、本番 runtime / scheduler / importer の直接接続先にしない。
 - `POST /api/admin/master-updates/datasets/local_orca_master_cache/upload/preview` は multipart ZIP を検証し、DB 更新なしで `uploadedSha256`、manifest metadata、`masterVersion`、`masterTypeCounts`、`warnings`、`importable` を返す。確定 upload は任意 header `X-Master-Artifact-Preview-Hash` を受け、payload hash が一致しない場合は 409 `upload_preview_hash_mismatch` とする。
+- `GET /api/admin/master-updates/datasets*` の dataset / version response は `masterTypeCounts` を返す。管理画面の差分判断は総件数の増減推定ではなく、保存済み `masterTypeCounts` と総件数変化を表示する。既存 `addedCount` / `removedCount` / `changedCount` は互換表示用であり、新しい安全判断には使わない。
+- `POST /api/admin/master-updates/datasets/local_orca_master_cache/rollback` は対象 version の `artifactPath` を再 import し、候補 API が読む `opendolphin.local_orca_master_*` 実体を rollback 先 artifact に戻す。管理 metadata の pointer だけを切り替えない。artifact 欠落、stored hash 欠落、hash 不一致、必須 master type 不足、manifest/hash/件数不一致、import 失敗は fail closed とし、`currentVersionId` / `currentRecordCount` / status / successful timestamp を更新しない。
+- rollback 成功時だけ `currentVersionId`、`currentRecordCount`、`currentMasterTypeCounts`、`status`、`lastSuccessfulAt`、`latestRunId`、`latestJobMessage` を更新し、response の `localMasterCacheImport` に `affectedMasterTypes`、`masterTypeCounts`、`importedRows` を含める。
 - runtime の外部 artifact 取得は HTTPS、credential/query/fragment なし、`MASTER_UPDATE_SOURCE_ALLOWED_HOSTS` の許可 host のみに限定する。`MASTER_UPDATE_LOCAL_ORCA_MASTER_CACHE_SOURCE_URL` は sanitized source metadata としてだけ残し、credential-bearing URL を受け入れない。
 - 手動 upload または scheduler 実行で import が失敗した場合、dataset update は failed とし、既存 cache を 0 件成功扱いにしない。API 応答には内部 SQL、DB URL、credential-bearing URL、raw ORCA body、患者情報を含めない。
 - `MASTER_UPDATE_SCHEDULER_ENABLED=true` の環境では `MasterUpdateScheduler` が auto-enabled dataset を定期実行する。本番では `MASTER_UPDATE_LOCAL_ORCA_MASTER_CACHE_SOURCE_URL` と `MASTER_UPDATE_SOURCE_ALLOWED_HOSTS` を設定し、classpath fixture ではなく公式 ORCA source 由来 artifact を運用する。
@@ -61,6 +64,7 @@ list response と各 entry の `meta` は、少なくとも次を返す。API �
 - 0 件は 404 `MASTER_GENERIC_PRICE_NOT_FOUND`。
 - backend unavailable は 503 `MASTER_GENERIC_PRICE_UNAVAILABLE`。
 - 成功時は単一の generic price entry を返し、ETag / Cache-Control を付与する。
+- ETag seed は `masterVersion` だけでなく cache `importedAt` も含める。同一 `masterVersion` の再 import 後に旧 304 を返してはならない。
 
 ## `/api/orca/master/hokenja` 契約
 ### 受け付ける query parameter
@@ -109,7 +113,8 @@ list response と各 entry の `meta` は、少なくとも次を返す。API �
 
 ## order helper / master-like API
 - `/api/orca/master/order/inputsets` と `/api/orca/master/order/inputsets/{setCode}` は OpenDolphin local master cache / OpenDolphin 管理マスタ由来の候補であり、ORCA 内部入力セット DB 直結を前提にしない。未インポートまたは backend unavailable は 503 `inputset_unavailable` とし、空結果にしない。
-- `/api/orca/master/order/interactions/check` は local interaction master cache を使う。未インポートまたは backend unavailable は 503 `interaction_unavailable` とし、処方安全上「相互作用なし」扱いにしない。
+- `drug`、`generic-class`、`generic-price`、`hokenja`、`address`、`comment`、`bodypart`、`youhou`、`material`、`kensa-sort`、`etensu`、`disease-candidate`、`order-inputsets`、`order-interactions` は UI からの `effective` / `asOf` を server で `yyyyMMdd` に正規化して local cache repository へ渡す。effective 未指定時は既存 default を使うが、期限切れ項目を候補成功や安全確認済みとして扱わない。
+- `/api/orca/master/order/interactions/check` は local interaction master cache を使う。request body の任意 `effective` は `yyyyMMdd` に正規化して有効日 filter に使う。未インポートまたは backend unavailable は 503 `interaction_unavailable` とし、処方安全上「相互作用なし」扱いにしない。
 - `/api/orca/official/disease-master/name/{param}/` は互換 route 名を維持するが、自由語候補は local disease candidate cache 由来の candidate/readOnly/candidateOnly 応答であり、ORCA 病名正本や `diseaseget/diseasev3` の成功根拠ではない。cache unavailable は明示 503 とする。
 
 ## 実装タスク

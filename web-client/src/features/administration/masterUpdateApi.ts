@@ -18,6 +18,7 @@ export type MasterUpdateDatasetVersion = {
   addedCount?: number;
   removedCount?: number;
   changedCount?: number;
+  masterTypeCounts?: Record<string, number>;
   note?: string;
   current?: boolean;
 };
@@ -47,6 +48,7 @@ export type MasterUpdateLocalArtifacts = {
   currentHash?: string;
   currentSummary?: string;
   currentArtifactPath?: string;
+  currentMasterTypeCounts?: Record<string, number>;
   versionCount?: number;
   versions?: MasterUpdateDatasetVersion[];
 };

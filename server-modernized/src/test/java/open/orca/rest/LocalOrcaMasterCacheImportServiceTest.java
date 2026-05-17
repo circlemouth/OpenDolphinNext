@@ -78,6 +78,10 @@ class LocalOrcaMasterCacheImportServiceTest {
                 "order-inputsets",
                 "order-interactions",
                 "disease-candidate");
+        assertThat(result.masterTypeCounts())
+                .containsEntry("drug", 1L)
+                .containsEntry("order-inputsets", 4L)
+                .containsEntry("order-interactions", 1L);
         verify(entityManager, atLeastOnce()).createNativeQuery(anyString());
         assertThat(sqlStatements)
                 .noneMatch(sql -> sql.contains("ORCADS"))

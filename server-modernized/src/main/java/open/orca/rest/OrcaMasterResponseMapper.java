@@ -422,7 +422,7 @@ class OrcaMasterResponseMapper {
         if (origin == OrcaMasterService.DataOrigin.FALLBACK) {
             return OrcaMasterCacheState.unavailable("master");
         }
-        return OrcaMasterCacheState.current("master", version);
+        return OrcaMasterCacheState.syntheticCurrent("master", version);
     }
 
     private String dataSourceForOrigin(OrcaMasterService.DataOrigin origin) {

@@ -103,6 +103,7 @@ public class MasterUpdateService {
             );
             if (importResult != null) {
                 artifact.recordCount = importResult.importedRows();
+                artifact.masterTypeCounts = importResult.masterTypeCounts();
                 artifact.summary = appendImportSummary(artifact.summary, importResult);
                 artifact.note = appendImportNote(artifact.note, importResult);
             }
@@ -239,6 +240,7 @@ public class MasterUpdateService {
                 fileName,
                 hash,
                 recordCount,
+                importResult != null ? importResult.masterTypeCounts() : null,
                 artifactPath,
                 requestedBy,
                 runId,
@@ -265,9 +267,12 @@ public class MasterUpdateService {
         if (versionId == null || versionId.isBlank()) {
             throw new MasterUpdateException(400, "version_required", "ロールバック対象の versionId が必要です。");
         }
+        if (LocalOrcaMasterCacheImportService.DATASET_CODE.equals(normalizedCode)) {
+            return rollbackLocalMasterCacheDataset(normalizedCode, versionId, requestedBy, runId);
+        }
         String now = Instant.now().toString();
         MasterUpdateStore.DatasetState updated =
-                MasterUpdateStateSupport.applyRollback(store, normalizedCode, versionId, runId, now);
+                MasterUpdateStateSupport.applyRollback(store, normalizedCode, versionId, null, null, runId, now);
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("runId", runId);
@@ -276,6 +281,64 @@ public class MasterUpdateService {
         body.put("requestedBy", requestedBy);
         body.put("dataset", MasterUpdatePayloads.toDetail(updated));
         return body;
+    }
+
+    private Map<String, Object> rollbackLocalMasterCacheDataset(String normalizedCode,
+                                                                 String versionId,
+                                                                 String requestedBy,
+                                                                 String runId) {
+        String now = Instant.now().toString();
+        try {
+            MasterUpdateStore.DatasetState state =
+                    MasterUpdateStateSupport.requireDataset(store.getSnapshot(), normalizedCode);
+            if (MasterUpdateStateSupport.isRunning(state)) {
+                throw new MasterUpdateException(409, "dataset_running", "実行中のためロールバックできません。");
+            }
+            MasterUpdateStore.DatasetVersion target = findVersion(state, versionId);
+            if (target == null) {
+                throw new MasterUpdateException(404, "version_not_found", "指定された versionId が見つかりません。");
+            }
+            Path artifactPath = requireRollbackArtifact(target);
+            verifyRollbackArtifactHash(target, artifactPath);
+            MasterUpdateStateSupport.markRunStarted(store, normalizedCode, UUID.randomUUID().toString(), runId, now);
+            LocalOrcaMasterCacheImportService.ImportResult importResult = importLocalMasterCacheIfSupported(
+                    normalizedCode,
+                    artifactPath,
+                    target.sourceUrl,
+                    "ROLLBACK",
+                    runId
+            );
+            if (importResult == null) {
+                throw new MasterUpdateException(500, "rollback_import_not_supported",
+                        "local master cache rollback import に対応していません。");
+            }
+            MasterUpdateStore.DatasetState updated = MasterUpdateStateSupport.applyRollback(
+                    store,
+                    normalizedCode,
+                    versionId,
+                    importResult.importedRows(),
+                    importResult.masterTypeCounts(),
+                    runId,
+                    now
+            );
+
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("runId", runId);
+            body.put("ok", true);
+            body.put("message", "ロールバックが完了しました。");
+            body.put("requestedBy", requestedBy);
+            body.put("dataset", MasterUpdatePayloads.toDetail(updated));
+            body.put("localMasterCacheImport", importResult.toMap());
+            return body;
+        } catch (MasterUpdateException ex) {
+            if (ex.getStatusCode() != 409 || !"dataset_running".equals(ex.getCode())) {
+                MasterUpdateStateSupport.failDatasetRun(store, normalizedCode, runId, now, ex.getMessage());
+            }
+            throw ex;
+        } catch (RuntimeException ex) {
+            MasterUpdateStateSupport.failDatasetRun(store, normalizedCode, runId, now, "ロールバックに失敗しました。");
+            throw new MasterUpdateException(500, "rollback_failed", "ロールバックに失敗しました。");
+        }
     }
 
     public Map<String, Object> getSchedule(String runId) {
@@ -401,6 +464,43 @@ public class MasterUpdateService {
         }
     }
 
+    private static MasterUpdateStore.DatasetVersion findVersion(MasterUpdateStore.DatasetState state, String versionId) {
+        if (state == null || state.versions == null) {
+            return null;
+        }
+        for (MasterUpdateStore.DatasetVersion version : state.versions) {
+            if (versionId.equals(version.versionId)) {
+                return version;
+            }
+        }
+        return null;
+    }
+
+    private static Path requireRollbackArtifact(MasterUpdateStore.DatasetVersion target) {
+        if (target == null || target.artifactPath == null || target.artifactPath.isBlank()) {
+            throw new MasterUpdateException(409, "rollback_artifact_missing",
+                    "ロールバック対象 artifact が見つかりません。");
+        }
+        Path artifactPath = Path.of(target.artifactPath);
+        if (!Files.isRegularFile(artifactPath)) {
+            throw new MasterUpdateException(409, "rollback_artifact_missing",
+                    "ロールバック対象 artifact が見つかりません。");
+        }
+        return artifactPath;
+    }
+
+    private static void verifyRollbackArtifactHash(MasterUpdateStore.DatasetVersion target, Path artifactPath) {
+        if (target.hash == null || target.hash.isBlank()) {
+            throw new MasterUpdateException(409, "rollback_artifact_hash_missing",
+                    "ロールバック対象 artifact の hash が記録されていません。");
+        }
+        String actualHash = sha256(artifactPath);
+        if (!target.hash.equalsIgnoreCase(actualHash)) {
+            throw new MasterUpdateException(409, "rollback_artifact_hash_mismatch",
+                    "ロールバック対象 artifact の hash が一致しません。");
+        }
+    }
+
     private static String appendImportSummary(String summary, LocalOrcaMasterCacheImportService.ImportResult result) {
         String current = summary != null && !summary.isBlank() ? summary : "artifact fetched";
         return current + " / localMasterCacheImportedRows=" + result.importedRows();
@@ -418,6 +518,25 @@ public class MasterUpdateService {
         try {
             java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
             return java.util.HexFormat.of().formatHex(digest.digest(payload));
+        } catch (Exception ex) {
+            throw new IllegalStateException("SHA-256 hash generation failed", ex);
+        }
+    }
+
+    private static String sha256(Path path) {
+        try (InputStream input = Files.newInputStream(path)) {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = input.read(buffer)) >= 0) {
+                if (read > 0) {
+                    digest.update(buffer, 0, read);
+                }
+            }
+            return java.util.HexFormat.of().formatHex(digest.digest());
+        } catch (IOException ex) {
+            throw new MasterUpdateException(409, "rollback_artifact_unreadable",
+                    "ロールバック対象 artifact を読み取れません。");
         } catch (Exception ex) {
             throw new IllegalStateException("SHA-256 hash generation failed", ex);
         }

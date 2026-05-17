@@ -41,6 +41,23 @@ describe('checkOrcaMasterStaticOrderInteractions', () => {
     expect(body).toBe('{"codes":["620000001","620000002"],"existingCodes":["620000003"]}');
   });
 
+  it('effective を指定時だけ送信する', async () => {
+    mockHttpFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true, totalCount: 0, pairs: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await checkOrcaMasterStaticOrderInteractions({
+      codes: ['620000001'],
+      effective: '20260309',
+    });
+
+    const body = mockHttpFetch.mock.calls[0]?.[1]?.body;
+    expect(body).toBe('{"codes":["620000001"],"existingCodes":[],"effective":"20260309"}');
+  });
+
   it('API エラーは result object で返す', async () => {
     mockHttpFetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ message: 'failed' }), {

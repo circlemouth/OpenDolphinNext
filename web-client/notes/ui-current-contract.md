@@ -304,7 +304,7 @@ GUI 改修ではこの文書の safety contract を下回らず、ORCA送信失�
 - `connection` は接続テストの実行面、`operations` は状態参照面です。
 - `config` section は charts delivery toggle だけを表示し、diagnostic / correction / runtime-owned setting を混ぜません。
 - `AdminDeliveryStatusCard` は配信メタデータ card として `deliveryId / version / etag / deliveredAt` を表示します。
-- `MasterUpdatesPanel` は `local_orca_master_cache` の artifact upload で事前検証を必須にし、manifest / masterVersion / sourceKind / uploadedSha256 / master type 別件数を表示してから確定アップロードします。確定 upload は preview hash を送信し、DB URL、credential、raw ORCA body、患者情報、内部 SQL、stack trace を表示しません。
+- `MasterUpdatesPanel` は `local_orca_master_cache` の artifact upload で事前検証を必須にし、manifest / masterVersion / sourceKind / uploadedSha256 / master type 別件数を表示してから確定アップロードします。確定 upload は preview hash を送信し、DB URL、credential、raw ORCA body、患者情報、内部 SQL、stack trace を表示しません。version 履歴は `masterTypeCounts` と総件数変化を表示し、総件数差から `+/-/~` を推定して追加・削除判断しません。run / upload / rollback 成功後は admin master update query に加え、ORCA master 候補系 query cache を明示 invalidate して、更新直後に古い候補リストを画面内に残しません。
 - `MasterVisibilityPanel` は `/api/admin/master-updates/visibility` を使い、固定 6 カテゴリ（処方、注射、処置・手術、検査、病名、患者補助）の UI 候補表示だけを切り替えます。保存は admin + `admin:mutation` step-up を server-side で必須とし、URL / browser storage / 患者文脈には保存しません。表示文言は master type と影響 UI に限定し、ORCA正本、会計反映、安全確認済みとは表現しません。
 - `connection` section は施設別 ORCA 接続設定 only、`testedScope` は capability note、runtime-owned setting は docs note を正本とします。
 - UG-14 未解決項目や optional module visibility owner 不明項目は UI に toggle を出さず、feature-off / fail-close で扱います。

@@ -219,6 +219,7 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
         String facilityId = requireFacilityId(request);
         List<String> codes = OrcaOrderInteractionSupport.sanitizeCodes(body != null ? body.getCodes() : null);
         List<String> existingCodes = OrcaOrderInteractionSupport.sanitizeCodes(body != null ? body.getExistingCodes() : null);
+        String normalizedEffective = OrcaOrderBundleRequestSupport.normalizeOrcaDateOrToday(body != null ? body.getEffective() : null);
         if (codes.isEmpty()) {
             Map<String, Object> audit = new HashMap<>();
             audit.put("facilityId", facilityId);
@@ -231,7 +232,7 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
             throw validationError(request, "codes", "codes is required");
         }
 
-        List<OrcaOrderInteractionCheckResponse.Pair> rows = loadInteractionPairs(codes, existingCodes);
+        List<OrcaOrderInteractionCheckResponse.Pair> rows = loadInteractionPairs(codes, existingCodes, normalizedEffective);
         OrcaOrderInteractionCheckResponse response = OrcaOrderBundleFetchSupport.buildInteractionResponse(
                 runId,
                 resolveTraceId(request),
@@ -243,6 +244,7 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
         audit.put("runId", runId);
         audit.put("codes", codes.size());
         audit.put("existingCodes", existingCodes.size());
+        audit.put("effective", normalizedEffective);
         audit.put("totalCount", response.getTotalCount());
         audit.put("routeNamespace", ROUTE_NAMESPACE);
         recordAudit(request, AUDIT_INTERACTION_CHECK_ACTION, audit, AuditEventEnvelope.Outcome.SUCCESS);
@@ -291,9 +293,10 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
         }
     }
 
-    protected List<OrcaOrderInteractionCheckResponse.Pair> loadInteractionPairs(List<String> codes, List<String> existingCodes) {
+    protected List<OrcaOrderInteractionCheckResponse.Pair> loadInteractionPairs(List<String> codes, List<String> existingCodes,
+                                                                                String effective) {
         try {
-            return repository().findInteractionPairs(codes, existingCodes);
+            return repository().findInteractionPairs(codes, existingCodes, effective);
         } catch (LocalOrcaMasterCacheRepository.LocalMasterUnavailableException ex) {
             throw restError(null, Response.Status.SERVICE_UNAVAILABLE, "interaction_unavailable",
                     "Interaction master cache is unavailable");

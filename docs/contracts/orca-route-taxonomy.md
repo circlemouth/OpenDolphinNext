@@ -174,7 +174,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/admin/master-updates/schedule`
 - `/api/admin/master-updates/visibility`
 
-`local_orca_master_cache` の admin-management route は OpenDolphin local master cache / projection の更新口であり、ORCA official route でも ORCA DB 直結 route でもない。本番 source は公式 ORCA 配布ファイル、公式 API 由来 canonical artifact、または施設内 tool-only ETL が ORCA DB コンテナから生成した canonical artifact に限定し、runtime の外部取得は `MASTER_UPDATE_LOCAL_ORCA_MASTER_CACHE_SOURCE_URL` と `MASTER_UPDATE_SOURCE_ALLOWED_HOSTS` で明示許可した HTTPS host だけに固定する。取得失敗・import 失敗は dataset failed とし、未取得を 0 件や「安全確認済み」に変換しない。
+`local_orca_master_cache` の admin-management route は OpenDolphin local master cache / projection の更新口であり、ORCA official route でも ORCA DB 直結 route でもない。本番 source は公式 ORCA 配布ファイル、公式 API 由来 canonical artifact、または施設内 tool-only ETL が ORCA DB コンテナから生成した canonical artifact に限定し、runtime の外部取得は `MASTER_UPDATE_LOCAL_ORCA_MASTER_CACHE_SOURCE_URL` と `MASTER_UPDATE_SOURCE_ALLOWED_HOSTS` で明示許可した HTTPS host だけに固定する。取得失敗・import 失敗は dataset failed とし、未取得を 0 件や「安全確認済み」に変換しない。rollback は対象 version の artifact を hash 検証後に再 import し、候補 API が読む local cache 実体も戻せた場合だけ current pointer を切り替える。artifact 欠落、hash 不一致、必須 master type 不足、import 失敗時は current version を維持する。
 
 `/api/admin/master-updates/visibility` は業務 UI の ORCA master 候補表示カテゴリだけを切り替える admin-management route です。`GET` は認証済み業務 UI が参照し、`PUT` は admin + `admin:mutation` step-up を必須とします。この route は `/api/orca/master/*` の公開停止、local master cache 更新、ORCA 正本確認、会計反映、安全確認、相互作用チェック停止を意味しません。未知カテゴリや任意 route 名は server allowlist で 400 とし、監査 details は changedCategories などの非秘密 metadata に限定します。
 

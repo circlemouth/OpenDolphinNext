@@ -147,6 +147,11 @@ public class MasterUpdateStore {
             if (currentState.versions == null) {
                 currentState.versions = new ArrayList<>();
             }
+            for (DatasetVersion version : currentState.versions) {
+                if (version.masterTypeCounts == null) {
+                    version.masterTypeCounts = new LinkedHashMap<>();
+                }
+            }
             if (currentState.defaultIntervalMinutes <= 0) {
                 currentState.defaultIntervalMinutes = definition.getDefaultIntervalMinutes();
             }
@@ -248,6 +253,7 @@ public class MasterUpdateStore {
         public long addedCount;
         public long removedCount;
         public long changedCount;
+        public Map<String, Long> masterTypeCounts = new LinkedHashMap<>();
         public String note;
         public boolean current;
     }

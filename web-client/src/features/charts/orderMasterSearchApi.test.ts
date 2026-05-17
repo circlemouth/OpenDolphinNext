@@ -169,6 +169,25 @@ describe('fetchOrderMasterSearch auth routing', () => {
     expect(init?.notifySessionExpired).toBe(false);
   });
 
+  it.each(['comment', 'bodypart', 'material', 'kensa-sort'] as const)(
+    'normalizes effective/asOf for %s search',
+    async (type) => {
+      const { httpFetch } = await import('../../libs/http/httpClient');
+      vi.mocked(httpFetch).mockResolvedValueOnce(
+        new Response(JSON.stringify({ totalCount: 0, items: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+      await fetchOrderMasterSearch({ type, keyword: '候補', effective: '2026-03-09' });
+
+      const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
+      expect(requestUrl).toContain('effective=20260309');
+      expect(requestUrl).toContain('asOf=20260309');
+    },
+  );
+
   it('does not force default category for plain etensu search', async () => {
     const { httpFetch } = await import('../../libs/http/httpClient');
     vi.mocked(httpFetch).mockResolvedValueOnce(

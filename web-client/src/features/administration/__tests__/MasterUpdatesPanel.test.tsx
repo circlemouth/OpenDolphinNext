@@ -72,6 +72,7 @@ const dataset = {
         addedCount: 1,
         removedCount: 0,
         changedCount: 0,
+        masterTypeCounts: { drug: 3, comment: 9 },
         current: true,
       },
     ],
@@ -85,6 +86,7 @@ const dataset = {
       addedCount: 1,
       removedCount: 0,
       changedCount: 0,
+      masterTypeCounts: { drug: 3, comment: 9 },
       current: true,
     },
   ],
@@ -97,11 +99,12 @@ const renderPanel = () => {
       mutations: { retry: false },
     },
   });
-  return render(
+  const result = render(
     <QueryClientProvider client={queryClient}>
       <MasterUpdatesPanel runId="RUN-MASTER" role="system_admin" />
     </QueryClientProvider>,
   );
+  return { ...result, queryClient };
 };
 
 beforeEach(() => {
@@ -159,16 +162,21 @@ describe('MasterUpdatesPanel', () => {
     expect(screen.getAllByRole('button', { name: 'official取得を実行' }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: '確定アップロード' })).toBeInTheDocument();
     expect(screen.getByText('official fetch')).toBeInTheDocument();
+    expect(screen.getByText('comment:9 / drug:3')).toBeInTheDocument();
   });
 
   it('official取得ボタンが run request を呼ぶ', async () => {
     const user = userEvent.setup();
-    renderPanel();
+    const { queryClient } = renderPanel();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
     await user.click((await screen.findAllByRole('button', { name: 'official取得を実行' }))[0]);
 
     await waitFor(() => {
       expect(mockRunMasterUpdateDataset).toHaveBeenCalledWith('orca_master_core', false);
+    });
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith(expect.objectContaining({ predicate: expect.any(Function) }));
     });
   });
 

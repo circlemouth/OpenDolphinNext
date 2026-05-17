@@ -76,6 +76,7 @@ final class MasterUpdatePayloads {
                 row.put("addedCount", version.addedCount);
                 row.put("removedCount", version.removedCount);
                 row.put("changedCount", version.changedCount);
+                row.put("masterTypeCounts", version.masterTypeCounts != null ? version.masterTypeCounts : Map.of());
                 row.put("note", version.note);
                 row.put("current", version.current);
                 versions.add(row);
@@ -122,6 +123,7 @@ final class MasterUpdatePayloads {
             local.put("currentHash", current.hash);
             local.put("currentSummary", current.summary);
             local.put("currentArtifactPath", current.artifactPath);
+            local.put("currentMasterTypeCounts", current.masterTypeCounts != null ? current.masterTypeCounts : Map.of());
         }
         local.put("versionCount", state.versions != null ? state.versions.size() : 0);
         return local;

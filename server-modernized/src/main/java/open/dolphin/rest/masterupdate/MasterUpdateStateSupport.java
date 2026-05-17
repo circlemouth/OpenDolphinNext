@@ -126,6 +126,7 @@ final class MasterUpdateStateSupport {
                                                       String fileName,
                                                       String hash,
                                                       long recordCount,
+                                                      Map<String, Long> masterTypeCounts,
                                                       String artifactPath,
                                                       String requestedBy,
                                                       String runId,
@@ -150,6 +151,7 @@ final class MasterUpdateStateSupport {
             version.addedCount = Math.max(0L, currentCount - previousCount);
             version.removedCount = Math.max(0L, previousCount - currentCount);
             version.changedCount = previousCount == currentCount ? 0L : Math.min(previousCount, currentCount) / 10L;
+            version.masterTypeCounts = copyCounts(masterTypeCounts);
             version.note = fileName;
             version.current = true;
 
@@ -169,11 +171,13 @@ final class MasterUpdateStateSupport {
     static MasterUpdateStore.DatasetState applyRollback(MasterUpdateStore store,
                                                         String datasetCode,
                                                         String versionId,
+                                                        Long restoredRecordCount,
+                                                        Map<String, Long> restoredMasterTypeCounts,
                                                         String runId,
                                                         String now) {
         return store.update(snapshot -> {
             MasterUpdateStore.DatasetState state = requireDataset(snapshot, datasetCode);
-            if (isRunning(state)) {
+            if (isRunning(state) && !Objects.equals(state.latestRunId, runId)) {
                 throw new MasterUpdateService.MasterUpdateException(409, "dataset_running", "実行中のためロールバックできません。");
             }
             MasterUpdateStore.DatasetVersion target = null;
@@ -192,12 +196,19 @@ final class MasterUpdateStateSupport {
             }
             target.current = true;
             state.currentVersionId = target.versionId;
+            if (restoredRecordCount != null) {
+                target.recordCount = Math.max(0L, restoredRecordCount);
+            }
+            if (restoredMasterTypeCounts != null) {
+                target.masterTypeCounts = copyCounts(restoredMasterTypeCounts);
+            }
             state.currentRecordCount = target.recordCount;
             state.status = "normal";
             state.lastCheckedAt = now;
             state.lastSuccessfulAt = now;
             state.latestRunId = runId;
             state.latestJobMessage = "ロールバックを実行しました";
+            state.lockJobId = null;
             state.updateDetected = false;
             return state;
         });
@@ -330,9 +341,17 @@ final class MasterUpdateStateSupport {
         version.addedCount = Math.max(0L, currentCount - previousCount);
         version.removedCount = Math.max(0L, previousCount - currentCount);
         version.changedCount = previousCount == currentCount ? 0L : Math.min(previousCount, currentCount) / 10L;
+        version.masterTypeCounts = copyCounts(artifact.masterTypeCounts);
         version.note = artifact.note;
         version.current = true;
         return version;
+    }
+
+    private static Map<String, Long> copyCounts(Map<String, Long> counts) {
+        if (counts == null || counts.isEmpty()) {
+            return new LinkedHashMap<>();
+        }
+        return new LinkedHashMap<>(counts);
     }
 
     private static void updateCurrentVersion(MasterUpdateStore.DatasetState state,

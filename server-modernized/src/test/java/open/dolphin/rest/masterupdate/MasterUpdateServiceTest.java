@@ -116,11 +116,15 @@ class MasterUpdateServiceTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> importBody = (Map<String, Object>) body.get("localMasterCacheImport");
         assertThat(importBody.get("importedRows")).isEqualTo(17L);
+        assertThat(importBody.get("masterTypeCounts")).isInstanceOf(Map.class);
         @SuppressWarnings("unchecked")
         List<String> affectedMasterTypes = (List<String>) importBody.get("affectedMasterTypes");
         assertThat(affectedMasterTypes).contains("drug", "order-interactions");
         assertThat(Files.exists(Path.of((String) body.get("artifactPath")))).isTrue();
         assertThat(store.getSnapshot().datasets.get("local_orca_master_cache").currentRecordCount).isEqualTo(17L);
+        assertThat(store.getSnapshot().datasets.get("local_orca_master_cache").currentVersion().masterTypeCounts)
+                .containsEntry("drug", 1L)
+                .containsEntry("order-interactions", 1L);
         assertThat(sqlStatements)
                 .noneMatch(sql -> sql.contains("ORCADS"))
                 .noneMatch(sql -> sql.contains("ORCA_DB_"))
@@ -184,6 +188,87 @@ class MasterUpdateServiceTest {
                         .isEqualTo("upload_preview_hash_mismatch"));
     }
 
+    @Test
+    void rollbackLocalMasterCacheReimportsTargetArtifactBeforeSwitchingCurrentVersion() throws Exception {
+        Path artifact = buildLocalMasterArtifact();
+        EntityManager entityManager = mock(EntityManager.class);
+        Query query = mock(Query.class);
+        List<String> sqlStatements = new ArrayList<>();
+        when(entityManager.createNativeQuery(anyString())).thenAnswer(invocation -> {
+            sqlStatements.add(invocation.getArgument(0, String.class));
+            return query;
+        });
+        when(query.setParameter(anyString(), any())).thenReturn(query);
+        when(query.executeUpdate()).thenReturn(1);
+
+        LocalOrcaMasterCacheImportService importService = new LocalOrcaMasterCacheImportService();
+        setField(importService, "entityManager", entityManager);
+
+        MasterUpdateStore store = new MasterUpdateStore();
+        store.init();
+        seedLocalMasterVersions(store, artifact, sha256Hex(Files.readAllBytes(artifact)), "old-version", "new-version");
+
+        MasterUpdateService service = new MasterUpdateService();
+        setField(service, "store", store);
+        setField(service, "localMasterCacheImportService", importService);
+
+        Map<String, Object> body = service.rollbackDataset(
+                "local_orca_master_cache",
+                "old-version",
+                "admin",
+                "RUN-ROLLBACK");
+
+        assertThat(body.get("ok")).isEqualTo(Boolean.TRUE);
+        assertThat(body.get("localMasterCacheImport")).isInstanceOf(Map.class);
+        assertThat(store.getSnapshot().datasets.get("local_orca_master_cache").currentVersionId).isEqualTo("old-version");
+        assertThat(store.getSnapshot().datasets.get("local_orca_master_cache").currentVersion().masterTypeCounts)
+                .containsEntry("drug", 1L)
+                .containsEntry("order-inputsets", 4L);
+        assertThat(sqlStatements).anyMatch(sql -> sql.contains("DELETE FROM opendolphin.local_orca_master_entry"));
+    }
+
+    @Test
+    void rollbackLocalMasterCacheRejectsHashMismatchWithoutSwitchingCurrentVersion() throws Exception {
+        Path artifact = buildLocalMasterArtifact();
+        MasterUpdateStore store = new MasterUpdateStore();
+        store.init();
+        seedLocalMasterVersions(store, artifact, "0".repeat(64), "old-version", "new-version");
+
+        MasterUpdateService service = new MasterUpdateService();
+        setField(service, "store", store);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.rollbackDataset(
+                        "local_orca_master_cache",
+                        "old-version",
+                        "admin",
+                        "RUN-ROLLBACK-HASH"))
+                .isInstanceOf(MasterUpdateService.MasterUpdateException.class)
+                .satisfies(ex -> assertThat(((MasterUpdateService.MasterUpdateException) ex).getCode())
+                        .isEqualTo("rollback_artifact_hash_mismatch"));
+        assertThat(store.getSnapshot().datasets.get("local_orca_master_cache").currentVersionId).isEqualTo("new-version");
+    }
+
+    @Test
+    void rollbackLocalMasterCacheRejectsMissingArtifactWithoutSwitchingCurrentVersion() throws Exception {
+        Path missingArtifact = tempDir.resolve("missing-local-master.zip");
+        MasterUpdateStore store = new MasterUpdateStore();
+        store.init();
+        seedLocalMasterVersions(store, missingArtifact, "0".repeat(64), "old-version", "new-version");
+
+        MasterUpdateService service = new MasterUpdateService();
+        setField(service, "store", store);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.rollbackDataset(
+                        "local_orca_master_cache",
+                        "old-version",
+                        "admin",
+                        "RUN-ROLLBACK-MISSING"))
+                .isInstanceOf(MasterUpdateService.MasterUpdateException.class)
+                .satisfies(ex -> assertThat(((MasterUpdateService.MasterUpdateException) ex).getCode())
+                        .isEqualTo("rollback_artifact_missing"));
+        assertThat(store.getSnapshot().datasets.get("local_orca_master_cache").currentVersionId).isEqualTo("new-version");
+    }
+
     private static byte[] readAllBytes(Path path) throws Exception {
         return Files.readAllBytes(path);
     }
@@ -208,6 +293,47 @@ class MasterUpdateServiceTest {
                 "orca-db-container-20260517",
                 "2026-05-17T11:22:13Z"));
         return output;
+    }
+
+    private static void seedLocalMasterVersions(MasterUpdateStore store,
+                                                Path artifact,
+                                                String oldHash,
+                                                String oldVersionId,
+                                                String currentVersionId) {
+        store.update(snapshot -> {
+            MasterUpdateStore.DatasetState state = snapshot.datasets.get("local_orca_master_cache");
+            state.versions.clear();
+            MasterUpdateStore.DatasetVersion oldVersion = version(oldVersionId, artifact, oldHash, false, 3L);
+            MasterUpdateStore.DatasetVersion currentVersion = version(currentVersionId, artifact, oldHash, true, 99L);
+            state.versions.add(currentVersion);
+            state.versions.add(oldVersion);
+            state.currentVersionId = currentVersionId;
+            state.currentRecordCount = currentVersion.recordCount;
+            state.status = "normal";
+            return null;
+        });
+    }
+
+    private static MasterUpdateStore.DatasetVersion version(String versionId,
+                                                            Path artifact,
+                                                            String hash,
+                                                            boolean current,
+                                                            long recordCount) {
+        MasterUpdateStore.DatasetVersion version = new MasterUpdateStore.DatasetVersion();
+        version.versionId = versionId;
+        version.capturedAt = "2026-05-17T00:00:00Z";
+        version.status = "READY";
+        version.hash = hash;
+        version.recordCount = recordCount;
+        version.artifactPath = artifact.toString();
+        version.sourceUrl = "classpath:" + LOCAL_MASTER_FIXTURE;
+        version.summary = "seeded";
+        version.triggerType = "UPLOAD";
+        version.requestedBy = "test";
+        version.runId = "RUN-SEED";
+        version.current = current;
+        version.masterTypeCounts = Map.of("drug", recordCount);
+        return version;
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

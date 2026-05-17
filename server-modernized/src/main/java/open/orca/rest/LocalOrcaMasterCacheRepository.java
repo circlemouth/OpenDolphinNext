@@ -452,6 +452,11 @@ public class LocalOrcaMasterCacheRepository {
 
     public List<OrcaOrderInteractionCheckResponse.Pair> findInteractionPairs(List<String> codes,
             List<String> existingCodes) {
+        return findInteractionPairs(codes, existingCodes, null);
+    }
+
+    public List<OrcaOrderInteractionCheckResponse.Pair> findInteractionPairs(List<String> codes,
+            List<String> existingCodes, String effective) {
         String masterType = "order-interactions";
         OrcaMasterCacheState state = loadState(masterType);
         if (state.isUnavailable()) {
@@ -464,10 +469,13 @@ public class LocalOrcaMasterCacheRepository {
         try {
             String leftIn = placeholders(codes.size());
             String rightIn = placeholders(rightCodes.size());
+            String normalizedEffective = effective != null && !effective.isBlank() ? normalizeEffective(effective) : null;
             String sql = "SELECT code1, code2, interaction_code, interaction_name, message "
                     + "FROM opendolphin.local_orca_master_interaction "
                     + "WHERE read_only = TRUE AND ((code1 IN (" + leftIn + ") AND code2 IN (" + rightIn + ")) "
-                    + "OR (code1 IN (" + rightIn + ") AND code2 IN (" + leftIn + "))) ORDER BY code1, code2";
+                    + "OR (code1 IN (" + rightIn + ") AND code2 IN (" + leftIn + "))) "
+                    + (normalizedEffective != null ? "AND valid_from <= ? AND valid_to >= ? " : "")
+                    + "ORDER BY code1, code2";
             Query query = entityManager().createNativeQuery(sql);
             int index = 1;
             for (String code : codes) {
@@ -481,6 +489,10 @@ public class LocalOrcaMasterCacheRepository {
             }
             for (String code : codes) {
                 query.setParameter(index++, code);
+            }
+            if (normalizedEffective != null) {
+                query.setParameter(index++, normalizedEffective);
+                query.setParameter(index, normalizedEffective);
             }
             @SuppressWarnings("unchecked")
             List<Object[]> rows = query.getResultList();

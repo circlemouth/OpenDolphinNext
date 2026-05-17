@@ -44,7 +44,7 @@ class OrcaMasterService {
 
         LoadedFixture(List<T> entries, String snapshotVersion, String version, DataOrigin origin, boolean loadFailed) {
             this(entries, snapshotVersion, version, origin, loadFailed,
-                    OrcaMasterCacheState.current("master", version));
+                    OrcaMasterCacheState.syntheticCurrent("master", version));
         }
 
         LoadedFixture(List<T> entries, String snapshotVersion, String version, DataOrigin origin, boolean loadFailed,
@@ -115,7 +115,7 @@ class OrcaMasterService {
 
     <T> LoadedFixture<T> buildDbFixture(List<T> entries, String version, boolean loadFailed) {
         return new LoadedFixture<>(safeList(entries), null, version, DataOrigin.LOCAL_CACHE, loadFailed,
-                OrcaMasterCacheState.current("master", version));
+                OrcaMasterCacheState.syntheticCurrent("master", version));
     }
 
     <T> LoadedFixture<T> buildLocalCacheFixture(List<T> entries, String version, boolean loadFailed,
@@ -166,6 +166,7 @@ class OrcaMasterService {
         seed.append(dataSourceForOrigin(fixture.origin)).append('|');
         seed.append(firstNonBlank(fixture.snapshotVersion, "none")).append('|');
         seed.append(firstNonBlank(fixture.version, DEFAULT_VERSION)).append('|');
+        seed.append(fixture.cacheState != null ? firstNonBlank(fixture.cacheState.importedAt(), "none") : "none").append('|');
         seed.append(normalizeQuery(params));
         return sha256Hex(seed.toString());
     }

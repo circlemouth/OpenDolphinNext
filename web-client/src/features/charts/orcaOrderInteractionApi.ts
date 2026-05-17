@@ -23,6 +23,7 @@ const sanitizeCodes = (values: string[]) => Array.from(new Set(values.map((value
 export async function checkOrcaMasterStaticOrderInteractions(params: {
   codes: string[];
   existingCodes?: string[];
+  effective?: string;
 }): Promise<OrcaMasterStaticOrderInteractionResult> {
   const meta = ensureObservabilityMeta();
   const response = await httpFetch('/api/orca/master/order/interactions/check', {
@@ -32,6 +33,7 @@ export async function checkOrcaMasterStaticOrderInteractions(params: {
     body: JSON.stringify({
       codes: sanitizeCodes(params.codes),
       existingCodes: sanitizeCodes(params.existingCodes ?? []),
+      effective: params.effective,
     }),
   });
   const parsed = await parseOrcaApiResponse(response, {
