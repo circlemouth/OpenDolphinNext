@@ -59,17 +59,19 @@
   - `opendolphin.pvt.worker-health.stale-success-seconds`
   - `opendolphin.pvt.worker-health.max-processing-millis`
 
-### 3. DB / ORCA DB
-- `db.*` または `orca.db.*` のどちらか一式を必須とする。
-- ORCA 専用接続を使う場合は `orca.db.*` を完全指定し、中途半端な混在を禁止する。
+### 3. DB / local master cache / legacy ORCA DB bridge
+- `db.*` は OpenDolphin server DB (`PostgresDS`) の必須設定であり、local master cache / projection もこの DB に保存する。
+- ORCA master search は production / normal dev runtime で `orca.db.*`、`ORCADS`、ORCA PostgreSQL 直結、`jma-receipt-docker-db-1` に依存しない。
+- `orca.db.*` / `ORCA_DB_*` は `ENABLE_LEGACY_ORCA_DB_BRIDGE=true` の非本番・明示 opt-in bridge だけで使う。未設定が標準であり、master API の起動要件にしてはいけない。
+- 標準 WildFly 設定は `ORCADS` datasource を定義しない。ローカル検証用 overlay などで `ORCADS` が残る場合も legacy/dev-only として扱い、候補検索・入力補助用 master API の authority にしてはいけない。
 - 必須項目
-  - `*.host`
-  - `*.port`
-  - `*.name`
-  - `*.user`
-  - `*.password`
-  - `*.sslmode`
-  - `*.sslrootcert`
+  - `db.host`
+  - `db.port`
+  - `db.name`
+  - `db.user`
+  - `db.password`
+  - `db.sslmode`
+  - `db.sslrootcert`
 
 ### 4. ORCA API
 - `orca.mode` / `ORCA_MODE` は `weborca|onprem` のいずれか。
@@ -118,7 +120,7 @@
   - `orca.rp.default-inout` / `ORCA_RP_DEFAULT_INOUT` は `in|out`。
 
 ### 5. Metrics / Scheduler / SMTP
-- `master-update.scheduler.enabled` / `MASTER_UPDATE_SCHEDULER_ENABLED` は `true|false`。未設定時は `false`。
+- `master-update.scheduler.enabled` / `MASTER_UPDATE_SCHEDULER_ENABLED` は `true|false`。未設定時は `false`。`true` にすると `MasterUpdateScheduler` が due dataset を 1 分周期で判定し、`local_orca_master_cache` を含む auto-enabled dataset を既定間隔で更新する。production では local master cache の source を公式配布ファイルまたは公式 API 由来 artifact に設定してから有効化する。classpath fixture は dev/trial 試運転用であり ORCA 正本ではない。
 - `chart-event.history.purge.enabled` / `CHART_EVENT_HISTORY_PURGE_ENABLED` は `true|false`。未設定時は `false`。
 - `chart-event.history.purge.interval-minutes` / `CHART_EVENT_HISTORY_PURGE_INTERVAL_MINUTES` は 1 以上。purge を有効化した環境のみ指定する。
 - `orca.patient-sync.enabled` / `ORCA_PATIENT_SYNC_ENABLED` は `true|false`。未設定時は `false`。

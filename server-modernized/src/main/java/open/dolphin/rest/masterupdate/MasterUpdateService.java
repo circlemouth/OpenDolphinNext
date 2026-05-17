@@ -17,6 +17,7 @@ import java.util.UUID;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.orca.transport.RestOrcaTransport;
+import open.orca.rest.LocalOrcaMasterCacheImportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +37,9 @@ public class MasterUpdateService {
 
     @Inject
     private ServerConfigurationResolver configurationResolver;
+
+    @Inject
+    private LocalOrcaMasterCacheImportService localMasterCacheImportService;
 
     private HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(20))
@@ -84,6 +88,18 @@ public class MasterUpdateService {
         try {
             MasterUpdateArtifacts.UpdateArtifact artifact = artifacts().fetchDatasetArtifact(store, normalizedCode);
             String artifactPath = artifacts().writeArtifact(normalizedCode, artifact, runId, normalizedTrigger);
+            LocalOrcaMasterCacheImportService.ImportResult importResult = importLocalMasterCacheIfSupported(
+                    normalizedCode,
+                    Path.of(artifactPath),
+                    artifact.sourceUrl,
+                    normalizedTrigger,
+                    runId
+            );
+            if (importResult != null) {
+                artifact.recordCount = importResult.importedRows();
+                artifact.summary = appendImportSummary(artifact.summary, importResult);
+                artifact.note = appendImportNote(artifact.note, importResult);
+            }
             MasterUpdateStore.DatasetState updated = MasterUpdateStateSupport.applyRunSuccess(
                     store,
                     normalizedCode,
@@ -103,6 +119,9 @@ public class MasterUpdateService {
             body.put("dataset", MasterUpdatePayloads.toDetail(updated));
             body.put("triggerType", normalizedTrigger);
             body.put("artifactPath", artifactPath);
+            if (importResult != null) {
+                body.put("localMasterCacheImport", importResult.toMap());
+            }
             return body;
         } catch (MasterUpdateException ex) {
             MasterUpdateStateSupport.failDatasetRun(store, normalizedCode, runId, now, ex.getMessage());
@@ -132,8 +151,17 @@ public class MasterUpdateService {
 
         String extension = MasterUpdateArtifacts.resolveExtension(fileName, null);
         String hash = sha256(payload);
-        long recordCount = estimateRecordCount(payload, extension, null);
         String artifactPath = artifacts().writeArtifact(normalizedCode, extension, payload, runId, "UPLOAD");
+        LocalOrcaMasterCacheImportService.ImportResult importResult = importLocalMasterCacheIfSupported(
+                normalizedCode,
+                Path.of(artifactPath),
+                dataset.sourceUrl,
+                "UPLOAD",
+                runId
+        );
+        long recordCount = importResult != null
+                ? importResult.importedRows()
+                : estimateRecordCount(payload, extension, null);
         String now = Instant.now().toString();
 
         MasterUpdateStore.DatasetState updated = MasterUpdateStateSupport.applyUpload(
@@ -154,6 +182,9 @@ public class MasterUpdateService {
         body.put("message", "アップロード版を反映しました。");
         body.put("dataset", MasterUpdatePayloads.toDetail(updated));
         body.put("artifactPath", artifactPath);
+        if (importResult != null) {
+            body.put("localMasterCacheImport", importResult.toMap());
+        }
         return body;
     }
 
@@ -274,6 +305,37 @@ public class MasterUpdateService {
 
     private MasterUpdateArtifacts artifacts() {
         return new MasterUpdateArtifacts(restOrcaTransport, configurationResolver, httpClient);
+    }
+
+    private LocalOrcaMasterCacheImportService.ImportResult importLocalMasterCacheIfSupported(String datasetCode,
+                                                                                            Path artifactPath,
+                                                                                            String sourceUrl,
+                                                                                            String triggerType,
+                                                                                            String runId) {
+        if (localMasterCacheImportService == null || !localMasterCacheImportService.supportsDataset(datasetCode)) {
+            return null;
+        }
+        try {
+            return localMasterCacheImportService.importArtifact(datasetCode, artifactPath, sourceUrl, triggerType, runId);
+        } catch (MasterUpdateException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new MasterUpdateException(500, "local_master_cache_import_failed",
+                    "local master cache import に失敗しました。");
+        }
+    }
+
+    private static String appendImportSummary(String summary, LocalOrcaMasterCacheImportService.ImportResult result) {
+        String current = summary != null && !summary.isBlank() ? summary : "artifact fetched";
+        return current + " / localMasterCacheImportedRows=" + result.importedRows();
+    }
+
+    private static String appendImportNote(String note, LocalOrcaMasterCacheImportService.ImportResult result) {
+        String importNote = "affectedMasterTypes=" + String.join(",", result.affectedMasterTypes());
+        if (note == null || note.isBlank()) {
+            return importNote;
+        }
+        return note + " / " + importNote;
     }
 
     private static String sha256(byte[] payload) {

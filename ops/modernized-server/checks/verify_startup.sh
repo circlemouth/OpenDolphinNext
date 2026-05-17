@@ -75,10 +75,9 @@ log_info "FACTOR2_AES_KEY_B64 が設定されているかを確認します"
 run_in_container /bin/sh -c 'if [ -z "${FACTOR2_AES_KEY_B64:-}" ]; then echo "FACTOR2_AES_KEY_B64 が未設定です" >&2; exit 1; fi'
 log_success "FACTOR2_AES_KEY_B64 が見つかりました"
 
-log_info "JDBC データソース PostgresDS / ORCADS を read-resource で検証します"
+log_info "JDBC データソース PostgresDS を read-resource で検証します"
 run_cli "/subsystem=datasources/data-source=PostgresDS:read-resource(include-runtime=true)"
-run_cli "/subsystem=datasources/data-source=ORCADS:read-resource(include-runtime=true)"
-log_success "PostgresDS と ORCADS の read-resource が成功しました"
+log_success "PostgresDS の read-resource が成功しました"
 
 log_info "JMS キューと JmsXA の read-resource を実行します"
 run_cli "/subsystem=messaging-activemq/server=default/jms-queue=dolphinQueue:read-resource"

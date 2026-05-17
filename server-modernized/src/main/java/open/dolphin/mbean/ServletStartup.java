@@ -26,7 +26,6 @@ import open.dolphin.runtime.config.ServerConfigurationValidator;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.StoragePersistenceContractValidator;
 import open.dolphin.runtime.RuntimeConfigurationSupport;
-import open.orca.rest.OrcaMasterSchemaValidator;
 
 /**
  * サーバー起動時の初期化と定期ジョブの実行を Jakarta Concurrency へ移行したライフサイクル管理コンポーネント。
@@ -59,9 +58,6 @@ public class ServletStartup {
     private ServerConfigurationValidator configurationValidator;
 
     @Inject
-    private OrcaMasterSchemaValidator orcaMasterSchemaValidator;
-
-    @Inject
     private StoragePersistenceContractValidator storagePersistenceContractValidator;
 
     private ScheduledFuture<?> midnightRefreshTask;
@@ -72,7 +68,6 @@ public class ServletStartup {
         contextHolder.ensureDateInitialized();
         eventServiceBean.ensureInitialized();
         configurationValidator.validateOrThrow();
-        orcaMasterSchemaValidator.validateOrThrow();
         storagePersistenceContractValidator.validateOrThrow();
         enforceStartupSecurityGuards();
         logRuntimeConfigurationSummary();

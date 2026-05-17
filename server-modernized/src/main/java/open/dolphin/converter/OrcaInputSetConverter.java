@@ -4,7 +4,7 @@ import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.OrcaInputSet;
 
 /**
- * ORCA の tbl_inputset エンティティクラス。
+ * Legacy ORCA input set model converter.
  *
  * @author Minagawa, Kazushi
  */

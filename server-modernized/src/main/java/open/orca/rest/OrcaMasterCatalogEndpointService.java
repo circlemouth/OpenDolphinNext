@@ -35,7 +35,8 @@ class OrcaMasterCatalogEndpointService {
             MultivaluedMap<String, String> params, OrcaMasterDao.GenericClassSearchResult dbResult,
             Map<String, Object> auditDetails) {
         SearchPayload<OrcaMasterDao.GenericClassRecord> payload =
-                dbResult == null ? null : new SearchPayload<>(dbResult.getRecords(), dbResult.getTotalCount(), dbResult.getVersion());
+                dbResult == null ? null : new SearchPayload<>(dbResult.getRecords(), dbResult.getTotalCount(),
+                        dbResult.getVersion(), dbResult.getCacheState());
         return buildPagedDrugEntryResponse(ifNoneMatch, request, params, "/api/orca/master/generic-class",
                 "orca05-generic-class", "MASTER_GENERIC_CLASS_UNAVAILABLE", "薬効分類マスタを取得できませんでした",
                 payload, auditDetails, responseMapper::toGenericClassEntry);
@@ -51,17 +52,18 @@ class OrcaMasterCatalogEndpointService {
     Response buildGenericPriceResponse(String ifNoneMatch, HttpServletRequest request,
             MultivaluedMap<String, String> params, OrcaMasterDao.LookupResult<OrcaMasterDao.GenericPriceRecord> dbResult,
             Map<String, Object> auditDetails) {
-        if (dbResult == null) {
+        if (dbResult == null || cacheUnavailable(dbResult.getCacheState())) {
             OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.GenericPriceRecord> unavailableFixture = fixtureSupport.unavailableFixture();
             Response failure = auditSupport.serviceUnavailable(request, "MASTER_GENERIC_PRICE_UNAVAILABLE",
                     "最低薬価マスタを取得できませんでした");
             auditSupport.recordMasterAudit(request, "/api/orca/master/generic-price", "orca05-generic-price",
-                    503, fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0, auditDetails);
+                    503, fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0,
+                    withCacheState(auditDetails, dbResult != null ? dbResult.getCacheState() : null));
             return failure;
         }
         OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.GenericPriceRecord> fixture =
-                fixtureSupport.buildDbFixture(dbResult.isFound() && dbResult.getRecord() != null
-                        ? List.of(dbResult.getRecord()) : List.of(), dbResult.getVersion(), false);
+                fixtureSupport.buildLocalCacheFixture(dbResult.isFound() && dbResult.getRecord() != null
+                        ? List.of(dbResult.getRecord()) : List.of(), dbResult.getVersion(), false, dbResult.getCacheState());
         if (!dbResult.isFound() || dbResult.getRecord() == null) {
             auditSupport.recordMasterAudit(request, "/api/orca/master/generic-price", "orca05-generic-price",
                     404, fixtureSupport.toServiceFixture(fixture), false, true, 0, auditDetails);
@@ -85,16 +87,18 @@ class OrcaMasterCatalogEndpointService {
     Response buildHokenjaResponse(String ifNoneMatch, HttpServletRequest request,
             MultivaluedMap<String, String> params, OrcaMasterDao.ListSearchResult<OrcaMasterDao.HokenjaRecord> dbResult,
             Map<String, Object> auditDetails) {
-        if (dbResult == null) {
+        if (dbResult == null || cacheUnavailable(dbResult.getCacheState())) {
             OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.HokenjaRecord> unavailableFixture = fixtureSupport.unavailableFixture();
             Response failure = auditSupport.serviceUnavailable(request, "MASTER_HOKENJA_UNAVAILABLE",
                     "保険者マスタを取得できませんでした");
             auditSupport.recordMasterAudit(request, "/api/orca/master/hokenja", "orca06-hokenja",
-                    503, fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0, auditDetails);
+                    503, fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0,
+                    withCacheState(auditDetails, dbResult != null ? dbResult.getCacheState() : null));
             return failure;
         }
         OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.HokenjaRecord> fixture =
-                fixtureSupport.buildDbFixture(dbResult.getRecords(), dbResult.getVersion(), false);
+                fixtureSupport.buildLocalCacheFixture(dbResult.getRecords(), dbResult.getVersion(), false,
+                        dbResult.getCacheState());
         String etagValue = cacheSupport.buildEtag("/api/orca/master/hokenja", "orca06-hokenja",
                 fixtureSupport.toServiceFixture(fixture), params);
         long ttlSeconds = cacheSupport.cacheTtlSeconds("orca06-hokenja");
@@ -108,7 +112,8 @@ class OrcaMasterCatalogEndpointService {
         for (OrcaMasterDao.HokenjaRecord entry : dbResult.getRecords()) {
             items.add(responseMapper.toInsurerEntry(entry, fixtureSupport.toServiceFixture(fixture)));
         }
-        OrcaMasterListResponse<OrcaInsurerEntry> response = responseAssembler.toListResponse(items, dbResult.getTotalCount());
+        OrcaMasterListResponse<OrcaInsurerEntry> response =
+                responseAssembler.toListResponse(items, dbResult.getTotalCount(), fixture.cacheState.toMeta());
         auditSupport.recordMasterAudit(request, "/api/orca/master/hokenja", "orca06-hokenja",
                 200, fixtureSupport.toServiceFixture(fixture), false, items.isEmpty(), dbResult.getTotalCount(), auditDetails);
         return cacheSupport.buildCachedOkResponse(response, etagValue, ttlSeconds, null);
@@ -117,17 +122,18 @@ class OrcaMasterCatalogEndpointService {
     Response buildAddressResponse(String ifNoneMatch, HttpServletRequest request,
             MultivaluedMap<String, String> params, OrcaMasterDao.LookupResult<OrcaMasterDao.AddressRecord> dbResult,
             Map<String, Object> auditDetails) {
-        if (dbResult == null) {
+        if (dbResult == null || cacheUnavailable(dbResult.getCacheState())) {
             OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.AddressRecord> unavailableFixture = fixtureSupport.unavailableFixture();
             Response failure = auditSupport.serviceUnavailable(request, "MASTER_ADDRESS_UNAVAILABLE",
                     "住所マスタを取得できませんでした");
             auditSupport.recordMasterAudit(request, "/api/orca/master/address", "orca06-address",
-                    503, fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0, auditDetails);
+                    503, fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0,
+                    withCacheState(auditDetails, dbResult != null ? dbResult.getCacheState() : null));
             return failure;
         }
         OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.AddressRecord> fixture =
-                fixtureSupport.buildDbFixture(dbResult.isFound() && dbResult.getRecord() != null
-                        ? List.of(dbResult.getRecord()) : List.of(), dbResult.getVersion(), false);
+                fixtureSupport.buildLocalCacheFixture(dbResult.isFound() && dbResult.getRecord() != null
+                        ? List.of(dbResult.getRecord()) : List.of(), dbResult.getVersion(), false, dbResult.getCacheState());
         if (!dbResult.isFound() || dbResult.getRecord() == null) {
             auditSupport.recordMasterAudit(request, "/api/orca/master/address", "orca06-address",
                     404, fixtureSupport.toServiceFixture(fixture), false, true, 0, auditDetails);
@@ -187,15 +193,15 @@ class OrcaMasterCatalogEndpointService {
             HttpServletRequest request, MultivaluedMap<String, String> params, String apiRoute, String masterType,
             String unavailableCode, String unavailableMessage, SearchPayload<T> payload, Map<String, Object> auditDetails,
             DrugEntryMapper<T> mapper) {
-        if (payload == null) {
+        if (payload == null || cacheUnavailable(payload.cacheState)) {
             OrcaMasterFixtureSupport.LoadedFixture<T> unavailableFixture = fixtureSupport.unavailableFixture();
             Response failure = auditSupport.serviceUnavailable(request, unavailableCode, unavailableMessage);
             auditSupport.recordMasterAudit(request, apiRoute, masterType, 503, fixtureSupport.toServiceFixture(unavailableFixture),
-                    false, true, 0, auditDetails);
+                    false, true, 0, withCacheState(auditDetails, payload != null ? payload.cacheState : null));
             return failure;
         }
         OrcaMasterFixtureSupport.LoadedFixture<T> fixture =
-                fixtureSupport.buildDbFixture(payload.records, payload.version, false);
+                fixtureSupport.buildLocalCacheFixture(payload.records, payload.version, false, payload.cacheState);
         String etagValue = cacheSupport.buildEtag(apiRoute, masterType, fixtureSupport.toServiceFixture(fixture), params);
         long ttlSeconds = cacheSupport.cacheTtlSeconds(masterType);
         if (cacheSupport.etagMatches(ifNoneMatch, etagValue)) {
@@ -208,7 +214,8 @@ class OrcaMasterCatalogEndpointService {
         for (T entry : fixture.entries) {
             items.add(mapper.map(entry, serviceFixture));
         }
-        OrcaMasterListResponse<OrcaDrugMasterEntry> response = responseAssembler.toListResponse(items, payload.totalCount);
+        OrcaMasterListResponse<OrcaDrugMasterEntry> response =
+                responseAssembler.toListResponse(items, payload.totalCount, fixture.cacheState.toMeta());
         auditSupport.recordMasterAudit(request, apiRoute, masterType, 200, serviceFixture, false, items.isEmpty(),
                 payload.totalCount, auditDetails);
         return cacheSupport.buildCachedOkResponse(response, etagValue, ttlSeconds, null);
@@ -218,15 +225,15 @@ class OrcaMasterCatalogEndpointService {
             HttpServletRequest request, MultivaluedMap<String, String> params, String apiRoute, String masterType,
             String unavailableCode, String unavailableMessage, SearchPayload<T> payload, Map<String, Object> auditDetails,
             DrugEntryMapper<T> mapper) {
-        if (payload == null) {
+        if (payload == null || cacheUnavailable(payload.cacheState)) {
             OrcaMasterFixtureSupport.LoadedFixture<T> unavailableFixture = fixtureSupport.unavailableFixture();
             Response failure = auditSupport.serviceUnavailable(request, unavailableCode, unavailableMessage);
             auditSupport.recordMasterAudit(request, apiRoute, masterType, 503, fixtureSupport.toServiceFixture(unavailableFixture),
-                    false, true, 0, auditDetails);
+                    false, true, 0, withCacheState(auditDetails, payload != null ? payload.cacheState : null));
             return failure;
         }
         OrcaMasterFixtureSupport.LoadedFixture<T> fixture =
-                fixtureSupport.buildDbFixture(payload.records, payload.version, false);
+                fixtureSupport.buildLocalCacheFixture(payload.records, payload.version, false, payload.cacheState);
         String etagValue = cacheSupport.buildEtag(apiRoute, masterType, fixtureSupport.toServiceFixture(fixture), params);
         long ttlSeconds = cacheSupport.cacheTtlSeconds(masterType);
         if (cacheSupport.etagMatches(ifNoneMatch, etagValue)) {
@@ -248,15 +255,15 @@ class OrcaMasterCatalogEndpointService {
             HttpServletRequest request, MultivaluedMap<String, String> params, String apiRoute, String masterType,
             String unavailableCode, String unavailableMessage, SearchPayload<T> payload, Map<String, Object> auditDetails,
             TensuEntryMapper<T> mapper) {
-        if (payload == null) {
+        if (payload == null || cacheUnavailable(payload.cacheState)) {
             OrcaMasterFixtureSupport.LoadedFixture<T> unavailableFixture = fixtureSupport.unavailableFixture();
             Response failure = auditSupport.serviceUnavailable(request, unavailableCode, unavailableMessage);
             auditSupport.recordMasterAudit(request, apiRoute, masterType, 503, fixtureSupport.toServiceFixture(unavailableFixture),
-                    false, true, 0, auditDetails);
+                    false, true, 0, withCacheState(auditDetails, payload != null ? payload.cacheState : null));
             return failure;
         }
         OrcaMasterFixtureSupport.LoadedFixture<T> fixture =
-                fixtureSupport.buildDbFixture(payload.records, payload.version, false);
+                fixtureSupport.buildLocalCacheFixture(payload.records, payload.version, false, payload.cacheState);
         String etagValue = cacheSupport.buildEtag(apiRoute, masterType, fixtureSupport.toServiceFixture(fixture), params);
         long ttlSeconds = cacheSupport.cacheTtlSeconds(masterType);
         if (cacheSupport.etagMatches(ifNoneMatch, etagValue)) {
@@ -269,7 +276,8 @@ class OrcaMasterCatalogEndpointService {
         for (T entry : fixture.entries) {
             items.add(mapper.map(entry, serviceFixture));
         }
-        OrcaMasterListResponse<OrcaTensuEntry> response = responseAssembler.toListResponse(items, payload.totalCount);
+        OrcaMasterListResponse<OrcaTensuEntry> response =
+                responseAssembler.toListResponse(items, payload.totalCount, fixture.cacheState.toMeta());
         auditSupport.recordMasterAudit(request, apiRoute, masterType, 200, serviceFixture, false, items.isEmpty(),
                 payload.totalCount, auditDetails);
         return cacheSupport.buildCachedOkResponse(response, etagValue, ttlSeconds, null);
@@ -280,7 +288,23 @@ class OrcaMasterCatalogEndpointService {
         if (result == null) {
             return null;
         }
-        return new SearchPayload<>(result.getRecords(), result.getTotalCount(), result.getVersion());
+        return new SearchPayload<>(result.getRecords(), result.getTotalCount(), result.getVersion(), result.getCacheState());
+    }
+
+    private static boolean cacheUnavailable(OrcaMasterCacheState cacheState) {
+        return cacheState != null && cacheState.isUnavailable();
+    }
+
+    private static Map<String, Object> withCacheState(Map<String, Object> auditDetails, OrcaMasterCacheState cacheState) {
+        if (cacheState == null) {
+            return auditDetails;
+        }
+        Map<String, Object> details = new java.util.LinkedHashMap<>();
+        if (auditDetails != null) {
+            details.putAll(auditDetails);
+        }
+        details.putAll(cacheState.toAuditDetails());
+        return details;
     }
 
     @FunctionalInterface
@@ -297,11 +321,13 @@ class OrcaMasterCatalogEndpointService {
         private final List<T> records;
         private final Integer totalCount;
         private final String version;
+        private final OrcaMasterCacheState cacheState;
 
-        private SearchPayload(List<T> records, Integer totalCount, String version) {
+        private SearchPayload(List<T> records, Integer totalCount, String version, OrcaMasterCacheState cacheState) {
             this.records = records != null ? records : Collections.emptyList();
             this.totalCount = totalCount;
             this.version = version;
+            this.cacheState = cacheState;
         }
     }
 }

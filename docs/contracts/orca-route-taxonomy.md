@@ -1,15 +1,16 @@
 # ORCA Route Taxonomy
 
-最終更新: 2026-05-15
+最終更新: 2026-05-17
 
 ## 目的
 
 public route の taxonomy を固定し、official / master / local / admin-internal の責務を混在させない。
 
 - `official`: ORCA official transport 到達 API。公開 prefix は `/api/orca/official/*` のみ。
-- `master`: master-backed read API。公開 prefix は `/api/orca/master/*` のみ。
+- `master`: OpenDolphin local master cache / projection backed read API。公開 prefix は `/api/orca/master/*` のみ。候補検索・入力補助用であり、ORCA 正本ではない。
 - `local`: local-only wrapper / local projection / local persistence。公開 prefix は `/api/local/*` のみ。
 - `admin-internal`: 管理 UI 向けの internal label / internal state。公開 prefix は `/api/admin/internal/*` のみ。
+- `admin-management`: 管理者 step-up を要求する運用 API。公開 prefix は `/api/admin/master-updates/*` のみ。ORCA official/master public route ではない。
 
 `/api/orca/*` の public route は `official` と `master` だけです。production fail-close sentinel、MSW mock/test-only legacy route surface、e2e/QA fixture surface、blocked-route detector、docs/reference、server route inventory negative assertion、web.xml exposure negative assertion に分類される route string は retained string または negative assertion であり、public route ではありません。mock / test / detector / docs reference は public route ではなく、`runtime-ready-smoke` の blocked route detector も success route ではありません。
 
@@ -39,7 +40,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/orca/*` 直下には `official` と `master` 以外を置かない。
 - `/api/orca/queue` と `/api/orca/pusheventgetv2` は current public taxonomy に含めない。server public surface に登録せず、browser runtime が到達したら failure とみなす。
 - official transport を呼ばない local wrapper / local read model / local persistence を `/api/orca/*` に置かない。
-- master-backed read は `/api/orca/master/*` へ寄せ、official bridge と混在させない。
+- master-backed read は `/api/orca/master/*` へ寄せ、official bridge と混在させない。production / normal dev runtime の master search は `ORCADS`、`ORCA_DB_*`、ORCA PostgreSQL 直結、`jma-receipt-docker-db-1` を使わない。
 - audit action も taxonomy に合わせ、official は `ORCA_OFFICIAL_*`、master は `ORCA_MASTER_*`、local は `LOCAL_*` を使う。
 - audit details には route taxonomy に一致する `scope=official|master|local|admin-internal` を入れ、action だけに依存せず追跡できるようにする。
 - official patient 系 audit action は `ORCA_OFFICIAL_CREATE_PATIENT` / `ORCA_OFFICIAL_UPDATE_PATIENT` / `ORCA_OFFICIAL_GET_PATIENT` / `ORCA_OFFICIAL_SYNC_PATIENTS` に固定し、旧 patient-first naming や `ORCA_PATIENT_GET` を残さない。
@@ -159,6 +160,15 @@ public route の taxonomy を固定し、official / master / local / admin-inter
   `/api/admin/internal/orca/medical-sets`
   `/api/admin/internal/orca/birth-delivery`
 
+### Admin-Management
+
+- `/api/admin/master-updates/datasets`
+- `/api/admin/master-updates/datasets/{datasetCode}`
+- `/api/admin/master-updates/datasets/{datasetCode}/run`
+- `/api/admin/master-updates/datasets/{datasetCode}/rollback`
+- `/api/admin/master-updates/datasets/{datasetCode}/upload`
+- `/api/admin/master-updates/schedule`
+
 ### Intentional Fail-Close Exceptions
 
 - `/api/orca/queue`
@@ -172,9 +182,10 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - appointment / visit / billing / report / chart-support / disease lookup は official bridge として `/api/orca/official/*` に固定する。
 - Charts の ORCA 病名 create / update / delete / 削除病名整理は official bridge として `/api/orca/official/chart-support/disease-mod-v3` に固定する。病名本体は `Disease_Single` component 列を正本にし、通常 CRUD は `Disease_Code` 単独や自由文字列だけで送らない。`Request_Number=01` は削除病名整理だけで server が生成し、通常 CRUD や client payload からは送らない。
 - order inputsets / interaction check は master-backed read として `/api/orca/master/order/*` に固定する。
+- `/api/orca/master/*` は local master cache の `cacheStatus=NOT_IMPORTED|UNAVAILABLE|STALE` を UI/API に伝播し、未インポート・取得不能を 0 件と混同しない。local cache の候補コードは ORCA 送信成功・会計反映・ORCA 正本確認の根拠ではない。
 - order bundles / recommendations / prescription orders / chart medical summary / diagnosis read model は local-only として `/api/local/*` に固定する。`/api/local/prescription-orders` は read-only projection だけを許可し、処方 mutation は `/api/local/prescription-orders/authority*` に限定する。病名 mutation は local-only route に置かない。
 - 通常外来の初回会計送信は local workflow `/api/local/encounters/{encounterKey}/close-and-send-to-billing` に固定する。結果不明・失敗・補正要確認の確認は local workflow `/api/local/encounters/orca-transmissions/*` に固定する。client が `patientId` / `facilityId` / voucher / sequential / insurance / `Medical_Uid` / `classCode` を送る direct official 初回送信は通常 UI に戻さない。`/api/orca/official/chart-support/medical-mod-v2` は low-level official bridge / QA focused test 用として残す。
-- sync status と admin wrapper label は `/api/admin/internal/*` に固定する。
+- sync status と admin wrapper label は `/api/admin/internal/*` に固定する。master update の実行・upload・scheduler 設定は管理者 step-up 必須の `/api/admin/master-updates/*` に固定し、`/api/orca/*` へ置かない。
 - local patient mutation route は current public taxonomy から除外する。local patient CRUD 用の DTO、JAX-RS resource、admin wrapper は production route registration へ戻さない。
 
 ## Verification Contract

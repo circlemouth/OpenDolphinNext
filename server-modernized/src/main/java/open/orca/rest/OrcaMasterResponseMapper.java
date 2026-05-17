@@ -129,7 +129,7 @@ class OrcaMasterResponseMapper {
         response.setCityCode(firstNonBlank(entry.cityCode, deriveCityCode(response.getPrefCode())));
         response.setValidFrom(firstNonBlank(entry.startDate, entry.validFrom, OrcaMasterService.DEFAULT_VALID_FROM));
         response.setValidTo(firstNonBlank(entry.endDate, entry.validTo, OrcaMasterService.DEFAULT_VALID_TO));
-        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, false, false,
+        response.setMeta(buildMeta(fixture, false, false,
                 fixture.origin == OrcaMasterService.DataOrigin.FALLBACK, null));
         return response;
     }
@@ -148,7 +148,7 @@ class OrcaMasterResponseMapper {
         response.setPhone(entry.phone);
         response.setValidFrom(firstNonBlank(entry.validFrom, OrcaMasterService.DEFAULT_VALID_FROM));
         response.setValidTo(firstNonBlank(entry.validTo, OrcaMasterService.DEFAULT_VALID_TO));
-        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, false, false, false, null));
+        response.setMeta(buildMeta(fixture, false, false, false, null));
         return response;
     }
 
@@ -162,7 +162,7 @@ class OrcaMasterResponseMapper {
         response.setTown(entry.town);
         response.setFullAddress(firstNonBlank(entry.fullAddress, entry.addressLine, entry.address));
         response.setKana(entry.kana);
-        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, false, false,
+        response.setMeta(buildMeta(fixture, false, false,
                 fixture.origin == OrcaMasterService.DataOrigin.FALLBACK, null));
         return response;
     }
@@ -178,7 +178,7 @@ class OrcaMasterResponseMapper {
         response.setKana(entry.kana);
         response.setRoman(entry.roman);
         response.setFullAddress(firstNonBlank(entry.fullAddress, joinAddress(entry.city, entry.town)));
-        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, false, false, false, null));
+        response.setMeta(buildMeta(fixture, false, false, false, null));
         return response;
     }
 
@@ -191,7 +191,7 @@ class OrcaMasterResponseMapper {
         response.setStartDate(firstNonBlank(entry.startDate, OrcaMasterService.DEFAULT_VALID_FROM));
         response.setEndDate(firstNonBlank(entry.endDate, OrcaMasterService.DEFAULT_VALID_TO));
         response.setTensuVersion(firstNonBlank(entry.version, OrcaMasterService.DEFAULT_VERSION));
-        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, false, false, false, null));
+        response.setMeta(buildMeta(fixture, false, false, false, null));
         return response;
     }
 
@@ -335,7 +335,7 @@ class OrcaMasterResponseMapper {
         response.setStartDate(firstNonBlank(entry.startDate, entry.validFrom, OrcaMasterService.DEFAULT_VALID_FROM));
         response.setEndDate(firstNonBlank(entry.endDate, entry.validTo, OrcaMasterService.DEFAULT_VALID_TO));
         response.setTensuVersion(firstNonBlank(entry.tensuVersion, entry.version, entry.snapshotVersion));
-        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, false,
+        response.setMeta(buildMeta(fixture, false,
                 fixture.origin == OrcaMasterService.DataOrigin.FALLBACK,
                 fixture.origin == OrcaMasterService.DataOrigin.FALLBACK, null));
         return response;
@@ -361,7 +361,7 @@ class OrcaMasterResponseMapper {
         response.setCalcUnits(record.getCalcUnits().isEmpty() ? null : record.getCalcUnits());
         response.setBundlingMembers(record.getBundlingMembers().isEmpty() ? null : record.getBundlingMembers());
         response.setSpecimens(record.getSpecimens().isEmpty() ? null : record.getSpecimens());
-        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, false, false, false, null));
+        response.setMeta(buildMeta(fixture, false, false, false, null));
         return response;
     }
 
@@ -377,6 +377,22 @@ class OrcaMasterResponseMapper {
         meta.setFallbackUsed(fallbackUsed);
         meta.setValidationError(validationError);
         meta.setFetchedAt(Instant.now().toString());
+        if (version != null) {
+            meta.setMasterVersion(version);
+        }
+        if (fixtureState(origin, version) != null) {
+            fixtureState(origin, version).applyTo(meta);
+        }
+        return meta;
+    }
+
+    OrcaMasterMeta buildMeta(OrcaMasterService.LoadedFixture<?> fixture, boolean cacheHit, boolean missingMaster,
+            boolean fallbackUsed, Boolean validationError) {
+        OrcaMasterMeta meta = buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, cacheHit,
+                missingMaster, fallbackUsed, validationError);
+        if (fixture.cacheState != null) {
+            fixture.cacheState.applyTo(meta);
+        }
         return meta;
     }
 
@@ -398,16 +414,22 @@ class OrcaMasterResponseMapper {
         boolean missing = Boolean.TRUE.equals(missingMaster);
         boolean fallback = Boolean.TRUE.equals(fallbackUsed) || missing
                 || fixture.origin == OrcaMasterService.DataOrigin.FALLBACK;
-        entry.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version,
-                Boolean.TRUE.equals(cacheHit), missing, fallback, null));
+        entry.setMeta(buildMeta(fixture, Boolean.TRUE.equals(cacheHit), missing, fallback, null));
         return entry;
+    }
+
+    private OrcaMasterCacheState fixtureState(OrcaMasterService.DataOrigin origin, String version) {
+        if (origin == OrcaMasterService.DataOrigin.FALLBACK) {
+            return OrcaMasterCacheState.unavailable("master");
+        }
+        return OrcaMasterCacheState.current("master", version);
     }
 
     private String dataSourceForOrigin(OrcaMasterService.DataOrigin origin) {
         if (origin == OrcaMasterService.DataOrigin.FALLBACK) {
             return "fallback";
         }
-        if (origin == OrcaMasterService.DataOrigin.ORCA_DB) {
+        if (origin == OrcaMasterService.DataOrigin.ORCA_DB || origin == OrcaMasterService.DataOrigin.LOCAL_CACHE) {
             return "server";
         }
         return "snapshot";

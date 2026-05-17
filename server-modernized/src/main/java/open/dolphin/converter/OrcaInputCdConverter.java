@@ -6,7 +6,7 @@ import open.dolphin.infomodel.OrcaInputCd;
 import open.dolphin.infomodel.OrcaInputSet;
 
 /**
- * ORCA の tbl_inputcd エンティティクラス。
+ * Legacy ORCA input code model converter.
  *
  * @author Minagawa, Kazushi
  */

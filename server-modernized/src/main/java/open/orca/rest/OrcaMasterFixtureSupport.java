@@ -19,7 +19,8 @@ class OrcaMasterFixtureSupport {
                 fixture.snapshotVersion,
                 fixture.version,
                 DataOrigin.valueOf(fixture.origin.name()),
-                fixture.loadFailed
+                fixture.loadFailed,
+                fixture.cacheState
         );
     }
 
@@ -33,7 +34,8 @@ class OrcaMasterFixtureSupport {
                 fixture.snapshotVersion,
                 fixture.version,
                 OrcaMasterService.DataOrigin.valueOf(fixture.origin.name()),
-                fixture.loadFailed
+                fixture.loadFailed,
+                fixture.cacheState
         );
     }
 
@@ -41,12 +43,19 @@ class OrcaMasterFixtureSupport {
         return toResourceFixture(masterService.buildDbFixture(entries, version, loadFailed));
     }
 
+    <T> LoadedFixture<T> buildLocalCacheFixture(List<T> entries, String version, boolean loadFailed,
+            OrcaMasterCacheState cacheState) {
+        return toResourceFixture(masterService.buildLocalCacheFixture(entries, version, loadFailed, cacheState));
+    }
+
     <T> LoadedFixture<T> unavailableFixture() {
-        return new LoadedFixture<>(Collections.emptyList(), null, null, DataOrigin.FALLBACK, true);
+        return new LoadedFixture<>(Collections.emptyList(), null, null, DataOrigin.FALLBACK, true,
+                OrcaMasterCacheState.unavailable("master"));
     }
 
     enum DataOrigin {
         ORCA_DB,
+        LOCAL_CACHE,
         FALLBACK
     }
 
@@ -56,13 +65,20 @@ class OrcaMasterFixtureSupport {
         final String version;
         final DataOrigin origin;
         final boolean loadFailed;
+        final OrcaMasterCacheState cacheState;
 
         LoadedFixture(List<T> entries, String snapshotVersion, String version, DataOrigin origin, boolean loadFailed) {
+            this(entries, snapshotVersion, version, origin, loadFailed, OrcaMasterCacheState.current("master", version));
+        }
+
+        LoadedFixture(List<T> entries, String snapshotVersion, String version, DataOrigin origin, boolean loadFailed,
+                OrcaMasterCacheState cacheState) {
             this.entries = entries;
             this.snapshotVersion = snapshotVersion;
             this.version = version;
             this.origin = origin;
             this.loadFailed = loadFailed;
+            this.cacheState = cacheState;
         }
     }
 

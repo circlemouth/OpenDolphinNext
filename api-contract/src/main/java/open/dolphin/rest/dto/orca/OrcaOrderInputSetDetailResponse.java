@@ -12,6 +12,7 @@ public class OrcaOrderInputSetDetailResponse {
     private Bundle bundle;
     private String runId;
     private String traceId;
+    private OrcaMasterMeta meta;
 
     public boolean isOk() {
         return ok;
@@ -51,6 +52,14 @@ public class OrcaOrderInputSetDetailResponse {
 
     public void setTraceId(String traceId) {
         this.traceId = traceId;
+    }
+
+    public OrcaMasterMeta getMeta() {
+        return meta;
+    }
+
+    public void setMeta(OrcaMasterMeta meta) {
+        this.meta = meta;
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

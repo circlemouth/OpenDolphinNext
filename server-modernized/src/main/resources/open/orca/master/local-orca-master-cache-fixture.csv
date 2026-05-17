@@ -1,0 +1,18 @@
+recordType,masterType,code,name,kana,category,unit,price,validFrom,validTo,masterVersion,note,searchText,payloadJson,setCode,entity,kind,classCode,className,itemCount,seq,quantity,memo,rowRole,rowSubtype,code2,interactionCode,interactionName,message
+entry,drug,620006949,ゲンタシン軟膏０．１％,ゲンタシンナンコウ,264,本,11.20,20240401,99991231,fixture-import-20260517,local master candidate fixture,620006949 ゲンタシン軟膏０．１％ ゲンタシンナンコウ ゲンタ,{}
+entry,generic-price,620006949,ゲンタシン軟膏０．１％,ゲンタシンナンコウ,264,本,11.20,20240401,99991231,fixture-import-20260517,9-digit exact lookup fixture,620006949 ゲンタシン軟膏０．１％ ゲンタシンナンコウ,{}
+entry,generic-class,264,鎮痛・鎮痒・収斂・消炎剤,チンツウチンヨウシュウレンショウエンザイ,264,,,20240401,99991231,fixture-import-20260517,,264 鎮痛 鎮痒 収斂 消炎 外用薬,{}
+entry,hokenja,01130012,全国健康保険協会 東京支部,ゼンコクケンコウホケンキョウカイトウキョウシブ,協会けんぽ,,,20240401,99991231,fixture-import-20260517,,01130012 全国健康保険協会 東京支部 東京 13,"{""prefCode"":""13"",""cityCode"":""13101"",""phone"":""000-0000-0000"",""payerRatio"":""70""}"
+entry,address,1000001,東京都千代田区千代田,トウキョウトチヨダクチヨダ,13,,,20240401,99991231,fixture-import-20260517,,1000001 東京都千代田区千代田 東京 千代田,"{""zip"":""1000001"",""prefCode"":""13"",""cityCode"":""13101"",""city"":""千代田区"",""town"":""千代田"",""addressLine"":""東京都千代田区千代田"",""kanaAddress"":""トウキョウトチヨダクチヨダ""}"
+entry,comment,008500001,別途コメント,ベットコメント,comment,,,20240401,99991231,fixture-import-20260517,,008500001 別途コメント コメント,{}
+entry,bodypart,002000001,胸部,キョウブ,bodypart,,,20240401,99991231,fixture-import-20260517,,002000001 胸部 部位,{}
+entry,youhou,001000001,１日１回朝食後,イチニチイッカイチョウショクゴ,usage,,,20240401,99991231,fixture-import-20260517,,001000001 １日１回朝食後 用法,"{""timingCode"":""morning"",""routeCode"":""oral"",""dosePerDay"":""1""}"
+entry,material,700000031,カテーテル材料,カテーテルザイリョウ,material,本,120.00,20240401,99991231,fixture-import-20260517,,700000031 カテーテル 材料,{}
+entry,kensa-sort,160000010,血液検査,ケツエキケンサ,kensa,,,20240401,99991231,fixture-import-20260517,,160000010 血液検査 検査,"{""kensaSort"":""blood""}"
+entry,etensu,160000010,血液採取,ケツエキサイシュ,6,回,16.00,20240401,99991231,fixture-import-20260517,fixture etensu candidate,160000010 血液採取 検査 6,"{""noticeDate"":""20240401""}"
+entry,disease-candidate,8839001,高血圧症,コウケツアツショウ,I10,,,20240401,99991231,fixture-import-20260517,local disease candidate fixture,8839001 高血圧症 コウケツアツショウ,"{""icdTen"":""I10""}"
+inputset,order-inputsets,,細菌検査セット,,,,,20240401,99991231,fixture-import-20260517,,S60001 細菌検査セット bacteria,{},S60001,bacteriaOrder,S,600,細菌検査,3
+inputsetItem,order-inputsets,160000010,血液採取,,6,回,,20240401,99991231,fixture-import-20260517,,,{},S60001,,,,,,1,1,,main
+inputsetItem,order-inputsets,700000031,カテーテル材料,,material,本,,20240401,99991231,fixture-import-20260517,,,{},S60001,,,,,,2,1,,material
+inputsetItem,order-inputsets,008500001,別途コメント,,comment,,,20240401,99991231,fixture-import-20260517,,,{},S60001,,,,,,3,,,comment
+interaction,order-interactions,620006949,,,,,,20240401,99991231,fixture-import-20260517,,,{},,,,,,,,,,,620000002,LMI0001,相互作用候補,相互作用候補が検出されました

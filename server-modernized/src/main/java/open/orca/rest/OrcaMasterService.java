@@ -30,6 +30,7 @@ class OrcaMasterService {
 
     enum DataOrigin {
         ORCA_DB,
+        LOCAL_CACHE,
         FALLBACK
     }
 
@@ -39,13 +40,21 @@ class OrcaMasterService {
         final String version;
         final DataOrigin origin;
         final boolean loadFailed;
+        final OrcaMasterCacheState cacheState;
 
         LoadedFixture(List<T> entries, String snapshotVersion, String version, DataOrigin origin, boolean loadFailed) {
+            this(entries, snapshotVersion, version, origin, loadFailed,
+                    OrcaMasterCacheState.current("master", version));
+        }
+
+        LoadedFixture(List<T> entries, String snapshotVersion, String version, DataOrigin origin, boolean loadFailed,
+                OrcaMasterCacheState cacheState) {
             this.entries = entries;
             this.snapshotVersion = snapshotVersion;
             this.version = version;
             this.origin = origin;
             this.loadFailed = loadFailed;
+            this.cacheState = cacheState;
         }
     }
 
@@ -105,7 +114,13 @@ class OrcaMasterService {
     }
 
     <T> LoadedFixture<T> buildDbFixture(List<T> entries, String version, boolean loadFailed) {
-        return new LoadedFixture<>(safeList(entries), null, version, DataOrigin.ORCA_DB, loadFailed);
+        return new LoadedFixture<>(safeList(entries), null, version, DataOrigin.LOCAL_CACHE, loadFailed,
+                OrcaMasterCacheState.current("master", version));
+    }
+
+    <T> LoadedFixture<T> buildLocalCacheFixture(List<T> entries, String version, boolean loadFailed,
+            OrcaMasterCacheState cacheState) {
+        return new LoadedFixture<>(safeList(entries), null, version, DataOrigin.LOCAL_CACHE, loadFailed, cacheState);
     }
 
     boolean isUnavailableFallback(LoadedFixture<?> fixture) {
@@ -276,7 +291,7 @@ class OrcaMasterService {
         if (origin == DataOrigin.FALLBACK) {
             return "fallback";
         }
-        if (origin == DataOrigin.ORCA_DB) {
+        if (origin == DataOrigin.ORCA_DB || origin == DataOrigin.LOCAL_CACHE) {
             return "server";
         }
         return "snapshot";

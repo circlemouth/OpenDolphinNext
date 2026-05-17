@@ -31,7 +31,7 @@ public class ServerConfigurationValidator {
         validateRuntime(errors, resolver.runtime());
         validateOrcaRuntime(errors, resolver.orcaRuntime());
         validateOrcaLegacy(errors, resolver.orcaLegacy());
-        validateDatasource(errors, resolver.orcaDatasource());
+        validateDatasource(errors, resolver.primaryDatasource());
         validateFactor2(errors, resolver.factor2());
         validateOrcaSecretProtection(errors, resolver.orcaSecretProtection(), resolver.factor2());
         validateOrcaApi(errors, resolver.orcaApi());

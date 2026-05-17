@@ -46,6 +46,11 @@ export type OrderMasterSearchResult = {
   missingMaster?: boolean;
   fallbackUsed?: boolean;
   dataSourceTransition?: DataSourceTransition;
+  masterStatus?: 'CURRENT' | 'STALE' | 'NOT_IMPORTED' | 'UNAVAILABLE' | string;
+  masterStale?: boolean;
+  masterUnavailableReason?: string;
+  sourceSystem?: string;
+  sourceKind?: string;
   message?: string;
   raw?: unknown;
   correctionCandidates?: OrderMasterSearchItem[];
@@ -67,6 +72,22 @@ type OrcaMasterListResponse<T> = {
   totalCount?: number;
   items?: T[];
   message?: string;
+  meta?: OrcaMasterMeta;
+};
+
+type OrcaMasterMeta = {
+  sourceSystem?: string;
+  sourceKind?: string;
+  sourceApi?: string;
+  sourceFile?: string;
+  masterType?: string;
+  masterVersion?: string;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  importedAt?: string;
+  stale?: boolean;
+  unavailableReason?: string;
+  cacheStatus?: string;
 };
 
 type OrcaDrugMasterEntry = {
@@ -85,6 +106,7 @@ type OrcaDrugMasterEntry = {
   validFrom?: string;
   validTo?: string;
   note?: string;
+  meta?: OrcaMasterMeta;
 };
 
 type OrcaTensuEntry = {
@@ -105,6 +127,7 @@ type OrcaTensuEntry = {
     seq?: number;
     sampleCode?: string;
   }>;
+  meta?: OrcaMasterMeta;
 };
 
 const MASTER_ENDPOINT_MAP: Record<OrderMasterSearchType, string> = {
@@ -202,19 +225,50 @@ const isMasterUnavailableError = (
   return /unavailable|取得できませんでした/i.test(summary);
 };
 
-const extractList = <T,>(json: unknown): { items: T[]; totalCount?: number } => {
+const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object';
+
+const readMasterMeta = (json: unknown): OrcaMasterMeta | undefined => {
+  if (!isRecord(json)) return undefined;
+  const meta = json.meta;
+  if (!isRecord(meta)) return undefined;
+  return meta as OrcaMasterMeta;
+};
+
+const readEntryMasterMeta = (entry: unknown): OrcaMasterMeta | undefined => {
+  if (!isRecord(entry)) return undefined;
+  const meta = entry.meta;
+  if (!isRecord(meta)) return undefined;
+  return meta as OrcaMasterMeta;
+};
+
+const extractList = <T,>(json: unknown): { items: T[]; totalCount?: number; meta?: OrcaMasterMeta } => {
   if (Array.isArray(json)) {
-    return { items: json as T[], totalCount: (json as T[]).length };
+    return { items: json as T[], totalCount: (json as T[]).length, meta: readEntryMasterMeta(json[0]) };
   }
   if (json && typeof json === 'object') {
     const list = (json as OrcaMasterListResponse<T>).items;
     const total = (json as OrcaMasterListResponse<T>).totalCount;
     if (Array.isArray(list)) {
-      return { items: list, totalCount: typeof total === 'number' ? total : list.length };
+      return {
+        items: list,
+        totalCount: typeof total === 'number' ? total : list.length,
+        meta: (json as OrcaMasterListResponse<T>).meta ?? readEntryMasterMeta(list[0]),
+      };
     }
   }
-  return { items: [], totalCount: 0 };
+  return { items: [], totalCount: 0, meta: readMasterMeta(json) };
 };
+
+const buildMasterStatusFields = (meta: OrcaMasterMeta | undefined) => ({
+  masterStatus: meta?.cacheStatus,
+  masterStale: meta?.stale,
+  masterUnavailableReason: meta?.unavailableReason,
+  sourceSystem: meta?.sourceSystem,
+  sourceKind: meta?.sourceKind,
+});
+
+const staleMasterMessage = (meta: OrcaMasterMeta | undefined) =>
+  meta?.cacheStatus === 'STALE' || meta?.stale ? 'マスタキャッシュが最新ではない可能性があります。' : undefined;
 
 type OrderMasterDrugSearchMethod = 'prefix' | 'partial';
 
@@ -307,7 +361,7 @@ export async function fetchOrderMasterSearch(params: {
     const isMasterUnavailable = isMasterUnavailableError(response.status, errorCode, json, response.statusText);
     if (isMasterUnavailable) {
       return {
-        ok: true,
+        ok: false,
         items: [],
         totalCount: 0,
         runId: latestMeta.runId ?? meta.runId,
@@ -315,6 +369,11 @@ export async function fetchOrderMasterSearch(params: {
         missingMaster: true,
         fallbackUsed: true,
         dataSourceTransition: latestMeta.dataSourceTransition,
+        masterStatus: readMasterMeta(json)?.cacheStatus ?? 'UNAVAILABLE',
+        masterStale: readMasterMeta(json)?.stale,
+        masterUnavailableReason: readMasterMeta(json)?.unavailableReason ?? errorCode,
+        sourceSystem: readMasterMeta(json)?.sourceSystem,
+        sourceKind: readMasterMeta(json)?.sourceKind,
         message: readMessage(json, response.statusText || 'マスタ候補の取得に失敗しました。'),
         raw: json,
       };
@@ -351,7 +410,7 @@ export async function fetchOrderMasterSearch(params: {
   }
 
   if (params.type === 'etensu' || params.type === 'bodypart' || params.type === 'comment') {
-    const { items, totalCount } = extractList<OrcaTensuEntry>(json);
+    const { items, totalCount, meta: masterMeta } = extractList<OrcaTensuEntry>(json);
     const normalizedAll = items
       .map((entry) => normalizeTensuEntry(entry, params.type))
       .filter((item): item is OrderMasterSearchItem => Boolean(item));
@@ -373,11 +432,13 @@ export async function fetchOrderMasterSearch(params: {
       missingMaster: latestMeta.missingMaster,
       fallbackUsed: latestMeta.fallbackUsed,
       dataSourceTransition: latestMeta.dataSourceTransition,
+      ...buildMasterStatusFields(masterMeta),
+      message: staleMasterMessage(masterMeta),
       raw: json,
     };
   }
 
-  const { items, totalCount } = extractList<OrcaDrugMasterEntry>(json);
+  const { items, totalCount, meta: masterMeta } = extractList<OrcaDrugMasterEntry>(json);
   const normalized = items
     .map((entry) => normalizeDrugEntry(entry, params.type))
     .filter((item): item is OrderMasterSearchItem => Boolean(item));
@@ -391,6 +452,8 @@ export async function fetchOrderMasterSearch(params: {
     missingMaster: latestMeta.missingMaster,
     fallbackUsed: latestMeta.fallbackUsed,
     dataSourceTransition: latestMeta.dataSourceTransition,
+    ...buildMasterStatusFields(masterMeta),
+    message: staleMasterMessage(masterMeta),
     raw: json,
     correctionCandidates: undefined,
     correctionMeta: undefined,

@@ -483,20 +483,21 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setSize(parsePageSize(params, "size", 100));
         criteria.setIncludeTotalCount(OrcaMasterRequestSupport.shouldIncludeTotalCount(params));
         EtensuDao.EtensuSearchResult dbResult = masterService.searchEtensu(criteria);
-        if (dbResult == null || dbResult.isLoadFailed()) {
+        OrcaMasterCacheState cacheState = dbResult != null ? dbResult.getCacheState() : null;
+        if (dbResult == null || dbResult.isLoadFailed() || cacheUnavailable(cacheState)) {
             LoadedFixture<EtensuDao.EtensuRecord> unavailableFixture = unavailableFixture();
             Response failure = errorResponseSupport().serviceUnavailable(request, "ETENSU_UNAVAILABLE",
                     "etensu master unavailable");
             recordMasterAudit(request, "/api/orca/master/etensu", masterType, 503, unavailableFixture, false, true, 0,
-                    buildTensuQueryDetails(keyword, category, asOf, tensuVersion, pointsMin, pointsMax, params));
+                    withCacheState(buildTensuQueryDetails(keyword, category, asOf, tensuVersion, pointsMin, pointsMax, params),
+                            cacheState));
             return failure;
         }
-        LoadedFixture<EtensuDao.EtensuRecord> dbFixture = new LoadedFixture<>(
+        LoadedFixture<EtensuDao.EtensuRecord> dbFixture = fixtureSupport.buildLocalCacheFixture(
                 dbResult.getRecords(),
-                null,
                 dbResult.getVersion(),
-                DataOrigin.ORCA_DB,
-                false
+                false,
+                cacheState
         );
         final String etagValue = buildEtag("/api/orca/master/etensu", masterType, dbFixture, params);
         final long ttlSeconds = cacheTtlSeconds(masterType);
@@ -521,7 +522,8 @@ public class OrcaMasterResource extends AbstractResource {
         for (EtensuDao.EtensuRecord entry : dbResult.getRecords()) {
             items.add(toEtensuEntry(entry, dbFixture));
         }
-        OrcaMasterListResponse<OrcaTensuEntry> response = responseAssembler.toListResponse(items, totalCount);
+        OrcaMasterListResponse<OrcaTensuEntry> response =
+                responseAssembler.toListResponse(items, totalCount, dbFixture.cacheState.toMeta());
         recordMasterAudit(request, "/api/orca/master/etensu", masterType, 200, dbFixture, false, items.isEmpty(),
                 totalCount,
                 etensuAuditDetails);
@@ -574,7 +576,7 @@ public class OrcaMasterResource extends AbstractResource {
                 Collections.emptyList(),
                 null,
                 tensuVersion,
-                DataOrigin.ORCA_DB,
+                DataOrigin.LOCAL_CACHE,
                 false
         );
         java.util.Map<String, Object> details =
@@ -593,6 +595,22 @@ public class OrcaMasterResource extends AbstractResource {
 
     private <T> OrcaMasterService.LoadedFixture<T> toServiceFixture(LoadedFixture<T> fixture) {
         return fixtureSupport.toServiceFixture(fixture);
+    }
+
+    private static boolean cacheUnavailable(OrcaMasterCacheState cacheState) {
+        return cacheState != null && cacheState.isUnavailable();
+    }
+
+    private static Map<String, Object> withCacheState(Map<String, Object> details, OrcaMasterCacheState cacheState) {
+        if (cacheState == null) {
+            return details;
+        }
+        Map<String, Object> enriched = new LinkedHashMap<>();
+        if (details != null) {
+            enriched.putAll(details);
+        }
+        enriched.putAll(cacheState.toAuditDetails());
+        return enriched;
     }
 
     private int parsePositiveInt(MultivaluedMap<String, String> params, String key, int fallback) {

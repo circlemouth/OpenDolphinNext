@@ -35,4 +35,19 @@
     <Class name="open.orca.rest.OrcaMasterGenericPriceQueryService"/>
     <Bug pattern="SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING"/>
   </Match>
+
+  <!-- Local master cache read-service wrappers intentionally hold the CDI repository boundary.
+       They do not expose mutable clinical state or credential-bearing data. -->
+  <Match>
+    <Class name="open.dolphin.orca.read.OrcaOrderInputSetReadService"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+  <Match>
+    <Class name="open.dolphin.orca.read.OrcaOrderInteractionReadService"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+  <Match>
+    <Class name="open.dolphin.orca.read.OrcaLiveDiseaseMasterReadService"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
 </FindBugsFilter>

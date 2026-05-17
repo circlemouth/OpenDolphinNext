@@ -8,6 +8,7 @@ public class OrcaMasterListResponse<T> {
 
     private Integer totalCount;
     private List<T> items;
+    private OrcaMasterMeta meta;
 
     public Integer getTotalCount() {
         return totalCount;
@@ -23,5 +24,13 @@ public class OrcaMasterListResponse<T> {
 
     public void setItems(List<T> items) {
         this.items = items;
+    }
+
+    public OrcaMasterMeta getMeta() {
+        return meta;
+    }
+
+    public void setMeta(OrcaMasterMeta meta) {
+        this.meta = meta;
     }
 }

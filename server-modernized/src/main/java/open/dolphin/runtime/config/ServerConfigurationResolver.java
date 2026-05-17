@@ -222,6 +222,21 @@ public class ServerConfigurationResolver {
         );
     }
 
+    public ServerRuntimeConfiguration.DatasourceSettings primaryDatasource() {
+        return new ServerRuntimeConfiguration.DatasourceSettings(
+                "db",
+                optional(KEY_DB_HOST).orElse(null),
+                optionalInteger(KEY_DB_PORT).orElse(null),
+                optional(KEY_DB_NAME).orElse(null),
+                optional(KEY_DB_USER).orElse(null),
+                optional(KEY_DB_PASSWORD).orElse(null),
+                optional(KEY_DB_SSLMODE).orElse(null),
+                optionalPath(KEY_DB_SSLROOTCERT).orElse(null),
+                null,
+                null
+        );
+    }
+
     public ServerRuntimeConfiguration.DatasourceSettings orcaDatasource() {
         boolean orcaSpecific = hasAny(
                 KEY_ORCA_DB_HOST,

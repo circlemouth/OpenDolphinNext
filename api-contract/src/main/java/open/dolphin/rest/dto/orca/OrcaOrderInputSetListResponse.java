@@ -11,6 +11,7 @@ public class OrcaOrderInputSetListResponse {
     private List<Item> items = new ArrayList<>();
     private String runId;
     private String traceId;
+    private OrcaMasterMeta meta;
 
     public Integer getTotalCount() {
         return totalCount;
@@ -42,6 +43,14 @@ public class OrcaOrderInputSetListResponse {
 
     public void setTraceId(String traceId) {
         this.traceId = traceId;
+    }
+
+    public OrcaMasterMeta getMeta() {
+        return meta;
+    }
+
+    public void setMeta(OrcaMasterMeta meta) {
+        this.meta = meta;
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

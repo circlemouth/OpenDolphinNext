@@ -21,15 +21,19 @@ ORCA正本情報はOpenDolphinNext側で独立正本化しない。
 | 診療行為・処方・算定候補送信 | medicalmodv2 |
 | 会計・収納・帳票・請求関連 | ORCA公式API経由の参照cache/snapshot |
 
+候補検索・入力補助用の薬剤、点数、コメント、部位、用法、材料、検査、保険者、住所、入力セット、相互作用、病名候補は OpenDolphin local master cache / projection を使う。これは ORCA official API の代替正本ではなく、ORCA送信成功、会計反映、病名正本、患者正本の根拠にしてはならない。
+
 ## 3. 禁止方式
 
 - CLAIM連携への新規依存
 - diseasev2への新規依存
 - ORCA DB直接参照
 - ORCA DB直接更新
+- production / normal dev master search で `ORCADS`、`ORCA_DB_*`、`jma-receipt-docker-db-1` を必須化すること
 - Web clientから生ORCA pathへ到達するproxy
 - ORCA認証情報のブラウザ露出
 - ORCAレスポンス受信前の成功扱い
+- local interaction master cache の未インポート・取得不能を「相互作用なし」や「安全確認済み」と扱うこと
 
 ## 4. ORCA送信で保存する情報
 

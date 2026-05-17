@@ -13,7 +13,6 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.servlet.http.HttpServletRequest;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,7 +25,8 @@ import open.dolphin.rest.dto.orca.OrcaOrderInputSetDetailResponse;
 import open.dolphin.rest.dto.orca.OrcaOrderInputSetListResponse;
 import open.dolphin.rest.dto.orca.OrcaOrderInteractionCheckRequest;
 import open.dolphin.rest.dto.orca.OrcaOrderInteractionCheckResponse;
-import open.orca.rest.ORCAConnection;
+import open.orca.rest.LocalOrcaMasterCacheRepository;
+import open.orca.rest.OrcaMasterCacheState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +44,7 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
     private static final String CLAIM_CLASS_SYSTEM = ClaimConst.CLASS_CODE_ID;
 
     @Inject
-    private ORCAConnection orcaConnection;
+    private LocalOrcaMasterCacheRepository localMasterCacheRepository;
 
     @GET
     @Path("/inputsets")
@@ -87,6 +87,7 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
                 normalizedEntity,
                 resolvedPage,
                 resolvedSize);
+        response.setMeta(loadCacheMeta("order-inputsets"));
 
         Map<String, Object> audit = new HashMap<>();
         audit.put("facilityId", facilityId);
@@ -191,6 +192,7 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
                 resolveTraceId(request),
                 normalizedSetCode,
                 bundle);
+        response.setMeta(loadCacheMeta("order-inputsets"));
 
         Map<String, Object> audit = new HashMap<>();
         audit.put("facilityId", facilityId);
@@ -234,6 +236,7 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
                 runId,
                 resolveTraceId(request),
                 rows);
+        response.setMeta(loadCacheMeta("order-interactions"));
 
         Map<String, Object> audit = new HashMap<>();
         audit.put("facilityId", facilityId);
@@ -272,41 +275,41 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
 
     protected List<OrcaOrderInputSetListResponse.Item> loadInputSetSummaries(String keyword, String effective) {
         try {
-            return OrcaOrderInputSetSupport.loadInputSetSummaries(
-                    resolveOrcaConnection(),
-                    keyword,
-                    effective,
-                    CLAIM_CLASS_SYSTEM,
-                    receiptCode -> OrcaOrderInputSetMetadataSupport.resolveClassMetadata(receiptCode, LOGGER));
-        } catch (SQLException e) {
-            throw restError(null, Response.Status.SERVICE_UNAVAILABLE, "inputset_unavailable", "Failed to load input sets");
+            return repository().searchInputSetSummaries(keyword, effective, CLAIM_CLASS_SYSTEM);
+        } catch (LocalOrcaMasterCacheRepository.LocalMasterUnavailableException ex) {
+            throw restError(null, Response.Status.SERVICE_UNAVAILABLE, "inputset_unavailable",
+                    "Input set master cache is unavailable");
         }
     }
 
     protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(String setCode, String effective, String requestedName) {
         try {
-            return OrcaOrderInputSetSupport.loadInputSetDetail(
-                    resolveOrcaConnection(),
-                    setCode,
-                    effective,
-                    requestedName,
-                    BODY_PART_CODE_PREFIX,
-                    CLAIM_CLASS_SYSTEM,
-                    receiptCode -> OrcaOrderInputSetMetadataSupport.resolveClassMetadata(receiptCode, LOGGER));
-        } catch (SQLException e) {
-            throw restError(null, Response.Status.SERVICE_UNAVAILABLE, "inputset_unavailable", "Failed to load input set detail");
+            return repository().findInputSetDetail(setCode, effective, requestedName, BODY_PART_CODE_PREFIX, CLAIM_CLASS_SYSTEM);
+        } catch (LocalOrcaMasterCacheRepository.LocalMasterUnavailableException ex) {
+            throw restError(null, Response.Status.SERVICE_UNAVAILABLE, "inputset_unavailable",
+                    "Input set master cache is unavailable");
         }
     }
 
     protected List<OrcaOrderInteractionCheckResponse.Pair> loadInteractionPairs(List<String> codes, List<String> existingCodes) {
         try {
-            return OrcaOrderInteractionSupport.loadInteractionPairs(resolveOrcaConnection(), codes, existingCodes);
-        } catch (SQLException e) {
-            throw restError(null, Response.Status.SERVICE_UNAVAILABLE, "interaction_unavailable", "Failed to check interactions");
+            return repository().findInteractionPairs(codes, existingCodes);
+        } catch (LocalOrcaMasterCacheRepository.LocalMasterUnavailableException ex) {
+            throw restError(null, Response.Status.SERVICE_UNAVAILABLE, "interaction_unavailable",
+                    "Interaction master cache is unavailable");
         }
     }
 
-    private ORCAConnection resolveOrcaConnection() {
-        return orcaConnection != null ? orcaConnection : ORCAConnection.current();
+    private open.dolphin.rest.dto.orca.OrcaMasterMeta loadCacheMeta(String masterType) {
+        OrcaMasterCacheState state = repository().loadState(masterType);
+        return state.toMeta();
+    }
+
+    private LocalOrcaMasterCacheRepository repository() {
+        if (localMasterCacheRepository == null) {
+            throw restError(null, Response.Status.SERVICE_UNAVAILABLE, "master_cache_unavailable",
+                    "Local master cache is unavailable");
+        }
+        return localMasterCacheRepository;
     }
 }

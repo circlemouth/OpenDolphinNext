@@ -2,12 +2,6 @@ package open.orca.rest;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * ORCA master DAO.
@@ -15,44 +9,25 @@ import java.util.logging.Logger;
  */
 @ApplicationScoped
 public class OrcaMasterDao {
-    private static final Logger LOGGER = Logger.getLogger(OrcaMasterDao.class.getName());
-    private final ORCAConnection orcaConnection;
-    private final OrcaMasterQuerySupport querySupport = new OrcaMasterQuerySupport();
-    private final OrcaMasterPagingSupport pagingSupport = new OrcaMasterPagingSupport();
-    private final OrcaMasterGenericClassQueryService genericClassQueryService =
-            new OrcaMasterGenericClassQueryService(querySupport, pagingSupport);
-    private final OrcaMasterDrugQueryService drugQueryService = new OrcaMasterDrugQueryService(querySupport, pagingSupport);
-    private final OrcaMasterGenericPriceQueryService genericPriceQueryService = new OrcaMasterGenericPriceQueryService();
-    private final OrcaMasterHokenjaQueryService hokenjaQueryService =
-            new OrcaMasterHokenjaQueryService(querySupport, pagingSupport);
-    private final OrcaMasterAddressQueryService addressQueryService = new OrcaMasterAddressQueryService();
-    private final OrcaMasterYouhouQueryService youhouQueryService =
-            new OrcaMasterYouhouQueryService(querySupport, pagingSupport);
-    private final OrcaMasterKensaSortQueryService kensaSortQueryService =
-            new OrcaMasterKensaSortQueryService(querySupport, pagingSupport);
+    private final LocalOrcaMasterCacheRepository localMasterCacheRepository;
 
     OrcaMasterDao() {
         this(null);
     }
 
     @Inject
-    OrcaMasterDao(ORCAConnection orcaConnection) {
-        this.orcaConnection = orcaConnection;
+    OrcaMasterDao(LocalOrcaMasterCacheRepository localMasterCacheRepository) {
+        this.localMasterCacheRepository = localMasterCacheRepository;
     }
 
     public GenericClassSearchResult searchGenericClass(GenericClassCriteria criteria) {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = openConnection()) {
-            OrcaMasterDaoTableMeta.GenericClassTableMeta meta = OrcaMasterDaoTableMeta.GenericClassTableMeta.SUPPORTED_CONTRACT;
-            return genericClassQueryService.searchGenericClass(connection, criteria, meta.tableName, meta.codeColumn,
-                    meta.nameColumn, meta.kanaColumn, meta.categoryColumn, meta.parentColumn, meta.startDateColumn,
-                    meta.endDateColumn, meta.versionColumn);
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Failed to load ORCA-05 generic class master", e);
+        if (localMasterCacheRepository == null) {
             return null;
         }
+        return localMasterCacheRepository.searchGenericClass(criteria);
     }
 
 
@@ -60,137 +35,90 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = openConnection()) {
-            OrcaMasterDaoTableMeta.DrugTableMeta meta = OrcaMasterDaoTableMeta.DrugTableMeta.SUPPORTED_CONTRACT;
-            return drugQueryService.searchDrug(connection, criteria, meta.tableName, meta.codeColumn, meta.nameColumn,
-                    meta.kanaColumn, meta.categoryColumn, meta.unitColumn, meta.priceColumn, meta.noteColumn,
-                    meta.startDateColumn, meta.endDateColumn, meta.versionColumn);
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Failed to load ORCA-08 drug master", e);
+        if (localMasterCacheRepository == null) {
             return null;
         }
+        return localMasterCacheRepository.searchDrug(criteria);
     }
 
     public LookupResult<GenericPriceRecord> findGenericPrice(GenericPriceCriteria criteria) {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = openConnection()) {
-            return genericPriceQueryService.findGenericPrice(connection, criteria,
-                    OrcaMasterDaoTableMeta.GenericPriceTableMeta.SUPPORTED_CONTRACT);
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Failed to load ORCA-05 generic price master", e);
+        if (localMasterCacheRepository == null) {
             return null;
         }
+        return localMasterCacheRepository.findGenericPrice(criteria);
     }
 
     public ListSearchResult<CommentRecord> searchComment(CommentCriteria criteria) {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = openConnection()) {
-            OrcaMasterDaoTableMeta.DrugTableMeta meta = OrcaMasterDaoTableMeta.DrugTableMeta.SUPPORTED_CONTRACT;
-            return drugQueryService.searchComment(connection, criteria, meta.tableName, meta.codeColumn, meta.nameColumn,
-                    meta.kanaColumn, meta.categoryColumn, meta.unitColumn, meta.startDateColumn, meta.endDateColumn,
-                    meta.versionColumn, false);
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Failed to load ORCA-08 comment master", e);
+        if (localMasterCacheRepository == null) {
             return null;
         }
+        return localMasterCacheRepository.searchComment(criteria);
     }
 
     public ListSearchResult<CommentRecord> searchBodypart(CommentCriteria criteria) {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = openConnection()) {
-            OrcaMasterDaoTableMeta.DrugTableMeta meta = OrcaMasterDaoTableMeta.DrugTableMeta.SUPPORTED_CONTRACT;
-            return drugQueryService.searchComment(connection, criteria, meta.tableName, meta.codeColumn, meta.nameColumn,
-                    meta.kanaColumn, meta.categoryColumn, meta.unitColumn, meta.startDateColumn, meta.endDateColumn,
-                    meta.versionColumn, true);
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Failed to load ORCA-08 bodypart master", e);
+        if (localMasterCacheRepository == null) {
             return null;
         }
+        return localMasterCacheRepository.searchBodypart(criteria);
     }
 
     public ListSearchResult<HokenjaRecord> searchHokenja(HokenjaCriteria criteria) {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = openConnection()) {
-            OrcaMasterDaoTableMeta.HokenjaTableMeta meta = OrcaMasterDaoTableMeta.HokenjaTableMeta.SUPPORTED_CONTRACT;
-            return hokenjaQueryService.searchHokenja(connection, criteria, meta);
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Failed to load ORCA-06 hokenja master", e);
+        if (localMasterCacheRepository == null) {
             return null;
         }
+        return localMasterCacheRepository.searchHokenja(criteria);
     }
 
     public LookupResult<AddressRecord> findAddress(AddressCriteria criteria) {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = openConnection()) {
-            return addressQueryService.findAddress(connection, criteria,
-                    OrcaMasterDaoTableMeta.AddressTableMeta.SUPPORTED_CONTRACT);
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Failed to load ORCA-06 address master", e);
+        if (localMasterCacheRepository == null) {
             return null;
         }
+        return localMasterCacheRepository.findAddress(criteria);
     }
 
     public ListSearchResult<YouhouRecord> searchYouhou(YouhouCriteria criteria) {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = openConnection()) {
-            OrcaMasterDaoTableMeta.YouhouTableMeta meta = OrcaMasterDaoTableMeta.YouhouTableMeta.SUPPORTED_CONTRACT;
-            return youhouQueryService.searchYouhou(connection, criteria, meta.tableName, meta.codeColumn,
-                    meta.nameColumn, meta.kanaColumn, meta.startDateColumn, meta.endDateColumn, meta.versionColumn);
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Failed to load ORCA-05 youhou master", e);
+        if (localMasterCacheRepository == null) {
             return null;
         }
+        return localMasterCacheRepository.searchYouhou(criteria);
     }
 
     public ListSearchResult<MaterialRecord> searchMaterial(MaterialCriteria criteria) {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = openConnection()) {
-            OrcaMasterDaoTableMeta.MaterialTableMeta meta = OrcaMasterDaoTableMeta.MaterialTableMeta.SUPPORTED_CONTRACT;
-            return drugQueryService.searchMaterial(connection, criteria, meta.tableName, meta.codeColumn, meta.nameColumn,
-                    meta.kanaColumn, meta.materialCategoryColumn, meta.unitColumn, meta.priceColumn, meta.makerColumn,
-                    meta.startDateColumn, meta.endDateColumn, meta.versionColumn);
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Failed to load ORCA-08 material master", e);
+        if (localMasterCacheRepository == null) {
             return null;
         }
+        return localMasterCacheRepository.searchMaterial(criteria);
     }
 
     public ListSearchResult<KensaSortRecord> searchKensaSort(KensaSortCriteria criteria) {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = openConnection()) {
-            OrcaMasterDaoTableMeta.KensaSortTableMeta kensaSortMeta = OrcaMasterDaoTableMeta.KensaSortTableMeta.SUPPORTED_CONTRACT;
-            OrcaMasterDaoTableMeta.DrugTableMeta tensuMeta = OrcaMasterDaoTableMeta.DrugTableMeta.SUPPORTED_CONTRACT;
-            return kensaSortQueryService.searchKensaSort(connection, criteria, kensaSortMeta.tableName,
-                    kensaSortMeta.codeColumn, kensaSortMeta.kensaSortColumn, kensaSortMeta.versionColumn,
-                    tensuMeta.tableName, tensuMeta.codeColumn, tensuMeta.nameColumn, tensuMeta.kanaColumn,
-                    tensuMeta.categoryColumn, tensuMeta.startDateColumn, tensuMeta.endDateColumn, tensuMeta.versionColumn);
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Failed to load ORCA-08 kensa sort master", e);
+        if (localMasterCacheRepository == null) {
             return null;
         }
-    }
-
-    private Connection openConnection() throws SQLException {
-        if (orcaConnection == null) {
-            throw new SQLException("ORCAConnection is not configured");
-        }
-        return orcaConnection.getConnection();
+        return localMasterCacheRepository.searchKensaSort(criteria);
     }
 
     public interface VersionedRecord {
@@ -292,6 +220,11 @@ public class OrcaMasterDao {
         public GenericClassSearchResult(java.util.List<GenericClassRecord> records, Integer totalCount, String version) {
             super(records, totalCount, version);
         }
+
+        public GenericClassSearchResult(java.util.List<GenericClassRecord> records, Integer totalCount, String version,
+                OrcaMasterCacheState cacheState) {
+            super(records, totalCount, version, cacheState);
+        }
     }
 
     public static final class ListSearchResult<T extends VersionedRecord>
@@ -299,11 +232,20 @@ public class OrcaMasterDao {
         public ListSearchResult(java.util.List<T> records, Integer totalCount, String version) {
             super(records, totalCount, version);
         }
+
+        public ListSearchResult(java.util.List<T> records, Integer totalCount, String version,
+                OrcaMasterCacheState cacheState) {
+            super(records, totalCount, version, cacheState);
+        }
     }
 
     public static final class LookupResult<T extends VersionedRecord> extends OrcaMasterDaoTypes.LookupResultBase<T> {
         public LookupResult(T record, String version, boolean found) {
             super(record, version, found);
+        }
+
+        public LookupResult(T record, String version, boolean found, OrcaMasterCacheState cacheState) {
+            super(record, version, found, cacheState);
         }
     }
 }

@@ -93,6 +93,9 @@ class OrcaMasterAuditSupport extends AbstractResource {
         details.put("dataSource", dataSourceForOrigin(fixture.origin));
         details.put("snapshotVersion", fixture.snapshotVersion);
         details.put("version", firstNonBlank(fixture.version, OrcaMasterService.DEFAULT_VERSION));
+        if (fixture.cacheState != null) {
+            details.putAll(fixture.cacheState.toAuditDetails());
+        }
         details.put("cacheHit", cacheHit);
         boolean missingMaster = fixture.origin == OrcaMasterService.DataOrigin.FALLBACK;
         if (missingMasterOverride != null) {
@@ -261,7 +264,7 @@ class OrcaMasterAuditSupport extends AbstractResource {
         if (origin == OrcaMasterService.DataOrigin.FALLBACK) {
             return "fallback";
         }
-        if (origin == OrcaMasterService.DataOrigin.ORCA_DB) {
+        if (origin == OrcaMasterService.DataOrigin.ORCA_DB || origin == OrcaMasterService.DataOrigin.LOCAL_CACHE) {
             return "server";
         }
         return "snapshot";

@@ -101,6 +101,7 @@ ORCA由来cacheには、可能な限り次を保存する。
 
 cacheは正本ではない。
 cache更新はORCA正本更新ではない。
+OpenDolphin local ORCA master cache / projection は薬剤・診療行為・コメント・部位・用法・材料・検査・保険者・住所・入力セット・相互作用・病名候補の入力補助専用であり、ORCA 会計、ORCA送信結果、患者、病名、会計、収納、領収、レセプトの正本ではない。未インポート、取得不能、stale は API/UI に明示し、0 件検索結果や安全確認済みとして扱ってはならない。local cache に存在するコードでも ORCA official 送信時に拒否・警告・UNKNOWN となる可能性を必ず扱う。
 `orca_prescription_orders` を残す場合も、この分類は ORCA由来 cache / projection / read model に限定する。処方指示の作成、確定、変更、中止、取消、再発行、再送の正本 mutation 先にしてはならない。OpenDolphinNext の処方正本 mutation は `prescription_order` / `prescription_order_revision` / `prescription_order_item` / `prescription_order_event` だけを使い、`orca_prescription_orders` への app direct INSERT / UPDATE / DELETE は fail-closed で拒否する。
 
 ## 7. snapshot仕様

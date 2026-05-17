@@ -1,12 +1,11 @@
 package open.dolphin.rest.orca;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import open.dolphin.orca.read.OrcaOrderInteractionReadService;
 import open.dolphin.rest.dto.orca.OrcaOrderInteractionCheckResponse;
-import open.orca.rest.ORCAConnection;
+import open.orca.rest.LocalOrcaMasterCacheRepository;
 
 final class OrcaOrderInteractionSupport {
 
@@ -28,9 +27,9 @@ final class OrcaOrderInteractionSupport {
     }
 
     static List<OrcaOrderInteractionCheckResponse.Pair> loadInteractionPairs(
-            ORCAConnection orcaConnection,
+            LocalOrcaMasterCacheRepository repository,
             List<String> codes,
-            List<String> existingCodes) throws SQLException {
-        return new OrcaOrderInteractionReadService(orcaConnection).loadInteractionPairs(codes, existingCodes);
+            List<String> existingCodes) {
+        return new OrcaOrderInteractionReadService(repository).loadInteractionPairs(codes, existingCodes);
     }
 }

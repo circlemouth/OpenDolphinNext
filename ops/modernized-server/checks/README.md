@@ -26,7 +26,7 @@ cd /workspaces/OpenDolphin_WebClient
 
 1. WildFly コンテナが起動済みであることを `docker ps` で確認する。
 2. 上記コマンドでスクリプトを実行し、`FACTOR2_AES_KEY_B64` が設定済みであることを確認する。
-3. JDBC データソース（`PostgresDS`, `ORCADS`）が `read-resource` で取得できることを確認する。
+3. JDBC データソース（`PostgresDS`）が `read-resource` で取得できることを確認する。ORCA master candidate search は OpenDolphin local master cache を使い、標準起動で `ORCADS` を必須にしない。
 4. JMS キュー `dolphinQueue` と `JmsXA` の `read-resource` が成功することを確認する。
 5. `ManagedExecutor`, `ManagedScheduledExecutor`, `ManagedThreadFactory` の `read-resource` が成功することを確認する。
 6. すべて `OK` となったことをもって、モダナイズ版 WildFly の起動に必要なリソースが揃っていると判断する。

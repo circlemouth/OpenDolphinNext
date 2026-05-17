@@ -53,6 +53,15 @@ class ServerConfigurationValidatorTest {
     }
 
     @Test
+    void ignoresLegacyOrcaDbKeysForRequiredStartupDatasource() {
+        ServerConfigurationValidator validator = new ServerConfigurationValidator(
+                resolverWithBaseConfig(
+                        ServerConfigurationResolver.KEY_ORCA_DB_HOST, "legacy-orca-db"));
+
+        assertDoesNotThrow(validator::validateOrThrow);
+    }
+
+    @Test
     void rejectsIncompleteS3AttachmentStorageConfiguration() {
         ServerConfigurationValidator validator = new ServerConfigurationValidator(
                 resolverWithBaseConfig(

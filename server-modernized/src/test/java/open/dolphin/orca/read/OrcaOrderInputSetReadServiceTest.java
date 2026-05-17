@@ -3,21 +3,17 @@ package open.dolphin.orca.read;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.lang.reflect.Proxy;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.List;
-import java.util.Map;
 import open.dolphin.rest.dto.orca.OrcaOrderInputSetDetailResponse;
-import open.orca.rest.ORCAConnection;
+import open.dolphin.rest.dto.orca.OrcaOrderInputSetListResponse;
+import open.orca.rest.LocalOrcaMasterCacheRepository;
 import org.junit.jupiter.api.Test;
 
 class OrcaOrderInputSetReadServiceTest {
 
     @Test
-    void loadInputSetDetailSplitsMainMaterialAndCommentRows() throws Exception {
-        OrcaOrderInputSetReadService service = new OrcaOrderInputSetReadService(buildConnection());
+    void loadInputSetDetailDelegatesToLocalMasterCache() {
+        OrcaOrderInputSetReadService service = new OrcaOrderInputSetReadService(new StubRepository());
 
         OrcaOrderInputSetDetailResponse.Bundle bundle = service.loadInputSetDetail(
                 "S60001",
@@ -41,127 +37,42 @@ class OrcaOrderInputSetReadServiceTest {
         assertEquals("comment", bundle.getCommentItems().get(0).getRowRole());
     }
 
-    private static ORCAConnection buildConnection() {
-        Connection connection = (Connection) Proxy.newProxyInstance(
-                OrcaOrderInputSetReadServiceTest.class.getClassLoader(),
-                new Class[]{Connection.class},
-                (proxy, method, args) -> {
-                    if ("prepareStatement".equals(method.getName())) {
-                        String sql = String.valueOf(args[0]);
-                        return buildPreparedStatement(sql);
-                    }
-                    return defaultValue(method.getReturnType());
-                });
-        return new ORCAConnection() {
-            @Override
-            public Connection getConnection() {
-                return connection;
-            }
-        };
+    @Test
+    void normalizeClassCodeKeepsLegacyInputSetClassParsing() {
+        assertEquals("600", OrcaOrderInputSetReadService.normalizeClassCode(".60001"));
     }
 
-    private static PreparedStatement buildPreparedStatement(String sql) {
-        java.util.Map<Integer, String> params = new java.util.HashMap<>();
-        return (PreparedStatement) Proxy.newProxyInstance(
-                OrcaOrderInputSetReadServiceTest.class.getClassLoader(),
-                new Class[]{PreparedStatement.class},
-                (proxy, method, args) -> {
-                    switch (method.getName()) {
-                        case "setString" -> {
-                            params.put((Integer) args[0], (String) args[1]);
-                            return null;
-                        }
-                        case "executeQuery" -> {
-                            return buildResultSet(sql, params);
-                        }
-                        default -> {
-                            return defaultValue(method.getReturnType());
-                        }
-                    }
-                });
-    }
-
-    private static ResultSet buildResultSet(String sql, Map<Integer, String> params) {
-        List<Map<String, String>> rows;
-        if (sql.contains("FROM tbl_inputset")) {
-            rows = List.of(
-                    Map.of("inputcd", ".600", "suryo1", "", "kaisu", "6"),
-                    Map.of("inputcd", "160000010", "suryo1", "1.0", "kaisu", "6"),
-                    Map.of("inputcd", "700000031", "suryo1", "1.0", "kaisu", "6"),
-                    Map.of("inputcd", "0085001", "suryo1", "", "kaisu", "6"));
-        } else if (sql.contains("FROM tbl_tensu")) {
-            String code = params.get(1);
-            rows = switch (code) {
-                case "160000010" -> List.of(Map.of("name", "LAB_MAIN", "taniname", "count"));
-                case "700000031" -> List.of(Map.of("name", "MATERIAL", "taniname", "set"));
-                case "0085001" -> List.of(Map.of("name", "COMMENT", "taniname", ""));
-                default -> List.of();
-            };
-        } else {
-            rows = List.of();
+    private static final class StubRepository extends LocalOrcaMasterCacheRepository {
+        @Override
+        public List<OrcaOrderInputSetListResponse.Item> searchInputSetSummaries(
+                String keyword, String effective, String claimClassSystem) {
+            return List.of();
         }
 
-        final int[] index = {-1};
-        return (ResultSet) Proxy.newProxyInstance(
-                OrcaOrderInputSetReadServiceTest.class.getClassLoader(),
-                new Class[]{ResultSet.class},
-                (proxy, method, args) -> {
-                    switch (method.getName()) {
-                        case "next" -> {
-                            index[0] += 1;
-                            return index[0] < rows.size();
-                        }
-                        case "getString" -> {
-                            if (index[0] < 0 || index[0] >= rows.size()) {
-                                return null;
-                            }
-                            Map<String, String> row = rows.get(index[0]);
-                            Object key = args[0];
-                            if (key instanceof Integer column) {
-                                return switch (column.intValue()) {
-                                    case 1 -> row.get("inputcd") != null ? row.get("inputcd") : row.get("name");
-                                    case 2 -> row.get("suryo1") != null ? row.get("suryo1") : row.get("taniname");
-                                    case 3 -> row.get("kaisu");
-                                    default -> null;
-                                };
-                            }
-                            return row.get(String.valueOf(key));
-                        }
-                        default -> {
-                            return defaultValue(method.getReturnType());
-                        }
-                    }
-                });
-    }
+        @Override
+        public OrcaOrderInputSetDetailResponse.Bundle findInputSetDetail(
+                String setCode, String effective, String requestedName, String bodyPartCodePrefix, String claimClassSystem) {
+            OrcaOrderInputSetDetailResponse.Bundle bundle = new OrcaOrderInputSetDetailResponse.Bundle();
+            bundle.setSourceSetCode(setCode);
+            bundle.setBundleName(requestedName);
+            bundle.setClassCode("600");
+            bundle.setClassCodeSystem(claimClassSystem);
+            bundle.setEntity("testOrder");
 
-    private static Object defaultValue(Class<?> returnType) {
-        if (returnType == null || !returnType.isPrimitive()) {
-            return null;
+            OrcaOrderInputSetDetailResponse.Item main = item("160000010", "main");
+            OrcaOrderInputSetDetailResponse.Item material = item("700000031", "material");
+            OrcaOrderInputSetDetailResponse.Item comment = item("0085001", "comment");
+            bundle.setItems(List.of(main));
+            bundle.setMaterialItems(List.of(material));
+            bundle.setCommentItems(List.of(comment));
+            return bundle;
         }
-        if (boolean.class.equals(returnType)) {
-            return false;
+
+        private OrcaOrderInputSetDetailResponse.Item item(String code, String role) {
+            OrcaOrderInputSetDetailResponse.Item item = new OrcaOrderInputSetDetailResponse.Item();
+            item.setCode(code);
+            item.setRowRole(role);
+            return item;
         }
-        if (byte.class.equals(returnType)) {
-            return (byte) 0;
-        }
-        if (short.class.equals(returnType)) {
-            return (short) 0;
-        }
-        if (int.class.equals(returnType)) {
-            return 0;
-        }
-        if (long.class.equals(returnType)) {
-            return 0L;
-        }
-        if (float.class.equals(returnType)) {
-            return 0f;
-        }
-        if (double.class.equals(returnType)) {
-            return 0d;
-        }
-        if (char.class.equals(returnType)) {
-            return '\0';
-        }
-        return null;
     }
 }

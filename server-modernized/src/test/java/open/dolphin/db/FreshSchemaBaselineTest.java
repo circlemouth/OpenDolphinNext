@@ -91,7 +91,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0335", appliedVersion(connection));
+                assertEquals("0336", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -146,6 +146,11 @@ class FreshSchemaBaselineTest {
                 assertTrue(tableExists(connection, "opendolphin", "orca_billing_cache"));
                 assertTrue(tableExists(connection, "opendolphin", "orca_report_snapshot"));
                 assertTrue(tableExists(connection, "opendolphin", "orca_medical_candidate"));
+                assertTrue(tableExists(connection, "opendolphin", "local_orca_master_dataset"));
+                assertTrue(tableExists(connection, "opendolphin", "local_orca_master_entry"));
+                assertTrue(tableExists(connection, "opendolphin", "local_orca_master_inputset"));
+                assertTrue(tableExists(connection, "opendolphin", "local_orca_master_inputset_item"));
+                assertTrue(tableExists(connection, "opendolphin", "local_orca_master_interaction"));
                 assertFalse(tableExists(connection, "opendolphin", "d_module_payload"));
                 assertTrue(tableExists(connection, "opendolphin", "runtime_state_store"));
                 assertFalse(tableExists(connection, "opendolphin", "phr_async_job"));
@@ -168,6 +173,9 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "d_billing_orca_snapshot", "snapshot_json"));
                 assertTrue(columnExists(connection, "opendolphin", "d_billing_orca_transmission", "idempotency_key"));
                 assertTrue(columnExists(connection, "opendolphin", "d_billing_orca_transmission", "medical_uid"));
+                assertTrue(columnExists(connection, "opendolphin", "local_orca_master_dataset", "cache_status"));
+                assertTrue(columnExists(connection, "opendolphin", "local_orca_master_entry", "payload_json"));
+                assertTrue(columnExists(connection, "opendolphin", "local_orca_master_inputset_item", "row_role"));
                 assertTrue(columnExists(connection, "opendolphin", "d_diagnosis_entry", "orca_snapshot_hash"));
                 assertTrue(columnExists(connection, "opendolphin", "d_diagnosis_entry", "outcome"));
                 assertTrue(columnExists(connection, "opendolphin", "d_diagnosis_component", "component_type"));

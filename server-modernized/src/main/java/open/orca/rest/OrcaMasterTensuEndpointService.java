@@ -52,16 +52,17 @@ class OrcaMasterTensuEndpointService {
             MultivaluedMap<String, String> params, String apiRoute, String masterType, String unavailableCode,
             String unavailableMessage, SearchPayload<OrcaMasterDao.CommentRecord> payload,
             Map<String, Object> auditDetails) {
-        if (payload == null) {
+        if (payload == null || cacheUnavailable(payload.cacheState)) {
             OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.CommentRecord> unavailableFixture =
                     fixtureSupport.unavailableFixture();
             Response failure = auditSupport.serviceUnavailable(request, unavailableCode, unavailableMessage);
             auditSupport.recordMasterAudit(request, apiRoute, masterType, 503,
-                    fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0, auditDetails);
+                    fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0,
+                    withCacheState(auditDetails, payload != null ? payload.cacheState : null));
             return failure;
         }
         OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.CommentRecord> fixture =
-                fixtureSupport.buildDbFixture(payload.records, payload.version, false);
+                fixtureSupport.buildLocalCacheFixture(payload.records, payload.version, false, payload.cacheState);
         String etagValue = cacheSupport.buildEtag(apiRoute, masterType, fixtureSupport.toServiceFixture(fixture), params);
         long ttlSeconds = cacheSupport.cacheTtlSeconds(masterType);
         if (cacheSupport.etagMatches(ifNoneMatch, etagValue)) {
@@ -74,7 +75,8 @@ class OrcaMasterTensuEndpointService {
         for (OrcaMasterDao.CommentRecord entry : fixture.entries) {
             items.add(responseMapper.toCommentEntry(entry, serviceFixture));
         }
-        OrcaMasterListResponse<OrcaTensuEntry> response = responseAssembler.toListResponse(items, payload.totalCount);
+        OrcaMasterListResponse<OrcaTensuEntry> response =
+                responseAssembler.toListResponse(items, payload.totalCount, fixture.cacheState.toMeta());
         auditSupport.recordMasterAudit(request, apiRoute, masterType, 200, serviceFixture, false, items.isEmpty(),
                 payload.totalCount, auditDetails);
         return cacheSupport.buildCachedOkResponse(response, etagValue, ttlSeconds, null);
@@ -84,14 +86,16 @@ class OrcaMasterTensuEndpointService {
             HttpServletRequest request, MultivaluedMap<String, String> params, String apiRoute, String masterType,
             String unavailableCode, String unavailableMessage, SearchPayload<T> payload, Map<String, Object> auditDetails,
             DrugEntryMapper<T> mapper) {
-        if (payload == null) {
+        if (payload == null || cacheUnavailable(payload.cacheState)) {
             OrcaMasterFixtureSupport.LoadedFixture<T> unavailableFixture = fixtureSupport.unavailableFixture();
             Response failure = auditSupport.serviceUnavailable(request, unavailableCode, unavailableMessage);
             auditSupport.recordMasterAudit(request, apiRoute, masterType, 503,
-                    fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0, auditDetails);
+                    fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0,
+                    withCacheState(auditDetails, payload != null ? payload.cacheState : null));
             return failure;
         }
-        OrcaMasterFixtureSupport.LoadedFixture<T> fixture = fixtureSupport.buildDbFixture(payload.records, payload.version, false);
+        OrcaMasterFixtureSupport.LoadedFixture<T> fixture =
+                fixtureSupport.buildLocalCacheFixture(payload.records, payload.version, false, payload.cacheState);
         String etagValue = cacheSupport.buildEtag(apiRoute, masterType, fixtureSupport.toServiceFixture(fixture), params);
         long ttlSeconds = cacheSupport.cacheTtlSeconds(masterType);
         if (cacheSupport.etagMatches(ifNoneMatch, etagValue)) {
@@ -104,7 +108,8 @@ class OrcaMasterTensuEndpointService {
         for (T entry : fixture.entries) {
             items.add(mapper.map(entry, serviceFixture));
         }
-        OrcaMasterListResponse<OrcaDrugMasterEntry> response = responseAssembler.toListResponse(items, payload.totalCount);
+        OrcaMasterListResponse<OrcaDrugMasterEntry> response =
+                responseAssembler.toListResponse(items, payload.totalCount, fixture.cacheState.toMeta());
         auditSupport.recordMasterAudit(request, apiRoute, masterType, 200, serviceFixture, false, items.isEmpty(),
                 payload.totalCount, auditDetails);
         return cacheSupport.buildCachedOkResponse(response, etagValue, ttlSeconds, null);
@@ -115,7 +120,23 @@ class OrcaMasterTensuEndpointService {
         if (result == null) {
             return null;
         }
-        return new SearchPayload<>(result.getRecords(), result.getTotalCount(), result.getVersion());
+        return new SearchPayload<>(result.getRecords(), result.getTotalCount(), result.getVersion(), result.getCacheState());
+    }
+
+    private static boolean cacheUnavailable(OrcaMasterCacheState cacheState) {
+        return cacheState != null && cacheState.isUnavailable();
+    }
+
+    private static Map<String, Object> withCacheState(Map<String, Object> auditDetails, OrcaMasterCacheState cacheState) {
+        if (cacheState == null) {
+            return auditDetails;
+        }
+        Map<String, Object> details = new java.util.LinkedHashMap<>();
+        if (auditDetails != null) {
+            details.putAll(auditDetails);
+        }
+        details.putAll(cacheState.toAuditDetails());
+        return details;
     }
 
     @FunctionalInterface
@@ -127,11 +148,13 @@ class OrcaMasterTensuEndpointService {
         private final List<T> records;
         private final Integer totalCount;
         private final String version;
+        private final OrcaMasterCacheState cacheState;
 
-        private SearchPayload(List<T> records, Integer totalCount, String version) {
+        private SearchPayload(List<T> records, Integer totalCount, String version, OrcaMasterCacheState cacheState) {
             this.records = records != null ? records : Collections.emptyList();
             this.totalCount = totalCount;
             this.version = version;
+            this.cacheState = cacheState;
         }
     }
 }

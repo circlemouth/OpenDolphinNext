@@ -1,24 +1,17 @@
 package open.dolphin.orca.read;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import open.dolphin.rest.dto.orca.OrcaOrderInteractionCheckResponse;
-import open.orca.rest.ORCAConnection;
+import open.orca.rest.LocalOrcaMasterCacheRepository;
 
 public class OrcaOrderInteractionReadService {
 
-    private final ORCAConnection orcaConnection;
+    private final LocalOrcaMasterCacheRepository repository;
 
-    public OrcaOrderInteractionReadService(ORCAConnection orcaConnection) {
-        this.orcaConnection = orcaConnection;
+    public OrcaOrderInteractionReadService(LocalOrcaMasterCacheRepository repository) {
+        this.repository = repository;
     }
 
     public List<String> sanitizeCodes(List<String> source) {
@@ -37,58 +30,15 @@ public class OrcaOrderInteractionReadService {
 
     public List<OrcaOrderInteractionCheckResponse.Pair> loadInteractionPairs(
             List<String> codes,
-            List<String> existingCodes) throws SQLException {
-        List<String> rightCodes = existingCodes.isEmpty() ? codes : existingCodes;
-        if (codes.isEmpty() || rightCodes.isEmpty()) {
-            return List.of();
+            List<String> existingCodes) {
+        return repository().findInteractionPairs(codes, existingCodes);
+    }
+
+    private LocalOrcaMasterCacheRepository repository() {
+        if (repository == null) {
+            throw new LocalOrcaMasterCacheRepository.LocalMasterUnavailableException(null);
         }
-        Map<String, OrcaOrderInteractionCheckResponse.Pair> deduped = new LinkedHashMap<>();
-        try (Connection connection = orcaConnection.getConnection()) {
-            String leftInClause = codes.stream().map(code -> "?").collect(Collectors.joining(","));
-            String rightInClause = rightCodes.stream().map(code -> "?").collect(Collectors.joining(","));
-            String sql = "SELECT drugcd, drugcd2, TI.syojyoucd, syojyou "
-                    + "FROM tbl_interact TI INNER JOIN tbl_sskijyo TS ON TI.syojyoucd = TS.syojyoucd "
-                    + "WHERE ((drugcd IN (" + leftInClause + ") AND drugcd2 IN (" + rightInClause + ")) "
-                    + "OR (drugcd IN (" + rightInClause + ") AND drugcd2 IN (" + leftInClause + ")))";
-            try (PreparedStatement ps = connection.prepareStatement(sql)) {
-                int index = 1;
-                for (String code : codes) {
-                    ps.setString(index++, code);
-                }
-                for (String code : rightCodes) {
-                    ps.setString(index++, code);
-                }
-                for (String code : rightCodes) {
-                    ps.setString(index++, code);
-                }
-                for (String code : codes) {
-                    ps.setString(index++, code);
-                }
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        String left = trimToNull(rs.getString(1));
-                        String right = trimToNull(rs.getString(2));
-                        if (left == null || right == null || left.equals(right)) {
-                            continue;
-                        }
-                        String first = left.compareTo(right) <= 0 ? left : right;
-                        String second = left.compareTo(right) <= 0 ? right : left;
-                        String key = first + "|" + second + "|" + trimToNull(rs.getString(3));
-                        if (deduped.containsKey(key)) {
-                            continue;
-                        }
-                        OrcaOrderInteractionCheckResponse.Pair pair = new OrcaOrderInteractionCheckResponse.Pair();
-                        pair.setCode1(first);
-                        pair.setCode2(second);
-                        pair.setInteractionCode(trimToNull(rs.getString(3)));
-                        pair.setInteractionName(trimToNull(rs.getString(4)));
-                        pair.setMessage("相互作用が検出されました");
-                        deduped.put(key, pair);
-                    }
-                }
-            }
-        }
-        return new ArrayList<>(deduped.values());
+        return repository;
     }
 
     private String trimToNull(String value) {

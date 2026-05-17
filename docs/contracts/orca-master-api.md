@@ -7,9 +7,34 @@ current repo の server 実装が提供する ORCA master read API の contract 
 - 後方互換は保持しない。
 - 実装されていない `scope` は削除する。
 - 「今は効かないが将来使う」 parameter を残さない。
-- table / column は current repo の schema evidence で確認できた範囲だけを使い、推測名を commit しない。
+- 候補検索・入力補助用 master は OpenDolphin local master cache / projection を使い、production / normal dev runtime で `ORCADS`、`ORCA_DB_*`、ORCA PostgreSQL 直結、`jma-receipt-docker-db-1` に依存しない。
+- local master cache は candidate / cache / projection であり、ORCA 会計・ORCA送信結果・患者/病名/会計の正本ではない。
+- table / column は OpenDolphin local master cache schema evidence で確認できた範囲だけを使い、ORCA 内部 DB table 名を production master search の前提にしない。
 - 503 は backend unavailable のときだけ返す。
 - cache / ETag / audit は既存 master API と同じ規約に揃える。
+
+## local master cache metadata
+list response と各 entry の `meta` は、少なくとも次を返す。API 応答・監査ログに credential、DB URL、raw ORCA body、患者情報を含めない。
+
+- `sourceSystem`
+- `sourceKind`
+- `sourceApi` または `sourceFile`
+- `masterType`
+- `masterVersion`
+- `effectiveFrom`
+- `effectiveTo`
+- `importedAt`
+- `stale`
+- `unavailableReason`
+- `cacheStatus`
+
+`cacheStatus=NOT_IMPORTED|UNAVAILABLE` は 503 とし、0 件検索結果と混同しない。`cacheStatus=STALE` は候補を返してよいが UI/API は stale を明示する。local cache に存在するコードでも ORCA 送信時に ORCA 側で拒否・警告・UNKNOWN になる可能性を扱う。
+
+## import / update contract
+- master update dataset `local_orca_master_cache` は OpenDolphin server 側の import job で `opendolphin.local_orca_master_*` を更新する。通常の master search runtime はこの local cache を読むだけで、ORCA DB (`ORCADS` / `ORCA_DB_*`) へ接続しない。
+- dev/trial の初期試運転 source は `classpath:open/orca/master/local-orca-master-cache-fixture.csv`。これは import 経路確認用 fixture であり、本番 master の根拠ではない。
+- 手動 upload または scheduler 実行で import が失敗した場合、dataset update は failed とし、既存 cache を 0 件成功扱いにしない。API 応答には内部 SQL、DB URL、credential-bearing URL、raw ORCA body、患者情報を含めない。
+- `MASTER_UPDATE_SCHEDULER_ENABLED=true` の環境では `MasterUpdateScheduler` が auto-enabled dataset を定期実行する。本番では classpath fixture ではなく公式 ORCA マスタ配布ファイル、または公式 API 由来 artifact を source として運用する。
 
 ## `/api/orca/master/generic-price` 契約
 ### 受け付ける query parameter
@@ -67,6 +92,11 @@ current repo の server 実装が提供する ORCA master read API の contract 
 - 400 `unsupported_parameter`
 - メッセージ: `scope query parameter is not supported`
 - silent ignore を禁止する。
+
+## order helper / master-like API
+- `/api/orca/master/order/inputsets` と `/api/orca/master/order/inputsets/{setCode}` は OpenDolphin local master cache / OpenDolphin 管理マスタ由来の候補であり、ORCA 内部入力セット DB 直結を前提にしない。未インポートまたは backend unavailable は 503 `inputset_unavailable` とし、空結果にしない。
+- `/api/orca/master/order/interactions/check` は local interaction master cache を使う。未インポートまたは backend unavailable は 503 `interaction_unavailable` とし、処方安全上「相互作用なし」扱いにしない。
+- `/api/orca/official/disease-master/name/{param}/` は互換 route 名を維持するが、自由語候補は local disease candidate cache 由来の candidate/readOnly/candidateOnly 応答であり、ORCA 病名正本や `diseaseget/diseasev3` の成功根拠ではない。cache unavailable は明示 503 とする。
 
 ## 実装タスク
 - [x] `OrcaMasterResource` から `scope` の解決・criteria 反映を削除する。

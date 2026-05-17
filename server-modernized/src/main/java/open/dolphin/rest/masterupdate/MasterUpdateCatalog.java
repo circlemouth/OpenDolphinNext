@@ -35,6 +35,17 @@ public final class MasterUpdateCatalog {
                         24 * 60
                 ),
                 new DatasetDefinition(
+                        "local_orca_master_cache",
+                        "OpenDolphin local ORCA master cache",
+                        "classpath:open/orca/master/local-orca-master-cache-fixture.csv",
+                        "毎日 1回（scheduler 有効時）",
+                        "CSV",
+                        "候補検索用 local master cache/projection。fixture source は非本番試運転用で、ORCA 正本ではない",
+                        true,
+                        true,
+                        24 * 60
+                ),
+                new DatasetDefinition(
                         "drug_package_medhot",
                         "MEDHOT package unit",
                         "https://medhot.medd.jp/view_download",

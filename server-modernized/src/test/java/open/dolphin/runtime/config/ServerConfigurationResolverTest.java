@@ -52,6 +52,22 @@ class ServerConfigurationResolverTest {
     }
 
     @Test
+    void resolvesPrimaryDatasourceFromGenericDbNamespace() {
+        ServerRuntimeConfiguration.DatasourceSettings settings = TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_DB_HOST, "primary-db",
+                ServerConfigurationResolver.KEY_DB_PORT, "5432",
+                ServerConfigurationResolver.KEY_DB_NAME, "opendolphin",
+                ServerConfigurationResolver.KEY_DB_USER, "app",
+                ServerConfigurationResolver.KEY_DB_PASSWORD, "pw")
+                .primaryDatasource();
+
+        assertEquals("db", settings.namespace());
+        assertEquals("primary-db", settings.host());
+        assertEquals(5432, settings.port());
+        assertEquals("opendolphin", settings.database());
+    }
+
+    @Test
     void resolvesOrcaRuntimeSettingsAsTypedValues() {
         ServerRuntimeConfiguration.OrcaRuntimeSettings settings = TestServerConfigurationResolvers.resolver(
                 ServerConfigurationResolver.KEY_FACILITY_ID, "facility01",

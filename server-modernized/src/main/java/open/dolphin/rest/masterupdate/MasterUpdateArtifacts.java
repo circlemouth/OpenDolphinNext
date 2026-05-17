@@ -52,6 +52,9 @@ final class MasterUpdateArtifacts {
             return fetchOrcaMasterArtifact();
         }
         MasterUpdateStore.DatasetState state = MasterUpdateStateSupport.requireDataset(store.getSnapshot(), datasetCode);
+        if (state.sourceUrl != null && state.sourceUrl.trim().startsWith("classpath:")) {
+            return fetchClasspathArtifact(state.sourceUrl);
+        }
         return fetchExternalArtifact(state.sourceUrl);
     }
 
@@ -134,12 +137,56 @@ final class MasterUpdateArtifacts {
         return artifact;
     }
 
+    private UpdateArtifact fetchClasspathArtifact(String sourceUrl) {
+        String resourceName = sourceUrl != null ? sourceUrl.trim().substring("classpath:".length()) : "";
+        if (resourceName.isBlank() || resourceName.startsWith("/")) {
+            throw new MasterUpdateService.MasterUpdateException(400, "classpath_source_invalid", "classpath データ取得元が不正です。");
+        }
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        if (loader == null) {
+            loader = MasterUpdateArtifacts.class.getClassLoader();
+        }
+        try (InputStream input = loader.getResourceAsStream(resourceName)) {
+            if (input == null) {
+                throw new MasterUpdateService.MasterUpdateException(404, "classpath_source_not_found",
+                        "classpath データ取得元が見つかりません。");
+            }
+            byte[] payload = input.readAllBytes();
+            if (payload.length == 0) {
+                throw new MasterUpdateService.MasterUpdateException(502, "classpath_source_empty",
+                        "classpath データが空です。");
+            }
+            String extension = resolveExtension(resourceName, "text/csv");
+            UpdateArtifact artifact = new UpdateArtifact();
+            artifact.payload = payload;
+            artifact.hash = sha256(payload);
+            artifact.recordCount = estimateRecordCount(payload, extension, "text/csv");
+            artifact.summary = "classpath resource / size=" + payload.length;
+            artifact.note = "development/trial fixture source";
+            artifact.suggestedExtension = extension;
+            artifact.sourceUrl = "classpath:" + resourceName;
+            return artifact;
+        } catch (MasterUpdateService.MasterUpdateException ex) {
+            throw ex;
+        } catch (IOException ex) {
+            throw new MasterUpdateService.MasterUpdateException(500, "classpath_source_read_failed",
+                    "classpath データ取得に失敗しました。");
+        }
+    }
+
     private UpdateArtifact fetchExternalArtifact(String sourceUrl) {
         if (sourceUrl == null || sourceUrl.isBlank()) {
             throw new MasterUpdateService.MasterUpdateException(400, "source_url_missing", "取得元URLが未設定です。");
         }
 
-        HttpRequest request = HttpRequest.newBuilder(URI.create(sourceUrl.trim()))
+        URI sourceUri;
+        try {
+            sourceUri = URI.create(sourceUrl.trim());
+        } catch (IllegalArgumentException ex) {
+            throw new MasterUpdateService.MasterUpdateException(400, "source_url_invalid", "取得元URLが不正です。");
+        }
+
+        HttpRequest request = HttpRequest.newBuilder(sourceUri)
                 .GET()
                 .timeout(Duration.ofSeconds(45))
                 .header("User-Agent", "OpenDolphin-MasterUpdate/1.0")
@@ -150,9 +197,9 @@ final class MasterUpdateArtifacts {
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-            throw new MasterUpdateService.MasterUpdateException(502, "external_fetch_failed", "外部データ取得に失敗しました: " + ex.getMessage());
+            throw new MasterUpdateService.MasterUpdateException(502, "external_fetch_failed", "外部データ取得に失敗しました。");
         } catch (IOException ex) {
-            throw new MasterUpdateService.MasterUpdateException(502, "external_fetch_failed", "外部データ取得に失敗しました: " + ex.getMessage());
+            throw new MasterUpdateService.MasterUpdateException(502, "external_fetch_failed", "外部データ取得に失敗しました。");
         }
 
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
@@ -183,14 +230,14 @@ final class MasterUpdateArtifacts {
             artifact.summary = "HTTP " + response.statusCode() + " / size=" + streamed.size;
             artifact.note = contentType;
             artifact.suggestedExtension = extension;
-            artifact.sourceUrl = sourceUrl;
+            artifact.sourceUrl = sanitizeSourceUrl(sourceUrl);
             return artifact;
         } catch (MasterUpdateService.MasterUpdateException ex) {
             deleteTempFileQuietly(tempFile);
             throw ex;
         } catch (IOException ex) {
             deleteTempFileQuietly(tempFile);
-            throw new MasterUpdateService.MasterUpdateException(500, "artifact_stream_failed", "取得ファイルの一時保存に失敗しました: " + ex.getMessage());
+            throw new MasterUpdateService.MasterUpdateException(500, "artifact_stream_failed", "取得ファイルの一時保存に失敗しました。");
         }
     }
 
@@ -382,6 +429,32 @@ final class MasterUpdateArtifacts {
             }
         }
         return "bin";
+    }
+
+    private static String sanitizeSourceUrl(String sourceUrl) {
+        if (sourceUrl == null || sourceUrl.isBlank()) {
+            return sourceUrl;
+        }
+        try {
+            URI uri = URI.create(sourceUrl.trim());
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            if (scheme == null || host == null) {
+                return sourceUrl.split("\\?", 2)[0];
+            }
+            StringBuilder sanitized = new StringBuilder();
+            sanitized.append(scheme).append("://").append(host);
+            if (uri.getPort() >= 0) {
+                sanitized.append(':').append(uri.getPort());
+            }
+            String path = uri.getRawPath();
+            if (path != null) {
+                sanitized.append(path);
+            }
+            return sanitized.toString();
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     private static String sha256(byte[] payload) {

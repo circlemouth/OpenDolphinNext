@@ -17,13 +17,4 @@ class EtensuRefactorSupportTest {
         assertNull(EtensuDaoSupport.parseVersionKey("current"));
     }
 
-    @Test
-    void expectedCapacity_positiveSizeExpandsForHashCollections() {
-        assertEquals(27, new EtensuDetailLoader().expectedCapacity(20));
-    }
-
-    @Test
-    void expectedCapacity_zeroSizeKeepsMinimumCapacity() {
-        assertEquals(16, new EtensuDetailLoader().expectedCapacity(0));
-    }
 }

@@ -251,14 +251,15 @@ container_name() {
 POSTGRES_CONTAINER_NAME="$(container_name opendolphin-postgres-modernized)"
 SERVER_CONTAINER_NAME="$(container_name opendolphin-server-modernized-dev)"
 MINIO_CONTAINER_NAME="$(container_name opendolphin-minio)"
-ORCA_DB_CONTAINER_NAME="${ORCA_DB_CONTAINER_NAME:-jma-receipt-docker-db-1}"
-ORCA_DB_HOST="${ORCA_DB_HOST:-$ORCA_DB_CONTAINER_NAME}"
-ORCA_DB_PORT="${ORCA_DB_PORT:-5432}"
-ORCA_DB_NAME="${ORCA_DB_NAME:-orca}"
-ORCA_DB_USER="${ORCA_DB_USER:-orca}"
-ORCA_DB_PASSWORD="${ORCA_DB_PASSWORD:-orca_password}"
-ORCA_DB_SSLMODE="${ORCA_DB_SSLMODE:-disable&currentSchema=master,public}"
-ORCA_DB_SSLROOTCERT="${ORCA_DB_SSLROOTCERT:-/dev/null}"
+ENABLE_LEGACY_ORCA_DB_BRIDGE="${ENABLE_LEGACY_ORCA_DB_BRIDGE:-0}"
+ORCA_DB_CONTAINER_NAME="${ORCA_DB_CONTAINER_NAME:-}"
+ORCA_DB_HOST="${ORCA_DB_HOST:-}"
+ORCA_DB_PORT="${ORCA_DB_PORT:-}"
+ORCA_DB_NAME="${ORCA_DB_NAME:-}"
+ORCA_DB_USER="${ORCA_DB_USER:-}"
+ORCA_DB_PASSWORD="${ORCA_DB_PASSWORD:-}"
+ORCA_DB_SSLMODE="${ORCA_DB_SSLMODE:-}"
+ORCA_DB_SSLROOTCERT="${ORCA_DB_SSLROOTCERT:-}"
 DB_REPAIR_APPLIED=0
 SEARCH_PATH_FIXED=0
 
@@ -278,6 +279,24 @@ is_truthy() {
       return 1
       ;;
   esac
+}
+
+resolve_legacy_orca_db_defaults() {
+  if ! is_truthy "$ENABLE_LEGACY_ORCA_DB_BRIDGE"; then
+    return
+  fi
+  ORCA_DB_CONTAINER_NAME="${ORCA_DB_CONTAINER_NAME:-jma-receipt-docker-db-1}"
+  ORCA_DB_HOST="${ORCA_DB_HOST:-$ORCA_DB_CONTAINER_NAME}"
+  ORCA_DB_PORT="${ORCA_DB_PORT:-5432}"
+  ORCA_DB_NAME="${ORCA_DB_NAME:-orca}"
+  ORCA_DB_USER="${ORCA_DB_USER:-}"
+  ORCA_DB_PASSWORD="${ORCA_DB_PASSWORD:-}"
+  ORCA_DB_SSLMODE="${ORCA_DB_SSLMODE:-disable&currentSchema=master,public}"
+  ORCA_DB_SSLROOTCERT="${ORCA_DB_SSLROOTCERT:-/dev/null}"
+  if [[ -z "$ORCA_DB_USER" || -z "$ORCA_DB_PASSWORD" ]]; then
+    echo "ENABLE_LEGACY_ORCA_DB_BRIDGE requires ORCA_DB_USER and ORCA_DB_PASSWORD to be supplied from local secrets." >&2
+    exit 1
+  fi
 }
 
 LEGACY_HEADER_AUTH_FALLBACK_DEFAULT=1
@@ -743,10 +762,23 @@ generate_custom_properties() {
 
 generate_compose_override() {
   log "Generating $COMPOSE_OVERRIDE_FILE..."
-  log "ORCADS route host=${ORCA_DB_HOST} port=${ORCA_DB_PORT} db=${ORCA_DB_NAME} user=${ORCA_DB_USER} sslmode=${ORCA_DB_SSLMODE}"
   local storage_env_block=""
   local minio_env_block=""
   local minio_mc_env_block=""
+  local orca_db_env_block=""
+  if is_truthy "$ENABLE_LEGACY_ORCA_DB_BRIDGE"; then
+    resolve_legacy_orca_db_defaults
+    log "Legacy ORCA DB dev-only env enabled host=${ORCA_DB_HOST} port=${ORCA_DB_PORT} db=${ORCA_DB_NAME} sslmode=${ORCA_DB_SSLMODE}"
+    orca_db_env_block="      ORCA_DB_HOST: ${ORCA_DB_HOST}
+      ORCA_DB_PORT: ${ORCA_DB_PORT}
+      ORCA_DB_NAME: ${ORCA_DB_NAME}
+      ORCA_DB_USER: ${ORCA_DB_USER}
+      ORCA_DB_PASSWORD: ${ORCA_DB_PASSWORD}
+      ORCA_DB_SSLMODE: ${ORCA_DB_SSLMODE}
+      ORCA_DB_SSLROOTCERT: ${ORCA_DB_SSLROOTCERT}"
+  else
+    log "Legacy ORCA DB dev-only env disabled; master search uses OpenDolphin local master cache."
+  fi
   if [[ "$OBJECT_STORAGE_FREE_RUNTIME" == "1" ]]; then
     storage_env_block="      OPENDOLPHIN_RUNTIME_PROFILE: ${OPENDOLPHIN_RUNTIME_PROFILE_EFFECTIVE}
       ATTACHMENT_STORAGE_MODE: disabled
@@ -810,13 +842,7 @@ ${storage_env_block}
       ORCA_API_RETRY_MAX: ${ORCA_API_RETRY_MAX:-}
       ORCA_API_RETRY_BACKOFF_MS: ${ORCA_API_RETRY_BACKOFF_MS:-}
       ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH: ${ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH:-true}
-      ORCA_DB_HOST: ${ORCA_DB_HOST}
-      ORCA_DB_PORT: ${ORCA_DB_PORT}
-      ORCA_DB_NAME: ${ORCA_DB_NAME}
-      ORCA_DB_USER: ${ORCA_DB_USER}
-      ORCA_DB_PASSWORD: ${ORCA_DB_PASSWORD}
-      ORCA_DB_SSLMODE: ${ORCA_DB_SSLMODE}
-      ORCA_DB_SSLROOTCERT: ${ORCA_DB_SSLROOTCERT}
+${orca_db_env_block}
       DOCUMENT_INTEGRITY_MODE: enforce
       DOCUMENT_INTEGRITY_KEYRING_PATH: ${DOCUMENT_INTEGRITY_KEYRING_CONTAINER_PATH}
       OPENDOLPHIN_SCHEMA_ACTION: ${OPENDOLPHIN_SCHEMA_ACTION}
@@ -849,8 +875,13 @@ start_modernized_server() {
 }
 
 ensure_orca_db_bridge() {
+  if ! is_truthy "$ENABLE_LEGACY_ORCA_DB_BRIDGE"; then
+    log "Skipping legacy ORCA DB bridge; local master cache is the standard master search source."
+    return
+  fi
+  resolve_legacy_orca_db_defaults
   if ! docker ps -a --format '{{.Names}}' | grep -Fx "$ORCA_DB_CONTAINER_NAME" >/dev/null 2>&1; then
-    log "Warning: ORCA DB container not found (${ORCA_DB_CONTAINER_NAME}). ORCA master APIs may fail."
+    log "Warning: legacy ORCA DB container not found (${ORCA_DB_CONTAINER_NAME}). Dev-only ORCA DB bridge will be skipped."
     return
   fi
   local server_network

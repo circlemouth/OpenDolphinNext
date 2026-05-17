@@ -705,11 +705,18 @@ final class OrcaMasterDaoTypes {
         private final List<T> records;
         private final Integer totalCount;
         private final String version;
+        private final OrcaMasterCacheState cacheState;
 
         GenericClassSearchResultBase(List<T> records, Integer totalCount, String version) {
+            this(records, totalCount, version, OrcaMasterCacheState.current("generic-class", version));
+        }
+
+        GenericClassSearchResultBase(List<T> records, Integer totalCount, String version,
+                OrcaMasterCacheState cacheState) {
             this.records = records;
             this.totalCount = totalCount;
             this.version = version;
+            this.cacheState = cacheState;
         }
 
         public List<T> getRecords() {
@@ -722,6 +729,10 @@ final class OrcaMasterDaoTypes {
 
         public String getVersion() {
             return version;
+        }
+
+        public OrcaMasterCacheState getCacheState() {
+            return cacheState;
         }
     }
 
@@ -729,11 +740,17 @@ final class OrcaMasterDaoTypes {
         private final List<T> records;
         private final Integer totalCount;
         private final String version;
+        private final OrcaMasterCacheState cacheState;
 
         ListSearchResultBase(List<T> records, Integer totalCount, String version) {
+            this(records, totalCount, version, OrcaMasterCacheState.current("master", version));
+        }
+
+        ListSearchResultBase(List<T> records, Integer totalCount, String version, OrcaMasterCacheState cacheState) {
             this.records = records;
             this.totalCount = totalCount;
             this.version = version;
+            this.cacheState = cacheState;
         }
 
         public List<T> getRecords() {
@@ -747,17 +764,27 @@ final class OrcaMasterDaoTypes {
         public String getVersion() {
             return version;
         }
+
+        public OrcaMasterCacheState getCacheState() {
+            return cacheState;
+        }
     }
 
     static class LookupResultBase<T> {
         private final T record;
         private final String version;
         private final boolean found;
+        private final OrcaMasterCacheState cacheState;
 
         LookupResultBase(T record, String version, boolean found) {
+            this(record, version, found, OrcaMasterCacheState.current("master", version));
+        }
+
+        LookupResultBase(T record, String version, boolean found, OrcaMasterCacheState cacheState) {
             this.record = record;
             this.version = version;
             this.found = found;
+            this.cacheState = cacheState;
         }
 
         public T getRecord() {
@@ -770,6 +797,10 @@ final class OrcaMasterDaoTypes {
 
         public boolean isFound() {
             return found;
+        }
+
+        public OrcaMasterCacheState getCacheState() {
+            return cacheState;
         }
     }
 

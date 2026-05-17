@@ -253,7 +253,7 @@ describe('fetchOrderMasterSearch auth routing', () => {
     expect(result.totalCount).toBe(0);
   });
 
-  it('treats ETENSU_UNAVAILABLE as empty result for etensu search', async () => {
+  it('treats ETENSU_UNAVAILABLE as unavailable, not an empty search result', async () => {
     const { httpFetch } = await import('../../libs/http/httpClient');
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
@@ -270,11 +270,12 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     const result = await fetchOrderMasterSearch({ type: 'etensu', keyword: 'zz' });
 
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
     expect(result.items).toEqual([]);
     expect(result.totalCount).toBe(0);
     expect(result.missingMaster).toBe(true);
     expect(result.fallbackUsed).toBe(true);
+    expect(result.masterStatus).toBe('UNAVAILABLE');
   });
 
   it('forces missingMaster/fallbackUsed=true on unavailable even when observability meta is stale false', async () => {
@@ -300,14 +301,14 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     const result = await fetchOrderMasterSearch({ type: 'etensu', keyword: 'zz' });
 
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
     expect(result.items).toEqual([]);
     expect(result.totalCount).toBe(0);
     expect(result.missingMaster).toBe(true);
     expect(result.fallbackUsed).toBe(true);
   });
 
-  it('treats MASTER_*_UNAVAILABLE as empty result for non-etensu searches', async () => {
+  it('treats MASTER_*_UNAVAILABLE as unavailable for non-etensu searches', async () => {
     const { httpFetch } = await import('../../libs/http/httpClient');
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
@@ -324,14 +325,15 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     const result = await fetchOrderMasterSearch({ type: 'material', keyword: 'カテーテル' });
 
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
     expect(result.items).toEqual([]);
     expect(result.totalCount).toBe(0);
     expect(result.missingMaster).toBe(true);
     expect(result.fallbackUsed).toBe(true);
+    expect(result.masterStatus).toBe('UNAVAILABLE');
   });
 
-  it('drug 検索で MASTER_DRUG_UNAVAILABLE は空結果かつ missingMaster/fallbackUsed=true を返す', async () => {
+  it('drug 検索で MASTER_DRUG_UNAVAILABLE は unavailable として返す', async () => {
     const { httpFetch } = await import('../../libs/http/httpClient');
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
@@ -348,11 +350,12 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     const result = await fetchOrderMasterSearch({ type: 'drug', keyword: 'アムロジピン' });
 
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
     expect(result.items).toEqual([]);
     expect(result.totalCount).toBe(0);
     expect(result.missingMaster).toBe(true);
     expect(result.fallbackUsed).toBe(true);
+    expect(result.masterStatus).toBe('UNAVAILABLE');
   });
 
   it('treats uppercase statusText unavailable as unavailable for non-etensu searches', async () => {
@@ -367,11 +370,44 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     const result = await fetchOrderMasterSearch({ type: 'material', keyword: 'カテーテル' });
 
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
     expect(result.items).toEqual([]);
     expect(result.totalCount).toBe(0);
     expect(result.missingMaster).toBe(true);
     expect(result.fallbackUsed).toBe(true);
+  });
+
+  it('successful search propagates local master cache metadata and stale state', async () => {
+    const { httpFetch } = await import('../../libs/http/httpClient');
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          totalCount: 1,
+          meta: {
+            sourceSystem: 'OpenDolphinLocalMasterCache',
+            sourceKind: 'fixture-dev',
+            masterType: 'drug',
+            masterVersion: 'fixture-20260517',
+            stale: true,
+            cacheStatus: 'STALE',
+          },
+          items: [{ code: '620006949', name: 'ゲンタシン軟膏０．１％', unit: '本' }],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await fetchOrderMasterSearch({ type: 'drug', keyword: 'ゲンタ' });
+
+    expect(result.ok).toBe(true);
+    expect(result.items[0]).toMatchObject({ code: '620006949', name: 'ゲンタシン軟膏０．１％', unit: '本' });
+    expect(result.masterStatus).toBe('STALE');
+    expect(result.masterStale).toBe(true);
+    expect(result.sourceSystem).toBe('OpenDolphinLocalMasterCache');
+    expect(result.message).toContain('マスタキャッシュ');
   });
 
   it('youhou 検索で effective を付与し、拡張項目をマッピングする', async () => {

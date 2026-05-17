@@ -20,7 +20,7 @@
 - `送信候補` は対象がある場合だけ隔離表示し、ORCAへ登録する明示 confirm がある場合だけ `diseasev3` へ送信します。候補は `readOnly=false` の local CRUD 対象ではなく、ORCA未登録の送信候補として扱います。
 - 診察終了時の標準導線では、`POST /api/local/encounters/{encounterKey}/close-and-send-to-billing` が server-side snapshot を作成し、ORCA連携対象として明示された病名だけを `diseasev3` 連携候補にします。候補病名、臨床メモ、local-only disease は会計送信 snapshot に自動昇格しません。
 - `候補` は truth ではありません。明示 confirm なしで ORCA 登録 payload に昇格させません。
-- 病名マスター候補検索は server-side ORCA master datasource の `tbl_byomei` を参照し、画面日付は server で `yyyyMMdd` へ正規化する。`masterlastupdatev3` 由来の `disease_master` dataset を master update 状態に保存し、候補検索と病名一覧に `masterVersion` を含める。ローカル開発DBで master table が無い、または ORCA master datasource が未起動の場合だけ最小 bootstrap 候補を補助表示できるが、ORCA 登録済み truth にはせず、登録は confirm と `disease-mod-v3` を必須にする。
+- 病名マスター候補検索は OpenDolphin local disease candidate cache / projection を参照し、画面日付は server で `yyyyMMdd` へ正規化する。候補検索には local cache の `masterVersion` / `cacheStatus` を含める。未インポート・取得不能は unavailable として表示し、0 件や bootstrap fallback と混同しない。候補は ORCA 登録済み truth にはせず、登録は confirm と `disease-mod-v3` を必須にする。
 - 外部の臨床病名 source が未接続の間は fake list を出さず、boundary note で止めます。
 
 ## Canonical Notes
