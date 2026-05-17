@@ -19,8 +19,8 @@
 ## 2-1. GitHub / required checks
 1. 対象 branch の branch protection の現設定
 2. required checks 一覧
-3. `server-modernized-static-analysis-gate` の actual check 名
-4. 上記 static-analysis check を required にするか
+3. 削除済みの `server-modernized-static-analysis-gate` または旧 static-analysis check 名が required に残っていないか
+4. Maven static-analysis verify を release 前 mandatory gate として手動/別 automation で実行する運用になっているか
 5. web-client CI を required にするか
 6. `runtime-ready-smoke.mjs` を every PR required にするか
 7. stale / 旧 check 名が required に残っていないか
@@ -44,8 +44,8 @@
 | ID | 項目 | なぜ必要か | 何を確認するか | 証拠として必要なもの | owner 候補 | blocking 度 | 完了条件 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | GH-01 | branch protection 現設定の採取 | release-ready 判定に required checks の実効設定が必要 | 対象 branch の branch protection ルール名、required checks 一覧、required review 条件 | GitHub 設定画面スクショまたは設定文字列 | GitHub 管理者 | 高 | 対象 branch の現設定が文字列で残る |
-| GH-02 | static-analysis workflow の actual check 名確認 | restore 済みでも actual check 名は GitHub 上でしか確定しない | completed run から exact check 名を特定 | PR run URL / スクショ / check 名原文 | GitHub 管理者 | 高 | exact check 名が採取される |
-| GH-03 | static-analysis required yes/no 決定 | docs にある workflow restore と branch protection を接続する | required にするか、しないか、その理由 | 決定メモ + 設定証跡 | GitHub 管理者 / Release owner | 高 | yes/no が確定して記録される |
+| GH-02 | stale static-analysis required check の除去確認 | workflow 削除後に branch protection へ旧 check 名が残ると merge が止まる | `server-modernized-static-analysis-gate` または旧 static-analysis check 名が required にないこと | branch protection 証跡 | GitHub 管理者 | 高 | stale static-analysis required check が 0 件 |
+| GH-03 | Maven static-analysis release gate 運用確認 | GitHub Actions 専用 workflow は削除したが release 前 gate は維持する必要がある | `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` を release 前に実行する担当/証跡 | 決定メモ + 実行証跡 | Release owner | 高 | release 前実行方針が確定して記録される |
 | GH-04 | web-client CI required 状態確認 | release gate の 1 本だが PR required かは repo 外 | actual check 名と required 状態 | check 名原文 + branch protection 証跡 | GitHub 管理者 | 高 | required / not required が明文化される |
 | GH-05 | runtime-ready-smoke の扱い決定 | release 前 mandatory と every PR required は別 | every PR required にするかどうか | 決定メモ、必要なら設定証跡 | Release owner / GitHub 管理者 | 高 | yes/no が記録される |
 | CFG-01 | DB 接続情報 / DB CA | 本番 DB 接続不可だと release 不可 | 接続先、認証情報、CA の投入先と反映先 | Secret Manager / manifest / 起動ログ / 疎通ログ | インフラ/運用 | 最高 | DB 接続情報と DB CA の所在と反映が確認済み |
@@ -64,9 +64,9 @@
 
 | 確認項目 | 現在値 | 確認先 | 期待値 | 不一致時の扱い |
 | --- | --- | --- | --- | --- |
-| static-analysis workflow は restore 済みか | docs 上 yes | current repo docs / GitHub Actions | GitHub 上でも存在し completed run がある | 見当たらなければ repo mismatch 候補 |
-| static-analysis workflow の actual check 名 | unknown | completed PR run 詳細 | exact check 名が採取できる | 名が採れない / current repo PR で生成されない → repo mismatch 候補 |
-| branch protection で static-analysis が required か | unknown | GitHub branch protection | yes/no のどちらかに確定 | 未設定なら repo 外設定作業。存在しない check 名が required なら repo mismatch 候補 |
+| static-analysis workflow は削除済みか | docs 上 yes | current repo docs / GitHub Actions | GitHub 上で専用 workflow が生成されない | 生成されるなら repo mismatch 候補 |
+| stale static-analysis required check | unknown | GitHub branch protection | 0 件 | 残っているなら repo 外設定修正 |
+| Maven static-analysis release gate | docs 上 yes | release validation 証跡 | release 前に authoritative command が実行される | 未実行なら release sign-off 不足 |
 | web-client CI の actual check 名 | unknown | completed PR run 詳細 | exact check 名が採取できる | 名が不明ならまず GitHub 確認 |
 | web-client CI が required か | unknown | GitHub branch protection | yes/no のどちらかに確定 | 未設定なら repo 外設定作業 |
 | runtime-ready-smoke を every PR required にするか | unknown | Release owner 判断 + GitHub branch protection | yes/no のどちらでもよいが未決定不可 | 未決定なら sign-off 未完了 |
@@ -102,7 +102,7 @@
 | --- | --- | --- | --- | --- | --- |
 | repo-local closeout | repo-local code task が none、主要 gate は green | 追加の repo-local reopen 証拠なし | current repo に矛盾証拠なし | current repo の regression 証拠あり | merge-ready と release-ready は別 |
 | required checks 現設定 | workflow / docs / release gate は repo にある | GitHub 現設定が採取済み | actual check 名と required 状態が記録済み | 現設定が unknown のまま | まず現物確認 |
-| static-analysis governance | authoritative entrypoint と workflow restore が docs にある | actual check 名が採取済み、required yes/no 決定済み | 名と required 状態が整合 | exact 名が不明、または stale required check が残る | repo mismatch の可能性あり |
+| static-analysis governance | authoritative entrypoint が docs にあり、専用 workflow は削除済み | stale required check がなく、release 前実行方針が決定済み | branch protection と docs が整合 | stale required check が残る、または release 前実行方針がない | repo 外設定修正または release sign-off 不足 |
 | web-client CI governance | `npm run ci` は release gate に含まれる | actual check 名と required 状態が確定 | 名と required 状態が明文化 | unknown のまま | required/no 自体は運用判断でもよいが未決定不可 |
 | runtime-ready-smoke の位置づけ | release 前 mandatory と docs にある | every PR required にするか明示決定 | yes/no のどちらかが決定済み | 未決定 | yes/no 自体より決定と記録が重要 |
 | production secrets/config | repo 内では external task として列挙済み | 必須項目の投入証跡がそろう | blocking 項目が全て確認済み | 1 項目でも未確認 / 未投入 / unknown | unknown のままは NO-GO |
@@ -117,16 +117,16 @@
 Codex に戻す条件は **repo mismatch が出た時だけ** です。
 
 ### 戻す条件
-- static-analysis の actual check 名が current repo の PR で生成されない
-- restore 済みのはずの workflow が current repo の想定 trigger/path で動かない
+- 削除済みの static-analysis workflow が current repo の PR でまだ生成される
 - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` が current repo で再現性を持って失敗する
 - `cd web-client && npm run ci` が current repo で再現性を持って失敗する
 - `cd web-client && node scripts/runtime-ready-smoke.mjs` が current repo で再現性を持って失敗する
-- GitHub 上の actual check 名や job 構成が repo docs の期待と噛み合わず、branch protection 設定変更だけでは解消しない
+- GitHub 上の job 構成が repo docs の期待と噛み合わず、branch protection 設定変更だけでは解消しない
 - 運用側の実測ログが、repo docs の current contract では起動 / 接続できないことを示す
 
 ### 戻さない条件
 - branch protection がまだ更新されていないだけ
+- branch protection に削除済み static-analysis check が required として残っているだけ
 - secrets / config が未投入なだけ
 - keystore / TSA / bucket / trusted proxies の運用準備待ち
 - GitHub 管理者や運用担当の確認待ち

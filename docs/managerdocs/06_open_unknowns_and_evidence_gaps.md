@@ -30,7 +30,7 @@ unknown を無理に埋めないために使ってください。
 | 論点 | なぜ unknown か | release 影響 | 誰が確認するか | 確認先 |
 | --- | --- | --- | --- | --- |
 | GitHub required checks の current state | repo 外設定だから | 高 | GitHub 管理者 | branch protection 画面 / completed run |
-| static-analysis actual check 名 | GitHub 上の実 run を見ないと確定しない | 高 | GitHub 管理者 | Actions completed run |
+| stale static-analysis required check の有無 | workflow 削除後の branch protection は repo 外設定だから | 高 | GitHub 管理者 | branch protection 画面 |
 | web-client CI の actual check 名と required 状態 | repo 外設定だから | 高 | GitHub 管理者 | branch protection / completed run |
 | `runtime-ready-smoke.mjs` を every PR required にするか | 運用判断だから | 高 | Release owner / GitHub 管理者 | sign-off 記録 |
 | DB 接続情報 / DB CA の投入状況 | repo 外だから | 最高 | インフラ/運用 | Secret Manager / manifest / 起動ログ |

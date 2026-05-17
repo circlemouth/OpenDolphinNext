@@ -43,7 +43,7 @@
 
 - static-analysis baseline burn-down は完了済み
 - authoritative static-analysis entrypoint は 1 本化済み
-- dedicated static-analysis PR workflow は restore 済み
+- dedicated static-analysis PR workflow は通知ノイズ削減のため削除済み
 - minimal release gate は docs に明記済み
 - web / server / runtime smoke の主要 gate は local validation で green 扱い
 - raw runtime error details の TRUE_REGRESSION は narrow patch で修正済み
@@ -88,15 +88,14 @@ bash ./scripts/server-modernized/verify-static-analysis.sh
 
 wrapper は thin wrapper として扱います。
 
-### 3-3. dedicated static-analysis workflow
-`server-modernized-static-analysis-gate` は static-analysis 専用 workflow として restore 済みです。
+### 3-3. GitHub Actions static-analysis workflow
+`server-modernized-static-analysis-gate` は削除済みです。
 
 manager が前提にしてよい内容:
-- `pull_request` trigger あり
-- `schedule` / `workflow_dispatch` 維持
-- path filter は server 側関連に限定
-- 実行内容は static-analysis 専用
-- release-critical wrapper や reporting verify を混載しない
+- GitHub Actions では専用 static-analysis check を生成しない
+- branch protection に `server-modernized-static-analysis-gate` または旧 static-analysis check 名を required として残さない
+- release 前 mandatory gate としての Maven static-analysis verify は維持する
+- 必要な場合は local / release validation で authoritative entrypoint を実行する
 
 ### 3-4. minimal release gate
 release 前に必須とする最小セットはこの 3 本です。
@@ -143,7 +142,7 @@ runtime / closeout artifact の既知出力先:
 ### 5-1. docs / workflow / static-analysis 側
 - authoritative entrypoint を Maven 1 本に統一
 - `verify-static-analysis.sh` を thin wrapper 化
-- static-analysis PR workflow を restore
+- static-analysis PR workflow を削除し、release 前 mandatory gate を Maven entrypoint に集約
 - minimal release gate を docs に明文化
 - web-client の docs freeze / truth-sync を完了
 
@@ -230,7 +229,7 @@ runtime / closeout artifact の既知出力先:
 
 Codex に戻すのは、次のような **current repo mismatch** が出た時だけです。
 
-- restore した workflow の check 名・path filter・job 構成が期待とズレていて YAML 修正が必要
+- 削除済みの static-analysis workflow が current repo の PR でまだ生成される
 - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` が current repo で再現性を持って落ちる
 - `cd web-client && npm run ci` が current repo で再現性を持って落ちる
 - `cd web-client && node scripts/runtime-ready-smoke.mjs` が canonical な手順で再現性を持って落ちる
@@ -239,6 +238,7 @@ Codex に戻すのは、次のような **current repo mismatch** が出た時�
 逆に、次だけなら Codex に戻しません。
 
 - branch protection がまだ更新されていない
+- branch protection に削除済み static-analysis check 名が残っているだけ
 - secrets / config が未投入
 - GitHub 管理者やインフラ/運用担当の返答待ち
 - release owner の sign-off 未記入

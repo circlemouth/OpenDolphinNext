@@ -36,8 +36,8 @@ repo 外 manual task として、handoff で current fact として扱えるも�
 
 ### Branch Protection / Required Checks
 - GitHub branch protection / required checks の最終設定確認
-- restore 済み static-analysis workflow の実際の check 名の確認
-- それを required にするかの判断
+- 削除済み `server-modernized-static-analysis-gate` または旧 static-analysis check 名が required に残っていないことの確認
+- Maven static-analysis verify を release 前 mandatory gate として実行する運用確認
 - `runtime-ready-smoke.mjs` を毎 PR required にするかの判断
 
 ### Production Config / Secrets

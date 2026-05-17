@@ -259,7 +259,6 @@ for required_path in \
   web-client/README.md \
   web-client/notes/ui-current-contract.md \
   .github/workflows/web-client-test-shards.yml \
-  .github/workflows/server-modernized-static-analysis-gate.yml \
   scripts/create-review-package-curated.sh \
   .codex/skills/review-curated-50mb-bundle/SKILL.md
 do

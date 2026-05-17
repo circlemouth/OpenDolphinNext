@@ -9,8 +9,8 @@
 repo-external sign-off のため、対象 branch の required checks を yes/no で確認してください。  
 1. 対象 branch 名:  
 2. required checks 一覧（画面表記そのまま）:  
-3. `server-modernized-static-analysis-gate` の actual check 名は確認できましたか。yes/no。yes の場合は名称を貼付してください。  
-4. 上記 static-analysis check は branch protection で required ですか。yes/no  
+3. 削除済みの `server-modernized-static-analysis-gate` または旧 static-analysis check 名が required に残っていますか。yes/no
+4. Maven static-analysis verify は release 前 mandatory gate として別途実行する運用で問題ありませんか。yes/no
 5. web-client CI は required ですか。yes/no。yes の場合は check 名を貼付してください。  
 6. `runtime-ready-smoke` は every PR required にしますか。yes/no  
 7. current repo で生成されない stale / 旧 check 名が required に残っていますか。yes/no  
@@ -50,8 +50,8 @@ Go/No-Go: `[GO / NO-GO / PENDING]`
 
 | 項目 | owner | 状態 (yes/no/unknown) | blocking 度 | 次アクション |
 | --- | --- | --- | --- | --- |
-| static-analysis check 名 | GitHub 管理者 | unknown | 高 | completed run から actual 名を採取 |
-| static-analysis required yes/no | GitHub 管理者 / Release owner | unknown | 高 | branch protection の設定有無を確定 |
+| stale static-analysis required check | GitHub 管理者 | unknown | 高 | branch protection から削除済み check 名を除去 |
+| Maven static-analysis release gate | Release owner | unknown | 高 | release 前に authoritative command を実行する担当と証跡を決める |
 | web-client CI required yes/no | GitHub 管理者 | unknown | 高 | actual check 名と required 状態を確認 |
 | runtime-ready-smoke every PR yes/no | Release owner | unknown | 高 | every PR required にするか決定 |
 | DB | インフラ/運用 | unknown | 最高 | 投入先と証跡種別を回答 |
@@ -71,7 +71,8 @@ Go/No-Go: `[GO / NO-GO / PENDING]`
 ## 5. 回答を受けた後の判定ルール（短縮版）
 
 ### そのまま人手で閉じる
-- actual check 名と required yes/no が確定している
+- stale static-analysis required check が残っていない
+- Maven static-analysis verify の release 前実行方針が確定している
 - `runtime-ready-smoke` の every PR yes/no が決まっている
 - blocking secrets/config が yes、または reporting 系は今回不要と明記されている
 - Release owner の GO / NO-GO / PENDING 記録が入っている

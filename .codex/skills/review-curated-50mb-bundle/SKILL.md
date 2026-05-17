@@ -72,7 +72,6 @@ Common options:
   - `docs/reference/repository-history/ライセンス_コード著者アカウント同一性時系列調査_20260313.md`
   - `docs/reference/repository-history/OpenDolphin-Lab-A4.pdf`
   - `.github/workflows/web-client-test-shards.yml`
-  - `.github/workflows/server-modernized-static-analysis-gate.yml`
   - latest `artifacts/doc-reorg/*/final-report.md` if present
   - latest `artifacts/doc-reorg/*-addendum/addendum-report.md` if present
 - `zipinfo -1` must not show:
