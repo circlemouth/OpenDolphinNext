@@ -18,6 +18,7 @@ import {
 } from '../outpatient/orcaQueueStatus';
 import { AccessManagementPanel } from './AccessManagementPanel';
 import { MasterUpdatesPanel } from './MasterUpdatesPanel';
+import { MasterVisibilityPanel } from './MasterVisibilityPanel';
 import { OrcaUserManagementPanel } from './OrcaUserManagementPanel';
 import {
   discardOrcaQueue,
@@ -68,7 +69,7 @@ type AdministrationPageProps = {
   role?: string;
 };
 
-type AdministrationTab = 'delivery' | 'orca-users' | 'master-updates';
+type AdministrationTab = 'delivery' | 'orca-users' | 'master-updates' | 'master-visibility';
 type Feedback = { tone: FeedbackTone; message: string };
 
 type OrcaInternalWrapperResult = OrcaInternalWrapperBase & {
@@ -165,7 +166,7 @@ const isDeliverySection = (value: string | null): value is DeliverySection =>
 const resolveAdministrationTabFromSearch = (params: URLSearchParams): AdministrationTab => {
   const tab = params.get('tab');
   if (tab === 'access') return 'orca-users';
-  if (tab === 'orca-users' || tab === 'master-updates') return tab;
+  if (tab === 'orca-users' || tab === 'master-updates' || tab === 'master-visibility') return tab;
   return 'delivery';
 };
 
@@ -1177,10 +1178,18 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       ? '配信設定・接続テスト・監視導線を分離し、誤操作を防止します。'
       : activeTab === 'master-updates'
         ? 'ORCA と外部マスタの更新導線を管理し、更新状態を安全に確認します。'
-        : 'ORCA職員マスタ連携と、連携済みユーザーへの電子カルテ権限付与を管理します。';
+        : activeTab === 'master-visibility'
+          ? '業務UIに表示するORCAマスタ候補カテゴリを管理します。'
+          : 'ORCA職員マスタ連携と、連携済みユーザーへの電子カルテ権限付与を管理します。';
 
   const sectionMetricsHeading =
-    activeTab === 'delivery' ? '運用KPI' : activeTab === 'master-updates' ? '更新サマリ' : '権限サマリ';
+    activeTab === 'delivery'
+      ? '運用KPI'
+      : activeTab === 'master-updates'
+        ? '更新サマリ'
+        : activeTab === 'master-visibility'
+          ? '表示設定サマリ'
+          : '権限サマリ';
 
   const sectionMetrics =
     activeTab === 'delivery'
@@ -1195,6 +1204,13 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
         ]
       : activeTab === 'master-updates'
         ? [`環境: ${environmentLabel}`, `RUN_ID: ${resolvedRunId ?? '―'}`, '配信設定の正本: /api/admin/config']
+        : activeTab === 'master-visibility'
+          ? [
+              `環境: ${environmentLabel}`,
+              `RUN_ID: ${resolvedRunId ?? '―'}`,
+              '対象: 業務UIの候補表示のみ',
+              'API正本: /api/admin/master-updates/visibility',
+            ]
         : [
             `権限: ${formatRoleLabel(role)}`,
             `施設ID: ${session.facilityId}`,
@@ -1313,6 +1329,19 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
             >
               マスタ更新
             </button>
+            <button
+              type="button"
+              aria-current={activeTab === 'master-visibility' ? 'page' : undefined}
+              className={`administration-tab${activeTab === 'master-visibility' ? ' is-active' : ''}`}
+              onClick={() => {
+                const params = new URLSearchParams(searchParams);
+                params.set('tab', 'master-visibility');
+                params.delete('section');
+                setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
+              }}
+            >
+              マスタ表示設定
+            </button>
           </nav>
         </div>
 
@@ -1364,6 +1393,10 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
             ) : activeTab === 'master-updates' ? (
               <div className="administration-grid administration-grid--wide">
                 <MasterUpdatesPanel runId={panelRunId} role={role} />
+              </div>
+            ) : activeTab === 'master-visibility' ? (
+              <div className="administration-grid administration-grid--wide">
+                <MasterVisibilityPanel runId={panelRunId} role={role} />
               </div>
             ) : (
               <>

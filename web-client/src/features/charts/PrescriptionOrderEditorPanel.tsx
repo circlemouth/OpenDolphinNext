@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CriticalOperationConfirmDialog } from '../../components/modals/CriticalOperationConfirmDialog';
 import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import { resolveAriaLive } from '../../libs/observability/observability';
+import { useMasterVisibilityCategory } from '../administration/useMasterVisibility';
 import type { OrderBundleEditPanelMeta, OrderBundleEditPanelRequest, OrderBundleEditingContext } from './OrderBundleEditPanel';
 import type { OrderBundle } from './orderBundleApi';
 import { fetchOrderMasterSearch, type OrderMasterSearchItem } from './orderMasterSearchApi';
@@ -395,6 +396,7 @@ export function PrescriptionOrderEditorPanel({
   const domId = useCallback((suffix: string) => `${idPrefix}-${suffix}`, [idPrefix]);
   const isPreviewMode = readOnlyPreview;
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const prescriptionMasterVisibility = useMasterVisibilityCategory('prescription');
   const [order, setOrder] = useState<PrescriptionOrder>(() =>
     buildEmptyPrescriptionOrder(patientId ?? '', today, meta.encounterId),
   );
@@ -623,7 +625,7 @@ export function PrescriptionOrderEditorPanel({
       }),
     [order.rps, searchMethod],
   );
-  const showInputSetChooser = variant === 'utility';
+  const showInputSetChooser = variant === 'utility' && prescriptionMasterVisibility.visible;
 
   const rpRequired = useMemo(() => mergeRpRequired(order), [order]);
   useEffect(() => {
@@ -855,7 +857,7 @@ export function PrescriptionOrderEditorPanel({
   const searchEffectiveDate = (meta.visitDate ?? today).slice(0, 10);
   const shouldAutoSearch = trimmedSearchKeyword.length >= 3;
   const shouldManualSearch = trimmedSearchKeyword.length > 0 && trimmedSearchKeyword.length <= 2;
-  const shouldRunSearch = active && Boolean(patientId) && (shouldAutoSearch || manualSearchNonce > 0);
+  const shouldRunSearch = active && prescriptionMasterVisibility.visible && Boolean(patientId) && (shouldAutoSearch || manualSearchNonce > 0);
 
   const drugSearchQuery = useQuery({
     queryKey: [
@@ -878,15 +880,17 @@ export function PrescriptionOrderEditorPanel({
   });
 
   const filteredCandidates = useMemo(() => {
+    if (!prescriptionMasterVisibility.visible) return [];
     const items = drugSearchQuery.data?.items ?? [];
     if (!trimmedSearchKeyword) return [];
     return items
       .filter((item) => isDrugMatched(item, trimmedSearchKeyword, searchMethod))
       .slice(0, 40);
-  }, [drugSearchQuery.data?.items, searchMethod, trimmedSearchKeyword]);
+  }, [drugSearchQuery.data?.items, prescriptionMasterVisibility.visible, searchMethod, trimmedSearchKeyword]);
 
   const ensureGenericPrice = useCallback(
     async (code?: string | null) => {
+      if (!prescriptionMasterVisibility.visible) return;
       const normalizedCode = code?.trim() ?? '';
       if (!isOrcaDrugCode(normalizedCode)) return;
       const key = genericPriceCacheKey(normalizedCode, searchEffectiveDate);
@@ -909,7 +913,7 @@ export function PrescriptionOrderEditorPanel({
         }));
       }
     },
-    [genericPriceCache, searchEffectiveDate],
+    [genericPriceCache, prescriptionMasterVisibility.visible, searchEffectiveDate],
   );
 
   useEffect(() => {
@@ -954,7 +958,7 @@ export function PrescriptionOrderEditorPanel({
         allowEmpty: true,
         effective: (meta.visitDate ?? today).slice(0, 10),
       }),
-    enabled: active && Boolean(patientId),
+    enabled: active && prescriptionMasterVisibility.visible && Boolean(patientId),
     staleTime: 60_000,
   });
 
@@ -1643,6 +1647,11 @@ export function PrescriptionOrderEditorPanel({
               </div>
             </div>
 
+            {!prescriptionMasterVisibility.visible ? (
+              <div className="charts-side-panel__notice charts-side-panel__notice--warning">
+                {prescriptionMasterVisibility.hiddenMessage}
+              </div>
+            ) : (
             <details className="charts-side-panel__subsection charts-side-panel__subsection--search charts-order-editor__secondary-section">
               <summary className="charts-side-panel__subheader charts-order-editor__secondary-summary">
                 <strong>薬剤検索</strong>
@@ -1722,6 +1731,7 @@ export function PrescriptionOrderEditorPanel({
                 </div>
               ) : null}
             </details>
+            )}
 
             {showInputSetChooser ? (
               <details className="charts-side-panel__subsection charts-side-panel__subsection--search charts-order-editor__secondary-section">
@@ -1830,29 +1840,35 @@ export function PrescriptionOrderEditorPanel({
                 </div>
 
                 <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--usage charts-order-editor__manual-card charts-order-editor__rx-compact-band">
-                  <div className="charts-side-panel__field">
-                    <label htmlFor={domId('usage')}>用法マスタ</label>
-                    <select
-                      id={domId('usage')}
-                      value={selectedRp.usageCode ?? ''}
-                      onChange={(event) => {
-                        const code = event.target.value;
-                        const selected = usageOptions.find((option) => (option.code?.trim() ?? '') === code);
-                        updateRp(selectedRpIndex, (rp) => ({
-                          ...rp,
-                          usageCode: code || undefined,
-                          usage: selected?.name ?? rp.usage,
-                        }));
-                      }}
-                    >
-                      <option value="">候補を選択</option>
-                      {usageOptions.map((item) => (
-                        <option key={`usage-${item.code ?? item.name}`} value={item.code?.trim() ?? ''}>
-                          {item.code ? `${item.code} ${item.name}` : item.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {prescriptionMasterVisibility.visible ? (
+                    <div className="charts-side-panel__field">
+                      <label htmlFor={domId('usage')}>用法マスタ</label>
+                      <select
+                        id={domId('usage')}
+                        value={selectedRp.usageCode ?? ''}
+                        onChange={(event) => {
+                          const code = event.target.value;
+                          const selected = usageOptions.find((option) => (option.code?.trim() ?? '') === code);
+                          updateRp(selectedRpIndex, (rp) => ({
+                            ...rp,
+                            usageCode: code || undefined,
+                            usage: selected?.name ?? rp.usage,
+                          }));
+                        }}
+                      >
+                        <option value="">候補を選択</option>
+                        {usageOptions.map((item) => (
+                          <option key={`usage-${item.code ?? item.name}`} value={item.code?.trim() ?? ''}>
+                            {item.code ? `${item.code} ${item.name}` : item.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="charts-side-panel__notice charts-side-panel__notice--warning" role="status">
+                      {prescriptionMasterVisibility.hiddenMessage}
+                    </div>
+                  )}
                   <div className="charts-side-panel__field">
                     <label htmlFor={domId('usage-free')}>用法（自由入力）</label>
                     <input
@@ -2102,7 +2118,7 @@ export function PrescriptionOrderEditorPanel({
                       >
                         <input
                           id={domId(`drug-name-${drugIndex}`)}
-                          list={isSelectedDrugRow ? drugCandidateListId : undefined}
+                          list={prescriptionMasterVisibility.visible && isSelectedDrugRow ? drugCandidateListId : undefined}
                           value={drug.name}
                           onFocus={() => {
                             setSelectedDrugIndex(drugIndex);
@@ -2112,7 +2128,7 @@ export function PrescriptionOrderEditorPanel({
                           onChange={(event) => handleDrugNameInput(selectedRpIndex, drugIndex, event.target.value)}
                           placeholder="薬剤名"
                         />
-                        {isSelectedDrugRow ? (
+                        {prescriptionMasterVisibility.visible && isSelectedDrugRow ? (
                           <datalist id={drugCandidateListId}>
                             {filteredCandidates.map((item) => (
                               <option

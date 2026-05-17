@@ -101,6 +101,7 @@ GUI 改修ではこの文書の safety contract を下回らず、ORCA送信失�
 - `PrescriptionOrderEditorPanel` の `処方確定` が preview / 保存中 / 確定中で native disabled になる場合は、近傍 `charts-side-panel__block-reason` と `aria-describedby` で理由と有効化条件を表示します。この理由表示は二重実行防止と操作理解の UI 補助であり、処方確定の権限・状態遷移 enforcement ではありません。
 - `OrderDockPanel` の quick-add / group-add / bundle edit / bundle copy / bundle delete / prescription-history import / recommendation apply は patient context 不足、read-only、missing master、fallback data だけでは native disabled にせず、`aria-disabled=true` と近傍 `order-dock-edit-block-reason` で理由を示したうえで、押下時に `オーダー追加を停止: ...`、`オーダー編集を停止: ...`、`オーダーコピーを停止: ...`、`オーダー削除を停止: ...`、`処方履歴取り込みを停止: ...`、`直近処方コピーを停止: ...`、`頻用オーダー反映を停止: ...` notice を出して editor / delete confirm を開きません。検索入力 / category select、pending/loading、二重実行防止、直近処方なしなど操作自体を受けられない状態は native disabled を維持し、検索入力 / category select には近傍 `order-dock-search-block-reason` と `aria-describedby` で理由を示します。
 - Order master search は OpenDolphin local master cache / projection を使い、`cacheStatus=NOT_IMPORTED|UNAVAILABLE` は検索 0 件ではなく取得不能として notice / error state に表示します。`cacheStatus=STALE` は候補表示と同時に stale warning を保持します。候補選択でだけ code/unit/source を入力へ反映し、自由入力だけで ORCA code authority を付与しません。
+- 管理画面の `マスタ表示設定` は ORCA master 候補カテゴリの表示/非表示だけを切り替えます。非表示時も手入力、既存入力値、保存済みデータ表示、ORCA送信前の通常検証、`/api/orca/master/order/interactions/check` は維持し、候補未取得・ORCA利用不可・安全確認済みとは表示しません。
 - `/api/orca/master/order/interactions/check` が unavailable の場合、Prescription UI は warning として扱い、相互作用なし・安全確認済み・ORCA 送信成功の表示にしてはいけません。
 - `OrderRecommendationModal` のカテゴリ scope は default entity がない場合 native disabled を維持し、近傍 `order-recommend-category-scope-reason` と `aria-describedby` で理由と横断 scope の代替を示します。
 - `OrderBundleEditPanel` embedded footer の `保存して閉じる` / `保存して続ける` / `保存して追加・更新` は read-only、missing master、fallback data だけでは native disabled にせず、`aria-disabled=true`、`data-disabled-reason=order_detail_submit_blocked`、近傍 edit block reason で理由を示し、押下時に `保存操作を停止: ...` notice と blocked audit を出して mutation へ進みません。保存中・禁忌チェック中など二重実行防止は native disabled を維持します。
@@ -296,7 +297,7 @@ GUI 改修ではこの文書の safety contract を下回らず、ORCA送信失�
 - admin current contract の source of truth は `/api/admin/config` です。
 - `/api/admin/config` の正本範囲は charts delivery only です。
 - `/api/admin/delivery` を第 2 正本として復活させません。
-- top-level navigation は `delivery`, `orca-users`, `master-updates` の 3 本で、tab pattern ではなく plain navigation / `aria-current` を使います。
+- top-level navigation は `delivery`, `orca-users`, `master-updates`, `master-visibility` の 4 本で、tab pattern ではなく plain navigation / `aria-current` を使います。
 - `delivery` 配下は `dashboard`, `connection`, `config`, `queue`, `operations`, `debug` の section sub-navigation を持ちます。
 - sub-navigation は `設定 / 状態確認 / 調査` に regroup します。
 - authz の canonical layer は `AdministrationGate` の route-level guard です。
@@ -304,6 +305,7 @@ GUI 改修ではこの文書の safety contract を下回らず、ORCA送信失�
 - `config` section は charts delivery toggle だけを表示し、diagnostic / correction / runtime-owned setting を混ぜません。
 - `AdminDeliveryStatusCard` は配信メタデータ card として `deliveryId / version / etag / deliveredAt` を表示します。
 - `MasterUpdatesPanel` は `local_orca_master_cache` の artifact upload で事前検証を必須にし、manifest / masterVersion / sourceKind / uploadedSha256 / master type 別件数を表示してから確定アップロードします。確定 upload は preview hash を送信し、DB URL、credential、raw ORCA body、患者情報、内部 SQL、stack trace を表示しません。
+- `MasterVisibilityPanel` は `/api/admin/master-updates/visibility` を使い、固定 6 カテゴリ（処方、注射、処置・手術、検査、病名、患者補助）の UI 候補表示だけを切り替えます。保存は admin + `admin:mutation` step-up を server-side で必須とし、URL / browser storage / 患者文脈には保存しません。表示文言は master type と影響 UI に限定し、ORCA正本、会計反映、安全確認済みとは表現しません。
 - `connection` section は施設別 ORCA 接続設定 only、`testedScope` は capability note、runtime-owned setting は docs note を正本とします。
 - UG-14 未解決項目や optional module visibility owner 不明項目は UI に toggle を出さず、feature-off / fail-close で扱います。
 

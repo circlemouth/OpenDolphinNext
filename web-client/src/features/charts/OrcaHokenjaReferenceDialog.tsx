@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import { fetchOrcaHokenja, type OrcaHokenjaResult } from '../patients/orcaHokenjaApi';
+import { useMasterVisibilityCategory } from '../administration/useMasterVisibility';
 import { resolveUserSafeFetchFailure } from './userSafeErrorCopy';
 
 export type OrcaHokenjaReferenceDialogProps = {
@@ -39,6 +40,7 @@ export function OrcaHokenjaReferenceDialog({
   const [message, setMessage] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const patientSupportMasterVisibility = useMasterVisibilityCategory('patientSupport');
 
   useEffect(() => {
     if (!open) return;
@@ -54,6 +56,12 @@ export function OrcaHokenjaReferenceDialog({
     event.preventDefault();
     const nextKeyword = keyword.trim();
     if (!nextKeyword) {
+      return;
+    }
+    if (!patientSupportMasterVisibility.visible) {
+      setItems([]);
+      setSearched(false);
+      setMessage(patientSupportMasterVisibility.hiddenMessage);
       return;
     }
 
@@ -127,7 +135,7 @@ export function OrcaHokenjaReferenceDialog({
             />
           </label>
           <div className="hokenja-ref__actions">
-            <button type="submit" className="patients-tab__primary" disabled={pending}>
+            <button type="submit" className="patients-tab__primary" disabled={pending || !patientSupportMasterVisibility.visible}>
               検索
             </button>
             <button type="button" className="patients-tab__ghost" onClick={onClose}>
@@ -137,6 +145,11 @@ export function OrcaHokenjaReferenceDialog({
         </div>
 
         <p className="hokenja-ref__note">この画面では参照のみ行います。患者情報は更新しません。</p>
+        {!patientSupportMasterVisibility.visible ? (
+          <p className="hokenja-ref__status" role="status">
+            {patientSupportMasterVisibility.hiddenMessage}
+          </p>
+        ) : null}
 
         {pending ? (
           <p className="hokenja-ref__status" role="status" aria-live="polite">

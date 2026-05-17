@@ -324,7 +324,11 @@ describe('OrderBundleEditPanel master search UI', () => {
     expect(screen.getByRole('button', { name: '部位検索' })).toBeDisabled();
     expect(screen.getByPlaceholderText('コード')).toBeDisabled();
     expect(screen.getByPlaceholderText('コメント内容')).toBeDisabled();
-    const addButtons = screen.getAllByRole('button', { name: '追加' });
+    const addButtons = [
+      screen.getByRole('button', { name: '＋項目行' }),
+      screen.getByRole('button', { name: '材料追加' }),
+      screen.getByRole('button', { name: 'コメント追加' }),
+    ];
     addButtons.forEach((button) => expect(button).toBeDisabled());
   });
 

@@ -84,6 +84,10 @@ vi.mock('../MasterUpdatesPanel', () => ({
   MasterUpdatesPanel: () => <div data-testid="master-updates-panel" />,
 }));
 
+vi.mock('../MasterVisibilityPanel', () => ({
+  MasterVisibilityPanel: () => <div data-testid="master-visibility-panel" />,
+}));
+
 vi.mock('../components/ConfirmDialog', () => ({
   ConfirmDialog: () => null,
 }));
@@ -272,6 +276,17 @@ describe('AdministrationPage search params sync', () => {
     });
 
     act(() => {
+      void router.navigate('/admin?tab=master-visibility');
+    });
+    await waitFor(() => {
+      expect(router.state.location.search).toBe('?tab=master-visibility');
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'マスタ表示設定' })).toHaveAttribute('aria-current', 'page');
+    });
+    expect(screen.getByTestId('master-visibility-panel')).toBeInTheDocument();
+
+    act(() => {
       void router.navigate('/admin?section=queue');
     });
     await waitFor(() => {
@@ -281,6 +296,14 @@ describe('AdministrationPage search params sync', () => {
       expect(screen.getByRole('button', { name: '配信・運用' })).toHaveAttribute('aria-current', 'page');
     });
     expect(screen.getByTestId('delivery-active-section')).toHaveTextContent('queue');
+
+    act(() => {
+      void router.navigate(-1);
+    });
+    await waitFor(() => {
+      expect(router.state.location.search).toBe('?tab=master-visibility');
+    });
+    expect(screen.getByRole('button', { name: 'マスタ表示設定' })).toHaveAttribute('aria-current', 'page');
 
     act(() => {
       void router.navigate(-1);

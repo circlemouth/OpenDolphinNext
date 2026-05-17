@@ -3,7 +3,9 @@ package open.dolphin.rest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,7 +14,9 @@ import jakarta.ws.rs.core.Response;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import open.dolphin.rest.masterupdate.MasterVisibilityStore;
 import open.dolphin.rest.masterupdate.MasterUpdateService;
 import open.dolphin.security.auth.AdminStepUpGuard;
 import open.dolphin.security.audit.SessionAuditDispatcher;
@@ -26,6 +30,8 @@ class AdminMasterUpdateResourceTest {
     private HttpServletRequest request;
     private UserServiceBean userServiceBean;
     private MasterUpdateService masterUpdateService;
+    private MasterVisibilityStore masterVisibilityStore;
+    private AdminStepUpGuard adminStepUpGuard;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -33,10 +39,13 @@ class AdminMasterUpdateResourceTest {
         request = mock(HttpServletRequest.class);
         userServiceBean = mock(UserServiceBean.class);
         masterUpdateService = mock(MasterUpdateService.class);
+        masterVisibilityStore = mock(MasterVisibilityStore.class);
+        adminStepUpGuard = mock(AdminStepUpGuard.class);
 
         setField(resource, "userServiceBean", userServiceBean);
         setField(resource, "masterUpdateService", masterUpdateService);
-        setField(resource, "adminStepUpGuard", mock(AdminStepUpGuard.class));
+        setField(resource, "masterVisibilityStore", masterVisibilityStore);
+        setField(resource, "adminStepUpGuard", adminStepUpGuard);
         setField(resource, "sessionAuditDispatcher", mock(SessionAuditDispatcher.class));
     }
 
@@ -96,6 +105,87 @@ class AdminMasterUpdateResourceTest {
             fail("Expected WebApplicationException");
         } catch (WebApplicationException ex) {
             assertEquals(404, ex.getResponse().getStatus());
+        }
+    }
+
+    @Test
+    void getVisibilityReturnsBodyForAdmin() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-VISIBILITY");
+        when(request.getRemoteUser()).thenReturn("FACILITY:admin");
+        when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("runId", "RUN-VISIBILITY");
+        body.put("categories", List.of());
+        when(masterVisibilityStore.getVisibility("RUN-VISIBILITY")).thenReturn(body);
+
+        Response response = resource.getVisibility(request);
+        assertEquals(200, response.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> entity = (Map<String, Object>) response.getEntity();
+        assertNotNull(entity);
+        assertEquals("RUN-VISIBILITY", entity.get("runId"));
+    }
+
+    @Test
+    void getVisibilityRejectsWhenUnauthenticated() {
+        when(request.getRemoteUser()).thenReturn(null);
+        try {
+            resource.getVisibility(request);
+            fail("Expected WebApplicationException");
+        } catch (WebApplicationException ex) {
+            assertEquals(401, ex.getResponse().getStatus());
+        }
+    }
+
+    @Test
+    void updateVisibilityRequiresStepUpAndPersistsAllowedPayload() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-VISIBILITY");
+        when(request.getRemoteUser()).thenReturn("FACILITY:admin");
+        when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+        Map<String, Object> payload = Map.of("categories", Map.of("prescription", false));
+        Map<String, Object> body = Map.of("runId", "RUN-VISIBILITY", "ok", true);
+        when(masterVisibilityStore.updateVisibility(payload, "FACILITY:admin", "RUN-VISIBILITY"))
+                .thenReturn(new MasterVisibilityStore.UpdateResult(body, List.of("prescription")));
+
+        Response response = resource.updateVisibility(request, payload);
+
+        assertEquals(200, response.getStatus());
+        verify(adminStepUpGuard).require(request, "admin:mutation");
+        verify(masterVisibilityStore).updateVisibility(payload, "FACILITY:admin", "RUN-VISIBILITY");
+    }
+
+    @Test
+    void updateVisibilityRejectsWhenStepUpMissing() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-VISIBILITY");
+        when(request.getRemoteUser()).thenReturn("FACILITY:admin");
+        when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+        doThrow(new WebApplicationException(Response.status(403).build()))
+                .when(adminStepUpGuard).require(request, "admin:mutation");
+
+        try {
+            resource.updateVisibility(request, Map.of("categories", Map.of("prescription", false)));
+            fail("Expected WebApplicationException");
+        } catch (WebApplicationException ex) {
+            assertEquals(403, ex.getResponse().getStatus());
+        }
+    }
+
+    @Test
+    void updateVisibilityReturnsBadRequestForUnsupportedCategory() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-VISIBILITY");
+        when(request.getRemoteUser()).thenReturn("FACILITY:admin");
+        when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+        Map<String, Object> payload = Map.of("categories", Map.of("rawRoute", true));
+        when(masterVisibilityStore.updateVisibility(payload, "FACILITY:admin", "RUN-VISIBILITY"))
+                .thenThrow(new MasterUpdateService.MasterUpdateException(
+                        400, "visibility_category_unsupported", "unsupported"));
+
+        try {
+            resource.updateVisibility(request, payload);
+            fail("Expected WebApplicationException");
+        } catch (WebApplicationException ex) {
+            assertEquals(400, ex.getResponse().getStatus());
         }
     }
 

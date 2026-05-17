@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.rest.masterupdate.MasterVisibilityStore;
 import open.dolphin.rest.masterupdate.MasterUpdateService;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 import open.dolphin.security.auth.AdminStepUpGuard;
@@ -40,6 +41,9 @@ public class AdminMasterUpdateResource extends AbstractResource {
     private MasterUpdateService masterUpdateService;
 
     @Inject
+    private MasterVisibilityStore masterVisibilityStore;
+
+    @Inject
     private UserServiceBean userServiceBean;
 
     @Inject
@@ -59,6 +63,46 @@ public class AdminMasterUpdateResource extends AbstractResource {
                 Map.of("resource", "/api/admin/master-updates/datasets", "status", "success"),
                 AuditEventEnvelope.Outcome.SUCCESS, null, null);
         return Response.ok(body).header("x-run-id", runId).build();
+    }
+
+    @GET
+    @Path("/visibility")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getVisibility(@Context HttpServletRequest request) {
+        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
+        String actor = requireAuthenticatedActor(request);
+        Map<String, Object> body = masterVisibilityStore.getVisibility(runId);
+        recordAudit(request, "MASTER_VISIBILITY_GET", actor, runId,
+                Map.of("resource", "/api/admin/master-updates/visibility", "status", "success"),
+                AuditEventEnvelope.Outcome.SUCCESS, null, null);
+        return Response.ok(body).header("x-run-id", runId).build();
+    }
+
+    @PUT
+    @Path("/visibility")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response updateVisibility(@Context HttpServletRequest request,
+                                     Map<String, Object> payload) {
+        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
+        String actor = requireAdminActor(request, runId);
+        adminStepUpGuard.require(request, "admin:mutation");
+        try {
+            MasterVisibilityStore.UpdateResult result = masterVisibilityStore.updateVisibility(payload, actor, runId);
+            recordAudit(request, "MASTER_VISIBILITY_PUT", actor, runId,
+                    Map.of(
+                            "resource", "/api/admin/master-updates/visibility",
+                            "status", "success",
+                            "changedCategories", result.changedCategories()
+                    ),
+                    AuditEventEnvelope.Outcome.SUCCESS, null, null);
+            return Response.ok(result.body()).header("x-run-id", runId).build();
+        } catch (MasterUpdateService.MasterUpdateException ex) {
+            recordAudit(request, "MASTER_VISIBILITY_PUT", actor, runId,
+                    Map.of("resource", "/api/admin/master-updates/visibility", "status", "failed"),
+                    AuditEventEnvelope.Outcome.FAILURE, ex.getCode(), ex.getMessage());
+            throw restError(request, Response.Status.fromStatusCode(ex.getStatusCode()), ex.getCode(), ex.getMessage());
+        }
     }
 
     @GET
@@ -247,6 +291,14 @@ public class AdminMasterUpdateResource extends AbstractResource {
         }
         if (userServiceBean == null || !userServiceBean.isAdmin(actor)) {
             throw restError(request, Response.Status.FORBIDDEN, "forbidden", "管理者権限が必要です。");
+        }
+        return actor;
+    }
+
+    private String requireAuthenticatedActor(HttpServletRequest request) {
+        String actor = request != null ? request.getRemoteUser() : null;
+        if (actor == null || actor.isBlank()) {
+            throw restError(request, Response.Status.UNAUTHORIZED, "unauthorized", "Authentication required");
         }
         return actor;
     }

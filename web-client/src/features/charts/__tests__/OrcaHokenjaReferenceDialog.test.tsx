@@ -5,14 +5,25 @@ import userEvent from '@testing-library/user-event';
 import { OrcaHokenjaReferenceDialog } from '../OrcaHokenjaReferenceDialog';
 
 const mockFetchOrcaHokenja = vi.fn();
+const mockUseMasterVisibilityCategory = vi.fn();
 
 vi.mock('../../patients/orcaHokenjaApi', () => ({
   fetchOrcaHokenja: (...args: unknown[]) => mockFetchOrcaHokenja(...args),
 }));
 
+vi.mock('../../administration/useMasterVisibility', () => ({
+  useMasterVisibilityCategory: (...args: unknown[]) => mockUseMasterVisibilityCategory(...args),
+}));
+
 describe('OrcaHokenjaReferenceDialog', () => {
   beforeEach(() => {
     mockFetchOrcaHokenja.mockReset();
+    mockUseMasterVisibilityCategory.mockReturnValue({
+      visible: true,
+      hiddenMessage: undefined,
+      isLoading: false,
+      isError: false,
+    });
   });
 
   it('keyword 検索で read-only の結果を表示する', async () => {
@@ -97,5 +108,23 @@ describe('OrcaHokenjaReferenceDialog', () => {
     expect(await screen.findByText('保険者候補の取得に失敗しました。時間をおいて再試行してください。')).toBeInTheDocument();
     expect(screen.queryByText(/stacktrace/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/connection refused/i)).not.toBeInTheDocument();
+  });
+
+  it('患者補助候補が非表示のときは保険者候補を取得しない', async () => {
+    mockUseMasterVisibilityCategory.mockReturnValue({
+      visible: false,
+      hiddenMessage: '患者補助候補は管理画面のマスタ表示設定で非表示です。候補表示だけを停止し、手入力と既存値は維持します。',
+      isLoading: false,
+      isError: false,
+    });
+    const user = userEvent.setup();
+
+    render(<OrcaHokenjaReferenceDialog open onClose={vi.fn()} />);
+
+    await user.type(screen.getByRole('textbox', { name: '保険者番号または名称' }), '東京');
+
+    expect(screen.getByRole('button', { name: '検索' })).toBeDisabled();
+    expect(mockFetchOrcaHokenja).not.toHaveBeenCalled();
+    expect(screen.getByText(/患者補助候補は管理画面のマスタ表示設定で非表示です/)).toBeInTheDocument();
   });
 });

@@ -55,6 +55,7 @@ import { importPatientsFromOrca, type OrcaPatientImportResult } from '../outpati
 import { fetchOrcaAddress } from './orcaAddressApi';
 import { PATIENT_FIELD_LABEL, diffPatientKeys } from './patientDiff';
 import { validatePatientMutation, type PatientOperation, type PatientValidationError } from './patientValidation';
+import { useMasterVisibilityCategory } from '../administration/useMasterVisibility';
 import {
   loadOutpatientSavedViews,
   removeOutpatientSavedView,
@@ -597,6 +598,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   }, [sidebarWidth, sidebarWidthStorageKey]);
 
   const [orcaAddressPending, setOrcaAddressPending] = useState(false);
+  const patientSupportMasterVisibility = useMasterVisibilityCategory('patientSupport');
   const [lastMeta, setLastMeta] = useState<
     Pick<
       PatientListResponse,
@@ -1048,6 +1050,10 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   }, [blockReasons, patientsErrorContext]);
   const handleOrcaAddressLookup = useCallback(async () => {
     const zip = normalizeZipCode(form.zip);
+    if (!patientSupportMasterVisibility.visible) {
+      enqueue({ tone: 'warning', message: patientSupportMasterVisibility.hiddenMessage });
+      return;
+    }
     if (zip.length !== 7 || blocking || orcaAddressPending) return;
     setOrcaAddressPending(true);
     try {
@@ -1068,14 +1074,17 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     } finally {
       setOrcaAddressPending(false);
     }
-  }, [blocking, enqueue, form.zip, orcaAddressPending, today]);
-  const canLookupAddress = normalizeZipCode(form.zip).length === 7 && !blocking && !orcaAddressPending;
+  }, [blocking, enqueue, form.zip, orcaAddressPending, patientSupportMasterVisibility.hiddenMessage, patientSupportMasterVisibility.visible, today]);
+  const canLookupAddress =
+    patientSupportMasterVisibility.visible && normalizeZipCode(form.zip).length === 7 && !blocking && !orcaAddressPending;
   const importDisabledReason = buildImportDisabledReason(importMutation.isPending, importPatientIdDraft);
   const selectedImportDisabledReason = buildImportDisabledReason(
     importMutation.isPending,
     emptyStateImportPatientId ?? importSelectedPatientId ?? '',
   );
-  const addressLookupDisabledReason = buildAddressLookupDisabledReason(blocking, form.zip ?? '', orcaAddressPending);
+  const addressLookupDisabledReason = patientSupportMasterVisibility.visible
+    ? buildAddressLookupDisabledReason(blocking, form.zip ?? '', orcaAddressPending)
+    : patientSupportMasterVisibility.hiddenMessage;
   const missingMasterFlag = resolvedMissingMaster;
   const fallbackUsedFlag = resolvedFallbackUsed;
   const fieldErrorMap = useMemo(() => {
