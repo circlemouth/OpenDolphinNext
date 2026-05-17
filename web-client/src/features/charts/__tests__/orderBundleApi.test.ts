@@ -38,6 +38,9 @@ describe('orderBundleApi bodyPart contract', () => {
           patientId: '000001',
           bundles: [
             {
+              documentId: 901,
+              moduleId: 902,
+              contentHash: 'hash-order-bundle-1',
               entity: 'radiologyOrder',
               bundleName: 'CHEST_CT',
               classCode: '700',
@@ -78,6 +81,7 @@ describe('orderBundleApi bodyPart contract', () => {
     expect((result.bundles[0] as any).adminCodeSystem).toBe('Claim007');
     expect((result.bundles[0] as any).items[0]?.rowRole).toBe('main');
     expect((result.bundles[0] as any).bodyPart?.rowRole).toBe('bodyPart');
+    expect((result.bundles[0] as any).contentHash).toBe('hash-order-bundle-1');
   });
 
   it('fetch normalizes laboTest bundle.entity to testOrder', async () => {
@@ -195,6 +199,43 @@ describe('orderBundleApi bodyPart contract', () => {
     const body = JSON.parse(String((request as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
 
     expect(body.operations[0]?.entity).toBe('testOrder');
+  });
+
+  it('mutation sends expectedContentHash for existing bundle updates', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ runId: 'RUN-MUT-HASH', updatedDocumentIds: [901] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        {
+          operation: 'update',
+          documentId: 901,
+          moduleId: 902,
+          expectedContentHash: 'hash-order-bundle-1',
+          entity: 'treatmentOrder',
+          bundleName: 'TREATMENT_SET',
+          classCode: '400',
+          items: [{ code: '140000610', name: 'TREATMENT_ITEM', rowRole: 'main' }],
+        },
+      ],
+    });
+
+    const request = vi.mocked(httpFetch).mock.calls[0]?.[1];
+    const body = JSON.parse(String((request as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+    expect(body.operations[0]).toEqual(
+      expect.objectContaining({
+        operation: 'update',
+        documentId: 901,
+        moduleId: 902,
+        expectedContentHash: 'hash-order-bundle-1',
+        clientMutationId: 'RUN-META:order-bundle:0',
+      }),
+    );
   });
 
   it('mutation keeps adminCode and adminMemo as separate fields', async () => {

@@ -75,6 +75,7 @@ export type PrescriptionRp = PrescriptionLowerFields & {
   rpId: string;
   documentId?: number;
   moduleId?: number;
+  contentHash?: string;
   name: string;
   location: PrescriptionLocation;
   category: PrescriptionCategory;
@@ -98,6 +99,7 @@ export type PrescriptionOrder = {
   doctorComment: string;
   rps: PrescriptionRp[];
   deletedDocumentIds: number[];
+  deletedDocumentContentHashes?: Record<string, string>;
   prescriptionSettings?: PrescriptionSetting[];
   remarks?: PrescriptionRemark[];
 };
@@ -199,6 +201,7 @@ type ServerPrescriptionDrug = {
 type ServerPrescriptionRp = {
   documentId?: number;
   moduleId?: number;
+  contentHash?: string;
   rpNumber?: string;
   name?: string;
   bundleName?: string;
@@ -322,6 +325,11 @@ function normalizePrescriptionOrder(order: PrescriptionOrder): PrescriptionOrder
     performDate: order.performDate?.trim() || undefined,
     doctorComment: order.doctorComment.trim(),
     deletedDocumentIds: Array.from(new Set((order.deletedDocumentIds ?? []).filter((id) => Number.isInteger(id) && id > 0))),
+    deletedDocumentContentHashes: Object.fromEntries(
+      Object.entries(order.deletedDocumentContentHashes ?? {}).filter(([id, hash]) =>
+        Number.isInteger(Number(id)) && Number(id) > 0 && typeof hash === 'string' && hash.trim().length > 0,
+      ),
+    ),
     prescriptionSettings: (order.prescriptionSettings ?? []).map((setting) => ({
       code: setting.code?.trim() || undefined,
       name: setting.name?.trim() || undefined,
@@ -611,6 +619,7 @@ const toRpFromBundle = (bundle: OrderBundle): PrescriptionRp => {
     rpId: rpMeta?.rpId?.trim() || createStableId('rp'),
     documentId: bundle.documentId,
     moduleId: bundle.moduleId,
+    contentHash: bundle.contentHash,
     name: bundle.bundleName?.trim() || '',
     location: classParsed.location,
     category: classParsed.category,
@@ -660,6 +669,7 @@ export const buildEmptyPrescriptionOrder = (
   doctorComment: '',
   rps: [buildEmptyPrescriptionRp(started)],
   deletedDocumentIds: [],
+  deletedDocumentContentHashes: {},
   prescriptionSettings: [],
   remarks: [],
 });
@@ -686,6 +696,7 @@ export const toPrescriptionOrder = (
     doctorComment: rps.find((rp) => rp.doctorComment.trim())?.doctorComment ?? '',
     rps,
     deletedDocumentIds: [],
+    deletedDocumentContentHashes: {},
     prescriptionSettings: [],
     remarks: [],
   };
@@ -940,6 +951,7 @@ export const buildPrescriptionMutationOperations = (order: PrescriptionOrder): O
       operation: rp.documentId ? 'update' : 'create',
       documentId: rp.documentId,
       moduleId: rp.moduleId,
+      expectedContentHash: rp.documentId ? rp.contentHash : undefined,
       entity: 'medOrder',
       bundleName: rp.name.trim() || '処方RP',
       bundleNumber: rp.daysOrTimes.trim() || '1',
@@ -960,6 +972,7 @@ export const buildPrescriptionMutationOperations = (order: PrescriptionOrder): O
     operations.push({
       operation: 'delete',
       documentId,
+      expectedContentHash: normalizedOrder.deletedDocumentContentHashes?.[String(documentId)],
       entity: 'medOrder',
     });
   });
@@ -980,6 +993,7 @@ export const buildPrescriptionOrderSendBundles = (order: PrescriptionOrder): Ord
       entity: 'medOrder',
       documentId: rp.documentId,
       moduleId: rp.moduleId,
+      contentHash: rp.contentHash,
       bundleName: rp.name.trim() || '処方RP',
       bundleNumber: rp.daysOrTimes.trim() || '1',
       classCode: resolvePrescriptionClassCode(rp.category, rp.location),
@@ -1083,6 +1097,7 @@ const fromServerPrescriptionOrder = (order: ServerPrescriptionOrder, patientId: 
       rpId: rp.rpNumber?.trim() || createStableId('rp'),
       documentId: undefined,
       moduleId: undefined,
+      contentHash: undefined,
       name: rp.bundleName?.trim() || '',
       location: classParsed.location,
       category: classParsed.category,
@@ -1474,12 +1489,18 @@ export async function finalizePrescriptionAuthority(params: {
     order: normalizedOrder,
     fallbackMessage: '処方確定の準備に失敗しました。',
   });
-  if (!created.ok || typeof created.prescriptionId !== 'number') {
+  if (
+    !created.ok ||
+    typeof created.prescriptionId !== 'number' ||
+    typeof created.revisionId !== 'number' ||
+    !created.status ||
+    !created.contentHash
+  ) {
     return created.ok
       ? {
           ...created,
           ok: false,
-          message: '処方確定の準備結果に prescriptionId が含まれていません。',
+          message: '処方確定の準備結果に prescriptionId/revision/contentHash が含まれていません。',
         }
       : created;
   }
@@ -1492,6 +1513,10 @@ export async function finalizePrescriptionAuthority(params: {
       body: JSON.stringify({
         patientId: params.patientId,
         encounterId,
+        expectedRevisionId: created.revisionId,
+        expectedStatus: created.status,
+        expectedContentHash: created.contentHash,
+        clientMutationId: `${runId}:prescription-finalize:${created.prescriptionId}`,
       }),
     },
   );
@@ -1528,6 +1553,7 @@ const createPrescriptionAuthorityDraft = async ({
       patientId,
       encounterId,
       chartRevisionId,
+      clientMutationId: `${runId}:prescription-draft`,
       order: toServerPrescriptionOrder(order),
     }),
   });
@@ -1611,6 +1637,12 @@ export const mutatePrescriptionOrderBundles = async (params: {
         }
         if (typeof operation.documentId === 'number' && !nextOrder.deletedDocumentIds.includes(operation.documentId)) {
           nextOrder.deletedDocumentIds = [...nextOrder.deletedDocumentIds, operation.documentId];
+          if (operation.expectedContentHash?.trim()) {
+            nextOrder.deletedDocumentContentHashes = {
+              ...(nextOrder.deletedDocumentContentHashes ?? {}),
+              [String(operation.documentId)]: operation.expectedContentHash.trim(),
+            };
+          }
         }
         return;
       }
@@ -1671,6 +1703,7 @@ const cloneRp = (rp: PrescriptionRp): PrescriptionRp => {
     rpId: rp.rpId || createStableId('rp'),
     documentId: rp.documentId,
     moduleId: rp.moduleId,
+    contentHash: rp.contentHash,
     name: rp.name.trim(),
     location: rp.location,
     category: rp.category,
@@ -1698,6 +1731,7 @@ export const importPrescriptionDoInput = (
   const nextBase: PrescriptionOrder = {
     ...baseOrder,
     deletedDocumentIds: [...baseOrder.deletedDocumentIds],
+    deletedDocumentContentHashes: { ...(baseOrder.deletedDocumentContentHashes ?? {}) },
     prescriptionSettings: [...(baseOrder.prescriptionSettings ?? [])],
     remarks: [...(baseOrder.remarks ?? [])],
     rps: baseOrder.rps.map(cloneRp),
@@ -1726,6 +1760,10 @@ export const importPrescriptionDoInput = (
   const importedDeletes = incoming.deletedDocumentIds.filter((id) => Number.isInteger(id) && id > 0);
   nextBase.rps = [...nextBase.rps, ...importedRps];
   nextBase.deletedDocumentIds = Array.from(new Set([...nextBase.deletedDocumentIds, ...importedDeletes]));
+  nextBase.deletedDocumentContentHashes = {
+    ...(nextBase.deletedDocumentContentHashes ?? {}),
+    ...(incoming.deletedDocumentContentHashes ?? {}),
+  };
   if (!nextBase.doctorComment.trim() && incoming.doctorComment.trim()) {
     nextBase.doctorComment = incoming.doctorComment;
   }

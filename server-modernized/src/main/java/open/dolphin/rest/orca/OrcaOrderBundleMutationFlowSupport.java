@@ -75,7 +75,16 @@ final class OrcaOrderBundleMutationFlowSupport {
                                 request, runId, facilityId, payload.getPatientId(), context.karteId(), documentId, operation, ex),
                         (field, message) -> OrcaOrderBundleMutationAuditSupport.validationFailure(
                                 resource,
-                                request, facilityId, payload.getPatientId(), runId, field, message));
+                                request, facilityId, payload.getPatientId(), runId, field, message),
+                        (documentId, code, message) -> conflictFailure(
+                                resource,
+                                request,
+                                facilityId,
+                                payload.getPatientId(),
+                                runId,
+                                documentId,
+                                code,
+                                message));
         List<Long> created = mutationResult.created();
         List<Long> updated = mutationResult.updated();
         List<Long> deleted = mutationResult.deleted();
@@ -181,6 +190,31 @@ final class OrcaOrderBundleMutationFlowSupport {
         resource.recordAudit(request, LocalOrderBundleResource.AUDIT_MUTATION_ACTION, audit,
                 open.dolphin.audit.AuditEventEnvelope.Outcome.FAILURE);
         return resource.restError(request, jakarta.ws.rs.core.Response.Status.NOT_FOUND, errorCode, message);
+    }
+
+    private static RuntimeException conflictFailure(
+            AbstractOrcaRestResource resource,
+            HttpServletRequest request,
+            String facilityId,
+            String patientId,
+            String runId,
+            Long documentId,
+            String errorCode,
+            String message) {
+        Map<String, Object> audit = new HashMap<>();
+        audit.put("facilityId", facilityId);
+        audit.put("patientId", patientId);
+        audit.put("runId", runId);
+        audit.put("routeNamespace", LocalOrderBundleResource.ROUTE_NAMESPACE);
+        audit.put("documentId", documentId);
+        resource.markFailureDetails(audit, 409, errorCode, message);
+        resource.recordAudit(request, LocalOrderBundleResource.AUDIT_MUTATION_ACTION, audit,
+                open.dolphin.audit.AuditEventEnvelope.Outcome.FAILURE);
+        Map<String, Object> details = new HashMap<>();
+        details.put("documentId", documentId);
+        details.put("reasonCode", errorCode);
+        details.put("classification", errorCode);
+        return resource.restError(request, jakarta.ws.rs.core.Response.Status.CONFLICT, errorCode, message, details, null);
     }
 
     record MutationFlowResult(

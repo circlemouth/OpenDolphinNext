@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import open.dolphin.infomodel.DocumentModel;
 import open.dolphin.infomodel.IInfoModel;
+import open.dolphin.infomodel.KarteBean;
+import open.dolphin.infomodel.UserModel;
 import open.dolphin.rest.dto.orca.OrderBundleMutationRequest;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +31,7 @@ class OrcaOrderBundleMutationExecutionSupportTest {
                 (documentId, operation, runtimeEx) -> runtimeEx,
                 OrcaOrderBundleMutationExecutionSupportTest::validationFailure);
 
-        assertTrue(result.updated().isEmpty());
+        assertTrue(result.created().contains(0L));
     }
 
     @Test
@@ -45,7 +47,7 @@ class OrcaOrderBundleMutationExecutionSupportTest {
                 (documentId, operation, ex) -> ex,
                 OrcaOrderBundleMutationExecutionSupportTest::validationFailure);
 
-        assertTrue(result.updated().isEmpty());
+        assertTrue(result.created().contains(0L));
     }
 
     @Test
@@ -64,7 +66,7 @@ class OrcaOrderBundleMutationExecutionSupportTest {
                 (documentId, operation, runtimeEx) -> runtimeEx,
                 OrcaOrderBundleMutationExecutionSupportTest::validationFailure);
 
-        assertTrue(result.updated().isEmpty());
+        assertTrue(result.created().contains(0L));
     }
 
     @Test
@@ -268,6 +270,51 @@ class OrcaOrderBundleMutationExecutionSupportTest {
         assertTrue(ex.getMessage().contains("required"));
     }
 
+    @Test
+    void executeRejectsExistingOrderUpdateWithoutExpectedContentHash() {
+        OrderBundleMutationRequest.BundleOperation operation = buildTreatmentUpdateOperation();
+
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                () -> OrcaOrderBundleMutationExecutionSupport.execute(
+                        buildPayload(operation),
+                        null,
+                        null,
+                        new HashMap<>(),
+                        (operationName, field, input, required) -> new Date(0L),
+                        documentId -> buildExistingTreatmentDocument(documentId),
+                        new NoOpPersistence(),
+                        (documentId, operationName, runtimeEx) -> runtimeEx,
+                        OrcaOrderBundleMutationExecutionSupportTest::validationFailure,
+                        (documentId, code, message) -> new IllegalStateException(code + ":" + message)));
+
+        assertTrue(ex.getMessage().contains("order_bundle_conflict"));
+        assertTrue(ex.getMessage().contains("expectedContentHash"));
+    }
+
+    @Test
+    void executeRejectsExistingOrderUpdateWhenContentHashIsStale() {
+        OrderBundleMutationRequest.BundleOperation operation = buildTreatmentUpdateOperation();
+        operation.setExpectedContentHash("stale-content-hash");
+
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                () -> OrcaOrderBundleMutationExecutionSupport.execute(
+                        buildPayload(operation),
+                        null,
+                        null,
+                        new HashMap<>(),
+                        (operationName, field, input, required) -> new Date(0L),
+                        documentId -> buildExistingTreatmentDocument(documentId),
+                        new NoOpPersistence(),
+                        (documentId, operationName, runtimeEx) -> runtimeEx,
+                        OrcaOrderBundleMutationExecutionSupportTest::validationFailure,
+                        (documentId, code, message) -> new IllegalStateException(code + ":" + message)));
+
+        assertTrue(ex.getMessage().contains("order_bundle_conflict"));
+        assertTrue(ex.getMessage().contains("changed by another editor"));
+    }
+
     private static OrderBundleMutationRequest buildPayload(OrderBundleMutationRequest.BundleOperation operation) {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setOperations(List.of(operation));
@@ -279,8 +326,7 @@ class OrcaOrderBundleMutationExecutionSupportTest {
             String adminCode,
             List<OrderBundleMutationRequest.BundleItem> items) {
         OrderBundleMutationRequest.BundleOperation operation = new OrderBundleMutationRequest.BundleOperation();
-        operation.setOperation("update");
-        operation.setDocumentId(1L);
+        operation.setOperation("create");
         operation.setEntity(IInfoModel.ENTITY_INJECTION_ORDER);
         operation.setClassCode("310");
         operation.setStartDate("2026-04-04");
@@ -288,6 +334,33 @@ class OrcaOrderBundleMutationExecutionSupportTest {
         operation.setAdminCode(adminCode);
         operation.setItems(items);
         return operation;
+    }
+
+    private static OrderBundleMutationRequest.BundleOperation buildTreatmentUpdateOperation() {
+        OrderBundleMutationRequest.BundleOperation operation = new OrderBundleMutationRequest.BundleOperation();
+        operation.setOperation("update");
+        operation.setDocumentId(77L);
+        operation.setEntity(IInfoModel.ENTITY_TREATMENT);
+        operation.setClassCode("400");
+        operation.setStartDate("2026-04-04");
+        operation.setBundleName("treatment-update");
+        operation.setItems(List.of(buildItem("140000610", "procedure-a", "main")));
+        return operation;
+    }
+
+    private static DocumentModel buildExistingTreatmentDocument(long documentId) {
+        OrderBundleMutationRequest.BundleOperation operation = new OrderBundleMutationRequest.BundleOperation();
+        operation.setOperation("create");
+        operation.setEntity(IInfoModel.ENTITY_TREATMENT);
+        operation.setClassCode("400");
+        operation.setBundleName("existing-treatment");
+        operation.setItems(List.of(buildItem("140000610", "procedure-a", "main")));
+        DocumentModel document = OrcaOrderBundleMutationSupport.buildDocument(new KarteBean(), new UserModel(), operation, new Date(0L));
+        document.setId(documentId);
+        if (document.getModules() != null && !document.getModules().isEmpty()) {
+            document.getModules().get(0).setId(770L);
+        }
+        return document;
     }
 
     private static OrderBundleMutationRequest.BundleItem buildItem(String code, String name, String rowRole) {

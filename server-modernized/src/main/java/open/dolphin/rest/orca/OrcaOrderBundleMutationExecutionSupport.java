@@ -9,6 +9,8 @@ import java.util.regex.Pattern;
 import open.dolphin.infomodel.DocumentModel;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.KarteBean;
+import open.dolphin.infomodel.ModuleInfoBean;
+import open.dolphin.infomodel.ModuleModel;
 import open.dolphin.infomodel.UserModel;
 import open.dolphin.rest.dto.orca.BacteriaOrderMetadata;
 import open.dolphin.rest.dto.orca.OrderBundleMutationRequest;
@@ -30,6 +32,30 @@ final class OrcaOrderBundleMutationExecutionSupport {
             Persistence persistence,
             FailureBuilder failureBuilder,
             ValidationFailure validationFailure) {
+        return execute(
+                payload,
+                karte,
+                user,
+                orderBundleContext,
+                dateValidator,
+                documentFetcher,
+                persistence,
+                failureBuilder,
+                validationFailure,
+                (documentId, code, message) -> validationFailure.invalid(code, message));
+    }
+
+    static MutationResult execute(
+            OrderBundleMutationRequest payload,
+            KarteBean karte,
+            UserModel user,
+            Map<String, Object> orderBundleContext,
+            DateValidator dateValidator,
+            DocumentFetcher documentFetcher,
+            Persistence persistence,
+            FailureBuilder failureBuilder,
+            ValidationFailure validationFailure,
+            ConflictFailure conflictFailure) {
         List<Long> created = new ArrayList<>();
         List<Long> updated = new ArrayList<>();
         List<Long> deleted = new ArrayList<>();
@@ -62,8 +88,8 @@ final class OrcaOrderBundleMutationExecutionSupport {
             }
             switch (operation) {
                 case "create" -> createDocument(karte, user, op, performDate, persistence, failureBuilder, created);
-                case "update" -> updateDocument(user, op, performDate, documentFetcher, persistence, failureBuilder, validationFailure, updated);
-                case "delete" -> deleteDocument(op, persistence, failureBuilder, validationFailure, deleted);
+                case "update" -> updateDocument(user, op, performDate, documentFetcher, persistence, failureBuilder, validationFailure, conflictFailure, updated);
+                case "delete" -> deleteDocument(op, documentFetcher, persistence, failureBuilder, validationFailure, conflictFailure, deleted);
                 default -> {
                 }
             }
@@ -369,6 +395,7 @@ final class OrcaOrderBundleMutationExecutionSupport {
             Persistence persistence,
             FailureBuilder failureBuilder,
             ValidationFailure validationFailure,
+            ConflictFailure conflictFailure,
             List<Long> updated) {
         Long documentId = op.getDocumentId();
         if (documentId == null || documentId <= 0) {
@@ -376,8 +403,9 @@ final class OrcaOrderBundleMutationExecutionSupport {
         }
         DocumentModel document = documentFetcher.fetch(documentId);
         if (document == null) {
-            return;
+            throw conflictFailure.conflict(documentId, "order_bundle_conflict", "Order bundle no longer exists.");
         }
+        requireExpectedContentHash(op, document, conflictFailure);
         try {
             OrcaOrderBundleMutationSupport.updateDocumentWithBundle(document, user, op, performDate);
             persistence.updateDocument(document);
@@ -390,14 +418,21 @@ final class OrcaOrderBundleMutationExecutionSupport {
 
     private static void deleteDocument(
             OrderBundleMutationRequest.BundleOperation op,
+            DocumentFetcher documentFetcher,
             Persistence persistence,
             FailureBuilder failureBuilder,
             ValidationFailure validationFailure,
+            ConflictFailure conflictFailure,
             List<Long> deleted) {
         Long documentId = op.getDocumentId();
         if (documentId == null || documentId <= 0) {
             throw validationFailure.invalid("documentId", "documentId is required");
         }
+        DocumentModel document = documentFetcher.fetch(documentId);
+        if (document == null) {
+            throw conflictFailure.conflict(documentId, "order_bundle_conflict", "Order bundle no longer exists.");
+        }
+        requireExpectedContentHash(op, document, conflictFailure);
         try {
             persistence.deleteDocument(documentId);
             persistence.flush();
@@ -405,6 +440,59 @@ final class OrcaOrderBundleMutationExecutionSupport {
         } catch (RuntimeException ex) {
             throw failureBuilder.build(documentId, "delete", ex);
         }
+    }
+
+    private static void requireExpectedContentHash(
+            OrderBundleMutationRequest.BundleOperation op,
+            DocumentModel document,
+            ConflictFailure conflictFailure) {
+        String expected = trimToNull(op.getExpectedContentHash());
+        Long documentId = op.getDocumentId();
+        if (expected == null) {
+            throw conflictFailure.conflict(documentId, "order_bundle_conflict",
+                    "expectedContentHash is required for order bundle update/delete.");
+        }
+        ModuleModel module = resolveTargetModule(document, op);
+        if (module == null) {
+            throw conflictFailure.conflict(documentId, "order_bundle_conflict", "Order bundle module no longer exists.");
+        }
+        String current = OrcaOrderBundleFetchSupport.contentHash(document, module);
+        if (!current.equalsIgnoreCase(expected)) {
+            throw conflictFailure.conflict(documentId, "order_bundle_conflict",
+                    "Order bundle was changed by another editor. Reload before saving.");
+        }
+    }
+
+    private static ModuleModel resolveTargetModule(DocumentModel document, OrderBundleMutationRequest.BundleOperation op) {
+        if (document == null || document.getModules() == null || document.getModules().isEmpty()) {
+            return null;
+        }
+        Long moduleId = op.getModuleId();
+        if (moduleId != null && moduleId > 0) {
+            for (ModuleModel module : document.getModules()) {
+                if (module != null && module.getId() == moduleId) {
+                    return module;
+                }
+            }
+            return null;
+        }
+        String requestedEntity = OrcaOrderBundleRequestSupport.normalizeEntityStorage(op.getEntity());
+        for (ModuleModel module : document.getModules()) {
+            ModuleInfoBean info = module != null ? module.getModuleInfoBean() : null;
+            String moduleEntity = info != null ? info.getEntity() : null;
+            if (requestedEntity == null || OrcaOrderBundleRequestSupport.entitiesMatch(requestedEntity, moduleEntity)) {
+                return module;
+            }
+        }
+        return document.getModules().get(0);
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     record MutationResult(List<Long> created, List<Long> updated, List<Long> deleted) {
@@ -435,5 +523,10 @@ final class OrcaOrderBundleMutationExecutionSupport {
     @FunctionalInterface
     interface ValidationFailure {
         RuntimeException invalid(String field, String message);
+    }
+
+    @FunctionalInterface
+    interface ConflictFailure {
+        RuntimeException conflict(Long documentId, String code, String message);
     }
 }

@@ -912,6 +912,7 @@ export function OrderDockPanel(props: {
             operation: 'delete',
             documentId: bundle.documentId,
             moduleId: bundle.moduleId,
+            expectedContentHash: bundle.contentHash,
             entity: bundle.entity,
           },
         ],

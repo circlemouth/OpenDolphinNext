@@ -13,6 +13,12 @@ import {
   type ChartsLockTarget,
   type ChartsTabLockRecord,
 } from './editLock';
+import {
+  acquireChartEditSession,
+  heartbeatChartEditSession,
+  releaseChartEditSession,
+  type ChartEditSessionParams,
+} from './chartEditSessionApi';
 
 export type ChartsTabLockStatus = 'owned' | 'other-tab' | 'none' | 'expired';
 
@@ -76,6 +82,50 @@ export function useChartsTabLock(options: {
   const previousStorageKeyRef = useRef<string | null>(storageKey);
   const legacyKeyRef = useRef<string | null>(legacyStorageKey);
   legacyKeyRef.current = legacyStorageKey;
+  const serverLeaseIdRef = useRef<string | null>(null);
+  const serverLeaseForceTakeoverRef = useRef(false);
+
+  const serverLeaseParams = useMemo<ChartEditSessionParams | null>(() => {
+    const patientId = (options.target.patientId ?? '').trim();
+    if (!patientId) return null;
+    return {
+      patientId,
+      appointmentId: options.target.appointmentId?.trim() || undefined,
+      receptionId: options.target.receptionId?.trim() || undefined,
+      ownerTabSessionId: tabSessionId,
+      ownerRunId: runId,
+      ttlSeconds: Math.ceil(ttlMs / 1000),
+    };
+  }, [options.target.appointmentId, options.target.patientId, options.target.receptionId, runId, tabSessionId, ttlMs]);
+
+  const markServerLockConflict = useCallback(
+    (result: { lockStatus?: string; ownerRunId?: string; ownerTabSessionId?: string; expiresAt?: string; acquiredAt?: string }) => {
+      setState((prev) => {
+        if (!prev.storageKey) return prev;
+        const next: ChartsTabLockState = {
+          ...prev,
+          status: 'other-tab',
+          ownerRunId: result.ownerRunId,
+          ownerTabSessionId: result.ownerTabSessionId,
+          acquiredAt: result.acquiredAt,
+          expiresAt: result.expiresAt,
+          isReadOnly: true,
+          readOnlyReason: result.ownerRunId
+            ? `他端末が編集中です（runId=${result.ownerRunId}）`
+            : '他端末が編集中です',
+        };
+        return isSameLockState(prev, next) ? prev : next;
+      });
+    },
+    [],
+  );
+
+  const releaseServerLease = useCallback(() => {
+    if (!serverLeaseParams || !serverLeaseIdRef.current) return;
+    const leaseId = serverLeaseIdRef.current;
+    serverLeaseIdRef.current = null;
+    void releaseChartEditSession({ ...serverLeaseParams, leaseId }).catch(() => undefined);
+  }, [serverLeaseParams]);
 
   const apply = useCallback(
     (nextKey: string | null, hint?: { force?: boolean }) => {
@@ -229,27 +279,73 @@ export function useChartsTabLock(options: {
   useEffect(() => {
     const previousStorageKey = previousStorageKeyRef.current;
     if (previousStorageKey && previousStorageKey !== storageKey) {
+      releaseServerLease();
       releaseChartsTabLock({ storageKey: previousStorageKey, ownerTabSessionId: tabSessionId });
     }
     previousStorageKeyRef.current = storageKey;
 
     if (!enabled) {
       if (storageKey) {
+        releaseServerLease();
         releaseChartsTabLock({ storageKey, ownerTabSessionId: tabSessionId });
       }
       setState((prev) => ({ ...prev, status: 'none', isReadOnly: false, readOnlyReason: undefined }));
       return;
     }
     apply(storageKey ?? null);
-  }, [apply, enabled, storageKey, tabSessionId]);
+  }, [apply, enabled, releaseServerLease, storageKey, tabSessionId]);
 
   useEffect(() => {
     return () => {
       const activeKey = storageKeyRef.current;
+      releaseServerLease();
       if (!activeKey) return;
       releaseChartsTabLock({ storageKey: activeKey, ownerTabSessionId: tabSessionId });
     };
-  }, [tabSessionId]);
+  }, [releaseServerLease, tabSessionId]);
+
+  useEffect(() => {
+    if (!enabled || state.status !== 'owned' || !storageKey || !serverLeaseParams) return;
+    let canceled = false;
+    const forceTakeover = serverLeaseForceTakeoverRef.current;
+    serverLeaseForceTakeoverRef.current = false;
+    void acquireChartEditSession({
+      ...serverLeaseParams,
+      leaseId: serverLeaseIdRef.current ?? undefined,
+      forceTakeover,
+    })
+      .then((result) => {
+        if (canceled) return;
+        if (result.ok && result.leaseId) {
+          serverLeaseIdRef.current = result.leaseId;
+          setState((prev) => {
+            const next: ChartsTabLockState = {
+              ...prev,
+              status: 'owned',
+              ownerRunId: result.ownerRunId ?? runId,
+              ownerTabSessionId: result.ownerTabSessionId ?? tabSessionId,
+              acquiredAt: result.acquiredAt ?? prev.acquiredAt,
+              expiresAt: result.expiresAt ?? prev.expiresAt,
+              isReadOnly: false,
+              readOnlyReason: undefined,
+            };
+            return isSameLockState(prev, next) ? prev : next;
+          });
+          return;
+        }
+        if (result.supported !== false) {
+          markServerLockConflict(result);
+        }
+      })
+      .catch(() => {
+        if (!canceled) {
+          markServerLockConflict({});
+        }
+      });
+    return () => {
+      canceled = true;
+    };
+  }, [enabled, markServerLockConflict, runId, serverLeaseParams, state.status, storageKey, tabSessionId]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -270,10 +366,20 @@ export function useChartsTabLock(options: {
       } else {
         refreshFromStorage(activeKey);
       }
+      if (serverLeaseParams && serverLeaseIdRef.current) {
+        void heartbeatChartEditSession({ ...serverLeaseParams, leaseId: serverLeaseIdRef.current })
+          .then((result) => {
+            if (!result.ok && result.supported !== false) {
+              markServerLockConflict(result);
+            }
+          })
+          .catch(() => markServerLockConflict({}));
+      }
     }, REFRESH_INTERVAL_MS);
 
     const onBeforeUnload = () => {
       const activeKey = storageKeyRef.current;
+      releaseServerLease();
       if (!activeKey) return;
       releaseChartsTabLock({ storageKey: activeKey, ownerTabSessionId: tabSessionId });
     };
@@ -293,18 +399,20 @@ export function useChartsTabLock(options: {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       disposeSubscription();
     };
-  }, [enabled, refreshFromStorage, storageKey, tabSessionId, ttlMs]);
+  }, [enabled, markServerLockConflict, refreshFromStorage, releaseServerLease, serverLeaseParams, storageKey, tabSessionId, ttlMs]);
 
   const forceTakeover = useCallback(() => {
     if (!storageKey) return;
+    serverLeaseForceTakeoverRef.current = true;
     apply(storageKey, { force: true });
   }, [apply, storageKey]);
 
   const release = useCallback(() => {
     if (!storageKey) return;
+    releaseServerLease();
     releaseChartsTabLock({ storageKey, ownerTabSessionId: tabSessionId });
     refreshFromStorage(storageKey);
-  }, [refreshFromStorage, storageKey, tabSessionId]);
+  }, [refreshFromStorage, releaseServerLease, storageKey, tabSessionId]);
 
   return {
     ...state,

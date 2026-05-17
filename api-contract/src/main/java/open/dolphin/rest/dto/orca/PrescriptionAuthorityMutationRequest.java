@@ -8,6 +8,10 @@ public class PrescriptionAuthorityMutationRequest {
     private String patientId;
     private String encounterId;
     private String chartRevisionId;
+    private Long expectedRevisionId;
+    private String expectedStatus;
+    private String expectedContentHash;
+    private String clientMutationId;
     private String reasonCode;
     private String reasonText;
     private PrescriptionOrder order;
@@ -34,6 +38,38 @@ public class PrescriptionAuthorityMutationRequest {
 
     public void setChartRevisionId(String chartRevisionId) {
         this.chartRevisionId = chartRevisionId;
+    }
+
+    public Long getExpectedRevisionId() {
+        return expectedRevisionId;
+    }
+
+    public void setExpectedRevisionId(Long expectedRevisionId) {
+        this.expectedRevisionId = expectedRevisionId;
+    }
+
+    public String getExpectedStatus() {
+        return expectedStatus;
+    }
+
+    public void setExpectedStatus(String expectedStatus) {
+        this.expectedStatus = expectedStatus;
+    }
+
+    public String getExpectedContentHash() {
+        return expectedContentHash;
+    }
+
+    public void setExpectedContentHash(String expectedContentHash) {
+        this.expectedContentHash = expectedContentHash;
+    }
+
+    public String getClientMutationId() {
+        return clientMutationId;
+    }
+
+    public void setClientMutationId(String clientMutationId) {
+        this.clientMutationId = clientMutationId;
     }
 
     public String getReasonCode() {

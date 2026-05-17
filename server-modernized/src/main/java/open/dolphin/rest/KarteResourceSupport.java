@@ -29,6 +29,7 @@ import open.dolphin.rest.dto.KarteRevisionDocumentResponse;
 import open.dolphin.rest.dto.LegacyKarteListResponse;
 import open.dolphin.rest.support.KarteRevisionResponseMapper;
 import open.dolphin.rest.support.LegacyJsonSupport;
+import open.dolphin.security.HashUtil;
 import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.UserServiceBean;
 
@@ -167,7 +168,20 @@ final class KarteResourceSupport {
                 model.getId(),
                 model.getFacilityPatId(),
                 model.getConfirmed(),
-                model.getComment());
+                model.getComment(),
+                patientFreeDocumentContentHash(model));
+    }
+
+    String patientFreeDocumentContentHash(PatientFreeDocumentModel model) {
+        if (model == null) {
+            return null;
+        }
+        long confirmed = model.getConfirmed() != null ? model.getConfirmed().getTime() : 0L;
+        return HashUtil.sha256(String.join("\u001f",
+                String.valueOf(model.getId()),
+                trimToEmpty(model.getFacilityPatId()),
+                String.valueOf(confirmed),
+                trimToEmpty(model.getComment())));
     }
 
     String requireActorFacilityId(HttpServletRequest request) {
@@ -301,6 +315,10 @@ final class KarteResourceSupport {
 
     <T> T readJson(String json, Class<T> type) throws IOException {
         return LegacyJsonSupport.readBody(json, type, objectMapper);
+    }
+
+    private String trimToEmpty(String value) {
+        return value != null ? value.trim() : "";
     }
 
     private HttpServletRequest resolveRequest(HttpServletRequest explicit) {

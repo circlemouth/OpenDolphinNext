@@ -16,6 +16,7 @@ import open.dolphin.rest.dto.orca.OrderBundleFetchResponse;
 import open.dolphin.rest.dto.orca.OrcaOrderInputSetDetailResponse;
 import open.dolphin.rest.dto.orca.OrcaOrderInputSetListResponse;
 import open.dolphin.rest.dto.orca.OrcaOrderInteractionCheckResponse;
+import open.dolphin.security.HashUtil;
 
 final class OrcaOrderBundleFetchSupport {
 
@@ -133,6 +134,7 @@ final class OrcaOrderBundleFetchSupport {
         OrderBundleFetchResponse.OrderBundleEntry entry = new OrderBundleFetchResponse.OrderBundleEntry();
         entry.setDocumentId(document.getId());
         entry.setModuleId(module.getId());
+        entry.setContentHash(contentHash(document, module));
         entry.setEntity(OrcaOrderBundleRequestSupport.normalizeEntityResponse(moduleEntity));
         entry.setBundleName(OrcaOrderBundleDisplaySupport.resolveBundleName(bundle, info));
         entry.setBundleNumber(bundle.getBundleNumber());
@@ -178,5 +180,23 @@ final class OrcaOrderBundleFetchSupport {
         entry.setCommentItems(OrcaOrderBundleRecommendationSupport.filterItemsByRowRole(
                 items, OrcaOrderBundleRecommendationSupport.ROW_ROLE_COMMENT));
         return entry;
+    }
+
+    static String contentHash(DocumentModel document, ModuleModel module) {
+        ModuleInfoBean info = module != null ? module.getModuleInfoBean() : null;
+        return HashUtil.sha256(String.join("\u001f",
+                String.valueOf(document != null ? document.getId() : 0L),
+                String.valueOf(module != null ? module.getId() : 0L),
+                trimToEmpty(info != null ? info.getEntity() : null),
+                trimToEmpty(info != null ? info.getStampRole() : null),
+                trimToEmpty(info != null ? info.getStampName() : null),
+                trimToEmpty(info != null ? info.getStampMemo() : null),
+                trimToEmpty(module != null ? module.getBeanJson() : null),
+                trimToEmpty(OrcaOrderBundleRequestSupport.formatDate(module != null ? module.getStarted() : null)),
+                trimToEmpty(OrcaOrderBundleRequestSupport.formatDate(module != null ? module.getConfirmed() : null))));
+    }
+
+    private static String trimToEmpty(String value) {
+        return value != null ? value.trim() : "";
     }
 }

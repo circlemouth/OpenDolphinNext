@@ -91,7 +91,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0336", appliedVersion(connection));
+                assertEquals("0337", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -128,6 +128,7 @@ class FreshSchemaBaselineTest {
                 assertTrue(tableExists(connection, "opendolphin", "chart_document"));
                 assertTrue(tableExists(connection, "opendolphin", "chart_revision"));
                 assertTrue(tableExists(connection, "opendolphin", "chart_revision_event"));
+                assertTrue(tableExists(connection, "opendolphin", "chart_edit_session"));
                 assertTrue(tableExists(connection, "opendolphin", "user_security_state"));
                 assertTrue(tableExists(connection, "opendolphin", "auth_session_registry"));
                 assertTrue(tableExists(connection, "opendolphin", "audit_event"));
@@ -225,6 +226,9 @@ class FreshSchemaBaselineTest {
                 assertTrue(columnExists(connection, "opendolphin", "chart_revision", "delegated_by_user_id"));
                 assertTrue(columnExists(connection, "opendolphin", "chart_revision_event", "event_type"));
                 assertTrue(columnExists(connection, "opendolphin", "chart_revision_event", "before_summary_json"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_edit_session", "lease_id"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_edit_session", "expires_at"));
+                assertTrue(columnExists(connection, "opendolphin", "chart_edit_session", "stale_takeover_at"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order", "status"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_revision", "content_hash"));
                 assertTrue(columnExists(connection, "opendolphin", "prescription_order_item", "drug_code"));
@@ -293,6 +297,8 @@ class FreshSchemaBaselineTest {
                 assertTrue(indexExists(connection, "opendolphin", "uk_chart_document_key"));
                 assertTrue(indexExists(connection, "opendolphin", "uk_chart_revision_number"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_chart_revision_event_document"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_chart_edit_session_scope_active"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_chart_edit_session_lease"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_auth_session_registry_user_active"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_auth_session_registry_session_active"));
                 assertTrue(indexExists(connection, "opendolphin", "idx_audit_event_time_desc"));

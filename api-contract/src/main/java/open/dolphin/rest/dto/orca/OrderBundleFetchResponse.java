@@ -65,6 +65,7 @@ public class OrderBundleFetchResponse {
     public static class OrderBundleEntry {
         private Long documentId;
         private Long moduleId;
+        private String contentHash;
         private String entity;
         private String bundleName;
         private String bundleNumber;
@@ -104,6 +105,14 @@ public class OrderBundleFetchResponse {
 
         public void setModuleId(Long moduleId) {
             this.moduleId = moduleId;
+        }
+
+        public String getContentHash() {
+            return contentHash;
+        }
+
+        public void setContentHash(String contentHash) {
+            this.contentHash = contentHash;
         }
 
         public String getEntity() {

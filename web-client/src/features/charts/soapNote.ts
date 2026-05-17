@@ -11,6 +11,8 @@ export type SoapEntry = {
   authorRole: string;
   authorName?: string;
   action: SoapEntryAction;
+  baseChartRevisionId?: string;
+  contentHash?: string;
   patientId?: string;
   appointmentId?: string;
   receptionId?: string;

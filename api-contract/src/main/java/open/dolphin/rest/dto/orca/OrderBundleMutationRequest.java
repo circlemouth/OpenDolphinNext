@@ -33,6 +33,8 @@ public class OrderBundleMutationRequest {
         private String operation; // create/update/delete
         private Long documentId;
         private Long moduleId;
+        private String expectedContentHash;
+        private String clientMutationId;
         private String entity;
         private String bundleName;
         private String bundleNumber;
@@ -79,6 +81,22 @@ public class OrderBundleMutationRequest {
 
         public void setModuleId(Long moduleId) {
             this.moduleId = moduleId;
+        }
+
+        public String getExpectedContentHash() {
+            return expectedContentHash;
+        }
+
+        public void setExpectedContentHash(String expectedContentHash) {
+            this.expectedContentHash = expectedContentHash;
+        }
+
+        public String getClientMutationId() {
+            return clientMutationId;
+        }
+
+        public void setClientMutationId(String clientMutationId) {
+            this.clientMutationId = clientMutationId;
         }
 
         public String getEntity() {

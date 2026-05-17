@@ -107,7 +107,7 @@ describe('OrderBundleEditPanel history copy', () => {
       />,
     );
 
-    await waitFor(() => expect(screen.getByDisplayValue('降圧薬セット')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByDisplayValue('アムロジピン')).toBeInTheDocument());
 
     await user.click(screen.getByRole('button', { name: /保存して追加/ }));
 

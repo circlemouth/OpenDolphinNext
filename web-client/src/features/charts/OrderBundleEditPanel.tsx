@@ -156,6 +156,7 @@ type PrescriptionTiming = 'regular' | 'tonyo' | 'gaiyo';
 type BundleFormState = {
   documentId?: number;
   moduleId?: number;
+  contentHash?: string;
   bundleName: string;
   admin: string;
   adminMemo: string;
@@ -897,6 +898,7 @@ export const toFormState = (bundle: OrderBundle, today: string): BundleFormState
   return {
     documentId: canonicalBundle.documentId,
     moduleId: canonicalBundle.moduleId,
+    contentHash: canonicalBundle.contentHash,
     bundleName: canonicalBundle.bundleName ?? '',
     admin: canonicalBundle.admin ?? '',
     adminMemo: canonicalBundle.adminMemo ?? '',
@@ -927,6 +929,7 @@ const toFormStateFromHistoryCopy = (bundle: OrderBundle, today: string): BundleF
     ...base,
     documentId: undefined,
     moduleId: undefined,
+    contentHash: undefined,
     startDate: today,
   };
 };
@@ -3190,6 +3193,7 @@ export function OrderBundleEditPanel({
             operation: payload.form.documentId ? 'update' : 'create',
             documentId: payload.form.documentId,
             moduleId: payload.form.moduleId,
+            expectedContentHash: payload.form.documentId ? payload.form.contentHash : undefined,
             entity,
             bundleName: payload.form.bundleName,
             bundleNumber: payload.form.bundleNumber,
@@ -3385,6 +3389,7 @@ export function OrderBundleEditPanel({
             operation: 'delete',
             documentId: bundle.documentId,
             moduleId: bundle.moduleId,
+            expectedContentHash: bundle.contentHash,
             entity,
           },
         ],

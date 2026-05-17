@@ -43,6 +43,8 @@ import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.UserServiceBean;
 import open.dolphin.testsupport.RuntimeDelegateTestSupport;
+import open.orca.rest.LocalOrcaMasterCacheRepository;
+import open.orca.rest.OrcaMasterCacheState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -750,6 +752,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "localMasterCacheRepository", new FakeLocalMasterCacheRepository());
         OrcaOrderInputSetListResponse response =
                 inputSetResource.getInputSets(servletRequest, "セット", null, "2026-03-09", 1, 20);
 
@@ -790,6 +793,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "localMasterCacheRepository", new FakeLocalMasterCacheRepository());
         OrcaOrderInputSetListResponse response =
                 inputSetResource.getInputSets(servletRequest, "セット", "laboTest", "2026-03-09", 1, 20);
 
@@ -819,6 +823,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "localMasterCacheRepository", new FakeLocalMasterCacheRepository());
         OrcaOrderInputSetListResponse response =
                 inputSetResource.getInputSets(servletRequest, "セット", null, "2026-03-09", 1, 20);
 
@@ -870,6 +875,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "localMasterCacheRepository", new FakeLocalMasterCacheRepository());
         OrcaOrderInputSetDetailResponse response =
                 inputSetResource.getInputSetDetail(servletRequest, "P01001", "20260309", IInfoModel.ENTITY_MED_ORDER, null);
 
@@ -916,6 +922,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "localMasterCacheRepository", new FakeLocalMasterCacheRepository());
         OrcaOrderInputSetDetailResponse response =
                 inputSetResource.getInputSetDetail(servletRequest, "P01001", "20260309", "laboTest", null);
 
@@ -949,6 +956,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "localMasterCacheRepository", new FakeLocalMasterCacheRepository());
         OrcaOrderInputSetDetailResponse response =
                 inputSetResource.getInputSetDetail(servletRequest, "S02001", "20260309", IInfoModel.ENTITY_TREATMENT, null);
 
@@ -970,6 +978,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "localMasterCacheRepository", new FakeLocalMasterCacheRepository());
         WebApplicationException exception = null;
         try {
             inputSetResource.getInputSetDetail(servletRequest, "X99999", "20260309", IInfoModel.ENTITY_TREATMENT, null);
@@ -995,6 +1004,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "localMasterCacheRepository", new FakeLocalMasterCacheRepository());
         WebApplicationException exception = null;
         try {
             inputSetResource.getInputSetDetail(servletRequest, "P01001", "20260309", IInfoModel.ENTITY_TREATMENT, null);
@@ -1021,6 +1031,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(interactionResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(interactionResource, "localMasterCacheRepository", new FakeLocalMasterCacheRepository());
         OrcaOrderInteractionCheckRequest body = new OrcaOrderInteractionCheckRequest();
         body.setCodes(List.of("620000001", "620000001", "620000002"));
         body.setExistingCodes(List.of("620000003", "620000003", "620000001"));
@@ -1075,7 +1086,15 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
     private OrcaOrderMasterResource buildMasterResource(OrcaOrderMasterResource target) throws Exception {
         injectField(target, "sessionAuditDispatcher", auditDispatcher);
+        injectField(target, "localMasterCacheRepository", new FakeLocalMasterCacheRepository());
         return target;
+    }
+
+    private static final class FakeLocalMasterCacheRepository extends LocalOrcaMasterCacheRepository {
+        @Override
+        public OrcaMasterCacheState loadState(String masterType) {
+            return OrcaMasterCacheState.current(masterType, "test-local-master-cache");
+        }
     }
 
     private static final class RecordingSessionAuditDispatcher extends SessionAuditDispatcher {

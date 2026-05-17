@@ -76,6 +76,7 @@ export type OrderBundleBodyPart = {
 export type OrderBundle = {
   documentId?: number;
   moduleId?: number;
+  contentHash?: string;
   entity?: string;
   bundleName?: string;
   bundleNumber?: string;
@@ -128,6 +129,8 @@ export type OrderBundleOperation = {
   operation: 'create' | 'update' | 'delete';
   documentId?: number;
   moduleId?: number;
+  expectedContentHash?: string;
+  clientMutationId?: string;
   entity?: string;
   bundleName?: string;
   bundleNumber?: string;
@@ -541,12 +544,16 @@ export async function mutateOrderBundles(params: {
       message: '選択式コメントの itemNumber / branch は未対応のため保存できません。パラメータ不要のコメントのみ選択してください。',
     };
   }
+  const operationsWithMutationIds = normalizedOperations.map((operation, index) => ({
+    ...operation,
+    clientMutationId: operation.clientMutationId ?? `${runId}:order-bundle:${index}`,
+  }));
   const response = await httpFetch('/api/local/order/bundles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       patientId: params.patientId,
-      operations: normalizedOperations,
+      operations: operationsWithMutationIds,
     }),
   });
   const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;

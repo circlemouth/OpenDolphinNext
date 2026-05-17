@@ -33,6 +33,7 @@ import open.dolphin.infomodel.ProgressCourse;
 import open.dolphin.infomodel.UserModel;
 import open.dolphin.rest.dto.orca.SubjectiveEntryRequest;
 import open.dolphin.rest.dto.orca.SubjectiveEntryResponse;
+import open.dolphin.security.HashUtil;
 import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.UserServiceBean;
@@ -73,6 +74,7 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
         String patientId = requirePatientId(request, payload, facilityId, runId);
         String soapCategory = requireSoapCategory(request, payload, facilityId, patientId, runId);
         String displaySection = requireDisplaySection(request, payload, facilityId, patientId, runId, soapCategory);
+        rejectEntryUpdateAttempt(request, payload, facilityId, patientId, runId, soapCategory, displaySection);
         String body = requireBody(request, payload, facilityId, patientId, runId);
         PatientModel patient = requirePatient(request, facilityId, patientId, runId);
         UserModel user = requireUser(request, facilityId, patientId, runId);
@@ -91,7 +93,8 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
         response.setRouteNamespace(ROUTE_NAMESPACE);
         response.setRecordedAt(recordedAt);
         response.setMessageDetail("院内ローカル SOAP 記載を登録しました。");
-        response.setEntry(buildReadbackEntry(documentId, patientId, performDate, soapCategory, displaySection, body, recordedAt, user));
+        response.setEntry(buildReadbackEntry(documentId, patientId, performDate, soapCategory, displaySection, body,
+                recordedAt, user, payload.getBaseRevisionId()));
 
         Map<String, Object> audit = new HashMap<>();
         audit.put("facilityId", facilityId);
@@ -247,6 +250,24 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
         throw restError(request, status, errorCode, message);
     }
 
+    private void rejectEntryUpdateAttempt(HttpServletRequest request, SubjectiveEntryRequest payload,
+            String facilityId, String patientId, String runId, String soapCategory, String displaySection) {
+        if (!hasText(payload.getEntryId()) && !hasText(payload.getExpectedEntryHash())) {
+            return;
+        }
+        Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
+        audit.put("soapCategory", soapCategory);
+        audit.put("displaySection", displaySection);
+        audit.put("entryUpdateAttempt", Boolean.TRUE);
+        markFailureDetails(audit, Response.Status.CONFLICT.getStatusCode(),
+                "subjective_entry_append_only",
+                "SOAP/F entries are append-only; existing entry update requires a dedicated conflict-aware endpoint.");
+        recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
+        throw restError(request, Response.Status.CONFLICT,
+                "subjective_entry_append_only",
+                "SOAP/F entries are append-only. Save this note as a new card.");
+    }
+
     private void failSubjectivePersistence(HttpServletRequest request, String facilityId, String patientId,
             String runId, String soapCategory, String displaySection, String reasonCode) {
         Response.Status status = Response.Status.SERVICE_UNAVAILABLE;
@@ -349,9 +370,11 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
     }
 
     private SubjectiveEntryResponse.Entry buildReadbackEntry(long documentId, String patientId, Date performDate,
-            String soapCategory, String displaySection, String body, String recordedAt, UserModel user) {
+            String soapCategory, String displaySection, String body, String recordedAt, UserModel user,
+            String baseRevisionId) {
         SubjectiveEntryResponse.Entry entry = new SubjectiveEntryResponse.Entry();
         entry.setDocumentId(documentId);
+        entry.setEntryId("local-subjective-" + documentId + "-" + displaySection);
         entry.setPatientId(patientId);
         entry.setPerformDate(ModelUtils.getDateAsString(performDate));
         entry.setSoapCategory(soapCategory);
@@ -360,6 +383,8 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
         entry.setRecordedAt(recordedAt);
         entry.setAuthorUserId(user.getUserId());
         entry.setAuthorName(user.getCommonName());
+        entry.setBaseChartRevisionId(trimToNull(baseRevisionId));
+        entry.setContentHash(contentHash(patientId, performDate, soapCategory, displaySection, body, baseRevisionId));
         return entry;
     }
 
@@ -410,6 +435,29 @@ public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
             return IInfoModel.ROLE_P_SPEC;
         }
         return IInfoModel.ROLE_SOA_SPEC;
+    }
+
+    private String contentHash(String patientId, Date performDate, String soapCategory, String displaySection,
+            String body, String baseRevisionId) {
+        return HashUtil.sha256(String.join("\u001f",
+                trimToEmpty(patientId),
+                ModelUtils.getDateAsString(performDate),
+                trimToEmpty(soapCategory),
+                trimToEmpty(displaySection),
+                trimToEmpty(body),
+                trimToEmpty(baseRevisionId)));
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String trimToNull(String value) {
+        return hasText(value) ? value.trim() : null;
+    }
+
+    private String trimToEmpty(String value) {
+        return hasText(value) ? value.trim() : "";
     }
 
 }

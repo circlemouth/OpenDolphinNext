@@ -39,6 +39,7 @@ describe('PatientSummaryPanel', () => {
         facilityPatId: 'P-001',
         confirmed: '2026-03-05T00:18:34Z',
         comment: '既存サマリ',
+        contentHash: 'hash-free-doc-1',
       },
     });
     mockedSavePatientFreeDocument.mockResolvedValue({
@@ -98,6 +99,7 @@ describe('PatientSummaryPanel', () => {
           patientId: 'P-001',
           id: 1,
           comment: '更新サマリ',
+          expectedContentHash: 'hash-free-doc-1',
         }),
       );
     });

@@ -31,8 +31,8 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 
 - `DRAFT` から `FINAL` などへの遷移は server-side authority API だけが行う。
 - `POST /api/local/prescription-orders/authority` は server-side facility と patient existence を検証し、診療録リビジョンに紐付く `DRAFT` 処方を `prescription_order` / `prescription_order_revision` / `prescription_order_item` / `prescription_order_event` に保存する。旧 `/api/prescriptions` alias は公開しない。
-- `POST /api/local/prescription-orders/authority/{prescriptionId}/finalize` は保存済み current revision の server-side summary から `content_hash` を計算し、`FINALIZE` event を追加する。client 提供 digest は権威値にしない。
-- `POST /api/local/prescription-orders/authority/{prescriptionId}/change|stop|cancel|reissue|resend` は理由必須とし、`CHANGE` / `STOP` / `CANCEL` / `REISSUE` / `RESEND` event を append-only で追加する。`change` / `reissue` は新しい構造化 item を持つ revision を要求し、`resend` は current revision を維持した再送判断 event だけを追加する。
+- `POST /api/local/prescription-orders/authority/{prescriptionId}/finalize` は保存済み current revision の server-side summary から `content_hash` を計算し、`FINALIZE` event を追加する。request は `expectedRevisionId`, `expectedStatus`, `expectedContentHash`, `clientMutationId` 必須。欠落は 409 `prescription_expected_state_required`、不一致は 409 `prescription_revision_conflict` とし、client 提供 digest は権威値にしない。
+- `POST /api/local/prescription-orders/authority/{prescriptionId}/change|stop|cancel|reissue|resend` は理由必須とし、`CHANGE` / `STOP` / `CANCEL` / `REISSUE` / `RESEND` event を append-only で追加する。これらも `expectedRevisionId`, `expectedStatus`, `expectedContentHash`, `clientMutationId` 必須。`change` / `reissue` は新しい構造化 item を持つ revision を要求し、`resend` は current revision を維持した再送判断 event だけを追加する。
 - authority route の facility は認証済み remote user / server-side tenant context だけから解決する。`X-Facility-Id` を含む client header は処方 mutation authority、order lookup、event hash chain の facility 判定に使わない。
 - 構造化 item は first-class DTO の `standardName` / `dosageForm` / `days` / `prescriptionLocation` / `medicationRoute` を保存する。client hint が欠落している場合でも、server は `medicalClass` / `medicalClassNumber` から院内外・内服/頓服/外用・日数を再解決し、未知または不正な値は fail-open せず null / unresolved に落とす。
 - `created_by` は認証済み actor から保存し、client payload の owner / role / facility 相当値は採用しない。
@@ -71,6 +71,7 @@ ORCA transmission status は ORCA operation family と同じ fail-closed status 
 - client が構造化 item ではなく payload JSON だけで ORCA candidate を作らせ、未解決薬剤や用法を隠す。
 - client が change/reissue payload の `patientId` / `encounterId` を別患者・別受付へ改ざんし、確定済み処方を横展開する。
 - client が finalize 時に偽 digest を送信し、保存済み処方内容とは異なる hash を正本化する。
+- client が stale な revision/status/contentHash で finalize/change/stop/cancel/reissue/resend を行い、別端末で確定・変更済みの処方へ追い越し更新する。
 - client が candidate prepare に別患者・別施設・保険組合せ・voucher / sequential を混入させて ORCA 送信候補の authority を乗っ取る。
 - client が偽 digest を送って候補と異なる処方 revision を後続 workflow へ結び付ける。
 - candidate snapshot に client 由来の patient / encounter / insurance / voucher / sequential を混入させ、後続 send workflow が snapshot を authority と誤解する。

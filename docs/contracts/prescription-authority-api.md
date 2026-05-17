@@ -11,14 +11,16 @@
 | Method | Route | Event | Notes |
 | --- | --- | --- | --- |
 | `POST` | `/api/local/prescription-orders/authority` | `CREATE` | server-side facility / patient / encounter context で draft order を作成する。 |
-| `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/finalize` | `FINALIZE` | 保存済み current revision から content hash を計算して確定する。 |
-| `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/change` | `CHANGE` | 理由と新 structured item revision を必須にする。 |
-| `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/stop` | `STOP` | 理由必須。既存 content を直接上書きしない。 |
-| `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/cancel` | `CANCEL` | 理由必須。既存 content を直接上書きしない。 |
-| `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/reissue` | `REISSUE` | 理由と新 structured item revision を必須にする。 |
-| `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/resend` | `RESEND` | ORCA UNKNOWN / 再送判断の audit event。処方 content と status は変更しない。 |
+| `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/finalize` | `FINALIZE` | 保存済み current revision から content hash を計算して確定する。`expectedRevisionId` / `expectedStatus` / `expectedContentHash` / `clientMutationId` 必須。 |
+| `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/change` | `CHANGE` | 理由と新 structured item revision を必須にする。stale mutation 防止の expected state 必須。 |
+| `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/stop` | `STOP` | 理由必須。既存 content を直接上書きしない。stale mutation 防止の expected state 必須。 |
+| `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/cancel` | `CANCEL` | 理由必須。既存 content を直接上書きしない。stale mutation 防止の expected state 必須。 |
+| `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/reissue` | `REISSUE` | 理由と新 structured item revision を必須にする。stale mutation 防止の expected state 必須。 |
+| `POST` | `/api/local/prescription-orders/authority/{prescriptionId}/resend` | `RESEND` | ORCA UNKNOWN / 再送判断の audit event。処方 content と status は変更しない。stale mutation 防止の expected state 必須。 |
 
 全 route の facility は認証済み remote user / session / server-side tenant context からだけ解決する。`X-Facility-Id` を含む client header は authority に使わない。
+
+`CREATE` response は `prescriptionId`, `revisionId`, `status`, `contentHash` を返す。client はこの server-side readback を `FINALIZE` の expected state として送る。expected state の欠落は 409 `prescription_expected_state_required`、current revision/status/contentHash との不一致は 409 `prescription_revision_conflict` とする。`clientMutationId` は重複操作の照合材料であり、content hash の代替ではない。
 
 ## Hash Chain
 

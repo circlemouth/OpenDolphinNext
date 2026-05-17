@@ -1167,6 +1167,7 @@ describe('prescriptionOrderApi first-class contract', () => {
             prescriptionId: 55,
             revisionId: 56,
             status: 'DRAFT',
+            contentHash: 'd'.repeat(64),
             patientId: '000001',
             encounterId: 'F001:E100',
           }),
@@ -1247,6 +1248,15 @@ describe('prescriptionOrderApi first-class contract', () => {
       '/api/local/prescription-orders/authority/55/finalize',
       expect.objectContaining({
         method: 'POST',
+      }),
+    );
+    expect(requestEnvelopeAt(1)).toEqual(
+      expect.objectContaining({
+        patientId: '000001',
+        encounterId: 'F001:E100',
+        expectedRevisionId: 56,
+        expectedStatus: 'DRAFT',
+        expectedContentHash: 'd'.repeat(64),
       }),
     );
   });

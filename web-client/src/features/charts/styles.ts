@@ -3743,11 +3743,53 @@ export const chartsStyles = css`
     gap: var(--charts-space-xs);
   }
 
+  .charts-order-editor__kirin-fieldset {
+    display: grid;
+    gap: var(--charts-space-xs);
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
   .charts-order-editor__kirin-grid-header {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: var(--charts-space-xs);
+  }
+
+  .charts-order-editor__kirin-grid-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--charts-space-2xs);
+  }
+
+  .charts-order-editor__icon-action {
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    padding: 0 0.42rem;
+    border: 1px solid rgba(37, 99, 235, 0.34);
+    border-radius: var(--charts-radius-sm);
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .charts-order-editor__icon-action--danger {
+    border-color: rgba(220, 38, 38, 0.34);
+    background: #fef2f2;
+    color: #b91c1c;
+  }
+
+  .charts-order-editor__icon-action:disabled,
+  .charts-order-editor__icon-action[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.58;
   }
 
   .charts-order-editor__kirin-grid-header strong {
@@ -3792,6 +3834,10 @@ export const chartsStyles = css`
     color: #334155;
   }
 
+  .charts-order-editor__kirin-table-row[data-selected='true'] {
+    background: #eff6ff;
+  }
+
   .charts-order-editor__kirin-table-row > span {
     min-width: 0;
     padding: 0.26rem 0.38rem;
@@ -3809,6 +3855,35 @@ export const chartsStyles = css`
     color: #92400e;
     background: #fff7ed;
     font-weight: 800;
+  }
+
+  .charts-order-editor__kirin-cell-stack {
+    display: grid;
+    gap: 0.18rem;
+  }
+
+  .charts-order-editor__kirin-cell-control {
+    width: 100%;
+    min-height: 1.65rem;
+    padding: 0.16rem 0.26rem;
+    border: 1px solid rgba(148, 163, 184, 0.52);
+    border-radius: var(--charts-radius-sm);
+    background: #fff;
+    color: #0f172a;
+    font: inherit;
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  .charts-order-editor__kirin-cell-control:focus {
+    border-color: rgba(37, 99, 235, 0.72);
+    outline: 2px solid rgba(37, 99, 235, 0.18);
+    outline-offset: 1px;
+  }
+
+  .charts-order-editor__kirin-cell-control:disabled {
+    background: #f8fafc;
+    color: #64748b;
   }
 
   .charts-order-editor__kirin-injection-controls {

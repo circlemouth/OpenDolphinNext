@@ -93,7 +93,12 @@ public class PrescriptionAuthorityResource extends AbstractOrcaRestResource {
         requireAuditWritePathAvailable(request);
         PrescriptionAuthorityRepository.PrescriptionMutationResult result;
         try {
-            result = prescriptionAuthorityRepository.finalizeDraft(facilityId, prescriptionId, actor, Instant.now());
+            result = prescriptionAuthorityRepository.finalizeDraft(
+                    facilityId,
+                    prescriptionId,
+                    expectedState(payload),
+                    actor,
+                    Instant.now());
         } catch (IllegalStateException ex) {
             throw restError(request, statusForStateError(ex),
                     ex.getMessage(),
@@ -164,6 +169,7 @@ public class PrescriptionAuthorityResource extends AbstractOrcaRestResource {
                     prescriptionId,
                     trimToNull(payload.getReasonCode()),
                     trimToNull(payload.getReasonText()),
+                    expectedState(payload),
                     actor,
                     Instant.now());
         } catch (IllegalStateException ex) {
@@ -208,7 +214,8 @@ public class PrescriptionAuthorityResource extends AbstractOrcaRestResource {
                     order,
                     actor,
                     Instant.now(),
-                    null);
+                    null,
+                    expectedState(payload));
         } catch (IllegalStateException ex) {
             throw restError(request, statusForStateError(ex),
                     ex.getMessage(),
@@ -330,6 +337,14 @@ public class PrescriptionAuthorityResource extends AbstractOrcaRestResource {
 
     private PrescriptionOrder copyOrder(PrescriptionOrder source) {
         return OBJECT_MAPPER.convertValue(source, PrescriptionOrder.class);
+    }
+
+    private PrescriptionAuthorityRepository.ExpectedState expectedState(PrescriptionAuthorityMutationRequest payload) {
+        return new PrescriptionAuthorityRepository.ExpectedState(
+                payload != null ? payload.getExpectedRevisionId() : null,
+                payload != null ? trimToNull(payload.getExpectedStatus()) : null,
+                payload != null ? trimToNull(payload.getExpectedContentHash()) : null,
+                payload != null ? trimToNull(payload.getClientMutationId()) : null);
     }
 
     private String firstNonBlank(String first, String second) {

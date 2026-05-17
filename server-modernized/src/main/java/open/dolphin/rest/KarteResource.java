@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
@@ -81,7 +82,7 @@ public class KarteResource extends AbstractResource {
         long patientPK = Long.parseLong(params[0]);
         Date fromDate = parseDate(params[1]);
         support().ensurePatientFacilityAccess(patientPK, servletReq);
-        
+
         KarteBean bean = karteServiceBean.getKarte(patientPK, fromDate);
         return support().toConverter(servletReq, bean, "patient_lookup");
     }
@@ -385,9 +386,22 @@ public class KarteResource extends AbstractResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
     public String putPatientFreeDocument(@Context HttpServletRequest servletReq, String json) throws IOException {
+        requireRemoteUser(servletReq);
+        JsonNode root = objectMapper.readTree(json == null || json.isBlank() ? "{}" : json);
         PatientFreeDocumentModel model = support().readJson(json, PatientFreeDocumentModel.class);
-        
+
         String fpid = getFidPid(servletReq.getRemoteUser(), model.getFacilityPatId());
+        PatientFreeDocumentModel current = karteServiceBean.getPatientFreeDocument(fpid);
+        String expectedContentHash = root != null && root.hasNonNull("expectedContentHash")
+                ? root.get("expectedContentHash").asText(null)
+                : null;
+        String currentContentHash = support().patientFreeDocumentContentHash(current);
+        if (current != null && (expectedContentHash == null || expectedContentHash.isBlank()
+                || !currentContentHash.equalsIgnoreCase(expectedContentHash.trim()))) {
+            throw restError(servletReq, Response.Status.CONFLICT,
+                    "patient_free_document_conflict",
+                    "Patient free document was changed by another editor. Reload before saving.");
+        }
         model.setFacilityPatId(fpid);
 
         int result = karteServiceBean.updatePatientFreeDocument(model);

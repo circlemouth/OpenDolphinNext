@@ -4,8 +4,7 @@ import { describe, expect, it } from 'vitest';
 const readSource = (relative: string) => readFileSync(new URL(relative, import.meta.url), 'utf8');
 
 const extractSaveFooter = (source: string) => {
-  const marker = '<footer className="charts-side-panel__dock-footer" aria-label="保存操作">';
-  const start = source.lastIndexOf(marker);
+  const start = source.search(/<footer\s+className="[^"]*charts-side-panel__dock-footer[^"]*"\s+aria-label="保存操作">/);
   expect(start).toBeGreaterThanOrEqual(0);
   const end = source.indexOf('</footer>', start);
   expect(end).toBeGreaterThan(start);

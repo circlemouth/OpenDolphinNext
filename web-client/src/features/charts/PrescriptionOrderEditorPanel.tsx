@@ -608,6 +608,10 @@ export function PrescriptionOrderEditorPanel({
             : [];
           return {
             key: `${rp.rpId}-${drug?.rowId ?? `empty-${drugIndex}`}`,
+            rpIndex,
+            drugIndex,
+            rp,
+            drug,
             rpLabel: `RP${rpIndex + 1}`,
             drugName: drug?.name.trim() || '未入力',
             quantity,
@@ -706,10 +710,18 @@ export function PrescriptionOrderEditorPanel({
         typeof target.documentId === 'number' && target.documentId > 0
           ? Array.from(new Set([...prev.deletedDocumentIds, target.documentId]))
           : prev.deletedDocumentIds;
+      const deletedDocumentContentHashes =
+        typeof target.documentId === 'number' && target.documentId > 0 && target.contentHash?.trim()
+          ? {
+              ...(prev.deletedDocumentContentHashes ?? {}),
+              [String(target.documentId)]: target.contentHash.trim(),
+            }
+          : prev.deletedDocumentContentHashes;
       return {
         ...prev,
         rps: nextRps.length > 0 ? nextRps : [buildEmptyPrescriptionRp(today)],
         deletedDocumentIds,
+        deletedDocumentContentHashes,
       };
     });
     setSelectedRpIndex((prev) => Math.max(0, Math.min(prev, order.rps.length - 2)));
@@ -722,9 +734,16 @@ export function PrescriptionOrderEditorPanel({
       const deletions = prev.rps
         .map((rp) => rp.documentId)
         .filter((id): id is number => typeof id === 'number' && id > 0);
+      const deletedDocumentContentHashes = prev.rps.reduce<Record<string, string>>((acc, rp) => {
+        if (typeof rp.documentId === 'number' && rp.documentId > 0 && rp.contentHash?.trim()) {
+          acc[String(rp.documentId)] = rp.contentHash.trim();
+        }
+        return acc;
+      }, { ...(prev.deletedDocumentContentHashes ?? {}) });
       return {
         ...buildEmptyPrescriptionOrder(prev.patientId || patientId || '', today),
         deletedDocumentIds: Array.from(new Set([...prev.deletedDocumentIds, ...deletions])),
+        deletedDocumentContentHashes,
       };
     });
     setSelectedRpIndex(0);
@@ -983,6 +1002,7 @@ export function PrescriptionOrderEditorPanel({
   const handleDrugNameInput = useCallback(
     (rpIndex: number, drugIndex: number, value: string) => {
       if (isPreviewMode) return;
+      const matchedCandidate = filteredCandidates.find((candidate) => candidate.name === value);
       setSelectedRpIndex(rpIndex);
       setSelectedDrugIndex(drugIndex);
       setSearchKeyword(value);
@@ -990,11 +1010,19 @@ export function PrescriptionOrderEditorPanel({
       if (normalizeSearchText(value).length >= 3) setManualSearchNonce(0);
       updateDrug(rpIndex, drugIndex, (current) => ({
         ...current,
-        name: value,
-        code: value === current.name ? current.code : undefined,
+        code: matchedCandidate?.code?.trim() || (value === current.name ? current.code : undefined),
+        name: matchedCandidate?.name ?? value,
+        unit: matchedCandidate?.unit?.trim() || current.unit,
       }));
+      if (matchedCandidate) {
+        onDrugCandidateCommit?.({
+          rpIndex,
+          drugIndex,
+          candidate: matchedCandidate,
+        });
+      }
     },
-    [isPreviewMode, updateDrug],
+    [filteredCandidates, isPreviewMode, onDrugCandidateCommit, updateDrug],
   );
 
   const handleInputSetSearch = useCallback(async () => {
@@ -1216,7 +1244,7 @@ export function PrescriptionOrderEditorPanel({
         queryClient.invalidateQueries({
           queryKey: ['charts-prescription-order-editor-source', patientId, meta.visitDate ?? today, meta.encounterId ?? 'none'],
         });
-        setOrder((prev) => ({ ...prev, deletedDocumentIds: [] }));
+        setOrder((prev) => ({ ...prev, deletedDocumentIds: [], deletedDocumentContentHashes: {} }));
         if (action === 'expand') onClose?.();
       }
     },
@@ -1510,34 +1538,6 @@ export function PrescriptionOrderEditorPanel({
         <div className="charts-side-panel__section-header-main">
           <strong title={RP_SHARED_USAGE_RULE}>処方（RP集合）</strong>
         </div>
-        <div className="charts-side-panel__subheader-actions">
-          <button type="button" className="charts-side-panel__ghost charts-side-panel__ghost--add" onClick={addRp} disabled={isPreviewMode}>
-            ＋RP
-          </button>
-          <button
-            type="button"
-            className="charts-side-panel__ghost charts-side-panel__ghost--add"
-            onClick={addDrug}
-            disabled={isPreviewMode}
-            title={RP_SHARED_USAGE_RULE}
-          >
-            ＋薬剤行
-          </button>
-          <button
-            type="button"
-            className="charts-side-panel__row-delete"
-            onClick={() => {
-              if (!selectedRp) return;
-              removeDrug(selectedRpIndex, selectedDrugIndex);
-            }}
-            disabled={!selectedRp || isPreviewMode}
-          >
-            選択薬剤を削除
-          </button>
-          <button type="button" className="charts-side-panel__ghost charts-side-panel__ghost--danger" onClick={clearAll} disabled={isPreviewMode}>
-            入力を全クリア
-          </button>
-        </div>
       </header>
 
       <div className="charts-side-panel__dock-body">
@@ -1566,8 +1566,54 @@ export function PrescriptionOrderEditorPanel({
           aria-label="処方オーダー内容"
           data-testid="prescription-order-kirin-grid"
         >
+          <fieldset
+            disabled={isPreviewMode}
+            className="charts-order-editor__kirin-fieldset"
+          >
           <div className="charts-order-editor__kirin-grid-header">
             <strong>オーダー内容</strong>
+            <div className="charts-order-editor__kirin-grid-actions" aria-label="処方オーダー内容の操作">
+              <button
+                type="button"
+                className="charts-order-editor__icon-action"
+                onClick={addRp}
+                title="RPを追加"
+                aria-label="＋RP"
+              >
+                +RP
+              </button>
+              <button
+                type="button"
+                className="charts-order-editor__icon-action"
+                onClick={addDrug}
+                title="薬剤行を追加"
+                aria-label="＋薬剤行"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                className="charts-order-editor__icon-action charts-order-editor__icon-action--danger"
+                onClick={() => {
+                  if (!selectedRp) return;
+                  removeDrug(selectedRpIndex, selectedDrugIndex);
+                }}
+                aria-disabled={!selectedRp ? 'true' : undefined}
+                title="選択薬剤を削除"
+                aria-label="選択薬剤を削除"
+              >
+                -
+              </button>
+              <button
+                type="button"
+                className="charts-order-editor__icon-action charts-order-editor__icon-action--danger"
+                onClick={clearAll}
+                title="入力を全クリア"
+                aria-label="入力を全クリア"
+              >
+                x
+              </button>
+            </div>
           </div>
           <div className="charts-order-editor__kirin-table charts-order-editor__kirin-table--prescription" role="table" aria-label="処方オーダー内容グリッド">
             <div className="charts-order-editor__kirin-table-row charts-order-editor__kirin-table-row--header" role="row">
@@ -1578,27 +1624,186 @@ export function PrescriptionOrderEditorPanel({
               ))}
             </div>
             {prescriptionGridRows.map((row) => (
-              <div key={row.key} className="charts-order-editor__kirin-table-row" role="row">
+              <div
+                key={row.key}
+                className="charts-order-editor__kirin-table-row"
+                role="row"
+                data-selected={selectedRpIndex === row.rpIndex && selectedDrugIndex === row.drugIndex ? 'true' : undefined}
+                onClick={() => {
+                  setSelectedRpIndex(row.rpIndex);
+                  setSelectedDrugIndex(row.drugIndex);
+                }}
+              >
                 <span role="cell">{row.rpLabel}</span>
-                <span role="cell">{row.drugName}</span>
-                <span role="cell">{row.quantity}</span>
+                <span role="cell">
+                  {row.drug ? (
+                    <>
+                      <input
+                        className="charts-order-editor__kirin-cell-control"
+                        list={selectedRpIndex === row.rpIndex && selectedDrugIndex === row.drugIndex ? domId(`grid-drug-candidates-${row.rpIndex}-${row.drugIndex}`) : undefined}
+                        value={row.drug.name}
+                        onFocus={() => {
+                          setSelectedRpIndex(row.rpIndex);
+                          setSelectedDrugIndex(row.drugIndex);
+                          setSearchKeyword(row.drug?.name ?? '');
+                          setSearchOrigin('drug-name');
+                        }}
+                        onChange={(event) => handleDrugNameInput(row.rpIndex, row.drugIndex, event.target.value)}
+                        aria-label={`${row.rpLabel} 薬剤${row.drugIndex + 1} 薬剤名称`}
+                      />
+                      {selectedRpIndex === row.rpIndex && selectedDrugIndex === row.drugIndex ? (
+                        <datalist id={domId(`grid-drug-candidates-${row.rpIndex}-${row.drugIndex}`)}>
+                          {filteredCandidates.map((item) => (
+                            <option
+                              key={`rx-grid-drug-option-${item.code ?? item.name}`}
+                              value={item.name}
+                              label={item.code ? `${item.code} ${item.unit ?? ''}`.trim() : item.unit}
+                            />
+                          ))}
+                        </datalist>
+                      ) : null}
+                    </>
+                  ) : (
+                    row.drugName
+                  )}
+                </span>
+                <span role="cell">
+                  {row.drug ? (
+                    <span className="charts-order-editor__kirin-cell-stack">
+                      <input
+                        className="charts-order-editor__kirin-cell-control"
+                        value={row.drug.quantity}
+                        onChange={(event) =>
+                          updateDrug(row.rpIndex, row.drugIndex, (current) => ({
+                            ...current,
+                            quantity: event.target.value,
+                          }))
+                        }
+                        aria-label={`${row.rpLabel} 薬剤${row.drugIndex + 1} 薬剤量`}
+                      />
+                      <input
+                        className="charts-order-editor__kirin-cell-control"
+                        value={row.drug.unit}
+                        onChange={(event) =>
+                          updateDrug(row.rpIndex, row.drugIndex, (current) => ({
+                            ...current,
+                            unit: event.target.value,
+                          }))
+                        }
+                        aria-label={`${row.rpLabel} 薬剤${row.drugIndex + 1} 単位`}
+                      />
+                    </span>
+                  ) : (
+                    row.quantity
+                  )}
+                </span>
                 <span role="cell" data-unresolved={row.ingredientUnresolved ? 'true' : undefined}>
                   {row.ingredientAmount}
                 </span>
                 <span role="cell" data-unresolved={row.otherUnresolved ? 'true' : undefined}>
                   {row.other}
                 </span>
-                <span role="cell">{row.genericChange}</span>
-                <span role="cell">{row.drugComment}</span>
-                <span role="cell">{row.usage}</span>
-                <span role="cell">{row.daysOrTimes}</span>
-                <span role="cell">{row.searchMethod}</span>
+                <span role="cell">
+                  {row.drug ? (
+                    <select
+                      className="charts-order-editor__kirin-cell-control"
+                      value={row.drug.genericChangeAllowed === false ? 'blocked' : 'allowed'}
+                      onChange={(event) =>
+                        updateDrug(row.rpIndex, row.drugIndex, (current) => ({
+                          ...current,
+                          genericChangeAllowed: event.target.value === 'allowed',
+                        }))
+                      }
+                      aria-label={`${row.rpLabel} 薬剤${row.drugIndex + 1} 後発変更可否`}
+                    >
+                      <option value="allowed">変更可能</option>
+                      <option value="blocked">変更不可</option>
+                    </select>
+                  ) : (
+                    row.genericChange
+                  )}
+                </span>
+                <span role="cell">
+                  {row.drug ? (
+                    <input
+                      className="charts-order-editor__kirin-cell-control"
+                      value={row.drug.drugComment}
+                      onChange={(event) =>
+                        updateDrug(row.rpIndex, row.drugIndex, (current) => ({
+                          ...current,
+                          drugComment: event.target.value,
+                        }))
+                      }
+                      aria-label={`${row.rpLabel} 薬剤${row.drugIndex + 1} 薬剤コメント`}
+                    />
+                  ) : (
+                    row.drugComment
+                  )}
+                </span>
+                <span role="cell">
+                  <span className="charts-order-editor__kirin-cell-stack">
+                    <select
+                      className="charts-order-editor__kirin-cell-control"
+                      value={row.rp.usageCode ?? ''}
+                      onChange={(event) => {
+                        const code = event.target.value;
+                        const selected = usageOptions.find((option) => (option.code?.trim() ?? '') === code);
+                        updateRp(row.rpIndex, (rp) => ({
+                          ...rp,
+                          usageCode: code || undefined,
+                          usage: selected?.name ?? rp.usage,
+                        }));
+                      }}
+                      aria-label={`${row.rpLabel} 用法マスタ`}
+                    >
+                      <option value="">候補</option>
+                      {usageOptions.map((item) => (
+                        <option key={`grid-usage-${item.code ?? item.name}`} value={item.code?.trim() ?? ''}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      className="charts-order-editor__kirin-cell-control"
+                      value={row.rp.usage}
+                      onChange={(event) =>
+                        updateRp(row.rpIndex, (rp) => ({
+                          ...rp,
+                          usage: event.target.value,
+                        }))
+                      }
+                      aria-label={`${row.rpLabel} 用法`}
+                    />
+                  </span>
+                </span>
+                <span role="cell">
+                  <input
+                    className="charts-order-editor__kirin-cell-control"
+                    value={row.rp.daysOrTimes}
+                    onChange={(event) =>
+                      updateRp(row.rpIndex, (rp) => ({
+                        ...rp,
+                        daysOrTimes: event.target.value,
+                      }))
+                    }
+                    aria-label={`${row.rpLabel} 日数・回数`}
+                  />
+                </span>
+                <span role="cell">
+                  <select
+                    className="charts-order-editor__kirin-cell-control"
+                    value={searchMethod}
+                    onChange={(event) => setSearchMethod(event.target.value as PrescriptionSearchMethod)}
+                    aria-label={`${row.rpLabel} 検索方法`}
+                  >
+                    <option value="prefix">前方一致</option>
+                    <option value="partial">部分一致</option>
+                  </select>
+                </span>
               </div>
             ))}
           </div>
-          <p className="charts-side-panel__help">
-            成分量とその他は現行データから解決できない場合に未設定として表示します。未設定値を処方確定・ORCA送信済みとして扱いません。
-          </p>
+          </fieldset>
         </section>
 
         <fieldset
@@ -1859,7 +2064,7 @@ export function PrescriptionOrderEditorPanel({
                         <option value="">候補を選択</option>
                         {usageOptions.map((item) => (
                           <option key={`usage-${item.code ?? item.name}`} value={item.code?.trim() ?? ''}>
-                            {item.code ? `${item.code} ${item.name}` : item.name}
+                            {item.name}
                           </option>
                         ))}
                       </select>
@@ -2212,31 +2417,6 @@ export function PrescriptionOrderEditorPanel({
                             </button>
                           ) : null}
                         </div>
-                        {searchOrigin === 'drug-name' && isSelectedDrugRow && filteredCandidates.length > 0 ? (
-                          <div className="charts-side-panel__search-table charts-order-editor__rx-inline-candidates" aria-label={`薬剤${drugIndex + 1}マスタ候補`}>
-                            <div className="charts-side-panel__search-header">
-                              <span>コード</span>
-                              <span>名称</span>
-                              <span>単位</span>
-                              <span>最低薬価</span>
-                              <span>反映</span>
-                            </div>
-                            {filteredCandidates.slice(0, 8).map((item) => (
-                              <button
-                                key={`rx-inline-candidate-${item.code ?? item.name}`}
-                                type="button"
-                                className="charts-side-panel__search-row"
-                                onClick={() => applyDrugCandidate(item)}
-                              >
-                                <span>{item.code ?? '-'}</span>
-                                <span>{item.name}</span>
-                                <span>{item.unit ?? '-'}</span>
-                                <span>{resolveCandidateGenericPrice(item)}</span>
-                                <span>反映</span>
-                              </button>
-                            ))}
-                          </div>
-                        ) : null}
                         <input
                           id={domId(`drug-comment-${drugIndex}`)}
                           className="charts-order-editor__rx-drug-comment"

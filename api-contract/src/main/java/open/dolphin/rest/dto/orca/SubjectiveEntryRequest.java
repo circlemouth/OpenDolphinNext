@@ -14,6 +14,9 @@ public class SubjectiveEntryRequest {
     private String displaySection;
     private String physicianCode;
     private String body;
+    private String entryId;
+    private String expectedEntryHash;
+    private String baseRevisionId;
 
     public String getPatientId() {
         return patientId;
@@ -61,5 +64,29 @@ public class SubjectiveEntryRequest {
 
     public void setBody(String body) {
         this.body = body;
+    }
+
+    public String getEntryId() {
+        return entryId;
+    }
+
+    public void setEntryId(String entryId) {
+        this.entryId = entryId;
+    }
+
+    public String getExpectedEntryHash() {
+        return expectedEntryHash;
+    }
+
+    public void setExpectedEntryHash(String expectedEntryHash) {
+        this.expectedEntryHash = expectedEntryHash;
+    }
+
+    public String getBaseRevisionId() {
+        return baseRevisionId;
+    }
+
+    public void setBaseRevisionId(String baseRevisionId) {
+        this.baseRevisionId = baseRevisionId;
     }
 }

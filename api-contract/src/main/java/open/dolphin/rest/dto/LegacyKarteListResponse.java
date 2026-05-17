@@ -79,6 +79,7 @@ public final class LegacyKarteListResponse {
         private String facilityPatId;
         private java.util.Date confirmed;
         private String comment;
+        private String contentHash;
 
         public long getId() {
             return id;
@@ -112,7 +113,19 @@ public final class LegacyKarteListResponse {
             this.comment = comment;
         }
 
+        public String getContentHash() {
+            return contentHash;
+        }
+
+        public void setContentHash(String contentHash) {
+            this.contentHash = contentHash;
+        }
+
         public static PatientFreeDocumentResponse of(long id, String facilityPatId, java.util.Date confirmed, String comment) {
+            return of(id, facilityPatId, confirmed, comment, null);
+        }
+
+        public static PatientFreeDocumentResponse of(long id, String facilityPatId, java.util.Date confirmed, String comment, String contentHash) {
             if (facilityPatId == null && confirmed == null && comment == null && id == 0L) {
                 return null;
             }
@@ -121,6 +134,7 @@ public final class LegacyKarteListResponse {
             response.setFacilityPatId(facilityPatId);
             response.setConfirmed(confirmed);
             response.setComment(comment);
+            response.setContentHash(contentHash);
             return response;
         }
     }

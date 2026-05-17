@@ -82,7 +82,7 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void stopCreatesAppendOnlyEventWithoutClientOrderAuthority() {
-        PrescriptionAuthorityMutationRequest payload = new PrescriptionAuthorityMutationRequest();
+        PrescriptionAuthorityMutationRequest payload = expectedStatePayload("FINAL");
         payload.setPatientId("TAMPERED");
         payload.setReasonText("adverse event");
 
@@ -98,7 +98,7 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void resendRecordsAppendOnlyEventWithoutChangingPrescriptionStatus() {
-        PrescriptionAuthorityMutationRequest payload = new PrescriptionAuthorityMutationRequest();
+        PrescriptionAuthorityMutationRequest payload = expectedStatePayload("FINAL");
         payload.setReasonText("UNKNOWN reconciliation confirmed no duplicate");
 
         PrescriptionAuthorityMutationResponse response = resource.resend(request, 101L, payload);
@@ -117,7 +117,7 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
                 "HACKED-FACILITY");
 
         PrescriptionAuthorityMutationResponse response =
-                resource.finalizeDraft(spoofedRequest, 101L, new PrescriptionAuthorityMutationRequest());
+                resource.finalizeDraft(spoofedRequest, 101L, expectedStatePayload("DRAFT"));
 
         assertEquals("FINAL", response.getStatus());
         assertEquals("F001", repository.facilityId);
@@ -129,7 +129,7 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
         repository.finalizeFailure = new IllegalStateException("prescription_order_not_draft");
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
-                () -> resource.finalizeDraft(request, 101L, new PrescriptionAuthorityMutationRequest()));
+                () -> resource.finalizeDraft(request, 101L, expectedStatePayload("DRAFT")));
 
         assertEquals(409, ex.getResponse().getStatus());
         assertTrue(String.valueOf(ex.getResponse().getEntity()).contains("prescription_order_not_draft"));
@@ -143,7 +143,7 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
                 "SPOOFED-FACILITY");
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
-                () -> resource.finalizeDraft(missingFacilityRequest, 101L, new PrescriptionAuthorityMutationRequest()));
+                () -> resource.finalizeDraft(missingFacilityRequest, 101L, expectedStatePayload("DRAFT")));
 
         assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), ex.getResponse().getStatus());
         assertEquals(0, repository.finalizeCalls);
@@ -180,6 +180,15 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
         order.setEncounterDate("2026-05-10");
         order.setRps(List.of(rp));
         return order;
+    }
+
+    private static PrescriptionAuthorityMutationRequest expectedStatePayload(String status) {
+        PrescriptionAuthorityMutationRequest payload = new PrescriptionAuthorityMutationRequest();
+        payload.setExpectedRevisionId(201L);
+        payload.setExpectedStatus(status);
+        payload.setExpectedContentHash("a".repeat(64));
+        payload.setClientMutationId("test-mutation");
+        return payload;
     }
 
     private HttpServletRequest request(String uri) {
@@ -259,11 +268,11 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
             this.patientId = patientId;
             this.encounterId = encounterId;
             this.order = order;
-            return new PrescriptionMutationResult(101L, 201L, "DRAFT", null, patientId, encounterId);
+            return new PrescriptionMutationResult(101L, 201L, "DRAFT", "a".repeat(64), patientId, encounterId);
         }
 
         @Override
-        PrescriptionMutationResult finalizeDraft(String facilityId, long orderId, String actor, Instant now) {
+        PrescriptionMutationResult finalizeDraft(String facilityId, long orderId, ExpectedState expected, String actor, Instant now) {
             finalizeCalls += 1;
             this.facilityId = facilityId;
             if (finalizeFailure != null) {
@@ -274,7 +283,7 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
 
         @Override
         PrescriptionMutationResult transition(String facilityId, long orderId, String status, String eventType, String reasonCode,
-                String reasonText, PrescriptionOrder order, String actor, Instant now, String contentHash) {
+                String reasonText, PrescriptionOrder order, String actor, Instant now, String contentHash, ExpectedState expected) {
             transitionCalls += 1;
             this.facilityId = facilityId;
             this.status = status;
@@ -285,7 +294,8 @@ class PrescriptionAuthorityResourceTest extends RuntimeDelegateTestSupport {
         }
 
         @Override
-        PrescriptionMutationResult recordResend(String facilityId, long orderId, String reasonCode, String reasonText, String actor, Instant now) {
+        PrescriptionMutationResult recordResend(String facilityId, long orderId, String reasonCode, String reasonText, ExpectedState expected,
+                String actor, Instant now) {
             transitionCalls += 1;
             this.facilityId = facilityId;
             this.status = "FINAL";

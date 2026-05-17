@@ -12,10 +12,12 @@ import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Date;
 import java.util.List;
 import open.dolphin.converter.SchemaModelConverter;
 import open.dolphin.infomodel.KarteBean;
+import open.dolphin.infomodel.PatientFreeDocumentModel;
 import open.dolphin.infomodel.SchemaModel;
 import open.dolphin.infomodel.UserModel;
 import open.dolphin.rest.dto.UserPropertyResponse;
@@ -29,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,6 +54,9 @@ class KarteResourceAuthorizationTest {
 
     @Mock
     HttpServletRequest httpServletRequest;
+
+    @Spy
+    ObjectMapper objectMapper = new ObjectMapper();
 
     @InjectMocks
     KarteResource resource;
@@ -181,6 +187,36 @@ class KarteResourceAuthorizationTest {
 
         assertForbidden(() -> resource.getUserProperties(httpServletRequest, "FAC_B:doctor02"));
         verify(karteServiceBean, never()).getUserProperties(any());
+    }
+
+    @Test
+    void putPatientFreeDocumentRejectsStaleExpectedContentHash() {
+        PatientFreeDocumentModel current = new PatientFreeDocumentModel();
+        current.setId(12L);
+        current.setFacilityPatId("FAC_A:P001");
+        current.setConfirmed(new Date(1770000000000L));
+        current.setComment("current free document");
+        when(karteServiceBean.getPatientFreeDocument("FAC_A:P001")).thenReturn(current);
+
+        assertThatThrownBy(() -> resource.putPatientFreeDocument(
+                httpServletRequest,
+                """
+                {
+                  "id": 12,
+                  "facilityPatId": "P001",
+                  "confirmed": 1770000000000,
+                  "comment": "updated free document",
+                  "expectedContentHash": "stale-hash"
+                }
+                """))
+                .isInstanceOf(WebApplicationException.class)
+                .satisfies(ex -> {
+                    WebApplicationException webEx = (WebApplicationException) ex;
+                    assertThat(webEx.getResponse().getStatus()).isEqualTo(409);
+                    assertThat(String.valueOf(webEx.getResponse().getEntity()))
+                            .contains("patient_free_document_conflict");
+                });
+        verify(karteServiceBean, never()).updatePatientFreeDocument(any());
     }
 
     @Test

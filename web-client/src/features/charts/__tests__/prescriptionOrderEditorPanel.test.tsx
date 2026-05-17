@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { PrescriptionOrderEditorPanel } from '../PrescriptionOrderEditorPanel';
@@ -69,9 +69,10 @@ describe('PrescriptionOrderEditorPanel', () => {
     expect(within(grid).getByText('オーダー内容')).toBeInTheDocument();
     expect(within(grid).queryByText('RP行はこの表で確認し、下の選択中RPで即編集します')).toBeNull();
     expect(within(grid).getByText('薬剤名称')).toBeInTheDocument();
-    expect(within(grid).getByText(/アムロジピン/)).toBeInTheDocument();
+    expect(within(grid).getByLabelText('RP1 薬剤1 薬剤名称')).toHaveDisplayValue('A100 アムロジピン');
     expect(within(grid).getByText('後発変更可否')).toBeInTheDocument();
     expect(grid.querySelectorAll('[data-unresolved="true"]').length).toBeGreaterThan(0);
+    expect(within(grid).queryByText('成分量とその他は現行データから解決できない場合に未設定として表示します。未設定値を処方確定・ORCA送信済みとして扱いません。')).toBeNull();
     expect(screen.queryByLabelText('RP名')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('処方安全チェックサマリ')).toBeNull();
     expect(screen.queryByText('この画面で検出できる重複投与候補、静的相互作用候補、保存不可ルールはありません。')).toBeNull();
@@ -129,7 +130,7 @@ describe('PrescriptionOrderEditorPanel', () => {
     expect(within(rpPane).getByText('2件')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '＋薬剤行' }));
-    expect(screen.getAllByPlaceholderText('薬剤名')).toHaveLength(2);
+    expect(screen.getAllByLabelText(/薬剤名称/)).toHaveLength(3);
 
     await user.click(screen.getByRole('button', { name: '入力を全クリア' }));
     expect(within(rpPane).getByText('1件')).toBeInTheDocument();
@@ -144,9 +145,8 @@ describe('PrescriptionOrderEditorPanel', () => {
 
     expect(screen.queryByText('1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。')).toBeNull();
     const addDrugButton = screen.getByRole('button', { name: '＋薬剤行' });
-    expect(addDrugButton).toHaveAttribute('title', '1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。');
     await user.click(addDrugButton);
-    expect(screen.getAllByPlaceholderText('薬剤名')).toHaveLength(2);
+    expect(screen.getAllByLabelText(/薬剤名称/)).toHaveLength(2);
 
     const splitDrugButtons = screen.getAllByRole('button', { name: 'この薬剤を別RPへ' });
     expect(splitDrugButtons[1]).toHaveAttribute('title', '1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。');
@@ -277,8 +277,11 @@ describe('PrescriptionOrderEditorPanel', () => {
     await waitFor(() => {
       expect(searchMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'drug', keyword: 'ゲンタ' }));
     });
-    const candidate = await screen.findByRole('button', { name: /620000123.*ゲンタ錠.*反映/ });
-    await user.click(candidate);
+    await waitFor(() => {
+      expect(document.querySelector('datalist option[value="ゲンタ錠"]')).not.toBeNull();
+    });
+    expect(screen.queryByRole('button', { name: /620000123.*ゲンタ錠.*反映/ })).toBeNull();
+    fireEvent.change(nameInput, { target: { value: 'ゲンタ錠' } });
 
     expect(nameInput.value).toBe('ゲンタ錠');
     expect((screen.getByPlaceholderText('単位') as HTMLInputElement).value).toBe('錠');
@@ -297,6 +300,32 @@ describe('PrescriptionOrderEditorPanel', () => {
           effective: '2026-02-26',
         }),
       );
+    });
+  });
+
+  it('用法マスタ候補はコードを表示せず用法名だけを表示する', async () => {
+    const searchMock = vi.mocked(fetchOrderMasterSearch);
+    searchMock.mockImplementation(async ({ type }) => {
+      if (type === 'youhou') {
+        return {
+          ok: true,
+          items: [{ type: 'youhou', code: 'XX7A000000000000', name: '1日10回' }],
+          totalCount: 1,
+        };
+      }
+      return { ok: true, items: [], totalCount: 0 };
+    });
+
+    renderPanel();
+
+    const usageSelects = screen.getAllByLabelText(/用法マスタ/) as HTMLSelectElement[];
+    await waitFor(() => {
+      expect(Array.from(usageSelects[0]?.options ?? []).some((option) => option.text === '1日10回')).toBe(true);
+    });
+    usageSelects.forEach((select) => {
+      const usageOption = Array.from(select.options).find((option) => option.value === 'XX7A000000000000');
+      expect(usageOption?.text).toBe('1日10回');
+      expect(usageOption?.text).not.toContain('XX7A000000000000');
     });
   });
 

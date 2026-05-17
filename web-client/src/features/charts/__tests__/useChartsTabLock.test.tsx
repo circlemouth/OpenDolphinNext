@@ -26,6 +26,37 @@ vi.mock('../editLock', () => ({
   subscribeChartsTabLock: vi.fn(() => () => undefined),
 }));
 
+vi.mock('../chartEditSessionApi', () => ({
+  acquireChartEditSession: vi.fn(() =>
+    Promise.resolve({
+      ok: false,
+      supported: false,
+      status: 404,
+      runId: 'RUN-LOCK',
+      error: 'NOT_SUPPORTED',
+    }),
+  ),
+  heartbeatChartEditSession: vi.fn(() =>
+    Promise.resolve({
+      ok: true,
+      supported: true,
+      status: 200,
+      runId: 'RUN-LOCK',
+      lockStatus: 'owned',
+      leaseId: 'lease-test',
+    }),
+  ),
+  releaseChartEditSession: vi.fn(() =>
+    Promise.resolve({
+      ok: true,
+      supported: true,
+      status: 200,
+      runId: 'RUN-LOCK',
+      lockStatus: 'released',
+    }),
+  ),
+}));
+
 import { releaseChartsTabLock } from '../editLock';
 
 describe('useChartsTabLock', () => {

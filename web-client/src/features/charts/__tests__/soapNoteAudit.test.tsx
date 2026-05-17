@@ -26,6 +26,16 @@ const renderWithQueryClient = (ui: ReactNode) => {
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 };
 
+const getSoapSaveButton = () => {
+  const button = screen
+    .getAllByRole('button', { name: '保存' })
+    .find((candidate) => candidate.classList.contains('soap-note__primary'));
+  if (!button) {
+    throw new Error('SOAP save button not found');
+  }
+  return button;
+};
+
 afterEach(() => {
   cleanup();
   clearAuditEventLog();
@@ -71,7 +81,7 @@ describe('SOAP note audit', () => {
     const subjectiveArea = screen.getByPlaceholderText('Subjective を記載してください。');
     await user.type(subjectiveArea, '追加記載');
 
-    await user.click(screen.getByRole('button', { name: '保存' }));
+    await user.click(getSoapSaveButton());
 
     const events = getAuditEventLog();
     const templateEvent = events.find((event) => (event.payload as any)?.action === 'SOAP_TEMPLATE_APPLY');
@@ -124,7 +134,7 @@ describe('SOAP note audit', () => {
     const subjectiveArea = screen.getByPlaceholderText('Subjective を記載してください。');
     await user.type(subjectiveArea, 'SOAPテスト');
 
-    await user.click(screen.getByRole('button', { name: '保存' }));
+    await user.click(getSoapSaveButton());
     await waitFor(() => {
       expect(captured.length).toBeGreaterThan(0);
     });

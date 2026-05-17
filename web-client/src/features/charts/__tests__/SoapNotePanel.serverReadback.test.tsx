@@ -60,6 +60,14 @@ const createDeferred = <T,>() => {
   return { promise, resolve };
 };
 
+const clickSoapPrimarySave = async (user: ReturnType<typeof userEvent.setup>) => {
+  const saveButton = screen
+    .getAllByRole('button', { name: '保存' })
+    .find((button) => button.classList.contains('soap-note__primary'));
+  expect(saveButton).toBeDefined();
+  await user.click(saveButton as HTMLButtonElement);
+};
+
 describe('SoapNotePanel local readback contract', () => {
   it('saves S/O/A/P/free from SOAP server response and remounts from canonical readback history', async () => {
     const user = userEvent.setup();
@@ -86,7 +94,7 @@ describe('SoapNotePanel local readback contract', () => {
     for (const [placeholder, body] of sectionCases) {
       await user.type(screen.getByPlaceholderText(placeholder), body);
     }
-    await user.click(screen.getByRole('button', { name: '保存' }));
+    await clickSoapPrimarySave(user);
 
     await waitFor(() => expect(postChartSubjectiveEntry).toHaveBeenCalledTimes(sectionCases.length));
     sectionCases.forEach(([, body, displaySection, soapCategory], index) => {
@@ -187,7 +195,7 @@ describe('SoapNotePanel local readback contract', () => {
 
     await user.type(screen.getByPlaceholderText('Subjective を記載してください。'), '頭痛');
     await user.type(screen.getByPlaceholderText('Objective を記載してください。'), '発熱なし');
-    await user.click(screen.getByRole('button', { name: '保存' }));
+    await clickSoapPrimarySave(user);
 
     await waitFor(() => expect(postChartSubjectiveEntry).toHaveBeenCalledTimes(1));
     await Promise.resolve();

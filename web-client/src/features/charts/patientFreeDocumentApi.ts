@@ -6,6 +6,7 @@ export type PatientFreeDocumentPayload = {
   facilityPatId?: string;
   confirmed?: number | string;
   comment?: string;
+  contentHash?: string;
 };
 
 export type PatientFreeDocumentFetchResult = {
@@ -94,6 +95,7 @@ export async function fetchPatientFreeDocument({ patientId }: { patientId: strin
         : undefined;
   const facilityPatId = typeof obj.facilityPatId === 'string' ? obj.facilityPatId : undefined;
   const comment = typeof obj.comment === 'string' ? obj.comment : undefined;
+  const contentHash = typeof obj.contentHash === 'string' ? obj.contentHash : undefined;
 
   return {
     ok: true,
@@ -105,6 +107,7 @@ export async function fetchPatientFreeDocument({ patientId }: { patientId: strin
       facilityPatId,
       confirmed,
       comment,
+      contentHash,
     },
   };
 }
@@ -114,6 +117,7 @@ export async function savePatientFreeDocument(params: {
   id?: number;
   confirmed?: number;
   comment: string;
+  expectedContentHash?: string;
 }): Promise<PatientFreeDocumentSaveResult> {
   const runId = ensureRunId();
   const endpoint = '/api/karte/freedocument';
@@ -125,6 +129,7 @@ export async function savePatientFreeDocument(params: {
       facilityPatId: params.patientId,
       confirmed: params.confirmed ?? Date.now(),
       comment: params.comment,
+      expectedContentHash: params.expectedContentHash,
     }),
   });
   const status = response.status;

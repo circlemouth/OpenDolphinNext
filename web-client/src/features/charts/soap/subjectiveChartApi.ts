@@ -8,6 +8,9 @@ export type ChartSubjectiveEntryRequest = {
   displaySection?: 'free' | 'subjective' | 'objective' | 'assessment' | 'plan';
   physicianCode?: string;
   body: string;
+  entryId?: string;
+  expectedEntryHash?: string;
+  baseRevisionId?: string;
 };
 
 export type ChartSubjectiveEntryReadback = {
@@ -20,6 +23,9 @@ export type ChartSubjectiveEntryReadback = {
   recordedAt?: string;
   authorUserId?: string;
   authorName?: string;
+  entryId?: string;
+  baseChartRevisionId?: string;
+  contentHash?: string;
 };
 
 export type ChartSubjectiveEntryResponse = {
@@ -54,6 +60,9 @@ const parseReadbackEntry = (value: unknown): ChartSubjectiveEntryReadback | unde
     recordedAt: typeof raw.recordedAt === 'string' ? raw.recordedAt : undefined,
     authorUserId: typeof raw.authorUserId === 'string' ? raw.authorUserId : undefined,
     authorName: typeof raw.authorName === 'string' ? raw.authorName : undefined,
+    entryId: typeof raw.entryId === 'string' ? raw.entryId : undefined,
+    baseChartRevisionId: typeof raw.baseChartRevisionId === 'string' ? raw.baseChartRevisionId : undefined,
+    contentHash: typeof raw.contentHash === 'string' ? raw.contentHash : undefined,
   };
 };
 

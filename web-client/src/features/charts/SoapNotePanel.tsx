@@ -205,11 +205,13 @@ const buildCanonicalSoapEntryFromReadback = (
   const authoredAt = readback?.recordedAt ?? recordedAt ?? fallback.authoredAt;
   return {
     ...fallback,
-    id: typeof readback?.documentId === 'number' ? `local-subjective-${readback.documentId}-${section}` : fallback.id,
+    id: readback?.entryId ?? (typeof readback?.documentId === 'number' ? `local-subjective-${readback.documentId}-${section}` : fallback.id),
     section,
     body: readback?.body ?? fallback.body,
     authoredAt,
     authorName: readback?.authorName ?? fallback.authorName,
+    baseChartRevisionId: readback?.baseChartRevisionId ?? fallback.baseChartRevisionId,
+    contentHash: readback?.contentHash ?? fallback.contentHash,
     patientId: readback?.patientId ?? fallback.patientId,
     visitDate: readback?.performDate ?? fallback.visitDate,
   };
@@ -944,6 +946,7 @@ export function SoapNotePanel({
             operation: 'delete',
             documentId: target.bundle.documentId,
             moduleId: target.bundle.moduleId,
+            expectedContentHash: target.bundle.contentHash,
             entity: target.entity,
           },
         ],

@@ -56,6 +56,9 @@ public class SubjectiveEntryResponse extends OrcaApiResponse {
         private String recordedAt;
         private String authorUserId;
         private String authorName;
+        private String entryId;
+        private String baseChartRevisionId;
+        private String contentHash;
 
         public Long getDocumentId() {
             return documentId;
@@ -127,6 +130,30 @@ public class SubjectiveEntryResponse extends OrcaApiResponse {
 
         public void setAuthorName(String authorName) {
             this.authorName = authorName;
+        }
+
+        public String getEntryId() {
+            return entryId;
+        }
+
+        public void setEntryId(String entryId) {
+            this.entryId = entryId;
+        }
+
+        public String getBaseChartRevisionId() {
+            return baseChartRevisionId;
+        }
+
+        public void setBaseChartRevisionId(String baseChartRevisionId) {
+            this.baseChartRevisionId = baseChartRevisionId;
+        }
+
+        public String getContentHash() {
+            return contentHash;
+        }
+
+        public void setContentHash(String contentHash) {
+            this.contentHash = contentHash;
         }
     }
 }

@@ -36,6 +36,8 @@ import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.UserServiceBean;
 import open.dolphin.testsupport.RuntimeDelegateTestSupport;
+import open.orca.rest.LocalOrcaMasterCacheRepository;
+import open.orca.rest.OrcaMasterCacheState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -753,7 +755,15 @@ class LocalOrderBundleResource600Test extends RuntimeDelegateTestSupport {
 
     private OrcaOrderMasterResource buildMasterResource(OrcaOrderMasterResource target) throws Exception {
         injectField(target, "sessionAuditDispatcher", auditDispatcher);
+        injectField(target, "localMasterCacheRepository", new FakeLocalMasterCacheRepository());
         return target;
+    }
+
+    private static final class FakeLocalMasterCacheRepository extends LocalOrcaMasterCacheRepository {
+        @Override
+        public OrcaMasterCacheState loadState(String masterType) {
+            return OrcaMasterCacheState.current(masterType, "test-local-master-cache");
+        }
     }
 
     private static OrcaOrderInputSetDetailResponse.Bundle buildInputSetBundle(

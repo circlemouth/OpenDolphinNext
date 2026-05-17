@@ -23,6 +23,16 @@ const renderWithQueryClient = (ui: ReactNode) => {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 };
 
+const getSoapSaveButton = () => {
+  const button = screen
+    .getAllByRole('button', { name: '保存' })
+    .find((candidate) => candidate.classList.contains('soap-note__primary'));
+  if (!button) {
+    throw new Error('SOAP save button not found');
+  }
+  return button;
+};
+
 describe('SoapNotePanel dirty state', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -54,7 +64,7 @@ describe('SoapNotePanel dirty state', () => {
     );
 
     await user.type(screen.getByPlaceholderText('Subjective を記載してください。'), 'dirty test');
-    await user.click(screen.getByRole('button', { name: '保存' }));
+    await user.click(getSoapSaveButton());
 
     await waitFor(() => expect(postChartSubjectiveEntry).toHaveBeenCalled());
     expect(screen.getByText(/SOAPのみ未保存: SOAPのみの保存に失敗しました/)).toBeInTheDocument();
@@ -120,7 +130,7 @@ describe('SoapNotePanel dirty state', () => {
 
     await user.type(screen.getByPlaceholderText('Subjective を記載してください。'), '主訴あり');
     await user.type(screen.getByPlaceholderText('Objective を記載してください。'), '所見あり');
-    await user.click(screen.getByRole('button', { name: '保存' }));
+    await user.click(getSoapSaveButton());
 
     await waitFor(() => expect(postChartSubjectiveEntry).toHaveBeenCalledTimes(2));
     expect(screen.getByText(/SOAPのみ未保存: 成功 1 件 \/ 未保存 1 件/)).toBeInTheDocument();

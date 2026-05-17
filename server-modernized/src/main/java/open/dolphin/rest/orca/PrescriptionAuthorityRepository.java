@@ -44,20 +44,22 @@ class PrescriptionAuthorityRepository {
                 .setParameter(7, Timestamp.from(now))
                 .setParameter(8, Timestamp.from(now))
                 .getSingleResult());
-        long revisionId = insertRevision(orderId, 1, "DRAFT", null, null, null, null, actor, now, order, null, order);
+        String draftContentHash = sha256(json(order));
+        long revisionId = insertRevision(orderId, 1, "DRAFT", null, null, draftContentHash, null, actor, now, order, null, order);
         insertItems(revisionId, order, actor);
         setCurrentRevision(facilityId, orderId, revisionId, "DRAFT", actor, now);
         insertEvent(facilityId, orderId, revisionId, "CREATE", null, null, actor, now, null, order);
-        return new PrescriptionMutationResult(orderId, revisionId, "DRAFT", null, patientId, encounterId);
+        return new PrescriptionMutationResult(orderId, revisionId, "DRAFT", draftContentHash, patientId, encounterId);
     }
 
-    PrescriptionMutationResult finalizeDraft(String facilityId, long orderId, String actor, Instant now) {
+    PrescriptionMutationResult finalizeDraft(String facilityId, long orderId, ExpectedState expected, String actor, Instant now) {
         Object[] row = loadOrderForUpdate(facilityId, orderId);
         long revisionId = number(row[1]);
         String status = text(row[2]);
         if (!"DRAFT".equals(status)) {
             throw new IllegalStateException("prescription_order_not_draft");
         }
+        requireExpectedState(facilityId, orderId, row, expected);
         String currentSummary = summaryFromRevision(facilityId, orderId, revisionId);
         String contentHash = sha256(json(currentSummary));
         entityManager.createNativeQuery("""
@@ -84,12 +86,14 @@ class PrescriptionAuthorityRepository {
             PrescriptionOrder order,
             String actor,
             Instant now,
-            String contentHash) {
+            String contentHash,
+            ExpectedState expected) {
         Object[] row = loadOrderForUpdate(facilityId, orderId);
         String currentStatus = text(row[2]);
         if ("DRAFT".equals(currentStatus)) {
             throw new IllegalStateException("prescription_order_not_finalized");
         }
+        requireExpectedState(facilityId, orderId, row, expected);
         if (order != null) {
             order.setPatientId(text(row[3]));
             order.setEncounterId(text(row[4]));
@@ -123,6 +127,7 @@ class PrescriptionAuthorityRepository {
             long orderId,
             String reasonCode,
             String reasonText,
+            ExpectedState expected,
             String actor,
             Instant now) {
         Object[] row = loadOrderForUpdate(facilityId, orderId);
@@ -130,6 +135,7 @@ class PrescriptionAuthorityRepository {
         if ("DRAFT".equals(currentStatus)) {
             throw new IllegalStateException("prescription_order_not_finalized");
         }
+        requireExpectedState(facilityId, orderId, row, expected);
         long revisionId = number(row[1]);
         Object currentSummary = summaryFromRevision(facilityId, orderId, revisionId);
         insertEvent(facilityId, orderId, revisionId, "RESEND", reasonCode, reasonText, actor, now, currentSummary, currentSummary);
@@ -151,6 +157,24 @@ class PrescriptionAuthorityRepository {
                 .setParameter(2, orderId)
                 .setParameter(3, facilityId)
                 .getSingleResult());
+    }
+
+    private void requireExpectedState(String facilityId, long orderId, Object[] row, ExpectedState expected) {
+        if (expected == null
+                || expected.revisionId() == null
+                || trimToNull(expected.status()) == null
+                || trimToNull(expected.contentHash()) == null) {
+            throw new IllegalStateException("prescription_expected_state_required");
+        }
+        long currentRevisionId = number(row[1]);
+        String currentStatus = text(row[2]);
+        String currentContentHash = contentHashFromRevision(facilityId, orderId, currentRevisionId);
+        if (currentRevisionId != expected.revisionId()
+                || !currentStatus.equalsIgnoreCase(expected.status().trim())
+                || currentContentHash == null
+                || !currentContentHash.equalsIgnoreCase(expected.contentHash().trim())) {
+            throw new IllegalStateException("prescription_revision_conflict");
+        }
     }
 
     private String contentHashFromRevision(String facilityId, long orderId, long revisionId) {
@@ -511,6 +535,13 @@ class PrescriptionAuthorityRepository {
             String contentHash,
             String patientId,
             String encounterId) {
+    }
+
+    record ExpectedState(
+            Long revisionId,
+            String status,
+            String contentHash,
+            String clientMutationId) {
     }
 
     record StructuredPrescriptionItemRow(

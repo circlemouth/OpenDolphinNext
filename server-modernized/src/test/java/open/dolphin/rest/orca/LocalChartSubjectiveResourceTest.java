@@ -123,6 +123,8 @@ class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("free", response.getEntry().getDisplaySection());
         assertEquals("咽頭痛あり", response.getEntry().getBody());
         assertEquals("doctor01", response.getEntry().getAuthorName());
+        assertEquals("local-subjective-9001-free", response.getEntry().getEntryId());
+        assertNotNull(response.getEntry().getContentHash());
         assertEquals(1, fakeKarteServiceBean.getAddDocumentCalls());
 
         DocumentModel saved = fakeKarteServiceBean.getLastAddedDocument();
@@ -145,6 +147,20 @@ class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
         assertTrue(module.getModel() instanceof ProgressCourse);
         ProgressCourse progress = (ProgressCourse) module.getModel();
         assertEquals("咽頭痛あり", progress.getFreeText());
+    }
+
+    @Test
+    void postSubjectiveRejectsExistingEntryUpdateAttempt() {
+        SubjectiveEntryRequest payload = validSubjectiveRequest();
+        payload.setEntryId("local-subjective-9001-free");
+        payload.setExpectedEntryHash("stale-hash");
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.postSubjective(servletRequest, payload));
+
+        assertEquals(409, ex.getResponse().getStatus());
+        assertTrue(String.valueOf(ex.getResponse().getEntity()).contains("subjective_entry_append_only"));
+        assertEquals(0, fakeKarteServiceBean.getAddDocumentCalls());
     }
 
     @Test

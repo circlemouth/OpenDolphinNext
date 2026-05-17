@@ -90,6 +90,7 @@ export function PatientSummaryPanel({ patientId, readOnly = false, readOnlyReaso
         id: payload?.id,
         confirmed: Date.now(),
         comment: draft,
+        expectedContentHash: payload?.contentHash,
       });
     },
     onSuccess: (result) => {
