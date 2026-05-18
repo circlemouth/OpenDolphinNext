@@ -3623,6 +3623,12 @@ export const chartsStyles = css`
     gap: var(--charts-space-sm);
   }
 
+  .charts-order-editor__integrated-details {
+    display: grid;
+    gap: var(--charts-space-sm);
+    padding: 0;
+  }
+
   .charts-order-editor__manual-card {
     border: 1px solid rgba(148, 163, 184, 0.32);
     background: #fff;
@@ -3729,6 +3735,16 @@ export const chartsStyles = css`
     grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   }
 
+  .charts-order-editor__kirin-rp-settings {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.4rem;
+    padding: 0.42rem;
+    border: 1px solid rgba(22, 163, 74, 0.28);
+    border-radius: var(--charts-radius-sm);
+    background: #f8fffb;
+  }
+
   .charts-order-editor__rx-compact-footer {
     grid-template-columns: minmax(150px, 0.9fr) minmax(220px, 1.4fr) minmax(180px, 1fr);
     align-items: start;
@@ -3819,7 +3835,7 @@ export const chartsStyles = css`
   }
 
   .charts-order-editor__kirin-table--prescription .charts-order-editor__kirin-table-row {
-    grid-template-columns: minmax(3.25rem, 0.5fr) minmax(10rem, 1.5fr) minmax(5rem, 0.7fr) minmax(5rem, 0.7fr) minmax(6rem, 0.8fr) minmax(6rem, 0.8fr) minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(5rem, 0.7fr) minmax(5rem, 0.7fr);
+    grid-template-columns: minmax(3.25rem, 0.5fr) minmax(10rem, 1.5fr) minmax(5rem, 0.7fr) minmax(5rem, 0.7fr) minmax(6rem, 0.8fr) minmax(6rem, 0.8fr) minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(5rem, 0.7fr);
   }
 
   .charts-order-editor__kirin-table--injection .charts-order-editor__kirin-table-row,
@@ -3884,6 +3900,32 @@ export const chartsStyles = css`
   .charts-order-editor__kirin-cell-control:disabled {
     background: #f8fafc;
     color: #64748b;
+  }
+
+  .charts-order-editor__kirin-checkbox-control {
+    display: inline-grid;
+    grid-template-columns: 1rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.32rem;
+    width: 100%;
+    min-height: 1.65rem;
+    color: #0f172a;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .charts-order-editor__kirin-checkbox-control input {
+    width: 0.95rem;
+    height: 0.95rem;
+    margin: 0;
+    accent-color: #2563eb;
+  }
+
+  .charts-order-editor__kirin-checkbox-control:focus-within {
+    border-radius: var(--charts-radius-sm);
+    outline: 2px solid rgba(37, 99, 235, 0.18);
+    outline-offset: 1px;
   }
 
   .charts-order-editor__kirin-injection-controls {

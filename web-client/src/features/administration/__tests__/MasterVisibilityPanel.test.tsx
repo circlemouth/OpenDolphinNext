@@ -38,6 +38,7 @@ const visibilityResponse = {
   updatedAt: '2026-05-17T20:40:56Z',
   updatedBy: 'admin-user',
   defaultsVisible: true,
+  prescriptionDrugSearchMethodDefault: 'prefix',
   categories: [
     {
       code: 'prescription',
@@ -93,15 +94,19 @@ describe('MasterVisibilityPanel', () => {
     expect(screen.getByText('病名候補')).toBeInTheDocument();
     expect(screen.getByText('drug, youhou')).toBeInTheDocument();
 
+    await user.selectOptions(screen.getByLabelText('処方薬剤検索の既定値'), 'partial');
     const diseaseToggle = screen.getAllByRole('checkbox')[1];
     await user.click(diseaseToggle);
     await user.click(screen.getByRole('button', { name: '表示設定を保存' }));
 
     await waitFor(() => {
-      expect(mockSaveMasterVisibility).toHaveBeenCalledWith({
-        prescription: true,
-        disease: false,
-      });
+      expect(mockSaveMasterVisibility).toHaveBeenCalledWith(
+        {
+          prescription: true,
+          disease: false,
+        },
+        { prescriptionDrugSearchMethodDefault: 'partial' },
+      );
     });
     expect(mockEnqueue).toHaveBeenCalledWith({ tone: 'success', message: 'マスタ表示設定を更新しました。' });
   });

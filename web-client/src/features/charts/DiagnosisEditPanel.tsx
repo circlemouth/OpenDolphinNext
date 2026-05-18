@@ -17,7 +17,7 @@ import {
   DISEASE_MIRROR_UNAVAILABLE_NOTE,
   DISEASE_OUTCOME_PRESETS,
   DISEASE_SYNC_CANDIDATES_NOTE,
-  fetchDiseases,
+  fetchDiseasesWithPatientImportRecovery,
   mutateOrcaDisease,
   resolveDiseaseCodeFromOrcaMaster,
   searchDiseaseMasterCandidates,
@@ -587,7 +587,7 @@ export function DiagnosisEditPanel({ patientId, meta, chartTextDiseaseMentions =
     queryKey,
     queryFn: () => {
       if (!patientId) throw new Error('patientId is required');
-      return fetchDiseases({ patientId, to: meta.visitDate, baseMonth: diagnosisBaseMonth });
+      return fetchDiseasesWithPatientImportRecovery({ patientId, to: meta.visitDate, baseMonth: diagnosisBaseMonth });
     },
     enabled: !!patientId,
     staleTime: 30_000,

@@ -28,6 +28,8 @@ public class MasterVisibilityStore {
     private static final Logger LOGGER = LoggerFactory.getLogger(MasterVisibilityStore.class);
     private static final String STATE_CATEGORY = "master_visibility";
     private static final String STATE_KEY = "default";
+    private static final String DEFAULT_PRESCRIPTION_DRUG_SEARCH_METHOD = "prefix";
+    private static final Set<String> ALLOWED_PRESCRIPTION_DRUG_SEARCH_METHODS = Set.of("prefix", "partial");
 
     private static final List<CategoryDefinition> DEFINITIONS = List.of(
             new CategoryDefinition(
@@ -98,16 +100,17 @@ public class MasterVisibilityStore {
         body.put("updatedAt", snapshot.updatedAt);
         body.put("updatedBy", snapshot.updatedBy);
         body.put("defaultsVisible", true);
+        body.put("prescriptionDrugSearchMethodDefault", snapshot.prescriptionDrugSearchMethodDefault);
         return body;
     }
 
     public UpdateResult updateVisibility(Map<String, Object> payload, String actor, String runId) {
-        Map<String, Boolean> incoming = parsePayload(payload);
+        VisibilityPayload incoming = parsePayload(payload);
         String now = Instant.now().toString();
         return update(snapshot -> {
             Snapshot next = applyDefaults(snapshot);
             List<String> changed = new ArrayList<>();
-            for (Map.Entry<String, Boolean> entry : incoming.entrySet()) {
+            for (Map.Entry<String, Boolean> entry : incoming.categories().entrySet()) {
                 CategoryState state = next.categories.get(entry.getKey());
                 boolean before = state == null || state.visible == null || state.visible;
                 boolean after = entry.getValue();
@@ -120,6 +123,10 @@ public class MasterVisibilityStore {
                     changed.add(entry.getKey());
                 }
                 state.visible = after;
+            }
+            if (incoming.prescriptionDrugSearchMethodDefault() != null
+                    && !incoming.prescriptionDrugSearchMethodDefault().equals(next.prescriptionDrugSearchMethodDefault)) {
+                next.prescriptionDrugSearchMethodDefault = incoming.prescriptionDrugSearchMethodDefault();
             }
             next.updatedAt = now;
             next.updatedBy = actor;
@@ -161,6 +168,7 @@ public class MasterVisibilityStore {
         body.put("updatedAt", snapshot.updatedAt);
         body.put("updatedBy", snapshot.updatedBy);
         body.put("defaultsVisible", true);
+        body.put("prescriptionDrugSearchMethodDefault", snapshot.prescriptionDrugSearchMethodDefault);
         return body;
     }
 
@@ -180,30 +188,40 @@ public class MasterVisibilityStore {
         return rows;
     }
 
-    private Map<String, Boolean> parsePayload(Map<String, Object> payload) {
+    private VisibilityPayload parsePayload(Map<String, Object> payload) {
         if (payload == null || payload.isEmpty()) {
             throw invalid("visibility_payload_empty", "設定内容が空です。");
         }
         Object categoriesObj = payload.get("categories");
-        if (!(categoriesObj instanceof Map<?, ?> rawCategories)) {
-            throw invalid("visibility_categories_required", "categories オブジェクトが必要です。");
-        }
         Map<String, Boolean> parsed = new LinkedHashMap<>();
-        for (Map.Entry<?, ?> entry : rawCategories.entrySet()) {
-            String code = entry.getKey() instanceof String text ? text.trim() : String.valueOf(entry.getKey()).trim();
-            if (!ALLOWED_CODES.contains(code)) {
-                throw invalid("visibility_category_unsupported", "未対応のマスタ表示カテゴリです: " + code);
+        if (categoriesObj != null) {
+            if (!(categoriesObj instanceof Map<?, ?> rawCategories)) {
+                throw invalid("visibility_categories_required", "categories オブジェクトが必要です。");
             }
-            Object value = entry.getValue();
-            if (!(value instanceof Boolean bool)) {
-                throw invalid("visibility_category_invalid", "visible は boolean で指定してください: " + code);
+            for (Map.Entry<?, ?> entry : rawCategories.entrySet()) {
+                String code = entry.getKey() instanceof String text ? text.trim() : String.valueOf(entry.getKey()).trim();
+                if (!ALLOWED_CODES.contains(code)) {
+                    throw invalid("visibility_category_unsupported", "未対応のマスタ表示カテゴリです: " + code);
+                }
+                Object value = entry.getValue();
+                if (!(value instanceof Boolean bool)) {
+                    throw invalid("visibility_category_invalid", "visible は boolean で指定してください: " + code);
+                }
+                parsed.put(code, bool);
             }
-            parsed.put(code, bool);
         }
-        if (parsed.isEmpty()) {
+        String prescriptionDrugSearchMethodDefault = null;
+        if (payload.containsKey("prescriptionDrugSearchMethodDefault")) {
+            Object raw = payload.get("prescriptionDrugSearchMethodDefault");
+            if (!(raw instanceof String text) || !ALLOWED_PRESCRIPTION_DRUG_SEARCH_METHODS.contains(text.trim())) {
+                throw invalid("visibility_prescription_search_method_invalid", "処方薬剤検索方法は prefix または partial で指定してください。");
+            }
+            prescriptionDrugSearchMethodDefault = text.trim();
+        }
+        if (parsed.isEmpty() && prescriptionDrugSearchMethodDefault == null) {
             throw invalid("visibility_categories_empty", "更新対象カテゴリがありません。");
         }
-        return parsed;
+        return new VisibilityPayload(parsed, prescriptionDrugSearchMethodDefault);
     }
 
     private MasterUpdateService.MasterUpdateException invalid(String code, String message) {
@@ -250,6 +268,7 @@ public class MasterVisibilityStore {
             snapshot.categories.put(definition.code(), state);
         }
         snapshot.updatedAt = Instant.now().toString();
+        snapshot.prescriptionDrugSearchMethodDefault = DEFAULT_PRESCRIPTION_DRUG_SEARCH_METHOD;
         return snapshot;
     }
 
@@ -269,6 +288,9 @@ public class MasterVisibilityStore {
         resolved.categories = next;
         if (resolved.updatedAt == null || resolved.updatedAt.isBlank()) {
             resolved.updatedAt = Instant.now().toString();
+        }
+        if (!ALLOWED_PRESCRIPTION_DRUG_SEARCH_METHODS.contains(resolved.prescriptionDrugSearchMethodDefault)) {
+            resolved.prescriptionDrugSearchMethodDefault = DEFAULT_PRESCRIPTION_DRUG_SEARCH_METHOD;
         }
         return resolved;
     }
@@ -303,8 +325,14 @@ public class MasterVisibilityStore {
         }
     }
 
+    private record VisibilityPayload(
+            Map<String, Boolean> categories,
+            String prescriptionDrugSearchMethodDefault) {
+    }
+
     public static final class Snapshot {
         public Map<String, CategoryState> categories = new LinkedHashMap<>();
+        public String prescriptionDrugSearchMethodDefault = DEFAULT_PRESCRIPTION_DRUG_SEARCH_METHOD;
         public String updatedAt;
         public String updatedBy;
         public String runId;

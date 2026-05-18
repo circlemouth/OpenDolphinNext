@@ -30,6 +30,7 @@ class MasterVisibilityStoreTest {
         assertThat(categories).extracting(row -> row.get("code"))
                 .containsExactly("prescription", "injection", "procedure", "test", "disease", "patientSupport");
         assertThat(categories).allSatisfy(row -> assertThat(row.get("visible")).isEqualTo(Boolean.TRUE));
+        assertThat(body.get("prescriptionDrugSearchMethodDefault")).isEqualTo("prefix");
     }
 
     @Test
@@ -66,7 +67,9 @@ class MasterVisibilityStoreTest {
     @Test
     void updatesAllowedCategoriesAndReportsChangedCodes() {
         MasterVisibilityStore.UpdateResult result = store.updateVisibility(
-                Map.of("categories", Map.of("prescription", false, "disease", true)),
+                Map.of(
+                        "categories", Map.of("prescription", false, "disease", true),
+                        "prescriptionDrugSearchMethodDefault", "partial"),
                 "FACILITY:admin",
                 "RUN-VISIBILITY");
 
@@ -79,6 +82,7 @@ class MasterVisibilityStoreTest {
                 .orElseThrow();
         assertThat(prescription.get("visible")).isEqualTo(Boolean.FALSE);
         assertThat(prescription.get("masterTypes")).asList().contains("drug", "youhou", "order-inputsets");
+        assertThat(result.body().get("prescriptionDrugSearchMethodDefault")).isEqualTo("partial");
     }
 
     @Test
@@ -101,6 +105,19 @@ class MasterVisibilityStoreTest {
                 .isInstanceOf(MasterUpdateService.MasterUpdateException.class)
                 .satisfies(ex -> assertThat(((MasterUpdateService.MasterUpdateException) ex).getCode())
                         .isEqualTo("visibility_category_invalid"));
+    }
+
+    @Test
+    void rejectsUnsupportedPrescriptionDrugSearchMethod() {
+        assertThatThrownBy(() -> store.updateVisibility(
+                Map.of(
+                        "categories", Map.of("prescription", true),
+                        "prescriptionDrugSearchMethodDefault", "contains"),
+                "FACILITY:admin",
+                "RUN-VISIBILITY"))
+                .isInstanceOf(MasterUpdateService.MasterUpdateException.class)
+                .satisfies(ex -> assertThat(((MasterUpdateService.MasterUpdateException) ex).getCode())
+                        .isEqualTo("visibility_prescription_search_method_invalid"));
     }
 
     private static void setField(Object target, String name, Object value) throws Exception {

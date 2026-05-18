@@ -47,8 +47,8 @@ list response と各 entry の `meta` は、少なくとも次を返す。API �
 - `MASTER_UPDATE_SCHEDULER_ENABLED=true` の環境では `MasterUpdateScheduler` が auto-enabled dataset を定期実行する。本番では `MASTER_UPDATE_LOCAL_ORCA_MASTER_CACHE_SOURCE_URL` と `MASTER_UPDATE_SOURCE_ALLOWED_HOSTS` を設定し、classpath fixture ではなく公式 ORCA source 由来 artifact を運用する。
 
 ## UI candidate visibility contract
-- `GET /api/admin/master-updates/visibility` と `PUT /api/admin/master-updates/visibility` は、業務 UI に表示する ORCA master 候補カテゴリの表示/非表示だけを管理する admin-management API です。`/api/orca/master/*` の挙動、local master cache、ORCA 正本、処方/会計/病名送信判定、`/api/orca/master/order/interactions/check` は変更しません。
-- 固定カテゴリは `prescription`、`injection`、`procedure`、`test`、`disease`、`patientSupport` です。既定は全カテゴリ `visible=true` です。server は allowlist でカテゴリを検証し、未知カテゴリまたは boolean 以外の値は 400 で拒否します。
+- `GET /api/admin/master-updates/visibility` と `PUT /api/admin/master-updates/visibility` は、業務 UI に表示する ORCA master 候補カテゴリの表示/非表示と、施設単位の処方薬剤検索既定値（`prescriptionDrugSearchMethodDefault: "prefix" | "partial"`）だけを管理する admin-management API です。`/api/orca/master/*` の挙動、local master cache、ORCA 正本、処方/会計/病名送信判定、`/api/orca/master/order/interactions/check` は変更しません。
+- 固定カテゴリは `prescription`、`injection`、`procedure`、`test`、`disease`、`patientSupport` です。既定は全カテゴリ `visible=true`、処方薬剤検索は `prefix` です。server は allowlist でカテゴリと検索既定値を検証し、未知カテゴリ、boolean 以外の visible 値、`prefix` / `partial` 以外の検索既定値は 400 で拒否します。
 - `PUT` は admin 権限と `admin:mutation` step-up を必須とし、監査ログに actor、runId、changedCategories を残します。設定は `RuntimeStateRepository` の `master_visibility/default` に保存します。
 - Web client はこの設定を URL、患者文脈、browser storage へ保存しません。非表示時は候補取得、候補リスト、datalist、候補選択パネルだけを止め、手入力、既存入力値、保存済みデータ表示、ORCA 送信前の通常検証は維持します。
 - 非表示表示は「管理画面の設定で候補表示だけを停止中」として扱い、マスタ未取得、ORCA 側利用不可、安全確認済み、会計反映済みとは表示しません。

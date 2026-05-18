@@ -427,6 +427,10 @@ export function PrescriptionOrderEditorPanel({
   const [pendingSaveAction, setPendingSaveAction] = useState<SaveAction | null>(null);
   const pendingEditBundleRef = useRef<OrderBundle | null>(null);
 
+  useEffect(() => {
+    setSearchMethod(prescriptionMasterVisibility.prescriptionDrugSearchMethodDefault);
+  }, [prescriptionMasterVisibility.prescriptionDrugSearchMethodDefault]);
+
   const canFetchFromServer = Boolean(patientId) && !bundlesOverride && active;
   const sourceBundleQuery = useQuery({
     queryKey: ['charts-prescription-order-editor-source', patientId, meta.visitDate ?? today, meta.encounterId ?? 'none'],
@@ -623,11 +627,10 @@ export function PrescriptionOrderEditorPanel({
             drugComment: drug?.drugComment.trim() || '未入力',
             usage: rp.usage.trim() || '未設定',
             daysOrTimes: rp.daysOrTimes.trim() || '未設定',
-            searchMethod: searchMethod === 'partial' ? '部分一致' : '前方一致',
           };
         });
       }),
-    [order.rps, searchMethod],
+    [order.rps],
   );
   const showInputSetChooser = variant === 'utility' && prescriptionMasterVisibility.visible;
 
@@ -1615,9 +1618,55 @@ export function PrescriptionOrderEditorPanel({
               </button>
             </div>
           </div>
+          {selectedRp ? (
+            <div className="charts-order-editor__kirin-rp-settings" aria-label="選択中RP設定">
+              <div className="charts-side-panel__field">
+                <label>院内/院外</label>
+                <div className="charts-side-panel__switch-group" role="group" aria-label="院内院外選択">
+                  {(['in', 'out'] as PrescriptionLocation[]).map((location) => (
+                    <button
+                      key={`rx-grid-location-${location}`}
+                      type="button"
+                      className="charts-side-panel__switch-button"
+                      data-active={selectedRp.location === location ? 'true' : 'false'}
+                      onClick={() =>
+                        updateRp(selectedRpIndex, (rp) => ({
+                          ...rp,
+                          location,
+                        }))
+                      }
+                    >
+                      {LOCATION_LABEL[location]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="charts-side-panel__field">
+                <label>処方区分</label>
+                <div className="charts-side-panel__switch-group" role="group" aria-label="処方区分選択">
+                  {(['regular', 'tonyo', 'gaiyo'] as PrescriptionCategory[]).map((category) => (
+                    <button
+                      key={`rx-grid-category-${category}`}
+                      type="button"
+                      className="charts-side-panel__switch-button"
+                      data-active={selectedRp.category === category ? 'true' : 'false'}
+                      onClick={() =>
+                        updateRp(selectedRpIndex, (rp) => ({
+                          ...rp,
+                          category,
+                        }))
+                      }
+                    >
+                      {CATEGORY_LABEL[category]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
           <div className="charts-order-editor__kirin-table charts-order-editor__kirin-table--prescription" role="table" aria-label="処方オーダー内容グリッド">
             <div className="charts-order-editor__kirin-table-row charts-order-editor__kirin-table-row--header" role="row">
-              {['RP', '薬剤名称', '薬剤量', '成分量', 'その他', '後発変更可否', '薬剤コメント', '用法', '日数・回数', '検索方法'].map((column) => (
+              {['RP', '薬剤名称', '薬剤量', '成分量', 'その他', '後発変更可否', '薬剤コメント', '用法', '日数・回数'].map((column) => (
                 <span key={`rx-grid-column-${column}`} role="columnheader">
                   {column}
                 </span>
@@ -1700,25 +1749,59 @@ export function PrescriptionOrderEditorPanel({
                 <span role="cell" data-unresolved={row.ingredientUnresolved ? 'true' : undefined}>
                   {row.ingredientAmount}
                 </span>
-                <span role="cell" data-unresolved={row.otherUnresolved ? 'true' : undefined}>
-                  {row.other}
+                <span role="cell" data-unresolved={!row.drug && row.otherUnresolved ? 'true' : undefined}>
+                  {row.drug ? (
+                    <span className="charts-order-editor__kirin-cell-stack">
+                      <label className="charts-order-editor__kirin-checkbox-control">
+                        <input
+                          type="checkbox"
+                          checked={row.drug.patientRequest}
+                          onChange={(event) =>
+                            updateDrug(row.rpIndex, row.drugIndex, (current) => ({
+                              ...current,
+                              patientRequest: event.target.checked,
+                            }))
+                          }
+                          aria-label={`${row.rpLabel} 薬剤${row.drugIndex + 1} 患者希望`}
+                        />
+                        <span>患者希望</span>
+                      </label>
+                      <label className="charts-order-editor__kirin-checkbox-control">
+                        <input
+                          type="checkbox"
+                          checked={row.drug.isGeneralNamePrescription}
+                          onChange={(event) =>
+                            updateDrug(row.rpIndex, row.drugIndex, (current) => ({
+                              ...current,
+                              isGeneralNamePrescription: event.target.checked,
+                            }))
+                          }
+                          aria-label={`${row.rpLabel} 薬剤${row.drugIndex + 1} 一般名指定`}
+                        />
+                        <span>{row.drug.isGeneralNamePrescription ? '一般名指定' : '銘柄指定'}</span>
+                      </label>
+                      {row.drug.claimComments.length > 0 ? <span>請求コメント{row.drug.claimComments.length}件</span> : null}
+                    </span>
+                  ) : (
+                    row.other
+                  )}
                 </span>
                 <span role="cell">
                   {row.drug ? (
-                    <select
-                      className="charts-order-editor__kirin-cell-control"
-                      value={row.drug.genericChangeAllowed === false ? 'blocked' : 'allowed'}
-                      onChange={(event) =>
-                        updateDrug(row.rpIndex, row.drugIndex, (current) => ({
-                          ...current,
-                          genericChangeAllowed: event.target.value === 'allowed',
-                        }))
-                      }
-                      aria-label={`${row.rpLabel} 薬剤${row.drugIndex + 1} 後発変更可否`}
-                    >
-                      <option value="allowed">変更可能</option>
-                      <option value="blocked">変更不可</option>
-                    </select>
+                    <label className="charts-order-editor__kirin-checkbox-control">
+                      <input
+                        type="checkbox"
+                        checked={row.drug.genericChangeAllowed !== false}
+                        onChange={(event) =>
+                          updateDrug(row.rpIndex, row.drugIndex, (current) => ({
+                            ...current,
+                            genericChangeAllowed: event.target.checked,
+                          }))
+                        }
+                        aria-label={`${row.rpLabel} 薬剤${row.drugIndex + 1} 後発変更可否`}
+                      />
+                      <span>{row.drug.genericChangeAllowed === false ? '変更不可' : '変更可能'}</span>
+                    </label>
                   ) : (
                     row.genericChange
                   )}
@@ -1789,28 +1872,11 @@ export function PrescriptionOrderEditorPanel({
                     aria-label={`${row.rpLabel} 日数・回数`}
                   />
                 </span>
-                <span role="cell">
-                  <select
-                    className="charts-order-editor__kirin-cell-control"
-                    value={searchMethod}
-                    onChange={(event) => setSearchMethod(event.target.value as PrescriptionSearchMethod)}
-                    aria-label={`${row.rpLabel} 検索方法`}
-                  >
-                    <option value="prefix">前方一致</option>
-                    <option value="partial">部分一致</option>
-                  </select>
-                </span>
               </div>
             ))}
           </div>
-          </fieldset>
-        </section>
 
-        <fieldset
-          disabled={isPreviewMode}
-          style={{ margin: 0, padding: 0, border: 0, minInlineSize: 0 }}
-        >
-        <div className="charts-side-panel__workspace" data-variant={variant} data-order-editor-layout="manual-first">
+          <div className="charts-side-panel__workspace" data-variant={variant} data-order-editor-layout="manual-first">
           <aside className="charts-side-panel__workspace-left charts-order-editor__secondary" aria-label="候補・セット・RP一覧">
             <div className="charts-side-panel__subsection charts-order-editor__secondary-section" aria-label="RP一覧">
               <div className="charts-side-panel__subheader">
@@ -1865,19 +1931,6 @@ export function PrescriptionOrderEditorPanel({
                 </span>
                 <span className="charts-side-panel__fold-badge">候補を開く</span>
               </summary>
-              <div className="charts-side-panel__field-row">
-                <div className="charts-side-panel__field">
-                  <label htmlFor={domId('search-method')}>検索方法</label>
-                  <select
-                    id={domId('search-method')}
-                    value={searchMethod}
-                    onChange={(event) => setSearchMethod(event.target.value as PrescriptionSearchMethod)}
-                  >
-                    <option value="prefix">前方一致</option>
-                    <option value="partial">部分一致</option>
-                  </select>
-                </div>
-              </div>
               <div className="charts-side-panel__field">
                 <label htmlFor={domId('search-keyword')}>キーワード</label>
                 <input
@@ -1992,116 +2045,7 @@ export function PrescriptionOrderEditorPanel({
 
           <div className="charts-side-panel__workspace-right charts-side-panel__workspace-right--full">
             {selectedRp ? (
-              <form
-                className="charts-side-panel__form charts-order-editor__manual-primary"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  submit('save');
-                }}
-              >
-                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--rx-class charts-order-editor__manual-card charts-order-editor__rx-compact-band">
-                  <div className="charts-side-panel__field">
-                    <label>院内/院外</label>
-                    <div className="charts-side-panel__switch-group" role="group" aria-label="院内院外選択">
-                      {(['in', 'out'] as PrescriptionLocation[]).map((location) => (
-                        <button
-                          key={`rx-location-${location}`}
-                          type="button"
-                          className="charts-side-panel__switch-button"
-                          data-active={selectedRp.location === location ? 'true' : 'false'}
-                          onClick={() =>
-                            updateRp(selectedRpIndex, (rp) => ({
-                              ...rp,
-                              location,
-                            }))
-                          }
-                        >
-                          {LOCATION_LABEL[location]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="charts-side-panel__field">
-                    <label>処方区分</label>
-                    <div className="charts-side-panel__switch-group" role="group" aria-label="処方区分選択">
-                      {(['regular', 'tonyo', 'gaiyo'] as PrescriptionCategory[]).map((category) => (
-                        <button
-                          key={`rx-category-${category}`}
-                          type="button"
-                          className="charts-side-panel__switch-button"
-                          data-active={selectedRp.category === category ? 'true' : 'false'}
-                          onClick={() =>
-                            updateRp(selectedRpIndex, (rp) => ({
-                              ...rp,
-                              category,
-                            }))
-                          }
-                        >
-                          {CATEGORY_LABEL[category]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--usage charts-order-editor__manual-card charts-order-editor__rx-compact-band">
-                  {prescriptionMasterVisibility.visible ? (
-                    <div className="charts-side-panel__field">
-                      <label htmlFor={domId('usage')}>用法マスタ</label>
-                      <select
-                        id={domId('usage')}
-                        value={selectedRp.usageCode ?? ''}
-                        onChange={(event) => {
-                          const code = event.target.value;
-                          const selected = usageOptions.find((option) => (option.code?.trim() ?? '') === code);
-                          updateRp(selectedRpIndex, (rp) => ({
-                            ...rp,
-                            usageCode: code || undefined,
-                            usage: selected?.name ?? rp.usage,
-                          }));
-                        }}
-                      >
-                        <option value="">候補を選択</option>
-                        {usageOptions.map((item) => (
-                          <option key={`usage-${item.code ?? item.name}`} value={item.code?.trim() ?? ''}>
-                            {item.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="charts-side-panel__notice charts-side-panel__notice--warning" role="status">
-                      {prescriptionMasterVisibility.hiddenMessage}
-                    </div>
-                  )}
-                  <div className="charts-side-panel__field">
-                    <label htmlFor={domId('usage-free')}>用法（自由入力）</label>
-                    <input
-                      id={domId('usage-free')}
-                      value={selectedRp.usage}
-                      onChange={(event) =>
-                        updateRp(selectedRpIndex, (rp) => ({
-                          ...rp,
-                          usage: event.target.value,
-                        }))
-                      }
-                      placeholder="例: 1日1回 朝食後"
-                    />
-                  </div>
-                  <div className="charts-side-panel__field">
-                    <label htmlFor={domId('days')}>{selectedRp.category === 'tonyo' ? '回数' : '日数'}</label>
-                    <input
-                      id={domId('days')}
-                      value={selectedRp.daysOrTimes}
-                      onChange={(event) =>
-                        updateRp(selectedRpIndex, (rp) => ({
-                          ...rp,
-                          daysOrTimes: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
+              <div className="charts-side-panel__form charts-order-editor__integrated-details" aria-label="選択中RP詳細">
 
                 <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--memo charts-order-editor__rx-compact-footer">
                   <div className="charts-side-panel__field">
@@ -2298,211 +2242,104 @@ export function PrescriptionOrderEditorPanel({
                   </div>
                 </div>
 
-                <div className="charts-side-panel__subsection charts-side-panel__meta-section charts-side-panel__meta-section--items charts-order-editor__manual-card">
-                  <div className="charts-side-panel__subheader">
-                    <strong>薬剤行</strong>
-                    <span className="charts-side-panel__search-count">{selectedRp.drugs.length}件</span>
-                  </div>
-                  {selectedDrug ? (
-                    <p className="charts-side-panel__help">最低薬価: {selectedDrugGenericPrice ?? '-'}</p>
-                  ) : null}
-                  {selectedRp.drugs.map((drug, drugIndex) => {
-                    const enforceRule = !drug.patientRequest;
-                    const rowIssueGeneric = issueByKey.get(`drug_rule_generic_${selectedRpIndex}_${drugIndex}`);
-                    const rowIssueClaim = issueByKey.get(`drug_rule_claim_${selectedRpIndex}_${drugIndex}`);
-                    const isSelectedDrugRow = selectedDrugIndex === drugIndex;
-                    const drugCandidateListId = domId(`drug-candidates-${drugIndex}`);
-                    return (
-                      <div
-                        key={drug.rowId}
-                        className="charts-side-panel__item-row charts-side-panel__item-row--rx-drug"
-                        data-invalid={rowIssueGeneric || rowIssueClaim ? 'true' : undefined}
-                        onClick={() => {
-                          setSelectedDrugIndex(drugIndex);
-                        }}
-                      >
-                        <input
-                          id={domId(`drug-name-${drugIndex}`)}
-                          list={prescriptionMasterVisibility.visible && isSelectedDrugRow ? drugCandidateListId : undefined}
-                          value={drug.name}
-                          onFocus={() => {
-                            setSelectedDrugIndex(drugIndex);
-                            setSearchKeyword(drug.name);
-                            setSearchOrigin('drug-name');
-                          }}
-                          onChange={(event) => handleDrugNameInput(selectedRpIndex, drugIndex, event.target.value)}
-                          placeholder="薬剤名"
-                        />
-                        {prescriptionMasterVisibility.visible && isSelectedDrugRow ? (
-                          <datalist id={drugCandidateListId}>
-                            {filteredCandidates.map((item) => (
-                              <option
-                                key={`rx-drug-option-${item.code ?? item.name}`}
-                                value={item.name}
-                                label={item.code ? `${item.code} ${item.unit ?? ''}`.trim() : item.unit}
-                              />
+                {selectedDrug
+                  ? (() => {
+                      const rowIssueGeneric = issueByKey.get(`drug_rule_generic_${selectedRpIndex}_${selectedDrugIndex}`);
+                      const rowIssueClaim = issueByKey.get(`drug_rule_claim_${selectedRpIndex}_${selectedDrugIndex}`);
+                      const enforceRule = !selectedDrug.patientRequest;
+                      return (
+                        <div
+                          className="charts-side-panel__subsection charts-side-panel__meta-section charts-side-panel__meta-section--items charts-order-editor__manual-card"
+                          data-invalid={rowIssueGeneric || rowIssueClaim ? 'true' : undefined}
+                          aria-label="選択薬剤の詳細"
+                        >
+                          <div className="charts-side-panel__subheader">
+                            <strong>薬剤{selectedDrugIndex + 1} 詳細</strong>
+                            <span className="charts-side-panel__search-count">最低薬価: {selectedDrugGenericPrice ?? '-'}</span>
+                          </div>
+                          <div className="charts-side-panel__template-actions" aria-label={`薬剤${selectedDrugIndex + 1}定型文`}>
+                            {DRUG_COMMENT_TEMPLATES.map((templateText) => (
+                              <button
+                                key={`rx-drug-template-${templateText}`}
+                                type="button"
+                                className="charts-side-panel__chip-button"
+                                onClick={() =>
+                                  updateDrug(selectedRpIndex, selectedDrugIndex, (current) => ({
+                                    ...current,
+                                    drugComment: current.drugComment
+                                      ? `${current.drugComment} / ${templateText}`
+                                      : templateText,
+                                  }))
+                                }
+                              >
+                                {templateText}
+                              </button>
                             ))}
-                          </datalist>
-                        ) : null}
-                        <input
-                          id={domId(`drug-quantity-${drugIndex}`)}
-                          value={drug.quantity}
-                          onChange={(event) =>
-                            updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                              ...current,
-                              quantity: event.target.value,
-                            }))
-                          }
-                          placeholder="数量"
-                        />
-                        <input
-                          id={domId(`drug-unit-${drugIndex}`)}
-                          value={drug.unit}
-                          onChange={(event) =>
-                            updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                              ...current,
-                              unit: event.target.value,
-                            }))
-                          }
-                          placeholder="単位"
-                        />
-                        <div className="charts-order-editor__rx-drug-switches" role="group" aria-label={`薬剤${drugIndex + 1}属性`}>
-                          <button
-                            type="button"
-                            className="charts-side-panel__switch-button"
-                            data-active={drug.genericChangeAllowed ? 'true' : 'false'}
-                            onClick={() =>
-                              updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                                ...current,
-                                genericChangeAllowed: !current.genericChangeAllowed,
-                              }))
-                            }
-                          >
-                            {drug.genericChangeAllowed ? '後発変更 可' : '後発変更 不可'}
-                          </button>
-                          <button
-                            type="button"
-                            className="charts-side-panel__switch-button"
-                            data-active={drug.isGeneralNamePrescription ? 'true' : 'false'}
-                            onClick={() =>
-                              updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                                ...current,
-                                isGeneralNamePrescription: !current.isGeneralNamePrescription,
-                              }))
-                            }
-                          >
-                            {drug.isGeneralNamePrescription ? '一般名指定' : '銘柄指定'}
-                          </button>
-                          <button
-                            type="button"
-                            className="charts-side-panel__switch-button"
-                            data-active={drug.patientRequest ? 'true' : 'false'}
-                            onClick={() =>
-                              updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                                ...current,
-                                patientRequest: !current.patientRequest,
-                              }))
-                            }
-                          >
-                            {drug.patientRequest ? '患者希望' : '患者希望以外'}
-                          </button>
-                          {selectedRp.drugs.length > 1 ? (
-                            <button
-                              type="button"
-                              className="charts-side-panel__action"
-                              onClick={() => splitDrugToNewRp(drugIndex)}
-                              title={RP_SHARED_USAGE_RULE}
-                            >
-                              この薬剤を別RPへ
-                            </button>
-                          ) : null}
-                        </div>
-                        <input
-                          id={domId(`drug-comment-${drugIndex}`)}
-                          className="charts-order-editor__rx-drug-comment"
-                          value={drug.drugComment}
-                          onChange={(event) =>
-                            updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                              ...current,
-                              drugComment: event.target.value,
-                            }))
-                          }
-                          placeholder="薬剤コメント"
-                        />
-                        <div className="charts-side-panel__template-actions" aria-label={`薬剤${drugIndex + 1}定型文`}>
-                          {DRUG_COMMENT_TEMPLATES.map((templateText) => (
-                            <button
-                              key={`rx-drug-template-${templateText}`}
-                              type="button"
-                              className="charts-side-panel__chip-button"
-                              onClick={() =>
-                                updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                                  ...current,
-                                  drugComment: current.drugComment
-                                    ? `${current.drugComment} / ${templateText}`
-                                    : templateText,
-                                }))
-                              }
-                            >
-                              {templateText}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="charts-side-panel__template-actions" aria-label={`薬剤${drugIndex + 1}請求用コメント一覧`}>
-                          {drug.claimComments.map((comment, commentIndex) => {
-                            const uiMeta = resolveStructuredCommentUiMeta(comment.code);
-                            return (
-                              <div key={comment.id} className="charts-side-panel__item-actions">
-                                <button
-                                  type="button"
-                                  className="charts-side-panel__chip-button charts-side-panel__chip-button--recommend"
-                                  onClick={() =>
-                                    updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                                      ...current,
-                                      claimComments: current.claimComments.filter((_, idx) => idx !== commentIndex),
-                                    }))
-                                  }
-                                  title="クリックで削除"
-                                >
-                                  {comment.code ? `${comment.code} ` : ''}
-                                  {comment.name}
-                                </button>
-                                {uiMeta ? (
-                                  <div className="charts-side-panel__field">
-                                    <label htmlFor={domId(`drug-claim-note-${drugIndex}-${commentIndex}`)}>
-                                      薬剤{drugIndex + 1} 請求コメント {commentIndex + 1} 補足値
-                                    </label>
-                                    <input
-                                      id={domId(`drug-claim-note-${drugIndex}-${commentIndex}`)}
-                                      value={comment.note ?? ''}
-                                      onChange={(event) =>
-                                        updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                                          ...current,
-                                          claimComments: current.claimComments.map((entry, idx) =>
-                                            idx === commentIndex
-                                              ? {
-                                                  ...entry,
-                                                  note: (() => {
-                                                    const normalized =
-                                                      normalizeStructuredPrescriptionClaimCommentNote(entry.code, event.target.value);
-                                                    const fallback = event.target.value.trim() || undefined;
-                                                    return normalized ?? fallback;
-                                                  })(),
-                                                }
-                                              : entry,
-                                          ),
-                                        }))
-                                      }
-                                      placeholder={uiMeta.placeholder}
-                                    />
-                                    <p className="charts-side-panel__help">{uiMeta.hint}</p>
-                                  </div>
-                                ) : null}
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {selectedDrugIndex === drugIndex ? (
+                            {selectedRp.drugs.length > 1 ? (
+                              <button
+                                type="button"
+                                className="charts-side-panel__action"
+                                onClick={() => splitDrugToNewRp(selectedDrugIndex)}
+                                title={RP_SHARED_USAGE_RULE}
+                              >
+                                この薬剤を別RPへ
+                              </button>
+                            ) : null}
+                          </div>
+                          <div className="charts-side-panel__template-actions" aria-label={`薬剤${selectedDrugIndex + 1}請求用コメント一覧`}>
+                            {selectedDrug.claimComments.map((comment, commentIndex) => {
+                              const uiMeta = resolveStructuredCommentUiMeta(comment.code);
+                              return (
+                                <div key={comment.id} className="charts-side-panel__item-actions">
+                                  <button
+                                    type="button"
+                                    className="charts-side-panel__chip-button charts-side-panel__chip-button--recommend"
+                                    onClick={() =>
+                                      updateDrug(selectedRpIndex, selectedDrugIndex, (current) => ({
+                                        ...current,
+                                        claimComments: current.claimComments.filter((_, idx) => idx !== commentIndex),
+                                      }))
+                                    }
+                                    title="クリックで削除"
+                                  >
+                                    {comment.code ? `${comment.code} ` : ''}
+                                    {comment.name}
+                                  </button>
+                                  {uiMeta ? (
+                                    <div className="charts-side-panel__field">
+                                      <label htmlFor={domId(`drug-claim-note-${selectedDrugIndex}-${commentIndex}`)}>
+                                        薬剤{selectedDrugIndex + 1} 請求コメント {commentIndex + 1} 補足値
+                                      </label>
+                                      <input
+                                        id={domId(`drug-claim-note-${selectedDrugIndex}-${commentIndex}`)}
+                                        value={comment.note ?? ''}
+                                        onChange={(event) =>
+                                          updateDrug(selectedRpIndex, selectedDrugIndex, (current) => ({
+                                            ...current,
+                                            claimComments: current.claimComments.map((entry, idx) =>
+                                              idx === commentIndex
+                                                ? {
+                                                    ...entry,
+                                                    note: (() => {
+                                                      const normalized =
+                                                        normalizeStructuredPrescriptionClaimCommentNote(entry.code, event.target.value);
+                                                      const fallback = event.target.value.trim() || undefined;
+                                                      return normalized ?? fallback;
+                                                    })(),
+                                                  }
+                                                : entry,
+                                            ),
+                                          }))
+                                        }
+                                        placeholder={uiMeta.placeholder}
+                                      />
+                                      <p className="charts-side-panel__help">{uiMeta.hint}</p>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                          </div>
                           <div className="charts-side-panel__item-actions" aria-label="請求用コメント入力">
                             <input
                               value={claimDraft.code}
@@ -2534,7 +2371,7 @@ export function PrescriptionOrderEditorPanel({
                                 type="button"
                                 className="charts-side-panel__chip-button"
                                 onClick={() => {
-                                  updateDrug(selectedRpIndex, drugIndex, (current) => ({
+                                  updateDrug(selectedRpIndex, selectedDrugIndex, (current) => ({
                                     ...current,
                                     claimComments: [...current.claimComments, createClaimComment(template.name, template.code)],
                                   }));
@@ -2544,34 +2381,31 @@ export function PrescriptionOrderEditorPanel({
                               </button>
                             ))}
                           </div>
-                        ) : null}
-                        {selectedDrugIndex === drugIndex && resolveStructuredCommentUiMeta(claimDraft.code) ? (
-                          <p className="charts-side-panel__help">{resolveStructuredCommentUiMeta(claimDraft.code)?.hint}</p>
-                        ) : null}
-                        {enforceRule ? (
-                          <p className="charts-side-panel__help">
-                            患者希望以外の場合は「後発変更 不可」+「請求用コメント」が必須です。
-                          </p>
-                        ) : null}
-                        <p className="charts-side-panel__help">
-                          一般名指定/請求コメントは ORCA送信対象です。後発可否・lower系・numberCode・prescriptionSettings・remarks は preserve-only で、この画面からは編集しません。
-                        </p>
-                        {rowIssueGeneric || rowIssueClaim ? (
-                          <p className="charts-side-panel__field-error" role="alert">
-                            {[rowIssueGeneric, rowIssueClaim].filter(Boolean).join(' / ')}
-                          </p>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              </form>
+                          {resolveStructuredCommentUiMeta(claimDraft.code) ? (
+                            <p className="charts-side-panel__help">{resolveStructuredCommentUiMeta(claimDraft.code)?.hint}</p>
+                          ) : null}
+                          {enforceRule ? (
+                            <p className="charts-side-panel__help">
+                              患者希望以外の場合は「後発変更 不可」+「請求用コメント」が必須です。
+                            </p>
+                          ) : null}
+                          {rowIssueGeneric || rowIssueClaim ? (
+                            <p className="charts-side-panel__field-error" role="alert">
+                              {[rowIssueGeneric, rowIssueClaim].filter(Boolean).join(' / ')}
+                            </p>
+                          ) : null}
+                        </div>
+                      );
+                    })()
+                  : null}
+              </div>
             ) : (
               <p className="order-dock__empty">RPを選択してください。</p>
             )}
           </div>
-        </div>
-        </fieldset>
+          </div>
+          </fieldset>
+        </section>
       </div>
 
       <footer className="charts-side-panel__dock-footer charts-order-editor__sticky-footer" aria-label="保存操作">

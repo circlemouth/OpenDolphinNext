@@ -4,13 +4,18 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event';
 
 import { DiagnosisEditPanel, type ChartTextDiseaseMention, type DiagnosisEditPanelMeta } from '../DiagnosisEditPanel';
-import { fetchDiseases, mutateOrcaDisease, resolveDiseaseCodeFromOrcaMaster, searchDiseaseMasterCandidates } from '../diseaseApi';
+import {
+  fetchDiseasesWithPatientImportRecovery,
+  mutateOrcaDisease,
+  resolveDiseaseCodeFromOrcaMaster,
+  searchDiseaseMasterCandidates,
+} from '../diseaseApi';
 
 vi.mock('../diseaseApi', async () => {
   const actual = await vi.importActual<typeof import('../diseaseApi')>('../diseaseApi');
   return {
     ...actual,
-    fetchDiseases: vi.fn(),
+    fetchDiseasesWithPatientImportRecovery: vi.fn(),
     mutateOrcaDisease: vi.fn(),
     resolveDiseaseCodeFromOrcaMaster: vi.fn(async () => undefined),
     searchDiseaseMasterCandidates: vi.fn(),
@@ -56,7 +61,7 @@ const renderPanel = (metaOverride: Partial<DiagnosisEditPanelMeta> = {}, chartTe
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(fetchDiseases).mockResolvedValue({
+  vi.mocked(fetchDiseasesWithPatientImportRecovery).mockResolvedValue({
     ok: true,
     patientId: 'P-TEST-001',
     karteId: 1001,
@@ -176,7 +181,7 @@ describe('DiagnosisEditPanel ORCA source-of-truth contract', () => {
   });
 
   it('病名コードは通常表示せず、コードがない行だけ警告を表示する', async () => {
-    vi.mocked(fetchDiseases).mockResolvedValueOnce({
+    vi.mocked(fetchDiseasesWithPatientImportRecovery).mockResolvedValueOnce({
       ok: true,
       patientId: 'P-TEST-001',
       karteId: 1001,

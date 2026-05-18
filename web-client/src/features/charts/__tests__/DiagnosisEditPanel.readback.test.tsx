@@ -4,13 +4,13 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 
 import { DiagnosisEditPanel } from '../DiagnosisEditPanel';
-import { fetchDiseases, mutateOrcaDisease, searchDiseaseMasterCandidates } from '../diseaseApi';
+import { fetchDiseasesWithPatientImportRecovery, mutateOrcaDisease, searchDiseaseMasterCandidates } from '../diseaseApi';
 
 vi.mock('../diseaseApi', async () => {
   const actual = await vi.importActual<typeof import('../diseaseApi')>('../diseaseApi');
   return {
     ...actual,
-    fetchDiseases: vi.fn(),
+    fetchDiseasesWithPatientImportRecovery: vi.fn(),
     mutateOrcaDisease: vi.fn(),
     resolveDiseaseCodeFromOrcaMaster: vi.fn(async () => undefined),
     searchDiseaseMasterCandidates: vi.fn(),
@@ -54,7 +54,7 @@ const renderPanel = () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(fetchDiseases).mockResolvedValue({
+  vi.mocked(fetchDiseasesWithPatientImportRecovery).mockResolvedValue({
     ok: true,
     patientId: 'P-DIAG-READBACK',
     karteId: 2001,

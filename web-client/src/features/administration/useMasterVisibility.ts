@@ -30,6 +30,7 @@ export function useMasterVisibilityCategory(category: MasterVisibilityCategoryCo
 
   return {
     visible,
+    prescriptionDrugSearchMethodDefault: query.data?.prescriptionDrugSearchMethodDefault ?? 'prefix',
     hiddenMessage: resolveHiddenMasterCategoryMessage(categoryLabel),
     isLoading: query.isLoading,
     isError: query.isError,

@@ -4,13 +4,18 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event';
 
 import { DiagnosisEditPanel } from '../DiagnosisEditPanel';
-import { fetchDiseases, mutateOrcaDisease, resolveDiseaseCodeFromOrcaMaster, searchDiseaseMasterCandidates } from '../diseaseApi';
+import {
+  fetchDiseasesWithPatientImportRecovery,
+  mutateOrcaDisease,
+  resolveDiseaseCodeFromOrcaMaster,
+  searchDiseaseMasterCandidates,
+} from '../diseaseApi';
 
 vi.mock('../diseaseApi', async () => {
   const actual = await vi.importActual<typeof import('../diseaseApi')>('../diseaseApi');
   return {
     ...actual,
-    fetchDiseases: vi.fn(),
+    fetchDiseasesWithPatientImportRecovery: vi.fn(),
     mutateOrcaDisease: vi.fn(),
     resolveDiseaseCodeFromOrcaMaster: vi.fn(async () => undefined),
     searchDiseaseMasterCandidates: vi.fn(),
@@ -65,7 +70,7 @@ afterEach(() => {
 
 describe('DiagnosisEditPanel ORCA mirror connection', () => {
   it('shows neutral loading copy instead of unavailable copy while ORCA mirror retrieval is pending', async () => {
-    vi.mocked(fetchDiseases).mockReturnValueOnce(new Promise(() => undefined));
+    vi.mocked(fetchDiseasesWithPatientImportRecovery).mockReturnValueOnce(new Promise(() => undefined));
 
     renderPanel('2026-05-08');
 
@@ -81,7 +86,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
   });
 
   it('passes visit-date baseMonth explicitly to the ORCA mirror read model', async () => {
-    vi.mocked(fetchDiseases).mockResolvedValueOnce({
+    vi.mocked(fetchDiseasesWithPatientImportRecovery).mockResolvedValueOnce({
       ok: true,
       patientId: 'P-TEST-001',
       karteId: 1001,
@@ -92,7 +97,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     renderPanel('2026-05-08');
 
     await waitFor(() => {
-      expect(fetchDiseases).toHaveBeenCalledWith({
+      expect(fetchDiseasesWithPatientImportRecovery).toHaveBeenCalledWith({
         patientId: 'P-TEST-001',
         to: '2026-05-08',
         baseMonth: '202605',
@@ -101,7 +106,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
   });
 
   it('shows ORCA registered diagnoses from the connected mirror without auto-authoring local diseases', async () => {
-    vi.mocked(fetchDiseases).mockResolvedValueOnce({
+    vi.mocked(fetchDiseasesWithPatientImportRecovery).mockResolvedValueOnce({
       ok: true,
       patientId: 'P-TEST-001',
       karteId: 1001,
@@ -151,11 +156,11 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     expect(screen.getByText('ORCA側と差分があります')).toBeInTheDocument();
     expect(screen.queryByText(/まだ接続されていない/)).not.toBeInTheDocument();
     expect(mutateOrcaDisease).not.toHaveBeenCalled();
-    expect(fetchDiseases).toHaveBeenCalledWith(expect.objectContaining({ patientId: 'P-TEST-001', to: '2026-05-08' }));
+    expect(fetchDiseasesWithPatientImportRecovery).toHaveBeenCalledWith(expect.objectContaining({ patientId: 'P-TEST-001', to: '2026-05-08' }));
   });
 
   it('shows a connected empty mirror as no ORCA registered diagnoses', async () => {
-    vi.mocked(fetchDiseases).mockResolvedValueOnce({
+    vi.mocked(fetchDiseasesWithPatientImportRecovery).mockResolvedValueOnce({
       ok: true,
       patientId: 'P-TEST-001',
       karteId: 1001,
@@ -170,7 +175,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
   });
 
   it('shows only safe copy and disables ORCA mutation when ORCA mirror retrieval is unavailable', async () => {
-    vi.mocked(fetchDiseases).mockResolvedValueOnce({
+    vi.mocked(fetchDiseasesWithPatientImportRecovery).mockResolvedValueOnce({
       ok: true,
       patientId: 'P-TEST-001',
       karteId: 1001,
@@ -197,7 +202,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
 
   it('sends ORCA disease create only after explicit confirmation and does not call a local candidate mutation route', async () => {
     const user = userEvent.setup();
-    vi.mocked(fetchDiseases).mockResolvedValue({
+    vi.mocked(fetchDiseasesWithPatientImportRecovery).mockResolvedValue({
       ok: true,
       patientId: 'P-TEST-001',
       karteId: 1001,
@@ -245,7 +250,7 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
 
   it('updates the ORCA registered list from the post-mutation mirror instead of optimistic input state', async () => {
     const user = userEvent.setup();
-    vi.mocked(fetchDiseases).mockResolvedValue({
+    vi.mocked(fetchDiseasesWithPatientImportRecovery).mockResolvedValue({
       ok: true,
       patientId: 'P-TEST-001',
       karteId: 1001,
@@ -290,12 +295,12 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     expect(within(mirrorList).getByText('ORCA再取得病名')).toBeInTheDocument();
     expect(within(mirrorList).queryByText('入力病名')).not.toBeInTheDocument();
     expect(screen.getByText('ORCA病名を処理しました。ORCA再取得結果で同期確認しました。')).toBeInTheDocument();
-    expect(fetchDiseases).toHaveBeenCalledTimes(1);
+    expect(fetchDiseasesWithPatientImportRecovery).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the old mirror and shows review copy when post-mutation mirror retrieval is unavailable', async () => {
     const user = userEvent.setup();
-    vi.mocked(fetchDiseases).mockResolvedValue({
+    vi.mocked(fetchDiseasesWithPatientImportRecovery).mockResolvedValue({
       ok: true,
       patientId: 'P-TEST-001',
       karteId: 1001,
@@ -327,6 +332,6 @@ describe('DiagnosisEditPanel ORCA mirror connection', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'ORCA登録病名（活動中）' })).not.toBeInTheDocument();
     expect(screen.queryByText('再取得未確認病名')).not.toBeInTheDocument();
-    expect(fetchDiseases).toHaveBeenCalledTimes(1);
+    expect(fetchDiseasesWithPatientImportRecovery).toHaveBeenCalledTimes(1);
   });
 });

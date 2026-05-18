@@ -8,6 +8,7 @@ import {
   MASTER_VISIBILITY_QUERY_KEY,
   saveMasterVisibility,
   type MasterVisibilityCategoryCode,
+  type PrescriptionDrugSearchMethod,
 } from './masterVisibilityApi';
 
 type MasterVisibilityPanelProps = {
@@ -27,6 +28,8 @@ export function MasterVisibilityPanel({ runId, role }: MasterVisibilityPanelProp
   const queryClient = useQueryClient();
   const { enqueue } = useAppToast();
   const [form, setForm] = useState<Partial<Record<MasterVisibilityCategoryCode, boolean>>>({});
+  const [prescriptionDrugSearchMethodDefault, setPrescriptionDrugSearchMethodDefault] =
+    useState<PrescriptionDrugSearchMethod>('prefix');
 
   const visibilityQuery = useQuery({
     queryKey: MASTER_VISIBILITY_QUERY_KEY,
@@ -41,10 +44,11 @@ export function MasterVisibilityPanel({ runId, role }: MasterVisibilityPanelProp
         visibilityQuery.data.categories.map((category) => [category.code, category.visible]),
       ) as Partial<Record<MasterVisibilityCategoryCode, boolean>>,
     );
-  }, [visibilityQuery.data?.categories]);
+    setPrescriptionDrugSearchMethodDefault(visibilityQuery.data.prescriptionDrugSearchMethodDefault);
+  }, [visibilityQuery.data]);
 
   const saveMutation = useMutation({
-    mutationFn: async () => saveMasterVisibility(form),
+    mutationFn: async () => saveMasterVisibility(form, { prescriptionDrugSearchMethodDefault }),
     onSuccess: async () => {
       enqueue({ tone: 'success', message: 'マスタ表示設定を更新しました。' });
       await queryClient.invalidateQueries({ queryKey: MASTER_VISIBILITY_QUERY_KEY });
@@ -86,6 +90,20 @@ export function MasterVisibilityPanel({ runId, role }: MasterVisibilityPanelProp
 
       <section className="administration-card" aria-label="カテゴリ別候補表示">
         <h2 className="administration-card__title">カテゴリ別候補表示</h2>
+        <div className="admin-form-grid">
+          <label className="admin-form-field" htmlFor="master-visibility-prescription-search-method">
+            <span>処方薬剤検索の既定値</span>
+            <select
+              id="master-visibility-prescription-search-method"
+              value={prescriptionDrugSearchMethodDefault}
+              disabled={!isSystemAdmin || saveMutation.isPending}
+              onChange={(event) => setPrescriptionDrugSearchMethodDefault(event.target.value as PrescriptionDrugSearchMethod)}
+            >
+              <option value="prefix">前方一致</option>
+              <option value="partial">部分一致</option>
+            </select>
+          </label>
+        </div>
         <div className="admin-scroll">
           <table className="admin-table">
             <thead>

@@ -5,12 +5,21 @@ import userEvent from '@testing-library/user-event';
 
 import { PrescriptionOrderEditorPanel } from '../PrescriptionOrderEditorPanel';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
+import { savePrescriptionOrder } from '../prescriptionOrderApi';
 
 vi.mock('../orderMasterSearchApi', async () => {
   const actual = await vi.importActual<typeof import('../orderMasterSearchApi')>('../orderMasterSearchApi');
   return {
     ...actual,
     fetchOrderMasterSearch: vi.fn(),
+  };
+});
+
+vi.mock('../prescriptionOrderApi', async () => {
+  const actual = await vi.importActual<typeof import('../prescriptionOrderApi')>('../prescriptionOrderApi');
+  return {
+    ...actual,
+    savePrescriptionOrder: vi.fn(),
   };
 });
 
@@ -44,7 +53,7 @@ const renderPanel = (metaOverrides?: Partial<typeof baseMeta>) => {
             admin: '1日1回',
             classCode: '212',
             started: '2026-02-26',
-            items: [{ name: 'A100 アムロジピン', quantity: '1', unit: '錠', memo: '' }],
+            items: [{ code: '620000001', name: 'A100 アムロジピン', quantity: '1', unit: '錠', memo: '' }],
           },
         ]}
       />
@@ -71,13 +80,20 @@ describe('PrescriptionOrderEditorPanel', () => {
     expect(within(grid).getByText('薬剤名称')).toBeInTheDocument();
     expect(within(grid).getByLabelText('RP1 薬剤1 薬剤名称')).toHaveDisplayValue('A100 アムロジピン');
     expect(within(grid).getByText('後発変更可否')).toBeInTheDocument();
+    expect(within(grid).queryByText('検索方法')).toBeNull();
+    expect(within(grid).queryByLabelText('RP1 検索方法')).toBeNull();
+    const genericChangeCheckbox = within(grid).getByRole('checkbox', { name: 'RP1 薬剤1 後発変更可否' });
+    expect(genericChangeCheckbox).toBeChecked();
+    fireEvent.click(genericChangeCheckbox);
+    expect(genericChangeCheckbox).not.toBeChecked();
+    expect(within(grid).getByText('変更不可')).toBeInTheDocument();
     expect(grid.querySelectorAll('[data-unresolved="true"]').length).toBeGreaterThan(0);
     expect(within(grid).queryByText('成分量とその他は現行データから解決できない場合に未設定として表示します。未設定値を処方確定・ORCA送信済みとして扱いません。')).toBeNull();
     expect(screen.queryByLabelText('RP名')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('処方安全チェックサマリ')).toBeNull();
     expect(screen.queryByText('この画面で検出できる重複投与候補、静的相互作用候補、保存不可ルールはありません。')).toBeNull();
-    expect(document.querySelector('.charts-side-panel__item-row--rx-drug')).not.toBeNull();
-    expect(document.querySelector('.charts-order-editor__rx-compact-band')).not.toBeNull();
+    expect(document.querySelector('.charts-order-editor__manual-primary')).toBeNull();
+    expect(within(grid).getByLabelText('選択中RP詳細')).toBeInTheDocument();
   });
 
   it('3文字以上は自動検索、2文字以下は手動検索ボタンで候補表示する', async () => {
@@ -148,9 +164,9 @@ describe('PrescriptionOrderEditorPanel', () => {
     await user.click(addDrugButton);
     expect(screen.getAllByLabelText(/薬剤名称/)).toHaveLength(2);
 
-    const splitDrugButtons = screen.getAllByRole('button', { name: 'この薬剤を別RPへ' });
-    expect(splitDrugButtons[1]).toHaveAttribute('title', '1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。');
-    await user.click(splitDrugButtons[1]);
+    const splitDrugButton = screen.getByRole('button', { name: 'この薬剤を別RPへ' });
+    expect(splitDrugButton).toHaveAttribute('title', '1つのRPでは用法は共通です。異なる用法の薬剤は別RPに分けてください。');
+    await user.click(splitDrugButton);
 
     const rpPane = screen.getByLabelText('候補・セット・RP一覧');
     expect(within(rpPane).getByText('2件')).toBeInTheDocument();
@@ -203,7 +219,7 @@ describe('PrescriptionOrderEditorPanel', () => {
     await user.click(screen.getByRole('button', { name: /RP2:/ }));
     await user.click(screen.getByRole('button', { name: '外用' }));
 
-    const daysInput = screen.getByLabelText('日数');
+    const daysInput = screen.getByLabelText('RP2 日数・回数');
     await user.clear(daysInput);
     await user.type(daysInput, '3');
 
@@ -212,10 +228,85 @@ describe('PrescriptionOrderEditorPanel', () => {
     await user.click(screen.getByRole('button', { name: '一括反映' }));
 
     await user.click(screen.getByRole('button', { name: /RP1:/ }));
-    expect((screen.getByLabelText('日数') as HTMLInputElement).value).toBe('7');
+    expect((screen.getByLabelText('RP1 日数・回数') as HTMLInputElement).value).toBe('7');
 
     await user.click(screen.getByRole('button', { name: /RP2:/ }));
-    expect((screen.getByLabelText('日数') as HTMLInputElement).value).toBe('3');
+    expect((screen.getByLabelText('RP2 日数・回数') as HTMLInputElement).value).toBe('3');
+  });
+
+  it('オーダー内容内のRP単位入力を保存payloadへ反映する', async () => {
+    const user = userEvent.setup();
+    const searchMock = vi.mocked(fetchOrderMasterSearch);
+    searchMock.mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+    vi.mocked(savePrescriptionOrder).mockResolvedValue({ ok: true });
+
+    renderPanel();
+
+    await user.click(screen.getByRole('button', { name: '院内' }));
+    await user.click(screen.getByRole('button', { name: '頓服' }));
+    const usageInput = screen.getByLabelText('RP1 用法');
+    await user.clear(usageInput);
+    await user.type(usageInput, '頭痛時');
+    const daysInput = screen.getByLabelText('RP1 日数・回数');
+    await user.clear(daysInput);
+    await user.type(daysInput, '5');
+
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => {
+      expect(savePrescriptionOrder).toHaveBeenCalled();
+    });
+    const payload = vi.mocked(savePrescriptionOrder).mock.calls.at(-1)?.[0];
+    const rp = payload?.order.rps[0];
+    expect(rp).toEqual(
+      expect.objectContaining({
+        location: 'in',
+        category: 'tonyo',
+        usage: '頭痛時',
+        daysOrTimes: '5',
+      }),
+    );
+  });
+
+  it('オーダー内容内の薬剤単位入力を保存payloadへ反映する', async () => {
+    const user = userEvent.setup();
+    const searchMock = vi.mocked(fetchOrderMasterSearch);
+    searchMock.mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+    vi.mocked(savePrescriptionOrder).mockResolvedValue({ ok: true });
+
+    renderPanel();
+
+    const generalNameCheckbox = screen.getByRole('checkbox', { name: 'RP1 薬剤1 一般名指定' });
+    const patientRequestCheckbox = screen.getByRole('checkbox', { name: 'RP1 薬剤1 患者希望' });
+    const genericChangeCheckbox = screen.getByRole('checkbox', { name: 'RP1 薬剤1 後発変更可否' });
+    await user.click(generalNameCheckbox);
+    await user.click(patientRequestCheckbox);
+    await user.click(genericChangeCheckbox);
+
+    const drugCommentInput = screen.getByLabelText('RP1 薬剤1 薬剤コメント');
+    await user.type(drugCommentInput, '眠気注意');
+    await user.type(screen.getByPlaceholderText('請求コメントコード'), '810000001');
+    await user.type(screen.getByPlaceholderText('請求用コメント（Shift+Enterで確定）'), '患者希望コメント');
+    await user.keyboard('{Shift>}{Enter}{/Shift}');
+
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => {
+      expect(savePrescriptionOrder).toHaveBeenCalled();
+    });
+    const payload = vi.mocked(savePrescriptionOrder).mock.calls.at(-1)?.[0];
+    const drug = payload?.order.rps[0]?.drugs[0];
+    expect(drug).toEqual(
+      expect.objectContaining({
+        genericChangeAllowed: false,
+        isGeneralNamePrescription: true,
+        patientRequest: false,
+        drugComment: '眠気注意',
+      }),
+    );
+    expect(drug?.claimComments).toEqual([
+      expect.objectContaining({ code: '810000001', name: '患者希望コメント' }),
+    ]);
   });
 
   it('薬剤検索で method を API に渡し、非対応 scope は送信しない', async () => {
@@ -235,10 +326,9 @@ describe('PrescriptionOrderEditorPanel', () => {
 
     renderPanel();
 
-    const methodSelect = screen.getByLabelText('検索方法');
     const keywordInput = screen.getByLabelText('キーワード');
 
-    await user.selectOptions(methodSelect, 'partial');
+    expect(screen.queryByLabelText('検索方法')).toBeNull();
     expect(screen.queryByLabelText('検索範囲')).toBeNull();
     await user.clear(keywordInput);
     await user.type(keywordInput, 'アム');
@@ -246,7 +336,7 @@ describe('PrescriptionOrderEditorPanel', () => {
 
     await waitFor(() => {
       expect(searchMock).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'drug', keyword: 'アム', method: 'partial' }),
+        expect.objectContaining({ type: 'drug', keyword: 'アム', method: 'prefix' }),
       );
     });
     const drugCall = searchMock.mock.calls.find(([params]) => (params as Record<string, unknown>).type === 'drug');
@@ -270,7 +360,7 @@ describe('PrescriptionOrderEditorPanel', () => {
 
     renderPanel();
 
-    const nameInput = screen.getByPlaceholderText('薬剤名') as HTMLInputElement;
+    const nameInput = screen.getByLabelText('RP1 薬剤1 薬剤名称') as HTMLInputElement;
     await user.clear(nameInput);
     await user.type(nameInput, 'ゲンタ');
 
@@ -284,7 +374,7 @@ describe('PrescriptionOrderEditorPanel', () => {
     fireEvent.change(nameInput, { target: { value: 'ゲンタ錠' } });
 
     expect(nameInput.value).toBe('ゲンタ錠');
-    expect((screen.getByPlaceholderText('単位') as HTMLInputElement).value).toBe('錠');
+    expect((screen.getByLabelText('RP1 薬剤1 単位') as HTMLInputElement).value).toBe('錠');
   });
 
   it('visitDate が日時文字列でも用法マスタ検索の effective は YYYY-MM-DD になる', async () => {

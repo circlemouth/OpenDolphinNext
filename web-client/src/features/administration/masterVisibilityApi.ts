@@ -18,12 +18,15 @@ export type MasterVisibilityCategory = {
   affectedSurfaces: string[];
 };
 
+export type PrescriptionDrugSearchMethod = 'prefix' | 'partial';
+
 export type MasterVisibilityResponse = {
   runId?: string;
   generatedAt?: string;
   updatedAt?: string;
   updatedBy?: string;
   defaultsVisible?: boolean;
+  prescriptionDrugSearchMethodDefault: PrescriptionDrugSearchMethod;
   categories: MasterVisibilityCategory[];
 };
 
@@ -66,6 +69,9 @@ const normalizeStringList = (value: unknown): string[] =>
     ? value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean)
     : [];
 
+const normalizePrescriptionDrugSearchMethod = (value: unknown): PrescriptionDrugSearchMethod =>
+  value === 'partial' ? 'partial' : 'prefix';
+
 const normalizeResponse = (json: unknown): MasterVisibilityResponse => {
   const body = json && typeof json === 'object' ? (json as Record<string, unknown>) : {};
   const categories = Array.isArray(body.categories)
@@ -90,6 +96,7 @@ const normalizeResponse = (json: unknown): MasterVisibilityResponse => {
     updatedAt: typeof body.updatedAt === 'string' ? body.updatedAt : undefined,
     updatedBy: typeof body.updatedBy === 'string' ? body.updatedBy : undefined,
     defaultsVisible: typeof body.defaultsVisible === 'boolean' ? body.defaultsVisible : true,
+    prescriptionDrugSearchMethodDefault: normalizePrescriptionDrugSearchMethod(body.prescriptionDrugSearchMethodDefault),
     categories,
   };
 };
@@ -109,12 +116,13 @@ export async function fetchMasterVisibility(): Promise<MasterVisibilityResponse>
 
 export async function saveMasterVisibility(
   categories: Partial<Record<MasterVisibilityCategoryCode, boolean>>,
+  options?: { prescriptionDrugSearchMethodDefault?: PrescriptionDrugSearchMethod },
 ): Promise<MasterVisibilityUpdateResponse> {
   const response = await httpFetch(BASE, {
     method: 'PUT',
     notifySessionExpired: false,
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ categories }),
+    body: JSON.stringify({ categories, ...options }),
   });
   const normalized = await requireOk(response);
   return { ...normalized, ok: true };

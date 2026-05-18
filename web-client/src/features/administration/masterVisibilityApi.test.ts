@@ -24,6 +24,7 @@ describe('masterVisibilityApi', () => {
         JSON.stringify({
           runId: 'RUN-VIS',
           defaultsVisible: true,
+          prescriptionDrugSearchMethodDefault: 'partial',
           categories: [
             {
               code: 'prescription',
@@ -46,6 +47,7 @@ describe('masterVisibilityApi', () => {
       expect.objectContaining({ method: 'GET', notifySessionExpired: false }),
     );
     expect(result.categories).toHaveLength(1);
+    expect(result.prescriptionDrugSearchMethodDefault).toBe('partial');
     expect(isMasterCategoryVisible(result, 'prescription')).toBe(false);
     expect(isMasterCategoryVisible(result, 'injection')).toBe(true);
   });
@@ -61,7 +63,7 @@ describe('masterVisibilityApi', () => {
       ),
     );
 
-    const result = await saveMasterVisibility({ disease: false, prescription: true });
+    const result = await saveMasterVisibility({ disease: false, prescription: true }, { prescriptionDrugSearchMethodDefault: 'partial' });
 
     expect(mockHttpFetch).toHaveBeenCalledWith(
       '/api/admin/master-updates/visibility',
@@ -69,7 +71,7 @@ describe('masterVisibilityApi', () => {
         method: 'PUT',
         notifySessionExpired: false,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ categories: { disease: false, prescription: true } }),
+        body: JSON.stringify({ categories: { disease: false, prescription: true }, prescriptionDrugSearchMethodDefault: 'partial' }),
       }),
     );
     expect(result.ok).toBe(true);
