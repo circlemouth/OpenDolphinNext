@@ -120,8 +120,23 @@ describe('PatientSummaryPanel', () => {
 
     expect(await screen.findByText('保存はブロックされています: 別端末で編集中のため保存できません。')).toBeInTheDocument();
     const saveButton = screen.getByRole('button', { name: '保存' });
-    expect(saveButton).toBeDisabled();
+    expect(saveButton).not.toBeDisabled();
+    expect(saveButton).toHaveAttribute('aria-disabled', 'true');
     expect(saveButton).toHaveAttribute('aria-describedby', 'charts-patient-summary-save-block-reason');
+    expect(mockedSavePatientFreeDocument).not.toHaveBeenCalled();
+  });
+
+  it('変更なしの保存は押下時に停止理由を表示し mutation へ進まない', async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(<PatientSummaryPanel patientId="P-001" />);
+
+    const saveButton = await screen.findByRole('button', { name: '保存' });
+    expect(saveButton).not.toBeDisabled();
+    expect(saveButton).toHaveAttribute('aria-disabled', 'true');
+
+    await user.click(saveButton);
+
+    expect(screen.getByText('患者サマリの保存を停止: 変更がありません。')).toBeInTheDocument();
     expect(mockedSavePatientFreeDocument).not.toHaveBeenCalled();
   });
 

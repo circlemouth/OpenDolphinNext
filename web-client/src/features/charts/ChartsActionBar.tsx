@@ -843,6 +843,11 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     }
     return entries;
   }, [finishPrecheckReasons, printPrecheckReasons, sendPrecheckReasons]);
+  const embeddedGuardSummaries = useMemo(
+    () => (readOnly || approvalLocked ? [] : guardSummaries.filter((item) => item.key !== 'send')),
+    [approvalLocked, guardSummaries, readOnly],
+  );
+  const embeddedGuardSummaryId = embeddedGuardSummaries.length > 0 ? 'charts-actions-embedded-guard-summary' : undefined;
   useEffect(() => {
     onLockChange?.(parentActionLocked, parentActionLockReason);
   }, [onLockChange, parentActionLocked, parentActionLockReason]);
@@ -3127,11 +3132,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               disabled={embeddedEncounterNativeBlocked}
               data-disabled-reason={embeddedEncounterReason}
               aria-disabled={embeddedEncounterGuarded}
-              aria-describedby={
-                embeddedEncounterAction === 'finish' && !embedded && !isRunning && finishPrecheckReasons.length > 0
-                  ? 'charts-actions-finish-guard'
-                  : undefined
-              }
+              aria-describedby={embeddedEncounterAction === 'finish' && !isRunning ? embeddedGuardSummaryId : undefined}
               title={embeddedEncounterTitle}
               onClick={() => void handleAction(embeddedEncounterAction)}
               aria-keyshortcuts={embeddedEncounterAction === 'start' ? 'Alt+N' : 'Alt+E'}
@@ -3141,8 +3142,24 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             </button>
             {draftSaveButton}
           </div>
-          <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--center" aria-hidden="true">
-            <span className="charts-actions__patient-inline-spacer" />
+          <div
+            className="charts-actions__patient-action-slot charts-actions__patient-action-slot--center"
+            aria-hidden={embeddedGuardSummaries.length === 0 ? 'true' : undefined}
+          >
+            {embeddedGuardSummaries.length > 0 ? (
+              <div id={embeddedGuardSummaryId} className="charts-actions__patient-guard-summary" role="status" aria-live="polite">
+                <strong>送信前確認</strong>
+                <ul>
+                  {embeddedGuardSummaries.map((item) => (
+                    <li key={item.key}>
+                      {item.action}: {item.summary}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <span className="charts-actions__patient-inline-spacer" />
+            )}
           </div>
           <div className="charts-actions__patient-action-slot charts-actions__patient-action-slot--right">
             {editLockAlertButton}
