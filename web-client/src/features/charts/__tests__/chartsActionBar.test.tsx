@@ -977,6 +977,30 @@ describe('ChartsActionBar', () => {
     expect(screen.queryByText('補助操作', { selector: 'summary' })).toBeNull();
   });
 
+  it('埋め込み時のガード理由は患者情報帯内の短文サマリで表示する', () => {
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          embedded
+          compactHeader
+          missingMaster
+          patientId="P-601"
+          visitDate="2026-01-10"
+          selectedEntry={{ patientId: 'P-601', appointmentId: 'APT-601', visitDate: '2026-01-10', status: '診療中' } as any}
+        />
+      </MemoryRouter>,
+    );
+
+    const patientInlineGroup = screen.getByRole('group', { name: '患者情報帯の補助操作' });
+    expect(within(patientInlineGroup).getByText('送信前確認')).toBeInTheDocument();
+    const inlineGuardSummary = within(patientInlineGroup).getByRole('status');
+    expect(inlineGuardSummary).toHaveTextContent('診察終了して会計へ送信');
+    expect(inlineGuardSummary).toHaveTextContent('ORCA 参照不足: 会計送信不可');
+    expect(inlineGuardSummary).toHaveTextContent('印刷');
+    expect(inlineGuardSummary).toHaveTextContent('ORCA 参照不足: 印刷不可');
+  });
+
   it('埋め込み時の印刷 action は外部配置用に非表示化し ref から同じ dialog を開ける', async () => {
     const ref = createRef<ChartsActionBarHandle>();
     const onPrintActionStateChange = vi.fn();

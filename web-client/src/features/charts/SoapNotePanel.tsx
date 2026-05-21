@@ -1313,6 +1313,18 @@ export function SoapNotePanel({
       return { ok: false, message, serverSynced: false, localSaved: false, error: 'read_only' };
     }
 
+    if (historyView) {
+      const message = '履歴表示中は保存できません。';
+      setFeedback(message);
+      return { ok: false, message, serverSynced: syncState.serverSynced, localSaved: syncState.localSaved, error: 'history_view' };
+    }
+
+    if (syncState.isSaving) {
+      const message = '保存中です。完了後に再度保存してください。';
+      setFeedback(message);
+      return { ok: false, message, serverSynced: syncState.serverSynced, localSaved: syncState.localSaved, error: 'saving' };
+    }
+
     const authoredAt = new Date().toISOString();
     const entries: SoapEntry[] = [];
     const emptyClears: SoapSectionKey[] = [];
@@ -1579,6 +1591,7 @@ export function SoapNotePanel({
     author,
     clearPendingTemplatesForSections,
     draft,
+    historyView,
     latestBySection,
     markSectionsClean,
     meta.appointmentId,
@@ -1596,6 +1609,7 @@ export function SoapNotePanel({
     pendingTemplate,
     readOnly,
     readOnlyReason,
+    syncState.isSaving,
     syncState.localSaved,
     syncState.serverSynced,
   ]);
@@ -1669,6 +1683,10 @@ export function SoapNotePanel({
   }, [onClearHistory]);
 
   const cycleViewMode = useCallback(() => {
+    if (historyView) {
+      setFeedback('履歴表示中は表示モードを変更できません。');
+      return;
+    }
     setViewMode((prev) => {
       switch (prev) {
         case 'both':
@@ -1679,7 +1697,7 @@ export function SoapNotePanel({
           return 'both';
       }
     });
-  }, []);
+  }, [historyView]);
 
   const viewModeLabel = useMemo(() => {
     switch (viewMode) {
@@ -1701,6 +1719,7 @@ export function SoapNotePanel({
         : '';
   const suppressReadOnlyReason = readOnly && isParallelEditLockReason(readOnlyReason);
   const showSaveBlockedReason = Boolean(saveBlockedReason) && !suppressReadOnlyReason;
+  const saveNativeDisabled = syncState.isSaving;
   const handleTemplateDialogOpen = useCallback(() => {
     setTemplateSelection('');
     if (!SOAP_SECTIONS.includes(templateTargetSection)) {
@@ -1985,7 +2004,7 @@ export function SoapNotePanel({
             type="button"
             onClick={cycleViewMode}
             className="soap-note__ghost"
-            disabled={historyView}
+            aria-disabled={historyView ? true : undefined}
             title={historyView ? '履歴表示中は変更できません。' : '表示モードを切り替えます（SOAPのみ / FREEのみ / 両方）'}
           >
             表示:{viewModeLabel}
@@ -2020,8 +2039,9 @@ export function SoapNotePanel({
           <button
             type="button"
             onClick={handleSave}
-            disabled={readOnly || historyView || syncState.isSaving}
+            {...(saveNativeDisabled ? { disabled: true } : {})}
             className="soap-note__primary"
+            aria-disabled={saveBlockedReason ? true : undefined}
             aria-describedby={showSaveBlockedReason ? saveBlockedReasonId : undefined}
             title={saveBlockedReason || undefined}
           >

@@ -119,7 +119,6 @@ export function PatientSummaryPanel({ patientId, readOnly = false, readOnlyReaso
   if (freeDocQuery.isLoading && !freeDocQuery.data) return null;
 
   const isSaving = saveMutation.isPending;
-  const canSave = !readOnly && !isSaving && dirty;
   const saveBlockedReasonId = 'charts-patient-summary-save-block-reason';
   const saveBlockedReason = readOnly
     ? readOnlyReason ?? '読み取り専用のため保存できません。'
@@ -128,6 +127,34 @@ export function PatientSummaryPanel({ patientId, readOnly = false, readOnlyReaso
       : !dirty
         ? '変更がありません。'
         : '';
+  const handleSaveClick = () => {
+    if (saveBlockedReason) {
+      setStatusNotice({
+        tone: readOnly ? 'error' : 'info',
+        message: `患者サマリの保存を停止: ${saveBlockedReason}`,
+      });
+      return;
+    }
+    setStatusNotice({ tone: 'info', message: '患者サマリを保存中です。' });
+    void saveMutation.mutate();
+  };
+  const resetBlockedReason = readOnly
+    ? readOnlyReason ?? '読み取り専用のため取り消しできません。'
+    : !dirty && draft === storedComment
+      ? '取り消す変更がありません。'
+      : '';
+  const handleResetClick = () => {
+    if (resetBlockedReason) {
+      setStatusNotice({
+        tone: readOnly ? 'error' : 'info',
+        message: `患者サマリの取り消しを停止: ${resetBlockedReason}`,
+      });
+      return;
+    }
+    setDraft(storedComment);
+    setDirty(false);
+    setStatusNotice({ tone: 'info', message: '編集中の変更を取り消しました。' });
+  };
   const ariaLive = resolveAriaLive('info');
   const saveError =
     saveMutation.data && !saveMutation.data.ok
@@ -187,25 +214,21 @@ export function PatientSummaryPanel({ patientId, readOnly = false, readOnlyReaso
           <button
             type="button"
             className="charts-free-doc__save"
-            disabled={!canSave}
+            {...(isSaving ? { disabled: true } : {})}
+            aria-disabled={saveBlockedReason ? true : undefined}
             aria-describedby={saveBlockedReason ? saveBlockedReasonId : undefined}
             title={saveBlockedReason || undefined}
-            onClick={() => {
-              setStatusNotice({ tone: 'info', message: '患者サマリを保存中です。' });
-              void saveMutation.mutate();
-            }}
+            onClick={handleSaveClick}
           >
             保存
           </button>
           <button
             type="button"
             className="charts-free-doc__reset"
-            disabled={readOnly || isSaving || (!dirty && draft === storedComment)}
-            onClick={() => {
-              setDraft(storedComment);
-              setDirty(false);
-              setStatusNotice({ tone: 'info', message: '編集中の変更を取り消しました。' });
-            }}
+            {...(isSaving ? { disabled: true } : {})}
+            aria-disabled={resetBlockedReason ? true : undefined}
+            title={resetBlockedReason || undefined}
+            onClick={handleResetClick}
           >
             取り消し
           </button>
