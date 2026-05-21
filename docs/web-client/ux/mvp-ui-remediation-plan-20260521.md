@@ -125,6 +125,28 @@ MVP UIとしての合格条件は、「全画面を完全にDADS準拠へ作り�
   - `npm run build`
   - 必要に応じて `npm run test:e2e:no-artifacts`
 
+### Phase 5 完了状態
+
+- `web-client/scripts/verify-ui-mvp-contract.mjs` を追加し、`verify:web-guard` へ組み込み済み。
+  - 未定義 CSS custom property
+  - `FocusTrapDialog` の `closeOnBackdrop` 既定値再混入
+  - 通常UIの `RUN_ID` / `traceId` / `requestId` visible copy 増加
+  - Mobile Images 通常ヘッダーへの support identifier 再混入
+  - raw ORCA body wording 再混入
+- Validation/Docs で更新した focused tests:
+  - `web-client/scripts/__tests__/verifyUiMvpContract.test.ts`
+  - `web-client/src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx`
+  - `web-client/src/features/charts/__tests__/dadsClinicalInputContract.test.tsx`
+  - `web-client/src/features/charts/__tests__/prescriptionOrderEditorPanel.orca-support.test.tsx`
+  - `web-client/src/__tests__/WorkspaceTabBar.test.tsx`
+- merged branch `codex/ui-mvp-20260521` の `2c2e7a1df` を取り込み、Mobile Images の通常ヘッダーに `RUN_ID` copy を戻さない前提で guard/test を固定。
+- 2026-05-22 validation 実行結果:
+  - `cd web-client && npm run verify:web-guard` 成功
+  - `cd web-client && npm run typecheck` 成功
+  - `cd web-client && npm run test:ci` 成功
+  - `cd web-client && npm run build` 成功
+  - `cd web-client && npm run test:e2e:no-artifacts` は未実行（今回の所有範囲は guard/test/doc。MVP UI validation の必須 gate は上記4本で完了）
+
 ## 5. マージ順
 
 1. `ui-mvp-foundation`

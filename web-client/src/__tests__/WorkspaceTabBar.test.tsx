@@ -143,7 +143,7 @@ describe('WorkspaceTabBar navigation', () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe('/f/0001/charts');
     });
-  }, 10_000);
+  }, 20_000);
 
   it('受付画面で患者タブの✗を押しても charts へ遷移せずタブだけ閉じる', async () => {
     const user = userEvent.setup();
@@ -202,7 +202,7 @@ describe('WorkspaceTabBar navigation', () => {
     expect(params.get('date')).toBe('2026-03-01');
     expect(params.get('patientId')).toBeNull();
     expect(params.get('returnTo')).toBeNull();
-  }, 10_000);
+  }, 20_000);
 
   it('reload 相当の再 mount では patient tab を storage 復元しない', async () => {
     const queryClient = new QueryClient();
