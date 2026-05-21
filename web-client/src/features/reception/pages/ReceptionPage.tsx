@@ -8,6 +8,7 @@ import { getAuditEventLog, logAuditEvent, logUiState } from '../../../libs/audit
 import { resolveAriaLive, resolveRunId } from '../../../libs/observability/observability';
 import type { DataSourceTransition } from '../../../libs/observability/types';
 import { isOrcaSuccessResult, normalizeOrcaApiResult } from '../../../libs/orca/orcaApiResultPolicy';
+import { CriticalOperationConfirmDialog } from '../../../components/modals/CriticalOperationConfirmDialog';
 import { FocusTrapDialog } from '../../../components/modals/FocusTrapDialog';
 import { OrderConsole } from '../components/OrderConsole';
 import { ReceptionAuditPanel } from '../components/ReceptionAuditPanel';
@@ -504,6 +505,8 @@ const ACCEPT_SUCCESS_RESULTS = new Set(['00', '0000', 'K3']);
 const ACCEPT_WARNING_RESULTS = new Set(['16', '21', '60']);
 const RECEPTION_SUPPORT_GUIDE = '必要に応じて RUN_ID コピーで実行IDを共有してください。';
 const RECEPTION_INITIAL_BILLING_SEND_ENABLED = false;
+const CHARTS_HANDOFF_BLOCK_REASON = 'canonical handoff が未成立のためカルテを開けません。';
+const ACCEPT_READY_MESSAGE = '診療科・担当医・保険/自費・来院区分を確認すると受付できます。';
 
 const buildReceptionAcceptResultDetail = () => '結果を確認し、必要なら一覧を再取得してください。';
 
@@ -3800,6 +3803,24 @@ export function ReceptionPage({
     acceptVisitKind,
     visibleAppointmentEntries,
   ]);
+  const acceptRegisterStatus = useMemo(
+    () =>
+      isAcceptSubmitting
+        ? {
+            tone: 'info' as const,
+            message: '受付送信中です。ORCA 受付成立証跡を確認できるまで結果を確定表示しません。',
+          }
+        : acceptRegisterDecision.disabled
+          ? {
+              tone: 'warning' as const,
+              message: acceptRegisterDecision.reason ?? '条件を確認してください。',
+            }
+          : {
+              tone: 'info' as const,
+              message: ACCEPT_READY_MESSAGE,
+            },
+    [acceptRegisterDecision.disabled, acceptRegisterDecision.reason, isAcceptSubmitting],
+  );
   const selectedPatientName = patientSearchSelected?.name?.trim() || '未選択';
 
   const openExceptionsModal = useCallback(() => {
@@ -4614,10 +4635,6 @@ export function ReceptionPage({
           : acceptPaymentMode === 'self'
             ? '自費'
             : undefined;
-    const acceptInternalReference =
-      selectedEntryMatchesTarget
-        ? selectedEntry?.encounterKey ?? selectedEntry?.scheduleKey ?? selectedEntry?.receptionId ?? selectedEntry?.appointmentId
-        : undefined;
     const acceptOrcaStatus =
       acceptTarget.officialReadiness === 'ready'
         ? 'verified'
@@ -4634,7 +4651,6 @@ export function ReceptionPage({
           className="reception-accept__patient-identity"
           eyebrow="受付登録 / 患者確認"
           patientId={acceptTarget.patientId}
-          internalPatientId={acceptInternalReference}
           patientName={acceptPatientName}
           patientKana={acceptPatientKana}
           birthDateIso={acceptTarget.birthDate}
@@ -4651,6 +4667,10 @@ export function ReceptionPage({
           showMeta={false}
           showVisitSupport={false}
         />
+        <div className="reception-accept__cta-status" data-tone={acceptRegisterStatus.tone}>
+          <strong>受付条件</strong>
+          <span>{acceptRegisterStatus.message}</span>
+        </div>
         <section
           className="reception-accept__identity-card"
           role="group"
@@ -5090,7 +5110,6 @@ export function ReceptionPage({
                   type="search"
                   value={keyword}
                   onChange={(event) => setKeyword(event.target.value)}
-                  placeholder="患者ID・氏名・カナで検索できます。"
                 />
                 <button type="submit" className="reception-search__button primary reception-toolbar__keyword-submit">
                   検索
@@ -5105,6 +5124,7 @@ export function ReceptionPage({
                   表示条件変更
                 </button>
               </div>
+              <span className="reception-search__field-help">患者ID・氏名・カナで検索できます。</span>
             </div>
             {receptionErrorIndicator && !sessionStatusSlot ? (
               <div className="reception-toolbar__status" role="status" aria-live={infoLive}>
@@ -5792,7 +5812,7 @@ export function ReceptionPage({
                                     handleOpenCharts(entry);
                                   }}
                                   disabled={!canOpenCharts}
-                                  title={canOpenCharts ? 'カルテを開く' : 'canonical key がないためカルテを開けません'}
+                                  title={canOpenCharts ? 'カルテを開く' : CHARTS_HANDOFF_BLOCK_REASON}
                                 >
                                   <ClinicalIcon icon="chart-open" />
                                   <span>カルテ</span>
@@ -5910,6 +5930,9 @@ export function ReceptionPage({
                                   </div>
                                   {billingSendBlockedReason ? (
                                     <small className="reception-table__sub">{billingSendBlockedReason}</small>
+                                  ) : null}
+                                  {!canOpenCharts ? (
+                                    <small className="reception-table__sub">{CHARTS_HANDOFF_BLOCK_REASON}</small>
                                   ) : null}
                                 </div>
                               </div>
@@ -6244,11 +6267,14 @@ export function ReceptionPage({
                                       handleOpenCharts(entry);
                                     }}
                                     disabled={!canOpenCharts}
-                                    title={canOpenCharts ? 'カルテを開く' : 'canonical key がないためカルテを開けません'}
+                                    title={canOpenCharts ? 'カルテを開く' : CHARTS_HANDOFF_BLOCK_REASON}
                                   >
                                     <ClinicalIcon icon="chart-open" />
                                     <span>カルテ</span>
                                   </button>
+                                  {!canOpenCharts ? (
+                                    <small className="reception-table__sub">{CHARTS_HANDOFF_BLOCK_REASON}</small>
+                                  ) : null}
                                   <div
                                     className={`reception-card__menu${tableActionMenuOpen ? ' is-open' : ''}`}
                                     data-card-actions-menu-root="true"
@@ -6634,6 +6660,14 @@ export function ReceptionPage({
                                       </button>
                                     </div>
                                   ) : null}
+                                  {isSelected ? (
+                                    <p
+                                      className="reception-patient-search__item-action-note"
+                                      data-tone={acceptRegisterStatus.tone}
+                                    >
+                                      {acceptRegisterStatus.message}
+                                    </p>
+                                  ) : null}
                                 </div>
                               );
                             })
@@ -6743,51 +6777,47 @@ export function ReceptionPage({
           ) : null}
         </FocusTrapDialog>
 
-        <FocusTrapDialog
+        <CriticalOperationConfirmDialog
           open={Boolean(cancelConfirmState)}
           title="受付取消の確認"
-          onClose={closeCancelConfirm}
+          description="受付取消は破壊的操作です。対象患者と現在状態を確認してから実行してください。"
+          operationLabel="受付取消"
+          patientName={cancelConfirmState?.entry.name ?? '—'}
+          patientFields={
+            cancelConfirmState
+              ? (() => {
+                  const entry = cancelConfirmState.entry;
+                  const patientAge = calculateAge(entry.birthDate, selectedDate);
+                  const patientAgeGroupLabel = resolvePatientAgeGroupLabel(resolvePatientAgeGroup(patientAge));
+                  const patientSexLabel = resolvePatientSexAriaLabel(resolvePatientSexTone(entry.sex)) ?? '性別未登録';
+                  return [
+                    { label: '性別', value: patientSexLabel },
+                    { label: '年齢', value: formatAgeJa(patientAge) },
+                    { label: '年齢区分', value: patientAgeGroupLabel },
+                  ];
+                })()
+              : []
+          }
+          summaryTitle="取消対象"
+          summaryFields={
+            cancelConfirmState
+              ? [
+                  { label: '現在状態', value: SECTION_LABEL[cancelConfirmState.entry.status] ?? cancelConfirmState.entry.status },
+                  { label: '受付日', value: selectedDate || cancelConfirmState.entry.visitDate || '—' },
+                ]
+              : []
+          }
+          checklistItems={[
+            { label: '対象患者と受付状態を確認した', checked: true },
+            { label: '受付成立証跡が消えるまで成功扱いにしない', checked: true },
+          ]}
+          confirmLabel={isAcceptSubmitting ? '取消中…' : '受付取消を実行'}
+          confirmDisabled={isAcceptSubmitting}
+          tone="danger"
           testId="reception-cancel-confirm-modal"
-        >
-          {cancelConfirmState ? (
-            (() => {
-              const entry = cancelConfirmState.entry;
-              const patientAge = calculateAge(entry.birthDate, selectedDate);
-              const patientAgeGroup = resolvePatientAgeGroup(patientAge);
-              const patientSexTone = resolvePatientSexTone(entry.sex);
-              const statusLabel = SECTION_LABEL[entry.status] ?? entry.status;
-              return (
-                <>
-                  <p>この受付を取消します。実行後は受付一覧へ反映されます。</p>
-                  <section className="reception-cancel__identity-card" aria-label={`取消対象 ${entry.name ?? '患者'}`}>
-                    <PatientProfileIcon sexTone={patientSexTone} ageGroup={patientAgeGroup} />
-                    <div className="reception-cancel__identity-text">
-                      <small className="reception-cancel__identity-eyebrow">取消対象</small>
-                      <strong className="reception-cancel__identity-name">{entry.name ?? '取消対象'}</strong>
-                    </div>
-                    <span className="reception-cancel__identity-age">{formatAgeJa(patientAge)}</span>
-                    <StatusPill tone="warning" size="xs">
-                      {statusLabel}
-                    </StatusPill>
-                  </section>
-                  <div className="reception-modal__actions">
-                    <button type="button" className="reception-search__button ghost" onClick={closeCancelConfirm}>
-                      戻る
-                    </button>
-                    <button
-                      type="button"
-                      className="reception-search__button danger"
-                      onClick={handleConfirmCancelEntry}
-                      disabled={isAcceptSubmitting}
-                    >
-                      {isAcceptSubmitting ? '取消中…' : '取消を実行'}
-                    </button>
-                  </div>
-                </>
-              );
-            })()
-          ) : null}
-        </FocusTrapDialog>
+          onCancel={closeCancelConfirm}
+          onConfirm={handleConfirmCancelEntry}
+        />
 
         <FocusTrapDialog
           open={Boolean(recordsModalPatientId)}

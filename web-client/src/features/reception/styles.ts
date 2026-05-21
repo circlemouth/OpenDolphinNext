@@ -1824,6 +1824,35 @@ export const receptionStyles = css`
     gap: 0.65rem;
   }
 
+  .reception-accept__cta-status {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    padding: 0.72rem 0.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 0.84rem;
+  }
+
+  .reception-accept__cta-status strong {
+    color: #0f172a;
+    font-size: 0.85rem;
+  }
+
+  .reception-accept__cta-status[data-tone='warning'] {
+    border-color: var(--ui-warning-border);
+    background: var(--ui-warning-bg);
+    color: var(--ui-warning-strong);
+  }
+
+  .reception-accept__cta-status[data-tone='info'] {
+    border-color: var(--ui-info-border);
+    background: var(--ui-info-bg);
+    color: var(--ui-info-text);
+  }
+
   .reception-accept__identity-card {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -3875,6 +3904,21 @@ export const receptionStyles = css`
   .reception-patient-search__item-actions .reception-search__button {
     padding: 0.45rem 0.75rem;
     font-size: 0.85rem;
+  }
+
+  .reception-patient-search__item-action-note {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: #475569;
+  }
+
+  .reception-patient-search__item-action-note[data-tone='warning'] {
+    color: var(--ui-warning-strong);
+  }
+
+  .reception-patient-search__item-action-note[data-tone='info'] {
+    color: var(--ui-info-text);
   }
 
   .reception-patient-search__item:hover {
