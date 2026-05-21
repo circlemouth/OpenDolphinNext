@@ -2,6 +2,18 @@
 
 本リポジトリは OpenDolphin をベースに、`server-modernized/` と `web-client/` を現行実装として開発する repository です。`client/` と `server/` は legacy reference であり、通常の変更対象ではありません。
 
+フォーク元はメドレー株式会社様が管理されている以下のリポジトリです。
+ライセンスについてはメドレー株式会社様の判断に従い、変更の可能性があります。
+https://github.com/dolphin-dev/OpenDolphin
+
+
+# 注意点
+ORCAと連携する電子カルテサーバーと、そのクライアントとして開発しています。
+この電子カルテでは、厚生労働省が2026年5月現在で示している認証カルテになることが、定義上できない可能性が高く(認証申請時点で、直近1年間に一定数以上の医療機関で稼働していることが要件になり、クラウド上に個人でデプロイしたとしても満たせない可能性が高い)、開発が完了して、使用できたとしても制約をうけます。
+また、今後厚生労働省の政策次第では、未承認カルテ自体が使用できなくなる可能性があります。
+
+また、個人利用を想定して開発しているため、情報漏洩等のリスクは使用者に帰属します。
+
 ## Primary Entry
 - [docs/README.md](docs/README.md): current / workflow / reference / archive / evidence を分けた全体索引
 - [docs/managerdocs/README.md](docs/managerdocs/README.md): manager current state と release boundary
