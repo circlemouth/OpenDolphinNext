@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { resolveAriaLive, resolveRunId } from '../../../libs/observability/observability';
-import { copyTextToClipboard } from '../../../libs/observability/runIdCopy';
+import { resolveAriaLive } from '../../../libs/observability/observability';
 import { safeSameOriginHttpUrl } from '../../../libs/security/safeUrl';
 import { useOptionalSession } from '../../../AppRouter';
 import { loadDeepLinkContext } from '../../../routes/deepLinkContextStorage';
 import { buildFacilityPath } from '../../../routes/facilityRoutes';
-import { useAuthService } from '../../charts/authService';
 import type { OutpatientEncounterContext } from '../../charts/encounterContext';
 import { useAppNavigation } from '../../../routes/useAppNavigation';
 import { MobilePatientPicker } from '../components/MobilePatientPicker';
@@ -86,8 +84,6 @@ const buildSendDisabledReason = (options: {
 export function MobileImagesUploadPage() {
   const session = useOptionalSession();
   const location = useLocation();
-  const { flags } = useAuthService();
-  const resolvedRunId = resolveRunId(flags.runId);
   const appNav = useAppNavigation({ facilityId: session?.facilityId, userId: session?.userId });
   const locationState = (location.state as MobileImagesLocationState | null) ?? null;
   const queryParams = useMemo(
@@ -106,10 +102,8 @@ export function MobileImagesUploadPage() {
     const departmentCode = normalizeContextValue(stateEncounter?.departmentCode);
     const physicianCode = normalizeContextValue(stateEncounter?.physicianCode);
     const insuranceCombinationNumber = normalizeContextValue(stateEncounter?.insuranceCombinationNumber);
-    const encounterKey = normalizeContextValue(stateEncounter?.encounterKey);
-    const scheduleKey = normalizeContextValue(stateEncounter?.scheduleKey);
     const hasContext = Boolean(
-      visitDate || departmentCode || physicianCode || insuranceCombinationNumber || encounterKey || scheduleKey,
+      visitDate || departmentCode || physicianCode || insuranceCombinationNumber,
     );
     if (!hasContext) return undefined;
     return {
@@ -117,18 +111,17 @@ export function MobileImagesUploadPage() {
       department: departmentCode ? `診療科コード ${departmentCode}` : undefined,
       physician: physicianCode ? `担当医コード ${physicianCode}` : undefined,
       insuranceCombination: insuranceCombinationNumber ? `保険組合せ ${insuranceCombinationNumber}` : undefined,
-      internalPatientId: encounterKey ?? scheduleKey,
       orcaSourceLabel: '遷移文脈',
       orcaCacheStatus: 'unverified',
     };
   }, [stateEncounter]);
   const resolvedPatientId = patientIdParam ?? statePatientId ?? deepLinkPatientId;
   const resolvedPatientSourceLabel = patientIdParam
-    ? '入口 query patientId'
+    ? '遷移入口'
     : statePatientId
       ? '遷移文脈'
       : deepLinkPatientId
-        ? '一時文脈'
+        ? '一時引き継ぎ'
         : '未確定';
   const fallbackUrl = useMemo(() => {
     const facilityId = session?.facilityId;
@@ -314,18 +307,6 @@ export function MobileImagesUploadPage() {
   }, [patientId]);
 
   const statusTone: FeedbackTone = stage === 'error' ? 'error' : stage === 'success' ? 'success' : 'info';
-  const [copyFeedback, setCopyFeedback] = useState<string>('');
-
-  const handleCopyRunId = useCallback(async () => {
-    if (!resolvedRunId) return;
-    try {
-      await copyTextToClipboard(resolvedRunId);
-      setCopyFeedback('RUN_ID をコピーしました。');
-    } catch {
-      setCopyFeedback('RUN_ID のコピーに失敗しました。');
-    }
-  }, [resolvedRunId]);
-
   const header = useMemo(() => {
     return (
       <header className="mobile-images-page__header">
@@ -334,28 +315,11 @@ export function MobileImagesUploadPage() {
             <p className="mobile-images-page__eyebrow">patient-specific upload / reference</p>
             <h1 className="mobile-images-page__title">画像アップロード</h1>
           </div>
-          <span className="mobile-images-page__runid-chip">
-            <span>RUN_ID: {resolvedRunId ?? '―'}</span>
-            {resolvedRunId ? (
-              <button
-                type="button"
-                onClick={handleCopyRunId}
-                className="mobile-images-page__runid-copy"
-              >
-                コピー
-              </button>
-            ) : null}
-          </span>
         </div>
         <p className="mobile-images-page__lead">患者を特定して、撮影または写真を選択し、送信します。</p>
-        {copyFeedback ? (
-          <p className="mobile-images-page__copy-feedback" role="status" aria-live={infoLive}>
-            {copyFeedback}
-          </p>
-        ) : null}
       </header>
     );
-  }, [copyFeedback, handleCopyRunId, infoLive, resolvedRunId]);
+  }, []);
 
   return (
     <main data-test-id="mobile-images-page" className="mobile-images-page">
@@ -372,7 +336,6 @@ export function MobileImagesUploadPage() {
           <PatientIdentityBar
             eyebrow="患者画像アップロード / 参照"
             patientId={patientId}
-            internalPatientId={encounterSafetyContext?.internalPatientId}
             patientName={patientId ? undefined : '患者未確定'}
             acceptanceDate={encounterSafetyContext?.acceptanceDate}
             department={encounterSafetyContext?.department}
@@ -380,7 +343,7 @@ export function MobileImagesUploadPage() {
             insuranceCombination={encounterSafetyContext?.insuranceCombination}
             orcaSourceLabel={encounterSafetyContext?.orcaSourceLabel}
             orcaCacheStatus={encounterSafetyContext?.orcaCacheStatus}
-            note="画面内で患者を選び直せます。URL 由来の patientId は画面遷移後に保持しません。"
+            note="画面内で患者を選び直せます。遷移元の患者文脈はこの画面内だけで扱います。"
             chips={
               <>
                 <StatusPill tone="neutral" size="xs">患者文脈: {resolvedPatientSourceLabel}</StatusPill>

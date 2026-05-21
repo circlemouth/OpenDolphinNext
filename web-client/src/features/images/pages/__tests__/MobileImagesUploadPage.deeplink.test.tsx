@@ -16,16 +16,8 @@ vi.mock('../../../../libs/security/safeUrl', () => ({
   safeSameOriginHttpUrl: (value?: string) => value ?? undefined,
 }));
 
-vi.mock('../../../../libs/observability/runIdCopy', () => ({
-  copyTextToClipboard: vi.fn().mockResolvedValue(undefined),
-}));
-
 vi.mock('../../../../AppRouter', () => ({
   useOptionalSession: () => ({ facilityId: '0001', userId: 'user-1' }),
-}));
-
-vi.mock('../../../charts/authService', () => ({
-  useAuthService: () => ({ flags: { runId: 'RUN-IMAGES-TEST' } }),
 }));
 
 vi.mock('../../../../routes/useAppNavigation', () => ({
@@ -106,8 +98,6 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
       expect(vi.mocked(fetchPatientImageList)).toHaveBeenCalledWith('123');
     });
     const medicalSafetyHeader = screen.getByLabelText('医療安全患者ヘッダー');
-    expect(medicalSafetyHeader).toHaveTextContent('内部参照ID');
-    expect(medicalSafetyHeader).toHaveTextContent('enc-20260511-1');
     expect(medicalSafetyHeader).toHaveTextContent('受付日');
     expect(medicalSafetyHeader).toHaveTextContent('2026-05-11');
     expect(medicalSafetyHeader).toHaveTextContent('診療科コード 01');
@@ -115,6 +105,8 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
     expect(medicalSafetyHeader).toHaveTextContent('保険組合せ 0001');
     expect(medicalSafetyHeader).toHaveTextContent('ORCA取得');
     expect(medicalSafetyHeader).toHaveTextContent('遷移文脈 / unverified');
+    expect(medicalSafetyHeader).not.toHaveTextContent('内部参照ID');
+    expect(medicalSafetyHeader).not.toHaveTextContent('enc-20260511-1');
   });
 
   it('URL/退避どちらにも patientId が無い場合は明確エラーを表示し送信不可', async () => {

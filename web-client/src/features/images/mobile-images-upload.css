@@ -45,42 +45,12 @@
 }
 
 .mobile-images-page__lead,
-.mobile-images-page__copy-feedback,
 .mobile-images-page__empty-note,
 .mobile-images-page__missing-link {
   margin: 0;
   font-size: 0.95rem;
   line-height: 1.6;
   color: var(--ui-text-muted);
-}
-
-.mobile-images-page__copy-feedback {
-  font-size: 0.85rem;
-}
-
-.mobile-images-page__runid-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-  border-radius: var(--ui-radius-md);
-  border: 1px solid var(--ui-border-subtle);
-  background: var(--ui-surface-muted);
-  padding: 0.38rem 0.7rem;
-  font-size: 0.86rem;
-  color: var(--ui-text);
-  white-space: nowrap;
-}
-
-.mobile-images-page__runid-copy {
-  border: none;
-  background: transparent;
-  color: var(--ui-primary);
-  padding: 0;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 .mobile-images-page__step-rail {
