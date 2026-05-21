@@ -34,7 +34,7 @@ export function AdminCard({
         </div>
         {status ? <div className="admin-card-shell__status">{status}</div> : null}
       </header>
-      {actions ? <div className="admin-card-shell__actions">{actions}</div> : null}
+      {actions ? <div className="admin-card-shell__actions odn-action-bar odn-action-bar--start">{actions}</div> : null}
       <div className="admin-card-shell__body">{children}</div>
     </section>
   );

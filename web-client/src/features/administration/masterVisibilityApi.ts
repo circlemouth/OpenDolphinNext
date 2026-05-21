@@ -132,7 +132,7 @@ export function isMasterCategoryVisible(
   visibility: MasterVisibilityResponse | undefined,
   category: MasterVisibilityCategoryCode,
 ): boolean {
-  const row = visibility?.categories.find((candidate) => candidate.code === category);
+  const row = visibility?.categories?.find((candidate) => candidate.code === category);
   return row?.visible ?? true;
 }
 

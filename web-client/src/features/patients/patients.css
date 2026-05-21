@@ -526,6 +526,11 @@
   flex-wrap: wrap;
 }
 
+.patients-page__form-action-support {
+  display: grid;
+  gap: 0.35rem;
+}
+
 .patients-page__form-actions button {
   border: 1px solid #1d4ed8;
   border-radius: 10px;
@@ -576,6 +581,15 @@
 .patients-page__field-help {
   font-size: 0.8rem;
   color: #64748b;
+}
+
+.patients-page__boundary-note {
+  line-height: 1.5;
+}
+
+.patients-page__action-reason {
+  margin: 0;
+  font-weight: 600;
 }
 
 .patients-page__field-error {

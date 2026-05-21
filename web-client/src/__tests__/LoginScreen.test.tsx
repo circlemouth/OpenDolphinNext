@@ -102,12 +102,32 @@ describe('LoginScreen', () => {
     expect(document.getElementById('login-facility-id')).toHaveAttribute('aria-invalid', 'true');
     expect(document.getElementById('login-user-id')).toHaveAttribute('aria-invalid', 'true');
     expect(document.getElementById('login-password')).toHaveAttribute('aria-invalid', 'true');
-    expect(document.getElementById('login-facility-id')).toHaveAttribute('aria-describedby', 'login-facility-id-error');
-    expect(document.getElementById('login-user-id')).toHaveAttribute('aria-describedby', 'login-user-id-error');
-    expect(document.getElementById('login-password')).toHaveAttribute('aria-describedby', 'login-password-error');
+    expect(document.getElementById('login-facility-id')).toHaveAttribute(
+      'aria-describedby',
+      'login-facility-id-support login-facility-id-error',
+    );
+    expect(document.getElementById('login-user-id')).toHaveAttribute(
+      'aria-describedby',
+      'login-user-id-support login-user-id-error',
+    );
+    expect(document.getElementById('login-password')).toHaveAttribute(
+      'aria-describedby',
+      'login-password-support login-password-error',
+    );
     expect(screen.getByText('施設IDを入力してください。')).toHaveAttribute('id', 'login-facility-id-error');
     expect(screen.getByText('ユーザーIDを入力してください。')).toHaveAttribute('id', 'login-user-id-error');
     expect(screen.getByText('パスワードを入力してください。')).toHaveAttribute('id', 'login-password-error');
+  });
+
+  it('placeholder に頼らず support text と CTA 理由を表示する', () => {
+    render(<LoginScreen />);
+
+    expect(screen.getByLabelText('施設ID')).not.toHaveAttribute('placeholder');
+    expect(screen.getByLabelText('ユーザーID')).not.toHaveAttribute('placeholder');
+    expect(screen.getByLabelText('パスワード')).not.toHaveAttribute('placeholder');
+    expect(screen.getByText('例: 0001')).toBeInTheDocument();
+    expect(screen.getByText('院内で発行されたユーザーIDを入力してください（例: doctor01）。')).toBeInTheDocument();
+    expect(screen.getByText('施設ID・ユーザーID・パスワードを入力するとログインできます。')).toBeInTheDocument();
   });
 
   it('single facility login では施設ID入力欄を表示せず login payload から facilityId を省略する', async () => {
@@ -246,6 +266,7 @@ describe('LoginScreen', () => {
     expect(screen.queryByLabelText('パスワード')).not.toBeInTheDocument();
     expect(screen.getByText(AUTH_COPY.factor2Required)).toBeInTheDocument();
     expect(screen.getByText('パスワードは保持していません。認証コードのみ入力してください。')).toBeInTheDocument();
+    expect(screen.getByText('認証アプリに表示された6桁コードをそのまま入力してください。')).toBeInTheDocument();
     expect(screen.getByLabelText('認証コード')).toHaveFocus();
   });
 

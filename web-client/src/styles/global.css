@@ -819,6 +819,13 @@ body {
   margin-left: 4px;
 }
 
+.field-support {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ui-text-muted);
+  margin-left: 4px;
+}
+
 .login-form__actions {
   margin-top: 1.5rem;
 }
@@ -830,6 +837,13 @@ body {
   font-weight: 600;
   line-height: 1.5;
   text-align: center;
+}
+
+.login-form__reason {
+  margin: 0.65rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--ui-text-muted);
 }
 
 .login-form__actions button {

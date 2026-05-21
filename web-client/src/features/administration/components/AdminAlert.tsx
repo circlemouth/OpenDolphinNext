@@ -13,19 +13,21 @@ type AdminAlertProps = {
 export function AdminAlert({ tone, message, detail, className }: AdminAlertProps) {
   const role = tone === 'error' || tone === 'warn' ? 'alert' : 'status';
   const live = resolveAriaLive(tone === 'ok' ? 'success' : toLegacyWarningTone(tone), undefined);
+  const bannerTone =
+    tone === 'error' ? 'danger' : tone === 'warn' ? 'warning' : tone === 'ok' ? 'info' : 'info';
 
   return (
     <div
-      className={`admin-alert admin-alert--${tone}${className ? ` ${className}` : ''}`}
+      className={`admin-alert admin-alert--${tone} odn-banner odn-banner--${bannerTone}${className ? ` ${className}` : ''}`}
       role={role}
       aria-live={live}
       aria-atomic="true"
     >
       <strong className="admin-alert__tone">{tone.toUpperCase()}</strong>
-      <p className="admin-alert__message">
-        {message}
-        {detail ? ` ${detail}` : ''}
-      </p>
+      <div className="admin-alert__content">
+        <p className="admin-alert__message">{message}</p>
+        {detail ? <p className="admin-alert__detail">{detail}</p> : null}
+      </div>
     </div>
   );
 }

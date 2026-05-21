@@ -121,6 +121,15 @@ export function WebOrcaConnectionCard({
         ? connectionCapability.testedScope
         : '未証明（このテストでは未検証）';
   const testedScopeTone = connectionCapability?.testedScope === 'api_only' ? 'warn' : connectionCapability?.testedScope ? 'ok' : 'idle';
+  const actionReason = disabledByRole
+    ? '保存と接続テストは system_admin セッションで実行できます。'
+    : savePending
+      ? '保存中です。完了後に接続テストまたは再取得を実行してください。'
+      : testPending
+        ? '接続テスト中です。結果が表示されるまでお待ちください。'
+        : refetchPending
+          ? '設定を再取得しています。完了後に次の操作を選んでください。'
+          : undefined;
 
   return (
     <AdminCard
@@ -370,6 +379,7 @@ export function WebOrcaConnectionCard({
               接続テスト
             </button>
           </div>
+          {actionReason ? <p className="admin-quiet admin-actions__reason">{actionReason}</p> : null}
 
           {testSummary ? (
             <div className="admin-result admin-result--stack">
