@@ -1006,6 +1006,20 @@ describe('PatientsPage form safety', () => {
     await user.type(auditKeywordInput, '{enter}');
     expect(mockMutationCallCount).toBe(0);
   });
+
+  it('新患登録モードでは保存不可理由を action bar 近傍に表示する', async () => {
+    mockPatients();
+    renderPatientsPage();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: '新患登録' }));
+
+    expect(screen.getByRole('button', { name: '新患登録を実行' })).toBeDisabled();
+    expect(screen.getByText('未入力または形式不備の項目があります。1件の入力エラーを解消してください。')).toBeInTheDocument();
+    expect(
+      screen.getByText('この画面の一覧と編集中表示は院内ローカルです。保存・取込の完了表示は ORCA 正本の再取得による同期確認状況として扱います。'),
+    ).toBeInTheDocument();
+  });
 });
 
 describe('PatientsPage ORCA helpers', () => {

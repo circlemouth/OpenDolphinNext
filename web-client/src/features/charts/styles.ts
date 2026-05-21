@@ -1554,6 +1554,32 @@ export const chartsStyles = css`
     min-width: 1px;
   }
 
+  .charts-actions__patient-guard-summary {
+    width: 100%;
+    max-width: min(32rem, 100%);
+    padding: 0.56rem 0.72rem;
+    border: 1px solid rgba(251, 146, 60, 0.42);
+    border-radius: var(--charts-radius-sm);
+    background: rgba(255, 247, 237, 0.92);
+    color: #9a3412;
+    display: grid;
+    gap: 0.28rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    box-shadow: 0 4px 12px rgba(148, 64, 14, 0.08);
+  }
+
+  .charts-actions__patient-guard-summary strong {
+    font-size: 0.76rem;
+  }
+
+  .charts-actions__patient-guard-summary ul {
+    margin: 0;
+    padding-left: 1rem;
+    display: grid;
+    gap: 0.16rem;
+  }
+
   .charts-actions__patient-action-slot--right {
     justify-content: stretch;
     align-items: stretch;

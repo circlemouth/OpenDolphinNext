@@ -60,7 +60,7 @@ export function FocusTrapDialog({
   children,
   initialFocus = 'first',
   restoreFocus = true,
-  closeOnBackdrop = true,
+  closeOnBackdrop = false,
   showCloseButton = true,
   closeOnEscape = true,
   testId,

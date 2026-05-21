@@ -68,6 +68,40 @@ const resolveFieldErrorId = (fieldId: string) => `${fieldId}-error`;
 const resolveFieldDescribedBy = (fieldId: string, error?: string | null) =>
   error ? resolveFieldErrorId(fieldId) : undefined;
 
+const buildCredentialsSubmitReason = (options: {
+  facilityIdMissing: boolean;
+  userIdMissing: boolean;
+  passwordMissing: boolean;
+  isLoading: boolean;
+}) => {
+  if (options.isLoading) {
+    return '認証結果を確認しています。完了メッセージが出るまでお待ちください。';
+  }
+  const missingLabels = [
+    options.facilityIdMissing ? '施設ID' : null,
+    options.userIdMissing ? 'ユーザーID' : null,
+    options.passwordMissing ? 'パスワード' : null,
+  ].filter((value): value is string => Boolean(value));
+  if (missingLabels.length === 0) return undefined;
+  return `${missingLabels.join('・')}を入力するとログインできます。`;
+};
+
+const buildFactor2SubmitReason = (options: {
+  codeLength: number;
+  isLoading: boolean;
+}) => {
+  if (options.isLoading) {
+    return '認証コードを確認しています。結果が表示されるまでお待ちください。';
+  }
+  if (options.codeLength === 0) {
+    return '認証アプリに表示された6桁コードを入力してください。';
+  }
+  if (options.codeLength < 6) {
+    return '認証コードは6桁で入力してください。';
+  }
+  return undefined;
+};
+
 const resolveLoginSubmitErrorMessage = (error: unknown): string => {
   if (error instanceof LoginFailureError) {
     return error.message;
@@ -229,6 +263,16 @@ export const LoginScreen = ({
   const canSubmitCredentials = Boolean(normalizedResolvedFacilityId && normalizedUserId && values.password && !isLoading);
   const normalizedFactor2Code = secondFactorCode.replace(/\D/g, '');
   const canSubmitFactor2 = Boolean(normalizedFactor2Code.length === 6 && !isLoading);
+  const credentialsSubmitReason = buildCredentialsSubmitReason({
+    facilityIdMissing: shouldShowFacilityField && !normalizedResolvedFacilityId,
+    userIdMissing: !normalizedUserId,
+    passwordMissing: !values.password,
+    isLoading: step === 'credentials' && isLoading,
+  });
+  const factor2SubmitReason = buildFactor2SubmitReason({
+    codeLength: normalizedFactor2Code.length,
+    isLoading: step === 'factor2' && isLoading,
+  });
   useEffect(() => {
     const notice = resolveLoginSurfaceNotice({
       sessionExpiryNotice: consumeSessionExpiredNotice(),
@@ -549,8 +593,8 @@ export const LoginScreen = ({
           {step === 'credentials' ? (
             <>
               {shouldShowFacilityField ? (
-                <label className="field" htmlFor="login-facility-id">
-                  <span>施設ID</span>
+                <div className="field">
+                  <label htmlFor="login-facility-id">施設ID</label>
                   <input
                     id="login-facility-id"
                     name="loginFacilityId"
@@ -558,21 +602,26 @@ export const LoginScreen = ({
                     autoComplete="organization"
                     value={resolvedFacilityId}
                     onChange={handleFacilityChange}
-                    placeholder="例: 0001"
                     disabled={isLoading}
                     aria-invalid={errors.facilityId ? 'true' : undefined}
-                    aria-describedby={resolveFieldDescribedBy('login-facility-id', errors.facilityId)}
+                    aria-describedby={buildAriaDescribedBy(
+                      'login-facility-id-support',
+                      resolveFieldDescribedBy('login-facility-id', errors.facilityId),
+                    )}
                   />
+                  <span id="login-facility-id-support" className="field-support">
+                    例: 0001
+                  </span>
                   {errors.facilityId ? (
                     <span id={resolveFieldErrorId('login-facility-id')} className="field-error">
                       {errors.facilityId}
                     </span>
                   ) : null}
-                </label>
+                </div>
               ) : null}
 
-              <label className="field" htmlFor="login-user-id">
-                <span>ユーザーID</span>
+              <div className="field">
+                <label htmlFor="login-user-id">ユーザーID</label>
                 <input
                   id="login-user-id"
                   name="loginUserId"
@@ -580,17 +629,22 @@ export const LoginScreen = ({
                   autoComplete="username"
                   value={values.userId}
                   onChange={handleChange('userId')}
-                  placeholder="例: doctor01"
                   disabled={isLoading}
                   aria-invalid={errors.userId ? 'true' : undefined}
-                  aria-describedby={resolveFieldDescribedBy('login-user-id', errors.userId)}
+                  aria-describedby={buildAriaDescribedBy(
+                    'login-user-id-support',
+                    resolveFieldDescribedBy('login-user-id', errors.userId),
+                  )}
                 />
+                <span id="login-user-id-support" className="field-support">
+                  院内で発行されたユーザーIDを入力してください（例: doctor01）。
+                </span>
                 {errors.userId ? (
                   <span id={resolveFieldErrorId('login-user-id')} className="field-error">
                     {errors.userId}
                   </span>
                 ) : null}
-              </label>
+              </div>
 
               <div className="field">
                 <label htmlFor="login-password">パスワード</label>
@@ -602,10 +656,12 @@ export const LoginScreen = ({
                     autoComplete="current-password"
                     value={values.password}
                     onChange={handleChange('password')}
-                    placeholder="パスワード"
                     disabled={isLoading}
                     aria-invalid={errors.password ? 'true' : undefined}
-                    aria-describedby={resolveFieldDescribedBy('login-password', errors.password)}
+                    aria-describedby={buildAriaDescribedBy(
+                      'login-password-support',
+                      resolveFieldDescribedBy('login-password', errors.password),
+                    )}
                   />
                   <button
                     type="button"
@@ -619,6 +675,9 @@ export const LoginScreen = ({
                     {passwordVisible ? '隠す' : '表示'}
                   </button>
                 </div>
+                <span id="login-password-support" className="field-support">
+                  院内で指定されたパスワードを入力してください。
+                </span>
                 {errors.password ? (
                   <span id={resolveFieldErrorId('login-password')} className="field-error">
                     {errors.password}
@@ -636,10 +695,11 @@ export const LoginScreen = ({
                 <p className="status-message__detail">
                   パスワードは保持していません。認証コードのみ入力してください。
                 </p>
+                <p className="status-message__detail">認証アプリに表示された6桁コードをそのまま入力してください。</p>
               </div>
 
-              <label className="field" htmlFor="login-factor2-code">
-                <span>認証コード</span>
+              <div className="field">
+                <label htmlFor="login-factor2-code">認証コード</label>
                 <input
                   ref={secondFactorInputRef}
                   id="login-factor2-code"
@@ -650,17 +710,22 @@ export const LoginScreen = ({
                   maxLength={6}
                   value={secondFactorCode}
                   onChange={handleSecondFactorCodeChange}
-                  placeholder="6桁コード"
                   disabled={isLoading}
                   aria-invalid={secondFactorError ? 'true' : undefined}
-                  aria-describedby={resolveFieldDescribedBy('login-factor2-code', secondFactorError)}
+                  aria-describedby={buildAriaDescribedBy(
+                    'login-factor2-code-support',
+                    resolveFieldDescribedBy('login-factor2-code', secondFactorError),
+                  )}
                 />
+                <span id="login-factor2-code-support" className="field-support">
+                  6桁の数字を入力してください。
+                </span>
                 {secondFactorError ? (
                   <span id={resolveFieldErrorId('login-factor2-code')} className="field-error">
                     {secondFactorError}
                   </span>
                 ) : null}
-              </label>
+              </div>
 
               <div className="login-form__actions">
                 <button type="submit" disabled={!canSubmitFactor2}>
@@ -673,6 +738,7 @@ export const LoginScreen = ({
                 >
                   二要素認証を中止
                 </button>
+                {factor2SubmitReason ? <p className="login-form__reason">{factor2SubmitReason}</p> : null}
               </div>
             </>
           )}
@@ -683,6 +749,7 @@ export const LoginScreen = ({
               <button type="submit" disabled={!canSubmitCredentials}>
                 {buttonLabel}
               </button>
+              {credentialsSubmitReason ? <p className="login-form__reason">{credentialsSubmitReason}</p> : null}
             </div>
           ) : null}
 
@@ -771,6 +838,11 @@ const executeSessionPost = async (endpoint: string, body: Record<string, unknown
     throw new Error('ログイン応答を取得できませんでした。');
   }
   return response;
+};
+
+const buildAriaDescribedBy = (...ids: Array<string | undefined>) => {
+  const filtered = ids.filter(Boolean);
+  return filtered.length > 0 ? filtered.join(' ') : undefined;
 };
 
 const performLogin = async (

@@ -23,6 +23,9 @@
   --ui-border: #cbd5e1;
   --ui-border-strong: #94a3b8;
   --ui-border-stronger: #64748b;
+  --ui-radius-sm: 8px;
+  --ui-radius-md: 12px;
+  --ui-radius-lg: 16px;
   --ui-primary: #1d4ed8;
   --ui-primary-contrast: #ffffff;
   --ui-module-reception: #0f766e;
@@ -30,8 +33,13 @@
   --ui-module-charts: var(--ui-primary);
   --ui-selection-bg: rgba(29, 78, 216, 0.08);
   --ui-selection-border: rgba(29, 78, 216, 0.35);
+  --ui-selected-bg: var(--ui-selection-bg);
+  --ui-selected-border: var(--ui-selection-border);
+  --ui-selected-rail: #1d4ed8;
   --ui-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
   --ui-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.06);
+  --ui-shadow-overlay: 0 20px 70px rgba(15, 23, 42, 0.25);
+  --ui-surface-elevated: #fcfdff;
   --ui-info-bg: #eff6ff;
   --ui-info-border: #93c5fd;
   --ui-info-text: #1e40af;
@@ -128,6 +136,187 @@ body {
   top: 3.4rem;
 }
 
+.odn-button {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--ui-radius-md);
+  border: 1px solid var(--ui-border);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.35;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease;
+}
+
+.odn-button:hover {
+  background: #f8fafc;
+}
+
+.odn-button:disabled,
+.odn-button[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.odn-button:disabled {
+  opacity: 0.56;
+}
+
+.odn-button[aria-disabled='true']:not(:disabled) {
+  opacity: 0.76;
+}
+
+.odn-button--primary {
+  border-color: rgba(29, 78, 216, 0.55);
+  background: var(--ui-primary);
+  color: var(--ui-primary-contrast);
+  box-shadow: var(--ui-shadow-soft);
+}
+
+.odn-button--primary:hover {
+  background: #1e40af;
+}
+
+.odn-button--secondary {
+  background: #ffffff;
+  color: var(--ui-text);
+}
+
+.odn-button--secondary:hover {
+  background: #f8fafc;
+}
+
+.odn-button--ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ui-primary);
+}
+
+.odn-button--ghost:hover {
+  background: rgba(29, 78, 216, 0.08);
+}
+
+.odn-button--danger {
+  border-color: rgba(185, 28, 28, 0.55);
+  background: #b91c1c;
+  color: #ffffff;
+  box-shadow: var(--ui-shadow-soft);
+}
+
+.odn-button--danger:hover {
+  background: #991b1b;
+}
+
+.odn-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.odn-action-bar--start {
+  justify-content: flex-start;
+}
+
+.odn-action-bar--between {
+  justify-content: space-between;
+}
+
+.odn-field {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.odn-field__label {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ui-text);
+}
+
+.odn-field__control {
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--ui-radius-md);
+  border: 1px solid var(--ui-border);
+  background: #ffffff;
+  color: var(--ui-text);
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+}
+
+.odn-field__control[aria-invalid='true'] {
+  border-color: var(--ui-error-text);
+}
+
+.odn-field__support {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--ui-text-muted);
+}
+
+.odn-inline-error {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  font-weight: 700;
+  color: var(--ui-error-text);
+}
+
+.odn-banner {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--ui-radius-lg);
+  border: 1px solid var(--ui-border);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+
+.odn-banner__title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.odn-banner__body {
+  margin: 0;
+  line-height: 1.55;
+  color: inherit;
+}
+
+.odn-banner--info {
+  border-color: var(--ui-info-border);
+  background: var(--ui-info-bg);
+  color: var(--ui-info-text);
+}
+
+.odn-banner--warning {
+  border-color: var(--ui-warning-border);
+  background: var(--ui-warning-bg);
+  color: var(--ui-warning-text);
+}
+
+.odn-banner--danger {
+  border-color: var(--ui-error-border);
+  background: var(--ui-error-bg);
+  color: var(--ui-error-text);
+}
+
 /* FocusTrapDialog (modal) */
 .focus-trap-dialog__backdrop {
   position: fixed;
@@ -144,10 +333,10 @@ body {
   width: min(720px, 100%);
   max-height: 92vh;
   overflow: auto;
-  background: #ffffff;
-  border-radius: 20px;
+  background: var(--ui-surface-elevated);
+  border-radius: calc(var(--ui-radius-lg) + 4px);
   border: 1px solid var(--ui-border);
-  box-shadow: 0 20px 70px rgba(15, 23, 42, 0.25);
+  box-shadow: var(--ui-shadow-overlay);
   padding: 1.25rem;
 }
 
@@ -189,7 +378,7 @@ body {
   font-size: 1.65rem;
   line-height: 1;
   padding: 0.25rem;
-  border-radius: 12px;
+  border-radius: var(--ui-radius-md);
   flex-shrink: 0;
 }
 
@@ -231,7 +420,7 @@ body {
   margin: 0;
   padding: 0.65rem 0.75rem;
   border: 1px solid rgba(217, 119, 6, 0.34);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-sm);
   background: rgba(255, 251, 235, 0.96);
   color: #78350f;
   font-weight: 700;
@@ -269,7 +458,7 @@ body {
   min-width: 0;
   padding: 0.6rem;
   border: 1px solid rgba(148, 163, 184, 0.26);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-sm);
   background: rgba(248, 250, 252, 0.86);
 }
 
@@ -300,7 +489,7 @@ body {
   gap: 0.55rem;
   padding: 0.65rem 0.75rem;
   border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-sm);
   background: rgba(248, 250, 252, 0.88);
   color: #334155;
   font-weight: 700;
@@ -338,7 +527,7 @@ body {
 
 .critical-operation-confirm__extra {
   padding: 0.75rem;
-  border-radius: 8px;
+  border-radius: var(--ui-radius-sm);
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: rgba(248, 250, 252, 0.88);
 }
@@ -353,7 +542,7 @@ body {
 .critical-operation-confirm__button {
   min-height: 44px;
   min-width: 44px;
-  border-radius: 8px;
+  border-radius: var(--ui-radius-md);
   border: 1px solid rgba(148, 163, 184, 0.34);
   padding: 0.6rem 0.9rem;
   background: #fff;
@@ -630,6 +819,13 @@ body {
   margin-left: 4px;
 }
 
+.field-support {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ui-text-muted);
+  margin-left: 4px;
+}
+
 .login-form__actions {
   margin-top: 1.5rem;
 }
@@ -641,6 +837,13 @@ body {
   font-weight: 600;
   line-height: 1.5;
   text-align: center;
+}
+
+.login-form__reason {
+  margin: 0.65rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--ui-text-muted);
 }
 
 .login-form__actions button {

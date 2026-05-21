@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { resolveAriaLive, resolveRunId } from '../../../libs/observability/observability';
-import { copyTextToClipboard } from '../../../libs/observability/runIdCopy';
+import { resolveAriaLive } from '../../../libs/observability/observability';
 import { safeSameOriginHttpUrl } from '../../../libs/security/safeUrl';
 import { useOptionalSession } from '../../../AppRouter';
 import { loadDeepLinkContext } from '../../../routes/deepLinkContextStorage';
 import { buildFacilityPath } from '../../../routes/facilityRoutes';
-import { useAuthService } from '../../charts/authService';
 import type { OutpatientEncounterContext } from '../../charts/encounterContext';
 import { useAppNavigation } from '../../../routes/useAppNavigation';
 import { MobilePatientPicker } from '../components/MobilePatientPicker';
@@ -16,6 +14,7 @@ import { PatientIdentityBar } from '../../shared/PatientIdentityBar';
 import { ReturnToBar } from '../../shared/ReturnToBar';
 import { StatusPill } from '../../shared/StatusPill';
 import type { FeedbackTone } from '../../shared/feedbackTone';
+import '../mobile-images-upload.css';
 
 type UploadStage = 'idle' | 'ready' | 'uploading' | 'success' | 'error';
 type MobileImagesLocationState = {
@@ -58,174 +57,33 @@ const normalizeContextValue = (value?: string | null) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-const ui = {
-  radiusMd: 12,
-  radiusLg: 16,
-  surface: 'var(--ui-surface)',
-  surfaceMuted: 'var(--ui-surface-muted)',
-  text: 'var(--ui-text)',
-  textMuted: 'var(--ui-text-muted)',
-  border: 'var(--ui-border)',
-  borderSubtle: 'var(--ui-border-subtle)',
-  borderStrong: 'var(--ui-border-strong)',
-  primary: 'var(--ui-primary)',
-  primaryContrast: 'var(--ui-primary-contrast)',
-  selectionBg: 'var(--ui-selection-bg)',
-  selectionBorder: 'var(--ui-selection-border)',
-  shadowSoft: 'var(--ui-shadow-soft)',
-  successBg: 'var(--ui-success-bg)',
-  successText: 'var(--ui-success-text)',
-  warningBg: 'var(--ui-warning-bg)',
-  warningText: 'var(--ui-warning-text)',
-  errorBg: 'var(--ui-error-bg)',
-  errorText: 'var(--ui-error-text)',
-} as const;
-
-const pageStyle = {
-  minHeight: '100vh',
-  padding: '1rem',
-  background: 'linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%)',
+const buildPickFileDisabledReason = (options: {
+  patientId?: string;
+  featureDisabled: boolean;
+  stage: UploadStage;
+}) => {
+  if (options.featureDisabled) return '機能停止中のため画像を選択できません。';
+  if (!options.patientId) return '患者を確定すると撮影または写真選択へ進めます。';
+  if (options.stage === 'uploading') return '送信中は新しい画像を選択できません。完了後に再選択してください。';
+  return undefined;
 };
 
-const frameStyle = {
-  width: 'min(760px, 100%)',
-  margin: '0 auto',
-  display: 'grid',
-  gap: '1rem',
-};
-
-const surfaceStyle = {
-  border: `1px solid ${ui.border}`,
-  borderRadius: ui.radiusLg,
-  background: ui.surface,
-  boxShadow: ui.shadowSoft,
-};
-
-const sectionStyle = {
-  ...surfaceStyle,
-  padding: '1rem',
-  display: 'grid',
-  gap: '0.85rem',
-};
-
-const statusBannerStyle = (tone: FeedbackTone) => ({
-  ...surfaceStyle,
-  padding: '0.9rem 1rem',
-  background:
-    tone === 'error' ? ui.errorBg : tone === 'success' ? ui.successBg : tone === 'warn' ? ui.warningBg : ui.selectionBg,
-  color: tone === 'error' ? ui.errorText : tone === 'success' ? ui.successText : tone === 'warn' ? ui.warningText : ui.primary,
-  fontSize: '0.98rem',
-  fontWeight: 700,
-});
-
-const stepRailStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-  gap: '0.55rem',
-};
-
-const stepChipStyle = (active = false) => ({
-  border: `1px solid ${active ? ui.selectionBorder : ui.borderSubtle}`,
-  borderRadius: ui.radiusMd,
-  padding: '0.55rem 0.7rem',
-  background: active ? ui.selectionBg : ui.surface,
-  color: ui.text,
-  fontSize: '0.88rem',
-  fontWeight: active ? 800 : 700,
-  boxShadow: active ? `inset 3px 0 0 ${ui.primary}` : 'none',
-});
-
-const chipStyle = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '0.35rem',
-  borderRadius: ui.radiusMd,
-  border: `1px solid ${ui.borderSubtle}`,
-  background: ui.surfaceMuted,
-  padding: '0.38rem 0.7rem',
-  fontSize: '0.86rem',
-  color: ui.text,
-  whiteSpace: 'nowrap',
-};
-
-const cardTitleStyle = {
-  margin: 0,
-  fontSize: '1.02rem',
-  color: ui.text,
-};
-
-const cardLeadStyle = {
-  margin: 0,
-  color: ui.textMuted,
-  lineHeight: 1.6,
-  fontSize: '0.94rem',
-};
-
-const panelHeaderStyle = {
-  display: 'grid',
-  gap: '0.2rem',
-};
-
-const actionRowStyle = {
-  display: 'grid',
-  gap: '0.65rem',
-};
-
-const ctaBaseStyle = (enabled: boolean, tone: 'primary' | 'secondary' | 'success') => ({
-  width: '100%',
-  padding: '0.95rem 1rem',
-  borderRadius: ui.radiusLg,
-  border: `1px solid ${tone === 'secondary' ? ui.borderStrong : ui.primary}`,
-  background:
-    tone === 'secondary'
-      ? ui.surface
-      : tone === 'success'
-        ? enabled
-          ? '#0f766e'
-          : '#94a3b8'
-        : enabled
-          ? ui.primary
-          : '#94a3b8',
-  color: tone === 'secondary' ? ui.text : ui.primaryContrast,
-  fontSize: '1.04rem',
-  fontWeight: 800,
-  boxShadow: enabled ? ui.shadowSoft : 'none',
-});
-
-const quietButtonStyle = {
-  width: '100%',
-  padding: '0.88rem 1rem',
-  borderRadius: ui.radiusLg,
-  border: `1px solid ${ui.borderStrong}`,
-  background: ui.surface,
-  color: ui.text,
-  fontSize: '1rem',
-  fontWeight: 800,
-};
-
-const imagePreviewStyle = {
-  width: '100%',
-  maxHeight: 240,
-  objectFit: 'contain',
-  background: ui.surfaceMuted,
-  borderRadius: ui.radiusMd,
-  border: `1px solid ${ui.border}`,
-} as const;
-
-const listItemStyle = {
-  border: `1px solid ${ui.border}`,
-  borderRadius: ui.radiusMd,
-  padding: '0.8rem',
-  display: 'grid',
-  gap: '0.45rem',
-  background: ui.surface,
+const buildSendDisabledReason = (options: {
+  patientId?: string;
+  selectedFile: File | null;
+  featureDisabled: boolean;
+  stage: UploadStage;
+}) => {
+  if (options.featureDisabled) return '機能停止中のため送信できません。';
+  if (!options.patientId) return '患者が未確定のため送信できません。患者を選び直してください。';
+  if (!options.selectedFile) return '画像を1件選択すると送信できます。';
+  if (options.stage === 'uploading') return '送信中です。完了メッセージが表示されるまでお待ちください。';
+  return undefined;
 };
 
 export function MobileImagesUploadPage() {
   const session = useOptionalSession();
   const location = useLocation();
-  const { flags } = useAuthService();
-  const resolvedRunId = resolveRunId(flags.runId);
   const appNav = useAppNavigation({ facilityId: session?.facilityId, userId: session?.userId });
   const locationState = (location.state as MobileImagesLocationState | null) ?? null;
   const queryParams = useMemo(
@@ -244,10 +102,8 @@ export function MobileImagesUploadPage() {
     const departmentCode = normalizeContextValue(stateEncounter?.departmentCode);
     const physicianCode = normalizeContextValue(stateEncounter?.physicianCode);
     const insuranceCombinationNumber = normalizeContextValue(stateEncounter?.insuranceCombinationNumber);
-    const encounterKey = normalizeContextValue(stateEncounter?.encounterKey);
-    const scheduleKey = normalizeContextValue(stateEncounter?.scheduleKey);
     const hasContext = Boolean(
-      visitDate || departmentCode || physicianCode || insuranceCombinationNumber || encounterKey || scheduleKey,
+      visitDate || departmentCode || physicianCode || insuranceCombinationNumber,
     );
     if (!hasContext) return undefined;
     return {
@@ -255,18 +111,17 @@ export function MobileImagesUploadPage() {
       department: departmentCode ? `診療科コード ${departmentCode}` : undefined,
       physician: physicianCode ? `担当医コード ${physicianCode}` : undefined,
       insuranceCombination: insuranceCombinationNumber ? `保険組合せ ${insuranceCombinationNumber}` : undefined,
-      internalPatientId: encounterKey ?? scheduleKey,
       orcaSourceLabel: '遷移文脈',
       orcaCacheStatus: 'unverified',
     };
   }, [stateEncounter]);
   const resolvedPatientId = patientIdParam ?? statePatientId ?? deepLinkPatientId;
   const resolvedPatientSourceLabel = patientIdParam
-    ? '入口 query patientId'
+    ? '遷移入口'
     : statePatientId
       ? '遷移文脈'
       : deepLinkPatientId
-        ? '一時文脈'
+        ? '一時引き継ぎ'
         : '未確定';
   const fallbackUrl = useMemo(() => {
     const facilityId = session?.facilityId;
@@ -373,6 +228,8 @@ export function MobileImagesUploadPage() {
 
   const canPickFile = Boolean(patientId) && stage !== 'uploading' && !featureDisabled;
   const canSend = Boolean(patientId) && Boolean(selectedFile) && stage !== 'uploading' && !featureDisabled;
+  const pickFileDisabledReason = buildPickFileDisabledReason({ patientId, featureDisabled, stage });
+  const sendDisabledReason = buildSendDisabledReason({ patientId, selectedFile, featureDisabled, stage });
 
   const handleFilePicked = useCallback(
     (file: File | null) => {
@@ -450,56 +307,23 @@ export function MobileImagesUploadPage() {
   }, [patientId]);
 
   const statusTone: FeedbackTone = stage === 'error' ? 'error' : stage === 'success' ? 'success' : 'info';
-  const [copyFeedback, setCopyFeedback] = useState<string>('');
-
-  const handleCopyRunId = useCallback(async () => {
-    if (!resolvedRunId) return;
-    try {
-      await copyTextToClipboard(resolvedRunId);
-      setCopyFeedback('RUN_ID をコピーしました。');
-    } catch {
-      setCopyFeedback('RUN_ID のコピーに失敗しました。');
-    }
-  }, [resolvedRunId]);
-
   const header = useMemo(() => {
     return (
-      <header style={{ display: 'grid', gap: '0.55rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div style={{ display: 'grid', gap: '0.15rem' }}>
-            <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748b' }}>
-              patient-specific upload / reference
-            </p>
-            <h1 style={{ margin: 0, fontSize: '1.35rem', letterSpacing: '-0.02em', color: ui.text }}>画像アップロード</h1>
+      <header className="mobile-images-page__header">
+        <div className="mobile-images-page__header-row">
+          <div className="mobile-images-page__header-copy">
+            <p className="mobile-images-page__eyebrow">patient-specific upload / reference</p>
+            <h1 className="mobile-images-page__title">画像アップロード</h1>
           </div>
-          <span style={{ ...chipStyle, alignItems: 'center' }}>
-            <span>RUN_ID: {resolvedRunId ?? '―'}</span>
-            {resolvedRunId ? (
-              <button
-                type="button"
-                onClick={handleCopyRunId}
-                style={{ border: 'none', background: 'transparent', color: ui.primary, padding: 0, fontSize: '0.8rem', cursor: 'pointer' }}
-              >
-                コピー
-              </button>
-            ) : null}
-          </span>
         </div>
-        <p style={{ margin: 0, fontSize: '0.95rem', color: ui.textMuted }}>
-          患者を特定して、撮影または写真を選択し、送信します。
-        </p>
-        {copyFeedback ? (
-          <p style={{ margin: 0, fontSize: '0.85rem', color: ui.textMuted }} role="status" aria-live={infoLive}>
-            {copyFeedback}
-          </p>
-        ) : null}
+        <p className="mobile-images-page__lead">患者を特定して、撮影または写真を選択し、送信します。</p>
       </header>
     );
-  }, [copyFeedback, handleCopyRunId, infoLive, resolvedRunId]);
+  }, []);
 
   return (
-    <main data-test-id="mobile-images-page" style={pageStyle}>
-      <div style={frameStyle}>
+    <main data-test-id="mobile-images-page" className="mobile-images-page">
+      <div className="mobile-images-page__frame">
         <ReturnToBar
           scope={{ facilityId: session?.facilityId, userId: session?.userId }}
           returnTo={appNav.safeReturnToCandidate}
@@ -512,7 +336,6 @@ export function MobileImagesUploadPage() {
           <PatientIdentityBar
             eyebrow="患者画像アップロード / 参照"
             patientId={patientId}
-            internalPatientId={encounterSafetyContext?.internalPatientId}
             patientName={patientId ? undefined : '患者未確定'}
             acceptanceDate={encounterSafetyContext?.acceptanceDate}
             department={encounterSafetyContext?.department}
@@ -520,7 +343,7 @@ export function MobileImagesUploadPage() {
             insuranceCombination={encounterSafetyContext?.insuranceCombination}
             orcaSourceLabel={encounterSafetyContext?.orcaSourceLabel}
             orcaCacheStatus={encounterSafetyContext?.orcaCacheStatus}
-            note="画面内で患者を選び直せます。URL 由来の patientId は画面遷移後に保持しません。"
+            note="画面内で患者を選び直せます。遷移元の患者文脈はこの画面内だけで扱います。"
             chips={
               <>
                 <StatusPill tone="neutral" size="xs">患者文脈: {resolvedPatientSourceLabel}</StatusPill>
@@ -539,10 +362,10 @@ export function MobileImagesUploadPage() {
           />
         </div>
 
-        <nav style={stepRailStyle} aria-label="画像アップロードの3ステップ">
-          <div style={stepChipStyle(Boolean(patientId))}>1 患者特定</div>
-          <div style={stepChipStyle(Boolean(selectedFile))}>2 撮影・アップロード</div>
-          <div style={stepChipStyle(stage === 'success')}>3 完了・参照</div>
+        <nav className="mobile-images-page__step-rail" aria-label="画像アップロードの3ステップ">
+          <div className={`mobile-images-page__step-chip${patientId ? ' is-active' : ''}`}>1 患者特定</div>
+          <div className={`mobile-images-page__step-chip${selectedFile ? ' is-active' : ''}`}>2 撮影・アップロード</div>
+          <div className={`mobile-images-page__step-chip${stage === 'success' ? ' is-active' : ''}`}>3 完了・参照</div>
         </nav>
 
         <div
@@ -550,37 +373,33 @@ export function MobileImagesUploadPage() {
           aria-live={stage === 'error' ? errorLive : infoLive}
           aria-atomic="true"
           data-test-id="mobile-images-status"
-          style={statusBannerStyle(statusTone)}
+          className={`mobile-images-page__status mobile-images-page__status--${statusTone}`}
         >
           {statusText}
         </div>
 
-        <section
-          style={{
-            ...sectionStyle,
-            borderLeft: `3px solid ${ui.primary}`,
-          }}
-        >
-          <div style={panelHeaderStyle}>
-            <h2 style={cardTitleStyle}>1) 患者特定</h2>
-            <p style={cardLeadStyle}>患者ID を確定してから撮影・参照に進みます。</p>
+        <section className="mobile-images-page__section mobile-images-page__section--primary">
+          <div className="mobile-images-page__section-header">
+            <h2 className="mobile-images-page__section-title">1) 患者特定</h2>
+            <p className="mobile-images-page__section-lead">患者ID を確定してから撮影・参照に進みます。</p>
           </div>
           <MobilePatientPicker title="患者ID入力" selectedPatientId={undefined} onSelect={(pid) => setPatientId(pid)} />
         </section>
 
-        <section
-          style={{
-            ...sectionStyle,
-            borderLeft: `3px solid ${ui.text}`,
-          }}
-        >
-          <div style={panelHeaderStyle}>
-            <h2 style={cardTitleStyle}>2) 撮影 / アップロード</h2>
-            <p style={cardLeadStyle}>撮影か写真選択のどちらかで画像を選び、送信前に内容を確認します。</p>
+        <section className="mobile-images-page__section mobile-images-page__section--neutral">
+          <div className="mobile-images-page__section-header">
+            <h2 className="mobile-images-page__section-title">2) 撮影 / アップロード</h2>
+            <p className="mobile-images-page__section-lead">撮影か写真選択のどちらかで画像を選び、送信前に内容を確認します。</p>
           </div>
 
-          <div style={actionRowStyle}>
-            <button type="button" style={ctaBaseStyle(canPickFile, 'primary')} disabled={!canPickFile} onClick={openCapturePicker}>
+          <div className="mobile-images-page__action-stack">
+            <button
+              type="button"
+              className="odn-button odn-button--primary mobile-images-page__cta"
+              disabled={!canPickFile}
+              onClick={openCapturePicker}
+              aria-describedby={pickFileDisabledReason ? 'mobile-images-pick-disabled-reason' : undefined}
+            >
               撮影して送る
             </button>
             <input
@@ -590,11 +409,17 @@ export function MobileImagesUploadPage() {
               accept="image/*"
               capture="environment"
               disabled={!canPickFile}
-              style={{ display: 'none' }}
+              className="mobile-images-page__file-input"
               onChange={(event) => handleFilePicked(event.target.files?.[0] ?? null)}
             />
 
-            <button type="button" style={ctaBaseStyle(canPickFile, 'secondary')} disabled={!canPickFile} onClick={openFilePicker}>
+            <button
+              type="button"
+              className="odn-button odn-button--secondary mobile-images-page__cta"
+              disabled={!canPickFile}
+              onClick={openFilePicker}
+              aria-describedby={pickFileDisabledReason ? 'mobile-images-pick-disabled-reason' : undefined}
+            >
               写真を選んで送る
             </button>
             <input
@@ -603,91 +428,96 @@ export function MobileImagesUploadPage() {
               type="file"
               accept="image/*"
               disabled={!canPickFile}
-              style={{ display: 'none' }}
+              className="mobile-images-page__file-input"
               onChange={(event) => handleFilePicked(event.target.files?.[0] ?? null)}
             />
+            {pickFileDisabledReason ? (
+              <p id="mobile-images-pick-disabled-reason" className="mobile-images-page__action-reason">
+                {pickFileDisabledReason}
+              </p>
+            ) : null}
           </div>
 
           {selectedFile ? (
-            <div style={{ display: 'grid', gap: '0.55rem' }}>
-              <div style={{ fontSize: '0.95rem', color: ui.textMuted }}>
-                選択中: <strong style={{ color: ui.text }}>{selectedFile.name}</strong>（{formatBytes(selectedFile.size)}）
+            <div className="mobile-images-page__file-summary" data-test-id="mobile-image-selected-summary">
+              <div className="mobile-images-page__file-summary-main">
+                選択中: <strong>{selectedFile.name}</strong>
+              </div>
+              <div className="mobile-images-page__file-summary-meta">
+                <span>サイズ: {formatBytes(selectedFile.size)}</span>
+                <span>形式: {selectedFile.type || '不明'}</span>
+                <span>最終更新: {new Date(selectedFile.lastModified).toLocaleString('ja-JP', { hour12: false })}</span>
               </div>
               {previewUrl ? (
-                <img data-test-id="mobile-image-preview" src={previewUrl} alt={selectedFile.name} style={imagePreviewStyle} />
+                <img data-test-id="mobile-image-preview" src={previewUrl} alt={selectedFile.name} className="mobile-images-page__preview" />
               ) : null}
             </div>
-          ) : null}
+          ) : (
+            <p className="mobile-images-page__empty-note">まだ画像が選択されていません。撮影または写真選択を行ってください。</p>
+          )}
 
-          <div style={{ display: 'grid', gap: '0.5rem' }}>
+          <div className="mobile-images-page__send-area">
             <button
               type="button"
               data-test-id="mobile-image-send"
               ref={sendButtonRef}
               onClick={handleSend}
               disabled={!canSend}
-              style={ctaBaseStyle(canSend, 'success')}
+              className="odn-button odn-button--primary mobile-images-page__cta mobile-images-page__cta--success"
+              aria-describedby={sendDisabledReason ? 'mobile-images-send-disabled-reason' : undefined}
             >
               {stage === 'uploading' ? '送信中…' : '送信'}
             </button>
+            {sendDisabledReason ? (
+              <p id="mobile-images-send-disabled-reason" className="mobile-images-page__action-reason">
+                {sendDisabledReason}
+              </p>
+            ) : null}
             {stage === 'uploading' ? (
-              <div data-test-id="mobile-image-progress" style={{ fontSize: '0.9rem', color: ui.textMuted }}>
+              <div data-test-id="mobile-image-progress" className="mobile-images-page__progress">
                 {progress.mode === 'real' && typeof progress.percent === 'number' ? `進捗: ${progress.percent}%` : '進捗: 送信中…'}
               </div>
             ) : null}
             {stage === 'error' && lastError ? (
-              <button type="button" data-test-id="mobile-image-retry" onClick={handleRetry} style={quietButtonStyle}>
+              <button type="button" data-test-id="mobile-image-retry" onClick={handleRetry} className="odn-button odn-button--secondary mobile-images-page__cta">
                 再試行
               </button>
             ) : null}
+            {stage === 'error' && lastError ? (
+              <p className="mobile-images-page__failure-note">送信は完了していません。患者文脈と選択ファイルを確認して再試行してください。</p>
+            ) : null}
             {!patientId ? (
-              <p
-                data-test-id="mobile-images-missing-patient"
-                role="alert"
-                style={{ margin: 0, fontSize: '0.9rem', color: ui.errorText, lineHeight: 1.6 }}
-              >
+              <p data-test-id="mobile-images-missing-patient" role="alert" className="mobile-images-page__failure-note">
                 患者文脈が引き継がれていないため送信できません。この画面だけでは再開できないので、戻り導線から患者を選び直してください。
               </p>
             ) : null}
           </div>
         </section>
 
-        <section
-          style={{
-            ...sectionStyle,
-            borderLeft: `3px solid ${ui.successText}`,
-          }}
-        >
-          <div style={panelHeaderStyle}>
-            <h2 style={cardTitleStyle}>3) 完了 / 参照</h2>
-            <p style={cardLeadStyle}>送信済み画像は最新のものから確認できます。</p>
+        <section className="mobile-images-page__section mobile-images-page__section--success">
+          <div className="mobile-images-page__section-header">
+            <h2 className="mobile-images-page__section-title">3) 完了 / 参照</h2>
+            <p className="mobile-images-page__section-lead">送信済み画像は最新のものから確認できます。</p>
           </div>
           {!patientId ? (
-            <p style={{ margin: 0, fontSize: '0.95rem', color: ui.textMuted }}>患者情報が取得できないため一覧を表示できません。</p>
+            <p className="mobile-images-page__empty-note">患者情報が取得できないため一覧を表示できません。</p>
           ) : listItems.length === 0 ? (
-            <p style={{ margin: 0, fontSize: '0.95rem', color: ui.textMuted }}>画像はまだありません。</p>
+            <p className="mobile-images-page__empty-note">画像はまだありません。</p>
           ) : (
-            <ul data-test-id="mobile-images-list" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.6rem' }}>
+            <ul data-test-id="mobile-images-list" className="mobile-images-page__list">
               {listItems.slice(0, 6).map((item) => {
                 const safeDownloadUrl = safeSameOriginHttpUrl(item.downloadUrl);
                 return (
-                  <li key={item.imageId} style={listItemStyle}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'baseline' }}>
-                      <strong style={{ fontSize: '0.95rem', color: ui.text }}>{item.fileName ?? item.imageId}</strong>
-                      <span style={{ fontSize: '0.85rem', color: ui.textMuted }}>{formatBytes(item.size)}</span>
+                  <li key={item.imageId} className="mobile-images-page__list-item">
+                    <div className="mobile-images-page__list-item-header">
+                      <strong>{item.fileName ?? item.imageId}</strong>
+                      <span>{formatBytes(item.size)}</span>
                     </div>
                     {safeDownloadUrl ? (
                       <img
                         src={safeDownloadUrl}
                         alt={item.fileName ?? 'thumbnail'}
-                        style={{
-                          width: '100%',
-                          maxHeight: 150,
-                          objectFit: 'contain',
-                          background: ui.surfaceMuted,
-                          borderRadius: ui.radiusMd,
-                          border: `1px solid ${ui.borderSubtle}`,
-                        }}
+                        className="mobile-images-page__thumbnail"
                       />
                     ) : null}
                     {safeDownloadUrl ? (
@@ -698,12 +528,12 @@ export function MobileImagesUploadPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={`参照リンクを開く: ${item.fileName ?? item.imageId}`}
-                        style={{ fontSize: '0.95rem', color: ui.primary, fontWeight: 700 }}
+                        className="mobile-images-page__download-link"
                       >
                         参照リンクを開く
                       </a>
                     ) : (
-                      <span style={{ fontSize: '0.9rem', color: ui.textMuted }}>参照リンク: (未提供)</span>
+                      <span className="mobile-images-page__missing-link">参照リンク: (未提供)</span>
                     )}
                   </li>
                 );

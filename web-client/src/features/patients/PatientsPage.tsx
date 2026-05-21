@@ -361,6 +361,43 @@ const buildAddressLookupDisabledReason = (blocking: boolean, zip: string, pendin
   return undefined;
 };
 
+const buildPatientsSaveDisabledReason = (options: {
+  pending: boolean;
+  blocking: boolean;
+  blockReasons: string[];
+  liveValidationCount: number;
+  editorMode: PatientsEditorMode;
+  patientId: string;
+}) => {
+  if (options.pending) {
+    return '保存処理中です。結果が表示されるまでお待ちください。';
+  }
+  if (options.blocking) {
+    return `編集ブロック中です。${options.blockReasons.join(' / ')}`;
+  }
+  if (options.editorMode === 'update' && !options.patientId.trim()) {
+    return '患者を選択すると既存患者更新を実行できます。';
+  }
+  if (options.liveValidationCount > 0) {
+    return `未入力または形式不備の項目があります。${options.liveValidationCount}件の入力エラーを解消してください。`;
+  }
+  return undefined;
+};
+
+const buildPatientsModeChangeReason = (options: {
+  pending: boolean;
+  editorMode: PatientsEditorMode;
+  hasBaseline: boolean;
+}) => {
+  if (options.pending) {
+    return '保存または取込の完了後に切り替えてください。';
+  }
+  if (options.editorMode === 'update' && options.hasBaseline) {
+    return undefined;
+  }
+  return '既存患者を選択すると更新モードへ戻れます。';
+};
+
 const clampSidebarWidth = (value: number) => Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, value));
 
 const resolveUnlinkedState = (patient?: PatientRecord | null) => {
@@ -1842,6 +1879,19 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     event.preventDefault();
     void save(editorMode);
   };
+  const saveDisabledReason = buildPatientsSaveDisabledReason({
+    pending: mutation.isPending,
+    blocking,
+    blockReasons,
+    liveValidationCount,
+    editorMode,
+    patientId: form.patientId ?? '',
+  });
+  const modeChangeDisabledReason = buildPatientsModeChangeReason({
+    pending: mutation.isPending || importMutation.isPending,
+    editorMode,
+    hasBaseline: Boolean(baseline),
+  });
 
   const onFilterChange = (key: keyof typeof DEFAULT_FILTER, value: string) => {
     setDraftFilters((prev) => ({ ...prev, [key]: value }));
@@ -2170,6 +2220,9 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               <div className="patients-search__actions">
                 <span className="patients-page__field-help">
                   local search は氏名・カナ・患者番号・電話・郵便番号のみを使います。未使用の詳細条件はこの画面から外しています。
+                </span>
+                <span className="patients-page__field-help patients-page__boundary-note">
+                  一覧検索は院内ローカル、登録・更新・取込は ORCA 正本の再取得で同期確認します。
                 </span>
                 <button type="button" className="patients-search__button ghost" onClick={() => patientsQuery.refetch()}>
                   再取得
@@ -2570,6 +2623,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                   setValidationErrors([]);
                   setLastAttempt(null);
                 }}
+                aria-describedby={modeChangeDisabledReason ? 'patients-form-mode-disabled-reason' : undefined}
               >
                 更新モードへ戻る
               </button>
@@ -2579,12 +2633,33 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 disabled={!importSelectedPatientId || importMutation.isPending || mutation.isPending}
                 onClick={() => importSelectedPatientId && importMutation.mutate(importSelectedPatientId)}
                 title={importSelectedPatientId ? 'ORCA既存患者の情報を再取得します' : '患者IDが必要です'}
+                aria-describedby={selectedImportDisabledReason ? 'patients-form-import-disabled-reason' : undefined}
               >
                 {importMutation.isPending ? 'ORCA既存患者取込中…' : 'ORCA既存患者取込'}
               </button>
-              <button type="submit" disabled={saveDisabled}>
+              <button type="submit" disabled={saveDisabled} aria-describedby={saveDisabledReason ? 'patients-form-save-disabled-reason' : undefined}>
                 {mutation.isPending ? '送信中…' : editorMode === 'create' ? '新患登録を実行' : '既存患者更新を実行'}
               </button>
+            </div>
+            <div className="patients-page__form-action-support" aria-live="polite">
+              {saveDisabledReason ? (
+                <p id="patients-form-save-disabled-reason" className="patients-page__field-help patients-page__action-reason">
+                  {saveDisabledReason}
+                </p>
+              ) : null}
+              {selectedImportDisabledReason ? (
+                <p id="patients-form-import-disabled-reason" className="patients-page__field-help patients-page__action-reason">
+                  {selectedImportDisabledReason}
+                </p>
+              ) : null}
+              {modeChangeDisabledReason ? (
+                <p id="patients-form-mode-disabled-reason" className="patients-page__field-help patients-page__action-reason">
+                  {modeChangeDisabledReason}
+                </p>
+              ) : null}
+              <p className="patients-page__field-help patients-page__boundary-note">
+                この画面の一覧と編集中表示は院内ローカルです。保存・取込の完了表示は ORCA 正本の再取得による同期確認状況として扱います。
+              </p>
             </div>
           </div>
 
@@ -2652,7 +2727,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
 
           <PatientFormErrorAlert errors={displayedValidationErrors} onFocusField={focusField} />
 
-          <fieldset className="patients-page__grid" disabled={blocking}>
+          <fieldset className="patients-page__grid">
             <label>
               <span>患者ID</span>
               <input

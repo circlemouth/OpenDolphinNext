@@ -255,7 +255,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
       ],
     });
 
-    await user.click(screen.getByRole('button', { name: '銘柄指定' }));
+    await user.click(screen.getByRole('checkbox', { name: 'RP1 薬剤1 一般名指定' }));
     await user.click(screen.getByRole('button', { name: '保存' }));
 
     await waitFor(() => {

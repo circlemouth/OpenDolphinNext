@@ -276,7 +276,8 @@ describe('SoapNotePanel UI regression', () => {
     const saveButton = within(soapActions as HTMLElement).getByRole('button', { name: '保存' });
     const reason = screen.getByText('保存はブロックされています: 確定済み診療録のため保存できません。');
 
-    expect(saveButton).toBeDisabled();
+    expect(saveButton).not.toBeDisabled();
+    expect(saveButton).toHaveAttribute('aria-disabled', 'true');
     expect(reason).toHaveAttribute('id', 'soap-note-save-block-reason');
     expect(saveButton).toHaveAttribute('aria-describedby', 'soap-note-save-block-reason');
     expect(saveButton).toHaveAttribute('title', '確定済み診療録のため保存できません。');
@@ -304,10 +305,72 @@ describe('SoapNotePanel UI regression', () => {
     expect(soapActions).not.toBeNull();
     const saveButton = within(soapActions as HTMLElement).getByRole('button', { name: '保存' });
 
-    expect(saveButton).toBeDisabled();
+    expect(saveButton).not.toBeDisabled();
+    expect(saveButton).toHaveAttribute('aria-disabled', 'true');
     expect(saveButton).not.toHaveAttribute('aria-describedby');
     expect(saveButton).toHaveAttribute('title', '別タブが編集中です（runId=RUN-OWNER）');
     expect(screen.queryByText('保存はブロックされています: 別タブが編集中です（runId=RUN-OWNER）')).not.toBeInTheDocument();
     expect(screen.queryByText('読み取り専用: 別タブが編集中です（runId=RUN-OWNER）')).not.toBeInTheDocument();
+  });
+
+  it('履歴表示中の保存は押下時に停止理由を表示して save request を実行しない', async () => {
+    const user = userEvent.setup();
+    const onSaveRequestResult = vi.fn();
+    vi.mocked(postChartSubjectiveEntry).mockClear();
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    const rendered = render(
+      <QueryClientProvider client={client}>
+        <SoapNotePanel
+          history={[]}
+          meta={{
+            runId: 'RUN-SOAP-HISTORY-BLOCK',
+            patientId: 'P-001',
+            appointmentId: 'APT-001',
+            receptionId: 'RCP-001',
+            visitDate: '2026-03-01',
+          }}
+          author={{ role: 'doctor', displayName: 'Dr. Test', userId: 'doctor01' }}
+          orderBundles={[]}
+          onSaveRequestResult={onSaveRequestResult}
+        />
+      </QueryClientProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: '履歴表示' }));
+
+    rendered.rerender(
+      <QueryClientProvider client={client}>
+        <SoapNotePanel
+          history={[]}
+          meta={{
+            runId: 'RUN-SOAP-HISTORY-BLOCK',
+            patientId: 'P-001',
+            appointmentId: 'APT-001',
+            receptionId: 'RCP-001',
+            visitDate: '2026-03-01',
+          }}
+          author={{ role: 'doctor', displayName: 'Dr. Test', userId: 'doctor01' }}
+          orderBundles={[]}
+          saveRequest={{ token: 'save-request-1', reason: 'guard-check' }}
+          onSaveRequestResult={onSaveRequestResult}
+        />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByText('履歴表示中は保存できません。');
+    expect(onSaveRequestResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        token: 'save-request-1',
+        ok: false,
+        error: 'history_view',
+      }),
+    );
+    expect(postChartSubjectiveEntry).not.toHaveBeenCalled();
   });
 });
