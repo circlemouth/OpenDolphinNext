@@ -129,6 +129,8 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
     expect(document.querySelector('[data-test-id="mobile-image-send"]')).toBeDisabled();
     expect(document.querySelector('[data-test-id="mobile-image-capture-input"]')).toBeDisabled();
     expect(document.querySelector('[data-test-id="mobile-image-file-input"]')).toBeDisabled();
+    expect(screen.getByText('患者を確定すると撮影または写真選択へ進めます。')).toBeInTheDocument();
+    expect(screen.getByText('患者が未確定のため送信できません。患者を選び直してください。')).toBeInTheDocument();
     expect(vi.mocked(fetchPatientImageList)).not.toHaveBeenCalled();
   });
 
@@ -211,8 +213,33 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
     await user.click(screen.getByRole('button', { name: '送信' }));
 
     expect(await screen.findByText('送信に失敗しました。時間をおいて再試行してください。')).toBeInTheDocument();
+    expect(screen.getByText('送信は完了していません。患者文脈と選択ファイルを確認して再試行してください。')).toBeInTheDocument();
     expect(screen.queryByText(/java\.sql\.SQLException/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^debug:/)).not.toBeInTheDocument();
+  });
+
+  it('選択したファイルの要約を表示する', async () => {
+    saveDeepLinkContext({ patientId: '123' });
+
+    render(
+      <MemoryRouter initialEntries={['/f/0001/m/images']}>
+        <MobileImagesUploadPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(vi.mocked(fetchPatientImageList)).toHaveBeenCalledWith('123');
+    });
+
+    const fileInput = document.querySelector('[data-test-id="mobile-image-file-input"]') as HTMLInputElement;
+    const file = new File(['image'], 'upload.jpg', { type: 'image/jpeg', lastModified: Date.parse('2026-05-21T12:34:56Z') });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    const summary = document.querySelector('[data-test-id="mobile-image-selected-summary"]');
+    expect(summary).not.toBeNull();
+    expect(summary).toHaveTextContent('upload.jpg');
+    expect(summary).toHaveTextContent('形式: image/jpeg');
+    expect(summary).toHaveTextContent('サイズ: 5 B');
   });
 
   it('再試行で送信ボタンへ focus を戻す', async () => {
