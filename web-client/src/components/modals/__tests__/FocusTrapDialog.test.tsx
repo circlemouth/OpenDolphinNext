@@ -4,6 +4,34 @@ import { describe, expect, it, vi } from 'vitest';
 import { FocusTrapDialog } from '../FocusTrapDialog';
 
 describe('FocusTrapDialog', () => {
+  it('既定では背景クリックで閉じない', () => {
+    const onClose = vi.fn();
+    render(
+      <FocusTrapDialog open title="確認" onClose={onClose} testId="dialog-backdrop">
+        <button type="button">実行</button>
+      </FocusTrapDialog>,
+    );
+
+    const backdrop = document.querySelector('[data-test-id="dialog-backdrop"]');
+    expect(backdrop).not.toBeNull();
+    fireEvent.mouseDown(backdrop as Element);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('closeOnBackdrop=true の場合は背景クリックで閉じる', () => {
+    const onClose = vi.fn();
+    render(
+      <FocusTrapDialog open title="確認" onClose={onClose} closeOnBackdrop testId="dialog-backdrop">
+        <button type="button">実行</button>
+      </FocusTrapDialog>,
+    );
+
+    const backdrop = document.querySelector('[data-test-id="dialog-backdrop"]');
+    expect(backdrop).not.toBeNull();
+    fireEvent.mouseDown(backdrop as Element);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('closeOnBackdrop=false の場合は背景クリックで閉じない', () => {
     const onClose = vi.fn();
     render(

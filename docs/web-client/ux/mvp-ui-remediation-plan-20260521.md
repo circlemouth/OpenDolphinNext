@@ -76,6 +76,11 @@ MVP UIとしての合格条件は、「全画面を完全にDADS準拠へ作り�
   - `PageBanner/SectionBanner` または `.odn-banner`
 - `FocusTrapDialog` の `closeOnBackdrop` 既定値を `false` にする。既存挙動としてbackdrop closeが必要な箇所だけ明示的に `closeOnBackdrop={true}` を指定する。
 - `CriticalOperationConfirmDialog` は `closeOnBackdrop={false}` を維持し、患者識別・操作名・distinct confirm labelを壊さない。
+- Foundation 実装メモ:
+  - `global.css` に `--ui-radius-sm=8px`, `--ui-radius-md=12px`, `--ui-radius-lg=16px`, `--ui-selected-bg`, `--ui-selected-border`, `--ui-selected-rail`, `--ui-shadow-overlay`, `--ui-surface-elevated` を追加し、Patients / Reception / Charts / app shell の未定義参照を解消する。
+  - 後続が使う最小共通 class は `.odn-button`, `.odn-button--primary`, `.odn-button--secondary`, `.odn-button--ghost`, `.odn-button--danger`, `.odn-action-bar`, `.odn-action-bar--start`, `.odn-action-bar--between`, `.odn-field`, `.odn-field__label`, `.odn-field__control`, `.odn-field__support`, `.odn-inline-error`, `.odn-banner`, `.odn-banner--info`, `.odn-banner--warning`, `.odn-banner--danger` とする。
+  - `FocusTrapDialog` は backdrop close 既定を禁止し、明示 caller だけ opt-in する。Foundation 時点の opt-in caller は `features/administration/components/ConfirmDialog.tsx` の pending 連動 confirm だけとする。
+  - `CriticalOperationConfirmDialog` の action row は `odn-action-bar` と `odn-button` contract を併用し、重大操作 confirm の 44px target と primary/danger 階層を維持する。
 
 ### Phase 2: Reception MVP UI
 
@@ -200,6 +205,7 @@ WebORCA Trial接続が必要な場合は、既存QAスクリプトと安全なre
 - `FocusTrapDialog` は `closeOnBackdrop` の既定値を `false` にする。
   - backdrop clickで閉じる必要がある既存callerだけ明示的に `closeOnBackdrop={true}` を渡す。
   - 重大操作confirmではbackdrop closeを許可しない。
+- Foundation 実装では `features/administration/components/ConfirmDialog.tsx` を backdrop close opt-in caller として維持し、それ以外は dialog 内 close control または Escape を正規 close 導線にする。
 - DADS方針に沿い、primary/secondary/tertiary/dangerの意味と配置を最低限統一する。
 
 ## Reception
