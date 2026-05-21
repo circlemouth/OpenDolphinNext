@@ -116,11 +116,26 @@ describe('CriticalOperationConfirmDialog', () => {
     const cancelButton = within(dialog).getByRole('button', { name: 'キャンセル' });
     const confirmButton = within(dialog).getByRole('button', { name: '診察終了して会計へ送信する' });
 
-    expect(cancelButton).toHaveClass('critical-operation-confirm__button', 'critical-operation-confirm__button--secondary');
-    expect(confirmButton).toHaveClass('critical-operation-confirm__button', 'critical-operation-confirm__button--primary');
+    expect(cancelButton).toHaveClass(
+      'critical-operation-confirm__button',
+      'critical-operation-confirm__button--secondary',
+      'odn-button',
+      'odn-button--secondary',
+    );
+    expect(confirmButton).toHaveClass(
+      'critical-operation-confirm__button',
+      'critical-operation-confirm__button--primary',
+      'odn-button',
+      'odn-button--primary',
+    );
 
     const globalCss = readFileSync(resolve(process.cwd(), 'src/styles/global.css'), 'utf8');
     expect(globalCss).toMatch(/\.critical-operation-confirm__button\s*\{[^}]*min-height:\s*44px/s);
     expect(globalCss).toMatch(/\.critical-operation-confirm__button\s*\{[^}]*min-width:\s*44px/s);
+    expect(globalCss).toContain('.odn-button');
+    expect(globalCss).toContain('.odn-action-bar');
+    expect(globalCss).toContain('.odn-field');
+    expect(globalCss).toContain('.odn-inline-error');
+    expect(globalCss).toContain('.odn-banner');
   });
 });

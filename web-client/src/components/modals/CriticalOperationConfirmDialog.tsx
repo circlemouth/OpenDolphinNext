@@ -121,10 +121,10 @@ export function CriticalOperationConfirmDialog({
           </section>
         ) : null}
         {extraContent ? <div className="critical-operation-confirm__extra">{extraContent}</div> : null}
-        <div className="critical-operation-confirm__actions" role="group" aria-label={`${operationLabel}操作`}>
+        <div className="critical-operation-confirm__actions odn-action-bar" role="group" aria-label={`${operationLabel}操作`}>
           <button
             type="button"
-            className="critical-operation-confirm__button critical-operation-confirm__button--secondary"
+            className="critical-operation-confirm__button critical-operation-confirm__button--secondary odn-button odn-button--secondary"
             onClick={onCancel}
             disabled={cancelDisabled}
             aria-disabled={cancelDisabled || undefined}
@@ -133,7 +133,9 @@ export function CriticalOperationConfirmDialog({
           </button>
           <button
             type="button"
-            className="critical-operation-confirm__button critical-operation-confirm__button--primary"
+            className={`critical-operation-confirm__button critical-operation-confirm__button--primary odn-button ${
+              tone === 'danger' ? 'odn-button--danger' : 'odn-button--primary'
+            }`}
             onClick={onConfirm}
             disabled={confirmDisabled}
             aria-disabled={confirmDisabled || undefined}
