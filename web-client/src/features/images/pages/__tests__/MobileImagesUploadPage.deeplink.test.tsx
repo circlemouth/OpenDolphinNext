@@ -107,6 +107,8 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
     expect(medicalSafetyHeader).toHaveTextContent('遷移文脈 / unverified');
     expect(medicalSafetyHeader).not.toHaveTextContent('内部参照ID');
     expect(medicalSafetyHeader).not.toHaveTextContent('enc-20260511-1');
+    expect(screen.queryByRole('button', { name: 'RUN_ID をコピー' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/^RUN_ID:/)).not.toBeInTheDocument();
   });
 
   it('URL/退避どちらにも patientId が無い場合は明確エラーを表示し送信不可', async () => {

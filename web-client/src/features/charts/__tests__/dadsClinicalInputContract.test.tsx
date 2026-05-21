@@ -9,7 +9,7 @@ import { SoapNotePanel } from '../SoapNotePanel';
 import type { SoapEntry } from '../soapNote';
 import { DiagnosisEditPanel } from '../DiagnosisEditPanel';
 import type { DiagnosisEditPanelMeta } from '../DiagnosisEditPanel';
-import { fetchDiseases, mutateOrcaDisease, searchDiseaseMasterCandidates } from '../diseaseApi';
+import { fetchDiseasesWithPatientImportRecovery, mutateOrcaDisease, searchDiseaseMasterCandidates } from '../diseaseApi';
 import { DocumentCreatePanel } from '../DocumentCreatePanel';
 import { fetchKarteIdByPatientId, fetchLetterDetail, fetchLetterList, saveLetterModule, deleteLetter } from '../letterApi';
 import { AUTH_SESSION_STORAGE_KEY } from '../../../libs/session/authStorage';
@@ -18,7 +18,7 @@ vi.mock('../diseaseApi', async () => {
   const actual = await vi.importActual<typeof import('../diseaseApi')>('../diseaseApi');
   return {
     ...actual,
-    fetchDiseases: vi.fn(),
+    fetchDiseasesWithPatientImportRecovery: vi.fn(),
     mutateOrcaDisease: vi.fn(),
     resolveDiseaseCodeFromOrcaMaster: vi.fn(async () => undefined),
     searchDiseaseMasterCandidates: vi.fn(),
@@ -143,10 +143,11 @@ beforeEach(() => {
       clientUuid: 'client-dads',
     }),
   );
-  vi.mocked(fetchDiseases).mockResolvedValue({
+  vi.mocked(fetchDiseasesWithPatientImportRecovery).mockResolvedValue({
     ok: true,
     patientId: 'P-DADS-001',
     karteId: 2201,
+    orcaMirrorStatus: 'connected',
     diseases: [
       {
         diagnosisId: 1,
@@ -228,7 +229,9 @@ describe('DADS clinical input contract - SOAP', () => {
       expect(within(panel).getByText(label)).toBeVisible();
     }
     expect(within(panel).getByRole('button', { name: 'テンプレ' })).toBeDisabled();
-    expect(within(panel).getByRole('button', { name: '更新' })).toBeDisabled();
+    const updateButton = within(panel).getByRole('button', { name: '更新' });
+    expect(updateButton).toHaveAttribute('aria-disabled', 'true');
+    expect(updateButton).toHaveAttribute('aria-describedby', 'soap-note-save-block-reason');
   });
 });
 
