@@ -1,1 +1,0 @@
-{"8080/tcp":[{"HostIp":"0.0.0.0","HostPort":"9080"},{"HostIp":"::","HostPort":"9080"}],"9990/tcp":[{"HostIp":"0.0.0.0","HostPort":"9995"},{"HostIp":"::","HostPort":"9995"}]}

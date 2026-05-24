@@ -1,1 +1,0 @@
-{"error":"internal_server_error","code":"internal_server_error","message":"Session layer failure in open.dolphin.session.LetterServiceBean$Proxy$_$$_WeldSubclass#getLetter","status":500,"traceId":"cd7aa4f8-144f-454f-850d-7f0ca0d345fd","path":"/openDolphin/resources/odletter/letter/999999","retryable":true}

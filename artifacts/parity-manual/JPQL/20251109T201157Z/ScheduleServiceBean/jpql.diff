@@ -1,4 +1,0 @@
---- /var/folders/zb/vlmw5p4x16741f_nds50xy_m0000gp/T/tmp.fiLlynH11K/legacy.sql	2025-11-10 05:32:51
-+++ /var/folders/zb/vlmw5p4x16741f_nds50xy_m0000gp/T/tmp.fiLlynH11K/modern.sql	2025-11-10 05:32:51
-@@ -1 +0,0 @@
--select patientvis0_.id as id1_37_, patientvis0_.department as departme2_37_, patientvis0_.deptCode as deptCode3_37_, patientvis0_.deptName as deptName4_37_, patientvis0_.doctorId as doctorId5_37_, patientvis0_.doctorName as doctorNa6_37_, patientvis0_.facilityId as facility7_37_, patientvis0_.firstInsurance as firstIns8_37_, patientvis0_.insuranceUid as insuranc9_37_, patientvis0_.jmariNumber as jmariNu10_37_, patientvis0_.memo as memo11_37_, patientvis0_.patient_id as patient14_37_, patientvis0_.pvtDate as pvtDate12_37_, patientvis0_.status as status13_37_ from d_patient_visit patientvis0_ where patientvis0_.facilityId=? and (patientvis0_.pvtDate like ?) order by patientvis0_.pvtDate

@@ -1,3 +1,0 @@
-CREATE TABLE
-# RUN_ID=20251111TstampfixZ3 (2025-11-12 JST)
-# helper=postgres:14 コンテナから `psql -h opendolphin-postgres-modernized -d opendolphin_modern` を実行し、GET /stamp/tree 500（`relation "d_subscribed_tree" does not exist`）の回避として Modern DB にテーブルを作成。

@@ -1,8 +1,0 @@
-PUT /20/adm/eht/sendClaim -> legacy (messaging_claim) (status=405, time=0.028277, exit=0)
-PUT /20/adm/eht/sendClaim -> modern (messaging_claim) (status=401, time=0.140117, exit=0)
-PUT /20/adm/eht/sendClaim -> legacy (messaging_claim) (status=405, time=0.046010, exit=0)
-PUT /20/adm/eht/sendClaim -> modern (messaging_claim) (status=400, time=0.120475, exit=0)
-POST /karte/diagnosis/claim -> legacy (messaging_diagnosis) (status=404, time=0.030547, exit=0)
-POST /karte/diagnosis/claim -> modern (messaging_diagnosis) (status=406, time=0.026751, exit=0)
-PUT /mml/send -> legacy (messaging_mml) (status=404, time=0.288288, exit=0)
-PUT /mml/send -> modern (messaging_mml) (status=500, time=0.040593, exit=0)

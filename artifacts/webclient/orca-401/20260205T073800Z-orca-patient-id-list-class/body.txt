@@ -1,1 +1,0 @@
-{"apiResult":"91","apiResultMessage":"処理区分未設定","runId":"20260204T212322Z","dataSource":"real","cacheHit":false,"missingMaster":false,"fallbackUsed":false,"targetPatientCount":0,"patients":[]}

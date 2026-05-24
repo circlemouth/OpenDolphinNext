@@ -1,9 +1,0 @@
-{
-  "method": "POST",
-  "path": "/reporting/karte",
-  "base_url": "http://localhost:8080/openDolphin/resources",
-  "request_id": "reporting_karte_en",
-  "status_code": 000,
-  "time_total": "0.000283",
-  "exit_code": 7
-}

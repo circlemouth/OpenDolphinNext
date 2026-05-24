@@ -1,9 +1,0 @@
-{
-  "method": "PUT",
-  "path": "/stamp/tree",
-  "base_url": "http://opendolphin-server-modernized-dev:8080/openDolphin/resources",
-  "request_id": "stamp/20251111TstampfixZ",
-  "status_code": 500,
-  "time_total": "0.514873",
-  "exit_code": 0
-}

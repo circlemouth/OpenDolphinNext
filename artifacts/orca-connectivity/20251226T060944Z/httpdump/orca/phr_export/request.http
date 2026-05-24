@@ -1,6 +1,0 @@
-POST /20/adm/phr/export HTTP/1.1
-Host: weborca.cloud.orcamo.jp
-X-Facility-Id: LOCAL.FACILITY.0001
-X-Touch-TraceId: 20251226T060944Z
-X-Access-Reason: phr_export
-Authorization: Basic <MASKED>

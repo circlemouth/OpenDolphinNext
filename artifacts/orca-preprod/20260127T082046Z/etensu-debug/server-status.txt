@@ -1,2 +1,0 @@
-NAMES                                                         STATUS                        PORTS
-opendolphin-server-modernized-dev-task-1769491147731-37d0e5   Up About a minute (healthy)   0.0.0.0:19082->8080/tcp, [::]:19082->8080/tcp, 0.0.0.0:19998->9990/tcp, [::]:19998->9990/tcp

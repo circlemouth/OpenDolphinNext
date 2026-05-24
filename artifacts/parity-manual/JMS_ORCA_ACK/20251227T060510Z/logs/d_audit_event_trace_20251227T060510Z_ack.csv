@@ -1,2 +1,0 @@
-id,event_time,action,resource,trace_id,request_id,actor_id
-253822,2025-12-27 15:08:35.629609+09,EHT_CLAIM_SEND,/20/adm/eht/sendClaim,trace-jms-20251227T060510Z-ack1,31683fb0-bf79-418b-bcc9-ec73a805e65f,1.3.6.1.4.1.9414.72.103:doctor1

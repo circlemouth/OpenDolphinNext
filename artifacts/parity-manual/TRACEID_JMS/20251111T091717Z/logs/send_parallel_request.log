@@ -1,9 +1,0 @@
-2025-11-11T09:43:31+00:00 [INFO] RUN_ID=20251111T091717Z
-GET /serverinfo/jamri -> legacy (trace_http_200) (status=200, time=0.341710, exit=0)
-GET /serverinfo/jamri -> modern (trace_http_200) (status=200, time=0.465102, exit=0)
-GET /dolphin/activity/2025,04 -> legacy (trace_http_400) (status=500, time=0.074311, exit=0)
-GET /dolphin/activity/2025,04 -> modern (trace_http_400) (status=400, time=0.101236, exit=0)
-GET /touch/user/doctor1,1.3.6.1.4.1.9414.72.103,dolphin -> legacy (trace_http_401) (status=403, time=0.014412, exit=0)
-GET /touch/user/doctor1,1.3.6.1.4.1.9414.72.103,dolphin -> modern (trace_http_401) (status=403, time=0.006869, exit=0)
-GET /karte/pid/INVALID,%5Bdate%5D -> legacy (trace_http_500) (status=200, time=0.323519, exit=0)
-GET /karte/pid/INVALID,%5Bdate%5D -> modern (trace_http_500) (status=400, time=0.070731, exit=0)

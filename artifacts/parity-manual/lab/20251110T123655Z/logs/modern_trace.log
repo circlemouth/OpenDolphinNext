@@ -1,3 +1,0 @@
-[0m[0m21:40:38,672 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous GET /lab/module/WEB1001,0,5 traceId=trace-lab-20251110T123655Z
-[0m[0m21:40:38,672 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous GET /lab/module/WEB1001,0,5 traceId=trace-lab-20251110T123655Z
-[0m[31m21:40:38,711 ERROR [open.dolphin.session.framework.SessionOperationInterceptor] (default task-1) Session operation failed [traceId=trace-lab-20251110T123655Z, operation=open.dolphin.session.NLabServiceBean$Proxy$_$$_WeldSubclass#getLaboTest]: open.dolphin.session.framework.SessionServiceException: Session layer failure in open.dolphin.session.NLabServiceBean$Proxy$_$$_WeldSubclass#getLaboTest

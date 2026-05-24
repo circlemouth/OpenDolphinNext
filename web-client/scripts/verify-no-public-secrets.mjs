@@ -28,18 +28,12 @@ const ACTIVE_PATH_PREFIXES = [
   'reporting/',
   'ops/',
   'scripts/',
-  'docs/architecture/',
-  'docs/contracts/',
-  'docs/managerdocs/',
-  'docs/operations/',
-  'docs/runbooks/',
-  'docs/web-client/',
+  'docs/',
 ];
 const ACTIVE_EXACT_PATHS = new Set([
   'setup-modernized-env.sh',
   'setup-modernized-env.ps1',
   'docs/README.md',
-  'docs/runbooks/release-validation.md',
   'web-client/README.md',
 ]);
 const SKIP_PATH_PREFIXES = [
@@ -47,9 +41,6 @@ const SKIP_PATH_PREFIXES = [
   'client/',
   'server/',
   'ext_lib/',
-  'docs/archive/',
-  'docs/implementation/',
-  'docs/reference/',
   'web-client/dist/',
   'web-client/coverage/',
   'web-client/node_modules/',

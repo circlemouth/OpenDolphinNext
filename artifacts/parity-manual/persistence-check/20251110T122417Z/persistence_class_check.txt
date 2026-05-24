@@ -1,2 +1,0 @@
-19:        <class>open.dolphin.infomodel.PatientVisitModel</class>
-20:        <class>open.dolphin.infomodel.AppointmentModel</class>

@@ -1,7 +1,0 @@
-run_id=20251119TorcaPHRSeqZ1
-api=phr06_identityToken
-url=https://weborca.cloud.orcamo.jp/20/adm/phr/identityToken
-method=POST
-http_code=405
-curl_exit=0
-timestamp=2025-11-14T15:17:42Z

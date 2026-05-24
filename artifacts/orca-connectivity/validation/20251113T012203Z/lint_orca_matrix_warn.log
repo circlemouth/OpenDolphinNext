@@ -1,5 +1,0 @@
-
-> lint:orca-matrix
-> node scripts/tools/orca-api-matrix-validator.js
-
-ORCA API マトリクス検証 OK: 53 件の No/URL/優先度が一致

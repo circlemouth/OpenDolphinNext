@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/stamp/tree/9002/public",
-  "base_url": "http://opendolphin-server:8080/openDolphin/resources",
-  "request_id": "stamp_tree_public_mismatch",
-  "status_code": 403,
-  "time_total": "0.229666",
-  "exit_code": 0
-}

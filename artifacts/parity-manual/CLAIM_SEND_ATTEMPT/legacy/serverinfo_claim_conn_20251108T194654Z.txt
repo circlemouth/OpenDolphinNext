@@ -1,7 +1,0 @@
-timestamp_utc: 20251108T194654Z
-request: GET /openDolphin/resources/serverinfo/claim/conn
-headers:
-  userName: doctor1
-  password: ********
-http_status: 200
-body: server

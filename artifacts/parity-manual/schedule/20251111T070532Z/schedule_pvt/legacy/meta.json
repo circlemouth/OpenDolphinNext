@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/schedule/pvt/2025-11-09",
-  "base_url": "http://server:8080/openDolphin/resources",
-  "request_id": "schedule_pvt",
-  "status_code": 200,
-  "time_total": "0.438218",
-  "exit_code": 0
-}

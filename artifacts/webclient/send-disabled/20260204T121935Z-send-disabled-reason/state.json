@@ -1,6 +1,0 @@
-{
-  "runId": "20260204T121935Z-send-disabled-reason",
-  "nowIso": "2026-02-04T13:36:38.321Z",
-  "sendDisabled": true,
-  "guardSummary": "ガード理由（短文）\nORCA送信: マスタ欠損: missingMaster=true で送信不可 / 次: 再取得（master/請求バンドル） / Reception で状態確認\n印刷: マスタ欠損: missingMaster=true で印刷不可 / 次: 再取得（master/請求バンドル） / Reception で状態確認"
-}

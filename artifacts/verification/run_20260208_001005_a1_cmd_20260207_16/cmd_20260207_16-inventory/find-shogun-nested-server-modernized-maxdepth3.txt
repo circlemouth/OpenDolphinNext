@@ -1,4 +1,0 @@
-server-modernized
-server-modernized/src
-server-modernized/src/main
-server-modernized/src/main/java

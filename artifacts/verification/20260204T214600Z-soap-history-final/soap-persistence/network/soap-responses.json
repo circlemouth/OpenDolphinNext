@@ -1,8 +1,0 @@
-[
-  {
-    "url": "http://localhost:5176/orca/chart/subjectives",
-    "status": 200,
-    "statusText": "OK",
-    "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260204T214600Z-soap-history-final\",\"recordedAt\":\"2026-02-04T21:40:52.290662256Z\",\"messageDetail\":\"主訴を登録しました。\"}"
-  }
-]

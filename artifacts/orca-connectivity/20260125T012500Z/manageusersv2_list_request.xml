@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<data>
-  <manageusersreq type="record">
-    <Request_Number type="string">01</Request_Number>
-  </manageusersreq>
-</data>

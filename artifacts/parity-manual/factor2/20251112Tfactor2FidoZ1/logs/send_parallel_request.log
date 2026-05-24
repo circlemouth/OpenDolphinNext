@@ -1,4 +1,0 @@
-POST /20/adm/factor2/fido2/registration/options -> legacy (factor2_fido_registration_options) (status=404, time=0.051018, exit=0)
-POST /20/adm/factor2/fido2/registration/options -> modern (factor2_fido_registration_options) (status=500, time=0.149618, exit=0)
-POST /20/adm/factor2/fido2/assertion/options -> legacy (factor2_fido_assertion_options) (status=404, time=0.006439, exit=0)
-POST /20/adm/factor2/fido2/assertion/options -> modern (factor2_fido_assertion_options) (status=500, time=0.028346, exit=0)

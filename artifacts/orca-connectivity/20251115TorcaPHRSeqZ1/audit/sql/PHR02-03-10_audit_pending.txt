@@ -1,2 +1,0 @@
-PKCS12 パスフレーズ未取得のため d_audit_event 抽出クエリ未実施。
-再実行時に `psql -f audit/phr_audit_extract.sql --set=trace_id=20251115TorcaPHRSeqZ1` を予定。

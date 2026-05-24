@@ -1,4 +1,0 @@
-UID        PID  PPID  C STIME TTY          TIME CMD
-root         1     0  0 13:15 ?        00:00:00 su -s /bin/bash orca -c set -e cd /opt/jma/weborca/mw/bin set -a source /opt/jma/weborca/app/etc/online.env source /opt/jma/weborca/conf/jma-receipt.conf set +a export DBHOST='db' export DBPORT='5432' export DBNAME='orca' export DBUSER='orca' export DBPASS='orca_password' export DBENCODING='UTF-8' exec /opt/jma/weborca/mw/bin/weborca
-orca        29     1  0 13:15 ?        00:00:07 /run/rosetta/rosetta /opt/jma/weborca/mw/bin/weborca /opt/jma/weborca/mw/bin/weborca
-root       687     0  0 13:27 ?        00:00:00 ps -ef

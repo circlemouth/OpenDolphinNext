@@ -1,8 +1,0 @@
-GET /20/adm/phr/image/00000001 HTTP/1.1
-Host: weborca.cloud.orcamo.jp
-X-Facility-Id: LOCAL.FACILITY.0001
-X-Touch-TraceId: 20251119TorcaPHRSeqZ1
-X-Access-Reason: phr-image
-Accept: image/jpeg
-Authorization: Basic <MASKED>
-Notes: RUN_ID=20251119TorcaPHRSeqZ1

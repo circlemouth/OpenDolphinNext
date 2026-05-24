@@ -21,7 +21,7 @@ const resolveApiBaseUrl = () => {
   return raw || '/api';
 };
 const API_BASE_URL = resolveApiBaseUrl();
-const SYSTEM_ICON_URL = `${import.meta.env.BASE_URL}LogoImage/MainLogo.png`;
+const SYSTEM_ICON_URL = `${import.meta.env.BASE_URL}system-icon.jpg`;
 const SESSION_LOGIN_ENDPOINT = `${API_BASE_URL}/session/login`;
 const SESSION_FACTOR2_LOGIN_ENDPOINT = `${API_BASE_URL}/session/login/factor2`;
 

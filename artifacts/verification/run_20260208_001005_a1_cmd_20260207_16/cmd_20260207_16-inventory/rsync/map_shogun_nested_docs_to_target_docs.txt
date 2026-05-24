@@ -1,7 +1,0 @@
-# map_shogun_nested_docs_to_target_docs
-SRC: /Users/Hayato/Documents/GitHub/multi-agent-shogun/OpenDolphin_WebClient/docs/
-DST: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/
-
-.d..t..g. ./
-.d..t..g. server-modernization/
-.d..t..g. server-modernization/session-layer/

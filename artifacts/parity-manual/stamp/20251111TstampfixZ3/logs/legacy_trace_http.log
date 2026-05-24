@@ -1,8 +1,0 @@
-[0m[0m08:29:19,971 INFO  [open.dolphin] (default task-9) 172.19.0.7 doctor1 GET /stamp/tree/9001 traceId=parity-stamp-20251111TstampfixZ3
-[0m[0m08:29:19,971 INFO  [open.dolphin] (default task-9) 172.19.0.7 doctor1 GET /stamp/tree/9001 traceId=parity-stamp-20251111TstampfixZ3
-[0m[0m08:30:31,377 INFO  [open.dolphin] (default task-13) 172.19.0.7 doctor1 GET /stamp/tree/9001 traceId=parity-stamp-20251111TstampfixZ3
-[0m[0m08:30:31,380 INFO  [open.dolphin] (default task-13) 172.19.0.7 doctor1 GET /stamp/tree/9001 traceId=parity-stamp-20251111TstampfixZ3
-[0m[0m08:31:30,243 INFO  [open.dolphin] (default task-16) 172.19.0.7 doctor1 PUT /stamp/tree traceId=parity-stamp-20251111TstampfixZ3
-[0m[0m08:31:30,245 INFO  [open.dolphin] (default task-16) 172.19.0.7 doctor1 PUT /stamp/tree traceId=parity-stamp-20251111TstampfixZ3
-[0m[0m08:31:40,047 INFO  [open.dolphin] (default task-19) 172.19.0.7 doctor1 PUT /stamp/tree traceId=parity-stamp-20251111TstampfixZ3
-[0m[0m08:31:40,048 INFO  [open.dolphin] (default task-19) 172.19.0.7 doctor1 PUT /stamp/tree traceId=parity-stamp-20251111TstampfixZ3

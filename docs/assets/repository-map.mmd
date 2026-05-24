@@ -1,0 +1,23 @@
+flowchart TB
+    Root["OpenDolphinNext"]
+    Web["web-client"]
+    Server["server-modernized"]
+    Api["api-contract"]
+    Domain["domain"]
+    Persistence["persistence"]
+    Reporting["reporting"]
+    Scripts["scripts"]
+    Tests["tests"]
+    Ops["ops"]
+    Docs["docs"]
+
+    Root --> Web
+    Root --> Server
+    Server --> Api
+    Server --> Domain
+    Server --> Persistence
+    Server --> Reporting
+    Root --> Scripts
+    Root --> Tests
+    Root --> Ops
+    Root --> Docs

@@ -1,6 +1,0 @@
-HTTP/1.1 500 Internal Server Error
-Connection: keep-alive
-Content-Type: text/html;charset=UTF-8
-Content-Length: 80
-Date: Mon, 10 Nov 2025 13:51:48 GMT
-

@@ -1,4 +1,0 @@
-6:claim.conn=server
-10:claim.host=weborca.cloud.orcamo.jp
-11:claim.send.port=443
-12:claim.scheme=https

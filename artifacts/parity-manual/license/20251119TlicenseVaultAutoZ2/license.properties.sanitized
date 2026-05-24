@@ -1,3 +1,0 @@
-# fetch_license_secrets.sh が生成した license.properties のフォーマットのみ共有（実値は未保存）
-license.key=REDACTED_HEX32
-license.secret=REDACTED_HEX32

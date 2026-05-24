@@ -1,4 +1,0 @@
- document_id | karte_id | status | doctype | title | recorded 
--------------+----------+--------+---------+-------+----------
-(0 rows)
-

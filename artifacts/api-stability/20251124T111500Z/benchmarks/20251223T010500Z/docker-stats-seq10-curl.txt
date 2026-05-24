@@ -1,6 +1,0 @@
-timestamp\tname\tcpu\tmem\tmemPerc\tnet\tblock\tpids
-2025-12-23T14:20:27\topendolphin-server-modernized-dev	322.52%	1.352GiB / 15.58GiB	8.68%	234MB / 345MB	1.76GB / 2.95GB	236
-2025-12-23T14:20:31\topendolphin-server-modernized-dev	5.47%	1.205GiB / 15.58GiB	7.73%	234MB / 346MB	1.76GB / 2.95GB	201
-2025-12-23T14:20:34\topendolphin-server-modernized-dev	346.21%	1.368GiB / 15.58GiB	8.78%	234MB / 346MB	1.76GB / 2.95GB	237
-2025-12-23T14:20:39\topendolphin-server-modernized-dev	5.34%	1.204GiB / 15.58GiB	7.73%	234MB / 346MB	1.76GB / 2.95GB	201
-completed

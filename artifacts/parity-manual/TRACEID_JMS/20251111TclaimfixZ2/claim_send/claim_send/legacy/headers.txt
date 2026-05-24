@@ -1,8 +1,0 @@
-HTTP/1.1 404 Not Found
-Connection: keep-alive
-X-Powered-By: Undertow/1
-Server: WildFly/10
-Content-Length: 0
-X-Trace-Id: trace-jms-20251111TclaimfixZ2
-Date: Tue, 11 Nov 2025 21:46:41 GMT
-

@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/pvt2/pvtList",
-  "base_url": "http://localhost:9080/openDolphin/resources",
-  "request_id": "reception_pvtlist_loop001",
-  "status_code": 200,
-  "time_total": "0.005060",
-  "exit_code": 0
-}

@@ -1,7 +1,0 @@
-RUN_ID=20260207T093521Z-cmd_20260207_11_sub_3-images-mobile-server-hardening
-patientId=P0002
-featureGate: header X-Feature-Images: 1 OR env OPENDOLPHIN_FEATURE_IMAGES_PHASEA=true
-hardening:
-- allowed upload contentType: image/jpeg,image/png
-- max bytes env: OPENDOLPHIN_IMAGES_MAX_BYTES (default=5MiB)
-- errors: 401(no auth), 403(other facility), 404(feature_off), 415(unsupported), 413(too large)

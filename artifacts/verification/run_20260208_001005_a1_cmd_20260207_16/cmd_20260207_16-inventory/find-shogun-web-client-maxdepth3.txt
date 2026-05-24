@@ -1,3 +1,0 @@
-web-client
-web-client/scripts
-web-client/scripts/qa-order-001-parity.mjs

@@ -1,2 +1,0 @@
-BASE_URL_MODERN=http://localhost:9080/openDolphin/resources
-BASE_URL_LEGACY=http://localhost:8080/openDolphin/resources

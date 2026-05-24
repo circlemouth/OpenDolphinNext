@@ -1,3 +1,0 @@
-- [ ] ServerInfoResource: `server-modernized-dev` ホストが解決できないため `claim_conn.json` が未取得。compose で modernized サーバーを起動し、`curl http://server-modernized-dev:8080/openDolphin/resources/serverinfo/claim/conn` を再実施して `serverinfo/claim_conn.json` を更新する。
-- [ ] Screenshots: HTTP 404 応答のみのため `screenshots/phr-0X_response.png` は placeholder のまま。Modernized REST 経路での応答が得られ次第、JSON/UI のスクリーンショットを取得する。
-- [ ] Modernized 経路での再測: `/20/adm/phr/*` は ORCA クラウド上に存在しないことが判明したため、WildFly (RESTEasy) 側のエンドポイントを対象に Phase-A/B を再実施し、監査ログ (`PHR_ACCESS_KEY_*`, `PHR_*_TEXT`) を取得する計画を策定する。

@@ -1,3 +1,0 @@
-NAME                                        IMAGE                       COMMAND                   SERVICE   CREATED          STATUS                PORTS
-jma-receipt-docker-for-ubuntu-2204-db-1     postgres:10                 "docker-entrypoint.s…"   db        4 days ago       Up 3 days (healthy)   5432/tcp
-jma-receipt-docker-for-ubuntu-2204-orca-1   jma-receipt-weborca:22.04   "/usr/local/bin/star…"   orca      12 minutes ago   Up 12 minutes         0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp

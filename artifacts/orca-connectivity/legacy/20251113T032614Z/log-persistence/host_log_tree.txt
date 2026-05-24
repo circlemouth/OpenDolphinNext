@@ -1,3 +1,0 @@
-orca-db-install-5.2.0.log
-orca-db-install-thistime.log
-orca-db-patch.log

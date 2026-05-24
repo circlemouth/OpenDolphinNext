@@ -1,9 +1,0 @@
-Network summary (administration route, login as dolphindev):
-- GET /api/admin/config -> 404 (repeated)
-- GET /api/admin/delivery -> 404 (repeated)
-- GET /api/orca/queue -> 404 (repeated)
-- POST /orca/claim/outpatient -> 404 (repeated)
-- POST /orca21/medicalmodv2/outpatient -> 404 (repeated)
-- POST /api01rv2/pusheventgetv2 -> 200 (repeated)
-- GET /api/chart-events -> 200 (repeated)
-- Some POST /orca/appointments/list, /orca/visits/list -> success 200, intermittent net::ERR_ABORTED

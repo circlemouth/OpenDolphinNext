@@ -1,1 +1,0 @@
-{"type":"error.phr.identityTokenUnavailable","message":"Identity トークンの署名鍵が利用できません。","traceId":"trace-5xx-503-20251226T153311Z","status":503}

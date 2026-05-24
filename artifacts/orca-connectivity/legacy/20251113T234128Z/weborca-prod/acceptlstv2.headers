@@ -1,7 +1,0 @@
-HTTP/1.1 500 Internal Server Error
-Content-Length: 108
-Content-Type: application/json
-Date: Thu, 13 Nov 2025 23:41:29 GMT
-Vary: Origin
-X-Hybridmode: normal
-

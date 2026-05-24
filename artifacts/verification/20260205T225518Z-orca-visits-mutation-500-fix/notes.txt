@@ -1,3 +1,0 @@
-RUN_ID=20260205T225518Z-orca-visits-mutation-500-fix
-- POST /openDolphin/resources/orca/visits/mutation (requestNumber=01) -> HTTP 200 (Api_Result=00)
-- POST /openDolphin/resources/orca/visits/mutation (requestNumber=99) -> HTTP 400 (orca_gateway_error)

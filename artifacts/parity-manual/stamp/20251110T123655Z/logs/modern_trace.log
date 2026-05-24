@@ -1,3 +1,0 @@
-[0m[0m21:43:01,912 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous PUT /stamp/tree traceId=trace-stamp-20251110T123655Z
-[0m[0m21:43:01,912 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous PUT /stamp/tree traceId=trace-stamp-20251110T123655Z
-[0m[31m21:43:01,930 ERROR [open.dolphin.session.framework.SessionOperationInterceptor] (default task-1) Session operation failed [traceId=trace-stamp-20251110T123655Z, operation=open.dolphin.session.StampServiceBean$Proxy$_$$_WeldSubclass#putTree]: open.dolphin.session.framework.SessionServiceException: Session layer failure in open.dolphin.session.StampServiceBean$Proxy$_$$_WeldSubclass#putTree

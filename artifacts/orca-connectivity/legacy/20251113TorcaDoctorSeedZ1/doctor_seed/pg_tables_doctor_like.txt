@@ -1,5 +1,0 @@
- schemaname |    tablename    
-------------+-----------------
- public     | tbl_list_doctor
-(1 row)
-

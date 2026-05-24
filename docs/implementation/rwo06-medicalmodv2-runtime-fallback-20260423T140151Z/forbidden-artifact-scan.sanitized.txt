@@ -1,6 +1,0 @@
-RUN_ID=20260423T140151Z
-scope=docs/implementation/rwo06-medicalmodv2-runtime-fallback-20260423T140151Z
-forbidden_artifact_scan=pass_zero_hits
-patterns=har,trace,video,screenshot,raw,request_xml,response_xml
-credentialsCaptured=false
-rawArtifactsCaptured=false

@@ -1,1 +1,0 @@
-curl -sS -D headers.txt -o body.json -H X-Run-Id:20260206T134627Z-cmd_20260206_15_sub_13-material-master-503-curl2 -H X-Facility-Id:1.3.6.1.4.1.9414.72.103 -H Authorization:REDACTED -H userName:REDACTED -H password:REDACTED http://localhost:9080/openDolphin/resources/orca/master/material?keyword=a&effective=20240401

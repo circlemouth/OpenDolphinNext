@@ -1,9 +1,0 @@
-0 %1 karo
-1 %4 ashigaru1
-2 %5 ashigaru2
-3 %2 ashigaru3
-4 %6 ashigaru4
-5 %7 ashigaru5
-6 %3 ashigaru6
-7 %8 ashigaru7
-8 %9 ashigaru8

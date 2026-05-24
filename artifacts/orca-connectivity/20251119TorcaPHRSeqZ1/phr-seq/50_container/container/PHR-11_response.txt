@@ -1,6 +1,0 @@
-RUN_ID=20251119TorcaPHRSeqZ1
-API=PHR-11 /20/adm/phr/LOCAL.FACILITY.0001,00000001,20250101,20250101
-HTTP=404 Not Found
-TraceId=20251119TorcaPHRSeqZ1
-Notes=Signed URL/Container API が ORCA で未公開。レスポンス JSON は `{"Code":404,"Message":"code=404, message=Not Found"}`。
-Evidence=httpdump/phr11_container/, trace/phr-11_container_trace.log, screenshots/phr-11_container_response.png

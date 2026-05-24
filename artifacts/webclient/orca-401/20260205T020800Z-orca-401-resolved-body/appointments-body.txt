@@ -1,1 +1,0 @@
-{"error":"orca.appointment.invalid","code":"orca.appointment.invalid","message":"appointmentDate or fromDate/toDate is required","status":400,"traceId":"3ca5cbfa-9a69-410e-9ae7-4434e0fca756","path":"/openDolphin/resources/orca/appointments/list","validationError":true}

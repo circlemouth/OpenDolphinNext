@@ -1,7 +1,0 @@
-GET /20/adm/phr/patient/WEB1001 HTTP/1.1
-Host: weborca.cloud.orcamo.jp
-X-Facility-Id: LOCAL.FACILITY.0001
-X-Touch-TraceId: 20251115TorcaPHRSeqZ1
-X-Access-Reason: patient-key
-Accept: application/json
-Notes: Patient-to-key reverse lookup (Phase-A)

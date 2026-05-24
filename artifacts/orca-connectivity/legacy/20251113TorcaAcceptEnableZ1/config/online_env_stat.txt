@@ -1,1 +1,0 @@
--rw-r--r-- 1 root root 402  4月 14  2025 /opt/jma/weborca/app/etc/online.env

@@ -1,4 +1,0 @@
-network summary:
-- Login success -> reception/charts/patients navigation OK
-- Charts page shows 404 for /openDolphin/resources/api/orca21/medicalmodv2/outpatient (from UI preview)
-- Error banner: claim bundle fetch failed with statusText.toLowerCase is not a function (likely fetch error handling)

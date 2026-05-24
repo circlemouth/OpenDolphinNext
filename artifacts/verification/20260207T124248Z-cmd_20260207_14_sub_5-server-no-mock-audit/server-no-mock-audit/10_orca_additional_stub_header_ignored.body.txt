@@ -1,1 +1,0 @@
-{"error":"method_not_allowed","code":"method_not_allowed","errorCode":"method_not_allowed","message":"RESTEASY003650: No resource method found for GET, return 405 with Allow header","status":405,"errorCategory":"client_error","traceId":"1e63b458-505f-4901-933b-fab2a57ea1e1","path":"/openDolphin/resources/api01rv2/systeminfv2"}

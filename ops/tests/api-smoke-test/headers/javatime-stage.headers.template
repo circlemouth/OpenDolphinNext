@@ -1,6 +1,0 @@
-# JavaTime 監視向け Stage ヘッダー（テンプレート）
-# 以下を `ops/tests/api-smoke-test/headers/javatime-stage.headers` としてコピーし、
-# Authorization の値を Stage 用トークンへ置き換えてから利用してください。
-Content-Type: application/json
-X-Trace-Id: javatime-manual
-Authorization: Bearer REPLACE_WITH_STAGE_TOKEN

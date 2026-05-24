@@ -1,7 +1,0 @@
-<data>
-  <visitptlstreq type="record">
-    <Request_Number type="string">01</Request_Number>
-    <Visit_Date type="string">2024-04-10</Visit_Date>
-    <Department_Code type="string">01</Department_Code>
-  </visitptlstreq>
-</data>

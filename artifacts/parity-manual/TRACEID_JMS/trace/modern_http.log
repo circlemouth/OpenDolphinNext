@@ -1,2 +1,0 @@
-10:26:33,310 INFO  [open.dolphin] (default task-1) 172.19.0.1 anonymous GET /user/doctor1 traceId=trace-user-profile-manual
-10:26:33,310 INFO  [open.dolphin] (default task-1) 172.19.0.1 anonymous GET /user/doctor1 traceId=trace-user-profile-manual

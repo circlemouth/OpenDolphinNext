@@ -1,9 +1,0 @@
-[0m[0m21:51:09,734 INFO  [org.apache.activemq.artemis.core.server] (ServerService Thread Pool -- 84) AMQ221003: Deploying ANYCAST queue jms.queue.ExpiryQueue on address jms.queue.ExpiryQueue
-[0m[0m21:51:09,779 INFO  [org.apache.activemq.artemis.core.server] (ServerService Thread Pool -- 84) AMQ221003: Deploying ANYCAST queue jms.queue.DLQ on address jms.queue.DLQ
-[0m[0m21:51:09,781 INFO  [org.apache.activemq.artemis.core.server] (ServerService Thread Pool -- 84) AMQ221003: Deploying ANYCAST queue jms.queue.dolphinQueue on address jms.queue.dolphinQueue
-[0m[33m21:51:10,005 WARN  [org.apache.activemq.artemis.jms.server] (ServerService Thread Pool -- 88) AMQ122005: Invalid "host" value "0.0.0.0" detected for "http-connector" connector. Switching to "903ca88897c3". If this new address is incorrect please manually configure the connector to use the proper one.
-[0m[0m21:51:10,023 INFO  [org.wildfly.extension.messaging-activemq] (ServerService Thread Pool -- 88) WFLYMSGAMQ0002: Bound messaging object to jndi name java:jboss/exported/jms/RemoteConnectionFactory
-[0m[0m21:51:10,031 INFO  [org.wildfly.extension.messaging-activemq] (ServerService Thread Pool -- 87) WFLYMSGAMQ0002: Bound messaging object to jndi name java:jboss/exported/jms/ConnectionFactory
-[0m[0m21:51:10,059 INFO  [org.jboss.as.connector.deployment] (MSC service thread 1-4) WFLYJCA0007: Registered connection factory java:/JmsXA
-[0m[0m21:51:10,118 INFO  [org.jboss.as.connector.deployment] (MSC service thread 1-1) WFLYJCA0002: Bound Jakarta Connectors ConnectionFactory [java:/JmsXA]
-[0m[0m21:51:10,122 INFO  [org.jboss.as.connector.deployment] (MSC service thread 1-4) WFLYJCA0118: Binding connection factory named java:/JmsXA to alias java:jboss/DefaultJMSConnectionFactory

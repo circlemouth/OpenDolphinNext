@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/lab/module/WEB1001,0,5",
-  "base_url": "http://opendolphin-server:8080/openDolphin/resources",
-  "request_id": "lab_module_fetch",
-  "status_code": 200,
-  "time_total": "0.262466",
-  "exit_code": 0
-}

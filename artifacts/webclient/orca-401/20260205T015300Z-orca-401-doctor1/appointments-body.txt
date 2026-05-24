@@ -1,1 +1,0 @@
-{"error":"method_not_allowed","code":"method_not_allowed","message":"RESTEASY003650: No resource method found for GET, return 405 with Allow header","status":405,"traceId":"50f9c79e-50b5-47ba-a001-a55c56402389","path":"/openDolphin/resources/orca/appointments/list"}

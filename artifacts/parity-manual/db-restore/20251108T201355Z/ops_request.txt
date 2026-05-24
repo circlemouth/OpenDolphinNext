@@ -1,3 +1,0 @@
-[NOTE] IAM bindings applied:
-- gcloud storage buckets add-iam-policy-binding "gs://ops-dba-transfer-maruguchi-clinic-hp" --member="user:Circlemouth.h@gmail.com" --role="roles/storage.objectCreator"
-- gcloud storage buckets add-iam-policy-binding "gs://ops-dba-transfer-maruguchi-clinic-hp" --member="user:maruguchi.clin@gmail.com" --role="roles/storage.objectAdmin"

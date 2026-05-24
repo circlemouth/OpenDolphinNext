@@ -1,14 +1,14 @@
-# Ops ディレクトリ構成
+# Ops
 
-サーバー起動・検証に関する Docker 資産を `ops/` 配下へ整理した。各サブディレクトリの役割は次の通り。
+`ops/` は現行 `server-modernized/` のローカル起動、検証、運用補助に必要な Docker / shell 資産を置きます。
 
-- `base/` … PostgreSQL を定義する共通 Compose。`docker compose -f ops/base/docker-compose.yml up -d db` で単体起動できる。
-- `legacy-server/` … 旧 Java EE サーバー (WildFly 10) 用の Dockerfile / Compose。`docker compose -f ops/legacy-server/docker-compose.yml up -d` で `db` と `server` を起動する。
-- `modernized-server/` … モダナイズ版サーバー (WildFly 33) 用の Dockerfile / Compose。`docker compose -f ops/modernized-server/docker-compose.yml up -d` で単独検証が可能。
-- `shared/` … `custom.properties`・`bootstrap.sh`・Maven `settings.xml` など両サーバーで共通利用するファイル。
-- `tests/api-smoke-test/` … 旧/新サーバーを比較する manual スモークテスト資産。`docker-compose.yml` は手元検証用であり、現行 CI entry ではない。
+- `base/`: PostgreSQL を定義する共通 Compose。
+- `modernized-server/`: モダナイズ版サーバー用の Dockerfile / Compose。
+- `shared/`: `custom.properties`、`bootstrap.sh`、Maven `settings.xml` などの共通ファイル。
+- `tests/`: ORCA、storage、security などの手動確認補助。
+- `tools/`: 運用補助スクリプト。
 
-旧来の `docker/server*` や `server-modernized/tools/api-smoke-test` に存在していたファイルは上記へ移動済み。現行の全体導線は `docs/README.md` と `docs/runbooks/release-validation.md` を参照してください。
+全体の起動と検証は [docs/setup-and-validation.md](../docs/setup-and-validation.md) を参照してください。
 
 ## Demo API 無効化と資格情報外部化 (modernized-server)
 

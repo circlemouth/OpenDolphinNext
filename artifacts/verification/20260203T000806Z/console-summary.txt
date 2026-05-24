@@ -1,4 +1,0 @@
-Console summary (admin + charts after reload):
-- A form field element should have an id or name attribute: count 2 (Administration), count 11 (Charts).
-- OrcaSummary React key重複警告: 未再現。
-- statusText.toLowerCase 例外: 未再現。

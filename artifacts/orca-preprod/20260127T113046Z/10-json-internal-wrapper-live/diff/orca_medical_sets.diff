@@ -1,7 +1,0 @@
---- artifacts/orca-connectivity/20260111T213428Z/orca_medical_sets.json	2026-01-27 20:29:23
-+++ artifacts/orca-preprod/20260127T113046Z/10-json-internal-wrapper-live/orca_medical-sets.json	2026-01-27 20:50:50
-@@ -1 +1 @@
--{"apiResult":"79","apiResultMessage":"Spec-based implementation / Trial未検証","runId":"20251116T170500Z","messageDetail":"診療セット API は Trial で POST が閉鎖されているため stub 応答のみ提供しています。"}
-\ No newline at end of file
-+{"apiResult":"79","apiResultMessage":"Spec-based implementation / Trial未検証","runId":"20260127T113046Z","messageDetail":"診療セット API は Trial で POST が閉鎖されているため stub 応答のみ提供しています。"}
-\ No newline at end of file

@@ -1,3 +1,0 @@
-Console summary (Patients retest):
-- No id/name warnings observed.
-- No 500 resource errors observed in console.

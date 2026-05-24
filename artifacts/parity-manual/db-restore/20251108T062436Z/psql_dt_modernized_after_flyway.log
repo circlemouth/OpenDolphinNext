@@ -1,6 +1,0 @@
-                     List of relations
-   Schema    |         Name          | Type  |    Owner    
--------------+-----------------------+-------+-------------
- opendolphin | flyway_schema_history | table | opendolphin
-(1 row)
-

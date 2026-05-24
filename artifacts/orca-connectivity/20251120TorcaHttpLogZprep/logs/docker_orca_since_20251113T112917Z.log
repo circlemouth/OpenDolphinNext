@@ -1,2 +1,0 @@
-2025-11-13T11:29:22.336117970Z &{GET /api01rv2/patientgetv2?id=000001 HTTP/1.1 1 1 map[Accept:[*/*] User-Agent:[curl/8.7.1]] {} <nil> 0 [] false localhost:8000 map[] map[] <nil> map[] 172.217.161.36:35107 /api01rv2/patientgetv2?id=000001 <nil> <nil> <nil>  0xc005536050 <nil> [] map[]}
-2025-11-13T11:29:22.336874345Z 2025/11/13 20:29:22 Auth Error:401   

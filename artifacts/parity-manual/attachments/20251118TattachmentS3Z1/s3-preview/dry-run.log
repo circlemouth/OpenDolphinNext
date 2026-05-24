@@ -1,6 +1,0 @@
-runId=20251118TattachmentS3Z1
-modeLabel=s3-preview
-outputDir=artifacts/parity-manual/attachments/20251118TattachmentS3Z1/s3-preview
-composeFile=docker-compose.modernized.dev.yml
-appPort=9080
-notes=Attachment smoke テンプレのみ生成。既存スタックへの HTTP 実行は未実施。

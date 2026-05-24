@@ -1,1 +1,0 @@
-curl -v -u ormaster:change_me 'http://localhost:8000/api01rv2/patientgetv2?id=000001'

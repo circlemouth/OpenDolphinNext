@@ -1,4 +1,0 @@
-id	action	actor_id	request_id	event_time
-62	STAMP_TREE_PUT	1.3.6.1.4.1.9414.72.103:doctor1	parity-stamp-20251111TstampfixZ2	2025-11-12 06:43:07.396835+09
-60	STAMP_TREE_PUT	1.3.6.1.4.1.9414.72.103:doctor1	parity-stamp-20251111TstampfixZ2	2025-11-12 06:42:48.932664+09
-58	STAMP_TREE_PUT	1.3.6.1.4.1.9414.72.103:doctor1	parity-stamp-20251111TstampfixZ2	2025-11-12 06:37:05.836352+09

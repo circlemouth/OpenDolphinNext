@@ -1,9 +1,0 @@
-## docker ps port mapping
-NAMES                               STATUS                   PORTS
-opendolphin-server-modernized-dev   Up 6 minutes (healthy)   0.0.0.0:9080->8080/tcp, [::]:9080->8080/tcp, 0.0.0.0:9995->9990/tcp, [::]:9995->9990/tcp
-jma-receipt-docker-orca-1           Up 9 hours               0.0.0.0:8000->8000/tcp, :::8000->8000/tcp
-jma-receipt-docker-db-1             Up 9 hours (healthy)     5432/tcp
-opendolphin-postgres-modernized     Up 16 hours (healthy)    0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
-opendolphin-minio                   Up 16 hours (healthy)    0.0.0.0:9000-9001->9000-9001/tcp, :::9000-9001->9000-9001/tcp
----
-health=healthy started=2026-02-06T22:42:49.990055215Z ports={"8080/tcp":[{"HostIp":"0.0.0.0","HostPort":"9080"},{"HostIp":"::","HostPort":"9080"}],"9990/tcp":[{"HostIp":"0.0.0.0","HostPort":"9995"},{"HostIp":"::","HostPort":"9995"}]}

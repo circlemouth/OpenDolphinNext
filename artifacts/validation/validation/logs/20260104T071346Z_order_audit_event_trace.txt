@@ -1,5 +1,0 @@
- id |       action        |                 resource                  |                                     payload                                     |        trace_id        
-----+---------------------+-------------------------------------------+---------------------------------------------------------------------------------+------------------------
-  7 | REST_ERROR_RESPONSE | /openDolphin/resources/orca/order/bundles | {"reason":"http_404","errorCode":"http_404","httpStatus":404,"status":"failed"} | 20260104T071346Z-ORDER
-(1 row)
-

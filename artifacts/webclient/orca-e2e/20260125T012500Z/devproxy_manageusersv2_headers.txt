@@ -1,9 +1,0 @@
-HTTP/1.1 200 OK
-Vary: Origin
-server: nginx/1.18.0 (Ubuntu)
-date: Sun, 25 Jan 2026 01:44:32 GMT
-content-type: application/xml; charset=UTF-8
-transfer-encoding: chunked
-connection: close
-x-hybridmode: normal
-

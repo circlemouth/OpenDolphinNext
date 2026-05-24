@@ -1,5 +1,0 @@
-[0m[0m21:37:15,256 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous PUT /appo traceId=trace-appo-20251110T123655Z
-[0m[0m21:37:15,256 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous PUT /appo traceId=trace-appo-20251110T123655Z
-[0m[0m21:38:07,548 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous PUT /appo traceId=trace-appo-20251110T123655Z
-[0m[0m21:38:07,548 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous PUT /appo traceId=trace-appo-20251110T123655Z
-[0m[31m21:38:07,559 ERROR [open.dolphin.session.framework.SessionOperationInterceptor] (default task-1) Session operation failed [traceId=trace-appo-20251110T123655Z, operation=open.dolphin.session.AppoServiceBean$Proxy$_$$_WeldSubclass#putAppointments]: open.dolphin.session.framework.SessionServiceException: Session layer failure in open.dolphin.session.AppoServiceBean$Proxy$_$$_WeldSubclass#putAppointments

@@ -1,6 +1,0 @@
-NAME                                IMAGE                                    COMMAND                   SERVICE                 CREATED          STATUS                    PORTS
-opendolphin-minio                   minio/minio:latest                       "/usr/bin/docker-ent…"   minio                   15 minutes ago   Up 15 minutes (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
-opendolphin-postgres                postgres:14                              "docker-entrypoint.s…"   db                      15 minutes ago   Up 15 minutes (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
-opendolphin-postgres-modernized     postgres:14                              "docker-entrypoint.s…"   db-modernized           15 minutes ago   Up 15 minutes (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
-opendolphin-server                  legacy-vs-modern-server                  "/opt/jboss/bootstra…"   server                  15 minutes ago   Up 14 minutes (healthy)   0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp, 0.0.0.0:9990->9990/tcp, [::]:9990->9990/tcp
-opendolphin-server-modernized-dev   legacy-vs-modern-server-modernized-dev   "/opt/jboss/bootstra…"   server-modernized-dev   15 minutes ago   Up 14 minutes (healthy)   0.0.0.0:9080->8080/tcp, [::]:9080->8080/tcp, 0.0.0.0:9995->9990/tcp, [::]:9995->9990/tcp

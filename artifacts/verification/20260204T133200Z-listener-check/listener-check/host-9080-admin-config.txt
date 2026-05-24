@@ -1,17 +1,0 @@
-== host 9080 admin config ==
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100   226  100   226    0     0  16266      0 --:--:-- --:--:-- --:--:-- 17384
-HTTP/1.1 401 Unauthorized
-Referrer-Policy: no-referrer
-Content-Security-Policy: default-src 'self'
-X-Trace-Id: cd457b8c-e75f-435b-98ff-b7c9cdaaed2e
-Date: Wed, 04 Feb 2026 13:32:34 GMT
-Connection: keep-alive
-WWW-Authenticate: Basic realm="OpenDolphin"
-X-Content-Type-Options: nosniff
-Strict-Transport-Security: max-age=63072000; includeSubDomains
-Content-Type: application/json;charset=UTF-8
-Content-Length: 226
-
-{"error":"unauthorized","code":"unauthorized","message":"Authentication required","status":401,"traceId":"cd457b8c-e75f-435b-98ff-b7c9cdaaed2e","path":"/openDolphin/resources/api/admin/config","reason":"authentication_failed"}

@@ -1,4 +1,0 @@
-RUN_ID=20251119TorcaPHRSeqZ1
-wildfly_log_status=not_collected
-reason=server-modernized-dev host not reachable in this environment (curl host lookup failed)
-timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)

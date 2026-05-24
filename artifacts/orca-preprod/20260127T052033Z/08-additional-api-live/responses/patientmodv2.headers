@@ -1,15 +1,0 @@
-HTTP/1.1 200 OK
-X-Orca-Api-Result-Message: 006 D έzjχ<Α§Γ―¨ιό
-Referrer-Policy: no-referrer
-Content-Security-Policy: default-src 'self'
-X-Orca-Api-Result: H1
-X-Trace-Id: f253bace-6d8c-4b00-9786-6b0cc83ed519
-Date: Tue, 27 Jan 2026 05:39:48 GMT
-Connection: keep-alive
-X-Orca-Api-Result-Success: false
-X-Run-Id: 20260127T053948Z
-X-Content-Type-Options: nosniff
-Strict-Transport-Security: max-age=63072000; includeSubDomains
-Content-Length: 2794
-Content-Type: application/xml;charset=UTF-8
-

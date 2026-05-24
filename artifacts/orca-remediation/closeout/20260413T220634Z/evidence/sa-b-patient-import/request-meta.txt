@@ -1,6 +1,0 @@
-RUN_ID=20260413T220634Z
-TRACE_ID=sa-b-import-01423-post-setval-222407
-PATIENT_ID=01423
-FACILITY_ID=1.3.6.1.4.1.9414.72.103
-ENDPOINT=/openDolphin/api/orca/official/patients/import
-BODY={"patientIds":["01423"],"includeInsurance":false}

@@ -1,7 +1,0 @@
-GET /serverinfo/jamri -> legacy (trace_http_200) (status=200, time=0.034416, exit=0)
-GET /serverinfo/jamri -> modern (trace_http_200) (status=200, time=0.018196, exit=0)
-GET /dolphin/activity/2025,04 -> legacy (trace_http_400) (status=500, time=0.037226, exit=0)
-GET /dolphin/activity/2025,04 -> modern (trace_http_400) (status=400, time=0.026664, exit=0)
-GET /karte/pid/INVALID,%5Bdate%5D -> legacy (trace_http_500) (status=200, time=0.091737, exit=0)
-GET /karte/pid/INVALID,%5Bdate%5D -> legacy (trace_http_500) (status=200, time=0.031776, exit=0)
-GET /karte/pid/INVALID,%5Bdate%5D -> modern (trace_http_500) (status=400, time=0.007879, exit=0)

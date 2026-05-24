@@ -1,2 +1,0 @@
-## web-client proxy /api/user/1.3.6.1.4.1.9414.10.1:dolphindev (after 15s)
-curl_exit=0

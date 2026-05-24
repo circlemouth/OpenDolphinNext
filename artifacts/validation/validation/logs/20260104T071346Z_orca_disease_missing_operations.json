@@ -1,1 +1,0 @@
-{"error":"invalid_request","code":"invalid_request","message":"operations is required","status":400,"traceId":"20260104T071346Z-OPREQ","path":"/openDolphin/resources/orca/disease","field":"operations","validationError":true}

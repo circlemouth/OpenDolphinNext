@@ -1,1 +1,0 @@
-{"error":"invalid_activity_param","message":"param must contain year, month, count","status":400,"traceId":"trace-http-400-20251116TtracePropagationZ1","path":"/openDolphin/resources/dolphin/activity/2025,04","reason":"invalid_activity_param","requestParam":"2025,04"}

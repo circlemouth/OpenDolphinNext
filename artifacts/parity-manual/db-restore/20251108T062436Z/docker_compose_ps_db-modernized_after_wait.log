@@ -1,2 +1,0 @@
-NAME                              IMAGE         COMMAND                   SERVICE         CREATED         STATUS                   PORTS
-opendolphin-postgres-modernized   postgres:14   "docker-entrypoint.s…"   db-modernized   2 minutes ago   Up 2 minutes (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp

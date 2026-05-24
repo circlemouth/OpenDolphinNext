@@ -1,2 +1,0 @@
-/api/api21/medicalmodv2?class=01 は patientmodv2 で 8 桁 Patient_ID を取得できなかったため未実行。
-最新 patientmodv2 応答: Api_Result=01 (患者番号未設定)。

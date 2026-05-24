@@ -1,3 +1,0 @@
-# Slack dummy send (dry-run)
-curl -sS -X POST https://dummy.slack.local/webhook -H 'Content-Type: application/json' -d '{"text":"[license-nightly] RUN_ID=20251120TlicenseNightlyZ1 failed (stage=AUDIT_CHECK) → artifacts/parity-manual/license/20251120TlicenseNightlyZ1"}'
-result=dry_run_blocked_by_policy

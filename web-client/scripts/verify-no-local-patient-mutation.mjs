@@ -14,10 +14,7 @@ const checkedRoots = [
   'api-contract/src/main',
   'web-client/src',
   'web-client/scripts',
-  'docs/contracts',
-  'docs/runbooks',
-  'docs/architecture',
-  'web-client/notes',
+  'docs',
 ];
 
 const textFileExtensions = new Set([

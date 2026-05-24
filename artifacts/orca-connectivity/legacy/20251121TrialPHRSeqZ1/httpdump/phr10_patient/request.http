@@ -1,7 +1,0 @@
-GET /20/adm/phr/patient/WEB1001 HTTP/1.1
-Host: weborca-trial.orca.med.or.jp
-Authorization: Basic trial/weborcatrial
-X-Facility-Id: 1.3.6.1.4.1.9414.72.101
-X-Touch-TraceId: 20251121TrialPHRSeqZ1
-X-Access-Reason: phr-patient-key
-Accept: application/json

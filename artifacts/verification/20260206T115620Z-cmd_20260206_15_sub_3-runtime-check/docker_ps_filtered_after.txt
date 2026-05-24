@@ -1,5 +1,0 @@
-## docker ps (filtered after)
-1:opendolphin-web-client	Up 5 seconds	0.0.0.0:5173->5173/tcp, :::5173->5173/tcp
-2:opendolphin-server-modernized-dev	Up 5 hours (healthy)	0.0.0.0:9080->8080/tcp, [::]:9080->8080/tcp, 0.0.0.0:9995->9990/tcp, [::]:9995->9990/tcp
-3:opendolphin-postgres-modernized	Up 5 hours (healthy)	0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
-4:opendolphin-minio	Up 5 hours (healthy)	0.0.0.0:9000-9001->9000-9001/tcp, :::9000-9001->9000-9001/tcp

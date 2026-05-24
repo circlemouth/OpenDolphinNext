@@ -1,2 +1,0 @@
-## server-modernized /openDolphin/resources/dolphin
-curl_exit=0

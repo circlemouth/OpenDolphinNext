@@ -1,6 +1,0 @@
-2026-02-05T21:16:37.538Z Clear storage
-2026-02-05T21:16:37.879Z Login
-2026-02-05T21:16:38.099Z Navigate to http://localhost:5173/f/1.3.6.1.4.1.9414.72.103/charts?patientId=01415&visitDate=2026-02-05&runId=20260205T211637Z
-2026-02-05T21:16:38.354Z Open document create utility
-2026-02-05T21:16:38.454Z Fill document form
-2026-02-05T21:16:38.478Z Save document

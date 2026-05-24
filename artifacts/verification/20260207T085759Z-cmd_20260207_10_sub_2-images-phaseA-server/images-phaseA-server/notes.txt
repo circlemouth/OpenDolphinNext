@@ -1,7 +1,0 @@
-RUN_ID=20260207T085759Z-cmd_20260207_10_sub_2-images-phaseA-server
-patientId=P0002
-featureGate: header X-Feature-Images: 1 OR env OPENDOLPHIN_FEATURE_IMAGES_PHASEA=true
-API:
-- POST /openDolphin/resources/patients/{patientId}/images (multipart file)
-- GET  /openDolphin/resources/patients/{patientId}/images
-- GET  /openDolphin/resources/patients/{patientId}/images/{imageId}

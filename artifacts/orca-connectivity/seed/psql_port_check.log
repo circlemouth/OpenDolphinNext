@@ -1,5 +1,0 @@
-# WebORCA Postgres 接続確認 (2025-11-14 23:35 JST)
-nc -vz weborca.cloud.orcamo.jp 5432
-→ connect timeout (Operation timed out)
-
-備考: port 5432/TCP は外部ネットワークから閉じているため、`psql` で本番 DB へ直接接続できず seed 適用に進めない。Ops 側で bastion/TLS トンネルまたは別ホスト名/ポート情報の共有が必要。

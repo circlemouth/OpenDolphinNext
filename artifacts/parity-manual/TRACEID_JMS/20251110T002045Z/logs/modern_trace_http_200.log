@@ -1,2 +1,0 @@
-06:23:37,236 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous GET /serverinfo/jamri traceId=trace-http-200
-06:23:37,237 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous GET /serverinfo/jamri traceId=trace-http-200

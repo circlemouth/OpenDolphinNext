@@ -1,8 +1,0 @@
-[INFO] scenario=license run-id=20251119TlicenseMonitorZ2Rerun output=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/artifacts/parity-manual/smoke/20251119TlicenseMonitorZ2Rerun
-POST /dolphin/license -> legacy (license_post) (status=200, time=0.250196, exit=0)
-POST /dolphin/license -> modern (license_post) (status=200, time=0.584867, exit=0)
-GET /dolphin/license -> legacy (license_get_dolphin) (status=405, time=0.035779, exit=0)
-GET /dolphin/license -> modern (license_get_dolphin) (status=405, time=0.011419, exit=0)
-GET /system/license -> legacy (license_get_system) (status=405, time=0.010240, exit=0)
-GET /system/license -> modern (license_get_system) (status=405, time=0.002833, exit=0)
-[INFO] 3 件のケースを artifacts/parity-manual/smoke/20251119TlicenseMonitorZ2Rerun に保存しました

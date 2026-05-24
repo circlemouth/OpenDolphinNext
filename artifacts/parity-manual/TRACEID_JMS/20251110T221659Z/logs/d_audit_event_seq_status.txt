@@ -1,6 +1,0 @@
-# RUN_ID=20251110T221659Z
-# d_audit_event_id_seq snapshot (derived from exported log; DB container未起動のため psql 実行は保留)
-min_id=-47
-max_id=-41
-last_value_estimate<=-41
-note=after reseed this sequence must be set above existing negative IDs before enabling AuditTrail

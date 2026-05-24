@@ -1,9 +1,0 @@
-{
-  "method": "PUT",
-  "path": "/odletter/letter",
-  "base_url": "http://opendolphin-server-modernized-dev:8080/openDolphin/resources",
-  "request_id": "rest_error_letter_audit",
-  "status_code": 200,
-  "time_total": "0.385542",
-  "exit_code": 0
-}

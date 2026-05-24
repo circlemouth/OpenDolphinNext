@@ -1,7 +1,0 @@
-RUN_ID=20260206T045611Z-order-bundles-lo-decode-recheck
-get-no-entity.status=200
-get-no-entity.recordsReturned=5
-get-general-order.status=200
-get-general-order.recordsReturned=5
-get-general-order-from.status=200
-get-general-order-from.recordsReturned=5

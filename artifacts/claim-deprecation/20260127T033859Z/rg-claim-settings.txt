@@ -1,2 +1,0 @@
-No claim.* settings references found under server-modernized/ and ops/.
-Command: rg -n -S "claim.conn|claim.host|claim.send|claim.scheme|claim.jdbc|claim.user|claim.password" server-modernized ops

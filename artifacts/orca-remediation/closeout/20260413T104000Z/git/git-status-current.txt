@@ -1,7 +1,0 @@
- M docs/managerdocs/01_current_state_and_decision_rules.md
- M docs/releases/orca-remediation-cutover.md
- M docs/runbooks/release-validation.md
- M web-client/scripts/qa-acceptmodv2-weborca.mjs
- M web-client/scripts/qa-fullflow-weborca.mjs
- M web-client/scripts/qa-lib/session-auth.mjs
-?? artifacts/orca-remediation/

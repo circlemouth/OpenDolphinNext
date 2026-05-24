@@ -1,9 +1,0 @@
-PUT /20/adm/phr/accessKey HTTP/1.1
-Host: weborca-trial.orca.med.or.jp
-Authorization: Basic trial/weborcatrial
-X-Facility-Id: 1.3.6.1.4.1.9414.72.101
-X-Touch-TraceId: 20251121TrialPHRSeqZ1
-X-Access-Reason: phr-key-upsert
-Content-Type: application/json; charset=UTF-8
-Accept: application/json
-Body File: phr-seq/10_key-management/PHR-02_request.json

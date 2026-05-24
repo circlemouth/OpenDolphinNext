@@ -1,9 +1,0 @@
- id  |         action          |              request_id              |          event_time           
------+-------------------------+--------------------------------------+-------------------------------
- -44 | SYSTEM_ACTIVITY_SUMMARY | 76dd12b6-85d0-42a4-af3d-b9790ffbbe47 | 2025-11-10 21:32:07.878756+09
- -45 | SYSTEM_ACTIVITY_SUMMARY | 1097021e-aaeb-48c8-ae87-04b93ec46a64 | 2025-11-10 21:26:59.604509+09
- -46 | SYSTEM_ACTIVITY_SUMMARY | 2ff7792f-e128-4263-b7e7-739ce4ddcee2 | 2025-11-10 06:23:46.834083+09
- -47 | SYSTEM_ACTIVITY_SUMMARY | 269fa2ec-5054-4cb6-8470-168fd0cd40a4 | 2025-11-10 06:22:05.318451+09
-   1 | EHT_CLAIM_SEND          | 8c93e452-918d-407b-8216-cc7ca67b9d80 | 2025-11-10 05:18:27.015813+09
-(5 rows)
-

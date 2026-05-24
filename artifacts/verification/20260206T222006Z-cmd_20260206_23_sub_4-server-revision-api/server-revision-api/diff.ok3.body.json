@@ -1,9 +1,0 @@
-{
-  "error": "<redacted>",
-  "code": "<redacted>",
-  "message": "<redacted>",
-  "status": 401,
-  "traceId": "<redacted>",
-  "path": "<redacted>",
-  "reason": "<redacted>"
-}

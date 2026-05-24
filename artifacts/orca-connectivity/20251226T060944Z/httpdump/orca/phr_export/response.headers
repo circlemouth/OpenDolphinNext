@@ -1,7 +1,0 @@
-HTTP/1.1 405 Method Not Allowed
-Allow: OPTIONS, GET
-Content-Length: 62
-Content-Type: application/json
-Date: Fri, 26 Dec 2025 06:16:24 GMT
-Vary: Origin
-

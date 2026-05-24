@@ -1,2 +1,0 @@
-{"totalCount":1,"items":[{"tensuCode":"113006810","noticeDate":"20120912","effectiveDate":"20100401","startDate":"20100401","endDate":"20120331","calcUnits":[{"unitCode":131,"unitName":"月","maxCount":1,"specialCondition":0}],"meta":{"version":"20240426","runId":"20260127T103829Z","dataSource":"server","cacheHit":false,"missingMaster":false,"fallbackUsed":false,"fetchedAt":"2026-01-27T10:38:29.548666054Z"}}]}
-HTTP_STATUS:200

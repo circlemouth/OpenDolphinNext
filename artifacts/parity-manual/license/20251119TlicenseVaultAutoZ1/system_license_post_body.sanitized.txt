@@ -1,2 +1,0 @@
-# RUN_ID に応じて license.uid_seed を後置する
-UID-SEED-PLACEHOLDER-20251119TlicenseVaultAutoZ1

@@ -1,4 +1,0 @@
-name                                 type              encoding         emb sub uni object ID
------------------------------------- ----------------- ---------------- --- --- --- ---------
-LXEHKF+NotoSansCJKjp-Regular-Identity-H CID Type 0C       Identity-H       yes yes yes      1  0
-Helvetica                            Type 1            WinAnsi          no  no  no       2  0

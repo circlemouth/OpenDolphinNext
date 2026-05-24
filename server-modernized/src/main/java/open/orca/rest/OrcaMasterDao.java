@@ -5,7 +5,7 @@ import jakarta.inject.Inject;
 
 /**
  * ORCA master DAO.
- * Supported schema contract is documented in docs/contracts/orca-master-api.md.
+ * Supported ORCA boundary is summarized in docs/security-and-orca.md.
  */
 @ApplicationScoped
 public class OrcaMasterDao {

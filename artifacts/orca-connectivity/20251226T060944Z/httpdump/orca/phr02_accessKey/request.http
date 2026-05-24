@@ -1,6 +1,0 @@
-PUT /20/adm/phr/accessKey HTTP/1.1
-Host: weborca.cloud.orcamo.jp
-X-Facility-Id: LOCAL.FACILITY.0001
-X-Touch-TraceId: 20251226T060944Z
-X-Access-Reason: phr02_accessKey
-Authorization: Basic <MASKED>

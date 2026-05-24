@@ -1,3 +1,0 @@
-d_audit_event rows: min=-47 max=71 total=24
-d_audit_event_id_seq last_value=71 is_called=t
-suggested next_id=72

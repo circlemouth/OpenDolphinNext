@@ -1,5 +1,0 @@
-2025-11-13T00:18:12Z FAILURE
-- step: GET /openDolphin/resources/karte/{patientId},{from}
-- traceId: 925cddbe-2df6-49d5-8298-68f24a2c7fb7
-- server log excerpt: org.hibernate.query.sqm.UnknownEntityException: Could not resolve root entity 'ObservationModel'
-- impact: smoke_existing_stack.sh aborted before attachment upload; no hashes collected.

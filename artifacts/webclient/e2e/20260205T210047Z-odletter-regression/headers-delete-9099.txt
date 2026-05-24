@@ -1,8 +1,0 @@
-HTTP/1.1 204 No Content
-Strict-Transport-Security: max-age=63072000; includeSubDomains
-X-Content-Type-Options: nosniff
-Referrer-Policy: no-referrer
-Content-Security-Policy: default-src 'self'
-X-Trace-Id: b5e4198f-8ab9-4d03-8cb4-22edb71aa821
-Date: Thu, 05 Feb 2026 21:00:48 GMT
-

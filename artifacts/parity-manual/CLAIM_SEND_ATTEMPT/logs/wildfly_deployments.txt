@@ -1,4 +1,0 @@
-total 6544
--rw-rw-r-- 1 jboss root     8870 Aug 19  2016 README.txt
--rw-r--r-- 1 jboss root  6683436 Nov  9 04:32 opendolphin-server.war
--rw-r--r-- 1 jboss jboss      22 Nov  9 04:32 opendolphin-server.war.deployed

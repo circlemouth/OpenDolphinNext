@@ -1,8 +1,0 @@
-opendolphin-server  | [0m[33m09:04:44,618 WARNING [open.dolphin] (default task-87) Unauthorized user: 1.3.6.1.4.1.9414.72.103:doctor1: /openDolphin/resources/schedule/pvt/2025-11-09
-opendolphin-server  | [0m[33m09:05:27,626 WARNING [open.dolphin] (default task-90) Unauthorized user: 1.3.6.1.4.1.9414.72.103:doctor1: /openDolphin/resources/schedule/pvt/2025-11-09
-opendolphin-server  | [0m[33m09:06:56,513 WARNING [open.dolphin] (default task-94) Unauthorized user: 1.3.6.1.4.1.9414.72.103:doctor1: /openDolphin/resources/schedule/pvt/2025-11-09
-opendolphin-server  | [0m[0m09:07:36,335 INFO  [open.dolphin] (default task-96) 172.19.0.7 doctor1 GET /schedule/pvt/2025-11-09
-opendolphin-server  | [0m[0m09:07:36,336 INFO  [open.dolphin] (default task-96) 172.19.0.7 doctor1 GET /schedule/pvt/2025-11-09
-opendolphin-server  | [0m[33m09:07:57,619 WARNING [open.dolphin] (default task-98) Unauthorized user: 1.3.6.1.4.1.9414.72.103:doctor1: /openDolphin/resources/schedule/pvt/2025-11-09
-opendolphin-server  | [0m[0m09:09:02,596 INFO  [open.dolphin] (default task-101) 172.19.0.7 doctor1 GET /schedule/pvt/2025-11-09
-opendolphin-server  | [0m[0m09:09:02,599 INFO  [open.dolphin] (default task-101) 172.19.0.7 doctor1 GET /schedule/pvt/2025-11-09

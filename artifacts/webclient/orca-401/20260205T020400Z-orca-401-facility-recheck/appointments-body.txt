@@ -1,1 +1,0 @@
-{"error":"unsupported_media_type","code":"unsupported_media_type","message":"RESTEASY003065: Cannot consume content type","status":415,"traceId":"48bc80c3-d7bc-41f0-a9f7-92bb94752f30","path":"/openDolphin/resources/orca/appointments/list"}

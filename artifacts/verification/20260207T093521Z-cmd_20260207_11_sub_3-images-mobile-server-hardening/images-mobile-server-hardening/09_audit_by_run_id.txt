@@ -1,4 +1,0 @@
- id | event_time | action | run_id | actor_id | resource | trace_id | request_id | outcome | payload_head 
-----+------------+--------+--------+----------+----------+----------+------------+---------+--------------
-(0 rows)
-

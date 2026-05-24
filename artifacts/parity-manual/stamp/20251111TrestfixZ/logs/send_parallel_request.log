@@ -1,2 +1,0 @@
-2025-11-11T16:48:49Z PUT /stamp/tree -> legacy (rest_error_stamp_data_exception) (status=500, time=0.269795, exit=0)
-2025-11-11T16:48:49Z PUT /stamp/tree -> modern (rest_error_stamp_data_exception) (status=500, time=0.029234, exit=0)

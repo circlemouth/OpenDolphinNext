@@ -1,3 +1,0 @@
-Console summary (claim outpatient fallback test):
-- Multiple 404 resource errors after claim re-fetch.
-- No statusText.toLowerCase exception observed.

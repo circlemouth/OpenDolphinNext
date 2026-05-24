@@ -1,2 +1,0 @@
-{"error":"not_found","code":"not_found","message":"RESTEASY003210: Could not find resource for full path: http://localhost:8080/openDolphin/resources/orca/master/material?keyword=000000000&page=1&size=1","status":404,"traceId":"8007a9f8-7956-4924-89e1-c44e70975eea","path":"/openDolphin/resources/orca/master/material","reason":"RESTEASY003210: Could not find resource for full path: http://localhost:8080/openDolphin/resources/orca/master/material?keyword=000000000&page=1&size=1"}
-HTTP_STATUS:404

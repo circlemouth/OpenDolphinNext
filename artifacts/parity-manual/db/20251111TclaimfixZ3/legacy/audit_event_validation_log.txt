@@ -1,3 +1,0 @@
-validation_id=13
-event_time=2025-11-12 08:17:03.632596+09
-request_id=trace-seq-smoke-batch

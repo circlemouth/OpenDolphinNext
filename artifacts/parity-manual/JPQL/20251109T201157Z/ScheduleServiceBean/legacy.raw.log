@@ -1,7 +1,0 @@
-[0m[0m05:32:07,338 INFO  [open.dolphin] (default task-70) 127.0.0.1 dolphin GET /dolphin
-[0m[0m05:32:07,339 INFO  [open.dolphin] (default task-70) 127.0.0.1 dolphin GET /dolphin
-[0m[0m05:32:13,318 INFO  [open.dolphin] (default task-71) 127.0.0.1 doctor1 GET /schedule/pvt/2025-11-09
-[0m[0m05:32:13,318 INFO  [open.dolphin] (default task-71) 127.0.0.1 doctor1 GET /schedule/pvt/2025-11-09
-[0m[0m05:32:13,394 INFO  [stdout] (default task-71) Hibernate: select patientvis0_.id as id1_37_, patientvis0_.department as departme2_37_, patientvis0_.deptCode as deptCode3_37_, patientvis0_.deptName as deptName4_37_, patientvis0_.doctorId as doctorId5_37_, patientvis0_.doctorName as doctorNa6_37_, patientvis0_.facilityId as facility7_37_, patientvis0_.firstInsurance as firstIns8_37_, patientvis0_.insuranceUid as insuranc9_37_, patientvis0_.jmariNumber as jmariNu10_37_, patientvis0_.memo as memo11_37_, patientvis0_.patient_id as patient14_37_, patientvis0_.pvtDate as pvtDate12_37_, patientvis0_.status as status13_37_ from d_patient_visit patientvis0_ where patientvis0_.facilityId=? and (patientvis0_.pvtDate like ?) order by patientvis0_.pvtDate
-[0m[0m05:32:37,474 INFO  [open.dolphin] (default task-72) 127.0.0.1 dolphin GET /dolphin
-[0m[0m05:32:37,475 INFO  [open.dolphin] (default task-72) 127.0.0.1 dolphin GET /dolphin

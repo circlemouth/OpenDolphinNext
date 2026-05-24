@@ -1,1 +1,0 @@
-2025-11-15T22:59:04Z	GET https://weborca-trial.orca.med.or.jp/20/adm/phr/image/00000001

@@ -1,7 +1,0 @@
-RUN_ID=20251113TorcaApi21SeedZ1
-UTC_TAG=$UTC_TAG
-Seed_SQL=docs/server-modernization/phase2/operations/assets/seeds/api21_medical_seed.sql (8桁 patient_id)
-Seed_Artifacts=artifacts/orca-connectivity/20251113T061111Z/{seed_psql.log,seed_verification.txt}
-Payload=/tmp/orca-api-payloads/03_medicalmodv2_payload.xml (Patient_ID=00000001)
-Command=docker exec jma-receipt-docker-for-ubuntu-2204-orca-1 sh -c "cd / && curl -sS -D /tmp/api21_headers.txt -o /tmp/api21_body.json -u ormaster:change_me -H 'Content-Type: application/xml; charset=UTF-8' --data-binary @/tmp/orca-api-payloads/03_medicalmodv2_payload.xml 'http://localhost:8000/api/api21/medicalmodv2?class=01'"
-Result=HTTP 200 / Api_Result=10 (患者番号に該当する患者が存在しません)

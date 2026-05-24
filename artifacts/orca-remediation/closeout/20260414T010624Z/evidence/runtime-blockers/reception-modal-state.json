@@ -1,8 +1,0 @@
-{
-  "location": "https://127.0.0.1:5173/f/1.3.6.1.4.1.9414.72.103/reception?sort=time&date=2026-04-14",
-  "department": null,
-  "physician": null,
-  "visitKind": null,
-  "medicalInformation": null,
-  "modalText": "既存患者受付/患者検索既存患者を検索して選択し、当日受付を登録します。新患登録は Patients で行ってください。閉じる患者検索0件クリア患者ID氏名（姓）氏名（名）カナ（セイ）カナ（メイ）検索患者検索結果0件検索結果がありません。受付登録選択患者: 未選択左の患者検索結果カードを選択すると、受付設定と「受付する」ボタンが表示されます。"
-}

@@ -114,8 +114,8 @@ load_orca_env_file() {
   return 0
 }
 
-ORCA_INFO_FILE="docs/operations/ORCA_CERTIFICATION_ONLY.md"
-ORCA_CREDENTIAL_FILE="docs/operations/ORCA_CERTIFICATION_ONLY.md"
+ORCA_INFO_FILE="${ORCA_INFO_FILE:-}"
+ORCA_CREDENTIAL_FILE="${ORCA_CREDENTIAL_FILE:-}"
 CUSTOM_PROP_TEMPLATE="ops/shared/docker/custom.properties"
 CUSTOM_PROP_OUTPUT="custom.properties.dev"
 COMPOSE_OVERRIDE_FILE="docker-compose.override.dev.yml"
@@ -442,7 +442,7 @@ read_orca_info() {
   local file_scheme="" file_host="" file_port="" file_user="" file_pass=""
   local regex_auth='Basic auth:[[:space:]]*``([^`]*)``[[:space:]]*/[[:space:]]*``([^`]*)``'
 
-  if [[ -f "$ORCA_INFO_FILE" ]]; then
+  if [[ -n "$ORCA_INFO_FILE" && -f "$ORCA_INFO_FILE" ]]; then
     log "Reading ORCA connection info from $ORCA_INFO_FILE..."
     local base_url
     base_url="$(grep -Eo 'https?://[^` ]+' "$ORCA_INFO_FILE" | head -n 1 || true)"
@@ -479,18 +479,18 @@ read_orca_info() {
         file_pass="$table_pass"
       fi
     fi
-  else
+  elif [[ -n "$ORCA_INFO_FILE" ]]; then
     log "Warning: ORCA info file not found ($ORCA_INFO_FILE)"
   fi
 
-  if [[ -f "$ORCA_CREDENTIAL_FILE" ]]; then
+  if [[ -n "$ORCA_CREDENTIAL_FILE" && -f "$ORCA_CREDENTIAL_FILE" ]]; then
     local content
     content="$(<"$ORCA_CREDENTIAL_FILE")"
     if [[ $content =~ $regex_auth ]]; then
       file_user="${BASH_REMATCH[1]}"
       file_pass="${BASH_REMATCH[2]}"
     fi
-  else
+  elif [[ -n "$ORCA_CREDENTIAL_FILE" ]]; then
     log "Warning: ORCA credential file not found ($ORCA_CREDENTIAL_FILE)"
   fi
 
@@ -1528,8 +1528,6 @@ start_web_client_docker() {
     VITE_ENABLE_FACILITY_HEADER="$dev_enable_facility_header" \
     VITE_SINGLE_FACILITY_LOGIN="$VITE_SINGLE_FACILITY_LOGIN_EFFECTIVE" \
     VITE_DEFAULT_FACILITY_ID="$VITE_DEFAULT_FACILITY_ID_EFFECTIVE" \
-    VITE_ORCA_MODE="$dev_orca_mode" \
-    VITE_ORCA_API_PATH_PREFIX="$dev_orca_path_prefix" \
     VITE_API_BASE_URL="$WEB_CLIENT_DEV_API_BASE" \
     VITE_BASE_PATH="$base_path" \
     VITE_CHARTS_REVISION_HISTORY="$dev_charts_revision_history" \
@@ -1577,8 +1575,6 @@ VITE_DISABLE_AUDIT=$dev_disable_audit
 VITE_ENABLE_FACILITY_HEADER=$dev_enable_facility_header
 VITE_SINGLE_FACILITY_LOGIN=$VITE_SINGLE_FACILITY_LOGIN_EFFECTIVE
 VITE_DEFAULT_FACILITY_ID=$VITE_DEFAULT_FACILITY_ID_EFFECTIVE
-VITE_ORCA_MODE=$dev_orca_mode
-VITE_ORCA_API_PATH_PREFIX=$dev_orca_path_prefix
 VITE_BASE_PATH=$base_path
 VITE_CHARTS_REVISION_HISTORY=$dev_charts_revision_history
 VITE_CHARTS_REVISION_EDIT=$dev_charts_revision_edit

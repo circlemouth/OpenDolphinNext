@@ -1,7 +1,0 @@
-HTTP/1.1 200 OK
-Content-Length: 407
-Content-Type: application/json; charset=UTF-8
-Date: Thu, 13 Nov 2025 23:42:12 GMT
-Vary: Origin
-X-Hybridmode: normal
-

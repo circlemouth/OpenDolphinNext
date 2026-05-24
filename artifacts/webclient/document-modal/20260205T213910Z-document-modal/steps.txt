@@ -1,4 +1,0 @@
-[2026-02-05T21:39:11.413Z] Charts を開く
-[2026-02-05T21:39:13.085Z] ユーティリティを開く
-[2026-02-05T21:39:13.449Z] 文書を入力して保存
-[2026-02-05T21:39:33.611Z] エラー: page.waitForResponse: Timeout 20000ms exceeded while waiting for event "response"

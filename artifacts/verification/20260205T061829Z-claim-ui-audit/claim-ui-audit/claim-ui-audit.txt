@@ -1,3 +1,0 @@
-[2026-02-05T06:18:31.492Z] baseUrl=http://localhost:4173
-[2026-02-05T06:18:33.996Z] screenshot: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/artifacts/verification/20260205T061829Z-claim-ui-audit/claim-ui-audit/reception-claim-audit.png
-[2026-02-05T06:18:35.762Z] screenshot: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/artifacts/verification/20260205T061829Z-claim-ui-audit/claim-ui-audit/charts-claim-audit.png

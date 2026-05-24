@@ -1,1 +1,0 @@
-{"error":"feature_disabled","code":"feature_disabled","message":"Images PhaseA is disabled","status":404,"traceId":"87e7fadf-6aec-4a90-9290-9f837bf8c16c","path":"/openDolphin/resources/patients/P0002/images","requiredHeader":"X-Feature-Images","requiredEnv":"OPENDOLPHIN_FEATURE_IMAGES_PHASEA"}

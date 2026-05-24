@@ -1,8 +1,0 @@
-01_401_no_auth 401
-02_404_feature_off 404
-03_403_other_facility 403
-04_415_unsupported 415
-05_413_too_large 413
-06_200_upload_ok 200
-07_200_list 200
-08_200_download 200

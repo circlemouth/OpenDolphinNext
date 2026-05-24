@@ -1,8 +1,0 @@
-HTTP/1.1 405 Method Not Allowed
-Server: nginx/1.18.0 (Ubuntu)
-Date: Sun, 16 Nov 2025 12:57:33 GMT
-Content-Type: application/json
-Content-Length: 62
-Connection: keep-alive
-Allow: OPTIONS, GET
-

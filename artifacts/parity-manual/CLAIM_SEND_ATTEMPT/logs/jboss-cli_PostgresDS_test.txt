@@ -1,4 +1,0 @@
-{
-    "outcome" => "success",
-    "result" => [true]
-}

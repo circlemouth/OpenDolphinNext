@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/dolphin",
-  "base_url": "http://localhost:9080/openDolphin/resources",
-  "request_id": "observability_loop_loop004",
-  "status_code": 200,
-  "time_total": "0.003167",
-  "exit_code": 0
-}

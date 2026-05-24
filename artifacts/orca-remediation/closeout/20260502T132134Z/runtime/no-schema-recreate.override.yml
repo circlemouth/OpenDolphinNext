@@ -1,5 +1,0 @@
-services:
-  server-modernized-dev:
-    environment:
-      OPENDOLPHIN_SCHEMA_ACTION: none
-      JAVA_OPTS_APPEND: ${JAVA_OPTS_APPEND:-} -Dhibernate.hbm2ddl.auto=none -Djakarta.persistence.schema-generation.database.action=none -Dmicrometer.export.otlp.enabled=false -Dio.micrometer.export.otlp.enabled=false -Dotlp.enabled=false -Dotel.metrics.exporter=none -Dotel.sdk.disabled=true

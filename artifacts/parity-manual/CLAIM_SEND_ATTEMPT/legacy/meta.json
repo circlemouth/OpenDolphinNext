@@ -1,9 +1,0 @@
-{
-  "method": "PUT",
-  "path": "/20/adm/eht/sendClaim",
-  "base_url": "http://localhost:8080/openDolphin/resources",
-  "request_id": "CLAIM_SEND_SUCCESS",
-  "status_code": 405,
-  "time_total": "0.006065",
-  "exit_code": 0
-}

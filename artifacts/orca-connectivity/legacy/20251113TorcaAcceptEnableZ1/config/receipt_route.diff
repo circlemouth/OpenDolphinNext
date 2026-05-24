@@ -1,9 +1,0 @@
---- artifacts/orca-connectivity/templates/receipt_route.template.ini	2025-11-13 12:07:17
-+++ artifacts/orca-connectivity/20251113TorcaAcceptEnableZ1/config/receipt_route.ini	2025-11-13 12:33:06
-@@ -1,4 +1,5 @@
--# WebORCA route template (receipt_route.ini)
-+# WebORCA route example (receipt_route.ini)
-+# Runbook §4.5 参照: docs/server-modernization/phase2/operations/ORCA_CONNECTIVITY_VALIDATION.md
- #
- # 配置先: /opt/jma/weborca/app/etc/receipt_route.ini
- # 最低限の API グループ (api01rv2 / orca11 / orca14 / api21) を ENABLE=1 で定義し、

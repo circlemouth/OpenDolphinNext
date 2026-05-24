@@ -1,9 +1,0 @@
-A more recent version of Flyway is available. Find out more about Flyway 11.16.0 at https://rd.gt/3rXiSlV
-
-Flyway OSS Edition 10.17.3 by Redgate
-
-See release notes here: https://rd.gt/416ObMi
-Database: jdbc:postgresql://localhost:5432/opendolphin_modern (PostgreSQL 14.19)
-Creating schema "opendolphin" ...
-Creating Schema History table "opendolphin"."flyway_schema_history" with baseline ...
-Schema history table "opendolphin"."flyway_schema_history" already initialized with (0,<< Flyway Baseline >>). Skipping.

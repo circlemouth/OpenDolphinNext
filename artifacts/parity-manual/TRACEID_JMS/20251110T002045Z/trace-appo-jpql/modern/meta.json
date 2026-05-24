@@ -1,9 +1,0 @@
-{
-  "method": "PUT",
-  "path": "/appo",
-  "base_url": "http://localhost:9080/openDolphin/resources",
-  "request_id": "trace-appo-jpql",
-  "status_code": 500,
-  "time_total": "0.040830",
-  "exit_code": 0
-}

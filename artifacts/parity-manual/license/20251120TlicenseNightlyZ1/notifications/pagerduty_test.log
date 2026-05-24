@@ -1,3 +1,0 @@
-# PagerDuty dummy send (dry-run)
-curl -sS -X POST https://dummy.pagerduty.local/v2/enqueue -H 'Content-Type: application/json' -d '{"routing_key":"dummy-routing-key","event_action":"trigger","payload":{"summary":"license nightly failed: RUN_ID=20251120TlicenseNightlyZ1","source":"opendolphin-nightly","severity":"error"}}'
-result=dry_run_blocked_by_policy

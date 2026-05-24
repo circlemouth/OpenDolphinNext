@@ -1,1 +1,0 @@
-{"error":"unsupported_media_type","code":"unsupported_media_type","message":"Unsupported content type","status":415,"traceId":"d8971f87-4dee-49a4-b515-4d64b4b575c1","path":"/openDolphin/resources/patients/P0002/images","allowed":["image/jpeg","image/png"],"contentType":"application/octet-stream"}

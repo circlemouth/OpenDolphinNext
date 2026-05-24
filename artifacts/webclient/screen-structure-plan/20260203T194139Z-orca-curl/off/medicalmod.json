@@ -1,1 +1,0 @@
-{"error":"unauthorized","code":"unauthorized","message":"Authentication required","status":401,"traceId":"b5a54a59-1b84-4ba6-aa33-150685602e8a","path":"/openDolphin/resources/orca21/medicalmodv2/outpatient","reason":"authentication_failed"}

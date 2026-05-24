@@ -1,9 +1,0 @@
-- inject session (skip /api/user login) {"sessionKey":"opendolphin:web-client:auth","injectedSession":{"facilityId":"1.3.6.1.4.1.9414.72.103","userId":"doctor1","displayName":"doctor1","commonName":"doctor1","clientUuid":"playwright-smoke","runId":"20260207T085555Z","role":"doctor","roles":["doctor","user"]}}
-- open reception {"url":"http://localhost:4173/f/1.3.6.1.4.1.9414.72.103/reception"}
-- open charts from first row (dblclick)
-- select reception row {"index":0,"summary":"予約\n\t\n患者ID\n000001\n/\n予約ID\nAPT-2401\n\t\n山田 花子ヤマダ ハナコ\n\t\n09:10\n01 内科\t不明—\t血圧フォロー\nsrc: slots\n\t-\t未取得\tCharts 新規タブ"}
-- open docked utility panel (Ctrl+Shift+U)
-- open utility tab: order-edit
-- order-edit: bundle name input not visible (patient not selected or panel not opened?)
-- order-edit MVP entity selector not present
-- stamps tab not present (baseline expected)

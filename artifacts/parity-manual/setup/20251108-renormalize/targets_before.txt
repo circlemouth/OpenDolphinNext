@@ -1,4 +1,0 @@
-# Command: rg -l '\r$' -g '*.sh' scripts ops/tools
-# Timestamp: 2025-11-08T14:10:11+09:00
-scripts/setup_codex_env.sh
-scripts/run-static-analysis-diff.sh

@@ -1,9 +1,0 @@
-[2026-02-03T01:10Z] Reception network (key requests)
-- POST /orca/appointments/list [failed - net::ERR_ABORTED]
-- POST /orca/visits/list [failed - net::ERR_ABORTED]
-- POST /orca/appointments/list/mock [failed - net::ERR_CONNECTION_REFUSED]
-- POST /orca/visits/list/mock [failed - net::ERR_CONNECTION_REFUSED]
-- POST /orca/claim/outpatient [failed - net::ERR_ABORTED]
-- POST /orca/claim/outpatient/mock [failed - net::ERR_CONNECTION_REFUSED]
-- GET /api/orca/queue [pending/ERR_CONNECTION_REFUSED]
-- GET /orca/deptinfo [pending/ERR_CONNECTION_REFUSED]

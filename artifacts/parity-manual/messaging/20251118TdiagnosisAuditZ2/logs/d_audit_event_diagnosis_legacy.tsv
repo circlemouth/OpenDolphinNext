@@ -1,3 +1,0 @@
-id,event_time,action,resource,actor_id,request_id,trace_id,patient_id
-36,2025-11-13 10:05:00.705+09,EHT_DIAGNOSIS_CREATE,/karte/diagnosis/claim,1.3.6.1.4.1.9414.72.103:doctor1,parity-diagnosis-send-20251118TdiagnosisAuditZ2,parity-diagnosis-send-20251118TdiagnosisAuditZ2,0000001
-37,2025-11-13 10:14:57.118+09,EHT_DIAGNOSIS_CREATE,/karte/diagnosis/claim,1.3.6.1.4.1.9414.72.103:doctor1,parity-diagnosis-send-20251118TdiagnosisAuditZ2,parity-diagnosis-send-20251118TdiagnosisAuditZ2,0000001

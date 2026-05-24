@@ -1,2 +1,0 @@
-jma-receipt-docker-for-ubuntu-2204-orca-1 Up 18 minutes
-jma-receipt-docker-for-ubuntu-2204-db-1 Up 3 days (healthy)

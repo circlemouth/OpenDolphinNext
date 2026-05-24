@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/serverinfo/jamri",
-  "base_url": "http://localhost:9080/openDolphin/resources",
-  "request_id": "base_readonly_serverinfo",
-  "status_code": 401,
-  "time_total": "0.007700",
-  "exit_code": 0
-}

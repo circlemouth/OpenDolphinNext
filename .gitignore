@@ -18,6 +18,9 @@ node_modules/
 # Maven build artifacts
 **/target/
 
+# Local external jars copied in only for Docker/Maven dev builds.
+/ext_lib/*.jar
+
 # Docker Compose runtime output
 /docker/output/
 
@@ -58,6 +61,7 @@ build/
 tmp/
 output/
 artifacts/source-archives/
+artifacts/preprod/
 # Generated review support packages and sidecar integrity summaries.
 # Review ZIPs are local handoff artifacts; include source/log files via scripts/create-review-package.sh.
 artifacts/reviewer-submission-packets/

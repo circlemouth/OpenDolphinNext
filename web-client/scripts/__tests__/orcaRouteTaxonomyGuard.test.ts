@@ -19,9 +19,9 @@ describe('orca route taxonomy guard classifier', () => {
     expect(result.category).toBeUndefined();
   });
 
-  it('classifies docs references to official routes as docs/reference, not public route declarations', () => {
+  it('classifies docs references to official routes as docs, not public route declarations', () => {
     const result = classifyOrcaRouteReference({
-      relativePath: 'docs/contracts/orca-route-taxonomy.md',
+      relativePath: 'docs/security-and-orca.md',
       route: '/api/orca/official/appointments/list',
     });
 

@@ -1,2 +1,0 @@
-{"apiResult":"91","apiResultMessage":"処理区分未設定","runId":"20260117T235100Z","traceId":"trace-visits-20260117T235100Z","requestId":"req-visits-20260117T235100Z","dataSource":"real","dataSourceTransition":"server","recordsReturned":0,"cacheHit":false,"missingMaster":false,"fallbackUsed":false,"fetchedAt":"2026-01-17T23:59:36.933353549Z","visits":[]}
-HTTP_STATUS=200

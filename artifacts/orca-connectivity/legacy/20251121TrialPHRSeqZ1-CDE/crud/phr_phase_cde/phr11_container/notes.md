@@ -1,4 +1,0 @@
-- RUN_ID: 20251121TrialPHRSeqZ1-CDE
-- API: GET https://weborca-trial.orca.med.or.jp/20/adm/phr/1234567,00000001,20250101,20250101
-- Headers: X-Facility-Id=1234567, X-Touch-TraceId=20251121TrialPHRSeqZ1-CDE, X-Access-Reason=phr-container, Accept=application/json
-- Auth: Basic trial/weborcatrial

@@ -1,4 +1,0 @@
-curl http://127.0.0.1:8080/openDolphin/resources/serverinfo/claim/conn
-Headers: userName=doctor1, password=dolphin
-HTTP 200
-body: server

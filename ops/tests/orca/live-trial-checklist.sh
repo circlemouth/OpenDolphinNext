@@ -68,8 +68,8 @@ required_paths=(
   "web-client/scripts/qa-acceptmodv2-weborca.mjs"
   "web-client/scripts/qa-fullflow-weborca.mjs"
   "web-client/scripts/qa-phase4-safe-medicalmodv2.mjs"
-  "docs/runbooks/release-validation.md"
-  "docs/operations/ORCA_CERTIFICATION_ONLY.md"
+  "docs/setup-and-validation.md"
+  "docs/security-and-orca.md"
   "server-modernized/tools/ci/check-sensitive-evidence-redaction.sh"
 )
 

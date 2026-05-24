@@ -1,2 +1,0 @@
-id,action,resource,request_id,trace_id,event_time,payload
-721,EHT_CLAIM_SEND,/20/adm/eht/sendClaim,55914c47-eff0-4dce-adea-e5900158ca2d,trace-jms-20251226T121342Z-ack,2025-12-26 21:32:06.173942+09,"{""documentId"":""DOC-20251226T121342Z-ACK"",""facilityId"":""1.3.6.1.4.1.9414.72.103""}"

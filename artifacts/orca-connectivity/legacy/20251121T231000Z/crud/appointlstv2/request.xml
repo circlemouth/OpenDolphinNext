@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<data>
-  <appointlstreq>
-    <Appointment_Date>2025-11-21</Appointment_Date>
-    <Medical_Information>01</Medical_Information>
-    <Physician_Code>00001</Physician_Code>
-    <Department_Code>01</Department_Code>
-  </appointlstreq>
-</data>

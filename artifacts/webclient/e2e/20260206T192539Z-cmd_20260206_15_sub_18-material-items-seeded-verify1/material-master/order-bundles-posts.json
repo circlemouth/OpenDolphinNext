@@ -1,7 +1,0 @@
-[
-  {
-    "url": "http://127.0.0.1:5173/orca/order/bundles",
-    "method": "POST",
-    "postData": "{\"patientId\":\"01415\",\"operations\":[{\"operation\":\"create\",\"entity\":\"generalOrder\",\"bundleName\":\"QA material bundle 20260206T192539Z-cmd_20260206_15_sub_18-material-items-seeded-verify1 (5001001)\",\"bundleNumber\":\"1\",\"admin\":\"\",\"adminMemo\":\"\",\"memo\":\"\",\"startDate\":\"2026-02-06\",\"items\":[{\"name\":\"QA item\",\"quantity\":\"1\",\"unit\":\"\",\"memo\":\"\"},{\"code\":\"5001001\",\"name\":\"5001001 9001\",\"quantity\":\"1\",\"unit\":\"\",\"memo\":\"11\"}]}]}"
-  }
-]

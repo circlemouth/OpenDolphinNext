@@ -1,9 +1,0 @@
-final_zip_metadata_validation_version=1
-run_id=20260421T060636Z
-zip_path=docs/implementation/orca-trial-phase3-retry-20260421T060636Z/OpenDolphin_WebClient-review-package-20260421T060636Z-phase3-retry.zip
-zip_sha256=8887a2feebfe6720d82bb9dddb328391ff39514f70fbfbfdf178584aa607d4f9
-zip_size_bytes=18857974
-zip_file_count=2264
-excluded_path_violation_count=0
-result=PASS
-raw_browser_network_artifacts_excluded=true

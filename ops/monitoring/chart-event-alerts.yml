@@ -9,7 +9,7 @@ groups:
         labels:
           severity: warning
           service: chart-event-sse
-          runbook: docs/runbooks/release-validation.md
+          runbook: docs/setup-and-validation.md
         annotations:
           summary: "chartEvent.history.retained が 85 件以上 (facility {{ $labels.facility }})"
           description: |
@@ -23,7 +23,7 @@ groups:
         labels:
           severity: critical
           service: chart-event-sse
-          runbook: docs/runbooks/release-validation.md
+          runbook: docs/setup-and-validation.md
         annotations:
           summary: "chartEvent.history.retained が上限 100 件に達しています (facility {{ $labels.facility }})"
           description: |
@@ -36,7 +36,7 @@ groups:
         labels:
           severity: critical
           service: chart-event-sse
-          runbook: docs/runbooks/release-validation.md
+          runbook: docs/setup-and-validation.md
         annotations:
           summary: "chartEvent.history.gapDetected が増加 (facility {{ $labels.facility }})"
           description: |

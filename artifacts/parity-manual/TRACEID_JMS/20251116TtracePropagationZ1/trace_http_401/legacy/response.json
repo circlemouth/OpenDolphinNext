@@ -1,1 +1,0 @@
-{"error":"unauthorized","message":"Authentication required","status":401,"traceId":"trace-http-401-20251116TtracePropagationZ1","path":"/openDolphin/resources/touch/user/doctor1,1.3.6.1.4.1.9414.72.103,dolphin","principal":"1.3.6.1.4.1.9414.72.103:doctor1","reason":"authentication_failed"}

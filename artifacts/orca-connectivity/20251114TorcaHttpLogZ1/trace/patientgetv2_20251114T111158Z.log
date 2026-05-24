@@ -1,8 +1,0 @@
-== Info: Host weborca.cloud.orcamo.jp:443 was resolved.
-== Info: IPv6: (none)
-== Info: IPv4: 35.76.144.148, 54.178.230.126
-== Info:   Trying 35.76.144.148:443...
-== Info: Connected to weborca.cloud.orcamo.jp (35.76.144.148) port 443
-== Info: ALPN: curl offers h2,http/1.1
-== Info: could not parse PKCS12 file, check password, OpenSSL error error:11800071:PKCS12 routines::mac verify failure
-== Info: Closing connection

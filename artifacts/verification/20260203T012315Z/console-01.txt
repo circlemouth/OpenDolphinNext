@@ -1,2 +1,0 @@
-[2026-02-03T01:23Z] Reception console
-- [info] audit/telemetry logsのみ（id/name 警告は表示されず）

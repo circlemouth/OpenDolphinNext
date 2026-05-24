@@ -1,1 +1,0 @@
-{"error":"unsupported_media_type","code":"unsupported_media_type","message":"RESTEASY003065: Cannot consume content type","status":415,"traceId":"70c40f1c-a04e-430d-9b48-e309ff5ab9a5","path":"/openDolphin/resources/orca/visits/mutation"}

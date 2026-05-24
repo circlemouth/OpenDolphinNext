@@ -1,1 +1,0 @@
-name=/opendolphin-server-modernized-dev health=healthy started=2026-02-06T22:42:49.990055215Z ports={"8080/tcp":[{"HostIp":"0.0.0.0","HostPort":"9080"},{"HostIp":"::","HostPort":"9080"}],"9990/tcp":[{"HostIp":"0.0.0.0","HostPort":"9995"},{"HostIp":"::","HostPort":"9995"}]}

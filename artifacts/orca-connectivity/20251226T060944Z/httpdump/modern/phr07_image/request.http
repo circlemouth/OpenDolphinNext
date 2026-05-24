@@ -1,9 +1,0 @@
-GET /20/adm/phr/image/0000001 HTTP/1.1
-Host: localhost:9080
-X-Facility-Id: LOCAL.FACILITY.0001
-X-Trace-Id: 20251226T060944Z
-X-Request-Id: 20251226T060944Z
-X-Access-Reason: phr07_image
-userName: <MASKED>
-password: <MASKED>
-Accept: image/jpeg

@@ -1,4 +1,0 @@
- installed_rank | version | description | installed_on | success 
-----------------+---------+-------------+--------------+---------
-(0 rows)
-

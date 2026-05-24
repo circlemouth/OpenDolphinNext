@@ -1,4 +1,0 @@
-curl: (7) Failed to connect to localhost port 8080 after 0 ms: Couldn't connect to server
-GET /patient/id/0000001 -> legacy (PatientServiceBean) (status=000, time=0.000198, exit=7)
-curl: (7) Failed to connect to localhost port 9080 after 0 ms: Couldn't connect to server
-GET /patient/id/0000001 -> modern (PatientServiceBean) (status=000, time=0.000169, exit=7)

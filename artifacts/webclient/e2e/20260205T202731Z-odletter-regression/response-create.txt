@@ -1,1 +1,0 @@
-{"error":"method_not_allowed","code":"method_not_allowed","message":"RESTEASY003650: No resource method found for POST, return 405 with Allow header","status":405,"traceId":"20260205T202731Z-odletter-regression","path":"/openDolphin/resources/odletter/letter"}

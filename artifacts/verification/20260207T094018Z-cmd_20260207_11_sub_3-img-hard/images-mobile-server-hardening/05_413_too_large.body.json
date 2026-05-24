@@ -1,1 +1,0 @@
-{"error":"payload_too_large","code":"payload_too_large","message":"Payload too large","status":413,"traceId":"c6c5eb38-ecdd-470b-8afb-1f23acbd0d61","path":"/openDolphin/resources/patients/P0002/images","env":"OPENDOLPHIN_IMAGES_MAX_BYTES","size":5243904,"maxBytes":5242880}

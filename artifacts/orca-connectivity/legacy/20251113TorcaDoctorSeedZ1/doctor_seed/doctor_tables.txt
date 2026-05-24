@@ -1,6 +1,0 @@
-            List of relations
- Schema |      Name       | Type  | Owner 
---------+-----------------+-------+-------
- public | tbl_list_doctor | table | orca
-(1 row)
-

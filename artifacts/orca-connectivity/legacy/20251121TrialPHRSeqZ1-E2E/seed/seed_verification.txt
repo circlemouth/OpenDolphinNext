@@ -1,6 +1,0 @@
-[2025-11-15 09:30 JST] docker exec -i opendolphin-postgres-modernized psql -U opendolphin -d opendolphin_modern < seed_insert.sql
-- d_phr_key: 1 row (PHR-WEB1001-ACCESS)
-- d_observation: 1 row (Allergy)
-- d_diagnosis: 1 row (急性気管支炎)
-- d_nlabo_item: 1 row (ヘモグロビンA1c 7.2)
-- d_image: 1 row (`PHR-E2E-DOC-001`)

@@ -1,8 +1,0 @@
-HTTP/1.1 401 Unauthorized
-Server: nginx/1.18.0 (Ubuntu)
-Date: Mon, 05 Jan 2026 11:40:57 GMT
-Content-Type: application/json
-Content-Length: 56
-Connection: keep-alive
-Www-Authenticate: basic realm=Restricted
-

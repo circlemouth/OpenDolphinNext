@@ -1,8 +1,0 @@
-{
-  "patientId": "MOCK-001",
-  "performDate": "2026-01-11",
-  "departmentCode": "01",
-  "items": [
-    {"medicalCode": "110000001", "quantity": 1}
-  ]
-}

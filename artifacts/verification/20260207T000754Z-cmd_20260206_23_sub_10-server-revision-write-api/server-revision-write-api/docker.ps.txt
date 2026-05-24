@@ -1,6 +1,0 @@
-NAMES                               STATUS                        PORTS
-opendolphin-server-modernized-dev   Up About a minute (healthy)   0.0.0.0:9080->8080/tcp, [::]:9080->8080/tcp, 0.0.0.0:9995->9990/tcp, [::]:9995->9990/tcp
-jma-receipt-docker-orca-1           Up 10 hours                   0.0.0.0:8000->8000/tcp, :::8000->8000/tcp
-jma-receipt-docker-db-1             Up 10 hours (healthy)         5432/tcp
-opendolphin-postgres-modernized     Up 17 hours (healthy)         0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
-opendolphin-minio                   Up 17 hours (healthy)         0.0.0.0:9000-9001->9000-9001/tcp, :::9000-9001->9000-9001/tcp

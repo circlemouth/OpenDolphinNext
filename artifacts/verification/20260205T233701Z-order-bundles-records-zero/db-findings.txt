@@ -1,9 +1,0 @@
-DB findings (opendolphin schema)
-- d_karte for patientId=01415 -> karte_id=9058
-- d_document id=9136 (karte_id=9058, started=2026-02-06 08:32:19.864, status=F)
-- d_module id=9137 (doc_id=9136, entity=generalOrder)
-- d_module.bean_json='50720' (text holds OID string)
-  - lo_get(50720) contains BundleDolphin JSON payload
-- d_module.beanbytes=50721 (OID)
-  - lo_get(50721) contains BundleDolphin XML payload
-Note: /orca/order/bundles GET returns recordsReturned=0 despite module存在 -> bean_json/beanbytes stored as OID causes decoder to miss payload.

@@ -1,3 +1,0 @@
-NOTE:
-revise/restore were called twice while capturing http_code (body+code separately).
-The first call succeeded (see *.headers.txt). The second call returned 409 as expected due to stale baseRevisionId.

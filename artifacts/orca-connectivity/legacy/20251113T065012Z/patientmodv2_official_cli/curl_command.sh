@@ -1,7 +1,0 @@
-#!/bin/sh
-docker exec jma-receipt-docker-for-ubuntu-2204-orca-1 \
-  curl -sS -D /tmp/patientmod_headers.txt -o /tmp/patientmod_body.json \
-  -u ormaster:change_me \
-  -H 'Content-Type: application/xml; charset=UTF-8' \
-  --data-binary @/tmp/14_patientmodv2_request.xml \
-  'http://localhost:8000/api/orca12/patientmodv2?class=01'

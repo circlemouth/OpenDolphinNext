@@ -1,2 +1,0 @@
-$ ls /opt/jma/weborca/app/log
-ls: '/opt/jma/weborca/app/log' にアクセスできません: そのようなファイルやディレクトリはありません

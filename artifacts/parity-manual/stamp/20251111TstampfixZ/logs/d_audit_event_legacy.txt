@@ -1,8 +1,0 @@
- id |          event_time           |  action   |   request_id    
-----+-------------------------------+-----------+-----------------
-  7 | 2025-11-12 03:44:47.079632+09 | SEQ_SMOKE | trace-seq-smoke
-  5 | 2025-11-12 03:14:20.648614+09 | SEQ_SMOKE | trace-seq-smoke
-  3 | 2025-11-12 01:38:58.661587+09 | SEQ_SMOKE | trace-seq-smoke
-  2 | 2025-11-12 01:37:54.322521+09 | SEQ_SMOKE | trace-seq-smoke
-(4 rows)
-

@@ -1,9 +1,0 @@
-<data>
-  <patientlst7req type="record">
-    <Request_Number type="string">01</Request_Number>
-    <Patient_ID type="string">00002</Patient_ID>
-    <Base_Date type="string">2025-12-01</Base_Date>
-    <Department_Code type="string"></Department_Code>
-    <Memo_Class type="string"></Memo_Class>
-  </patientlst7req>
-</data>

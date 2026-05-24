@@ -1,5 +1,0 @@
-[PASS] POST /touch/sendPackage (JavaTime): JSON payload matches.
-[PASS] POST /touch/document (admFlag): JSON payload matches.
-[PASS] POST /touch/document (full, non-dry-run): Status codes match.
-[PASS] POST /touch/mkdocument (performFlag): JSON payload matches.
-Completed 4 target(s) with 0 failure(s).

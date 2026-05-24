@@ -1,8 +1,0 @@
-{
-  "soapKey": "opendolphin:web-client:soap-history:v2:1.3.6.1.4.1.9414.72.103:doctor1",
-  "rawLength": 466,
-  "raw": "{\"version\":1,\"updatedAt\":\"2026-02-04T13:33:34.822Z\",\"encounters\":{\"01415::APT-1415::none::2026-02-04\":{\"updatedAt\":\"2026-02-04T13:33:34.803Z\",\"entries\":[{\"id\":\"subjective-2026-02-04T13:33:34.803Z-hlvsxd\",\"section\":\"subjective\",\"body\":\"SOAPテスト 20260204T133326Z-soap-persistence-modernized\",\"authoredAt\":\"2026-02-04T13:33:34.803Z\",\"authorRole\":\"admin\",\"authorName\":\"QA admin\",\"action\":\"save\",\"patientId\":\"01415\",\"appointmentId\":\"APT-1415\",\"visitDate\":\"2026-02-04\"}]}}}",
-  "encounterKey": "opendolphin:web-client:charts:encounter-context:v2:1.3.6.1.4.1.9414.72.103:doctor1",
-  "encounterRawLength": 73,
-  "encounterRaw": "{\"patientId\":\"01415\",\"appointmentId\":\"APT-1415\",\"visitDate\":\"2026-02-04\"}"
-}

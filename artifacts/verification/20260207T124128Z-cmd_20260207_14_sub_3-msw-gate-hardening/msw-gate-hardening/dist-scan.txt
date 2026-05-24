@@ -1,6 +1,0 @@
-# verify-prod-dist-no-mocks
-distDir: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/dist
-scannedFiles: 10
-findingsFiles: 0
-
-OK: No mock/MSW references detected in dist (heuristic scan).

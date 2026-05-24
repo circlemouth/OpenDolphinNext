@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<data>
-  <medicationgetreq type="record">
-    <Request_Number type="string">02</Request_Number>
-    <Request_Code type="string">112007410</Request_Code>
-    <Base_Date type="string">2026-01-11</Base_Date>
-  </medicationgetreq>
-</data>

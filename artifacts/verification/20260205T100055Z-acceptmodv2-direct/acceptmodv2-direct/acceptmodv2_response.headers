@@ -1,8 +1,0 @@
-HTTP/1.1 200 OK
-Server: nginx/1.18.0 (Ubuntu)
-Date: Thu, 05 Feb 2026 10:00:55 GMT
-Content-Type: application/xml; charset=UTF-8
-Transfer-Encoding: chunked
-Connection: keep-alive
-X-Hybridmode: normal
-

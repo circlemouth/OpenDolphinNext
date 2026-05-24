@@ -1,1 +1,0 @@
-Session layer failure in open.dolphin.session.KarteServiceBean$Proxy$_$$_WeldSubclass#updateDocument

@@ -1,1 +1,0 @@
-{"error":"invalid_multipart","code":"invalid_multipart","message":"Failed to read multipart file","status":400,"traceId":"caf8f407-f8b3-42b4-99f9-a519f850252b","path":"/openDolphin/resources/patients/P0002/images","validationError":true}

@@ -1,2 +1,0 @@
-GET /stamp/tree/9002/public -> legacy (stamp_tree_public_mismatch) (status=403, time=0.229666, exit=0)
-GET /stamp/tree/9002/public -> modern (stamp_tree_public_mismatch) (status=403, time=0.069189, exit=0)

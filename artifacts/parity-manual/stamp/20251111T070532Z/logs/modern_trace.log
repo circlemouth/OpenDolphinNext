@@ -1,3 +1,0 @@
-opendolphin-server-modernized-dev  | [0m[0m16:15:52,892 INFO  [open.dolphin] (default task-1) 172.19.0.7 doctor1 PUT /stamp/tree traceId=parity-stamp-20251111T070532Z
-opendolphin-server-modernized-dev  | [0m[0m16:15:52,893 INFO  [open.dolphin] (default task-1) 172.19.0.7 doctor1 PUT /stamp/tree traceId=parity-stamp-20251111T070532Z
-opendolphin-server-modernized-dev  | [0m[31m16:15:52,917 ERROR [open.dolphin.session.framework.SessionOperationInterceptor] (default task-1) Session operation failed [traceId=parity-stamp-20251111T070532Z, operation=open.dolphin.session.StampServiceBean$Proxy$_$$_WeldSubclass#putTree]: open.dolphin.session.framework.SessionServiceException: Session layer failure in open.dolphin.session.StampServiceBean$Proxy$_$$_WeldSubclass#putTree

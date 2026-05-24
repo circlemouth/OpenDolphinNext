@@ -1,9 +1,0 @@
-HTTP/1.1 200 OK
-Server: nginx/1.18.0 (Ubuntu)
-Date: Mon, 05 Jan 2026 12:30:55 GMT
-Content-Type: text/html; charset=utf-8
-Content-Length: 2482
-Connection: keep-alive
-Accept-Ranges: bytes
-Last-Modified: Fri, 12 May 2023 06:52:18 GMT
-

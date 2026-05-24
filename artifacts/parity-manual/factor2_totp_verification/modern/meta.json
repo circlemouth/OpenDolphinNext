@@ -1,8 +1,0 @@
-{
-  "method": "POST",
-  "path": "/20/adm/factor2/totp/verification",
-  "base_url": "http://localhost:18080",
-  "status_code": 000,
-  "time_total": "0.000189",
-  "exit_code": 7
-}

@@ -1,9 +1,0 @@
-task_id,cluster,workstream,owner,priority,type,paths,acceptance_summary,depends_on,merge_order
-T-001,C1,WS-S1,SA-01,P0,code+test,OrcaConnectionConfigStore.java;OrcaTransportRegistry.java;OperationsReadinessEvaluator.java,runtime fallback除去; facility_configuration_missingでfail-close; negative tests追加,none,1
-T-002,C2,WS-S1,SA-01,P0,code+test,OrcaTransportSettings.java;OrcaHttpClient.java;OrcaGatewayExceptionMapper.java;AbstractResource.java;AdminOrcaConnectionTestSupport.java,raw host/baseUrl/url非露出; sanitized error body/audit/log; negative tests追加,T-001 optional,1
-T-003,C5,WS-P1,SA-03,P1,code+test,patients/api.ts;PatientsPage.tsx;PatientInfoEditDialog.tsx;orcaPatientImportApi.ts,canonical re-fetch failureでfull successにしない; dialog close抑止; import同様,none,2
-T-004,C3,WS-W1,SA-02,P1,code+test,orcaClaimSendCache.ts;ChartsActionBar.tsx;OrcaSummary.tsx;useOrcaReportPrint.ts;OrderBundleEditPanel.tsx;OrderDockPanel.tsx;DocumentTimeline.tsx,row-local lookupのみ; strongest key save; patientId latest cache除去; multi-encounter tests追加,none,3
-T-005,C4,WS-W1,SA-02,P1,code+test,OrcaSummary.tsx;supporting styles/tests,must-visible infoをclosed details外へ; one-primary維持; visibility assertionsに合格,T-004 partial,3
-T-006,C6,WS-Q1,SA-04,P2,test,OrcaSummary.semantics.test.tsx;supporting tests,details外/initial visibleを検査; hidden DOM存在だけで通らない,T-004;T-005,4
-T-007,C7,WS-Q1,SA-04,P2,docs+script,release-validation.md;orca-remediation-cutover.md;qa-acceptmodv2-weborca.mjs;qa-fullflow-weborca.mjs,QA_MEDICAL_INFORMATION未指定runでMedical_Information混入をfailure化; docs同期,T-003;T-004;T-005,4
-T-008,guard,P5,main-agent,P3,merge+stabilization,cross-workstream,PASS area regressionなし; final report; task/test matrix更新,T-001..T-007,5

@@ -1,1 +1,0 @@
-{"error":"header_auth_disabled","code":"header_auth_disabled","message":"Header-based authentication is not allowed","status":401,"traceId":"217b6e67-0f36-4145-a3e4-85d48398b0ca","path":"/openDolphin/resources/orca/visits/mutation","principal":"1.3.6.1.4.1.9414.10.1:dolphin","reason":"header_authentication_disabled"}

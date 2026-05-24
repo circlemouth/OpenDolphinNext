@@ -1,4 +1,0 @@
- id | event_time | action | request_id 
-----+------------+--------+------------
-(0 rows)
-

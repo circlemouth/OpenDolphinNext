@@ -1,4 +1,0 @@
-1162:15:15:32,153 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous GET /dolphin/activity/2025,04 traceId=trace-http-400
-1163:15:15:32,153 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous GET /dolphin/activity/2025,04 traceId=trace-http-400
-2431:15:18:10,858 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous GET /dolphin/activity/2025,04 traceId=trace-http-400
-2432:15:18:10,858 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous GET /dolphin/activity/2025,04 traceId=trace-http-400

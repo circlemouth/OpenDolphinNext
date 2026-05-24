@@ -1,9 +1,0 @@
-runId: 20260421T224445Z
-cwd: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main
-command: docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/scan_review_bundle.sh 'docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/review-package/OpenDolphin_WebClient-review-package-20260421T232805Z-WO4_clinical-wave1-batch2.zip' 'docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/review-package/OpenDolphin_WebClient-review-package-20260421T232805Z-WO4_clinical-wave1-batch2.zip.secret-scan-review-bundle.log'
-start_utc: 2026-04-21T23:29:27Z
-
-output_summary: command produced no stdout/stderr before metadata trailer
-
-end_utc: 2026-04-21T23:29:28Z
-exit_code: 1

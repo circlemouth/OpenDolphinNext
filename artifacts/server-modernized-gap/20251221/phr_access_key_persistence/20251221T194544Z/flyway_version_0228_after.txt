@@ -1,5 +1,0 @@
- installed_rank | version |      description      |        installed_on        | success 
-----------------+---------+-----------------------+----------------------------+---------
-             13 | 0228    | phr key and async job | 2025-12-21 20:01:18.525383 | t
-(1 row)
-

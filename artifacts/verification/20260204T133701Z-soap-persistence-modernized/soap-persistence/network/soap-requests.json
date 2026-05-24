@@ -1,7 +1,0 @@
-[
-  {
-    "url": "http://localhost:5175/orca/chart/subjectives",
-    "method": "POST",
-    "postData": "{\"patientId\":\"TEST-0001\",\"performDate\":\"2026-02-04\",\"soapCategory\":\"S\",\"body\":\"SOAPテスト 20260204T133701Z-soap-persistence-modernized\"}"
-  }
-]

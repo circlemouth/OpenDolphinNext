@@ -1,8 +1,0 @@
-HTTP/1.1 404 Not Found
-Vary: Origin
-server: nginx/1.18.0 (Ubuntu)
-date: Sun, 11 Jan 2026 23:59:54 GMT
-content-type: application/json
-content-length: 53
-connection: close
-

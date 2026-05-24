@@ -1,3 +1,0 @@
-{"runId":"20260425T044635Z","id":"preflight-repo-state","command":"date -u +%Y%m%dT%H%M%SZ; git branch --show-current; git rev-parse --short HEAD; git status --short; git worktree list --porcelain","exit_code":0,"sanitized":true}
-{"runId":"20260425T044635Z","id":"runtime-status-probe","command":"curl status-only probes for frontend, backend health, and backend readiness","exit_code":0,"sanitized":true,"result":{"frontendHttps5173":200,"backendHealth":0,"backendReadiness":0}}
-{"runId":"20260425T044635Z","id":"diagnostic-containment-check","command":"git check-ignore checks for diagnostic fullflow paths before and after .gitignore update","exit_code":0,"sanitized":true}

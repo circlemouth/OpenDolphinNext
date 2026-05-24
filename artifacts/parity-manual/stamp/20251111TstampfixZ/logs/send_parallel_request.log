@@ -1,4 +1,0 @@
-2025-11-11T19:05:02Z PUT /stamp/tree -> legacy (stamp_tree_put) (status=200, time=0.151942, exit=0)
-2025-11-11T19:05:02Z PUT /stamp/tree -> modern (stamp_tree_put) (status=500, time=0.055188, exit=0)
-2025-11-11T19:05:02Z GET /stamp/tree/9001 -> legacy (stamp_tree_user9001) (status=200, time=0.705357, exit=0)
-2025-11-11T19:05:02Z GET /stamp/tree/9001 -> modern (stamp_tree_user9001) (status=500, time=0.078992, exit=0)

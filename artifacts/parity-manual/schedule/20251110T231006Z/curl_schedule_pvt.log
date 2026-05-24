@@ -1,2 +1,0 @@
-curl -s -o schedule_pvt_2025-11-09.json -w "%{http_code}" -H "userName: 1.3.6.1.4.1.9414.72.103:doctor1" -H "password: 632080fabdb968f9ac4f31fb55104648" -H "clientUUID: trace-session-client" -H "facilityId: 1.3.6.1.4.1.9414.72.103" -H "X-Trace-Id: trace-schedule-20251110T231006Z" http://localhost:9080/openDolphin/resources/schedule/pvt/2025-11-09
-HTTP 200

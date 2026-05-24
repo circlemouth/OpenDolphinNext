@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/dolphin/license",
-  "base_url": "http://opendolphin-server:8080/openDolphin/resources",
-  "request_id": "license_get_dolphin",
-  "status_code": 405,
-  "time_total": "0.021442",
-  "exit_code": 0
-}

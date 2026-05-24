@@ -1,5 +1,0 @@
-total 6976
-drwxr-xr-x 1 jboss root    4096 Feb  6 04:59 .
-drwxrwxr-x 1 jboss root    4096 Feb  6 04:59 ..
--rw-r--r-- 1 jboss root       0 Feb  6 04:59 audit.log
--rw-r--r-- 1 jboss root 7119383 Feb  6 13:47 server.log

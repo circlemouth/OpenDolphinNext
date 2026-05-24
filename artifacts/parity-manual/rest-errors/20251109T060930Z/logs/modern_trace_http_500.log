@@ -1,2 +1,0 @@
-643:[0m[0m15:24:37,002 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous GET /karte/pid/INVALID,%5Bdate%5D traceId=trace-http-500
-644:[0m[0m15:24:37,003 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous GET /karte/pid/INVALID,%5Bdate%5D traceId=trace-http-500

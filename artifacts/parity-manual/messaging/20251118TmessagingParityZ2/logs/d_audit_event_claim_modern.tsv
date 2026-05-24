@@ -1,2 +1,0 @@
-id,event_time,action,resource,actor_id,request_id,trace_id,payload
-112,2025-11-13 07:40:57.463979+09,EHT_CLAIM_SEND,/20/adm/eht/sendClaim,1.3.6.1.4.1.9414.72.103:doctor1,e91a0424-9cbb-49df-9cf2-341112d76ccb,parity-claim-send-20251118TmessagingParityZ2,25449

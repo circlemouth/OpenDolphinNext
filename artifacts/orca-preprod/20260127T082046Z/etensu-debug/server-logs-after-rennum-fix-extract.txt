@@ -1,9 +1,0 @@
-303:[0m[0m19:38:29,354 INFO  [open.dolphin] (default task-1) 127.0.0.1 dolphindev GET /orca/master/etensu traceId=2fc3cf66-03ac-446d-8eac-b7f2ba2cf63d
-310:[0m[0m19:38:29,366 INFO  [open.dolphin] (default task-1) 127.0.0.1 dolphindev GET /orca/master/etensu traceId=aad39f77-e862-44f2-8281-8aacdfb3cc38
-312:[0m[0m19:38:29,446 INFO  [stdout] (default task-1) ETENSU_DEBUG resource: keyword=113006810 category=null asOf=20110401 tensuVersion=null page=1 size=1
-316:[0m[0m19:38:29,523 INFO  [stdout] (default task-1) ETENSU_DEBUG meta: startDateColumn=yukostymd endDateColumn=yukoedymd nameColumn=<null> categoryColumn=<null> tensuVersionColumn=<null>
-317:[0m[0m19:38:29,524 INFO  [open.dolphin] (default task-1) ETENSU table meta: startDateColumn=yukostymd endDateColumn=yukoedymd nameColumn=<null> categoryColumn=<null> tensuVersionColumn=<null>
-318:[0m[0m19:38:29,525 INFO  [stdout] (default task-1) ETENSU_DEBUG buildQuery: whereClause= FROM TBL_ETENSU_1 WHERE 1=1 AND UPPER(SRYCD) LIKE ? AND yukostymd <= ? AND yukoedymd >= ? params=[%113006810%, 20110401, 20110401]
-319:[0m[0m19:38:29,525 INFO  [open.dolphin] (default task-1) ETENSU buildQuery: whereClause= FROM TBL_ETENSU_1 WHERE 1=1 AND UPPER(SRYCD) LIKE ? AND yukostymd <= ? AND yukoedymd >= ? params=[%113006810%, 20110401, 20110401]
-320:[0m[0m19:38:29,546 INFO  [stdout] (default task-1) ETENSU_DEBUG search: totalCount=1 records=1 version=<null> elapsedMs=99 criteria=keyword=113006810 category=<null> asOf=20110401 tensuVersion=<null> page=1 size=1
-326:[0m[0m19:38:29,704 INFO  [open.dolphin.session.MessageSender] (Thread-0 (ActiveMQ-client-global-threads)) Audit envelope drained from JMS queue [traceId=aad39f77-e862-44f2-8281-8aacdfb3cc38, action=ORCA_MASTER_FETCH, resource=/orca/master/etensu, outcome=SUCCESS]

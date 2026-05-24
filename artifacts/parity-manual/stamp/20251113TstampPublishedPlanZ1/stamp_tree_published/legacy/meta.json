@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/stamp/tree/9001/published",
-  "base_url": "http://opendolphin-server:8080/openDolphin/resources",
-  "request_id": "stamp_tree_published",
-  "status_code": 200,
-  "time_total": "0.400547",
-  "exit_code": 0
-}

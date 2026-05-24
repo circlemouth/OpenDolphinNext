@@ -1,2 +1,0 @@
-Command: mvn -pl server-modernized -am -DskipTests compile
-Result: BUILD SUCCESS (2026-01-27)

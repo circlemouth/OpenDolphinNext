@@ -1,1 +1,0 @@
-{"error":"invalid_request","code":"invalid_request","message":"patientId is required","status":400,"traceId":"validation-20260104T094959Z-disease-missing-patient","path":"/openDolphin/resources/orca/disease","field":"patientId","validationError":true}

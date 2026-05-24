@@ -1,7 +1,0 @@
-HTTP/1.1 200 OK
-Content-Type: application/json; charset=UTF-8
-X-Hybridmode: normal
-Date: Thu, 13 Nov 2025 02:11:30 GMT
-Content-Length: 703
-
-{"acceptlstres":{"Information_Date":"2025-11-13","Information_Time":"11:11:30","Api_Result":"00","Api_Result_Message":"処理終了","Reskey":"Patient Info","Acceptance_Date":"2025-11-13","Acceptlst_Information":[{"Acceptance_Time":"10:15:00","Acceptance_Id":"00001","Department_Code":"01","Department_WholeName":"内科","Physician_Code":"00001","Physician_WholeName":"オルカマスター","Medical_Information":"01","Claim_Infometion":"0","Patient_Information":{"Patient_ID":"000001","WholeName":"Test Patient 000001","WholeName_inKana":"TEST PATIENT","BirthDate":"1980-01-01","Sex":"1"},"Patient_Memo_Information":{"Patient_Memo_Department":"2"},"Display_Order":{"Display_Order_Number":"9999"}}]}}

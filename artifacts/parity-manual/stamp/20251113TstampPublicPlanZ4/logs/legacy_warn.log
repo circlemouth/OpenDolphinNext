@@ -1,3 +1,0 @@
-[0m[0m22:41:50,821 INFO  [open.dolphin] (default task-29) 172.19.0.7 doctor1 GET /stamp/tree/9002/public traceId=parity-stamp-tree-public-20251113TstampPublicPlanZ4
-[0m[0m22:41:50,824 INFO  [open.dolphin] (default task-29) 172.19.0.7 doctor1 GET /stamp/tree/9002/public traceId=parity-stamp-tree-public-20251113TstampPublicPlanZ4
-[0m[33m22:41:50,840 WARNING [open.dolphin.rest.StampResource] (default task-29) Stamp tree access blocked [traceId=parity-stamp-tree-public-20251113TstampPublicPlanZ4, reason=facility_mismatch, facilityId=9002, visibility=public, remoteUser=9001:doctor1]

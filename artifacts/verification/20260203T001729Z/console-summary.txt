@@ -1,4 +1,0 @@
-Console summary (id/name warning retest):
-- Administration: id/name warning not observed in console (only 404 resource errors).
-- Charts: id/name warning not observed in console.
-- Patients: A form field element should have an id or name attribute (count: 24) + one 500 error resource.

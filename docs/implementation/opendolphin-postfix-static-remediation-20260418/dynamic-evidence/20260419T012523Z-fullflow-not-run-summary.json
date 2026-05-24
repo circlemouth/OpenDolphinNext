@@ -1,7 +1,0 @@
-{
-  "runId": "20260419T012523Z",
-  "phase": "qa-fullflow-weborca",
-  "executed": false,
-  "reason": "Phase 3 acceptmodv2 was not run because candidate discovery found no accepted Trial-native mutation-ready candidate.",
-  "rawSensitiveFieldsExcluded": true
-}

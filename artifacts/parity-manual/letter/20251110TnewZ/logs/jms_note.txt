@@ -1,1 +1,0 @@
-JMS ログは `parity-letter-20251110TnewZ` 実行時にも出力されず（`docker logs opendolphin-server-modernized-dev | rg -i JMS` 不一致）。

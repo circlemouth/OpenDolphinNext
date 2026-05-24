@@ -1,7 +1,0 @@
-   route to: 100.102.17.40
-destination: 100.64.0.0
-       mask: 255.192.0.0
-  interface: utun1
-      flags: <UP,DONE,CLONING,STATIC>
- recvpipe  sendpipe  ssthresh  rtt,msec    rttvar  hopcount      mtu     expire
-       0         0         0         0         0         0      1280         0 

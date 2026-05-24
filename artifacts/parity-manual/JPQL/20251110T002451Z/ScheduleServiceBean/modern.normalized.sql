@@ -1,1 +1,0 @@
-select pvm1_0.id,pvm1_0.department,pvm1_0.deptCode,pvm1_0.deptName,pvm1_0.doctorId,pvm1_0.doctorName,pvm1_0.facilityId,pvm1_0.firstInsurance,pvm1_0.insuranceUid,pvm1_0.jmariNumber,pvm1_0.memo,pvm1_0.patient_id,pvm1_0.pvtDate,pvm1_0.status from d_patient_visit pvm1_0 where pvm1_0.facilityId=? and pvm1_0.pvtDate like ? escape '' order by pvm1_0.pvtDate

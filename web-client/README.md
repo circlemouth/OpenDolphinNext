@@ -1,35 +1,25 @@
-# OpenDolphin Web Client
+# OpenDolphinNext Web Client
 
-この README は `web-client/` の module entry です。current contract の正本は `notes/` に分離し、UI の enduring reference は `docs/web-client/` 側へ寄せます。
+`web-client/` は OpenDolphinNext の現行 Web クライアントです。React / Vite / TypeScript で構成され、患者、受付、カルテ、管理、ORCA 状態表示などのブラウザ UI を提供します。
 
-## Current Contracts
-- [notes/README.md](./notes/README.md)
-- [notes/auth-check.md](./notes/auth-check.md)
-- [notes/auth-transition.md](./notes/auth-transition.md)
-- [notes/patient-context-contract.md](./notes/patient-context-contract.md)
-- [notes/feedback-spec.md](./notes/feedback-spec.md)
-- [notes/disease-insurance-orca-contract.md](./notes/disease-insurance-orca-contract.md)
-- [notes/ui-current-contract.md](./notes/ui-current-contract.md)
-- [notes/orca-order-remediation-20260403.md](./notes/orca-order-remediation-20260403.md)
-- [notes/orca-order-contract-cleanup-20260404.md](./notes/orca-order-contract-cleanup-20260404.md)
-- [notes/release-gate.md](./notes/release-gate.md)
-- [notes/security-spec.md](./notes/security-spec.md)
+## 主要コマンド
 
-## Enduring UI / Architecture References
-- [../docs/web-client/ux/dads_app_ui_design_rules_20260411.md](../docs/web-client/ux/dads_app_ui_design_rules_20260411.md)
-- [../docs/web-client/ux/web-client-ui-guideline.md](../docs/web-client/ux/web-client-ui-guideline.md)
-- [../docs/web-client/architecture/document-embedded-attachment-policy.md](../docs/web-client/architecture/document-embedded-attachment-policy.md)
-- [../docs/web-client/architecture/web-client-screen-structure-decisions-20260106.md](../docs/web-client/architecture/web-client-screen-structure-decisions-20260106.md)
+```bash
+npm run dev
+npm run verify:web-guard
+npm run typecheck
+npm run test:ci
+npm run build
+npm run ci
+```
 
-## Release / Validation
-- [notes/release-gate.md](./notes/release-gate.md)
-- [../docs/runbooks/release-validation.md](../docs/runbooks/release-validation.md)
+`npm run ci` は `verify:web-guard`、`typecheck`、`test:ci`、`build` をまとめて実行します。
 
-## Current Summary
-- 認証は `/login` 起点
-- `returnTo` は sanitize 済み internal path のみを扱う
-- 患者文脈は URL / browser storage に残さない
-- ORCA route taxonomy は `official=/api/orca/official/*`, `master=/api/orca/master/*`, `local=/api/local/*`
-- shell / topbar の ORCA 表示は sanitized readiness を参照し、step-up mutation の `/api/admin/orca/connection/test` を常時ポーリングしない
-- `npm run dev` は ORCA URL / Basic / 証明書情報を読み込まず、Vite dev proxy は server-modernized の `/api` entrypoint だけへ中継する
-- security 規範の詳細は `notes/security-spec.md` を正本とする
+## 境界
+
+- ブラウザは ORCA に直接接続しません。
+- ORCA URL、Basic 認証、証明書、証明書パスワードはブラウザ側へ置きません。
+- 患者文脈は URL や browser storage を正本にしません。
+- 認可、監査、ORCA 接続先の決定は server 側の責務です。
+
+全体説明は [docs/README.md](../docs/README.md) から参照してください。

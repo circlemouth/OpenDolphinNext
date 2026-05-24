@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/serverinfo/jamri",
-  "base_url": "http://localhost:8080",
-  "request_id": "base_readonly_serverinfo",
-  "status_code": 404,
-  "time_total": "0.005549",
-  "exit_code": 0
-}

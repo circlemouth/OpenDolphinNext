@@ -1,9 +1,0 @@
-{
-  "method": "POST",
-  "path": "/reporting/karte",
-  "base_url": "http://localhost:8080/openDolphin/resources",
-  "request_id": "20251118TkarteJaZ1",
-  "status_code": 200,
-  "time_total": "1.428427",
-  "exit_code": 0
-}

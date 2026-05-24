@@ -1,2 +1,0 @@
-557:[0m[0m15:24:28,284 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous GET /touch/user/doctor1,1.3.6.1.4.1.9414.72.103,dolphin traceId=trace-http-401
-558:[0m[0m15:24:28,284 INFO  [open.dolphin] (default task-1) 192.168.65.1 anonymous GET /touch/user/doctor1,1.3.6.1.4.1.9414.72.103,dolphin traceId=trace-http-401

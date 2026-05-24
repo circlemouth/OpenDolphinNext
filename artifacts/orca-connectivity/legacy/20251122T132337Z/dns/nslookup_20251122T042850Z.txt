@@ -1,8 +1,0 @@
-Server:		10.255.255.254
-Address:	10.255.255.254#53
-
-Non-authoritative answer:
-weborca-trial.orca.med.or.jp	canonical name = weborca-trial1.japaneast.cloudapp.azure.com.
-Name:	weborca-trial1.japaneast.cloudapp.azure.com
-Address: 172.192.77.103
-

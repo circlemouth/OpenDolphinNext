@@ -1,4 +1,0 @@
-rootRevisionId=9192
-childRevisionId=9193
-karteId=9058
-visitDate=2026-02-07

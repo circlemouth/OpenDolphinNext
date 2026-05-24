@@ -1,5 +1,0 @@
-RUN_ID=20260205T070405Z-msw-off-orca
-appointments HTTP 200
-visits HTTP 200
-claim HTTP 404
-medical HTTP 200

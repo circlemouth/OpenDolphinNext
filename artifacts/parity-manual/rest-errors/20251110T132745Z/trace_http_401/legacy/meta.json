@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/touch/user/doctor1,1.3.6.1.4.1.9414.72.103,dolphin",
-  "base_url": "http://opendolphin-server:8080/openDolphin/resources",
-  "request_id": "trace_http_401",
-  "status_code": 500,
-  "time_total": "0.016913",
-  "exit_code": 0
-}

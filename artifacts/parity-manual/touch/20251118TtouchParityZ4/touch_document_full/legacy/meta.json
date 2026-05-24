@@ -1,9 +1,0 @@
-{
-  "method": "POST",
-  "path": "/jtouch/document",
-  "base_url": "http://opendolphin-server:8080/openDolphin/resources",
-  "request_id": "touch_document_full",
-  "status_code": 200,
-  "time_total": "0.170309",
-  "exit_code": 0
-}

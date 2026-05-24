@@ -1,3 +1,0 @@
-id,event_time,actor_id,actor_display_name,actor_role,action,resource,patient_id,request_id,ip_address,user_agent,payload_hash,previous_hash,event_hash,payload,trace_id
-760,2025-12-26 22:45:31.154573+09,1.3.6.1.4.1.9414.72.103:doctor1,1.3.6.1.4.1.9414.72.103:doctor1,,EHT_CLAIM_SEND,/20/adm/eht/sendClaim,,23aa9463-f8f7-491a-9bc0-09f608281c1d,178.128.69.202,curl/8.7.1,72af137d9c0b701e0d6d4e3454ea5d29e9c8c01b21e2a995236870df486b9ec8,3c59bb45912271e42201adb71a1220e41a1fa5d059db1928c8d934449c02b2ce,74bf90b6078bf35ed60d7d053aae01494a54eb38930203e534ef020624d57c6a,{"documentId":"DOC-20251226T133822Z-ACK2","facilityId":"1.3.6.1.4.1.9414.72.103"},trace-jms-20251226T133822Z-ack2
-(1 row)

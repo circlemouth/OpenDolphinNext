@@ -1,2 +1,0 @@
-{"error":"not_found","code":"not_found","message":"RESTEASY003210: Could not find resource for full path: http://localhost:8080/openDolphin/resources/system/health","status":404,"traceId":"259627d8-8cd7-4bcc-a330-a96fbfb01611","path":"/openDolphin/resources/system/health","reason":"RESTEASY003210: Could not find resource for full path: http://localhost:8080/openDolphin/resources/system/health"}
-HTTP_STATUS:404

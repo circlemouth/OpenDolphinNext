@@ -1,1 +1,0 @@
-SELFTEST OK: /Users/Hayato/Documents/GitHub/multi-agent-shogun/artifacts/verification/20260206T122011Z-cmd_20260206_16_sub_2-tmux-send-2step

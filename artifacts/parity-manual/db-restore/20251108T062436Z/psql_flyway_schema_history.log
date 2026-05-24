@@ -1,6 +1,0 @@
- installed_rank | version |         description          | success 
-----------------+---------+------------------------------+---------
-              0 |         | << Flyway Schema Creation >> | t
-              1 | 0001    | baseline tag                 | t
-(2 rows)
-

@@ -1,6 +1,0 @@
-GET /dolphin/activity/2025,04 -> legacy (trace_http_400) (status=500, time=0.019855, exit=0)
-GET /dolphin/activity/2025,04 -> modern (trace_http_400) (status=400, time=0.013812, exit=0)
-GET /touch/user/doctor1,1.3.6.1.4.1.9414.72.103,dolphin -> legacy (trace_http_401) (status=500, time=0.010648, exit=0)
-GET /touch/user/doctor1,1.3.6.1.4.1.9414.72.103,dolphin -> modern (trace_http_401) (status=500, time=0.002285, exit=0)
-GET /karte/pid/INVALID,%5Bdate%5D -> legacy (trace_http_500) (status=200, time=0.079697, exit=0)
-GET /karte/pid/INVALID,%5Bdate%5D -> modern (trace_http_500) (status=400, time=0.011195, exit=0)

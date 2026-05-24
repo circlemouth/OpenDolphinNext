@@ -1,3 +1,0 @@
-# 証跡保存手順
-# 1. sudo tcpdump -i lo0 tcp port 9080 -c 200 -w <RUN_ID>/lo0_9080.pcap で採取する。
-# 2. tcpdump コマンド開始・終了時刻と件数を docs/server-modernization/phase2/operations/logs/ にも記録する。

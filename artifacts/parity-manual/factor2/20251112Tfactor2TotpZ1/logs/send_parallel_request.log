@@ -1,2 +1,0 @@
-POST /20/adm/factor2/totp/registration -> legacy (factor2_totp_registration) (status=404, time=0.015135, exit=0)
-POST /20/adm/factor2/totp/registration -> modern (factor2_totp_registration) (status=500, time=0.117808, exit=0)

@@ -1,7 +1,0 @@
-<!-- runId: 20260127T031057Z endpoint: insprogetv2 provider:010025 insurance:060 -->
-<data>
-  <insprogetreq type="record">
-    <InsuranceProvider_Number type="string">010025</InsuranceProvider_Number>
-    <Insurance_Number type="string">060</Insurance_Number>
-  </insprogetreq>
-</data>

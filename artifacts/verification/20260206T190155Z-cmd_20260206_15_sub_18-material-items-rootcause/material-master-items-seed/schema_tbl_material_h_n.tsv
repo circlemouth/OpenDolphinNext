@@ -1,5 +1,0 @@
-snamecd|smallint||NO
-sname|character varying|200|YES
-creymd|character varying|8|YES
-upymd|character varying|8|YES
-uphms|character varying|6|YES

@@ -1,7 +1,0 @@
---- artifacts/orca-connectivity/20260111T213428Z/orca_chart_subjectives.json	2026-01-27 20:29:23
-+++ artifacts/orca-preprod/20260127T113046Z/10-json-internal-wrapper-live/orca_chart_subjectives.json	2026-01-27 20:50:50
-@@ -1 +1 @@
--{"apiResult":"79","apiResultMessage":"Spec-based implementation / Trial未検証","runId":"20251116T170500Z","recordedAt":"2026-01-11T21:35:20.501157420Z","messageDetail":"WebORCA Trial では subjectivesv2 が未開放のためローカル記録は行っていません。"}
-\ No newline at end of file
-+{"apiResult":"00","apiResultMessage":"処理終了","runId":"20260127T113046Z","recordedAt":"2026-01-27T11:50:50.735211049Z","messageDetail":"主訴を登録しました。"}
-\ No newline at end of file

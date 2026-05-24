@@ -1,8 +1,0 @@
-# コマンド実行スキップ記録 (UTC 2025-11-08T10:14:55Z)
-- `docker compose -f docker-compose.modernized.dev.yml up -d db-modernized`
-  - 理由: Secrets dump 未受領のため、Runbook 0章に基づき DB 初期化コマンド実行を保留。
-- `docker exec opendolphin-postgres-modernized psql -U opendolphin -d opendolphin_modern -f ~/Secrets/server-modernized/db-baseline/opendolphin-modern-schema.sql`
-  - 理由: 該当 SQL ファイルが存在せず、再実行しても `relation ... does not exist` エラーを再発させるのみで証跡価値がない。
-- `docker run --rm -v $PWD/server-modernized/tools/flyway/conf:/flyway/conf flyway/flyway:10.17 baseline`
-- `docker run --rm -v $PWD/server-modernized/tools/flyway/conf:/flyway/conf flyway/flyway:10.17 migrate`
-  - 理由: baseline DDL 未適用の状態で再実行すると `V0002__performance_indexes.sql` が失敗する既知事象へ戻るためスキップし、Secrets 受領後に改めて実行する計画。

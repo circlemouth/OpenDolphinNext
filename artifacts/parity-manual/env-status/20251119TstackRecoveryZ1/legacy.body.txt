@@ -1,1 +1,0 @@
-{"error":"unauthorized","message":"Authentication required","status":401,"traceId":"36b4e484-5505-41ae-97b1-c31b29ba6963","path":"/openDolphin/resources/serverinfo/jamri","principal":"9001:doctor1","reason":"authentication_failed"}

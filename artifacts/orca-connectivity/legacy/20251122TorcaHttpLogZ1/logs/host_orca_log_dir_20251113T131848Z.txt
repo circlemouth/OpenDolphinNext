@@ -1,7 +1,0 @@
-total 216
--rw-r--r--@ 1 Hayato  staff  46380 11月 13 22:18 http.log
-lrwxr-xr-x  1 Hayato  staff      8 11月 13 14:25 orca_http.log -> http.log
--rw-r--r--  1 Hayato  staff   3336 11月 13 12:26 orca-db-install-5.2.0.log
--rw-r--r--  1 Hayato  staff   3934 11月 13 12:26 orca-db-install-thistime.log
--rw-------  1 Hayato  staff  49103 11月 13 14:25 orca-db-patch.log
--rw-------  1 Hayato  staff     22 11月 13 22:06 version-info.log

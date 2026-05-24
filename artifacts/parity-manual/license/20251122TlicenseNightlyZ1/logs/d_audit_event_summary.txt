@@ -1,4 +1,0 @@
-run_id=20251122TlicenseNightlyZ1
-modern_count=4
-modern_non_success=0
-legacy_count=0

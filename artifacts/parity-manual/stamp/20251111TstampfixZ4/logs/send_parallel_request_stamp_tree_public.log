@@ -1,2 +1,0 @@
-GET /stamp/tree/9001/public -> legacy (stamp_tree_public) (status=404, time=0.052899, exit=0)
-GET /stamp/tree/9001/public -> modern (stamp_tree_public) (status=404, time=0.034762, exit=0)

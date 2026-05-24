@@ -1,5 +1,0 @@
-medicalmodv2:
-<xmlio2>  <medicalmodv23res>    <Api_Result>00</Api_Result>    <Api_Result_Message>OK</Api_Result_Message>    <Information_Date>2026-01-20</Information_Date>    <Information_Time>09:00:00</Information_Time>  </medicalmodv23res></xmlio2>
-
-medicalmodv23:
-<xmlio2>  <medicalmodv23res>    <Api_Result>00</Api_Result>    <Api_Result_Message>OK</Api_Result_Message>    <Information_Date>2026-01-20</Information_Date>    <Information_Time>09:00:00</Information_Time>  </medicalmodv23res></xmlio2>

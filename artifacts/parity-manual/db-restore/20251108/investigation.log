@@ -1,8 +1,0 @@
-# DB ベースライン復旧調査ログ (2025-11-08)
-- docs/server-modernization/phase2/notes/test-data-inventory.md の 3.1 節を確認し、`d_audit_event` や 2FA 系テーブルが Secrets ストレージにあるベースライン DDL を適用しないと生成されないことを再確認。
-- server-modernized/tools/flyway/sql/V0001__baseline_tag.sql〜V0221__doc_module_flag_columns.sql を精査し、リポジトリに含まれるのは差分マイグレーションのみで、ベースラインテーブル/シーケンスは Secrets 側に退避されていることを確認。
-- server-modernized/tools/flyway/scripts/export-schema.sh を確認し、`pg_dump --schema-only` を利用した再エクスポート手順と `DB_*` 環境変数の必須項目を整理。
-- docs/server-modernization/persistence-layer/3_4-persistence-layer-modernization.md を参照し、初回移行で `flyway baseline` を実行した後 `V0002` 以降を `flyway migrate` で適用する運用を把握。
-- artifacts/manual/audit_log.txt に記録された `d_audit_event` 欠損エラー (`ERROR: relation "d_audit_event" does not exist`) を確認し、シーケンス/テーブル復旧が JMS/CLAIM/TRACE 検証のゲートになっていることを整理。
-- docker-compose.yml / docker-compose.modernized.dev.yml の Postgres サービス名（`opendolphin-postgres`, `opendolphin-postgres-modernized`）や接続パラメータを確認し、`docker exec ... psql -f` コマンド作成時の変数名を確定。
-- ops/modernized-server/checks/verify_startup.sh を確認し、WildFly 起動後に `FACTOR2_AES_KEY_B64` やデータソースが存在することを CLI で検証する方法を整理。

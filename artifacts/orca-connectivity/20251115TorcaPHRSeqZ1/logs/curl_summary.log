@@ -1,9 +1,0 @@
-2025-11-15 23:24 JST Phase-A/B実測（PKCS#12 pass=FJjmq/d7EP）
-PHR-02 accessKey: HTTP 404 (HTML body: "The specified URL cannot be found.")
-PHR-03 accessKey lookup: HTTP 404 JSON {Code:404}
-PHR-10 patient: HTTP 404 JSON {Code:404}
-PHR-01 abnormal: HTTP 404 JSON {Code:404}
-PHR-04 allergy: HTTP 404 JSON {Code:404}
-PHR-05 disease: HTTP 404 JSON {Code:404}
-PHR-08 labtest: HTTP 404 JSON {Code:404}
-PHR-09 medication: HTTP 404 JSON {Code:404}

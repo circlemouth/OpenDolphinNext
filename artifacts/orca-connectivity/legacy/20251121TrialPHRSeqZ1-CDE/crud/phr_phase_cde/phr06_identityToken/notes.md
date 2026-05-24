@@ -1,5 +1,0 @@
-- RUN_ID: 20251121TrialPHRSeqZ1-CDE
-- API: POST https://weborca-trial.orca.med.or.jp/20/adm/phr/identityToken
-- Headers: X-Facility-Id=1234567, X-Touch-TraceId=20251121TrialPHRSeqZ1-CDE, X-Access-Reason=layer-id, X-Consent-Token=20251121TrialPHRSeqZ1-CDE-consent, Accept=application/json, Content-Type=application/json; charset=UTF-8
-- Auth: Basic trial/weborcatrial
-- Body file: request.json (nonce + user)

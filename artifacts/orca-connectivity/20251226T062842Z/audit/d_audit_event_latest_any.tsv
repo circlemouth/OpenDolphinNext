@@ -1,5 +1,0 @@
-716	2025-12-26 15:31:21.748122+09	REST_ERROR_RESPONSE	/openDolphin/resources/orca/tensu/etensu
-715	2025-12-26 15:31:21.72995+09	ORCA_MASTER_FETCH	/orca/tensu/etensu
-714	2025-12-26 15:31:18.452282+09	REST_ERROR_RESPONSE	/openDolphin/resources/api/orca/master/generic-price
-713	2025-12-26 15:31:18.441771+09	ORCA_MASTER_FETCH	/orca/master/generic-price
-712	2025-12-26 15:30:50.366063+09	REST_UNAUTHORIZED_GUARD	/openDolphin/resources/orca/tensu/etensu

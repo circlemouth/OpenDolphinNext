@@ -1,8 +1,0 @@
-{
-  "port": 4173,
-  "baseUrl": "http://localhost:4173",
-  "VITE_DISABLE_MSW": 0,
-  "VITE_STAMPBOX_MVP": 0,
-  "VITE_ORDER_EDIT_MVP": "0",
-  "VITE_RECEPTION_STATUS_MVP": 0
-}

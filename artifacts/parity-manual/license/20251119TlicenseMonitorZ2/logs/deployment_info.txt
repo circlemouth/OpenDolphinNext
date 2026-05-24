@@ -1,2 +1,0 @@
-NAME                   RUNTIME-NAME           PERSISTENT ENABLED STATUS 
-opendolphin-server.war opendolphin-server.war false      true    OK     

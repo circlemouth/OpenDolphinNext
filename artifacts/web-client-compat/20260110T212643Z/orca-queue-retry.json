@@ -1,1 +1,0 @@
-{"runId":"20260110T212643Z","traceId":"trace-20260110T212643Z","fetchedAt":"2026-01-10T21:56:26.286043917Z","source":"mock","verifyAdminDelivery":true,"queue":[{"patientId":"MOCK-001","status":"pending","retryable":true,"lastDispatchAt":"2026-01-10T21:56:26.285106417Z"}],"patientId":"MOCK-001","retryRequested":true,"retryApplied":false,"retryReason":"mock_noop"}

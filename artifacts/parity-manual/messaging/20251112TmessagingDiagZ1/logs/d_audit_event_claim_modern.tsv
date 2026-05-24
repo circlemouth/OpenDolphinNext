@@ -1,2 +1,0 @@
-id,event_time,action,resource,actor_id,request_id,trace_id,payload
-95,2025-11-13 06:34:34.288117+09,REST_UNAUTHORIZED_GUARD,/openDolphin/resources/20/adm/eht/sendClaim,doctor1,parity-claim-send-20251112TmessagingDiagZ1,parity-claim-send-20251112TmessagingDiagZ1,25409

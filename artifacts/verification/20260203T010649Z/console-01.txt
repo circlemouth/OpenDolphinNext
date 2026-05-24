@@ -1,5 +1,0 @@
-[2026-02-03T01:06Z] Reception console
-- [issue] A form field element should have an id or name attribute (count: 22)
-- [info] [audit] event (multiple)
-- [info] [telemetry] Record outpatient funnel (multiple)
-- [info] [audit] UI state (multiple)

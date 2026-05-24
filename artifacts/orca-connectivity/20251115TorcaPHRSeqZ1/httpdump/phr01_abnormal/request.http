@@ -1,7 +1,0 @@
-GET /20/adm/phr/abnormal/WEB1001?docSince=2025-05-01 HTTP/1.1
-Host: weborca.cloud.orcamo.jp
-X-Facility-Id: LOCAL.FACILITY.0001
-X-Touch-TraceId: 20251115TorcaPHRSeqZ1
-X-Access-Reason: abnormal-view
-Accept: text/plain; charset=UTF-8
-Notes: Expect UTF-8 text output + docSince filtering evidence

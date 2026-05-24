@@ -1,7 +1,0 @@
-timestamp_utc: 20251108T194710Z
-request: GET /openDolphin/resources/serverinfo/jamri
-headers:
-  userName: doctor1
-  password: ********
-http_status: 200
-body: 

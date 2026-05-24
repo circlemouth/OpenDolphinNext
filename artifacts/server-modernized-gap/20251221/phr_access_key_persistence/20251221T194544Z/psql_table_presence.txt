@@ -1,9 +1,0 @@
- table_schema |      table_name       
---------------+-----------------------
- opendolphin  | d_phr_key
- opendolphin  | flyway_schema_history
- opendolphin  | phr_async_job
- public       | d_phr_key
- public       | phr_async_job
-(5 rows)
-

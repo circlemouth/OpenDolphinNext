@@ -1,8 +1,0 @@
-medicalmodv2:
-<xmlio2>  <medicalmodv23res>    <Api_Result>00</Api_Result>    <Api_Result_Message>OK</Api_Result_Message>    <Information_Date>2026-01-20</Information_Date>    <Information_Time>09:00:00</Information_Time>  </medicalmodv23res></xmlio2>
-
-medicalmodv23:
-<xmlio2>  <medicalmodv23res>    <Api_Result>00</Api_Result>    <Api_Result_Message>OK</Api_Result_Message>    <Information_Date>2026-01-20</Information_Date>    <Information_Time>09:00:00</Information_Time>  </medicalmodv23res></xmlio2>
-
-claim_outpatient:
-{"runId":"20260121T003937Z","traceId":"trace-20260121T003937Z","cacheHit":true,"missingMaster":false,"dataSourceTransition":"server","fallbackUsed":false,"recordsReturned":1,"bundles":[{"bundleNumber":"BUNDLE-1","patientId":"000001","appointmentId":"APT-2401","claimStatus":"会計待ち","invoiceNumber":"INV-000001","dataId":"DATA-000001"}],"queueEntries":[{"id":"claim-queue-1","phase":"retry","retryCount":1,"patientId":"000001","appointmentId":"APT-2401","requestId":"REQ-1"}],"invoiceNumber":"INV-000001","dataId":"DATA-000001","queue":[{"id":"claim-queue-1","phase":"retry","retryCount":1,"patientId":"000001","appointmentId":"APT-2401","requestId":"REQ-1"}]}

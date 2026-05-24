@@ -1,9 +1,0 @@
-{
-  "apiResult": "91",
-  "runId": "20260117T235100Z",
-  "dataSourceTransition": "server",
-  "recordsReturned": 0,
-  "dataSource": "real",
-  "traceId": "trace-appointments-20260117T235100Z",
-  "requestId": "req-appointments-20260117T235100Z"
-}

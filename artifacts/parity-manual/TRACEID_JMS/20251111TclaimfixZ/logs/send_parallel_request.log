@@ -1,2 +1,0 @@
-PUT /20/adm/eht/sendClaim -> legacy (claim_send) (status=401, time=0.046563, exit=0)
-PUT /20/adm/eht/sendClaim -> modern (claim_send) (status=401, time=0.018323, exit=0)

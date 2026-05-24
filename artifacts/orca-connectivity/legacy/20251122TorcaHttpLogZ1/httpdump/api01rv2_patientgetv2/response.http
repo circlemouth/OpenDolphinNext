@@ -1,7 +1,0 @@
-HTTP/1.1 401 Unauthorized
-Content-Type: application/json
-Www-Authenticate: basic realm=Restricted
-Date: Thu, 13 Nov 2025 13:18:23 GMT
-Content-Length: 56
-
-{"Code":401,"Message":"code=401, message=Unauthorized"}

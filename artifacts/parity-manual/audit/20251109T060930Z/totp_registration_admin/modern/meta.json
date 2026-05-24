@@ -1,9 +1,0 @@
-{
-  "method": "POST",
-  "path": "/20/adm/factor2/totp/registration",
-  "base_url": "http://localhost:9080/openDolphin/resources",
-  "request_id": "totp_registration_admin",
-  "status_code": 000,
-  "time_total": "0.000247",
-  "exit_code": 7
-}

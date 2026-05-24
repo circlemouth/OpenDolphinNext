@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/stamp/tree/9001/shared",
-  "base_url": "http://opendolphin-server:8080/openDolphin/resources",
-  "request_id": "stamp_tree_shared",
-  "status_code": 200,
-  "time_total": "0.171945",
-  "exit_code": 0
-}

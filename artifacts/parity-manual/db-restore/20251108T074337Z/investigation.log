@@ -1,7 +1,0 @@
-[UTC 2025-11-08T07:43:37Z] START Gate40-DB baseline再試行
-[UTC 2025-11-08T07:43:40Z] cmd: ls ~/Secrets
-result: ls: /Users/Hayato/Secrets: No such file or directory
-interpretation: Secrets ストレージ未マウント。Ops からの配布が完了していないため DDL 不在。
-[UTC 2025-11-08T07:43:45Z] action: POSTGRES_BASELINE_RESTORE.md 0. Secrets フローに基づき Ops/DBA への依頼テンプレを artifacts/parity-manual/db-restore/20251108T062436Z/baseline_search.log へ追記。
-[UTC 2025-11-08T07:43:50Z] blocking reason: Secrets 受領前のため Legacy/Modernized どちらの psql/flyway 操作も実施不可。
-[UTC 2025-11-08T07:43:55Z] next step: Secrets 配布後、shasum 取得→ ~/Secrets/<category>/ に配置→ docker compose -f docker-compose.modernized.dev.yml up -d db-modernized → psql/flyway ログ取得。

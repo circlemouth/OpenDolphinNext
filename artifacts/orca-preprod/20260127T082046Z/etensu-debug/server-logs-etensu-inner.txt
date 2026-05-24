@@ -1,3 +1,0 @@
-[0m[0m17:37:04,638 INFO  [open.dolphin] (default task-1) 127.0.0.1 dolphindev GET /orca/master/etensu traceId=d77426a2-2a25-4918-a9ba-bf48bc908f94
-[0m[0m17:37:04,646 INFO  [open.dolphin] (default task-1) 127.0.0.1 dolphindev GET /orca/master/etensu traceId=b60e93dc-a0fe-4363-b334-1a9ec59bb77e
-[0m[0m17:37:04,808 INFO  [open.dolphin.session.MessageSender] (Thread-1 (ActiveMQ-client-global-threads)) Audit envelope drained from JMS queue [traceId=0e83ad41-41e0-4724-8b15-f8d8110de217, action=REST_ERROR_RESPONSE, resource=/openDolphin/resources/orca/master/etensu, outcome=FAILURE]

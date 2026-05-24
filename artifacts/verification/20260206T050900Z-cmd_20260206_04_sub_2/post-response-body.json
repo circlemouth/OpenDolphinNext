@@ -1,1 +1,0 @@
-{"error":"order_bundle_unavailable","code":"order_bundle_unavailable","message":"Failed to mutate order bundle","status":503,"traceId":"2f3892e7-7290-4a32-b58d-27322ce7b5ca","path":"/openDolphin/resources/orca/order/bundles","facilityId":"1.3.6.1.4.1.9414.10.1","patientId":"P0002","karteId":91012,"runId":"20260206T051000Z-cmd_20260206_04_sub_2-failure","operation":"create"}

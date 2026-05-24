@@ -1,1 +1,0 @@
-[diagnosis] POST /karte/diagnosis/claim -> legacy=200, modern=200 (TRACE_RUN_ID=20251118TdiagnosisLegacyZ1, profile=modernized-dev)

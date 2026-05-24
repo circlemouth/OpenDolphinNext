@@ -1,2 +1,0 @@
-6:<Api_Result type="string">16</Api_Result>
-7:<Api_Result_Message type="string">診療科・保険組合せで受付登録済みです。二重登録疑い</Api_Result_Message>

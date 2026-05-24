@@ -11,8 +11,7 @@ const selfRelativePath = path.relative(repoRootDir, scriptPath).split(path.sep).
 
 const checkedRoots = [
   'web-client/src',
-  'web-client/notes',
-  'docs/web-client/ux',
+  'docs',
 ];
 
 const textFileExtensions = new Set([

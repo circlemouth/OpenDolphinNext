@@ -1,8 +1,0 @@
-HTTP/1.1 200 OK
-Server: nginx/1.18.0 (Ubuntu)
-Date: Tue, 14 Apr 2026 01:31:07 GMT
-Content-Type: application/xml; charset=UTF-8
-Content-Length: 695
-Connection: keep-alive
-X-Hybridmode: normal
-

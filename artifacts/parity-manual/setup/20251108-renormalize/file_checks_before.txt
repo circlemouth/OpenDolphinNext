@@ -1,3 +1,0 @@
-scripts/setup_codex_env.sh:                         Bourne-Again shell script, Unicode text, UTF-8 text executable, with CRLF line terminators
-ops/tools/send_parallel_request.sh:                 Bourne-Again shell script, Unicode text, UTF-8 text executable
-ops/tools/send_parallel_request.profile.env.sample: Bourne-Again shell script, Unicode text, UTF-8 text executable

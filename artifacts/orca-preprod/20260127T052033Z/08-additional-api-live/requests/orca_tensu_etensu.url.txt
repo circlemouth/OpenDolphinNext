@@ -1,1 +1,0 @@
-http://localhost:19082/openDolphin/resources/orca/tensu/etensu?keyword=%E5%86%8D%E8%A8%BA&asOf=20260127&page=1&size=20

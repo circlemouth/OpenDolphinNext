@@ -1,9 +1,0 @@
-RUN_ID=20251205T200000Z
-ENV=VITE_DISABLE_MSW=1 VITE_DEV_PROXY_TARGET=http://stage.open-dolphin VITE_API_BASE_URL=http://stage.open-dolphin VITE_DEV_USE_HTTPS=1
-SERVER_CMD="npm run dev -- --host 0.0.0.0 --strictPort --port 4173"
-STARTED=2025-12-05T12:55:00Z (recorded in /tmp/vite-stage.log)
-STAGE ACCESS ATTEMPT: curl -I http://stage.open-dolphin
-  -> curl: (6) Could not resolve host: stage.open-dolphin
-OBSERVATION: With the stage proxy host unresolved the UI cannot reach the Modernized server, so dataSourceTransition=server / missingMaster flows could not be exercised.
-SCREENSHOT: artifacts/webclient/e2e/20251205T200000Z-reception/reception-stage.png
-NOTE: Need to rerun once stage.open-dolphin becomes resolvable so charts/reception can load real audit flags.

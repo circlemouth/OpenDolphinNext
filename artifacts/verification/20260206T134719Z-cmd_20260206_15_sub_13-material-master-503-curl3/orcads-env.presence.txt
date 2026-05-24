@@ -1,9 +1,0 @@
-ORCA_DB_HOST=unset
-ORCA_DB_PORT=unset
-ORCA_DB_NAME=unset
-ORCA_DB_USER=unset
-ORCA_DB_SSLMODE=unset
-ORCA_DB_PASSWORD=unset
-DB_HOST=db-modernized
-DB_NAME=opendolphin_modern
-DB_USER=opendolphin

@@ -1,8 +1,0 @@
-5a141e8e9 docs(automation): refresh current-head review package state
-2eee57777 fix(packet): harden reviewer packet sanitization contract
-4ec2bd324 docs(automation): refresh current-head package roadmap state
-2dd8343dd docs(automation): refresh current-head review package evidence
-c2a578808 fix(orca): accept scoped medicalmodv2 trial payload
-2d068277d Fix trial-local ORCA readiness fallback
-1103a3d60 fix(automation): gate medicalmodv2 live retry on readiness
-2b6925a94 docs(automation): allow iterative medicalmodv2 retries

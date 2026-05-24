@@ -1,9 +1,0 @@
-{
-  "method": "--cases",
-  "path": "/trace_http_400,trace_http_401,trace_http_500",
-  "base_url": "http://opendolphin-server-modernized-dev:8080/openDolphin/resources",
-  "request_id": "--cases_trace_http_400_trace_http_401_trace_http_500",
-  "status_code": 403,
-  "time_total": "0.016704",
-  "exit_code": 0
-}

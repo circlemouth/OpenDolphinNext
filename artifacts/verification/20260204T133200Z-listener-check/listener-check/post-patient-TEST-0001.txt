@@ -1,15 +1,0 @@
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100   119  100     5  100   114     57   1305 --:--:-- --:--:-- --:--:--  1367
-HTTP/1.1 200 OK
-Referrer-Policy: no-referrer
-Content-Security-Policy: default-src 'self'
-X-Trace-Id: 5e165fc7-f2f1-4fae-b290-4b52902ddc89
-Date: Wed, 04 Feb 2026 13:36:50 GMT
-Connection: keep-alive
-X-Content-Type-Options: nosniff
-Strict-Transport-Security: max-age=63072000; includeSubDomains
-Content-Type: text/plain;charset=UTF-8
-Content-Length: 5
-
-91016

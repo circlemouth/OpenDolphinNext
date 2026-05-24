@@ -1,9 +1,0 @@
-* Host localhost:9080 was resolved.
-* IPv6: ::1
-* IPv4: 127.0.0.1
-*   Trying [::1]:9080...
-* connect to ::1 port 9080 from ::1 port 43408 failed: Connection refused
-*   Trying 127.0.0.1:9080...
-* connect to 127.0.0.1 port 9080 from 127.0.0.1 port 45822 failed: Connection refused
-* Failed to connect to localhost port 9080 after 2 ms: Couldn't connect to server
-* Closing connection

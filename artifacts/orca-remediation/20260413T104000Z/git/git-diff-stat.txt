@@ -1,4 +1,0 @@
- web-client/scripts/qa-acceptmodv2-weborca.mjs | 135 +++++++++++++------
- web-client/scripts/qa-fullflow-weborca.mjs    | 185 ++++++++++++++++++++------
- web-client/scripts/qa-lib/session-auth.mjs    |  26 ++--
- 3 files changed, 255 insertions(+), 91 deletions(-)

@@ -1,5 +1,0 @@
-57858:	at deployment.opendolphin-server.war//open.dolphin.adm20.session.PHRAsyncJobServiceBean$$$view6.createJob(Unknown Source)
-57868:	at deployment.opendolphin-server.war//open.dolphin.adm20.session.PHRAsyncJobServiceBean$Proxy$_$$_Weld$EnterpriseProxy$.createJob(Unknown Source)
-57953:2025-12-26 22:36:15,842 ERROR [org.jboss.as.ejb3.invocation] (default task-7) WFLYEJB0034: Jakarta Enterprise Beans Invocation failed on component PHRAsyncJobServiceBean for method public open.dolphin.infomodel.PHRAsyncJob open.dolphin.adm20.session.PHRAsyncJobServiceBean.createJob(java.lang.String,java.lang.String,java.lang.String): jakarta.ejb.EJBTransactionRolledbackException: jakarta.transaction.RollbackException: ARJUNA016053: Could not commit transaction.
-57997:	at deployment.opendolphin-server.war//open.dolphin.adm20.session.PHRAsyncJobServiceBean$$$view6.createJob(Unknown Source)
-58007:	at deployment.opendolphin-server.war//open.dolphin.adm20.session.PHRAsyncJobServiceBean$Proxy$_$$_Weld$EnterpriseProxy$.createJob(Unknown Source)

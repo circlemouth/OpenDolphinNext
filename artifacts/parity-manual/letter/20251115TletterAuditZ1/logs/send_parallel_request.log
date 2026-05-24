@@ -1,2 +1,0 @@
-2025-11-12T13:32:44Z PUT /odletter/letter -> legacy (rest_error_letter_audit) (status=200, time=0.367278, exit=0)
-2025-11-12T13:32:44Z PUT /odletter/letter -> modern (rest_error_letter_audit) (status=200, time=0.385542, exit=0)

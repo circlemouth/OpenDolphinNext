@@ -1,2 +1,0 @@
-GET /stamp/tree/9001/shared -> legacy (stamp_tree_shared) (status=404, time=0.093255, exit=0)
-GET /stamp/tree/9001/shared -> modern (stamp_tree_shared) (status=404, time=0.021283, exit=0)

@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/karte/docinfo/1012,2024-01-01%2000:00:00,true",
-  "base_url": "http://localhost:9080/openDolphin/resources",
-  "request_id": "api_stability_docinfo_loop002",
-  "status_code": 200,
-  "time_total": "0.013128",
-  "exit_code": 0
-}

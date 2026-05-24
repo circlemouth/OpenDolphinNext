@@ -1,7 +1,0 @@
-{
-  "operation": "invalid",
-  "patient": {
-    "patientId": "000101",
-    "wholeName": "Test Taro"
-  }
-}

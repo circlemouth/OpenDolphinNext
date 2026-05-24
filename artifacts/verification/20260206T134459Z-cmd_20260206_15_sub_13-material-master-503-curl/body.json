@@ -1,1 +1,0 @@
-{"error":"unauthorized","code":"unauthorized","message":"Authentication required","status":401,"traceId":"34d1bfd5-8577-48d3-b529-f096c2363245","path":"/openDolphin/resources/orca/master/material","reason":"authentication_failed"}

@@ -1,9 +1,0 @@
-{
-  "method": "POST",
-  "path": "/dolphin/license",
-  "base_url": "http://opendolphin-server-modernized-dev:8080/openDolphin/resources",
-  "request_id": "license_post_manual",
-  "status_code": 200,
-  "time_total": "0.158721",
-  "exit_code": 0
-}

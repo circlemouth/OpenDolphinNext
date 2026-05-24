@@ -1,1 +1,0 @@
-pfctl -sr could not be executed: sudo password required (RUN_ID=20251111Tnetdiag2).

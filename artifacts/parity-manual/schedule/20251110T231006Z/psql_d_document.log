@@ -1,6 +1,0 @@
-               List of relations
-   Schema    |    Name    | Type  |    Owner    
--------------+------------+-------+-------------
- opendolphin | d_document | table | opendolphin
-(1 row)
-

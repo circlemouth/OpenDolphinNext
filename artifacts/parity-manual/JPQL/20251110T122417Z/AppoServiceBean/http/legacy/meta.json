@@ -1,9 +1,0 @@
-{
-  "method": "PUT",
-  "path": "/appo",
-  "base_url": "http://localhost:8080/openDolphin/resources",
-  "request_id": "AppoServiceBean",
-  "status_code": 200,
-  "time_total": "0.068147",
-  "exit_code": 0
-}

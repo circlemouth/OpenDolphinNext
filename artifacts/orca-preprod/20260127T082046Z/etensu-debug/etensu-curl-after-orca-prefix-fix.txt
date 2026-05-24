@@ -1,2 +1,0 @@
-{"error":"not_found","code":"not_found","message":"RESTEASY003210: Could not find resource for full path: http://localhost:8080/openDolphin/resources/orca/master/etensu?keyword=113006810&asOf=20110401&page=1&size=1","status":404,"traceId":"655ee010-06c9-4a77-8ebd-9e1a1c857fcf","path":"/openDolphin/resources/orca/master/etensu","reason":"RESTEASY003210: Could not find resource for full path: http://localhost:8080/openDolphin/resources/orca/master/etensu?keyword=113006810&asOf=20110401&page=1&size=1"}
-HTTP_STATUS:404

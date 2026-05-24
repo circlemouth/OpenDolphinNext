@@ -1,5 +1,0 @@
-Console summary (administration route, login as dolphindev):
-- Warning: Encountered two children with the same key (OrcaSummary.tsx), repeated.
-- Failed to load resource: 404 (multiple).
-- Issue: A form field element should have an id or name attribute (count: 12).
-- Audit/telemetry info logs emitted (multiple).

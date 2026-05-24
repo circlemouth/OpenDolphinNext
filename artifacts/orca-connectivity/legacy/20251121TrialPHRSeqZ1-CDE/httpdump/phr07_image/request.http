@@ -1,8 +1,0 @@
-GET /20/adm/phr/image/00000001 HTTP/1.1
-Host: weborca-trial.orca.med.or.jp
-X-Facility-Id: 1234567
-X-Touch-TraceId: 20251121TrialPHRSeqZ1-CDE
-X-Access-Reason: phr07_image
-Accept: image/jpeg
-Authorization: Basic trial/weborcatrial
-Notes: RUN_ID=20251121TrialPHRSeqZ1-CDE

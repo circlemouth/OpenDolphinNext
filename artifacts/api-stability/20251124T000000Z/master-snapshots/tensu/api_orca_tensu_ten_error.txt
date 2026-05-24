@@ -1,16 +1,0 @@
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying 100.102.17.40:8000...
-* Connected to 100.102.17.40 (100.102.17.40) port 8000
-* Server auth using Basic with user 'ormaster'
-> GET /api/orca/tensu/ten?min=110000000&max=110000099 HTTP/1.1
-> Host: 100.102.17.40:8000
-> Authorization: Basic b3JtYXN0ZXI6Y2hhbmdlX21l
-> User-Agent: curl/8.7.1
-> Accept: */*
-> 
-* Request completely sent off
-* Empty reply from server
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-* Closing connection
-curl: (52) Empty reply from server

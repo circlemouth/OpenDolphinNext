@@ -25,7 +25,7 @@
     "verify:web-guard": "npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-direct-orca-proxy-config && npm run verify:no-local-patient-mutation && npm run verify:no-legacy-auth-drift && npm run verify:ui-mvp-contract && npm run verify:medical-safety-ui-copy",
     "verify:no-target-blank-unsafe": "node scripts/verify-no-target-blank-unsafe.mjs",
     "lint": "eslint .",
-    "openapi:orca-master": "node -e \"console.error('openapi:orca-master is retired; use docs/contracts/orca-master-api.md for the current contract summary.'); process.exit(1)\"",
+    "openapi:orca-master": "node -e \"console.error('openapi:orca-master is retired; use docs/security-and-orca.md for the current ORCA boundary summary.'); process.exit(1)\"",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:ci": "vitest run --silent --reporter=dot",

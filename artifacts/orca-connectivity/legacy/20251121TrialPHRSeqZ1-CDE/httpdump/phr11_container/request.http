@@ -1,8 +1,0 @@
-GET /20/adm/phr/1234567,00000001,20250101,20250101 HTTP/1.1
-Host: weborca-trial.orca.med.or.jp
-X-Facility-Id: 1234567
-X-Touch-TraceId: 20251121TrialPHRSeqZ1-CDE
-X-Access-Reason: phr11_container
-Accept: application/json
-Authorization: Basic trial/weborcatrial
-Notes: RUN_ID=20251121TrialPHRSeqZ1-CDE

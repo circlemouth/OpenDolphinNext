@@ -1,9 +1,0 @@
-A more recent version of Flyway is available. Find out more about Flyway 11.16.0 at https://rd.gt/3rXiSlV
-
-Flyway OSS Edition 10.17.3 by Redgate
-
-See release notes here: https://rd.gt/416ObMi
-Database: jdbc:postgresql://opendolphin-postgres-modernized:5432/opendolphin_modern (PostgreSQL 14.19)
-Successfully validated 11 migrations (execution time 00:00.027s)
-Current version of schema "opendolphin": 0225
-Schema "opendolphin" is up to date. No migration necessary.

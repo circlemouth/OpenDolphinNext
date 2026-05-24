@@ -1,3 +1,0 @@
-# fetch_license_secrets.sh が生成する license.properties のサニタイズ済みコピー
-license.key=REDACTED_BASE64_KEY
-license.secret=REDACTED_BASE64_SECRET

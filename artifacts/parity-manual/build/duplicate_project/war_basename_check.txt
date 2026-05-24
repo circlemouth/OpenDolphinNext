@@ -1,5 +1,0 @@
-[2025-11-12T15:50 JST] WAR_BASENAME利用再確認結果
-1. scripts/start_legacy_modernized.sh: Dockerfile.legacy生成時に `ARG WAR_BASENAME` (L103) を受け取り、WildFly配置・jboss-cli加工まで一貫して `${WAR_BASENAME}.war` を参照していることを確認。
-2. ops/modernized-server/docker/Dockerfile: ビルド・デプロイ両ステージ (L3-L100) で `ARG WAR_BASENAME`/`${WAR_BASENAME}.war` を使用し、固定ファイル名は存在しないことを確認。
-3. ops/legacy-server/docker/Dockerfile: 同様に `ARG WAR_BASENAME` を宣言し、WAR配置箇所 (L3-L120) で `${WAR_BASENAME}.war` に依存していることを確認。
-追加チェック: `rg "opendolphin-server.war" scripts ops` でハードコード例が無いことを確認 (ヒットは過去ログ/docのみ)。

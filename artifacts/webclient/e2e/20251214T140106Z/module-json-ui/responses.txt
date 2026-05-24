@@ -1,3 +1,0 @@
-addDocument response docPk=9024 (HTTP 200)
-updateDocument response docPk=9024 (HTTP 200)
-GET /api/karte/documents/9024 captured in get_after_update.json

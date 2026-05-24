@@ -1,5 +1,0 @@
-id	event_time	action	resource	request_id	actor_id	actor_role	payload
-17	2025-11-12 22:39:21.786+09	STAMP_TREE_SHARED_GET	/openDolphin/resources/stamp/tree/9001/shared	e90e46fa-3df6-427d-be19-00a4464625da	9001:doctor1		17623
-16	2025-11-12 22:36:47.377+09	STAMP_TREE_PUBLIC_GET	/openDolphin/resources/stamp/tree/9001/public	e04cdb8c-83a1-4e07-a884-ff8b84892e0d	9001:doctor1		17622
-15	2025-11-12 08:31:40.359+09	STAMP_TREE_PUT	/openDolphin/resources/stamp/tree	parity-stamp-20251111TstampfixZ3	1.3.6.1.4.1.9414.72.103:doctor1		17608
-14	2025-11-12 08:31:30.755+09	STAMP_TREE_PUT	/openDolphin/resources/stamp/tree	parity-stamp-20251111TstampfixZ3	1.3.6.1.4.1.9414.72.103:doctor1		17606

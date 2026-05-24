@@ -1,1 +1,0 @@
-stamp parity-run: docker compose -p legacy-vs-modern logs server-modernized-dev --since 20m | rg -i JMS でヒットなし。JMS 未発火。

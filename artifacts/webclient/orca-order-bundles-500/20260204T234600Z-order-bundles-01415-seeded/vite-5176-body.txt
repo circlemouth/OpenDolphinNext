@@ -1,1 +1,0 @@
-{"apiResult":"00","apiResultMessage":"処理終了","runId":"20260204T234600Z-order-bundles-01415-seeded","patientId":"01415","recordsReturned":0,"bundles":[]}

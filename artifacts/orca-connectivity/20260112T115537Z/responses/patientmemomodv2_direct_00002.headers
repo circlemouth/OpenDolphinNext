@@ -1,7 +1,0 @@
-HTTP/1.1 502 Bad Gateway
-Server: nginx/1.18.0 (Ubuntu)
-Date: Mon, 12 Jan 2026 13:11:41 GMT
-Content-Type: text/html
-Content-Length: 166
-Connection: keep-alive
-

@@ -1,6 +1,0 @@
- id |        action         |              resource               |                                                                                                                         payload                                                                                                                         |     trace_id     
-----+-----------------------+-------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------
-  6 | REST_ERROR_RESPONSE   | /openDolphin/resources/orca/disease | {"reason":"invalid_request","field":"patientId","httpStatus":400,"errorMessage":"patientId is required","errorCode":"invalid_request","validationError":true,"status":"failed"}                                                                         | 20260104T071346Z
-  5 | ORCA_DISEASE_MUTATION | /openDolphin/resources/orca/disease | {"traceId":"20260104T071346Z","facilityId":"1.3.6.1.4.1.9414.72.103","field":"patientId","requestId":"20260104T071346Z","httpStatus":400,"errorMessage":"patientId is required","errorCode":"invalid_request","validationError":true,"status":"failed"} | 20260104T071346Z
-(2 rows)
-

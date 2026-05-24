@@ -1,9 +1,0 @@
-PUT /20/adm/phr/accessKey HTTP/1.1
-Host: weborca.cloud.orcamo.jp
-X-Facility-Id: LOCAL.FACILITY.0001
-X-Touch-TraceId: 20251115TorcaPHRSeqZ1
-X-Access-Reason: phr-key-upsert
-Content-Type: application/json; charset=UTF-8
-Accept: application/json
-Body File: phr-seq/10_key-management/PHR-02_request.json
-Notes: RUN_ID template per ORCA_CONNECTIVITY_VALIDATION.md §4.3.2 (Phase-A)

@@ -1,7 +1,0 @@
-GET /20/adm/phr/labtest/WEB1001?labSince=2025-05-01 HTTP/1.1
-Host: weborca.cloud.orcamo.jp
-X-Facility-Id: LOCAL.FACILITY.0001
-X-Touch-TraceId: 20251115TorcaPHRSeqZ1
-X-Access-Reason: labtest-view
-Accept: text/plain; charset=UTF-8
-Notes: Need logs/phr_labtest_summary.md with Api_Result/件数

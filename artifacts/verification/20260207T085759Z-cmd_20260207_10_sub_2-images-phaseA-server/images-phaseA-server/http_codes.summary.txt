@@ -1,5 +1,0 @@
-00_no_auth 401
-01_feature_off 404
-02_upload 200
-03_list 200
-04_download 200

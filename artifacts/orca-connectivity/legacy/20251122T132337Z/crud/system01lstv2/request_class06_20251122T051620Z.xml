@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<data>
-  <system01_managereq type="record">
-    <Request_Number type="string">06</Request_Number>
-    <Base_Date type="string">2025-11-22</Base_Date>
-  </system01_managereq>
-</data>

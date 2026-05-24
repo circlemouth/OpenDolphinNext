@@ -1,9 +1,0 @@
-{
-  "method": "POST",
-  "path": "/20/adm/factor2/totp/registration",
-  "base_url": "http://opendolphin-server:8080/openDolphin/resources",
-  "request_id": "factor2_totp_registration",
-  "status_code": 404,
-  "time_total": "0.015135",
-  "exit_code": 0
-}

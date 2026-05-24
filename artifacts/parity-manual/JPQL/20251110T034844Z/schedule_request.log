@@ -1,4 +1,0 @@
-curl: (7) Failed to connect to localhost port 8080 after 0 ms: Couldn't connect to server
-GET /schedule/pvt/2025-11-09 -> legacy (ScheduleServiceBean) (status=000, time=0.000167, exit=7)
-curl: (7) Failed to connect to localhost port 9080 after 0 ms: Couldn't connect to server
-GET /schedule/pvt/2025-11-09 -> modern (ScheduleServiceBean) (status=000, time=0.000156, exit=7)

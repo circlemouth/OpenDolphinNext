@@ -1,4 +1,0 @@
-57374:2025-12-26 22:35:54,496 INFO  [open.dolphin] (default task-7) 178.128.69.202 dolphindev POST /20/adm/phr/export traceId=phr-export-20251226T133021Z-request
-57375:2025-12-26 22:35:54,496 INFO  [open.dolphin] (default task-7) 178.128.69.202 dolphindev POST /20/adm/phr/export traceId=phr-export-20251226T133021Z-request
-57743:2025-12-26 22:35:54,556 INFO  [open.dolphin.session.MessageSender] (Thread-44 (ActiveMQ-client-global-threads)) Audit envelope drained from JMS queue [traceId=phr-export-20251226T133021Z-request, action=PHR_EXPORT_REQUEST, resource=/openDolphin/resources/20/adm/phr/export, outcome=FAILURE]
-57748:2025-12-26 22:35:54,566 INFO  [open.dolphin.session.MessageSender] (Thread-44 (ActiveMQ-client-global-threads)) Audit envelope drained from JMS queue [traceId=phr-export-20251226T133021Z-request, action=REST_ERROR_RESPONSE, resource=/openDolphin/resources/20/adm/phr/export, outcome=FAILURE]

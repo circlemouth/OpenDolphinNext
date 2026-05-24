@@ -1,8 +1,0 @@
-[0m[0m18:26:46,719 INFO  [open.dolphin] (default task-1) 127.0.0.1 dolphin GET /dolphin traceId=79cfeb2e-e7cf-46a0-84cd-c3d8d2f3cece
-[0m[0m18:26:46,721 INFO  [open.dolphin] (default task-1) 127.0.0.1 dolphin GET /dolphin traceId=bff1a29e-8118-4959-bf4f-fde8555a8ce4
-[0m[0m18:27:16,805 INFO  [open.dolphin] (default task-1) 127.0.0.1 dolphin GET /dolphin traceId=33178fef-3699-466f-899b-5c6fbb0d0088
-[0m[0m18:27:16,808 INFO  [open.dolphin] (default task-1) 127.0.0.1 dolphin GET /dolphin traceId=dd306c5b-b8ab-43bb-a236-a5bc8588b0c7
-[0m[0m18:27:46,924 INFO  [open.dolphin] (default task-1) 127.0.0.1 dolphin GET /dolphin traceId=2dcfc4c3-d857-40f2-9ab1-94bed6a23817
-[0m[0m18:27:46,926 INFO  [open.dolphin] (default task-1) 127.0.0.1 dolphin GET /dolphin traceId=5f4be2f1-f83c-4f38-9678-94ec529fac27
-[0m[0m18:28:17,011 INFO  [open.dolphin] (default task-1) 127.0.0.1 dolphin GET /dolphin traceId=0a2a5b99-6ea5-4b9d-8ea3-27da426c1baa
-[0m[0m18:28:17,012 INFO  [open.dolphin] (default task-1) 127.0.0.1 dolphin GET /dolphin traceId=23e9af7b-3bf9-4a14-8133-9ecd126988ce

@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/karte/pid/INVALID,%5Bdate%5D",
-  "base_url": "http://opendolphin-server:8080/openDolphin/resources",
-  "request_id": "trace_http_500",
-  "status_code": 000,
-  "time_total": "10.289443",
-  "exit_code": 6
-}

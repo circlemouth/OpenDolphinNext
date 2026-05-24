@@ -1,8 +1,0 @@
-[
-  {
-    "url": "http://localhost:5175/orca/chart/subjectives",
-    "status": 500,
-    "statusText": "Internal Server Error",
-    "body": "{\"error\":\"internal_server_error\",\"code\":\"internal_server_error\",\"message\":\"ARJUNA016053: Could not commit transaction.\",\"status\":500,\"traceId\":\"65dcc4b6-1291-4b73-96b5-5ff07206ee2a\",\"path\":\"/openDolphin/resources/orca/chart/subjectives\",\"retryable\":true}"
-  }
-]

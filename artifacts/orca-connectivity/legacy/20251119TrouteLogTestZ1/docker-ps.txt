@@ -1,3 +1,0 @@
-CONTAINER ID   IMAGE                       COMMAND                   CREATED          STATUS                PORTS                                       NAMES
-b96490632e7d   jma-receipt-weborca:22.04   "/usr/local/bin/star…"   11 minutes ago   Up 11 minutes         0.0.0.0:8000->8000/tcp, :::8000->8000/tcp   jma-receipt-docker-for-ubuntu-2204-orca-1
-cde5e368005f   postgres:10                 "docker-entrypoint.s…"   4 days ago       Up 3 days (healthy)   5432/tcp                                    jma-receipt-docker-for-ubuntu-2204-db-1

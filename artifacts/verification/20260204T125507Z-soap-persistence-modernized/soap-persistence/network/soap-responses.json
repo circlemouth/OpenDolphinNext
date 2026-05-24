@@ -1,8 +1,0 @@
-[
-  {
-    "url": "http://localhost:5174/orca/chart/subjectives",
-    "status": 500,
-    "statusText": "Internal Server Error",
-    "body": ""
-  }
-]

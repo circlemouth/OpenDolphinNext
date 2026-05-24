@@ -1,8 +1,0 @@
-{
-  "responseText": "9001,2025-11-23T00:00:00Z",
-  "contentType": "text/plain",
-  "headers": {
-    "X-Compat-Mode": "no-op-sync"
-  },
-  "_comment": "no-op syncフラグ用。fail=1で503 {\"retryAfter\":3}を返し、既存UIは未実装のため常に固定レスポンス。"
-}

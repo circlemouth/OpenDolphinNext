@@ -1,9 +1,0 @@
-[2026-02-03T01:05Z] Reception network (key requests)
-- POST /orca/claim/outpatient [failed - net::ERR_ABORTED]
-- POST /orca/appointments/list [failed - net::ERR_ABORTED]
-- POST /orca/visits/list [failed - net::ERR_ABORTED]
-- GET /api/orca/queue [pending]
-- GET /orca/deptinfo [pending]
-- POST /orca/patients/name-search [pending]
-- POST /orca/patients/local-search [pending]
-- GET /api/chart-events [failed - net::ERR_ABORTED / pending]

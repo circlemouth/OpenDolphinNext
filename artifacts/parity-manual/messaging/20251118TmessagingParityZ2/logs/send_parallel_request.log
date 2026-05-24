@@ -1,3 +1,0 @@
-[claim] PUT /20/adm/eht/sendClaim -> legacy=200, modern=200 (TRACE_RUN_ID=$RUN_ID)
-[diagnosis] POST /karte/diagnosis/claim -> legacy=500, modern=200 (Accept=text/plain)
-[mml] PUT /mml/send -> legacy=404, modern=200

@@ -1,3 +1,0 @@
-opendolphin-server  | [0m[0m16:15:52,637 INFO  [open.dolphin] (default task-16) 172.19.0.7 doctor1 PUT /stamp/tree
-opendolphin-server  | [0m[0m16:15:52,638 INFO  [open.dolphin] (default task-16) 172.19.0.7 doctor1 PUT /stamp/tree
-opendolphin-server  | [0m[31m16:15:52,850 ERROR [io.undertow.request] (default task-16) UT005023: Exception handling request to /openDolphin/resources/stamp/tree: org.jboss.resteasy.spi.UnhandledException: javax.ejb.EJBException: javax.persistence.PersistenceException: org.hibernate.exception.DataException: could not execute query

@@ -1,1 +1,0 @@
-{"error":"unauthorized","code":"unauthorized","message":"Authentication required","status":401,"traceId":"c337c368-592b-464b-bf9c-20063bb981b8","path":"/openDolphin/resources/orca/appointments/list","reason":"authentication_failed"}

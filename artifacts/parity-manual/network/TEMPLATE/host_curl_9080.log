@@ -1,3 +1,0 @@
-# 証跡保存手順
-# 1. curl -v http://localhost:9080/healthz 2>&1 | tee <RUN_ID>/host_curl_9080.log を実行する。
-# 2. HTTP ステータスとレスポンスボディのサマリを先頭コメントに追記する。

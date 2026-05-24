@@ -1,1 +1,0 @@
-id,event_time,actor_id,actor_display_name,actor_role,action,resource,patient_id,request_id,ip_address,user_agent,payload_hash,previous_hash,event_hash,payload

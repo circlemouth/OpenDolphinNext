@@ -85,7 +85,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/orca/official/appointments/*',
     purpose: 'scope=official。予約一覧・患者／請求試算・来院状況を取得して ORCA バナーの `runId`/`dataSource` を連携する。',
     auditMetadata: ['runId', 'dataSource', 'cacheHit', 'missingMaster', 'fallbackUsed', 'dataSourceTransition', 'fetchedAt'],
-    sourceDocs: ['docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-master-api.md', 'docs/contracts/orca-route-taxonomy.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
   {
     id: 'orcaDiseaseMirrorRead',
@@ -95,7 +95,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/local/diagnoses/{patientId}',
     purpose: 'scope=local。Charts 用の病名 read model。ORCA diseasegetv2 正本 projection と local candidate を分離して返し、local 候補の作成・更新・削除 route は提供しない。',
     auditMetadata: ['runId', 'patientId', 'baseMonth', 'sourceOfTruth', 'orcaMirrorStatus'],
-    sourceDocs: ['docs/contracts/disease-boundary.md', 'docs/contracts/orca-route-taxonomy.md', 'web-client/notes/disease-insurance-orca-contract.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
   {
     id: 'officialDiseaseGetV2',
@@ -105,7 +105,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/local/diagnoses/{patientId}',
     purpose: 'scope=local / classification=official diseasegetv2。server が ORCA diseasegetv2?class=01 を取得し、主病名一覧の唯一の ORCA 正本 projection として返す。',
     auditMetadata: ['runId', 'patientId', 'baseMonth', 'sourceApi=diseasegetv2', 'orcaMirrorStatus'],
-    sourceDocs: ['docs/contracts/disease-boundary.md', 'docs/contracts/orca-route-taxonomy.md', 'web-client/notes/disease-insurance-orca-contract.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
   {
     id: 'officialDiseaseV3Mutation',
@@ -115,7 +115,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/orca/official/chart-support/disease-mod-v3',
     purpose: 'scope=official。Charts の病名追加・更新・削除・削除病名整理を diseasev3 へ送信し、成功後の diseasegetv2 再取得だけを登録済み表示に使う。',
     auditMetadata: ['runId', 'operation', 'patientId', 'operationStatus', 'needsUserReview', 'postMutationMirrorStatus'],
-    sourceDocs: ['docs/contracts/disease-boundary.md', 'docs/contracts/orca-route-taxonomy.md', 'web-client/notes/disease-insurance-orca-contract.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
   {
     id: 'orderMasterRead',
@@ -125,7 +125,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/orca/master/order/*',
     purpose: 'scope=master。Charts の入力セット参照と相互作用チェックで master-backed read を実行し、official/local mutation と混在させない。',
     auditMetadata: ['runId', 'traceId', 'recordsReturned', 'totalCount'],
-    sourceDocs: ['docs/contracts/orca-route-taxonomy.md', 'docs/contracts/orca-master-api.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
   {
     id: 'orderBundleMutation',
@@ -135,7 +135,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/local/order/bundles',
     purpose: 'scope=local。Charts の処方（RP）/オーダー束編集でバンドルを登録・更新・削除し、監査イベントへ反映する。',
     auditMetadata: ['runId', 'operation', 'patientId', 'entity'],
-    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/managerdocs/04_ui_improvement_program.md', 'docs/contracts/orca-route-taxonomy.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
   {
     id: 'officialPatientCreate',
@@ -145,7 +145,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/orca/official/patientmodv2/outpatient/create',
     purpose: 'scope=official。Patients で official patientmodv2 class=01 create を実行し、成功後に canonical/local sync を確定する。',
     auditMetadata: ['runId', 'routeNamespace', 'operation', 'patientId'],
-    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-route-taxonomy.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
   {
     id: 'officialPatientUpdate',
@@ -155,7 +155,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/orca/official/patientmodv2/outpatient/update',
     purpose: 'scope=official。Patients/Charts で official patientmodv2 class=02 update を実行し、成功後に canonical/local sync を確定する。',
     auditMetadata: ['runId', 'routeNamespace', 'operation', 'patientId'],
-    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-route-taxonomy.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
   {
     id: 'patientOutpatientInfo',
@@ -165,7 +165,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/local/patients/search',
     purpose: 'scope=local。Reception/Patients 用に院内ローカル患者検索を実行し、`routeNamespace=local` と `recordsReturned` を含む監査を生成する。',
     auditMetadata: ['runId', 'routeNamespace', 'dataSource', 'dataSourceTransition', 'fetchedAt', 'recordsReturned'],
-    sourceDocs: ['docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-master-api.md', 'docs/contracts/orca-route-taxonomy.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
 ];
 
@@ -177,7 +177,7 @@ export const KARTE_IMAGE_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/patients/{patientId}/images',
     purpose: '患者画像の一覧を取得し、Charts / Mobile Images UI へ共通供給する。',
     auditMetadata: ['runId', 'traceId', 'recordsReturned', 'fetchedAt'],
-    sourceDocs: ['docs/contracts/patient-images.md', 'docs/architecture/web-client-overview.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
   {
     id: 'patientImagesUpload',
@@ -186,7 +186,7 @@ export const KARTE_IMAGE_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/patients/{patientId}/images',
     purpose: '患者画像を multipart/form-data でアップロードする。',
     auditMetadata: ['runId', 'traceId', 'patientId', 'imageId', 'documentId', 'fetchedAt'],
-    sourceDocs: ['docs/contracts/patient-images.md', 'docs/architecture/web-client-overview.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
   {
     id: 'karteImageDetail',
@@ -195,7 +195,7 @@ export const KARTE_IMAGE_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/karte/image/{id}',
     purpose: 'カルテ画像の詳細（SchemaModel）を取得する。',
     auditMetadata: ['runId', 'traceId', 'imageId', 'fetchedAt'],
-    sourceDocs: ['docs/contracts/patient-images.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
   {
     id: 'karteAttachmentDetail',
@@ -204,7 +204,7 @@ export const KARTE_IMAGE_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/karte/attachment/{id}',
     purpose: 'カルテ添付ファイルを取得する。',
     auditMetadata: ['runId', 'traceId', 'attachmentId', 'fetchedAt'],
-    sourceDocs: ['docs/contracts/document-integrity.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
   {
     id: 'chartDocumentDraft',
@@ -213,12 +213,12 @@ export const KARTE_IMAGE_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/charts/document-drafts',
     purpose: 'chart_revision authority 経由で診療録下書きを作成し、旧 karte/document 書込 route を使わない。',
     auditMetadata: ['runId', 'traceId', 'chartId', 'revisionId', 'attachmentsSent', 'fetchedAt'],
-    sourceDocs: ['docs/contracts/chart-authority-api.md', 'docs/contracts/document-integrity.md', 'docs/web-client/architecture/document-embedded-attachment-policy.md'],
+    sourceDocs: ['docs/security-and-orca.md'],
   },
 ];
 
 // `resolveMasterSource` が `dataSourceTransition=server` を返す経路ではこの `outpatient` グループを使い、`cacheHit`/`missingMaster` を `telemetryClient` に継承します。
-// scope は official/master/local taxonomy と一致させ、契約の正本は `docs/architecture/*.md` と `docs/contracts/*.md` に集約しています。
+// scope は official/master/local taxonomy と一致させ、契約の要約は `docs/security-and-orca.md` に集約しています。
 
 export type HttpFetchInit = RequestInit & {
   /**

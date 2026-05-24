@@ -1,3 +1,0 @@
-;; Got recursion not available from 10.255.255.254
-40.17.102.100.in-addr.arpa	name = clinic-evox2.tail3cf51b.ts.net.
-

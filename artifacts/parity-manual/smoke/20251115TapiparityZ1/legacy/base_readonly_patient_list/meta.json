@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/mml/patient/list/1.3.6.1.4.1.9414.72.103",
-  "base_url": "http://localhost:8080/openDolphin/resources",
-  "request_id": "base_readonly_patient_list",
-  "status_code": 401,
-  "time_total": "0.013927",
-  "exit_code": 0
-}

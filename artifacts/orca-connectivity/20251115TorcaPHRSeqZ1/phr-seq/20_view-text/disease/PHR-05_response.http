@@ -1,3 +1,0 @@
-HTTP result: Not reached (curl exit 58)
-Evidence: httpdump/phr05_disease/curl_error.log, trace/phr05_disease_trace.log
-Notes: GET /20/adm/phr/disease/WEB1001

@@ -1,1 +1,0 @@
-{"error":"unauthorized","code":"unauthorized","message":"Authentication required","status":401,"traceId":"29939102-91ca-47fe-9dd7-9e3f3436cec7","path":"/openDolphin/resources/patients/P0002/images","reason":"authentication_failed"}

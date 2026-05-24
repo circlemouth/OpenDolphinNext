@@ -1,7 +1,0 @@
-run_id=20251119TorcaPHRSeqZ1
-api=phr07_image
-url=https://weborca.cloud.orcamo.jp/20/adm/phr/image/00000001
-method=GET
-http_code=404
-curl_exit=0
-timestamp=2025-11-14T15:17:42Z

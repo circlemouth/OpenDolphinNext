@@ -1,1 +1,0 @@
-{"error":"invalid_request","code":"invalid_request","message":"Patient_ID is required","status":400,"traceId":"orca-compat-20260105T142945Z-medical-missing-patient","path":"/openDolphin/resources/orca/medical/records","field":"patientId","validationError":true}

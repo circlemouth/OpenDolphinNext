@@ -1,8 +1,0 @@
-
-> orca-weekly
-> node scripts/tools/orca-weekly-report.js
-
-[orca-weekly] ORCA RUN_ID=20251118T120000Z (2025-11-18, W19)
-[orca-weekly] DOC_STATUS 最新週次: W21 (2025-11-12〜2025-11-18) / Codex
-[orca-weekly] JSON 出力: tmp/orca-weekly-summary.json
-[orca-weekly] Markdown 出力: tmp/orca-weekly-summary.md

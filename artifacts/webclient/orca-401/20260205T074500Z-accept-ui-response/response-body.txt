@@ -1,1 +1,0 @@
-{"error":"internal_server_error","code":"internal_server_error","message":"Session layer failure in open.dolphin.orca.rest.OrcaVisitResource$Proxy$_$$_WeldSubclass#mutateVisit","status":500,"traceId":"f8de8645-ca3e-48e8-b94f-cad4c1a2da07","path":"/openDolphin/resources/orca/visits/mutation","retryable":true}

@@ -1,0 +1,15 @@
+flowchart LR
+    Browser["利用者ブラウザ"]
+    Web["web-client"]
+    Server["server-modernized"]
+    Store["永続化層"]
+    Audit["監査・ログ"]
+    Boundary["ORCA連携境界"]
+    Orca["外部ORCA API"]
+
+    Browser --> Web
+    Web --> Server
+    Server --> Store
+    Server --> Audit
+    Server --> Boundary
+    Boundary --> Orca

@@ -1,2 +1,0 @@
-6:<Api_Result type="string">14</Api_Result>
-7:<Api_Result_Message type="string">ドクターが存在しません</Api_Result_Message>

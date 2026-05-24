@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/orca/tensu/name/プロパネコール,20240401,true/",
-  "base_url": "http://localhost:9080/openDolphin/resources",
-  "request_id": "api_stability_tensu_name_loop003",
-  "status_code": 200,
-  "time_total": "0.011500",
-  "exit_code": 0
-}

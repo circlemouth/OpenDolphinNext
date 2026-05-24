@@ -1,7 +1,0 @@
-## master...origin/master [ahead 2]
- M docs/implementation/clinical-fullscreen-qa-automation-20260502T073422Z/CHECKLIST.md
-?? artifacts/orca-remediation/closeout/20260502T121456Z/
-?? artifacts/orca-remediation/closeout/20260502T122743Z/
-?? artifacts/orca-remediation/closeout/20260502T122801Z/
-?? artifacts/orca-remediation/closeout/20260502T123712Z/
-?? artifacts/orca-remediation/closeout/20260502T132134Z/

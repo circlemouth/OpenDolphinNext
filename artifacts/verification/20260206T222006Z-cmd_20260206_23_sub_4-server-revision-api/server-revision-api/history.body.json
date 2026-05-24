@@ -1,1 +1,0 @@
-{"error":"unauthorized","code":"unauthorized","message":"Authentication required","status":401,"traceId":"4c2ed3de-2416-4ec9-afc9-033fe600f338","path":"/openDolphin/resources/karte/revisions","principal":"1.3.6.1.4.1.9414.10.1:dolphin","reason":"authentication_failed"}

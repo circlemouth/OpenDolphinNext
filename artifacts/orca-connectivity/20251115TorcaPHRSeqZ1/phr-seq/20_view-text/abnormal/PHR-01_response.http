@@ -1,3 +1,0 @@
-HTTP result: Not reached (curl exit 58)
-Evidence: httpdump/phr01_abnormal/curl_error.log, trace/phr01_abnormal_trace.log
-Notes: GET /20/adm/phr/abnormal/WEB1001?docSince=2025-05-01. Blocked by missing PKCS#12 password.

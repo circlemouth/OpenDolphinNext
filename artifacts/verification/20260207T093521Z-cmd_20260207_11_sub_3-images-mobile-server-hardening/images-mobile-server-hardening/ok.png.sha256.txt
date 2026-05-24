@@ -1,1 +1,0 @@
-dd22ffe01a3b9dc71d43c53d94b9045bf7567deb5f2be25048901317f3d19175  artifacts/verification/20260207T093521Z-cmd_20260207_11_sub_3-images-mobile-server-hardening/images-mobile-server-hardening/ok.png

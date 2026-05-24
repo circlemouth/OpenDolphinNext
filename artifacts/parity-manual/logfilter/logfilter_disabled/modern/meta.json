@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/user/doctor1",
-  "base_url": "http://localhost:9080/openDolphin/resources",
-  "request_id": "logfilter_disabled",
-  "status_code": 500,
-  "time_total": "0.010629",
-  "exit_code": 0
-}

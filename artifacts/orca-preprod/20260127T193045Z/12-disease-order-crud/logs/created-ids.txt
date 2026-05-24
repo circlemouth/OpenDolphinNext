@@ -1,3 +1,0 @@
-diagnosisId=3
-docId1=5
-docId2=8

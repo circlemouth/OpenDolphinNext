@@ -1,3 +1,0 @@
-history.ok 200
-rev_9192.ok 400
-diff.ok 200

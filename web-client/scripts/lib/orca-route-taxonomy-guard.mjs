@@ -12,7 +12,7 @@ export const ROUTE_GUARD_CATEGORIES = {
   MSW_MOCK_TEST_ONLY_LEGACY_ROUTE_SURFACE: 'MSW mock/test-only legacy route surface',
   E2E_QA_FIXTURE_SURFACE: 'e2e/QA fixture surface',
   BLOCKED_ROUTE_DETECTOR: 'blocked-route detector',
-  DOCS_REFERENCE: 'docs/reference',
+  DOCS_REFERENCE: 'docs',
   SERVER_ROUTE_INVENTORY_NEGATIVE_ASSERTION: 'server route inventory negative assertion',
   WEB_XML_EXPOSURE_NEGATIVE_ASSERTION: 'web.xml exposure negative assertion',
 };
@@ -25,10 +25,7 @@ export const SCAN_ROOTS = [
   'web-client/scripts',
   'web-client/plugins',
   'tests',
-  'docs/contracts',
-  'docs/runbooks',
-  'docs/releases',
-  'docs/implementation',
+  'docs',
 ];
 
 const TEXT_FILE_EXTENSIONS = new Set([
@@ -207,10 +204,7 @@ const findAllowlistEntry = (relativePath, route) =>
   ROUTE_CLASSIFICATION_ALLOWLIST.find((entry) => matchesAllowlistEntry({ relativePath, route }, entry));
 
 const isDocsPath = (relativePath) =>
-  relativePath.startsWith('docs/contracts/') ||
-  relativePath.startsWith('docs/runbooks/') ||
-  relativePath.startsWith('docs/releases/') ||
-  relativePath.startsWith('docs/implementation/');
+  relativePath.startsWith('docs/');
 
 const isTestPath = (relativePath) =>
   relativePath.startsWith('tests/') ||

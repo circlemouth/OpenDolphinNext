@@ -1,1 +1,0 @@
-docker exec jma-receipt-docker-for-ubuntu-2204-orca-1 bash -lc "curl -sS -D /tmp/api21_headers.txt -o /tmp/api21_body.json -u ormaster:change_me -H 'Content-Type: application/xml; charset=UTF-8' --data-binary @/tmp/03_medicalmodv2_payload.xml 'http://localhost:8000/api/api21/medicalmodv2?class=01'"

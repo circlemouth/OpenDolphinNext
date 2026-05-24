@@ -1,6 +1,0 @@
-{
-  "runId": "20260204T123958Z-msw-off-send-check",
-  "nowIso": "2026-02-04T13:47:56.658Z",
-  "sendDisabled": false,
-  "guardSummary": "ガード理由（短文）\n印刷: 患者未選択: 対象未確定で印刷不可 / 次: Patients で患者を選択 / Reception へ戻って対象患者を確定"
-}

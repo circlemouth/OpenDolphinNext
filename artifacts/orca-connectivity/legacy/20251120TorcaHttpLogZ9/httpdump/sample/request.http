@@ -1,1 +1,0 @@
-curl -v https://dummy.orca/api -X POST -H 'Content-Type: application/json' -d '{"patientId":"0000"}'

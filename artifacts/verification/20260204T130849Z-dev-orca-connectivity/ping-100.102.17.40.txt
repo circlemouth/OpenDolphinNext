@@ -1,3 +1,0 @@
-PING 100.102.17.40 (100.102.17.40): 56 data bytes
-Request timeout for icmp_seq 0
-Request timeout for icmp_seq 1

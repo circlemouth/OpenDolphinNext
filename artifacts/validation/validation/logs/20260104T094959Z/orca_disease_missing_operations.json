@@ -1,1 +1,0 @@
-{"error":"invalid_request","code":"invalid_request","message":"operations is required","status":400,"traceId":"validation-20260104T094959Z-disease-missing-operations","path":"/openDolphin/resources/orca/disease","field":"operations","validationError":true}

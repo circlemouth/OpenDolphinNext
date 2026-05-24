@@ -1,6 +1,0 @@
-HTTP/1.1 200 OK
-Content-Type: application/xml; charset=UTF-8
-X-Hybridmode: normal
-Date: Tue, 27 Jan 2026 03:25:09 GMT
-Content-Length: 1217
-

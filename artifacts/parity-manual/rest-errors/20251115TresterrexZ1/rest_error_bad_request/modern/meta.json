@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/dolphin/activity/2025,04",
-  "base_url": "http://localhost:9080/openDolphin/resources",
-  "request_id": "rest_error_bad_request",
-  "status_code": 400,
-  "time_total": "0.055896",
-  "exit_code": 0
-}

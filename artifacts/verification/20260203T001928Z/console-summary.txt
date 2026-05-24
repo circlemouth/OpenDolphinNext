@@ -1,3 +1,0 @@
-Console summary (claim outpatient mock re-test):
-- 404 resource errors still appear.
-- No statusText.toLowerCase exception observed.

@@ -1,5 +1,0 @@
-BASE_URL=http://localhost:9080/openDolphin/resources
-dolphin=200
-history=200
-diff=200
-rev_9192=200

@@ -1,2 +1,0 @@
-6:<Api_Result type="string">24</Api_Result>
-7:<Api_Result_Message type="string">保険組合せ番号がありません</Api_Result_Message>

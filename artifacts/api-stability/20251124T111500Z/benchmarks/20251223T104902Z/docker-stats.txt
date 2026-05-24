@@ -1,4 +1,0 @@
-CONTAINER ID   NAME                                CPU %     MEM USAGE / LIMIT     MEM %     NET I/O           BLOCK I/O         PIDS
-6e1fb06d73eb   opendolphin-server-modernized-dev   0.45%     773.1MiB / 7.654GiB   9.86%     897MB / 2.34GB    106kB / 280MB     150
-c9c447642f2d   opendolphin-postgres-modernized     0.00%     181.9MiB / 7.654GiB   2.32%     617MB / 1.07GB    23.7MB / 2.38GB   9
-1c77436684e5   opendolphin-minio                   0.05%     134.3MiB / 7.654GiB   1.71%     7.95kB / 2.92kB   112MB / 3.33MB    12

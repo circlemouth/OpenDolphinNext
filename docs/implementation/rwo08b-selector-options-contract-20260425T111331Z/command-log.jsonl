@@ -1,8 +1,0 @@
-{"runId":"20260425T111331Z","command":"git branch --show-current && git rev-parse --short HEAD && git status --short && git worktree list --porcelain","result":"pass","sanitized":true}
-{"runId":"20260425T111331Z","command":"read handoff state, active prompt, roadmap, and prior sanitized evidence","result":"pass","sanitized":true}
-{"runId":"20260425T111331Z","command":"official/public ORCA source research for system01lstv2 request numbers 01 and 02","result":"pass","sanitized":true}
-{"runId":"20260425T111331Z","command":"mvn -f pom.server-modernized.xml -pl server-modernized -am -Dtest=OrcaAppointmentResourceTest,OrcaLiveGatewaySupportTest,OrcaXmlMapperTypedTextParsingTest,PublicRouteInventoryContractTest -Dsurefire.failIfNoSpecifiedTests=false test","result":"pass","tests":29,"sanitized":true}
-{"runId":"20260425T111331Z","command":"cd web-client && npm run test -- --run src/features/reception/__tests__/ReceptionPage.test.tsx src/features/reception/__tests__/acceptmodv2.test.ts","result":"pass","tests":67,"sanitized":true}
-{"runId":"20260425T111331Z","command":"curl status-only local backend health/readiness","result":"skipped_environment_unavailable_backend","healthHttpStatus":"000","readinessHttpStatus":"000","sanitized":true}
-{"runId":"20260425T111331Z","command":"cd web-client && npm run typecheck","result":"pass","sanitized":true}
-{"runId":"20260425T111331Z","command":"git diff --check","result":"pass","sanitized":true}

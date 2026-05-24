@@ -1,4 +1,0 @@
-curl: (7) Failed to connect to localhost port 8080 after 0 ms: Couldn't connect to server
-PUT /appo -> legacy (AppoServiceBean) (status=000, time=0.000151, exit=7)
-curl: (7) Failed to connect to localhost port 9080 after 0 ms: Couldn't connect to server
-PUT /appo -> modern (AppoServiceBean) (status=000, time=0.000143, exit=7)

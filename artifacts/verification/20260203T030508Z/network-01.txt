@@ -1,6 +1,0 @@
-[2026-02-03T03:06Z] Reception network (key requests)
-- POST /orca/appointments/list [pending]
-- POST /orca/visits/list [pending]
-- POST /orca/claim/outpatient [pending]
-- GET /api/orca/queue [pending]
-- GET /orca/deptinfo [pending]

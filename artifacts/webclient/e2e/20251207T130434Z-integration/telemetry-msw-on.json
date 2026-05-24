@@ -1,6 +1,0 @@
-{
-  "claimStatus": 404,
-  "claimUrl": "http://localhost:4173/api01rv2/claim/outpatient/mock",
-  "medicalStatus": 404,
-  "medicalUrl": "http://localhost:4173/orca21/medicalmodv2/outpatient"
-}

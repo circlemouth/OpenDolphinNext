@@ -1,2 +1,0 @@
-imageId=None
-documentId=None

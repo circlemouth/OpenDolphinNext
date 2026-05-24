@@ -1,7 +1,0 @@
-run_id=20251119TorcaPHRSeqZ1
-api=phr11_container
-url=https://weborca.cloud.orcamo.jp/20/adm/phr/LOCAL.FACILITY.0001,00000001,20250101,20250101
-method=GET
-http_code=404
-curl_exit=0
-timestamp=2025-11-14T15:17:42Z

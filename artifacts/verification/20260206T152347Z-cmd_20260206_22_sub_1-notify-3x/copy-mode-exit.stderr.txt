@@ -1,1 +1,0 @@
-WARN: target pane 'tmux2step_selftest_20260206T152347Z_cmd_20260206_22_sub_1_notify_3x_:0.0' is in copy-mode (pane_in_mode=1); attempting to exit with 'q' (--force-exit-copy-mode)

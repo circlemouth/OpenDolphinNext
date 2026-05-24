@@ -1,1 +1,0 @@
-{"error":"internal_server_error","code":"internal_server_error","message":"ARJUNA016053: Could not commit transaction.","status":500,"traceId":"66b706bf-bb8f-4c0b-9c2e-0ed3bc31d0fe","path":"/openDolphin/resources/orca/chart/subjectives","retryable":true}

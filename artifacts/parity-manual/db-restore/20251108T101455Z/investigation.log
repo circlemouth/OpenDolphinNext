@@ -1,7 +1,0 @@
-# DB ベースライン復旧調査ログ (UTC 2025-11-08T10:14:55Z)
-- `ls ~/Secrets` を実行したところ `No such file or directory` となり、Secrets ストレージが依然としてマウントされていないことを再確認。
-- Runbook 0章の指示に従い、`artifacts/parity-manual/db-restore/20251108T062436Z/baseline_search.log` に 10:14:55Z 版フォローアップを追記し、Ops/DBA への再依頼内容と Slack #ops-db へ送付したテンプレート（Gate #40 用）を貼付。
-- Secrets dump を受領できていないため `shasum -a 256 <dump>` は未実施。受領後に `investigation.log` へ追記するまで Gate #40 はクローズ不可と判断。
-- ベースライン DDL が無い状態で `docker compose` / `psql -f` / `flyway baseline,migrate` を実行すると既知の `relation ... does not exist` エラーが再発するだけのため、本時点ではコンテナ起動や DB 変更を行わず待機とした。
-- 次アクション: (1) Ops/DBA から提供される ZIP/SQL の受領可否連絡を待ち、受領後に shasum / 展開結果を本ログへ追加、(2) Runbook 手順 3 以降を再開し、成果物を `artifacts/parity-manual/db-restore/20251108T101455Z/` へ集約する。
-- 2025-11-08T10:22:44Z: `ls -al ~/Secrets` を再実行したが `No such file or directory` のまま。Ops/DBA からの返信・チケット ID・Slack スレッド URL は未受領。フォローアップを同日時刻で送付済み（詳細は `ops_request.txt` を参照）で、回答待ち継続。

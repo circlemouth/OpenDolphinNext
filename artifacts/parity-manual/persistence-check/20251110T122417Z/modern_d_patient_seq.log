@@ -1,6 +1,0 @@
-                       Sequence "public.d_patient_seq"
-  Type  | Start | Minimum |       Maximum       | Increment | Cycles? | Cache 
---------+-------+---------+---------------------+-----------+---------+-------
- bigint |  1002 |       1 | 9223372036854775807 |         1 | no      |     1
-Owned by: public.d_patient.id
-

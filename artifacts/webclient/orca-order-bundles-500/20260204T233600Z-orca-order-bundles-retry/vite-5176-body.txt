@@ -1,1 +1,0 @@
-{"error":"patient_not_found","code":"patient_not_found","message":"Patient not found","status":404,"traceId":"f115810f-3281-4a6d-9782-1897a6d79737","path":"/openDolphin/resources/orca/order/bundles"}

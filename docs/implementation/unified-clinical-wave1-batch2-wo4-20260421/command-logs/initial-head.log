@@ -1,9 +1,0 @@
-runId: 20260421T224445Z
-cwd: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main
-command: git rev-parse HEAD
-start_utc: 2026-04-21T22:50:39Z
-
-40737ebca3b71fc86968467257fbcc8a9c8d9f29
-
-end_utc: 2026-04-21T22:50:39Z
-exit_code: 0

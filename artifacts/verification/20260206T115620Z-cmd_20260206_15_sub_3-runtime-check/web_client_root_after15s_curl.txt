@@ -1,2 +1,0 @@
-## web-client http://localhost:5173/ (after 15s)
-curl_exit=0

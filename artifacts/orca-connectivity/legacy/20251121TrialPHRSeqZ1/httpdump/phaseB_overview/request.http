@@ -1,4 +1,0 @@
-GET /20/adm/phr/phaseB HTTP/1.1
-Host: weborca-trial.orca.med.or.jp
-Authorization: Basic trial/weborcatrial
-Accept: application/json

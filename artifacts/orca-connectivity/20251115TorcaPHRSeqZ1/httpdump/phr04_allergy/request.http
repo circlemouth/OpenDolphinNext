@@ -1,7 +1,0 @@
-GET /20/adm/phr/allergy/WEB1001 HTTP/1.1
-Host: weborca.cloud.orcamo.jp
-X-Facility-Id: LOCAL.FACILITY.0001
-X-Touch-TraceId: 20251115TorcaPHRSeqZ1
-X-Access-Reason: allergy-view
-Accept: text/plain; charset=UTF-8
-Notes: Expect PHR_ALLERGY_TEXT audit entry once available

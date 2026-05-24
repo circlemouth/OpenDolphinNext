@@ -1,0 +1,17 @@
+flowchart LR
+    Browser["ブラウザ"]
+    Server["server-modernized"]
+    Context["患者文脈検証"]
+    Readiness["sanitized readiness"]
+    Credential["ORCA認証情報解決"]
+    Boundary["ORCA境界"]
+    Orca["外部ORCA API"]
+    Audit["監査・ログ"]
+
+    Browser -->|/api| Server
+    Server --> Context
+    Server --> Readiness
+    Server --> Credential
+    Server --> Audit
+    Credential --> Boundary
+    Boundary --> Orca

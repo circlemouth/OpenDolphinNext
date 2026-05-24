@@ -1,6 +1,0 @@
-scope=artifacts/orca-remediation/closeout/20260424T055036Z
-pattern=har_trace_video_screenshot_raw_network_request_xml_error_context
-matchCount=0
-result=pass_zero_hits
-credentialsCaptured=false
-rawArtifactsCaptured=false

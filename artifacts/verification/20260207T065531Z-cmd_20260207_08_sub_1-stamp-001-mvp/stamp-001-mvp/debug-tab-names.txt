@@ -1,9 +1,0 @@
-SOAP 記載
-症状詳記
-診療診療操作Ctrl+Shift+1
-処方処方編集Ctrl+Shift+2
-オーダオーダー編集Ctrl+Shift+3
-文書文書作成Ctrl+Shift+4
-画像画像Ctrl+Shift+5
-検査検査Ctrl+Shift+6
-スタスタンプCtrl+Shift+7

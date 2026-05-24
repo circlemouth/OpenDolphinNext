@@ -1,6 +1,0 @@
-# map_shogun_webclient_scripts_to_target
-SRC: /Users/Hayato/Documents/GitHub/multi-agent-shogun/web-client/scripts/
-DST: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/scripts/
-
-.d..t.... ./
->f.st.... qa-order-001-parity.mjs

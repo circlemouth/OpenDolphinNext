@@ -1,8 +1,0 @@
-[
-  {
-    "url": "http://localhost:5176/orca/chart/subjectives",
-    "status": 404,
-    "statusText": "Not Found",
-    "body": "{\"error\":\"patient_not_found\",\"code\":\"patient_not_found\",\"message\":\"Patient not found\",\"status\":404,\"traceId\":\"be45ece6-47f2-4992-a472-59ba1f304744\",\"path\":\"/openDolphin/resources/orca/chart/subjectives\"}"
-  }
-]

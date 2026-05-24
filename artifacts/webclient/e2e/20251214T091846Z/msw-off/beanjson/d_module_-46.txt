@@ -1,5 +1,0 @@
- id  | karte_id | creator_id |     name      | role |     entity     |                  bean_json                  
------+----------+------------+---------------+------+----------------+---------------------------------------------
- -46 |    91012 |      91003 | beanJson memo | p    | progressCourse | {"text":"bean json smoke 20251214T091846Z"}
-(1 row)
-

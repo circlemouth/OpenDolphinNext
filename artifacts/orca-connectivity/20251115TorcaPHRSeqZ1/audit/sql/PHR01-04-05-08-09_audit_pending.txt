@@ -1,1 +1,0 @@
-同上。PHR-01/04/05/08/09 の API 実測後に labtest/medication 件数を `logs/phr_labtest_summary.md` へ反映する。

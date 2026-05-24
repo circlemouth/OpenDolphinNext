@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/serverinfo/version",
-  "base_url": "http://localhost:8080/openDolphin/resources",
-  "request_id": "serverinfo_trace",
-  "status_code": 403,
-  "time_total": "0.029884",
-  "exit_code": 0
-}

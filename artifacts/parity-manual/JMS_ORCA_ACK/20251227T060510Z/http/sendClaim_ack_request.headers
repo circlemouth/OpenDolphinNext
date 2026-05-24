@@ -1,8 +1,0 @@
-userName: 1.3.6.1.4.1.9414.72.103:doctor1
-password: 632080fabdb968f9ac4f31fb55104648
-facilityId: 1.3.6.1.4.1.9414.72.103
-Content-Type: application/json
-Accept: application/octet-stream
-X-Trace-Id: trace-jms-20251227T060510Z-ack1
-X-Run-Id: 20251227T060510Z
-X-Claim-Debug: enabled

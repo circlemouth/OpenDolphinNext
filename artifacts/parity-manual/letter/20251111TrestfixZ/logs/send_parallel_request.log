@@ -1,2 +1,0 @@
-2025-11-11T16:48:49Z PUT /odletter/letter -> legacy (rest_error_letter_fk) (status=200, time=0.780804, exit=0)
-2025-11-11T16:48:49Z PUT /odletter/letter -> modern (rest_error_letter_fk) (status=200, time=0.236390, exit=0)

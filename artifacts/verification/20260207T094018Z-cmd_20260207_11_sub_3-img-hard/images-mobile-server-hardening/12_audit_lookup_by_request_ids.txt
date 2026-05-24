@@ -1,6 +1,0 @@
-           t            |         action         | outcome |                     resource                      | patient_id |              request_id              |               trace_id               |                     run_id                      
-------------------------+------------------------+---------+---------------------------------------------------+------------+--------------------------------------+--------------------------------------+-------------------------------------------------
- 2026-02-07T18:40:19+09 | PATIENT_IMAGE_UPLOAD   | SUCCESS | /openDolphin/resources/patients/P0002/images      |            | c93a15ea-4fa8-4401-b39e-5d1d8cb07d20 | f09889ae-dd96-4c3e-88d2-da86b6a84e0f | 20260207T094018Z-cmd_20260207_11_sub_3-img-hard
- 2026-02-07T18:40:19+09 | PATIENT_IMAGE_DOWNLOAD | SUCCESS | /openDolphin/resources/patients/P0002/images/9255 |            | 08e77bff-a27f-45cf-817e-ba6453868966 | 0281a898-bf3e-462c-982c-22cbadcb31a8 | 20260207T094018Z-cmd_20260207_11_sub_3-img-hard
-(2 rows)
-

@@ -1,4 +1,0 @@
-GET /lab/module/WEB1001,0,5 -> legacy (lab_module_fetch) (status=401, time=0.345009, exit=0)
-GET /lab/module/WEB1001,0,5 -> modern (lab_module_fetch) (status=401, time=0.107524, exit=0)
-GET /lab/module/WEB1001,0,5 -> legacy (lab_module_fetch) (status=200, time=0.262466, exit=0)
-GET /lab/module/WEB1001,0,5 -> modern (lab_module_fetch) (status=200, time=0.130888, exit=0)

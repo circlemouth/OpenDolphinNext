@@ -1,2 +1,0 @@
-accepted HEAD 5a141e8e9 is one commit ahead of origin/master fc4652f69.
-Refresh scope: current-head reviewer support package state after packet-contract hardening.

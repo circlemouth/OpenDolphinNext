@@ -1,8 +1,0 @@
-Network summary (Administration after Outlet key fix):
-- GET /api/admin/config -> 404
-- GET /api/orca/queue -> 404
-- POST /orca/claim/outpatient -> 404
-- POST /orca21/medicalmodv2/outpatient -> 404
-- POST /api01rv2/pusheventgetv2 -> 200
-- GET /api/chart-events -> 200 (with some net::ERR_ABORTED retries)
-- POST /orca/appointments/list, /orca/visits/list -> 200 with intermittent net::ERR_ABORTED

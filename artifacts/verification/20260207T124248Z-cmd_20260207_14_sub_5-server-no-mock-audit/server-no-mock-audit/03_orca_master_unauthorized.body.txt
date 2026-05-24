@@ -1,1 +1,0 @@
-{"error":"unauthorized","code":"unauthorized","errorCode":"unauthorized","message":"Authentication required","status":401,"errorCategory":"unauthorized","traceId":"b544c05c-488d-4313-a93e-8a939c62d461","path":"/openDolphin/resources/orca/master/generic-class","reason":"authentication_failed","details":{"reason":"authentication_failed"}}

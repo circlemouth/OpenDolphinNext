@@ -1,27 +1,0 @@
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying ::1:8080...
-* connect to ::1 port 8080 failed: Connection refused
-*   Trying 127.0.0.1:8080...
-* Connected to localhost (127.0.0.1) port 8080 (#0)
-> GET /openDolphin/resources/serverinfo/jamri HTTP/1.1
-> Host: localhost:8080
-> User-Agent: curl/7.76.1
-> Accept: */*
-> 
-<html><head><title>Error</title></head><body>Unauthorized</body></html>* Mark bundle as not supporting multiuse
-< HTTP/1.1 401 Unauthorized
-< Referrer-Policy: no-referrer
-< Content-Security-Policy: default-src 'self'
-< X-Trace-Id: 250fa110-b3e9-4d6a-9ef0-fd3dee1379ae
-< Date: Tue, 11 Nov 2025 22:29:29 GMT
-< Connection: keep-alive
-< WWW-Authenticate: Basic realm="OpenDolphin"
-< Strict-Transport-Security: max-age=63072000; includeSubDomains
-< X-Content-Type-Options: nosniff
-< Content-Type: text/html;charset=UTF-8
-< Content-Length: 71
-< 
-{ [71 bytes data]
-100    71  100    71    0     0   5071      0 --:--:-- --:--:-- --:--:--  5071
-* Connection #0 to host localhost left intact

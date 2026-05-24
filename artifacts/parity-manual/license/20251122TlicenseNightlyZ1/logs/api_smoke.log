@@ -1,5 +1,0 @@
-[INFO] scenario=license run-id=20251122TlicenseNightlyZ1 output=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/artifacts/parity-manual/smoke/20251122TlicenseNightlyZ1
-POST /dolphin/license -> modern (license_post) (status=200, time=0.055569, exit=0)
-GET /dolphin/license -> modern (license_get_dolphin) (status=405, time=0.002851, exit=0)
-GET /system/license -> modern (license_get_system) (status=405, time=0.002356, exit=0)
-[INFO] 3 件のケースを artifacts/parity-manual/smoke/20251122TlicenseNightlyZ1 に保存しました

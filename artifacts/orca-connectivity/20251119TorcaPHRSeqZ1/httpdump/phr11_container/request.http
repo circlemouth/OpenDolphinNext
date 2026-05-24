@@ -1,8 +1,0 @@
-GET /20/adm/phr/LOCAL.FACILITY.0001,00000001,20250101,20250101 HTTP/1.1
-Host: weborca.cloud.orcamo.jp
-X-Facility-Id: LOCAL.FACILITY.0001
-X-Touch-TraceId: 20251119TorcaPHRSeqZ1
-X-Access-Reason: phr-container
-Accept: application/json
-Authorization: Basic <MASKED>
-Notes: RUN_ID=20251119TorcaPHRSeqZ1

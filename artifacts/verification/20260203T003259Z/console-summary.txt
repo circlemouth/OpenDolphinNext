@@ -1,3 +1,0 @@
-Console summary (Patients id/name re-test):
-- No "A form field element should have an id or name attribute" warning observed.
-- Only telemetry/audit info logs present.

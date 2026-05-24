@@ -1,6 +1,0 @@
-{
-  "list": [],
-  "chartId": "chart-001",
-  "syncedAt": "2025-11-23T00:00:00Z",
-  "_comment": "attachment placeholderフラグ用。withDraft=1で503 + retryAfter=2を返しUIバックオフを確認。"
-}

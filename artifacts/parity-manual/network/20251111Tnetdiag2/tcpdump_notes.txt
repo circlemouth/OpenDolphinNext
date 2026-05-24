@@ -1,3 +1,0 @@
-RUN_ID=20251111Tnetdiag2
-- tcpdump -i lo0 port 9080 could not be executed because sudo password is unavailable in this environment.
-- パケット観測ができないため、SYN/ACK のどこで止まっているかは未確認。

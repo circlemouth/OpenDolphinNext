@@ -1,2887 +1,0 @@
-WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
-WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.google.inject.internal.aop.HiddenClassDefiner (file:/opt/homebrew/Cellar/maven/3.9.11/libexec/lib/guice-5.1.0-classes.jar)
-WARNING: Please consider reporting this to the maintainers of class com.google.inject.internal.aop.HiddenClassDefiner
-WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
-[INFO] Scanning for projects...
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-release-plugin/3.0.1/maven-release-plugin-3.0.1.pom
-Progress (1): 806 BProgress (1): 3.6 kBProgress (1): 5.5 kBProgress (1): 8.3 kBProgress (1): 9.8 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-release-plugin/3.0.1/maven-release-plugin-3.0.1.pom (9.8 kB at 14 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/release/maven-release/3.0.1/maven-release-3.0.1.pom
-Progress (1): 803 BProgress (1): 1.9 kBProgress (1): 3.7 kBProgress (1): 9.5 kBProgress (1): 11 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/release/maven-release/3.0.1/maven-release-3.0.1.pom (11 kB at 260 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-release-plugin/3.0.1/maven-release-plugin-3.0.1.jar
-Progress (1): 0.9/61 kBProgress (1): 2.3/61 kBProgress (1): 3.6/61 kBProgress (1): 5.0/61 kBProgress (1): 6.4/61 kBProgress (1): 7.7/61 kBProgress (1): 8.2/61 kBProgress (1): 9.6/61 kBProgress (1): 11/61 kB Progress (1): 12/61 kBProgress (1): 14/61 kBProgress (1): 15/61 kBProgress (1): 16/61 kBProgress (1): 18/61 kBProgress (1): 19/61 kBProgress (1): 21/61 kBProgress (1): 22/61 kBProgress (1): 23/61 kBProgress (1): 25/61 kBProgress (1): 26/61 kBProgress (1): 27/61 kBProgress (1): 29/61 kBProgress (1): 30/61 kBProgress (1): 31/61 kBProgress (1): 33/61 kBProgress (1): 34/61 kBProgress (1): 36/61 kBProgress (1): 37/61 kBProgress (1): 38/61 kBProgress (1): 40/61 kBProgress (1): 41/61 kBProgress (1): 42/61 kBProgress (1): 44/61 kBProgress (1): 45/61 kBProgress (1): 49/61 kBProgress (1): 54/61 kBProgress (1): 58/61 kBProgress (1): 61 kB                      Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-release-plugin/3.0.1/maven-release-plugin-3.0.1.jar (61 kB at 1.2 MB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-compiler-plugin/3.2/maven-compiler-plugin-3.2.pom
-Progress (1): 759 BProgress (1): 2.2 kBProgress (1): 6.3 kBProgress (1): 9.3 kBProgress (1): 12 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-compiler-plugin/3.2/maven-compiler-plugin-3.2.pom (12 kB at 248 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-plugins/25/maven-plugins-25.pom
-Progress (1): 758 BProgress (1): 2.2 kBProgress (1): 4.1 kBProgress (1): 6.6 kBProgress (1): 9.6 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-plugins/25/maven-plugins-25.pom (9.6 kB at 171 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-compiler-plugin/3.2/maven-compiler-plugin-3.2.jar
-Progress (1): 3.8/45 kBProgress (1): 8.0/45 kBProgress (1): 12/45 kB Progress (1): 16/45 kBProgress (1): 21/45 kBProgress (1): 25/45 kBProgress (1): 29/45 kBProgress (1): 33/45 kBProgress (1): 38/45 kBProgress (1): 42/45 kBProgress (1): 45 kB                      Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-compiler-plugin/3.2/maven-compiler-plugin-3.2.jar (45 kB at 363 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/mojo/maven-metadata.xml
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-metadata.xml
-Progress (1): 4.6 kBProgress (1): 12 kB Progress (1): 14 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-metadata.xml (14 kB at 357 kB/s)
-Progress (1): 3.1 kBProgress (1): 8.0 kBProgress (1): 11 kB Progress (1): 16 kBProgress (1): 20 kBProgress (1): 21 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/mojo/maven-metadata.xml (21 kB at 268 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-help-plugin/maven-metadata.xml
-Progress (1): 807 B                   Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-help-plugin/maven-metadata.xml (807 B at 14 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-help-plugin/3.5.1/maven-help-plugin-3.5.1.pom
-Progress (1): 778 BProgress (1): 1.7 kBProgress (1): 3.7 kBProgress (1): 8.4 kBProgress (1): 10 kB Progress (1): 10 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-help-plugin/3.5.1/maven-help-plugin-3.5.1.pom (10 kB at 241 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-plugins/43/maven-plugins-43.pom
-Progress (1): 771 BProgress (1): 1.8 kBProgress (1): 4.3 kBProgress (1): 6.9 kBProgress (1): 7.5 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-plugins/43/maven-plugins-43.pom (7.5 kB at 196 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/43/maven-parent-43.pom
-Progress (1): 720 BProgress (1): 1.9 kBProgress (1): 3.9 kBProgress (1): 8.4 kBProgress (1): 13 kB Progress (1): 16 kBProgress (1): 21 kBProgress (1): 25 kBProgress (1): 27 kBProgress (1): 29 kBProgress (1): 31 kBProgress (1): 33 kBProgress (1): 37 kBProgress (1): 40 kBProgress (1): 42 kBProgress (1): 45 kBProgress (1): 50 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/43/maven-parent-43.pom (50 kB at 1.3 MB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/apache/33/apache-33.pom
-Progress (1): 734 BProgress (1): 2.0 kBProgress (1): 3.1 kBProgress (1): 5.0 kBProgress (1): 8.0 kBProgress (1): 12 kB Progress (1): 17 kBProgress (1): 20 kBProgress (1): 22 kBProgress (1): 24 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/apache/33/apache-33.pom (24 kB at 636 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.10.3/junit-bom-5.10.3.pom
-Progress (1): 908 BProgress (1): 2.4 kBProgress (1): 5.6 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.10.3/junit-bom-5.10.3.pom (5.6 kB at 188 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-help-plugin/3.5.1/maven-help-plugin-3.5.1.jar
-Progress (1): 0.9/65 kBProgress (1): 2.3/65 kBProgress (1): 3.7/65 kBProgress (1): 5.0/65 kBProgress (1): 6.4/65 kBProgress (1): 7.8/65 kBProgress (1): 12/65 kB Progress (1): 16/65 kBProgress (1): 20/65 kBProgress (1): 25/65 kBProgress (1): 29/65 kBProgress (1): 33/65 kBProgress (1): 37/65 kBProgress (1): 41/65 kBProgress (1): 46/65 kBProgress (1): 50/65 kBProgress (1): 54/65 kBProgress (1): 58/65 kBProgress (1): 63/65 kBProgress (1): 65 kB                      Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-help-plugin/3.5.1/maven-help-plugin-3.5.1.jar (65 kB at 1.7 MB/s)
-[INFO] 
-[INFO] -------------< opendolphin:opendolphin-server-modernized >--------------
-[INFO] Building opendolphin-server-modernized 2.7.1
-[INFO]   from pom.xml
-[INFO] --------------------------------[ war ]---------------------------------
-[INFO] 
-[INFO] --- help:3.5.1:effective-pom (default-cli) @ opendolphin-server-modernized ---
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugin-tools/maven-plugin-tools-generators/3.13.1/maven-plugin-tools-generators-3.13.1.pom
-Progress (1): 836 BProgress (1): 3.5 kBProgress (1): 4.1 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugin-tools/maven-plugin-tools-generators/3.13.1/maven-plugin-tools-generators-3.13.1.pom (4.1 kB at 82 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugin-tools/maven-plugin-tools/3.13.1/maven-plugin-tools-3.13.1.pom
-Progress (1): 791 BProgress (1): 2.3 kBProgress (1): 4.1 kBProgress (1): 9.1 kBProgress (1): 13 kB Progress (1): 17 kBProgress (1): 18 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugin-tools/maven-plugin-tools/3.13.1/maven-plugin-tools-3.13.1.pom (18 kB at 556 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/eclipse/sisu/org.eclipse.sisu.plexus/0.9.0.M3/org.eclipse.sisu.plexus-0.9.0.M3.pom
-Progress (1): 804 BProgress (1): 3.4 kBProgress (1): 10 kB Progress (1): 17 kBProgress (1): 17 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/org/eclipse/sisu/org.eclipse.sisu.plexus/0.9.0.M3/org.eclipse.sisu.plexus-0.9.0.M3.pom (17 kB at 608 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/eclipse/sisu/sisu-inject/0.9.0.M3/sisu-inject-0.9.0.M3.pom
-Progress (1): 793 BProgress (1): 2.8 kBProgress (1): 4.8 kBProgress (1): 8.1 kBProgress (1): 11 kB Progress (1): 15 kBProgress (1): 19 kBProgress (1): 22 kBProgress (1): 22 kBProgress (1): 24 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/org/eclipse/sisu/sisu-inject/0.9.0.M3/sisu-inject-0.9.0.M3.pom (24 kB at 560 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/eclipse/sisu/org.eclipse.sisu.inject/0.9.0.M3/org.eclipse.sisu.inject-0.9.0.M3.pom
-Progress (1): 793 BProgress (1): 3.7 kBProgress (1): 11 kB Progress (1): 18 kBProgress (1): 20 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/org/eclipse/sisu/org.eclipse.sisu.inject/0.9.0.M3/org.eclipse.sisu.inject-0.9.0.M3.pom (20 kB at 530 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/jsoup/jsoup/1.17.2/jsoup-1.17.2.pom
-Progress (1): 779 BProgress (1): 2.2 kBProgress (1): 4.3 kBProgress (1): 7.5 kBProgress (1): 9.5 kBProgress (1): 12 kB Progress (1): 16 kBProgress (1): 16 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/org/jsoup/jsoup/1.17.2/jsoup-1.17.2.pom (16 kB at 425 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/reporting/maven-reporting-api/4.0.0/maven-reporting-api-4.0.0.pom
-Progress (1): 786 BProgress (1): 2.3 kBProgress (1): 2.8 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/reporting/maven-reporting-api/4.0.0/maven-reporting-api-4.0.0.pom (2.8 kB at 82 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-components/43/maven-shared-components-43.pom
-Progress (1): 802 BProgress (1): 2.3 kBProgress (1): 3.8 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-components/43/maven-shared-components-43.pom (3.8 kB at 111 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-interactivity-api/1.3/plexus-interactivity-api-1.3.pom
-Progress (1): 1.6 kBProgress (1): 1.7 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-interactivity-api/1.3/plexus-interactivity-api-1.3.pom (1.7 kB at 56 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-interactivity/1.3/plexus-interactivity-1.3.pom
-Progress (1): 1.3 kBProgress (1): 1.9 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-interactivity/1.3/plexus-interactivity-1.3.pom (1.9 kB at 64 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.1/plexus-xml-3.0.1.pom
-Progress (1): 805 BProgress (1): 2.6 kBProgress (1): 3.7 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.1/plexus-xml-3.0.1.pom (3.7 kB at 115 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/18/plexus-18.pom
-Progress (1): 691 BProgress (1): 2.5 kBProgress (1): 6.4 kBProgress (1): 8.9 kBProgress (1): 11 kB Progress (1): 14 kBProgress (1): 18 kBProgress (1): 21 kBProgress (1): 25 kBProgress (1): 29 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/18/plexus-18.pom (29 kB at 769 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/jdom/jdom2/2.0.6.1/jdom2-2.0.6.1.pom
-Progress (1): 942 BProgress (1): 2.2 kBProgress (1): 3.1 kBProgress (1): 4.6 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/org/jdom/jdom2/2.0.6.1/jdom2-2.0.6.1.pom (4.6 kB at 164 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/com/thoughtworks/xstream/xstream/1.4.20/xstream-1.4.20.pom
-Progress (1): 880 BProgress (1): 4.2 kBProgress (1): 7.2 kBProgress (1): 10 kB Progress (1): 15 kBProgress (1): 22 kBProgress (1): 25 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/com/thoughtworks/xstream/xstream/1.4.20/xstream-1.4.20.pom (25 kB at 753 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/com/thoughtworks/xstream/xstream-parent/1.4.20/xstream-parent-1.4.20.pom
-Progress (1): 811 BProgress (1): 3.2 kBProgress (1): 5.9 kBProgress (1): 11 kB Progress (1): 14 kBProgress (1): 19 kBProgress (1): 24 kBProgress (1): 29 kBProgress (1): 34 kBProgress (1): 38 kBProgress (1): 41 kBProgress (1): 43 kBProgress (1): 44 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/com/thoughtworks/xstream/xstream-parent/1.4.20/xstream-parent-1.4.20.pom (44 kB at 1.0 MB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/io/github/x-stream/mxparser/1.2.2/mxparser-1.2.2.pom
-Progress (1): 819 BProgress (1): 2.9 kBProgress (1): 6.3 kBProgress (1): 10 kB Progress (1): 15 kBProgress (1): 19 kBProgress (1): 23 kBProgress (1): 24 kB                   Downloaded from central: https://repo.maven.apache.org/maven2/io/github/x-stream/mxparser/1.2.2/mxparser-1.2.2.pom (24 kB at 681 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/xmlpull/xmlpull/1.1.3.1/xmlpull-1.1.3.1.pom
-Progress (1): 386 B                   Downloaded from central: https://repo.maven.apache.org/maven2/xmlpull/xmlpull/1.1.3.1/xmlpull-1.1.3.1.pom (386 B at 13 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugin-tools/maven-plugin-tools-generators/3.13.1/maven-plugin-tools-generators-3.13.1.jar
-Progress (1): 7.7/44 kBProgress (1): 16/44 kB Progress (1): 32/44 kBProgress (1): 33/44 kBProgress (1): 44 kB                      Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugin-tools/maven-plugin-tools-generators/3.13.1/maven-plugin-tools-generators-3.13.1.jar (44 kB at 1.3 MB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/eclipse/sisu/org.eclipse.sisu.plexus/0.9.0.M3/org.eclipse.sisu.plexus-0.9.0.M3.jar
-Downloading from central: https://repo.maven.apache.org/maven2/org/eclipse/sisu/org.eclipse.sisu.inject/0.9.0.M3/org.eclipse.sisu.inject-0.9.0.M3.jar
-Downloading from central: https://repo.maven.apache.org/maven2/org/jsoup/jsoup/1.17.2/jsoup-1.17.2.jar
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/reporting/maven-reporting-api/4.0.0/maven-reporting-api-4.0.0.jar
-Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-interactivity-api/1.3/plexus-interactivity-api-1.3.jar
-Progress (1): 3.8/434 kBProgress (1): 8.0/434 kBProgress (1): 12/434 kB Progress (1): 16/434 kBProgress (1): 21/434 kBProgress (1): 25/434 kBProgress (1): 29/434 kBProgress (1): 33/434 kBProgress (1): 38/434 kBProgress (1): 42/434 kBProgress (1): 46/434 kBProgress (1): 50/434 kBProgress (1): 55/434 kBProgress (1): 57/434 kBProgress (1): 62/434 kBProgress (1): 66/434 kBProgress (1): 82/434 kBProgress (1): 99/434 kBProgress (1): 115/434 kBProgress (1): 123/434 kBProgress (1): 139/434 kBProgress (1): 156/434 kBProgress (1): 172/434 kBProgress (1): 188/434 kBProgress (2): 188/434 kB | 7.7/216 kBProgress (2): 188/434 kB | 16/216 kB Progress (2): 188/434 kB | 20/216 kBProgress (2): 188/434 kB | 37/216 kBProgress (2): 188/434 kB | 53/216 kBProgress (2): 188/434 kB | 69/216 kBProgress (2): 188/434 kB | 86/216 kBProgress (2): 188/434 kB | 102/216 kBProgress (2): 188/434 kB | 118/216 kBProgress (2): 188/434 kB | 135/216 kBProgress (2): 188/434 kB | 151/216 kBProgress (2): 188/434 kB | 168/216 kBProgress (2): 188/434 kB | 184/216 kBProgress (2): 188/434 kB | 200/216 kBProgress (2): 205/434 kB | 200/216 kBProgress (2): 221/434 kB | 200/216 kBProgress (2): 238/434 kB | 200/216 kBProgress (2): 254/434 kB | 200/216 kBProgress (2): 270/434 kB | 200/216 kBProgress (2): 287/434 kB | 200/216 kBProgress (2): 303/434 kB | 200/216 kBProgress (2): 303/434 kB | 216 kB    Progress (2): 319/434 kB | 216 kBProgress (2): 336/434 kB | 216 kBProgress (2): 352/434 kB | 216 kBProgress (2): 369/434 kB | 216 kB                                 Downloaded from central: https://repo.maven.apache.org/maven2/org/eclipse/sisu/org.eclipse.sisu.plexus/0.9.0.M3/org.eclipse.sisu.plexus-0.9.0.M3.jar (216 kB at 4.5 MB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.1/plexus-xml-3.0.1.jar
-Progress (1): 385/434 kBProgress (1): 401/434 kBProgress (1): 418/434 kBProgress (1): 434 kB                        Downloaded from central: https://repo.maven.apache.org/maven2/org/eclipse/sisu/org.eclipse.sisu.inject/0.9.0.M3/org.eclipse.sisu.inject-0.9.0.M3.jar (434 kB at 7.7 MB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/jdom/jdom2/2.0.6.1/jdom2-2.0.6.1.jar
-Progress (1): 0.9/10 kBProgress (1): 2.3/10 kBProgress (1): 3.7/10 kBProgress (1): 3.8/10 kBProgress (1): 5.1/10 kBProgress (1): 6.5/10 kBProgress (1): 7.9/10 kBProgress (1): 9.2/10 kBProgress (1): 10 kB                       Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-interactivity-api/1.3/plexus-interactivity-api-1.3.jar (10 kB at 173 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/com/thoughtworks/xstream/xstream/1.4.20/xstream-1.4.20.jar
-Progress (1): 0.9/446 kBProgress (1): 2.3/446 kBProgress (1): 3.7/446 kBProgress (1): 5.0/446 kBProgress (1): 6.4/446 kBProgress (1): 7.8/446 kBProgress (1): 9.1/446 kBProgress (1): 11/446 kB Progress (1): 12/446 kBProgress (1): 13/446 kBProgress (1): 15/446 kBProgress (1): 16/446 kBProgress (1): 17/446 kBProgress (1): 19/446 kBProgress (1): 20/446 kBProgress (1): 21/446 kBProgress (1): 23/446 kBProgress (1): 24/446 kBProgress (1): 26/446 kBProgress (1): 27/446 kBProgress (1): 28/446 kBProgress (1): 30/446 kBProgress (1): 31/446 kBProgress (1): 32/446 kBProgress (1): 34/446 kBProgress (1): 35/446 kBProgress (1): 37/446 kBProgress (1): 38/446 kBProgress (1): 39/446 kBProgress (1): 41/446 kBProgress (1): 42/446 kBProgress (1): 43/446 kBProgress (1): 45/446 kBProgress (1): 46/446 kBProgress (1): 47/446 kBProgress (1): 49/446 kBProgress (1): 50/446 kBProgress (1): 52/446 kBProgress (1): 53/446 kBProgress (1): 54/446 kBProgress (1): 56/446 kBProgress (1): 60/446 kBProgress (1): 64/446 kBProgress (1): 68/446 kBProgress (1): 73/446 kBProgress (1): 77/446 kBProgress (1): 81/446 kBProgress (1): 85/446 kBProgress (1): 89/446 kBProgress (1): 94/446 kBProgress (1): 98/446 kBProgress (1): 102/446 kBProgress (1): 106/446 kBProgress (1): 111/446 kBProgress (1): 115/446 kBProgress (1): 119/446 kBProgress (2): 119/446 kB | 0.9/9.8 kBProgress (2): 123/446 kB | 0.9/9.8 kBProgress (2): 123/446 kB | 2.3/9.8 kBProgress (2): 128/446 kB | 2.3/9.8 kBProgress (2): 128/446 kB | 3.6/9.8 kBProgress (2): 128/446 kB | 5.0/9.8 kBProgress (2): 128/446 kB | 6.4/9.8 kBProgress (2): 128/446 kB | 7.7/9.8 kBProgress (2): 128/446 kB | 9.1/9.8 kBProgress (2): 128/446 kB | 9.8 kB                                     Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/reporting/maven-reporting-api/4.0.0/maven-reporting-api-4.0.0.jar (9.8 kB at 132 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/io/github/x-stream/mxparser/1.2.2/mxparser-1.2.2.jar
-Progress (1): 132/446 kBProgress (1): 136/446 kBProgress (2): 136/446 kB | 3.7/94 kBProgress (2): 140/446 kB | 3.7/94 kBProgress (2): 144/446 kB | 3.7/94 kBProgress (2): 149/446 kB | 3.7/94 kBProgress (2): 153/446 kB | 3.7/94 kBProgress (2): 153/446 kB | 20/94 kB Progress (2): 153/446 kB | 36/94 kBProgress (2): 153/446 kB | 53/94 kBProgress (2): 153/446 kB | 69/94 kBProgress (2): 157/446 kB | 69/94 kBProgress (2): 161/446 kB | 69/94 kBProgress (2): 161/446 kB | 86/94 kBProgress (2): 166/446 kB | 86/94 kBProgress (2): 170/446 kB | 86/94 kBProgress (2): 170/446 kB | 94 kB   Progress (2): 174/446 kB | 94 kBProgress (2): 178/446 kB | 94 kBProgress (2): 183/446 kB | 94 kBProgress (2): 184/446 kB | 94 kBProgress (2): 188/446 kB | 94 kBProgress (2): 192/446 kB | 94 kBProgress (2): 197/446 kB | 94 kBProgress (2): 201/446 kB | 94 kBProgress (2): 205/446 kB | 94 kB                                Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.1/plexus-xml-3.0.1.jar (94 kB at 1.2 MB/s)
-Progress (1): 209/446 kB                        Downloading from central: https://repo.maven.apache.org/maven2/xmlpull/xmlpull/1.1.3.1/xmlpull-1.1.3.1.jar
-Progress (1): 214/446 kBProgress (1): 218/446 kBProgress (1): 222/446 kBProgress (1): 238/446 kBProgress (1): 255/446 kBProgress (1): 262/446 kBProgress (1): 278/446 kBProgress (1): 294/446 kBProgress (1): 311/446 kBProgress (1): 327/446 kBProgress (1): 344/446 kBProgress (1): 360/446 kBProgress (1): 376/446 kBProgress (1): 393/446 kBProgress (1): 409/446 kBProgress (1): 426/446 kBProgress (1): 442/446 kBProgress (1): 446 kB    Progress (2): 446 kB | 7.7/328 kBProgress (2): 446 kB | 16/328 kB Progress (2): 446 kB | 25/328 kB                                Downloaded from central: https://repo.maven.apache.org/maven2/org/jsoup/jsoup/1.17.2/jsoup-1.17.2.jar (446 kB at 4.8 MB/s)
-Progress (1): 41/328 kBProgress (1): 57/328 kBProgress (1): 74/328 kBProgress (1): 90/328 kBProgress (1): 106/328 kBProgress (1): 123/328 kBProgress (1): 139/328 kBProgress (1): 142/328 kBProgress (1): 159/328 kBProgress (2): 159/328 kB | 0.9/645 kBProgress (2): 175/328 kB | 0.9/645 kBProgress (2): 175/328 kB | 2.3/645 kBProgress (2): 175/328 kB | 3.7/645 kBProgress (2): 175/328 kB | 5.0/645 kBProgress (2): 175/328 kB | 6.4/645 kBProgress (2): 175/328 kB | 7.8/645 kBProgress (2): 175/328 kB | 9.1/645 kBProgress (2): 175/328 kB | 11/645 kB Progress (2): 175/328 kB | 12/645 kBProgress (2): 192/328 kB | 12/645 kBProgress (2): 192/328 kB | 13/645 kBProgress (2): 192/328 kB | 15/645 kBProgress (2): 192/328 kB | 16/645 kBProgress (2): 192/328 kB | 17/645 kBProgress (2): 192/328 kB | 19/645 kBProgress (2): 192/328 kB | 20/645 kBProgress (2): 192/328 kB | 20/645 kBProgress (2): 208/328 kB | 20/645 kBProgress (2): 213/328 kB | 20/645 kBProgress (2): 229/328 kB | 20/645 kBProgress (2): 229/328 kB | 21/645 kBProgress (2): 246/328 kB | 21/645 kBProgress (2): 246/328 kB | 23/645 kBProgress (2): 246/328 kB | 24/645 kBProgress (2): 246/328 kB | 26/645 kBProgress (2): 246/328 kB | 27/645 kBProgress (2): 246/328 kB | 28/645 kBProgress (2): 246/328 kB | 30/645 kBProgress (2): 262/328 kB | 30/645 kBProgress (2): 262/328 kB | 31/645 kBProgress (2): 262/328 kB | 32/645 kBProgress (2): 262/328 kB | 34/645 kBProgress (2): 262/328 kB | 35/645 kBProgress (2): 262/328 kB | 37/645 kBProgress (2): 262/328 kB | 38/645 kBProgress (2): 262/328 kB | 39/645 kBProgress (2): 262/328 kB | 41/645 kBProgress (2): 279/328 kB | 41/645 kBProgress (2): 279/328 kB | 42/645 kBProgress (2): 279/328 kB | 46/645 kBProgress (2): 279/328 kB | 50/645 kBProgress (2): 279/328 kB | 55/645 kBProgress (2): 295/328 kB | 55/645 kBProgress (2): 295/328 kB | 59/645 kBProgress (2): 295/328 kB | 63/645 kBProgress (2): 295/328 kB | 67/645 kBProgress (2): 311/328 kB | 67/645 kBProgress (2): 311/328 kB | 72/645 kBProgress (2): 311/328 kB | 76/645 kBProgress (2): 311/328 kB | 80/645 kBProgress (2): 328/328 kB | 80/645 kBProgress (2): 328 kB | 80/645 kB    Progress (2): 328 kB | 84/645 kBProgress (2): 328 kB | 89/645 kBProgress (2): 328 kB | 93/645 kBProgress (2): 328 kB | 97/645 kBProgress (2): 328 kB | 101/645 kBProgress (2): 328 kB | 105/645 kBProgress (2): 328 kB | 110/645 kBProgress (2): 328 kB | 114/645 kB                                 Downloaded from central: https://repo.maven.apache.org/maven2/org/jdom/jdom2/2.0.6.1/jdom2-2.0.6.1.jar (328 kB at 3.4 MB/s)
-Progress (1): 118/645 kBProgress (1): 122/645 kBProgress (1): 127/645 kBProgress (1): 131/645 kBProgress (1): 135/645 kBProgress (1): 139/645 kBProgress (1): 144/645 kBProgress (1): 148/645 kBProgress (1): 151/645 kBProgress (1): 155/645 kBProgress (1): 160/645 kBProgress (1): 164/645 kBProgress (1): 168/645 kBProgress (1): 172/645 kBProgress (1): 177/645 kBProgress (1): 181/645 kBProgress (1): 185/645 kBProgress (1): 189/645 kBProgress (1): 193/645 kBProgress (1): 198/645 kBProgress (1): 202/645 kBProgress (1): 206/645 kBProgress (1): 210/645 kBProgress (1): 227/645 kBProgress (1): 243/645 kBProgress (1): 250/645 kBProgress (1): 250/645 kBProgress (2): 250/645 kB | 0.9/30 kBProgress (2): 250/645 kB | 2.3/30 kBProgress (2): 250/645 kB | 3.6/30 kBProgress (2): 250/645 kB | 5.0/30 kBProgress (2): 250/645 kB | 6.4/30 kBProgress (2): 250/645 kB | 7.7/30 kBProgress (2): 250/645 kB | 8.2/30 kBProgress (2): 250/645 kB | 9.6/30 kBProgress (2): 250/645 kB | 11/30 kB Progress (2): 250/645 kB | 12/30 kBProgress (2): 250/645 kB | 14/30 kBProgress (2): 250/645 kB | 15/30 kBProgress (2): 250/645 kB | 16/30 kBProgress (2): 250/645 kB | 18/30 kBProgress (2): 250/645 kB | 19/30 kBProgress (2): 250/645 kB | 21/30 kBProgress (2): 250/645 kB | 22/30 kBProgress (2): 250/645 kB | 23/30 kBProgress (2): 250/645 kB | 25/30 kBProgress (2): 250/645 kB | 26/30 kBProgress (2): 250/645 kB | 27/30 kBProgress (2): 250/645 kB | 29/30 kBProgress (2): 250/645 kB | 30 kB                                   Downloaded from central: https://repo.maven.apache.org/maven2/io/github/x-stream/mxparser/1.2.2/mxparser-1.2.2.jar (30 kB at 265 kB/s)
-Progress (1): 266/645 kBProgress (2): 266/645 kB | 7.2 kBProgress (2): 282/645 kB | 7.2 kBProgress (2): 299/645 kB | 7.2 kB                                 Downloaded from central: https://repo.maven.apache.org/maven2/xmlpull/xmlpull/1.1.3.1/xmlpull-1.1.3.1.jar (7.2 kB at 64 kB/s)
-Progress (1): 315/645 kBProgress (1): 331/645 kBProgress (1): 348/645 kBProgress (1): 364/645 kBProgress (1): 381/645 kBProgress (1): 397/645 kBProgress (1): 413/645 kBProgress (1): 430/645 kBProgress (1): 446/645 kBProgress (1): 463/645 kBProgress (1): 479/645 kBProgress (1): 495/645 kBProgress (1): 512/645 kBProgress (1): 528/645 kBProgress (1): 544/645 kBProgress (1): 561/645 kBProgress (1): 577/645 kBProgress (1): 590/645 kBProgress (1): 606/645 kBProgress (1): 622/645 kBProgress (1): 639/645 kBProgress (1): 645 kB                        Downloaded from central: https://repo.maven.apache.org/maven2/com/thoughtworks/xstream/xstream/1.4.20/xstream-1.4.20.jar (645 kB at 4.9 MB/s)
-[INFO] 
-Effective POMs, after inheritance, interpolation, and profiles are applied:
-
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- ====================================================================== -->
-<!--                                                                        -->
-<!-- Generated by Maven Help Plugin                                         -->
-<!-- See: https://maven.apache.org/plugins/maven-help-plugin/               -->
-<!--                                                                        -->
-<!-- ====================================================================== -->
-<!-- ====================================================================== -->
-<!--                                                                        -->
-<!-- Effective POM for project                                              -->
-<!-- 'opendolphin:opendolphin-server-modernized:war:2.7.1'                  -->
-<!--                                                                        -->
-<!-- ====================================================================== -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>opendolphin</groupId>
-    <artifactId>opendolphin</artifactId>
-    <version>2.7.1</version>
-  </parent>
-  <groupId>opendolphin</groupId>
-  <artifactId>opendolphin-server-modernized</artifactId>
-  <version>2.7.1</version>
-  <packaging>war</packaging>
-  <properties>
-    <aws.sdk.version>2.25.21</aws.sdk.version>
-    <bouncycastle.version>1.82</bouncycastle.version>
-    <jakarta.jakartaee-api.version>10.0.0</jakarta.jakartaee-api.version>
-    <jboss.logmanager.version>3.1.2.Final</jboss.logmanager.version>
-    <maven.compiler.release>17</maven.compiler.release>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
-    <micrometer.version>1.12.5</micrometer.version>
-    <microprofile.config.version>3.1</microprofile.config.version>
-    <okhttp.version>5.2.1</okhttp.version>
-    <openpdf.version>1.3.41</openpdf.version>
-    <plivo.java.version>5.46.0</plivo.java.version>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <snakeyaml.version>2.2</snakeyaml.version>
-    <wildfly.hostname>localhost</wildfly.hostname>
-    <wildfly.port>9990</wildfly.port>
-    <wildfly.serverId>wildfly-management</wildfly.serverId>
-    <wildfly.version>33.0.2.Final</wildfly.version>
-    <yubico.webauthn.version>2.6.0</yubico.webauthn.version>
-  </properties>
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>com.plivo</groupId>
-        <artifactId>plivo-java</artifactId>
-        <version>5.46.0</version>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup.okhttp3</groupId>
-        <artifactId>okhttp</artifactId>
-        <version>5.2.1</version>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup.okhttp3</groupId>
-        <artifactId>logging-interceptor</artifactId>
-        <version>5.2.1</version>
-      </dependency>
-      <dependency>
-        <groupId>com.github.librepdf</groupId>
-        <artifactId>openpdf</artifactId>
-        <version>1.3.41</version>
-      </dependency>
-      <dependency>
-        <groupId>com.yubico</groupId>
-        <artifactId>webauthn-server-core</artifactId>
-        <version>2.6.0</version>
-      </dependency>
-      <dependency>
-        <groupId>com.yubico</groupId>
-        <artifactId>webauthn-server-attestation</artifactId>
-        <version>2.6.0</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.websocket</groupId>
-        <artifactId>jakarta.websocket-api</artifactId>
-        <version>2.1.0</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.websocket</groupId>
-        <artifactId>jakarta.websocket-client-api</artifactId>
-        <version>2.1.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk18on</artifactId>
-        <version>1.82</version>
-      </dependency>
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk18on</artifactId>
-        <version>1.82</version>
-      </dependency>
-      <dependency>
-        <groupId>opendolphin</groupId>
-        <artifactId>opendolphin-common</artifactId>
-        <version>2.7.1</version>
-      </dependency>
-      <dependency>
-        <groupId>opendolphin</groupId>
-        <artifactId>opendolphin-client</artifactId>
-        <version>2.7.1</version>
-      </dependency>
-      <dependency>
-        <groupId>opendolphin</groupId>
-        <artifactId>opendolphin-server</artifactId>
-        <version>2.7.1</version>
-        <type>war</type>
-      </dependency>
-      <dependency>
-        <groupId>opendolphin</groupId>
-        <artifactId>opendolphin-server-modernized</artifactId>
-        <version>2.7.1</version>
-        <type>war</type>
-      </dependency>
-      <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.13.1</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.arquillian.container</groupId>
-        <artifactId>arquillian-container-test-spi</artifactId>
-        <version>1.9.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.arquillian.junit</groupId>
-        <artifactId>arquillian-junit-container</artifactId>
-        <version>1.9.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.arquillian.junit5</groupId>
-        <artifactId>arquillian-junit5-container</artifactId>
-        <version>1.9.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.arquillian.protocol</groupId>
-        <artifactId>arquillian-protocol-servlet-jakarta</artifactId>
-        <version>1.9.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.arquillian</groupId>
-        <artifactId>wildfly-arquillian-common</artifactId>
-        <version>5.1.0.Beta4</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.arquillian</groupId>
-        <artifactId>wildfly-arquillian-container-managed</artifactId>
-        <version>5.1.0.Beta4</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.arquillian</groupId>
-        <artifactId>wildfly-arquillian-container-remote</artifactId>
-        <version>5.1.0.Beta4</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.httpcomponents</groupId>
-        <artifactId>httpclient</artifactId>
-        <version>4.5.14</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.core</groupId>
-        <artifactId>wildfly-cli</artifactId>
-        <version>25.0.2.Final</version>
-        <classifier>client</classifier>
-      </dependency>
-      <dependency>
-        <groupId>com.h2database</groupId>
-        <artifactId>h2</artifactId>
-        <version>2.2.224</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly</groupId>
-        <artifactId>wildfly-ejb-client-bom</artifactId>
-        <version>33.0.2.Final</version>
-        <type>pom</type>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly</groupId>
-        <artifactId>wildfly-jaxws-client-bom</artifactId>
-        <version>33.0.2.Final</version>
-        <type>pom</type>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly</groupId>
-        <artifactId>wildfly-jms-client-bom</artifactId>
-        <version>33.0.2.Final</version>
-        <type>pom</type>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly</groupId>
-        <artifactId>wildfly-clustering-singleton-api</artifactId>
-        <version>33.0.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly</groupId>
-        <artifactId>wildfly-clustering-server-api</artifactId>
-        <version>33.0.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly</groupId>
-        <artifactId>wildfly-clustering-service</artifactId>
-        <version>33.0.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.msc</groupId>
-        <artifactId>jboss-msc</artifactId>
-        <version>1.5.5.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.datatype</groupId>
-        <artifactId>jackson-datatype-jdk8</artifactId>
-        <version>2.15.4</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-core</artifactId>
-        <version>2.15.4</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-databind</artifactId>
-        <version>2.15.4</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.datatype</groupId>
-        <artifactId>jackson-datatype-jsr310</artifactId>
-        <version>2.15.4</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-annotations</artifactId>
-        <version>2.15.4</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.activation</groupId>
-        <artifactId>jakarta.activation-api</artifactId>
-        <version>2.1.3</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.annotation</groupId>
-        <artifactId>jakarta.annotation-api</artifactId>
-        <version>2.1.1</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.batch</groupId>
-        <artifactId>jakarta.batch-api</artifactId>
-        <version>2.1.1</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.ejb</groupId>
-        <artifactId>jakarta.ejb-api</artifactId>
-        <version>4.0.1</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.enterprise</groupId>
-        <artifactId>jakarta.enterprise.cdi-api</artifactId>
-        <version>4.0.1</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.el</groupId>
-            <artifactId>jakarta.el-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.enterprise</groupId>
-        <artifactId>jakarta.enterprise.lang-model</artifactId>
-        <version>4.0.1</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.enterprise.concurrent</groupId>
-        <artifactId>jakarta.enterprise.concurrent-api</artifactId>
-        <version>3.0.3</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.faces</groupId>
-        <artifactId>jakarta.faces-api</artifactId>
-        <version>4.0.1</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.inject</groupId>
-        <artifactId>jakarta.inject-api</artifactId>
-        <version>2.0.1</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.jms</groupId>
-        <artifactId>jakarta.jms-api</artifactId>
-        <version>3.1.0</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.json.bind</groupId>
-        <artifactId>jakarta.json.bind-api</artifactId>
-        <version>3.0.1</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.mail</groupId>
-        <artifactId>jakarta.mail-api</artifactId>
-        <version>2.1.3</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.persistence</groupId>
-        <artifactId>jakarta.persistence-api</artifactId>
-        <version>3.1.0</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.resource</groupId>
-        <artifactId>jakarta.resource-api</artifactId>
-        <version>2.1.0</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.security.enterprise</groupId>
-        <artifactId>jakarta.security.enterprise-api</artifactId>
-        <version>3.0.0</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.servlet</groupId>
-        <artifactId>jakarta.servlet-api</artifactId>
-        <version>6.0.0</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.servlet.jsp</groupId>
-        <artifactId>jakarta.servlet.jsp-api</artifactId>
-        <version>3.1.1</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.servlet.jsp.jstl</groupId>
-        <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
-        <version>3.0.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.el</groupId>
-            <artifactId>jakarta.el-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.transaction</groupId>
-        <artifactId>jakarta.transaction-api</artifactId>
-        <version>2.0.1</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.validation</groupId>
-        <artifactId>jakarta.validation-api</artifactId>
-        <version>3.0.2</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.ws.rs</groupId>
-        <artifactId>jakarta.ws.rs-api</artifactId>
-        <version>3.1.0</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.xml.bind</groupId>
-        <artifactId>jakarta.xml.bind-api</artifactId>
-        <version>4.0.2</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.orm</groupId>
-        <artifactId>hibernate-core</artifactId>
-        <version>6.4.4.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.common</groupId>
-        <artifactId>hibernate-commons-annotations</artifactId>
-        <version>6.0.6.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>io.smallrye</groupId>
-        <artifactId>jandex</artifactId>
-        <version>3.2.0</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml</groupId>
-        <artifactId>classmate</artifactId>
-        <version>1.5.1</version>
-      </dependency>
-      <dependency>
-        <groupId>net.bytebuddy</groupId>
-        <artifactId>byte-buddy</artifactId>
-        <version>1.14.11</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jaxb</groupId>
-        <artifactId>jaxb-runtime</artifactId>
-        <version>4.0.4</version>
-        <exclusions>
-          <exclusion>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>javax.activation</groupId>
-            <artifactId>javax.activation-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.antlr</groupId>
-        <artifactId>antlr4-runtime</artifactId>
-        <version>4.13.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.orm</groupId>
-        <artifactId>hibernate-envers</artifactId>
-        <version>6.4.4.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.search</groupId>
-        <artifactId>hibernate-search-backend-elasticsearch</artifactId>
-        <version>7.1.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.elasticsearch.client</groupId>
-        <artifactId>elasticsearch-rest-client</artifactId>
-        <version>8.12.2</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.httpcomponents</groupId>
-        <artifactId>httpcore</artifactId>
-        <version>4.4.16</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.httpcomponents</groupId>
-        <artifactId>httpasyncclient</artifactId>
-        <version>4.1.5</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.httpcomponents</groupId>
-        <artifactId>httpcore-nio</artifactId>
-        <version>4.4.16</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.elasticsearch.client</groupId>
-        <artifactId>elasticsearch-rest-client-sniffer</artifactId>
-        <version>8.12.2</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.google.code.gson</groupId>
-        <artifactId>gson</artifactId>
-        <version>2.8.9</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.search</groupId>
-        <artifactId>hibernate-search-backend-lucene</artifactId>
-        <version>7.1.1.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-highlighter</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.lucene</groupId>
-        <artifactId>lucene-core</artifactId>
-        <version>9.9.2</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.lucene</groupId>
-        <artifactId>lucene-analysis-common</artifactId>
-        <version>9.9.2</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.lucene</groupId>
-        <artifactId>lucene-queryparser</artifactId>
-        <version>9.9.2</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-sandbox</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.lucene</groupId>
-        <artifactId>lucene-queries</artifactId>
-        <version>9.9.2</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.lucene</groupId>
-        <artifactId>lucene-join</artifactId>
-        <version>9.9.2</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.lucene</groupId>
-        <artifactId>lucene-facet</artifactId>
-        <version>9.9.2</version>
-      </dependency>
-      <dependency>
-        <groupId>com.carrotsearch</groupId>
-        <artifactId>hppc</artifactId>
-        <version>0.8.1</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.search</groupId>
-        <artifactId>hibernate-search-engine</artifactId>
-        <version>7.1.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.search</groupId>
-        <artifactId>hibernate-search-mapper-orm</artifactId>
-        <version>7.1.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.search</groupId>
-        <artifactId>hibernate-search-mapper-pojo-base</artifactId>
-        <version>7.1.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.search</groupId>
-        <artifactId>hibernate-search-util-common</artifactId>
-        <version>7.1.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.validator</groupId>
-        <artifactId>hibernate-validator</artifactId>
-        <version>8.0.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.validator</groupId>
-        <artifactId>hibernate-validator-cdi</artifactId>
-        <version>8.0.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.infinispan</groupId>
-        <artifactId>infinispan-core-jakarta</artifactId>
-        <version>14.0.29.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.infinispan</groupId>
-        <artifactId>infinispan-commons-jakarta</artifactId>
-        <version>14.0.29.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>io.reactivex.rxjava3</groupId>
-        <artifactId>rxjava</artifactId>
-        <version>3.1.8</version>
-      </dependency>
-      <dependency>
-        <groupId>org.infinispan.protostream</groupId>
-        <artifactId>protostream</artifactId>
-        <version>4.6.5.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.javassist</groupId>
-            <artifactId>javassist</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup</groupId>
-        <artifactId>protoparser</artifactId>
-        <version>4.0.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.infinispan.protostream</groupId>
-        <artifactId>protostream-types</artifactId>
-        <version>4.6.5.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jgroups</groupId>
-        <artifactId>jgroups</artifactId>
-        <version>5.2.27.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>com.github.ben-manes.caffeine</groupId>
-        <artifactId>caffeine</artifactId>
-        <version>3.1.8</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.google.errorprone</groupId>
-            <artifactId>error_prone_annotations</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.checkerframework</groupId>
-            <artifactId>checker-qual</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.threads</groupId>
-        <artifactId>jboss-threads</artifactId>
-        <version>2.4.0.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.ejb3</groupId>
-        <artifactId>jboss-ejb3-ext-api</artifactId>
-        <version>2.4.0.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.narayana.xts</groupId>
-        <artifactId>jbossxts</artifactId>
-        <version>7.0.2.Final</version>
-        <classifier>api</classifier>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.resteasy</groupId>
-        <artifactId>resteasy-atom-provider</artifactId>
-        <version>6.2.10.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.resteasy</groupId>
-        <artifactId>resteasy-client</artifactId>
-        <version>6.2.10.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-codec</groupId>
-        <artifactId>commons-codec</artifactId>
-        <version>1.15</version>
-      </dependency>
-      <dependency>
-        <groupId>org.reactivestreams</groupId>
-        <artifactId>reactive-streams</artifactId>
-        <version>1.0.4</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.resteasy</groupId>
-        <artifactId>resteasy-client-api</artifactId>
-        <version>6.2.10.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.resteasy</groupId>
-        <artifactId>resteasy-core</artifactId>
-        <version>6.2.10.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.jboss</groupId>
-            <artifactId>jandex</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.angus</groupId>
-        <artifactId>angus-activation</artifactId>
-        <version>2.0.2</version>
-      </dependency>
-      <dependency>
-        <groupId>com.ibm.async</groupId>
-        <artifactId>asyncutil</artifactId>
-        <version>0.1.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.resteasy</groupId>
-        <artifactId>resteasy-core-spi</artifactId>
-        <version>6.2.10.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.resteasy</groupId>
-        <artifactId>resteasy-jackson2-provider</artifactId>
-        <version>6.2.10.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.github.java-json-tools</groupId>
-            <artifactId>json-patch</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.jakarta.rs</groupId>
-        <artifactId>jackson-jakarta-rs-base</artifactId>
-        <version>2.15.4</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.jakarta.rs</groupId>
-        <artifactId>jackson-jakarta-rs-json-provider</artifactId>
-        <version>2.15.4</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.module</groupId>
-        <artifactId>jackson-module-jakarta-xmlbind-annotations</artifactId>
-        <version>2.15.4</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.resteasy</groupId>
-        <artifactId>resteasy-jaxb-provider</artifactId>
-        <version>6.2.10.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jaxb</groupId>
-        <artifactId>codemodel</artifactId>
-        <version>4.0.4</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jaxb</groupId>
-        <artifactId>jaxb-core</artifactId>
-        <version>4.0.4</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jaxb</groupId>
-        <artifactId>jaxb-jxc</artifactId>
-        <version>4.0.4</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.sun</groupId>
-            <artifactId>tools</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jaxb</groupId>
-        <artifactId>txw2</artifactId>
-        <version>4.0.4</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jaxb</groupId>
-        <artifactId>jaxb-xjc</artifactId>
-        <version>4.0.4</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.sun.xml.dtd-parser</groupId>
-            <artifactId>dtd-parser</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jaxb</groupId>
-        <artifactId>xsom</artifactId>
-        <version>4.0.4</version>
-        <exclusions>
-          <exclusion>
-            <groupId>relaxngDatatype</groupId>
-            <artifactId>relaxngDatatype</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.sun.istack</groupId>
-        <artifactId>istack-commons-runtime</artifactId>
-        <version>4.1.2</version>
-      </dependency>
-      <dependency>
-        <groupId>com.sun.istack</groupId>
-        <artifactId>istack-commons-tools</artifactId>
-        <version>4.1.2</version>
-      </dependency>
-      <dependency>
-        <groupId>com.sun.xml.bind.external</groupId>
-        <artifactId>relaxng-datatype</artifactId>
-        <version>4.0.4</version>
-      </dependency>
-      <dependency>
-        <groupId>com.sun.xml.bind.external</groupId>
-        <artifactId>rngom</artifactId>
-        <version>4.0.4</version>
-        <exclusions>
-          <exclusion>
-            <groupId>relaxngDatatype</groupId>
-            <artifactId>relaxngDatatype</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.resteasy</groupId>
-        <artifactId>resteasy-jsapi</artifactId>
-        <version>6.2.10.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.resteasy</groupId>
-        <artifactId>resteasy-json-binding-provider</artifactId>
-        <version>6.2.10.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.parsson</groupId>
-        <artifactId>parsson</artifactId>
-        <version>1.1.6</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse</groupId>
-        <artifactId>yasson</artifactId>
-        <version>3.0.2</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.resteasy</groupId>
-        <artifactId>resteasy-json-p-provider</artifactId>
-        <version>6.2.10.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.resteasy</groupId>
-        <artifactId>resteasy-multipart-provider</artifactId>
-        <version>6.2.10.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.angus</groupId>
-        <artifactId>angus-mail</artifactId>
-        <version>2.0.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.james</groupId>
-        <artifactId>apache-mime4j-dom</artifactId>
-        <version>0.8.10</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.james</groupId>
-        <artifactId>apache-mime4j-core</artifactId>
-        <version>0.8.10</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.james</groupId>
-        <artifactId>apache-mime4j-storage</artifactId>
-        <version>0.8.10</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-io</groupId>
-        <artifactId>commons-io</artifactId>
-        <version>2.16.1</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.resteasy</groupId>
-        <artifactId>resteasy-validator-provider</artifactId>
-        <version>6.2.10.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.spec.jakarta.el</groupId>
-        <artifactId>jboss-el-api_5.0_spec</artifactId>
-        <version>4.0.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.spec.jakarta.xml.soap</groupId>
-        <artifactId>jboss-saaj-api_3.0_spec</artifactId>
-        <version>1.0.0.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.spec.jakarta.xml.ws</groupId>
-        <artifactId>jboss-jakarta-xml-ws-api_4.0_spec</artifactId>
-        <version>1.0.0.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.soap</groupId>
-            <artifactId>jakarta.xml.soap-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.ws.cxf</groupId>
-        <artifactId>jbossws-cxf-client</artifactId>
-        <version>7.1.0.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.jboss.slf4j</groupId>
-            <artifactId>slf4j-jboss-logging</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.modules</groupId>
-        <artifactId>jboss-modules</artifactId>
-        <version>2.1.5.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.ws</groupId>
-        <artifactId>jbossws-api</artifactId>
-        <version>3.0.0.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.ws</groupId>
-        <artifactId>jbossws-common</artifactId>
-        <version>5.0.0.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.ws</groupId>
-        <artifactId>jbossws-common-tools</artifactId>
-        <version>2.1.0.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.ws</groupId>
-        <artifactId>jbossws-spi</artifactId>
-        <version>5.0.0.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.ws.cxf</groupId>
-        <artifactId>jbossws-cxf-factories</artifactId>
-        <version>7.1.0.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-core</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.ws.xmlschema</groupId>
-        <artifactId>xmlschema-core</artifactId>
-        <version>2.3.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>xalan</groupId>
-            <artifactId>xalan</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.bcel</groupId>
-            <artifactId>bcel</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-features-logging</artifactId>
-        <version>4.0.5</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>2.0.13</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-bindings-soap</artifactId>
-        <version>4.0.5</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>jakarta.xml.soap</groupId>
-            <artifactId>jakarta.xml.soap-api</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>jakarta.jws</groupId>
-            <artifactId>jakarta.jws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-databinding-jaxb</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-bindings-coloc</artifactId>
-        <version>4.0.5</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-frontend-jaxws</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>xml-resolver</groupId>
-        <artifactId>xml-resolver</artifactId>
-        <version>1.2</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-bindings-xml</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-frontend-simple</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-ws-addr</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-transports-http</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-transports-http-hc</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-transports-jms</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-transports-local</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-ws-mex</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-ws-rm</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-ws-policy</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>wsdl4j</groupId>
-        <artifactId>wsdl4j</artifactId>
-        <version>1.6.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.neethi</groupId>
-        <artifactId>neethi</artifactId>
-        <version>3.2.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.codehaus.woodstox</groupId>
-            <artifactId>woodstox-core-asl</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.ws.commons.axiom</groupId>
-            <artifactId>axiom-impl</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.ws.commons.axiom</groupId>
-            <artifactId>axiom-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-ws-security</artifactId>
-        <version>4.0.5</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.ehcache</groupId>
-            <artifactId>ehcache</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-security-saml</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-security</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.wss4j</groupId>
-        <artifactId>wss4j-ws-security-dom</artifactId>
-        <version>3.0.3</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.ehcache</groupId>
-            <artifactId>ehcache</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.wss4j</groupId>
-        <artifactId>wss4j-ws-security-common</artifactId>
-        <version>3.0.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-saml-impl</artifactId>
-        <version>4.3.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.velocity</groupId>
-            <artifactId>velocity</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-core</artifactId>
-        <version>4.3.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>io.dropwizard.metrics</groupId>
-            <artifactId>metrics-core</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-profile-api</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-saml-api</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-security-api</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-security-impl</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-soap-api</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-xmlsec-api</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-xmlsec-impl</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>net.shibboleth.utilities</groupId>
-        <artifactId>java-support</artifactId>
-        <version>8.0.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.cryptacular</groupId>
-        <artifactId>cryptacular</artifactId>
-        <version>1.2.5</version>
-      </dependency>
-      <dependency>
-        <groupId>com.google.guava</groupId>
-        <artifactId>guava</artifactId>
-        <version>32.1.2-jre</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.google.errorprone</groupId>
-            <artifactId>error_prone_annotations</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.google.guava</groupId>
-            <artifactId>listenablefuture</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.google.j2objc</groupId>
-            <artifactId>j2objc-annotations</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.checkerframework</groupId>
-            <artifactId>checker-qual</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.google.guava</groupId>
-        <artifactId>failureaccess</artifactId>
-        <version>1.0.1</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-xacml-impl</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-xacml-api</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-xacml-saml-impl</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opensaml</groupId>
-        <artifactId>opensaml-xacml-saml-api</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jasypt</groupId>
-        <artifactId>jasypt</artifactId>
-        <version>1.9.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.wss4j</groupId>
-        <artifactId>wss4j-policy</artifactId>
-        <version>3.0.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.wss4j</groupId>
-        <artifactId>wss4j-ws-security-stax</artifactId>
-        <version>3.0.3</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.ehcache</groupId>
-            <artifactId>ehcache</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.wss4j</groupId>
-        <artifactId>wss4j-bindings</artifactId>
-        <version>3.0.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.wss4j</groupId>
-        <artifactId>wss4j-ws-security-policy-stax</artifactId>
-        <version>3.0.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-wsdl</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-tools-java2ws</artifactId>
-        <version>4.0.5</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.cxf</groupId>
-            <artifactId>cxf-rt-javascript</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-tools-common</artifactId>
-        <version>4.0.5</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.jws</groupId>
-            <artifactId>jakarta.jws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-databinding-aegis</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-tools-wsdlto-core</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-tools-validator</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-tools-wsdlto-databinding-jaxb</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-tools-wsdlto-frontend-jaxws</artifactId>
-        <version>4.0.5</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-text</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf.services.ws-discovery</groupId>
-        <artifactId>cxf-services-ws-discovery-api</artifactId>
-        <version>4.0.5</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.cxf</groupId>
-            <artifactId>cxf-rt-transports-udp</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf.xjcplugins</groupId>
-        <artifactId>cxf-xjc-boolean</artifactId>
-        <version>4.0.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf.xjcplugins</groupId>
-        <artifactId>cxf-xjc-bug986</artifactId>
-        <version>4.0.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf.xjcplugins</groupId>
-        <artifactId>cxf-xjc-dv</artifactId>
-        <version>4.0.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf.xjcplugins</groupId>
-        <artifactId>cxf-xjc-ts</artifactId>
-        <version>4.0.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf.xjc-utils</groupId>
-        <artifactId>cxf-xjc-runtime</artifactId>
-        <version>4.0.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.velocity</groupId>
-        <artifactId>velocity-engine-core</artifactId>
-        <version>2.3</version>
-        <exclusions>
-          <exclusion>
-            <groupId>oro</groupId>
-            <artifactId>oro</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>commons-collections</groupId>
-        <artifactId>commons-collections</artifactId>
-        <version>3.2.2</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-lang3</artifactId>
-        <version>3.14.0</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-beanutils</groupId>
-        <artifactId>commons-beanutils</artifactId>
-        <version>1.9.4</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.sun.xml.fastinfoset</groupId>
-        <artifactId>FastInfoset</artifactId>
-        <version>2.1.1</version>
-        <exclusions>
-          <exclusion>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jsr173_api</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>javax.xml</groupId>
-            <artifactId>jsr173</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.santuario</groupId>
-        <artifactId>xmlsec</artifactId>
-        <version>3.0.4</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.woodstox</groupId>
-        <artifactId>woodstox-core</artifactId>
-        <version>6.4.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>javax.xml.stream</groupId>
-            <artifactId>stax-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.codehaus.woodstox</groupId>
-        <artifactId>stax2-api</artifactId>
-        <version>4.2.2</version>
-        <exclusions>
-          <exclusion>
-            <groupId>javax.xml.stream</groupId>
-            <artifactId>stax-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.ow2.asm</groupId>
-        <artifactId>asm</artifactId>
-        <version>9.6</version>
-      </dependency>
-      <dependency>
-        <groupId>com.sun.xml.messaging.saaj</groupId>
-        <artifactId>saaj-impl</artifactId>
-        <version>3.0.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.soap</groupId>
-            <artifactId>jakarta.xml.soap-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.jvnet.staxex</groupId>
-        <artifactId>stax-ex</artifactId>
-        <version>2.1.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.ws.cxf</groupId>
-        <artifactId>jbossws-cxf-resources</artifactId>
-        <version>7.1.0.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.ws.cxf</groupId>
-        <artifactId>jbossws-cxf-server</artifactId>
-        <version>7.1.0.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>jboss.jaxbintros</groupId>
-        <artifactId>jboss-jaxb-intros</artifactId>
-        <version>2.0.1</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-features-clustering</artifactId>
-        <version>4.0.5</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf</groupId>
-        <artifactId>cxf-rt-management</artifactId>
-        <version>4.0.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.cxf.services.sts</groupId>
-        <artifactId>cxf-services-sts-core</artifactId>
-        <version>4.0.5</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.cxf</groupId>
-            <artifactId>cxf-rt-rs-security-jose</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.ws.cxf</groupId>
-        <artifactId>jbossws-cxf-transports-udp</artifactId>
-        <version>7.1.0.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.ws.cxf</groupId>
-        <artifactId>jbossws-cxf-transports-undertow</artifactId>
-        <version>7.1.0.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.ws.projects</groupId>
-        <artifactId>jaxws-undertow-httpspi</artifactId>
-        <version>2.0.0.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>jakarta.xml.ws</groupId>
-            <artifactId>jakarta.xml.ws-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>io.undertow</groupId>
-        <artifactId>undertow-core</artifactId>
-        <version>2.3.17.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.xnio</groupId>
-        <artifactId>xnio-api</artifactId>
-        <version>3.8.16.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.xnio</groupId>
-        <artifactId>xnio-nio</artifactId>
-        <version>3.8.16.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.authentication</groupId>
-        <artifactId>jakarta.authentication-api</artifactId>
-        <version>3.0.0</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.authorization</groupId>
-        <artifactId>jakarta.authorization-api</artifactId>
-        <version>2.1.0</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.interceptor</groupId>
-        <artifactId>jakarta.interceptor-api</artifactId>
-        <version>2.1.0</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.json</groupId>
-        <artifactId>jakarta.json-api</artifactId>
-        <version>2.1.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.logging</groupId>
-        <artifactId>commons-logging-jboss-logging</artifactId>
-        <version>1.0.0.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.logging</groupId>
-        <artifactId>jboss-logging</artifactId>
-        <version>3.5.3.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.client</groupId>
-        <artifactId>wildfly-client-config</artifactId>
-        <version>1.0.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.common</groupId>
-        <artifactId>wildfly-common</artifactId>
-        <version>1.7.0.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.wildfly.security</groupId>
-            <artifactId>wildfly-security-manager</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.discovery</groupId>
-        <artifactId>wildfly-discovery-client</artifactId>
-        <version>1.3.0.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron</artifactId>
-        <version>2.5.2.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.wildfly.security</groupId>
-            <artifactId>wildfly-elytron-sasl-deprecated</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.wildfly.security</groupId>
-            <artifactId>wildfly-elytron-x500-deprecated</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.wildfly.security</groupId>
-            <artifactId>wildfly-elytron-credential-source-deprecated</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.wildfly.security</groupId>
-            <artifactId>wildfly-elytron-http-deprecated</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-asn1</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-audit</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-auth</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-auth-server</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-auth-server-deprecated</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-auth-server-http</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-auth-server-sasl</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-auth-util</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.sshd</groupId>
-        <artifactId>sshd-common</artifactId>
-        <version>2.12.1</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>jcl-over-slf4j</artifactId>
-        <version>2.0.13</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-base</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-client</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-credential-source-impl</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-provider-util</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-credential</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-credential-store</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-digest</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-dynamic-ssl</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-encryption</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-http</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-http-basic</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-http-bearer</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-http-cert</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-http-digest</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-http-external</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-http-form</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-http-oidc</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.bitbucket.b_c</groupId>
-        <artifactId>jose4j</artifactId>
-        <version>0.9.6</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-http-spnego</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-http-sso</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-http-util</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-json-util</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-jose-jwk</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-jose-util</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-keystore</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-mechanism</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-mechanism-digest</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-mechanism-gssapi</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-mechanism-http</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-mechanism-oauth2</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-mechanism-scram</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-password-impl</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-permission</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-realm</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-realm-jdbc</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-realm-ldap</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-realm-token</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-anonymous</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-auth-util</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-digest</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-entity</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-external</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-gs2</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-gssapi</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-localuser</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-oauth2</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-otp</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-plain</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-scram</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-security-manager</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-security-manager-action</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-ssl</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-ssh-util</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-util</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-x500</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-x500-cert</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-x500-cert-acme</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-x500-cert-util</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-x500-principal</artifactId>
-        <version>2.5.2.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.logging</groupId>
-        <artifactId>jboss-logging-annotations</artifactId>
-        <version>2.2.1.Final</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.logging</groupId>
-        <artifactId>jboss-logging-processor</artifactId>
-        <version>2.2.1.Final</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.validator</groupId>
-        <artifactId>hibernate-validator-annotation-processor</artifactId>
-        <version>8.0.1.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hibernate.orm</groupId>
-        <artifactId>hibernate-jpamodelgen</artifactId>
-        <version>6.4.4.Final</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.el</groupId>
-        <artifactId>jakarta.el-api</artifactId>
-        <version>5.0.1</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.xml.ws</groupId>
-        <artifactId>jakarta.xml.ws-api</artifactId>
-        <version>4.0.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>*</groupId>
-            <artifactId>*</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.xml.soap</groupId>
-        <artifactId>jakarta.xml.soap-api</artifactId>
-        <version>3.0.0</version>
-        <exclusions>
-          <exclusion>
-            <groupId>*</groupId>
-            <artifactId>*</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-  <dependencies>
-    <dependency>
-      <groupId>opendolphin</groupId>
-      <artifactId>opendolphin-reporting</artifactId>
-      <version>2.7.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>opendolphin</groupId>
-      <artifactId>opendolphin-common</artifactId>
-      <version>2.7.1</version>
-      <classifier>jakarta</classifier>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.platform</groupId>
-      <artifactId>jakarta.jakartaee-api</artifactId>
-      <version>10.0.0</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.velocity</groupId>
-      <artifactId>velocity-engine-core</artifactId>
-      <version>2.3</version>
-      <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>oro</groupId>
-          <artifactId>oro</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>jdom</groupId>
-      <artifactId>jdom</artifactId>
-      <version>1.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-      <version>2.17.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-      <version>2.17.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-annotations</artifactId>
-      <version>2.17.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.datatype</groupId>
-      <artifactId>jackson-datatype-jdk8</artifactId>
-      <version>2.17.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.datatype</groupId>
-      <artifactId>jackson-datatype-jsr310</artifactId>
-      <version>2.17.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.googlecode.jsontoken</groupId>
-      <artifactId>jsontoken</artifactId>
-      <version>1.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.github.librepdf</groupId>
-      <artifactId>openpdf</artifactId>
-      <version>1.3.41</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-      <version>42.7.3</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.plivo</groupId>
-      <artifactId>plivo-java</artifactId>
-      <version>5.46.0</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.squareup.okhttp3</groupId>
-      <artifactId>okhttp</artifactId>
-      <version>5.2.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.squareup.okhttp3</groupId>
-      <artifactId>logging-interceptor</artifactId>
-      <version>5.2.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.yubico</groupId>
-      <artifactId>webauthn-server-core</artifactId>
-      <version>2.6.0</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.yubico</groupId>
-      <artifactId>webauthn-server-attestation</artifactId>
-      <version>2.6.0</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>s3</artifactId>
-      <version>2.25.21</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>url-connection-client</artifactId>
-      <version>2.25.21</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.yaml</groupId>
-      <artifactId>snakeyaml</artifactId>
-      <version>2.2</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.microprofile.config</groupId>
-      <artifactId>microprofile-config-api</artifactId>
-      <version>3.1</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.jms</groupId>
-      <artifactId>jakarta.jms-api</artifactId>
-      <version>3.1.0</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.enterprise.concurrent</groupId>
-      <artifactId>jakarta.enterprise.concurrent-api</artifactId>
-      <version>3.0.3</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.mail</groupId>
-      <artifactId>jakarta.mail-api</artifactId>
-      <version>2.1.3</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.websocket</groupId>
-      <artifactId>jakarta.websocket-api</artifactId>
-      <version>2.1.0</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.websocket</groupId>
-      <artifactId>jakarta.websocket-client-api</artifactId>
-      <version>2.1.0</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>2.0.13</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.logmanager</groupId>
-      <artifactId>jboss-logmanager</artifactId>
-      <version>3.1.2.Final</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.ejb3</groupId>
-      <artifactId>jboss-ejb3-ext-api</artifactId>
-      <version>2.3.0.Final</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.agroal</groupId>
-      <artifactId>agroal-api</artifactId>
-      <version>1.16</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk18on</artifactId>
-      <version>1.82</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk18on</artifactId>
-      <version>1.82</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-core</artifactId>
-      <version>1.12.5</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-api</artifactId>
-      <version>5.10.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-      <version>5.10.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-junit-jupiter</artifactId>
-      <version>5.11.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-      <version>3.25.3</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.glassfish.jersey.core</groupId>
-      <artifactId>jersey-common</artifactId>
-      <version>3.1.5</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-  <repositories>
-    <repository>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <id>central</id>
-      <name>Central Repository</name>
-      <url>https://repo.maven.apache.org/maven2</url>
-    </repository>
-  </repositories>
-  <pluginRepositories>
-    <pluginRepository>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <id>central</id>
-      <name>Central Repository</name>
-      <url>https://repo.maven.apache.org/maven2</url>
-    </pluginRepository>
-  </pluginRepositories>
-  <build>
-    <sourceDirectory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/main/java</sourceDirectory>
-    <scriptSourceDirectory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/main/scripts</scriptSourceDirectory>
-    <testSourceDirectory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/test/java</testSourceDirectory>
-    <outputDirectory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/classes</outputDirectory>
-    <testOutputDirectory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/test-classes</testOutputDirectory>
-    <resources>
-      <resource>
-        <directory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/main/resources</directory>
-      </resource>
-      <resource>
-        <targetPath>reporting/templates</targetPath>
-        <directory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/reporting/templates</directory>
-        <includes>
-          <include>**/*.vm</include>
-        </includes>
-      </resource>
-      <resource>
-        <targetPath>reporting/glossary</targetPath>
-        <directory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/reporting/glossary</directory>
-      </resource>
-    </resources>
-    <testResources>
-      <testResource>
-        <directory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/test/resources</directory>
-      </testResource>
-    </testResources>
-    <directory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target</directory>
-    <finalName>opendolphin-server</finalName>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <artifactId>maven-antrun-plugin</artifactId>
-          <version>3.1.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>3.7.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-dependency-plugin</artifactId>
-          <version>3.7.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-release-plugin</artifactId>
-          <version>3.0.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.2</version>
-          <configuration>
-            <source>1.8</source>
-            <target>1.8</target>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-    <plugins>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.11.0</version>
-        <executions>
-          <execution>
-            <id>default-compile</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-            <configuration>
-              <showDeprecation>true</showDeprecation>
-              <release>17</release>
-              <source>1.8</source>
-              <target>1.8</target>
-            </configuration>
-          </execution>
-          <execution>
-            <id>default-testCompile</id>
-            <phase>test-compile</phase>
-            <goals>
-              <goal>testCompile</goal>
-            </goals>
-            <configuration>
-              <showDeprecation>true</showDeprecation>
-              <release>17</release>
-              <source>1.8</source>
-              <target>1.8</target>
-            </configuration>
-          </execution>
-        </executions>
-        <configuration>
-          <showDeprecation>true</showDeprecation>
-          <release>17</release>
-          <source>1.8</source>
-          <target>1.8</target>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.1.2</version>
-        <executions>
-          <execution>
-            <id>default-test</id>
-            <phase>test</phase>
-            <goals>
-              <goal>test</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.wildfly.plugins</groupId>
-        <artifactId>wildfly-maven-plugin</artifactId>
-        <version>4.2.0.Final</version>
-        <configuration>
-          <hostname>localhost</hostname>
-          <port>9990</port>
-          <serverId>wildfly-management</serverId>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.6.1</version>
-        <executions>
-          <execution>
-            <id>copy-jakarta-common</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>copy</goal>
-            </goals>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>opendolphin</groupId>
-                  <artifactId>opendolphin-common</artifactId>
-                  <version>2.7.1</version>
-                  <classifier>jakarta</classifier>
-                  <outputDirectory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/jakarta-libs</outputDirectory>
-                </artifactItem>
-              </artifactItems>
-              <overWriteReleases>true</overWriteReleases>
-              <overWriteSnapshots>true</overWriteSnapshots>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-war-plugin</artifactId>
-        <version>3.4.0</version>
-        <executions>
-          <execution>
-            <id>default-war</id>
-            <phase>package</phase>
-            <goals>
-              <goal>war</goal>
-            </goals>
-            <configuration>
-              <packagingExcludes>WEB-INF/lib/opendolphin-common-2.7.1.jar</packagingExcludes>
-              <webResources>
-                <resource>
-                  <directory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/jakarta-libs</directory>
-                  <targetPath>WEB-INF/lib</targetPath>
-                  <includes>
-                    <include>*.jar</include>
-                  </includes>
-                </resource>
-              </webResources>
-            </configuration>
-          </execution>
-        </executions>
-        <configuration>
-          <packagingExcludes>WEB-INF/lib/opendolphin-common-2.7.1.jar</packagingExcludes>
-          <webResources>
-            <resource>
-              <directory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/jakarta-libs</directory>
-              <targetPath>WEB-INF/lib</targetPath>
-              <includes>
-                <include>*.jar</include>
-              </includes>
-            </resource>
-          </webResources>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-clean-plugin</artifactId>
-        <version>3.2.0</version>
-        <executions>
-          <execution>
-            <id>default-clean</id>
-            <phase>clean</phase>
-            <goals>
-              <goal>clean</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>3.3.1</version>
-        <executions>
-          <execution>
-            <id>default-testResources</id>
-            <phase>process-test-resources</phase>
-            <goals>
-              <goal>testResources</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>default-resources</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>resources</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-install-plugin</artifactId>
-        <version>3.1.2</version>
-        <executions>
-          <execution>
-            <id>default-install</id>
-            <phase>install</phase>
-            <goals>
-              <goal>install</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <version>3.1.2</version>
-        <executions>
-          <execution>
-            <id>default-deploy</id>
-            <phase>deploy</phase>
-            <goals>
-              <goal>deploy</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-site-plugin</artifactId>
-        <version>3.12.1</version>
-        <executions>
-          <execution>
-            <id>default-site</id>
-            <phase>site</phase>
-            <goals>
-              <goal>site</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/site</outputDirectory>
-              <reportPlugins>
-                <reportPlugin>
-                  <groupId>org.apache.maven.plugins</groupId>
-                  <artifactId>maven-project-info-reports-plugin</artifactId>
-                </reportPlugin>
-              </reportPlugins>
-            </configuration>
-          </execution>
-          <execution>
-            <id>default-deploy</id>
-            <phase>site-deploy</phase>
-            <goals>
-              <goal>deploy</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/site</outputDirectory>
-              <reportPlugins>
-                <reportPlugin>
-                  <groupId>org.apache.maven.plugins</groupId>
-                  <artifactId>maven-project-info-reports-plugin</artifactId>
-                </reportPlugin>
-              </reportPlugins>
-            </configuration>
-          </execution>
-        </executions>
-        <configuration>
-          <outputDirectory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/site</outputDirectory>
-          <reportPlugins>
-            <reportPlugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-project-info-reports-plugin</artifactId>
-            </reportPlugin>
-          </reportPlugins>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-  <reporting>
-    <outputDirectory>/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/site</outputDirectory>
-  </reporting>
-  <profiles>
-    <profile>
-      <id>static-analysis</id>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <version>3.1.0</version>
-            <executions>
-              <execution>
-                <id>prepare-static-analysis-dirs</id>
-                <phase>initialize</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <mkdir dir="${static.analysis.output.dir}/spotbugs" />
-                    <mkdir dir="${static.analysis.output.dir}/checkstyle" />
-                    <mkdir dir="${static.analysis.output.dir}/pmd" />
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>com.github.spotbugs</groupId>
-            <artifactId>spotbugs-maven-plugin</artifactId>
-            <version>${spotbugs.plugin.version}</version>
-            <executions>
-              <execution>
-                <id>spotbugs-analyze</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>spotbugs</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>spotbugs-check</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>check</goal>
-                </goals>
-              </execution>
-            </executions>
-            <dependencies>
-              <dependency>
-                <groupId>com.h3xstream.findsecbugs</groupId>
-                <artifactId>findsecbugs-plugin</artifactId>
-                <version>${findsecbugs.plugin.version}</version>
-              </dependency>
-            </dependencies>
-            <configuration>
-              <effort>Max</effort>
-              <threshold>Medium</threshold>
-              <failOnError>false</failOnError>
-              <includeTests>false</includeTests>
-              <excludeFilterFile>${static.analysis.config.dir}/spotbugs-exclude.xml</excludeFilterFile>
-              <xmlOutput>true</xmlOutput>
-              <xmlOutputDirectory>${static.analysis.output.dir}/spotbugs</xmlOutputDirectory>
-              <spotbugsXmlOutputDirectory>${static.analysis.output.dir}/spotbugs</spotbugsXmlOutputDirectory>
-              <spotbugsXmlOutputFilename>spotbugs-opendolphin-server-modernized.xml</spotbugsXmlOutputFilename>
-            </configuration>
-          </plugin>
-          <plugin>
-            <artifactId>maven-checkstyle-plugin</artifactId>
-            <version>${checkstyle.plugin.version}</version>
-            <executions>
-              <execution>
-                <id>checkstyle-report</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>checkstyle</goal>
-                </goals>
-              </execution>
-            </executions>
-            <dependencies>
-              <dependency>
-                <groupId>com.puppycrawl.tools</groupId>
-                <artifactId>checkstyle</artifactId>
-                <version>${checkstyle.version}</version>
-              </dependency>
-            </dependencies>
-            <configuration>
-              <configLocation>${static.analysis.config.dir}/checkstyle.xml</configLocation>
-              <includeTestSourceDirectory>false</includeTestSourceDirectory>
-              <failOnViolation>false</failOnViolation>
-              <linkXRef>false</linkXRef>
-              <outputFile>${static.analysis.output.dir}/checkstyle/checkstyle-opendolphin-server-modernized.xml</outputFile>
-            </configuration>
-          </plugin>
-          <plugin>
-            <artifactId>maven-pmd-plugin</artifactId>
-            <version>${pmd.plugin.version}</version>
-            <executions>
-              <execution>
-                <id>pmd-report</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>pmd</goal>
-                </goals>
-              </execution>
-            </executions>
-            <dependencies>
-              <dependency>
-                <groupId>net.sourceforge.pmd</groupId>
-                <artifactId>pmd-java</artifactId>
-                <version>${pmd.version}</version>
-              </dependency>
-            </dependencies>
-            <configuration>
-              <targetJdk>17</targetJdk>
-              <linkXRef>false</linkXRef>
-              <failOnViolation>false</failOnViolation>
-              <rulesets>
-                <ruleset>${static.analysis.config.dir}/pmd-ruleset.xml</ruleset>
-              </rulesets>
-              <targetDirectory>${static.analysis.output.dir}/pmd</targetDirectory>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-      <properties>
-        <spotbugs.plugin.version>4.8.5.0</spotbugs.plugin.version>
-        <checkstyle.version>10.12.4</checkstyle.version>
-        <static.analysis.config.dir>${project.parent.basedir}/server-modernized/config/static-analysis</static.analysis.config.dir>
-        <pmd.plugin.version>3.21.0</pmd.plugin.version>
-        <pmd.version>6.55.0</pmd.version>
-        <checkstyle.plugin.version>3.3.1</checkstyle.plugin.version>
-        <static.analysis.output.dir>${project.parent.basedir}/server-modernized/target/static-analysis</static.analysis.output.dir>
-        <findsecbugs.plugin.version>1.12.0</findsecbugs.plugin.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>wildfly-hostname-env</id>
-      <activation>
-        <property>
-          <name>env.WILDFLY_HOSTNAME</name>
-        </property>
-      </activation>
-      <properties>
-        <wildfly.hostname>${env.WILDFLY_HOSTNAME}</wildfly.hostname>
-      </properties>
-    </profile>
-    <profile>
-      <id>wildfly-port-env</id>
-      <activation>
-        <property>
-          <name>env.WILDFLY_PORT</name>
-        </property>
-      </activation>
-      <properties>
-        <wildfly.port>${env.WILDFLY_PORT}</wildfly.port>
-      </properties>
-    </profile>
-    <profile>
-      <id>wildfly-server-id-env</id>
-      <activation>
-        <property>
-          <name>env.WILDFLY_SERVER_ID</name>
-        </property>
-      </activation>
-      <properties>
-        <wildfly.serverId>${env.WILDFLY_SERVER_ID}</wildfly.serverId>
-      </properties>
-    </profile>
-  </profiles>
-</project>
-
-
-[INFO] ------------------------------------------------------------------------
-[INFO] BUILD SUCCESS
-[INFO] ------------------------------------------------------------------------
-[INFO] Total time:  2.757 s
-[INFO] Finished at: 2025-11-12T15:33:35+09:00
-[INFO] ------------------------------------------------------------------------

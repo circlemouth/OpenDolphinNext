@@ -1,7 +1,0 @@
-GET /20/adm/phr/disease/WEB1001 HTTP/1.1
-Host: weborca.cloud.orcamo.jp
-X-Facility-Id: LOCAL.FACILITY.0001
-X-Touch-TraceId: 20251115TorcaPHRSeqZ1
-X-Access-Reason: disease-view
-Accept: text/plain; charset=UTF-8
-Notes: Expect multi-line disease list; track 401/403 as evidence otherwise

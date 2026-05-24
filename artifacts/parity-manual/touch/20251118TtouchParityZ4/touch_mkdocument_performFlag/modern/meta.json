@@ -1,9 +1,0 @@
-{
-  "method": "POST",
-  "path": "/jtouch/mkdocument?dryRun=true",
-  "base_url": "http://opendolphin-server-modernized-dev:8080/openDolphin/resources",
-  "request_id": "touch_mkdocument_performFlag",
-  "status_code": 200,
-  "time_total": "0.018990",
-  "exit_code": 0
-}

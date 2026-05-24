@@ -1,9 +1,0 @@
-RUN_ID=20260207T094018Z-cmd_20260207_11_sub_3-img-hard
-patientId=P0002
-expect:
-- 401 no auth
-- 404 feature_disabled (auth ok, gate off)
-- 403 forbidden (auth ok, other facility)
-- 415 unsupported_media_type
-- 413 payload_too_large
-- 200 upload/list/download (PhaseA compatible)

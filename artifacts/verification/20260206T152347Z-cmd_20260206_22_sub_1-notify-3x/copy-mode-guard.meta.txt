@@ -1,2 +1,0 @@
-pane_in_mode=
-exit_code=1

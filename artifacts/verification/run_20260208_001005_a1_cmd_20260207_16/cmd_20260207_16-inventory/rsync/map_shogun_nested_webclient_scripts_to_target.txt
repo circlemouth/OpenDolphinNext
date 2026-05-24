@@ -1,7 +1,0 @@
-# map_shogun_nested_webclient_scripts_to_target
-SRC: /Users/Hayato/Documents/GitHub/multi-agent-shogun/OpenDolphin_WebClient/web-client/scripts/
-DST: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/scripts/
-
-.d..t.... ./
->f.st.... qa-charts-do-copy-manual-regression.mjs
->f.st.... qa-order-001-parity.mjs

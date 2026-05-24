@@ -1,8 +1,0 @@
-<data>
-  <prescriptionv2req type="record">
-    <Request_Number type="string">01</Request_Number>
-    <Patient_ID type="string">00002</Patient_ID>
-    <Invoice_Number type="string">0002375</Invoice_Number>
-    <Outside_Class type="string">False</Outside_Class>
-  </prescriptionv2req>
-</data>

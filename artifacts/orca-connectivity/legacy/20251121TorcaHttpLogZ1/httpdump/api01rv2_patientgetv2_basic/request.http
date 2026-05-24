@@ -1,3 +1,0 @@
-curl -sv -u ormaster:ormaster "http://localhost:8000/api01rv2/patientgetv2?id=000001" \
-  -H 'Accept: application/json' \
-  -H 'User-Agent: handbook-worker/1.0'

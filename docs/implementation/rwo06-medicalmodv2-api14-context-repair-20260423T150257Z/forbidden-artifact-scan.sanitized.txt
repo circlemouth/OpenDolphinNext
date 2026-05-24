@@ -1,7 +1,0 @@
-runId=20260423T150257Z
-scope=docs/implementation/rwo06-medicalmodv2-api14-context-repair-20260423T150257Z
-command=find forbidden evidence artifact extensions and names: har, trace, zip, webm, mp4, png, jpg, jpeg, raw-network, screenshot, video
-result=PASS
-matches=0
-credentialsCaptured=false
-rawArtifactsCaptured=false

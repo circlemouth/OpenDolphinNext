@@ -1,1 +1,0 @@
-{"error":"orca.appointment.invalid","code":"orca.appointment.invalid","message":"appointmentDate is required","status":400,"traceId":"trace-20260110T212643Z","path":"/openDolphin/resources/api01rv2/appointment/outpatient","validationError":true}

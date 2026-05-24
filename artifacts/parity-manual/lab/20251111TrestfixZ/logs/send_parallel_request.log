@@ -1,2 +1,0 @@
-2025-11-11T16:48:49Z GET /lab/module/WEB1001,0,5 -> legacy (rest_error_lab_empty) (status=200, time=0.373390, exit=0)
-2025-11-11T16:48:49Z GET /lab/module/WEB1001,0,5 -> modern (rest_error_lab_empty) (status=200, time=0.036349, exit=0)

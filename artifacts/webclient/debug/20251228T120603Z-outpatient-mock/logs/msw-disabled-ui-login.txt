@@ -1,4 +1,0 @@
-after login url=http://localhost:5173/login
-login-card=OpenDolphin Web ログイン施設ID・ユーザーID・パスワードを入力し、認証ヘッダーを用いた既存APIでサインインします。クライアントUUIDを指定しない場合は自動生成されます。施設IDユーザーIDパスワードクライアントUUID (任意)ログイン<html><head><title>Error</title></head><body>Internal Server Error</body></html>
-outpatient url=http://localhost:5173/login
-warning_present=false

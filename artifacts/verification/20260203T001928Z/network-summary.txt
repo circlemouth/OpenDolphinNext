@@ -1,9 +1,0 @@
-Network summary (claim outpatient mock re-test):
-- POST /orca/claim/outpatient -> 404
-- POST /orca/claim/outpatient/mock -> 200 (success)
-- POST /orca/appointments/list -> 200 (with intermittent net::ERR_ABORTED)
-- POST /orca/visits/list -> 200 (with intermittent net::ERR_ABORTED)
-- POST /orca21/medicalmodv2/outpatient -> 404
-- GET /api/orca/queue -> 404
-- GET /api/chart-events -> 200 (with some net::ERR_ABORTED retries)
-- POST /api01rv2/pusheventgetv2 -> 200

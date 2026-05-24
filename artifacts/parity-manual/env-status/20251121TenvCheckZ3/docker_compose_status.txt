@@ -1,7 +1,0 @@
-NAME                                IMAGE                                          COMMAND                   SERVICE                 CREATED       STATUS                 PORTS
-opendolphin-minio                   minio/minio:latest                             "/usr/bin/docker-ent…"   minio                   4 hours ago   Up 4 hours (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
-opendolphin-otel-collector          otel/opentelemetry-collector-contrib:0.101.0   "/otelcol-contrib --…"   otel-collector          3 hours ago   Up 3 hours             0.0.0.0:4318->4318/tcp, [::]:4318->4318/tcp, 0.0.0.0:9464->9464/tcp, [::]:9464->9464/tcp
-opendolphin-postgres                postgres:14                                    "docker-entrypoint.s…"   db                      4 hours ago   Up 4 hours (healthy)   0.0.0.0:55433->5432/tcp, [::]:55433->5432/tcp
-opendolphin-postgres-modernized     postgres:14                                    "docker-entrypoint.s…"   db-modernized           4 hours ago   Up 4 hours (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
-opendolphin-server-modernized-dev   opendolphin_webclient-server-modernized-dev    "/opt/jboss/bootstra…"   server-modernized-dev   4 hours ago   Up 3 hours (healthy)   0.0.0.0:9080->8080/tcp, [::]:9080->8080/tcp, 0.0.0.0:9995->9990/tcp, [::]:9995->9990/tcp
-opendolphin_webclient-helper-1      mcr.microsoft.com/devcontainers/base:jammy     "sleep infinity"          helper                  3 hours ago   Up 3 hours             

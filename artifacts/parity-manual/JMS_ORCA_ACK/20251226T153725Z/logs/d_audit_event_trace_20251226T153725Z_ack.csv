@@ -1,2 +1,0 @@
-id,event_time,action,trace_id,payload
-253812,2025-12-27 00:43:11.043126+09,EHT_CLAIM_SEND,trace-jms-20251226T153725Z-ack1,"{""documentId"":""DOC-20251226T153725Z-ACK1"",""facilityId"":""1.3.6.1.4.1.9414.72.103""}"

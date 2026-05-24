@@ -1,9 +1,0 @@
-{
-  "method": "POST",
-  "path": "/karte/diagnosis/claim",
-  "base_url": "http://localhost:8080/openDolphin/resources",
-  "request_id": "20251109T231900Z_DIAGNOSIS",
-  "status_code": 403,
-  "time_total": "0.075637",
-  "exit_code": 0
-}

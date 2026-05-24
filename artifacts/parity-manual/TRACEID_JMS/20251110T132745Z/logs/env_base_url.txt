@@ -1,2 +1,0 @@
-BASE_URL_MODERN=http://opendolphin-server-modernized-dev:8080/openDolphin/resources
-BASE_URL_LEGACY=http://opendolphin-server:8080/openDolphin/resources

@@ -1,7 +1,0 @@
-timestamp_utc: 20251108T194717Z
-request: GET /openDolphin/resources/serverinfo/cloud/zero
-headers:
-  userName: doctor1
-  password: ********
-http_status: 200
-body: false

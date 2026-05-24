@@ -1,1 +1,0 @@
-{"error":"karte_lookup_failed","message":"Karte result is empty","status":500,"traceId":"trace-http-500-20251115TresterrexZ1","path":"/openDolphin/resources/karte/pid/INVALID,%5Bdate%5D","context":"pid_lookup"}

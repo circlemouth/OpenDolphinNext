@@ -1,3 +1,0 @@
-# Slack notification (auto)
-status=not_triggered
-reason=gate_passed modern_count=1 legacy_count=0

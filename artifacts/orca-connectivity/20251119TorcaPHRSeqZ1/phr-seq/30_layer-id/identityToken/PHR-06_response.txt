@@ -1,6 +1,0 @@
-RUN_ID=20251119TorcaPHRSeqZ1
-API=PHR-06 /20/adm/phr/identityToken
-HTTP=405 Method Not Allowed (Allow: OPTIONS, GET)
-TraceId=20251119TorcaPHRSeqZ1
-Notes=ORCA 側エンドポイント未開放のため 405 応答。mTLS + Basic + X-Consent-Token までは成功。
-Evidence=httpdump/phr06_identityToken/, trace/phr-06_identityToken_trace.log, screenshots/phr-06_identity_response.png

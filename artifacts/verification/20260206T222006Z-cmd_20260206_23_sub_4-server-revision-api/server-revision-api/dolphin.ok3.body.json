@@ -1,1 +1,0 @@
-{"error":"unauthorized","code":"unauthorized","message":"Authentication required","status":401,"traceId":"dd4f6e72-661c-4904-bef7-d606fc826b14","path":"/openDolphin/resources/dolphin","reason":"authentication_failed"}

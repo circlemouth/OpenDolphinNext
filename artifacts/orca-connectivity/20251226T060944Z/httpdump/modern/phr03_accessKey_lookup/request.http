@@ -1,9 +1,0 @@
-GET /20/adm/phr/accessKey/PHR-0000001-20251226 HTTP/1.1
-Host: localhost:9080
-X-Facility-Id: LOCAL.FACILITY.0001
-X-Trace-Id: 20251226T060944Z
-X-Request-Id: 20251226T060944Z
-X-Access-Reason: phr03_accessKey_lookup
-userName: <MASKED>
-password: <MASKED>
-Accept: application/octet-stream

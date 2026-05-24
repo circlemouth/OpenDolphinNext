@@ -1,4 +1,0 @@
- event_time | action | resource | request_id | payload 
-------------+--------+----------+------------+---------
-(0 rows)
-

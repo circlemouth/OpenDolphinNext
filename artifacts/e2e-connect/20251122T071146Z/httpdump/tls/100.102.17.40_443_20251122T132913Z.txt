@@ -1,2 +1,0 @@
-Connecting to 100.102.17.40
-402E090102000000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:ssl/record/rec_layer_s3.c:916:SSL alert number 80

@@ -1,1 +1,0 @@
-`/api01rv2/claim/outpatient/*` と `/orca21/medicalmodv2/outpatient` を MSW/Playwright でモックし、 missingMaster/cacheHit/dataSourceTransition の同期と telemetry funnel（resolve_master → charts_orchestration）を可視化します。 VITE_DISABLE_MSW=1 のときは実 API 接続となり、シナリオ切替は無効化されます。

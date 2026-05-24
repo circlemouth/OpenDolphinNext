@@ -1,7 +1,0 @@
-RUN_ID=20251121TorcaHttpLogZ1 / UTC=20251113T123218Z
-http_live: logs/http_live_20251113T123055Z.log, logs/http_live_20251113T123218Z.log, logs/http_live_20251113T124324Z.log
-since: logs/docker_orca_since_20251113T123218Z.log
-extract: logs/http_404405_extract_20251113T123218Z.log
-host/readlink: logs/host_orca_log_dir_20251113T123218Z.txt / logs/orca_http_symlink_20251113T123218Z.txt
-httpdump: httpdump/api01rv2_patientgetv2{,_basic}/, httpdump/api11_invalid/
-所見: patientgetv2 は Basic 認証の有無に関わらず 401 が継続。api11 の未知ルートは 404 で `Allow` 無し。http_live では 12:34:08Z に `System Error:405` と `/api01rv2/patientgetv2` の 405 呼び出しログあり、Go Echo ハンドラが panic している stacktrace も 12:43:37Z に記録された。docs/server-modernization/phase2/operations/logs/2025-11-13-orca-connectivity.md と PHASE2_PROGRESS.md の ORCA 節へ本 RUN_ID を追記予定。

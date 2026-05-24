@@ -1,6 +1,0 @@
-2025-11-13T12:20:48.363496676Z &{GET /api01rv2/patientgetv2?id=000001 HTTP/1.1 1 1 map[Accept:[*/*] User-Agent:[curl/8.7.1]] {} <nil> 0 [] false localhost:8000 map[] map[] <nil> map[] 172.217.161.36:52735 /api01rv2/patientgetv2?id=000001 <nil> <nil> <nil>  0xc005536050 <nil> [] map[]}
-2025-11-13T12:20:48.363973343Z 2025/11/13 21:20:48 Auth Error:401   
-2025-11-13T12:21:49.298535343Z &{GET /api01rv2/patientgetv2?id=000001 HTTP/1.1 1 1 map[Accept:[*/*] User-Agent:[curl/8.7.1]] {} <nil> 0 [] false localhost:8000 map[] map[] <nil> map[] 172.217.161.36:35046 /api01rv2/patientgetv2?id=000001 <nil> <nil> <nil>  0xc001564050 <nil> [] map[]}
-2025-11-13T12:21:49.298939801Z 2025/11/13 21:21:49 Auth Error:401   
-2025-11-13T12:22:05.342756753Z &{GET /api01rv2/patientgetv2?id=000001 HTTP/1.1 1 1 map[Accept:[*/*] User-Agent:[curl/8.7.1]] {} <nil> 0 [] false localhost:8000 map[] map[] <nil> map[] 172.217.161.36:22347 /api01rv2/patientgetv2?id=000001 <nil> <nil> <nil>  0xc0002120a0 <nil> [] map[]}
-2025-11-13T12:22:05.343143086Z 2025/11/13 21:22:05 Auth Error:401   

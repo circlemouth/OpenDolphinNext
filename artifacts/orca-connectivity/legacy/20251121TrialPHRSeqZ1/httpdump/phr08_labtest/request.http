@@ -1,7 +1,0 @@
-GET /20/adm/phr/labtest/WEB1001?labSince=2025-05-01 HTTP/1.1
-Host: weborca-trial.orca.med.or.jp
-Authorization: Basic trial:weborcatrial
-X-Facility-Id: 1.3.6.1.4.1.9414.72.101
-X-Touch-TraceId: 20251121TrialPHRSeqZ1
-X-Access-Reason: phr-labtest-view
-Accept: text/plain; charset=UTF-8

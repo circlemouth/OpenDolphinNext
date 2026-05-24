@@ -1,2 +1,0 @@
-2025-11-12T13:35:07Z GET /lab/module/WEB1001,0,5 -> legacy (rest_error_lab_audit) (status=404, time=0.045407, exit=0)
-2025-11-12T13:35:07Z GET /lab/module/WEB1001,0,5 -> modern (rest_error_lab_audit) (status=200, time=0.282400, exit=0)

@@ -1,11 +1,0 @@
-Clinical Summary
-
-Patient: John Smith
-DOB: May 17, 1975
-Attending Physician: Dr. Adams
-Encounter Date: Nov 06, 2025
-- Chief complaint: Headache
-- Prescription: Acetaminophen
-
-Generated at 2025-11-08 10:00
-

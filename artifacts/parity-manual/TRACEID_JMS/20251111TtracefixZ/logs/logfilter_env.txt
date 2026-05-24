@@ -1,1 +1,0 @@
-      LOGFILTER_HEADER_AUTH_ENABLED: "true"

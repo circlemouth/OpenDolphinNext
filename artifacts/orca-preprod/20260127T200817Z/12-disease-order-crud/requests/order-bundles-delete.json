@@ -1,9 +1,0 @@
-{
-  "patientId": "TX-20260127-CRUD-02",
-  "operations": [
-    {
-      "operation": "delete",
-      "documentId": 16
-    }
-  ]
-}

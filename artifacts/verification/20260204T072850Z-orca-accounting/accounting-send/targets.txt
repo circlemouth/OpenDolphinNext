@@ -1,2 +1,0 @@
-https://weborca-trial.orca.med.or.jp/api01rv2/acceptlstv2?class=01
-https://weborca-trial.orca.med.or.jp/api01rv2/acceptlstv2?class=02

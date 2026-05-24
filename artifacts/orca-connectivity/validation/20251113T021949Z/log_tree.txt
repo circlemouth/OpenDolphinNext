@@ -1,2 +1,0 @@
-/opt/jma/weborca/log:
-orca-db-patch.log

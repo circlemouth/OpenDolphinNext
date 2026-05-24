@@ -1,2 +1,0 @@
-503:[0m[0m22:47:19,499 INFO  [open.dolphin] (default task-93) 172.192.77.103 doctor1 GET /orca/master/material traceId=386cf7c9-17de-481a-a601-45e32947cddb
-509:[0m[0m22:47:19,511 INFO  [open.dolphin.session.MessageSender] (Thread-46 (ActiveMQ-client-global-threads)) Audit envelope drained from JMS queue [traceId=386cf7c9-17de-481a-a601-45e32947cddb, action=ORCA_MASTER_FETCH, resource=/orca/master/material, outcome=FAILURE]

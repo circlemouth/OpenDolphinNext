@@ -1,7 +1,0 @@
-[
-  {
-    "url": "http://localhost:5176/orca/chart/subjectives",
-    "method": "POST",
-    "postData": "{\"patientId\":\"01415\",\"performDate\":\"2026-02-04\",\"soapCategory\":\"S\",\"body\":\"SOAPテスト 20260204T214600Z-soap-history-final\"}"
-  }
-]

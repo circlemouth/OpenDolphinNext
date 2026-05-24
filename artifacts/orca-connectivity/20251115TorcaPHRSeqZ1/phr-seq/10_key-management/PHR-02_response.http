@@ -1,4 +1,0 @@
-HTTP result: (local TLS handshake not reached)
-Exit code: 58 (could not parse PKCS12 file)
-Evidence: httpdump/phr02_accessKey/curl_error.log, trace/phr02_accessKey_trace.log
-Notes: PKCS#12 passphrase未取得のため ORCA 443 へ接続直後に失敗。

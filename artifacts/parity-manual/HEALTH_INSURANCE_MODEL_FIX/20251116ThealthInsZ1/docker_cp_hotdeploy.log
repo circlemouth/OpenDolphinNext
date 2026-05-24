@@ -1,7 +1,0 @@
-total 41104
--rw-r--r-- 1   502 games 42070026 Nov 12 14:27 opendolphin-server.war
--rw-r--r-- 1 jboss jboss       22 Nov 12 13:44 opendolphin-server.war.deployed
--rw-rw-r-- 1 jboss root      8888 Sep 16  2024 README.txt
--rw-r--r-- 1   502 games 42070026 Nov 12 14:27 /opt/jboss/wildfly/standalone/deployments/opendolphin-server.war
--rw-r--r-- 1 jboss jboss       22 Nov 12 13:44 /opt/jboss/wildfly/standalone/deployments/opendolphin-server.war.deployed
--rw-r--r-- 1 jboss jboss        0 Nov 12 14:28 /opt/jboss/wildfly/standalone/deployments/opendolphin-server.war.dodeploy

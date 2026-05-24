@@ -1,3 +1,0 @@
-{"patientinfores":{"Information_Date":"2026-01-27","Information_Time":"19:06:23","Api_Result":"10","Api_Result_Message":"患者番号に該当する患者が存在しません","Reskey":"Patient Info"}}
-
-HTTP_STATUS:200

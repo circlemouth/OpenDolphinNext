@@ -1,1 +1,0 @@
-{"error":"internal_server_error","code":"internal_server_error","message":"Session layer failure in open.dolphin.session.PatientImageServiceBean$Proxy$_$$_WeldSubclass#uploadImage","status":500,"traceId":"d324ad01-82f4-4519-a7e4-275183354e31","path":"/openDolphin/resources/patients/P0002/images","retryable":true}

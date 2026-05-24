@@ -1,1 +1,0 @@
--rw-r--r-- 1 502 dialout 1273 11月 13 12:33 /opt/jma/weborca/app/etc/receipt_route.ini

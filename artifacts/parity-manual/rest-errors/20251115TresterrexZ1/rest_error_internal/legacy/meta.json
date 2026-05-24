@@ -1,9 +1,0 @@
-{
-  "method": "GET",
-  "path": "/karte/pid/INVALID,%5Bdate%5D",
-  "base_url": "http://localhost:8080/openDolphin/resources",
-  "request_id": "rest_error_internal",
-  "status_code": 500,
-  "time_total": "0.374446",
-  "exit_code": 0
-}

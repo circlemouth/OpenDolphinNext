@@ -1,3 +1,0 @@
-page: http://localhost:5173/f/1.3.6.1.4.1.9414.10.1/login
-console: issue - "A form field element should have an id or name attribute" (count: 3)
-notes: API calls not attempted (login blocked by missing credentials)

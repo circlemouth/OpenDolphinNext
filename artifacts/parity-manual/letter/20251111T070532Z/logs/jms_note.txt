@@ -1,1 +1,0 @@
-JMS ログは traceId=parity-letter-20251111T070532Z 実行時にも出力されず（docker compose -p legacy-vs-modern logs server-modernized-dev --since 10m | rg -i JMS でヒットなし）。

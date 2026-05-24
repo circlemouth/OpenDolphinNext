@@ -1,6 +1,0 @@
-RUN_ID=20251119TorcaPHRSeqZ1
-API=PHR-07 /20/adm/phr/image/00000001
-HTTP=404 Not Found
-TraceId=20251119TorcaPHRSeqZ1
-Notes=WebORCA 本番に Schema 画像 API が存在せず JSON 404 を返却。Modernized 版への差替え待ち。
-Evidence=httpdump/phr07_image/, trace/phr-07_image_trace.log, screenshots/phr-07_image_response.png
