@@ -104,7 +104,7 @@ Server 側の Maven 検証は、必ずリポジトリ直下の `pom.server-moder
 
 ## ライセンス
 
-ライセンスについては、フォーク元のリポジトリと、Git操作履歴の調査に基づき、ドキュメント最終変更者の移行を尊重してGLPv3として残してあります。
+ライセンスについては、フォーク元のリポジトリと、Git操作履歴の調査に基づき、ドキュメント最終変更者の意向を尊重してGLPv3として残してあります。
 
 - [LICENSE](LICENSE)
 - [LICENSE Git履歴調査](docs/minagawa-research/LICENSE_git履歴調査_20260310.md)
