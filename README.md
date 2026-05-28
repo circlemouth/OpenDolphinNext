@@ -27,6 +27,8 @@ https://zenn.dev/circlemouth/articles/opendolphinnext-individual-emr
   - 隠しAPIについてのORCA API協議会に参加すると情報が公開されますが、情報はオープンで書かないほうがよいかもしれません。
   - 必ずORCA API協議会に確認をお願いいたします。
   
+
+  
 非公開でOpenDolphinフォークで開発をされている先生からの情報によると、少なくとも電子処方箋については実装可能だったとのことです。
 
 ## 技術スタック等
@@ -102,7 +104,7 @@ Server 側の Maven 検証は、必ずリポジトリ直下の `pom.server-moder
 
 ## ライセンス
 
-ライセンスについては、フォーク元のリポジトリと、Git操作履歴の調査に基づき、ドキュメント最終変更者の移行を尊重してGLPv2として残してあります。
+ライセンスについては、フォーク元のリポジトリと、Git操作履歴の調査に基づき、ドキュメント最終変更者の移行を尊重してGLPv3として残してあります。
 
 - [LICENSE](LICENSE)
 - [LICENSE Git履歴調査](docs/minagawa-research/LICENSE_git履歴調査_20260310.md)
